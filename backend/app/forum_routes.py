@@ -1319,7 +1319,7 @@ async def get_visible_forums(
                         author=author_info,
                         last_reply_at=latest_post.last_reply_at or latest_post.created_at,
                         reply_count=latest_post.reply_count,
-                        view_count=display_view_count
+                        view_count=format_view_count(display_view_count)
                     )
                 
                 category_out = schemas.ForumCategoryOut(
@@ -1413,7 +1413,7 @@ async def get_visible_forums(
                         author=author_info,
                         last_reply_at=latest_post.last_reply_at or latest_post.created_at,
                         reply_count=latest_post.reply_count,
-                        view_count=display_view_count
+                        view_count=format_view_count(display_view_count)
                     )
                 
                 category_out = schemas.ForumCategoryOut(
