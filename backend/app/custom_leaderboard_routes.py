@@ -20,6 +20,7 @@ from app import models, schemas
 from app.utils.time_utils import get_utc_time
 from app.rate_limiting import rate_limit
 from app.config import Config
+from app.forum_routes import format_view_count
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ async def get_all_leaderboards_admin(
             status=leaderboard.status,
             item_count=leaderboard.item_count,
             vote_count=leaderboard.vote_count,
-            view_count=leaderboard.view_count,
+            view_count=format_view_count(leaderboard.view_count),
             created_at=leaderboard.created_at,
             updated_at=leaderboard.updated_at
         )
@@ -514,7 +515,7 @@ async def apply_leaderboard(
         status=new_leaderboard.status,
         item_count=new_leaderboard.item_count,
         vote_count=new_leaderboard.vote_count,
-        view_count=new_leaderboard.view_count,
+        view_count=format_view_count(new_leaderboard.view_count),
         created_at=new_leaderboard.created_at,
         updated_at=new_leaderboard.updated_at
     )
@@ -638,7 +639,7 @@ async def get_leaderboards(
             "status": leaderboard.status,
             "item_count": leaderboard.item_count,
             "vote_count": leaderboard.vote_count,
-            "view_count": display_view_count,
+            "view_count": format_view_count(display_view_count),
             "created_at": leaderboard.created_at,
             "updated_at": leaderboard.updated_at
         }
@@ -724,7 +725,7 @@ async def get_leaderboard_detail(
     if leaderboard.applicant:
         applicant_info = await build_user_info(db, leaderboard.applicant)
     
-    # 创建返回对象，使用计算后的浏览量
+    # 创建返回对象，使用计算后的浏览量（格式化显示）
     result = schemas.CustomLeaderboardOut(
         id=leaderboard.id,
         name=leaderboard.name,
@@ -736,7 +737,7 @@ async def get_leaderboard_detail(
         status=leaderboard.status,
         item_count=leaderboard.item_count,
         vote_count=leaderboard.vote_count,
-        view_count=display_view_count,
+        view_count=format_view_count(display_view_count),
         created_at=leaderboard.created_at,
         updated_at=leaderboard.updated_at
     )

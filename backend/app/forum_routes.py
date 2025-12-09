@@ -842,6 +842,43 @@ async def get_post_display_view_count(post_id: int, db_view_count: int) -> int:
     return db_view_count
 
 
+def format_view_count(count: int) -> str:
+    """
+    格式化浏览量，超过1000、10000、100000时使用模糊显示
+    
+    规则：
+    - 超过1000：显示为 "1.2k" 格式
+    - 超过10000：显示为 "1.2万" 格式
+    - 超过100000：显示为 "10万+" 格式
+    """
+    if count < 1000:
+        return str(count)
+    elif count < 10000:
+        # 超过1000，显示为 k 格式（保留一位小数，向下取整）
+        k_value = count / 1000.0
+        # 向下取整到一位小数
+        k_value_floor = int(k_value * 10) / 10.0
+        if abs(k_value_floor - int(k_value_floor)) < 0.01:
+            return f"{int(k_value_floor)}k"
+        formatted = f"{k_value_floor:.1f}k"
+        # 移除末尾的0和小数点
+        return formatted.rstrip('0').rstrip('.')
+    elif count < 100000:
+        # 超过10000，显示为万格式（保留一位小数，向下取整）
+        wan_value = count / 10000.0
+        # 向下取整到一位小数
+        wan_value_floor = int(wan_value * 10) / 10.0
+        if abs(wan_value_floor - int(wan_value_floor)) < 0.01:
+            return f"{int(wan_value_floor)}万"
+        formatted = f"{wan_value_floor:.1f}万"
+        # 移除末尾的0和小数点
+        return formatted.rstrip('0').rstrip('.')
+    else:
+        # 超过100000，显示为 "10万+" 格式
+        wan_value = count // 10000
+        return f"{wan_value}万+"
+
+
 async def update_category_stats(category_id: int, db: AsyncSession):
     """更新板块统计信息"""
     # 统计可见帖子数
@@ -985,7 +1022,7 @@ async def get_visible_forums(
                                     author=author_info,
                                     last_reply_at=latest_post.last_reply_at or latest_post.created_at,
                                     reply_count=latest_post.reply_count,
-                                    view_count=display_view_count
+                                    view_count=format_view_count(display_view_count)
                                 )
                             
                             category_out = schemas.ForumCategoryOut(
@@ -2115,7 +2152,7 @@ async def get_posts(
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
-            view_count=display_view_count,
+            view_count=format_view_count(display_view_count),
             reply_count=post.reply_count,
             like_count=post.like_count,
             is_pinned=post.is_pinned,
@@ -2228,7 +2265,7 @@ async def get_post(
         content=post.content,
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
         author=await get_post_author_info(db, post, request),
-        view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
+        view_count=format_view_count(display_view_count),  # 使用包含 Redis 增量的浏览量，格式化显示
         reply_count=post.reply_count,
         like_count=post.like_count,
         favorite_count=post.favorite_count,
