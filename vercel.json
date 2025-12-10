@@ -1,0 +1,162 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "link2ur.com"
+        }
+      ],
+      "destination": "https://www.link2ur.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "x-forwarded-proto",
+          "value": "http"
+        }
+      ],
+      "destination": "https://www.link2ur.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/tasks",
+      "destination": "/en/tasks",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/en/about",
+      "permanent": true
+    },
+    {
+      "source": "/partners",
+      "destination": "/en/partners",
+      "permanent": true
+    },
+    {
+      "source": "/faq",
+      "destination": "/en/faq",
+      "permanent": true
+    },
+    {
+      "source": "/join-us",
+      "destination": "/en/join-us",
+      "permanent": true
+    },
+    {
+      "source": "/terms",
+      "destination": "/en/terms",
+      "permanent": true
+    },
+    {
+      "source": "/privacy",
+      "destination": "/en/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/merchant-cooperation",
+      "destination": "/en/merchant-cooperation",
+      "permanent": true
+    },
+    {
+      "source": "/contact",
+      "destination": "/en/faq",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "destination": "/en/",
+      "permanent": true
+    },
+    {
+      "source": "/en",
+      "destination": "/en/",
+      "permanent": true
+    },
+    {
+      "source": "/zh",
+      "destination": "/zh/",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://api.link2ur.com/api/$1"
+    },
+    {
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://api.link2ur.com/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    },
+    {
+      "source": "/baidu_verify_codeva-N1G3JdDSeL.html",
+      "destination": "/baidu_verify_codeva-N1G3JdDSeL.html"
+    },
+    {
+      "source": "/BingSiteAuth.xml",
+      "destination": "/BingSiteAuth.xml"
+    },
+    {
+      "source": "/logo192.png",
+      "destination": "/logo192.png"
+    },
+    {
+      "source": "/logo512.png",
+      "destination": "/logo512.png"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://api.link2ur.com",
+    "REACT_APP_WS_URL": "wss://api.link2ur.com"
+  }
+}

@@ -669,23 +669,15 @@ async def build_user_info(
             is_admin=True
         )
     
-    # 检查是否有管理员会话（仅在管理员页面操作时）
-    # 注意：这里不检查邮箱匹配，因为用户和管理员是独立的身份系统
-    is_admin = False
-    if request:
-        try:
-            admin_user = await get_current_admin_async(request, db)
-            if admin_user:
-                # 如果有管理员会话，说明是在管理员页面操作，标记为管理员
-                is_admin = True
-        except HTTPException:
-            pass
+    # 注意：普通用户永远不是管理员
+    # 只有通过 build_admin_user_info 或 force_admin=True 才会标记为管理员
+    # 这里不再检查管理员会话，因为普通用户和管理员是独立的身份系统
     
     return schemas.UserInfo(
         id=user.id,
         name=user.name,
         avatar=user.avatar or None,
-        is_admin=is_admin
+        is_admin=False
     )
 
 

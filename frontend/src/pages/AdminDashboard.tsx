@@ -331,6 +331,7 @@ const AdminDashboard: React.FC = () => {
   const [forumRepliesLoading, setForumRepliesLoading] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyingToReplyId, setReplyingToReplyId] = useState<number | null>(null);
 
   // 举报管理相关状态
   const [forumReports, setForumReports] = useState<any[]>([]);
@@ -4736,10 +4737,12 @@ const AdminDashboard: React.FC = () => {
     try {
       setReplySubmitting(true);
       await createForumReply(selectedForumPost.id, {
-        content: replyContent
+        content: replyContent,
+        parent_reply_id: replyingToReplyId || undefined
       });
       message.success('回复成功');
       setReplyContent('');
+      setReplyingToReplyId(null);
       // 重新加载回复列表
       const repliesData = await getForumReplies(selectedForumPost.id, { page: 1, page_size: 50 });
       setForumReplies(repliesData.replies || []);
@@ -5676,6 +5679,7 @@ const AdminDashboard: React.FC = () => {
                   setSelectedForumPost(null);
                   setForumReplies([]);
                   setReplyContent('');
+                  setReplyingToReplyId(null);
                 }}
                 style={{
                   padding: '4px 12px',
@@ -5736,14 +5740,40 @@ const AdminDashboard: React.FC = () => {
                           borderLeft: '3px solid #007bff',
                           marginLeft: level * 24
                         }}>
-                          <div style={{ marginBottom: '8px', fontSize: '14px' }}>
-                            <span style={{ fontWeight: '500' }}>{reply.author?.name || '未知用户'}</span>
-                            {reply.author?.is_admin && (
-                              <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#1890ff', color: 'white', borderRadius: '4px', fontSize: '12px' }}>官方</span>
-                            )}
-                            <span style={{ marginLeft: '12px', color: '#999', fontSize: '12px' }}>
-                              {dayjs(reply.created_at).format('YYYY-MM-DD HH:mm:ss')}
-                            </span>
+                          <div style={{ marginBottom: '8px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                              <span style={{ fontWeight: '500' }}>{reply.author?.name || '未知用户'}</span>
+                              {reply.author?.is_admin === true && (
+                                <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#1890ff', color: 'white', borderRadius: '4px', fontSize: '12px' }}>官方</span>
+                              )}
+                              <span style={{ marginLeft: '12px', color: '#999', fontSize: '12px' }}>
+                                {dayjs(reply.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setReplyingToReplyId(reply.id);
+                                // 滚动到回复输入框
+                                setTimeout(() => {
+                                  const textarea = document.querySelector('textarea[placeholder="请输入回复内容..."]') as HTMLTextAreaElement;
+                                  if (textarea) {
+                                    textarea.focus();
+                                    textarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                  }
+                                }, 100);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                border: '1px solid #007bff',
+                                background: 'white',
+                                color: '#007bff',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              回复
+                            </button>
                           </div>
                           <div style={{ 
                             whiteSpace: 'pre-wrap',
@@ -5770,11 +5800,33 @@ const AdminDashboard: React.FC = () => {
             {/* 回复输入框 */}
             {!selectedForumPost.is_locked && (
               <div>
-                <h4 style={{ marginBottom: '12px' }}>管理员回复</h4>
+                <h4 style={{ marginBottom: '12px' }}>
+                  管理员回复
+                  {replyingToReplyId && (
+                    <span style={{ marginLeft: '12px', fontSize: '14px', color: '#666', fontWeight: 'normal' }}>
+                      (回复 #{replyingToReplyId})
+                      <button
+                        onClick={() => setReplyingToReplyId(null)}
+                        style={{
+                          marginLeft: '8px',
+                          padding: '2px 6px',
+                          border: '1px solid #ddd',
+                          background: 'white',
+                          color: '#666',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        取消
+                      </button>
+                    </span>
+                  )}
+                </h4>
                 <textarea
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="请输入回复内容..."
+                  placeholder={replyingToReplyId ? `回复 #${replyingToReplyId}...` : "请输入回复内容..."}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -5792,6 +5844,7 @@ const AdminDashboard: React.FC = () => {
                   <button
                     onClick={() => {
                       setReplyContent('');
+                      setReplyingToReplyId(null);
                     }}
                     style={{
                       padding: '8px 16px',
