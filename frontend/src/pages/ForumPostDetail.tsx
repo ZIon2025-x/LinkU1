@@ -834,8 +834,14 @@ const ForumPostDetail: React.FC = () => {
   const renderReply = (reply: ForumReply, level: number = 0) => {
     if (level > 2) return null; // 最多3层嵌套
     
+    const isNested = level > 0;
+    
     return (
-      <div key={reply.id} className={styles.replyItem} style={{ marginLeft: level * 24 }}>
+      <div 
+        key={reply.id} 
+        className={`${styles.replyItem} ${isNested ? styles.nestedReplyItem : ''}`}
+        data-level={level}
+      >
         <div className={styles.replyHeader}>
           <Space>
             <Avatar 

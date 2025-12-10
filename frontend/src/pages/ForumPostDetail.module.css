@@ -104,9 +104,37 @@
 
 .replyItem {
   padding: 16px;
-  background: #fafafa;
+  background: #fff;
   border-radius: 8px;
   border-left: 3px solid #1890ff;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.replyItem:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.replyItem.nestedReplyItem {
+  background: #f8f9fa;
+  border-left: 3px solid #52c41a;
+  margin-left: 0;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+
+.replyItem.nestedReplyItem::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #52c41a, #73d13d);
+  border-radius: 3px 0 0 3px;
 }
 
 .replyHeader {
@@ -123,8 +151,21 @@
 
 .nestedReplies {
   margin-top: 12px;
-  padding-left: 16px;
-  border-left: 2px solid #e8e8e8;
+  padding-left: 0;
+  border-left: none;
+  position: relative;
+}
+
+.nestedReplies::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -12px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, #d9d9d9 20px, #d9d9d9 calc(100% - 20px), transparent);
+  border-radius: 2px;
+  opacity: 0.6;
 }
 
 .replyCard {
@@ -268,6 +309,11 @@
     border-left-width: 3px;
   }
 
+  .replyItem.nestedReplyItem {
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+
   .replyHeader {
     flex-wrap: wrap;
     gap: 8px;
@@ -296,7 +342,12 @@
 
   .nestedReplies {
     margin-top: 8px;
-    padding-left: 12px;
+    padding-left: 0;
+  }
+
+  .replyItem.nestedReplyItem {
+    padding: 10px 12px;
+    margin-top: 8px;
   }
 
   .replyCard {
