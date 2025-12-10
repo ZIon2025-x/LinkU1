@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, 
@@ -190,7 +190,7 @@ const LeaderboardItemDetail: React.FC = () => {
     return formatRelativeTime(time);
   };
 
-  const handleLikeComment = async (voteId: number) => {
+  const handleLikeComment = useCallback(async (voteId: number) => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -220,7 +220,20 @@ const LeaderboardItemDetail: React.FC = () => {
         message.error(errorMsg);
       }
     }
-  };
+  }, [user, t]);
+
+  // 预计算匿名用户计数，避免在渲染时重复计算（O(n²) -> O(n)）
+  const anonymousCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    let currentCount = 0;
+    votes.forEach((vote, index) => {
+      if (vote.is_anonymous) {
+        currentCount++;
+      }
+      counts.set(index, currentCount);
+    });
+    return counts;
+  }, [votes]);
 
   if (loading) {
     return (
@@ -429,13 +442,8 @@ const LeaderboardItemDetail: React.FC = () => {
             <>
               <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {votes.map((vote, index) => {
-                  // 为匿名留言分配序号（按时间顺序）
-                  let anonymousCount = 0;
-                  for (let i = 0; i <= index; i++) {
-                    if (votes[i].is_anonymous) {
-                      anonymousCount++;
-                    }
-                  }
+                  // 使用预计算的匿名计数（避免 O(n²) 复杂度）
+                  const anonymousCount = anonymousCounts.get(index) || 0;
                   const displayName = vote.is_anonymous 
                     ? `${t('forum.anonymousUser')} #${anonymousCount}` 
                     : (vote.user_id ? `${t('forum.user')} ${vote.user_id}` : t('forum.unknownUser'));

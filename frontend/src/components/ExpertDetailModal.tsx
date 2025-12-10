@@ -150,13 +150,45 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
                   }}
                 />
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 8px 0', color: 'white', fontSize: '20px', fontWeight: 600 }}>
-                    {expert.expert_name || expert.name}
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, color: 'white', fontSize: '20px', fontWeight: 600 }}>
+                      {expert.expert_name || expert.name}
+                    </h3>
+                    {expert.is_verified && (
+                      <span style={{
+                        background: '#10b981',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        ✓
+                      </span>
+                    )}
+                    {expert.user_level && (
+                      <span style={{
+                        padding: '4px 10px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: 'white'
+                      }}>
+                        {expert.user_level === 'super' ? (t('taskExperts.superExpert') || '超级达人') :
+                         expert.user_level === 'vip' ? (t('taskExperts.vipExpert') || 'VIP达人') :
+                         (t('taskExperts.normalExpert') || '普通达人')}
+                      </span>
+                    )}
+                  </div>
                   <p style={{ margin: '0 0 12px 0', color: 'rgba(255, 255, 255, 0.9)', fontSize: '14px', lineHeight: 1.6 }}>
                     {expert.bio || expert.bio_en || ''}
                   </p>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: 'rgba(255,255,255,0.9)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: 'rgba(255,255,255,0.9)', flexWrap: 'wrap', marginBottom: '12px' }}>
                     {expert.avg_rating > 0 && (
                       <span>⭐ {expert.avg_rating.toFixed(1)}</span>
                     )}
@@ -166,10 +198,22 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
                     {expert.completion_rate !== undefined && (
                       <span>📊 {expert.completion_rate}% {t('taskExperts.completionRate') || '完成率'}</span>
                     )}
-                    {expert.location && expert.location !== 'Online' && (
-                      <span>📍 {expert.location}</span>
-                    )}
                   </div>
+                  {/* 城市和分类信息 */}
+                  {(expert.location || expert.category) && (
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'rgba(255,255,255,0.8)', flexWrap: 'wrap', marginTop: '8px' }}>
+                      {expert.location && (
+                        <span>📍 {expert.location}</span>
+                      )}
+                      {expert.category && (() => {
+                        const categoryKey = expert.category.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
+                        const categoryLabel = t(`taskExperts.${categoryKey}`) || expert.category;
+                        return (
+                          <span>💼 {categoryLabel}</span>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -255,22 +299,21 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
               )}
 
               {/* 服务信息 */}
-              <div>
-                <h4 style={{ margin: '0 0 12px 0', color: 'white', fontSize: '16px', fontWeight: 600 }}>
-                  {t('taskExperts.serviceInfo') || '服务信息'}
-                </h4>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', lineHeight: 1.8 }}>
-                  {expert.response_time && (
-                    <div>{t('taskExperts.responseTime') || '响应时间'}：{expert.response_time}</div>
-                  )}
-                  {expert.success_rate !== undefined && (
-                    <div>{t('taskExperts.successRate') || '成功率'}：{expert.success_rate}%</div>
-                  )}
-                  {expert.completed_tasks !== undefined && (
-                    <div>{t('taskExperts.completedTasks') || '已完成任务'}：{expert.completed_tasks}个</div>
-                  )}
+              {(expert.response_time || expert.success_rate !== undefined) && (
+                <div>
+                  <h4 style={{ margin: '0 0 12px 0', color: 'white', fontSize: '16px', fontWeight: 600 }}>
+                    {t('taskExperts.serviceInfo') || '服务信息'}
+                  </h4>
+                  <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', lineHeight: 1.8 }}>
+                    {expert.response_time && (
+                      <div>{t('taskExperts.responseTime') || '响应时间'}：{expert.response_time}</div>
+                    )}
+                    {expert.success_rate !== undefined && (
+                      <div>{t('taskExperts.successRate') || '成功率'}：{expert.success_rate}%</div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* 底部按钮 */}
