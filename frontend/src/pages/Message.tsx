@@ -328,6 +328,8 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
               src={taskImageUrl}
               alt={task.title}
               className={styles.taskImage}
+              width={50}
+              height={50}
               onError={handleImageError}
             />
           ) : (
@@ -3918,6 +3920,8 @@ const MessagePage: React.FC = () => {
                     src={getTaskImageUrl(activeTask.images[0], API_BASE_URL) || activeTask.images[0]}
                     alt={activeTask.title}
                     className={styles.chatHeaderTaskImageImg}
+                    width={50}
+                    height={50}
                     onError={() => {
                       // 如果任务图片加载失败，显示任务类型emoji图标
                       const placeholder = document.querySelector(`.${styles.chatHeaderTaskImagePlaceholder}`) as HTMLElement;

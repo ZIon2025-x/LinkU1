@@ -245,6 +245,10 @@
 .taskImageContainer {
   position: relative;
   flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 .taskImage {
@@ -253,6 +257,8 @@
   border-radius: 8px;
   object-fit: cover;
   display: block;
+  max-width: 50px;
+  max-height: 50px;
 }
 
 .taskImagePlaceholder {
@@ -397,11 +403,17 @@
   position: relative;
   flex-shrink: 0;
   cursor: pointer;
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 .chatHeaderTaskImageImg {
   width: 50px;
   height: 50px;
+  max-width: 50px;
+  max-height: 50px;
   border-radius: 8px;
   object-fit: cover;
   display: block;
