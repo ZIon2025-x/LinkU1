@@ -58,6 +58,8 @@ import api, {
   unhideForumPost,
   getForumReports,
   processForumReport,
+  getForumReplies,
+  createForumReply,
   getFleaMarketReports,
   processFleaMarketReport,
   getFleaMarketItemsAdmin,
@@ -322,6 +324,13 @@ const AdminDashboard: React.FC = () => {
     is_deleted: undefined as boolean | undefined,
     is_visible: undefined as boolean | undefined
   });
+  // 帖子详情和回复相关状态
+  const [showForumPostDetailModal, setShowForumPostDetailModal] = useState(false);
+  const [selectedForumPost, setSelectedForumPost] = useState<any>(null);
+  const [forumReplies, setForumReplies] = useState<any[]>([]);
+  const [forumRepliesLoading, setForumRepliesLoading] = useState(false);
+  const [replyContent, setReplyContent] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
 
   // 举报管理相关状态
   const [forumReports, setForumReports] = useState<any[]>([]);
@@ -4700,6 +4709,50 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // 查看帖子详情
+  const handleViewForumPostDetail = async (post: any) => {
+    try {
+      setForumRepliesLoading(true);
+      const fullPost = await getForumPost(post.id);
+      setSelectedForumPost(fullPost);
+      setShowForumPostDetailModal(true);
+      // 加载回复列表
+      const repliesData = await getForumReplies(post.id, { page: 1, page_size: 50 });
+      setForumReplies(repliesData.replies || []);
+    } catch (error: any) {
+      message.error('加载帖子详情失败');
+    } finally {
+      setForumRepliesLoading(false);
+    }
+  };
+
+  // 提交回复
+  const handleSubmitReply = async () => {
+    if (!replyContent.trim()) {
+      message.warning('请输入回复内容');
+      return;
+    }
+    if (!selectedForumPost) return;
+    try {
+      setReplySubmitting(true);
+      await createForumReply(selectedForumPost.id, {
+        content: replyContent
+      });
+      message.success('回复成功');
+      setReplyContent('');
+      // 重新加载回复列表
+      const repliesData = await getForumReplies(selectedForumPost.id, { page: 1, page_size: 50 });
+      setForumReplies(repliesData.replies || []);
+      // 更新帖子回复数
+      const updatedPost = await getForumPost(selectedForumPost.id);
+      setSelectedForumPost(updatedPost);
+    } catch (error: any) {
+      message.error(error?.response?.data?.detail || '回复失败');
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
+
   const renderForumCategories = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -5265,6 +5318,12 @@ const AdminDashboard: React.FC = () => {
                   <td className={styles.tableBody}>
                     <div className={styles.actionButtonGroupSmall}>
                       <button
+                        onClick={() => handleViewForumPostDetail(post)}
+                        className={`${styles.actionButtonSmall} ${styles.actionButtonSmallPrimary}`}
+                      >
+                        查看详情
+                      </button>
+                      <button
                         onClick={() => handleEditForumPost(post)}
                         className={`${styles.actionButtonSmall} ${styles.actionButtonSmallPrimary}`}
                       >
@@ -5582,8 +5641,196 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 帖子详情模态框 */}
+      {showForumPostDetailModal && selectedForumPost && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '900px',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>帖子详情</h3>
+              <button
+                onClick={() => {
+                  setShowForumPostDetailModal(false);
+                  setSelectedForumPost(null);
+                  setForumReplies([]);
+                  setReplyContent('');
+                }}
+                style={{
+                  padding: '4px 12px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                关闭
+              </button>
+            </div>
+
+            {/* 帖子内容 */}
+            <div style={{ marginBottom: '24px', padding: '16px', background: '#f8f9fa', borderRadius: '4px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <h4 style={{ margin: '0 0 8px 0' }}>{selectedForumPost.title}</h4>
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                  <span>板块：{selectedForumPost.category?.name || '-'}</span>
+                  <span style={{ marginLeft: '16px' }}>作者：{selectedForumPost.author?.name || '-'}</span>
+                  {selectedForumPost.author?.is_admin && (
+                    <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#1890ff', color: 'white', borderRadius: '4px', fontSize: '12px' }}>官方</span>
+                  )}
+                  <span style={{ marginLeft: '16px' }}>回复数：{selectedForumPost.reply_count || 0}</span>
+                </div>
+              </div>
+              <div style={{ 
+                padding: '12px', 
+                background: 'white', 
+                borderRadius: '4px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {selectedForumPost.content}
+              </div>
+            </div>
+
+            {/* 回复列表 */}
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ marginBottom: '12px' }}>回复列表</h4>
+              {forumRepliesLoading ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>加载中...</div>
+              ) : forumReplies.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>暂无回复</div>
+              ) : (
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {(() => {
+                    // 递归渲染回复（包括嵌套回复）
+                    const renderReply = (reply: any, level: number = 0) => {
+                      if (level > 2) return null; // 最多3层嵌套
+                      return (
+                        <div key={reply.id} style={{ 
+                          marginBottom: '12px', 
+                          padding: '12px', 
+                          background: '#f8f9fa', 
+                          borderRadius: '4px',
+                          borderLeft: '3px solid #007bff',
+                          marginLeft: level * 24
+                        }}>
+                          <div style={{ marginBottom: '8px', fontSize: '14px' }}>
+                            <span style={{ fontWeight: '500' }}>{reply.author?.name || '未知用户'}</span>
+                            {reply.author?.is_admin && (
+                              <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#1890ff', color: 'white', borderRadius: '4px', fontSize: '12px' }}>官方</span>
+                            )}
+                            <span style={{ marginLeft: '12px', color: '#999', fontSize: '12px' }}>
+                              {dayjs(reply.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                            </span>
+                          </div>
+                          <div style={{ 
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            color: '#333'
+                          }}>
+                            {reply.content}
+                          </div>
+                          {/* 嵌套回复 */}
+                          {reply.replies && reply.replies.length > 0 && (
+                            <div style={{ marginTop: '12px', paddingLeft: '12px', borderLeft: '2px solid #e0e0e0' }}>
+                              {reply.replies.map((childReply: any) => renderReply(childReply, level + 1))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    };
+                    return forumReplies.map((reply: any) => renderReply(reply));
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* 回复输入框 */}
+            {!selectedForumPost.is_locked && (
+              <div>
+                <h4 style={{ marginBottom: '12px' }}>管理员回复</h4>
+                <textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="请输入回复内容..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    minHeight: '120px',
+                    fontFamily: 'inherit',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    marginBottom: '12px'
+                  }}
+                  maxLength={10000}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      setReplyContent('');
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      border: '1px solid #ddd',
+                      background: 'white',
+                      color: '#666',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    清空
+                  </button>
+                  <button
+                    onClick={handleSubmitReply}
+                    disabled={replySubmitting || !replyContent.trim()}
+                    style={{
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: replySubmitting || !replyContent.trim() ? '#ccc' : '#007bff',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: replySubmitting || !replyContent.trim() ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {replySubmitting ? '提交中...' : '提交回复'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {selectedForumPost.is_locked && (
+              <div style={{ padding: '12px', background: '#fff3cd', borderRadius: '4px', color: '#856404' }}>
+                帖子已锁定，无法回复
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
-  ), [forumPostFilter, forumCategories, forumPosts, forumPostsLoading, forumPostsPage, forumPostsTotal, loadForumPosts, handleCreateForumPost, handleEditForumPost, pinForumPost, unpinForumPost, featureForumPost, unfeatureForumPost, lockForumPost, unlockForumPost, restoreForumPost, unhideForumPost, deleteForumPost, setForumPostFilter, setForumPostsPage, setShowForumPostModal, setForumPostForm]);
+  ), [forumPostFilter, forumCategories, forumPosts, forumPostsLoading, forumPostsPage, forumPostsTotal, loadForumPosts, handleCreateForumPost, handleEditForumPost, handleViewForumPostDetail, pinForumPost, unpinForumPost, featureForumPost, unfeatureForumPost, lockForumPost, unlockForumPost, restoreForumPost, unhideForumPost, deleteForumPost, setForumPostFilter, setForumPostsPage, setShowForumPostModal, setForumPostForm, showForumPostDetailModal, selectedForumPost, forumReplies, forumRepliesLoading, replyContent, replySubmitting, handleSubmitReply]);
 
   // 加载论坛举报 - 使用useCallback优化
   const loadForumReports = useCallback(async () => {

@@ -763,6 +763,52 @@ async def get_post_author_info(
         is_admin=False
     )
 
+
+async def get_reply_author_info(
+    db: AsyncSession,
+    reply: models.ForumReply,
+    request: Optional[Request] = None
+) -> schemas.UserInfo:
+    """获取回复作者信息（支持管理员回复）"""
+    # 管理员回复
+    if reply.admin_author_id:
+        reply_inspect = inspect(reply)
+        admin_attr = reply_inspect.attrs.admin_author
+        if admin_attr.loaded_value is not NO_VALUE:
+            admin_author = admin_attr.loaded_value
+            if admin_author:
+                return await build_admin_user_info(admin_author)
+        else:
+            admin_result = await db.execute(
+                select(models.AdminUser).where(models.AdminUser.id == reply.admin_author_id)
+            )
+            admin_author = admin_result.scalar_one_or_none()
+            if admin_author:
+                return await build_admin_user_info(admin_author)
+    
+    # 普通用户回复
+    if reply.author_id:
+        reply_inspect = inspect(reply)
+        author_attr = reply_inspect.attrs.author
+        if author_attr.loaded_value is not NO_VALUE:
+            author = author_attr.loaded_value
+            if author:
+                return await build_user_info(db, author, request, force_admin=False)
+        else:
+            author_result = await db.execute(
+                select(models.User).where(models.User.id == reply.author_id)
+            )
+            author = author_result.scalar_one_or_none()
+            if author:
+                return await build_user_info(db, author, request, force_admin=False)
+    
+    return schemas.UserInfo(
+        id="unknown",
+        name="已删除用户",
+        avatar=None,
+        is_admin=False
+    )
+
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
     # 简单的 Markdown 去除（移除常见标记）
@@ -3166,6 +3212,7 @@ async def get_replies(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumReply.author),
+        selectinload(models.ForumReply.admin_author),
         selectinload(models.ForumReply.parent_reply),
         selectinload(models.ForumReply.child_replies)
     )
@@ -3221,7 +3268,7 @@ async def get_replies(
         reply_out = schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=await build_user_info(db, reply.author, request),
+            author=await get_reply_author_info(db, reply, request),
             parent_reply_id=reply.parent_reply_id,
             reply_level=reply.reply_level,
             like_count=reply.like_count,
@@ -3256,19 +3303,46 @@ async def create_reply(
     post_id: int,
     reply: schemas.ForumReplyCreate,
     request: Request,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """创建回复"""
+    # 尝试获取管理员会话（用于后台官方回复）
+    admin_user = None
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
+    # 如果既没有普通用户也没有管理员，拒绝
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息",
+            headers={"X-Error-Code": "UNAUTHORIZED"}
+        )
+    
     # 频率限制：检查用户最近30秒内是否发过回复
     thirty_seconds_ago = datetime.now(timezone.utc) - timedelta(seconds=30)
-    recent_reply_result = await db.execute(
-        select(func.count(models.ForumReply.id))
-        .where(
-            models.ForumReply.author_id == current_user.id,
-            models.ForumReply.created_at >= thirty_seconds_ago
+    if current_user:
+        recent_reply_result = await db.execute(
+            select(func.count(models.ForumReply.id))
+            .where(
+                models.ForumReply.author_id == current_user.id,
+                models.ForumReply.created_at >= thirty_seconds_ago
+            )
         )
-    )
+    else:
+        recent_reply_result = await db.execute(
+            select(func.count(models.ForumReply.id))
+            .where(
+                models.ForumReply.admin_author_id == admin_user.id,
+                models.ForumReply.created_at >= thirty_seconds_ago
+            )
+        )
     recent_reply_count = recent_reply_result.scalar() or 0
     if recent_reply_count > 0:
         raise HTTPException(
@@ -3279,16 +3353,28 @@ async def create_reply(
     
     # 重复内容检测：检查用户最近2分钟内是否在同一帖子下发过相同内容的回复
     two_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=2)
-    duplicate_reply_result = await db.execute(
-        select(models.ForumReply)
-        .where(
-            models.ForumReply.author_id == current_user.id,
-            models.ForumReply.post_id == post_id,
-            models.ForumReply.content == reply.content,
-            models.ForumReply.created_at >= two_minutes_ago
+    if current_user:
+        duplicate_reply_result = await db.execute(
+            select(models.ForumReply)
+            .where(
+                models.ForumReply.author_id == current_user.id,
+                models.ForumReply.post_id == post_id,
+                models.ForumReply.content == reply.content,
+                models.ForumReply.created_at >= two_minutes_ago
+            )
+            .limit(1)
         )
-        .limit(1)
-    )
+    else:
+        duplicate_reply_result = await db.execute(
+            select(models.ForumReply)
+            .where(
+                models.ForumReply.admin_author_id == admin_user.id,
+                models.ForumReply.post_id == post_id,
+                models.ForumReply.content == reply.content,
+                models.ForumReply.created_at >= two_minutes_ago
+            )
+            .limit(1)
+        )
     duplicate_reply = duplicate_reply_result.scalar_one_or_none()
     if duplicate_reply:
         raise HTTPException(
@@ -3296,16 +3382,6 @@ async def create_reply(
             detail="您最近2分钟内已在该帖子下发过相同内容的回复，请勿重复发布",
             headers={"X-Error-Code": "DUPLICATE_REPLY"}
         )
-    
-    # 检查是否有管理员会话（在管理员页面操作时）
-    is_admin_user = False
-    admin_user = None
-    try:
-        admin_user = await get_current_admin_async(request, db)
-        if admin_user:
-            is_admin_user = True
-    except HTTPException:
-        pass
     
     # 获取帖子（使用权限检查函数）
     post = await get_post_with_permissions(post_id, current_user, is_admin_user, db, admin_user)
@@ -3358,7 +3434,8 @@ async def create_reply(
         content=reply.content,
         parent_reply_id=reply.parent_reply_id,
         reply_level=reply_level,
-        author_id=current_user.id
+        author_id=current_user.id if current_user else None,
+        admin_author_id=admin_user.id if admin_user else None
     )
     db.add(db_reply)
     await db.flush()
@@ -3370,20 +3447,20 @@ async def create_reply(
         await db.flush()
     
     await db.commit()
-    await db.refresh(db_reply, ["author"])
+    await db.refresh(db_reply, ["author", "admin_author"])
     
     # 发送通知给帖子作者和父回复作者
     notifications_to_create = []
     
     # 通知帖子作者（如果回复者不是帖子作者）
     # 注意：只通知普通用户作者，管理员作者不接收通知（因为通知系统只支持普通用户）
-    if post.author_id and post.author_id != current_user.id:
+    if post.author_id and (not current_user or post.author_id != current_user.id):
         notifications_to_create.append(
             models.ForumNotification(
                 notification_type="reply_post",
                 target_type="reply",
                 target_id=db_reply.id,
-                from_user_id=current_user.id,
+                from_user_id=current_user.id if current_user else None,
                 to_user_id=post.author_id
             )
         )
@@ -3396,14 +3473,14 @@ async def create_reply(
         parent_reply = parent_result.scalar_one()
         # 只通知普通用户作者，管理员作者不接收通知
         if (parent_reply.author_id and 
-            parent_reply.author_id != current_user.id and 
+            (not current_user or parent_reply.author_id != current_user.id) and 
             parent_reply.author_id != post.author_id):
             notifications_to_create.append(
                 models.ForumNotification(
                     notification_type="reply_reply",
                     target_type="reply",
                     target_id=db_reply.id,
-                    from_user_id=current_user.id,
+                    from_user_id=current_user.id if current_user else None,
                     to_user_id=parent_reply.author_id
                 )
             )
@@ -3417,7 +3494,7 @@ async def create_reply(
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=await build_user_info(db, db_reply.author, request, force_admin=is_admin_user),
+        author=await get_reply_author_info(db, db_reply, request),
         parent_reply_id=db_reply.parent_reply_id,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
@@ -3433,7 +3510,7 @@ async def update_reply(
     reply_id: int,
     reply: schemas.ForumReplyUpdate,
     request: Request,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """更新回复"""
@@ -3448,8 +3525,26 @@ async def update_reply(
             detail="回复不存在"
         )
     
-    # 检查权限：只有作者可以编辑
-    if db_reply.author_id != current_user.id:
+    # 尝试获取管理员会话
+    admin_user = None
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息"
+        )
+    
+    # 检查权限：作者或对应管理员可以编辑
+    is_author = current_user and db_reply.author_id == current_user.id
+    is_admin_author = admin_user and db_reply.admin_author_id == admin_user.id
+    if not is_author and not is_admin_author:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="只能编辑自己的回复"
@@ -3471,17 +3566,9 @@ async def update_reply(
     
     if post:
         # 检查是否有管理员会话
-        is_admin_user = False
-        try:
-            admin_user = await get_current_admin_async(request, db)
-            if admin_user:
-                is_admin_user = True
-        except HTTPException:
-            pass
-        
         # 检查帖子所属板块的可见性（学校板块需要权限）
         # 管理员可以绕过权限检查
-        if not is_admin_user:
+        if not is_admin_user and current_user:
             await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
     
     # 更新内容
@@ -3489,23 +3576,24 @@ async def update_reply(
     db_reply.updated_at = get_utc_time()
     
     await db.commit()
-    await db.refresh(db_reply, ["author"])
+    await db.refresh(db_reply, ["author", "admin_author"])
     
     # 检查是否已点赞
     is_liked = False
-    like_result = await db.execute(
-        select(models.ForumLike).where(
-            models.ForumLike.target_type == "reply",
-            models.ForumLike.target_id == db_reply.id,
-            models.ForumLike.user_id == current_user.id
+    if current_user:
+        like_result = await db.execute(
+            select(models.ForumLike).where(
+                models.ForumLike.target_type == "reply",
+                models.ForumLike.target_id == db_reply.id,
+                models.ForumLike.user_id == current_user.id
+            )
         )
-    )
-    is_liked = like_result.scalar_one_or_none() is not None
+        is_liked = like_result.scalar_one_or_none() is not None
     
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=await build_user_info(db, db_reply.author, request, force_admin=is_admin_user),
+        author=await get_reply_author_info(db, db_reply, request),
         parent_reply_id=db_reply.parent_reply_id,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
@@ -3519,7 +3607,8 @@ async def update_reply(
 @router.delete("/replies/{reply_id}")
 async def delete_reply(
     reply_id: int,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    request: Request,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """删除回复（软删除）"""
@@ -3534,8 +3623,23 @@ async def delete_reply(
             detail="回复不存在"
         )
     
-    # 检查权限：只有作者可以删除
-    if db_reply.author_id != current_user.id:
+    # 获取管理员会话（用于管理员回复）
+    admin_user = None
+    try:
+        admin_user = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+    
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息"
+        )
+    
+    # 检查权限：作者或管理员作者可以删除
+    is_author = current_user and db_reply.author_id == current_user.id
+    is_admin_author = admin_user and db_reply.admin_author_id == admin_user.id
+    if not is_author and not is_admin_author:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="只能删除自己的回复"
@@ -4745,7 +4849,8 @@ async def get_my_replies(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumReply.post).selectinload(models.ForumPost.category),
-        selectinload(models.ForumReply.author)
+        selectinload(models.ForumReply.author),
+        selectinload(models.ForumReply.admin_author)
     )
     
     result = await db.execute(query)
@@ -4776,7 +4881,7 @@ async def get_my_replies(
         reply_list.append(schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=await build_user_info(db, reply.author),
+            author=await get_reply_author_info(db, reply),
             parent_reply_id=reply.parent_reply_id,
             reply_level=reply.reply_level,
             like_count=reply.like_count,

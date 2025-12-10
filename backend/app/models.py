@@ -1999,7 +1999,9 @@ class ForumReply(Base):
     post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False)
     parent_reply_id = Column(Integer, ForeignKey("forum_replies.id", ondelete="CASCADE"), nullable=True)
     reply_level = Column(Integer, default=1, server_default=text('1'))
-    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    # 管理员作者（用于后台官方回复）
+    admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="CASCADE"), nullable=True)
     like_count = Column(Integer, default=0, server_default=text('0'))
     is_deleted = Column(Boolean, default=False, server_default=text('false'))
     is_visible = Column(Boolean, default=True, nullable=False, server_default=text('true'))
@@ -2010,6 +2012,7 @@ class ForumReply(Base):
     post = relationship("ForumPost", back_populates="replies")
     parent_reply = relationship("ForumReply", remote_side=[id], backref="child_replies")
     author = relationship("User", foreign_keys=[author_id])
+    admin_author = relationship("AdminUser", foreign_keys=[admin_author_id])
     # 多态关联：使用 primaryjoin 指定连接条件（ForumLike 没有直接外键）
     likes = relationship(
         "ForumLike",
@@ -2020,9 +2023,14 @@ class ForumReply(Base):
     
     __table_args__ = (
         CheckConstraint("reply_level BETWEEN 1 AND 3", name="check_reply_level"),
+        CheckConstraint(
+            "(author_id IS NOT NULL) OR (admin_author_id IS NOT NULL)",
+            name="check_reply_has_author"
+        ),
         Index("idx_forum_replies_post", post_id, created_at),
         Index("idx_forum_replies_parent", parent_reply_id),
         Index("idx_forum_replies_author", author_id, is_deleted, is_visible),
+        Index("idx_forum_replies_admin_author", admin_author_id, is_deleted, is_visible),
     )
 
 
