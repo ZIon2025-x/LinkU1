@@ -261,7 +261,7 @@ const LeaderboardItemDetail: React.FC = () => {
         <div className="item-detail-content" style={{ display: 'flex', gap: 24 }}>
           {/* 左侧：图片 */}
           {item.images && item.images.length > 0 && (
-            <div className="item-images-section" style={{ flexShrink: 0, maxWidth: '250px', boxSizing: 'border-box' }}>
+            <div className="item-images-section" style={{ flexShrink: 0, maxWidth: '250px', boxSizing: 'border-box', overflow: 'hidden' }}>
               <Image.PreviewGroup>
                 <Image
                   className="item-main-image"
@@ -269,7 +269,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   alt={item.name}
                   width={250}
                   height={250}
-                  style={{ objectFit: 'cover', borderRadius: 8, maxWidth: '100%', width: '100%', height: 'auto' }}
+                  style={{ objectFit: 'cover', borderRadius: 8, maxWidth: '100%', maxHeight: '100%', width: '100%', height: 'auto' }}
                   preview
                 />
                 {item.images.length > 1 && (
@@ -281,7 +281,7 @@ const LeaderboardItemDetail: React.FC = () => {
                         alt={`${item.name} - ${t('forum.image')} ${idx + 2}`}
                         width={70}
                         height={70}
-                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                        style={{ objectFit: 'cover', borderRadius: 4, maxWidth: '100%', maxHeight: '100%' }}
                         preview
                       />
                     ))}

@@ -94,16 +94,33 @@ const LazyImage: React.FC<LazyImageProps> = ({
   // 如果图片加载失败，显示占位符
   if (hasError && placeholder) {
     return (
-      <img
+      <div
         ref={imgRef}
-        src={placeholder}
-        alt={alt}
+        style={{
+          position: 'relative',
+          width: width || '100%',
+          height: height || 'auto',
+          overflow: 'hidden',
+          ...style
+        }}
         className={className}
-        width={width}
-        height={height}
-        style={style}
-        loading="lazy"
-      />
+      >
+        <img
+          src={placeholder}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'cover',
+            display: 'block'
+          }}
+        />
+      </div>
     );
   }
 
@@ -114,6 +131,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
         position: 'relative',
         width: width || '100%',
         height: height || 'auto',
+        overflow: 'hidden',
         ...style
       }}
       className={className}
@@ -147,7 +165,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
             transition: 'opacity 0.3s ease-in-out',
             width: '100%',
             height: '100%',
-            objectFit: 'cover'
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'cover',
+            display: 'block'
           }}
         />
       )}
