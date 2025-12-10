@@ -106,6 +106,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
               left: 0,
               width: '100%',
               height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
               objectFit: 'cover',
               zIndex: 1,
               backgroundColor: 'transparent',

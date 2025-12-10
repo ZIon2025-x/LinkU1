@@ -34,7 +34,26 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
     setLoading(true);
     try {
       const data = await getTaskExpert(expertId);
-      setExpert(data);
+      // 确保所有字段都有默认值
+      setExpert({
+        ...data,
+        expert_name: data.expert_name || data.name,
+        name: data.name || data.expert_name,
+        bio: data.bio || data.bio_en || '',
+        bio_en: data.bio_en || data.bio || '',
+        location: data.location || null,
+        category: data.category || null,
+        expertise_areas: data.expertise_areas || [],
+        featured_skills: data.featured_skills || [],
+        achievements: data.achievements || [],
+        avg_rating: data.avg_rating || 0,
+        completed_tasks: data.completed_tasks || 0,
+        completion_rate: data.completion_rate || 0,
+        response_time: data.response_time || null,
+        success_rate: data.success_rate !== undefined ? data.success_rate : null,
+        is_verified: data.is_verified || false,
+        user_level: data.user_level || null
+      });
     } catch (err: any) {
           } finally {
       setLoading(false);
@@ -245,7 +264,7 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
               )}
 
               {/* 特色技能 */}
-              {expert.featured_skills && expert.featured_skills.length > 0 && (
+              {expert.featured_skills && Array.isArray(expert.featured_skills) && expert.featured_skills.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: 'white', fontSize: '16px', fontWeight: 600 }}>
                     {t('taskExperts.featuredSkills') || '特色技能'}
@@ -272,7 +291,7 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
               )}
 
               {/* 成就徽章 */}
-              {expert.achievements && expert.achievements.length > 0 && (
+              {expert.achievements && Array.isArray(expert.achievements) && expert.achievements.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: 'white', fontSize: '16px', fontWeight: 600 }}>
                     {t('taskExperts.achievements') || '成就徽章'}

@@ -46,10 +46,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  max-height: 200px;
 }
 
 .imageContainerMobile {
   aspect-ratio: 9 / 16;
+  max-height: 250px;
 }
 
 /* 任务等级标签 */
