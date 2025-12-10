@@ -62,6 +62,14 @@ try:
 except Exception as e:
     logger.warning(f"配置日志过滤器时出错: {e}")
 
+# 配置敏感信息日志过滤器
+try:
+    from app.logging_filters import setup_sensitive_data_filter
+    setup_sensitive_data_filter()
+    logger.info("敏感信息日志过滤器已启用")
+except Exception as e:
+    logger.warning(f"配置敏感信息日志过滤器时出错: {e}")
+
 # 添加日志过滤器，将 SQLAlchemy 连接池的事件循环错误降级为警告
 # 这些错误不影响应用功能，只是连接池内部清理时的常见问题
 class SQLAlchemyPoolErrorFilter(logging.Filter):
@@ -134,6 +142,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=Config.ALLOWED_METHODS,
     allow_headers=Config.ALLOWED_HEADERS,
+    expose_headers=Config.EXPOSE_HEADERS,
+    max_age=3600,  # 预检请求缓存1小时
 )
 
 # P2 优化：添加 GZip 响应压缩中间件

@@ -10,6 +10,7 @@ import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServi
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import LazyImage from './LazyImage';
 
 interface ServiceDetailModalProps {
   isOpen: boolean;
@@ -241,7 +242,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
               {service.images && service.images.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
                   {service.images.map((img, index) => (
-                    <img
+                    <LazyImage
                       key={index}
                       src={img}
                       alt={`${service.service_name} ${index + 1}`}

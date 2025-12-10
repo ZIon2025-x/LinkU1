@@ -16,6 +16,8 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
+import LazyImage from '../components/LazyImage';
+import { getErrorMessage } from '../utils/errorHandler';
 import styles from './MyTasks.module.css';
 
 // 配置dayjs插件
@@ -328,7 +330,7 @@ const MyTasks: React.FC = () => {
     } catch (error: any) {
             // 显示错误信息给用户
       if (error.response) {
-                message.error(error.response.data?.detail || '加载任务失败，请刷新页面重试');
+                message.error(getErrorMessage(error));
       } else if (error.request) {
                 message.error('网络错误，请检查网络连接');
       } else {
@@ -381,7 +383,7 @@ const MyTasks: React.FC = () => {
       setCompletedTasks(prev => new Set([...Array.from(prev), taskId]));
       loadTasks();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      message.error(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -401,7 +403,7 @@ const MyTasks: React.FC = () => {
         await loadTasks(true);
       }, 1000);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      message.error(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -440,7 +442,7 @@ const MyTasks: React.FC = () => {
       message.success('申请退出已提交，等待任务达人审核');
       await loadTasks();
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '提交失败，请重试');
+            message.error(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -477,25 +479,25 @@ const MyTasks: React.FC = () => {
       }
       
       // 获取详细的错误信息
-      const errorDetail = error.response?.data?.detail || '';
+      const errorMsg = getErrorMessage(error);
       const errorStatus = error.response?.status;
       
       // 处理不同类型的错误
       if (errorStatus === 400) {
-        if (errorDetail.includes('already pending') || errorDetail.includes('正在审核') || errorDetail.includes('待审核')) {
+        if (errorMsg.includes('already pending') || errorMsg.includes('正在审核') || errorMsg.includes('待审核')) {
           // 如果已经有待审核请求，也添加到列表中
           setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
           message.info('您的取消请求正在审核中，请耐心等待');
           loadTasks();
-        } else if (errorDetail.includes('cannot be cancelled') || errorDetail.includes('不能取消') || errorDetail.includes('状态')) {
+        } else if (errorMsg.includes('cannot be cancelled') || errorMsg.includes('不能取消') || errorMsg.includes('状态')) {
           // 任务状态不允许取消
-          let errorMsg = '该任务当前状态不允许取消';
-          if (errorDetail.includes('current status')) {
-            errorMsg += '。只有"待接取"状态的任务可以直接取消，已被接受或进行中的任务需要等待客服审核。';
+          let cancelErrorMsg = '该任务当前状态不允许取消';
+          if (errorMsg.includes('current status')) {
+            cancelErrorMsg += '。只有"待接取"状态的任务可以直接取消，已被接受或进行中的任务需要等待客服审核。';
           }
+          message.error(cancelErrorMsg);
+        } else if (errorMsg) {
           message.error(errorMsg);
-        } else if (errorDetail) {
-          message.error(errorDetail);
         } else {
           message.error('取消任务失败，请检查任务状态后重试');
         }
@@ -505,7 +507,7 @@ const MyTasks: React.FC = () => {
         message.error('任务不存在或已被删除');
       } else {
         // 其他错误
-        message.error(errorDetail || t('myTasks.alerts.operationFailed'));
+        message.error(errorMsg || t('myTasks.alerts.operationFailed'));
       }
     } finally {
       setActionLoading(null);
@@ -519,7 +521,7 @@ const MyTasks: React.FC = () => {
       message.success(t('myTasks.alerts.visibilityUpdated'));
       loadTasks();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('myTasks.alerts.updateVisibilityFailed'));
+      message.error(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -537,7 +539,7 @@ const MyTasks: React.FC = () => {
           message.success(t('myTasks.alerts.taskDeleted'));
           loadTasks();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('myTasks.alerts.deleteFailed'));
+          message.error(getErrorMessage(error));
         } finally {
           setActionLoading(null);
         }
@@ -636,7 +638,7 @@ const MyTasks: React.FC = () => {
       // 强制重新加载该任务的评价数据
       await loadTaskReviews(taskId);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('myTasks.alerts.reviewSubmitFailed'));
+      message.error(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -1480,7 +1482,7 @@ const MyTasks: React.FC = () => {
             >
               <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.reviewModalHeader}>
-                  <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+                  <LazyImage src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
                   <h2 className={styles.reviewModalTitle}>
                     {t('myTasks.actions.review')}
                   </h2>

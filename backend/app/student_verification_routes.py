@@ -13,6 +13,7 @@ from sqlalchemy import and_, or_
 
 from app import models
 from app.deps import get_sync_db
+from app.performance_monitor import measure_api_performance
 from app.deps import get_current_user_secure_sync_csrf
 from app.student_verification_utils import (
     calculate_expires_at,
@@ -546,14 +547,13 @@ def verify_email(
     
     if not email:
         # 记录详细信息以便调试
-        logger.warning(f"验证令牌无效或已过期: token={token[:20]}..., redis_client={'available' if redis_client else 'unavailable'}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": 400,
-                "message": "验证令牌无效或已过期",
-                "error": "INVALID_TOKEN"
-            }
+        logger.warning(f"验证令牌无效或已过期，重定向到首页: token={token[:20]}..., redis_client={'available' if redis_client else 'unavailable'}")
+        # Token无效或已使用，重定向到首页
+        from fastapi.responses import RedirectResponse
+        from app.config import Config
+        return RedirectResponse(
+            url=Config.FRONTEND_URL,
+            status_code=302
         )
     
     # 查找对应的认证记录
@@ -570,15 +570,25 @@ def verify_email(
         ).first()
         if verification_any_status:
             logger.warning(f"找到认证记录但状态不是pending: token={token[:20]}..., status={verification_any_status.status}, user_id={verification_any_status.user_id}")
+            # 如果状态是verified，说明token已被使用，重定向到首页
+            if verification_any_status.status == 'verified':
+                from fastapi.responses import RedirectResponse
+                from app.config import Config
+                logger.info(f"Token已被使用，重定向到首页: token={token[:20]}...")
+                return RedirectResponse(
+                    url=Config.FRONTEND_URL,
+                    status_code=302
+                )
         else:
             logger.warning(f"数据库中未找到对应的认证记录: token={token[:20]}...")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": 400,
-                "message": "验证令牌无效或已过期",
-                "error": "INVALID_TOKEN"
-            }
+        
+        # Token无效或已使用，重定向到首页
+        from fastapi.responses import RedirectResponse
+        from app.config import Config
+        logger.info(f"Token无效或已过期，重定向到首页: token={token[:20]}...")
+        return RedirectResponse(
+            url=Config.FRONTEND_URL,
+            status_code=302
         )
     
     logger.info(f"找到待验证的认证记录: verification_id={verification.id}, user_id={verification.user_id}, email={verification.email}")
@@ -609,6 +619,9 @@ def verify_email(
     # 更新认证状态
     now = get_utc_time()
     verification.status = 'verified'
+    
+    # 🔒 安全修复：清空token字段，防止重复使用
+    verification.verification_token = None
     
     # 清除用户的论坛可见板块缓存（认证状态变更，可能需要重新计算可见板块）
     try:
@@ -1015,6 +1028,7 @@ def get_user_verification_status(
 
 @router.get("/universities")
 @rate_limit("60/minute")  # 60次/分钟/IP
+@measure_api_performance("get_universities")
 def get_universities(
     request: Request,
     search: Optional[str] = None,

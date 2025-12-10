@@ -29,6 +29,8 @@ from app import crud, models, schemas
 from app.database import get_async_db
 from app.rate_limiting import rate_limit
 from app.deps import get_current_user_secure_sync_csrf
+from app.performance_monitor import measure_api_performance
+from app.cache import cache_response
 
 logger = logging.getLogger(__name__)
 import os
@@ -361,10 +363,10 @@ def verify_email(
         )
     
     if not user:
-        # 验证失败，重定向到错误页面
-        logger.warning(f"验证失败，令牌无效或已过期: {token}")
+        # 验证失败，token无效或已使用，重定向到首页
+        logger.warning(f"验证失败，令牌无效或已过期，重定向到首页: {token}")
         return RedirectResponse(
-            url=f"{frontend_url}/verify-email?error={quote('验证失败，令牌无效或已过期')}",
+            url=frontend_url,
             status_code=302
         )
     
@@ -881,6 +883,24 @@ def reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # 验证密码强度（与注册时相同）
+    from app.password_validator import PasswordValidator
+    password_validator = PasswordValidator()
+    password_validation = password_validator.validate_password(
+        new_password,
+        username=user.name,
+        email=user.email
+    )
+    
+    if not password_validation.is_valid:
+        error_message = "密码不符合安全要求：\n" + "\n".join(password_validation.errors)
+        if password_validation.suggestions:
+            error_message += "\n\n建议：\n" + "\n".join(password_validation.suggestions)
+        raise HTTPException(
+            status_code=400,
+            detail=error_message
+        )
+    
     # token有效且未被使用，重置密码
     from app.security import get_password_hash
     user.hashed_password = get_password_hash(new_password)
@@ -1253,17 +1273,23 @@ def create_review(
 
 
 @router.get("/tasks/{task_id}/reviews", response_model=list[schemas.ReviewOut])
+@measure_api_performance("get_task_reviews")
+@cache_response(ttl=180, key_prefix="task_reviews")  # 缓存3分钟
 def get_task_reviews(task_id: int, db: Session = Depends(get_db)):
     return crud.get_task_reviews(db, task_id)
 
 
 @router.get("/users/{user_id}/received-reviews", response_model=list[schemas.ReviewOut])
+@measure_api_performance("get_user_received_reviews")
+@cache_response(ttl=300, key_prefix="user_reviews")  # 缓存5分钟
 def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的所有评价（包括匿名评价），用于个人主页显示"""
     return crud.get_user_received_reviews(db, user_id)
 
 
 @router.get("/{user_id}/reviews")
+@measure_api_performance("get_user_reviews")
+@cache_response(ttl=300, key_prefix="user_reviews_alt")  # 缓存5分钟
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的评价（用于个人主页显示）"""
     try:
@@ -1573,6 +1599,8 @@ def delete_cancelled_task(
 
 
 @router.get("/tasks/{task_id}/history")
+@measure_api_performance("get_task_history")
+@cache_response(ttl=180, key_prefix="task_history")  # 缓存3分钟
 def get_task_history(task_id: int, db: Session = Depends(get_db)):
     history = crud.get_task_history(db, task_id)
     return [
@@ -1588,6 +1616,7 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/profile/me")
+@measure_api_performance("get_my_profile")
 def get_my_profile(
     request: Request, 
     current_user=Depends(get_current_user_secure_sync_csrf), 
@@ -1705,6 +1734,7 @@ def get_my_profile(
 
 
 @router.get("/my-tasks", response_model=list[schemas.TaskOut])
+@measure_api_performance("get_my_tasks")
 def get_my_tasks(
     current_user=Depends(check_user_status), 
     db: Session = Depends(get_db),
@@ -1717,6 +1747,8 @@ def get_my_tasks(
 
 
 @router.get("/profile/{user_id}")
+@measure_api_performance("get_user_profile")
+@cache_response(ttl=300, key_prefix="user_profile")  # 缓存5分钟
 def user_profile(
     user_id: str, current_user: Optional[models.User] = Depends(get_current_user_optional), db: Session = Depends(get_db)
 ):
@@ -3134,6 +3166,8 @@ def admin_get_payments(
 
 
 @router.get("/contacts")
+@measure_api_performance("get_contacts")
+@cache_response(ttl=180, key_prefix="user_contacts")  # 缓存3分钟
 def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)):
     try:
         from app.models import Message, User
@@ -4267,6 +4301,8 @@ async def upload_customer_service_file(
 
 
 @router.get("/customer-service/{service_id}/rating")
+@measure_api_performance("get_customer_service_rating")
+@cache_response(ttl=300, key_prefix="cs_rating")  # 缓存5分钟
 def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
     """获取客服的平均评分信息"""
     service = db.query(CustomerService).filter(CustomerService.id == service_id).first()
@@ -4282,6 +4318,8 @@ def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/customer-service/all-ratings")
+@measure_api_performance("get_all_customer_service_ratings")
+@cache_response(ttl=300, key_prefix="cs_all_ratings")  # 缓存5分钟
 def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     """获取所有客服的平均评分信息"""
     services = db.query(CustomerService).all()
@@ -4521,6 +4559,8 @@ from app.deps import check_admin, check_admin_user_status, check_super_admin
 
 
 @router.get("/stats")
+@measure_api_performance("get_public_stats")
+@cache_response(ttl=300, key_prefix="public_stats")  # 缓存5分钟
 def get_public_stats(
     db: Session = Depends(get_db)
 ):
@@ -4537,6 +4577,7 @@ def get_public_stats(
 
 
 @router.get("/admin/dashboard/stats")
+@measure_api_performance("get_dashboard_stats")
 def get_dashboard_stats(
     current_admin=Depends(get_current_admin), 
     db: Session = Depends(get_db),
@@ -5068,6 +5109,12 @@ def update_system_settings(
     """更新系统设置"""
     try:
         updated_settings = crud.bulk_update_system_settings(db, settings_data)
+        
+        # 清除相关缓存
+        from app.cache import invalidate_cache
+        invalidate_cache("cache:public_settings:*")
+        invalidate_cache("cache:system_settings:*")
+        
         return {
             "message": "系统设置更新成功",
             "updated_count": len(updated_settings),
@@ -5079,66 +5126,72 @@ def update_system_settings(
 
 @router.get("/system-settings/public")
 def get_public_system_settings(db: Session = Depends(get_db)):
-    """获取公开的系统设置（前端使用）"""
-    settings_dict = crud.get_system_settings_dict(db)
+    """获取公开的系统设置（前端使用，已应用缓存）"""
+    from app.cache import cache_response
+    
+    @cache_response(ttl=600, key_prefix="public_settings")  # 缓存10分钟
+    def _get_cached_settings():
+        settings_dict = crud.get_system_settings_dict(db)
 
-    # 默认设置（如果数据库中没有设置）
-    default_settings = {
-        "vip_enabled": True,
-        "super_vip_enabled": True,
-        "vip_task_threshold": 5,
-        "super_vip_task_threshold": 20,
-        "vip_price_threshold": 10.0,
-        "super_vip_price_threshold": 50.0,
-        "vip_button_visible": True,
-        "vip_auto_upgrade_enabled": False,
-        "vip_benefits_description": "优先任务推荐、专属客服服务、任务发布数量翻倍",
-        "super_vip_benefits_description": "所有VIP功能、无限任务发布、专属高级客服、任务优先展示、专属会员标识",
-        # VIP晋升超级VIP的条件
-        "vip_to_super_task_count_threshold": 50,
-        "vip_to_super_rating_threshold": 4.5,
-        "vip_to_super_completion_rate_threshold": 0.8,
-        "vip_to_super_enabled": True,
-    }
+        # 默认设置（如果数据库中没有设置）
+        default_settings = {
+            "vip_enabled": True,
+            "super_vip_enabled": True,
+            "vip_task_threshold": 5,
+            "super_vip_task_threshold": 20,
+            "vip_price_threshold": 10.0,
+            "super_vip_price_threshold": 50.0,
+            "vip_button_visible": True,
+            "vip_auto_upgrade_enabled": False,
+            "vip_benefits_description": "优先任务推荐、专属客服服务、任务发布数量翻倍",
+            "super_vip_benefits_description": "所有VIP功能、无限任务发布、专属高级客服、任务优先展示、专属会员标识",
+            # VIP晋升超级VIP的条件
+            "vip_to_super_task_count_threshold": 50,
+            "vip_to_super_rating_threshold": 4.5,
+            "vip_to_super_completion_rate_threshold": 0.8,
+            "vip_to_super_enabled": True,
+        }
 
-    # 合并数据库设置和默认设置
-    for key, value in default_settings.items():
-        if key not in settings_dict:
-            settings_dict[key] = value
+        # 合并数据库设置和默认设置
+        for key, value in default_settings.items():
+            if key not in settings_dict:
+                settings_dict[key] = value
 
-    # 返回前端需要的所有公开设置
-    public_settings = {
-        # VIP功能开关
-        "vip_enabled": settings_dict.get("vip_enabled", True),
-        "super_vip_enabled": settings_dict.get("super_vip_enabled", True),
-        "vip_button_visible": settings_dict.get("vip_button_visible", True),
-        
-        # 价格阈值设置
-        "vip_price_threshold": float(settings_dict.get("vip_price_threshold", 10.0)),
-        "super_vip_price_threshold": float(settings_dict.get("super_vip_price_threshold", 50.0)),
-        
-        # 任务数量阈值
-        "vip_task_threshold": int(settings_dict.get("vip_task_threshold", 5)),
-        "super_vip_task_threshold": int(settings_dict.get("super_vip_task_threshold", 20)),
-        
-        # VIP晋升设置
-        "vip_auto_upgrade_enabled": settings_dict.get("vip_auto_upgrade_enabled", False),
-        "vip_to_super_task_count_threshold": int(settings_dict.get("vip_to_super_task_count_threshold", 50)),
-        "vip_to_super_rating_threshold": float(settings_dict.get("vip_to_super_rating_threshold", 4.5)),
-        "vip_to_super_completion_rate_threshold": float(settings_dict.get("vip_to_super_completion_rate_threshold", 0.8)),
-        "vip_to_super_enabled": settings_dict.get("vip_to_super_enabled", True),
-        
-        # 描述信息
-        "vip_benefits_description": settings_dict.get(
-            "vip_benefits_description", "优先任务推荐、专属客服服务、任务发布数量翻倍"
-        ),
-        "super_vip_benefits_description": settings_dict.get(
-            "super_vip_benefits_description",
-            "所有VIP功能、无限任务发布、专属高级客服、任务优先展示、专属会员标识",
-        ),
-    }
+        # 返回前端需要的所有公开设置
+        public_settings = {
+            # VIP功能开关
+            "vip_enabled": settings_dict.get("vip_enabled", True),
+            "super_vip_enabled": settings_dict.get("super_vip_enabled", True),
+            "vip_button_visible": settings_dict.get("vip_button_visible", True),
+            
+            # 价格阈值设置
+            "vip_price_threshold": float(settings_dict.get("vip_price_threshold", 10.0)),
+            "super_vip_price_threshold": float(settings_dict.get("super_vip_price_threshold", 50.0)),
+            
+            # 任务数量阈值
+            "vip_task_threshold": int(settings_dict.get("vip_task_threshold", 5)),
+            "super_vip_task_threshold": int(settings_dict.get("super_vip_task_threshold", 20)),
+            
+            # VIP晋升设置
+            "vip_auto_upgrade_enabled": settings_dict.get("vip_auto_upgrade_enabled", False),
+            "vip_to_super_task_count_threshold": int(settings_dict.get("vip_to_super_task_count_threshold", 50)),
+            "vip_to_super_rating_threshold": float(settings_dict.get("vip_to_super_rating_threshold", 4.5)),
+            "vip_to_super_completion_rate_threshold": float(settings_dict.get("vip_to_super_completion_rate_threshold", 0.8)),
+            "vip_to_super_enabled": settings_dict.get("vip_to_super_enabled", True),
+            
+            # 描述信息
+            "vip_benefits_description": settings_dict.get(
+                "vip_benefits_description", "优先任务推荐、专属客服服务、任务发布数量翻倍"
+            ),
+            "super_vip_benefits_description": settings_dict.get(
+                "super_vip_benefits_description",
+                "所有VIP功能、无限任务发布、专属高级客服、任务优先展示、专属会员标识",
+            ),
+        }
 
-    return public_settings
+        return public_settings
+    
+    return _get_cached_settings()
 
 
 @router.get("/users/{user_id}/task-statistics")
@@ -6414,6 +6467,7 @@ def toggle_job_position_status(
 
 # 公开API - 获取启用的岗位列表（用于join页面）
 @router.get("/job-positions")
+@cache_response(ttl=600, key_prefix="public_job_positions")  # 缓存10分钟
 def get_public_job_positions(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -7467,6 +7521,8 @@ def batch_create_service_time_slots_admin(
 
 # 公开 API - 获取任务达人列表（前端使用）
 @router.get("/task-experts")
+@measure_api_performance("get_task_experts")
+@cache_response(ttl=600, key_prefix="public_task_experts")  # 缓存10分钟
 def get_public_task_experts(
     category: Optional[str] = None,
     location: Optional[str] = Query(None, description="城市筛选"),

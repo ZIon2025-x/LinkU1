@@ -1,62 +1,157 @@
 """
-简单的内存缓存模块
-用于缓存用户信息等频繁访问的数据
+API响应缓存装饰器
+使用Redis实现API响应缓存，提升性能
 """
-import time
-from typing import Any, Dict, Optional
-from threading import Lock
+import hashlib
+import json
+import logging
+from functools import wraps
+from typing import Any, Callable, Optional
+from app.redis_cache import get_redis_client
 
-class SimpleCache:
-    """简单的内存缓存实现"""
-    
-    def __init__(self, default_ttl: int = 300):  # 默认5分钟过期
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._lock = Lock()
-        self.default_ttl = default_ttl
-    
-    def get(self, key: str) -> Optional[Any]:
-        """获取缓存值"""
-        with self._lock:
-            if key in self._cache:
-                item = self._cache[key]
-                if time.time() < item['expires_at']:
-                    return item['value']
-                else:
-                    # 过期，删除
-                    del self._cache[key]
-            return None
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
-        """设置缓存值"""
-        with self._lock:
-            expires_at = time.time() + (ttl or self.default_ttl)
-            self._cache[key] = {
-                'value': value,
-                'expires_at': expires_at
-            }
-    
-    def delete(self, key: str) -> None:
-        """删除缓存值"""
-        with self._lock:
-            if key in self._cache:
-                del self._cache[key]
-    
-    def clear(self) -> None:
-        """清空所有缓存"""
-        with self._lock:
-            self._cache.clear()
-    
-    def cleanup_expired(self) -> None:
-        """清理过期的缓存项"""
-        with self._lock:
-            current_time = time.time()
-            expired_keys = [
-                key for key, item in self._cache.items()
-                if current_time >= item['expires_at']
-            ]
-            for key in expired_keys:
-                del self._cache[key]
+logger = logging.getLogger(__name__)
 
-# 全局缓存实例
-user_cache = SimpleCache(default_ttl=300)  # 用户信息缓存5分钟
-task_cache = SimpleCache(default_ttl=60)   # 任务信息缓存1分钟
+
+def cache_response(ttl: int = 300, key_prefix: str = "cache"):
+    """
+    API响应缓存装饰器
+    
+    Args:
+        ttl: 缓存过期时间（秒），默认5分钟
+        key_prefix: 缓存键前缀
+    
+    Usage:
+        @cache_response(ttl=600, key_prefix="tasks")
+        async def get_tasks():
+            ...
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            redis_client = get_redis_client()
+            if not redis_client:
+                # Redis不可用时，直接执行函数
+                return await func(*args, **kwargs)
+            
+            try:
+                # 生成缓存键（基于函数名和参数）
+                # 排除request对象（不可序列化）
+                cache_params = {
+                    k: v for k, v in kwargs.items() 
+                    if k != 'request' and k != 'db' and not k.startswith('_')
+                }
+                # 将参数转换为可序列化的格式
+                params_str = json.dumps(cache_params, sort_keys=True, default=str)
+                cache_key = f"{key_prefix}:{func.__name__}:{hashlib.md5(params_str.encode()).hexdigest()}"
+                
+                # 尝试从缓存获取
+                cached = redis_client.get(cache_key)
+                if cached:
+                    try:
+                        cached_data = json.loads(cached)
+                        logger.debug(f"缓存命中: {cache_key}")
+                        return cached_data
+                    except json.JSONDecodeError:
+                        logger.warning(f"缓存数据格式错误: {cache_key}")
+                
+                # 执行函数
+                result = await func(*args, **kwargs)
+                
+                # 存储到缓存（只缓存可序列化的结果）
+                try:
+                    result_str = json.dumps(result, default=str)
+                    redis_client.setex(cache_key, ttl, result_str)
+                    logger.debug(f"缓存已设置: {cache_key}, TTL: {ttl}秒")
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"无法缓存结果（不可序列化）: {cache_key}, 错误: {e}")
+                
+                return result
+            except Exception as e:
+                logger.error(f"缓存操作失败: {e}", exc_info=True)
+                # 缓存失败不影响主功能，直接执行函数
+                return await func(*args, **kwargs)
+        
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            redis_client = get_redis_client()
+            if not redis_client:
+                # Redis不可用时，直接执行函数
+                return func(*args, **kwargs)
+            
+            try:
+                # 生成缓存键
+                cache_params = {
+                    k: v for k, v in kwargs.items() 
+                    if k != 'request' and k != 'db' and not k.startswith('_')
+                }
+                params_str = json.dumps(cache_params, sort_keys=True, default=str)
+                cache_key = f"{key_prefix}:{func.__name__}:{hashlib.md5(params_str.encode()).hexdigest()}"
+                
+                # 尝试从缓存获取
+                cached = redis_client.get(cache_key)
+                if cached:
+                    try:
+                        cached_data = json.loads(cached)
+                        logger.debug(f"缓存命中: {cache_key}")
+                        return cached_data
+                    except json.JSONDecodeError:
+                        logger.warning(f"缓存数据格式错误: {cache_key}")
+                
+                # 执行函数
+                result = func(*args, **kwargs)
+                
+                # 存储到缓存
+                try:
+                    result_str = json.dumps(result, default=str)
+                    redis_client.setex(cache_key, ttl, result_str)
+                    logger.debug(f"缓存已设置: {cache_key}, TTL: {ttl}秒")
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"无法缓存结果（不可序列化）: {cache_key}, 错误: {e}")
+                
+                return result
+            except Exception as e:
+                logger.error(f"缓存操作失败: {e}", exc_info=True)
+                # 缓存失败不影响主功能，直接执行函数
+                return func(*args, **kwargs)
+        
+        # 根据函数类型返回对应的包装器
+        import asyncio
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+    
+    return decorator
+
+
+def invalidate_cache(pattern: str):
+    """
+    使缓存失效
+    
+    Args:
+        pattern: 缓存键模式（支持通配符）
+    
+    Usage:
+        invalidate_cache("cache:get_tasks:*")
+    """
+    redis_client = get_redis_client()
+    if not redis_client:
+        return
+    
+    try:
+        keys = redis_client.keys(pattern)
+        if keys:
+            redis_client.delete(*keys)
+            logger.info(f"已清除缓存: {len(keys)} 个键匹配模式 {pattern}")
+    except Exception as e:
+        logger.error(f"清除缓存失败: {e}", exc_info=True)
+
+
+def clear_all_cache(key_prefix: str = "cache"):
+    """
+    清除所有指定前缀的缓存
+    
+    Args:
+        key_prefix: 缓存键前缀
+    """
+    invalidate_cache(f"{key_prefix}:*")

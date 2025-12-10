@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ConfigProvider } from 'antd';
+import { antdTheme } from './styles/theme';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
@@ -343,26 +345,28 @@ function App() {
       fallback={<ErrorFallback />}
     >
       <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <CookieProvider>
-            <AuthProvider>
-              <UnreadMessageProvider>
-                <Router>
-                  <ErrorBoundary>
-                    <LanguageMetaManager />
-                    <FaviconManager />
-                    {/* 全局 Organization 结构化数据 - 确保所有页面都能访问 */}
-                    <OrganizationStructuredData />
-                    <ScrollToTop />
-                    <LanguageRoutes />
-                    <CookieManager />
-                    <InstallPrompt />
-                  </ErrorBoundary>
-                </Router>
-              </UnreadMessageProvider>
-            </AuthProvider>
-          </CookieProvider>
-        </LanguageProvider>
+        <ConfigProvider theme={antdTheme}>
+          <LanguageProvider>
+            <CookieProvider>
+              <AuthProvider>
+                <UnreadMessageProvider>
+                  <Router>
+                    <ErrorBoundary>
+                      <LanguageMetaManager />
+                      <FaviconManager />
+                      {/* 全局 Organization 结构化数据 - 确保所有页面都能访问 */}
+                      <OrganizationStructuredData />
+                      <ScrollToTop />
+                      <LanguageRoutes />
+                      <CookieManager />
+                      <InstallPrompt />
+                    </ErrorBoundary>
+                  </Router>
+                </UnreadMessageProvider>
+              </AuthProvider>
+            </CookieProvider>
+          </LanguageProvider>
+        </ConfigProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

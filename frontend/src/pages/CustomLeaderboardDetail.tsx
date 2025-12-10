@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload, QRCode, Typography, Divider } from 'antd';
 import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
+import { validateName } from '../utils/inputValidators';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import {
@@ -615,7 +617,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       } else if (error.response?.status >= 500) {
         message.error(t('forum.serverError'));
       } else {
-        message.error(error.response?.data?.detail || t('forum.loadingFailed'));
+        message.error(getErrorMessage(error));
       }
     } finally {
       setLoading(false);
@@ -635,7 +637,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         message.success(t('forum.voteCancelled'));
         loadData();
       } catch (error: any) {
-        message.error(error.response?.data?.detail || t('forum.cancelVoteFailed'));
+        message.error(getErrorMessage(error));
       }
     } else {
       setCurrentVoteItemId(itemId);
@@ -677,7 +679,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         setItems(prev => [...prev].sort((a, b) => b.vote_score - a.vote_score));
       }
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
+            const errorMsg = getErrorMessage(error);
       
       // 处理速率限制错误
       if (error.response?.status === 429) {
@@ -724,7 +726,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         throw new Error(t('forum.imageUploadFailed'));
       }
     } catch (error: any) {
-            message.error(`${t('forum.imageUploadFailed')}: ${error.response?.data?.detail || error.message}`);
+            message.error(`${t('forum.imageUploadFailed')}: ${getErrorMessage(error)}`);
       throw error;
     } finally {
       setUploading(false);
@@ -858,7 +860,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       setPagination(prev => ({ ...prev, current: 1 }));
       loadData(1);
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('forum.addItemFailed');
+            const errorMsg = getErrorMessage(error);
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {
@@ -1536,6 +1538,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                       cursor: 'pointer'
                                     }}
                                     preview
+                                    loading="lazy"
                                   />
                                 ))}
                               </Image.PreviewGroup>
@@ -1716,7 +1719,19 @@ const CustomLeaderboardDetail: React.FC = () => {
           <Form.Item
             name="name"
             label={t('forum.itemName')}
-            rules={[{ required: true, message: t('forum.enterItemName') }, { max: 200, message: t('forum.nameMaxLength') }]}
+            rules={[
+              { required: true, message: t('forum.enterItemName') }, 
+              { max: 200, message: t('forum.nameMaxLength') },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const validation = validateName(value);
+                  return validation.valid 
+                    ? Promise.resolve() 
+                    : Promise.reject(new Error(validation.message));
+                }
+              }
+            ]}
           >
             <Input placeholder={t('forum.itemNamePlaceholder')} maxLength={200} showCount />
           </Form.Item>
@@ -1843,7 +1858,7 @@ const CustomLeaderboardDetail: React.FC = () => {
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
-                            const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
+                            const errorMsg = getErrorMessage(error);
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);

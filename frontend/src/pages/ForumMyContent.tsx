@@ -6,6 +6,7 @@ import {
   EditOutlined, DeleteOutlined, UserOutlined, ClockCircleOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { 
   getMyForumPosts, getMyForumReplies, getMyForumLikes, getMyForumFavorites,
@@ -21,6 +22,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
+import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumMyContent.module.css';
 
 const { Title, Text } = Typography;
@@ -173,7 +175,7 @@ const ForumMyContent: React.FC = () => {
           break;
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -189,7 +191,7 @@ const ForumMyContent: React.FC = () => {
           message.success(t('forum.deleteSuccess'));
           loadContent();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -205,7 +207,7 @@ const ForumMyContent: React.FC = () => {
           message.success(t('forum.deleteSuccess'));
           loadContent();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -288,7 +290,7 @@ const ForumMyContent: React.FC = () => {
             <TabPane tab={t('forum.myPosts')} key="posts">
               {loading ? (
                 <div className={styles.loadingContainer}>
-                  <Spin size="large" />
+                  <SkeletonLoader type="post" count={3} />
                 </div>
               ) : posts.length === 0 ? (
                 <Empty description={t('forum.noPosts')} />
@@ -369,7 +371,7 @@ const ForumMyContent: React.FC = () => {
             <TabPane tab={t('forum.myReplies')} key="replies">
               {loading ? (
                 <div className={styles.loadingContainer}>
-                  <Spin size="large" />
+                  <SkeletonLoader type="post" count={3} />
                 </div>
               ) : replies.length === 0 ? (
                 <Empty description={t('forum.noReplies')} />
@@ -433,7 +435,7 @@ const ForumMyContent: React.FC = () => {
             <TabPane tab={t('forum.myLikes')} key="likes">
               {loading ? (
                 <div className={styles.loadingContainer}>
-                  <Spin size="large" />
+                  <SkeletonLoader type="post" count={3} />
                 </div>
               ) : likes.length === 0 ? (
                 <Empty description={t('forum.noLikes')} />
@@ -495,7 +497,7 @@ const ForumMyContent: React.FC = () => {
             <TabPane tab={t('forum.myFavorites')} key="favorites">
               {loading ? (
                 <div className={styles.loadingContainer}>
-                  <Spin size="large" />
+                  <SkeletonLoader type="post" count={3} />
                 </div>
               ) : favorites.length === 0 ? (
                 <Empty description={t('forum.noFavorites')} />

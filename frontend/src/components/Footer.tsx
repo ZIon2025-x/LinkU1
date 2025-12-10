@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import LocalizedLink from './LocalizedLink';
+import LazyImage from './LazyImage';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
@@ -224,7 +225,7 @@ const Footer: React.FC = () => {
         }}>
           {/* 左侧 - Logo和版权 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-            <img 
+            <LazyImage 
               src="/static/logo.png" 
               alt="Link²Ur Logo" 
               style={{
@@ -347,7 +348,7 @@ const Footer: React.FC = () => {
               }}
               title="微信二维码"
             >
-              <img 
+              <LazyImage 
                 src="/static/wechatlogo.png" 
                 alt="微信" 
                 style={{
@@ -355,7 +356,7 @@ const Footer: React.FC = () => {
                   height: '20px',
                   objectFit: 'contain'
                 }}
-                onError={(e) => {
+                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                   // 如果 PNG 不存在，回退到 JPG
                   const target = e.currentTarget;
                   if (!target.src.includes('.jpg')) {
@@ -439,7 +440,7 @@ const Footer: React.FC = () => {
             }}>
               添加我们的微信客服
             </h3>
-            <img 
+            <LazyImage 
               src="/static/wechat.jpg" 
               alt="微信二维码" 
               style={{

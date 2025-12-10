@@ -35,7 +35,12 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js' --no-open",
+    "analyze:size": "npm run build && node -e \"const fs=require('fs');const path=require('path');const files=fs.readdirSync('build/static/js').filter(f=>f.endsWith('.js')).map(f=>{const s=fs.statSync(path.join('build/static/js',f));return{name:f,size:(s.size/1024).toFixed(2)+'KB'}}).sort((a,b)=>parseFloat(b.size)-parseFloat(a.size));console.log('Bundle Sizes:');files.forEach(f=>console.log(f.name.padEnd(40),f.size))\"",
+    "analyze:html": "npm run build && npx source-map-explorer 'build/static/js/*.js' --html bundle-analysis.html 2>&1 | findstr /V \"source map refers to generated column\" || npx source-map-explorer 'build/static/js/*.js' --html bundle-analysis.html",
+    "analyze:json": "npm run build && npx source-map-explorer 'build/static/js/*.js' --json bundle-analysis.json --no-open 2>&1 | findstr /V \"source map refers to generated column\" || npx source-map-explorer 'build/static/js/*.js' --json bundle-analysis.json --no-open",
+    "analyze:simple": "npm run build && echo Bundle File Sizes: && powershell -Command \"Get-ChildItem -Path 'build/static/js/*.js' | Sort-Object Length -Descending | ForEach-Object { $size = [math]::Round($_.Length / 1KB, 2); Write-Host ('{0,-50} {1,10} KB' -f $_.Name, $size) }\""
   },
   "eslintConfig": {
     "extends": [

@@ -4,6 +4,8 @@ import { fetchCurrentUser, updateAvatar, getPublicSystemSettings, getStudentVeri
 import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import LazyImage from '../components/LazyImage';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const AVATARS = [
   '/static/avatar1.png',
@@ -132,20 +134,9 @@ const Profile: React.FC = () => {
       <div style={{ 
         minHeight: '100vh', 
         background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        padding: '20px'
       }}>
-        <div style={{ 
-          background: '#fff', 
-          padding: '40px', 
-          borderRadius: '20px',
-          textAlign: 'center',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-          <div style={{ fontSize: '18px', color: '#64748b' }}>{t('profile.loading')}</div>
-        </div>
+        <SkeletonLoader type="user" count={1} />
       </div>
     );
   }
@@ -259,14 +250,10 @@ const Profile: React.FC = () => {
         }}>
           <div style={{ marginBottom: '30px' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
-              <img
+              <LazyImage
                 src={user.avatar || '/static/avatar1.png'}
                 alt={t('profile.avatar')}
-                onError={(e) => {
-                                    e.currentTarget.src = '/static/avatar1.png';
-                }}
-                onLoad={(e) => {
-                }}
+                onError={() => {}}
                 style={{
                   width: '120px',
                   height: '120px',
@@ -322,11 +309,9 @@ const Profile: React.FC = () => {
                 border: '1px solid #e2e8f0'
               }}>
                 {AVATARS.map(src => (
-                  <img 
-                    key={src} 
-                    src={src} 
-                    alt={t('profile.optionalAvatar')} 
-                    onClick={() => handleAvatarChange(src)} 
+                  <div
+                    key={src}
+                    onClick={() => handleAvatarChange(src)}
                     style={{
                       width: isMobile ? '50px' : '60px', 
                       height: isMobile ? '50px' : '60px', 
@@ -334,7 +319,7 @@ const Profile: React.FC = () => {
                       border: src === user.avatar ? '3px solid #3b82f6' : '2px solid #e2e8f0', 
                       cursor: 'pointer', 
                       background: '#fff', 
-                      objectFit: 'cover', 
+                      overflow: 'hidden',
                       transition: 'all 0.3s ease',
                       boxShadow: src === user.avatar ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)'
                     }}
@@ -350,7 +335,17 @@ const Profile: React.FC = () => {
                         e.currentTarget.style.transform = 'scale(1)';
                       }
                     }}
-                  />
+                  >
+                    <LazyImage
+                      src={src}
+                      alt={t('profile.optionalAvatar')}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             )}

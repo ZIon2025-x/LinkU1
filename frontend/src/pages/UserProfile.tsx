@@ -6,6 +6,7 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { formatViewCount } from '../utils/formatUtils';
 import { message } from 'antd';
 import ServiceDetailModal from '../components/ServiceDetailModal';
+import LazyImage from '../components/LazyImage';
 
 interface UserProfileType {
   user: {
@@ -355,7 +356,7 @@ const UserProfile: React.FC = () => {
                 position: 'relative',
                 display: 'inline-block'
               }}>
-                <img
+                <LazyImage
                   src={profile.user.avatar || '/static/avatar1.png'}
                   alt="头像"
                   style={{

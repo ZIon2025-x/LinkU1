@@ -28,6 +28,8 @@ import api, {
 } from '../api';
 import { useLocation } from 'react-router-dom';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import LazyImage from '../components/LazyImage';
+import { getErrorMessage } from '../utils/errorHandler';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -143,7 +145,7 @@ const PrivateImageDisplay: React.FC<{
   }
 
   return (
-    <img 
+    <LazyImage 
       src={imageUrl} 
       alt={alt} 
       className={className}
@@ -322,7 +324,7 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
         <div className={styles.taskImageContainer}>
           {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
           {taskImageUrl ? (
-            <img
+            <LazyImage
               src={taskImageUrl}
               alt={task.title}
               className={styles.taskImage}
@@ -1478,7 +1480,7 @@ const MessagePage: React.FC = () => {
       setInput(messageContent); // 恢复输入内容
       
       // 显示错误提示
-      showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
+      showToast('error', getErrorMessage(error) || t('messages.notifications.sendMessageFailed'));
     } finally {
       setIsSending(false);
     }
@@ -1517,7 +1519,7 @@ const MessagePage: React.FC = () => {
                   }
       }, 0);
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
+            const errorMsg = getErrorMessage(error);
       showToast('error', errorMsg);
       setActionLoading(false);
     }
@@ -1557,7 +1559,7 @@ const MessagePage: React.FC = () => {
                   }
       }, 0);
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
+            const errorMsg = getErrorMessage(error);
       showToast('error', errorMsg);
       setActionLoading(false);
     }
@@ -1651,7 +1653,7 @@ const MessagePage: React.FC = () => {
         await loadTaskReviews(activeTaskId);
       }
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.reviewFailed');
+            const errorMsg = getErrorMessage(error);
       showToast('error', errorMsg);
     } finally {
       setActionLoading(false);
@@ -3787,7 +3789,7 @@ const MessagePage: React.FC = () => {
                 width: '50px',
                 height: '50px'
               }}>
-                <img src={'/static/service.png'} alt={t('messages.service')} style={{ 
+                <LazyImage src={'/static/service.png'} alt={t('messages.service')} style={{ 
                   width: '50px', 
                   height: '50px', 
                   borderRadius: '50%', 
@@ -3797,8 +3799,8 @@ const MessagePage: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
                   transition: 'none'
                 }} 
-                onError={(e) => {
-                                    e.currentTarget.src = '/static/avatar1.png';
+                onError={() => {
+                  // 错误已由 LazyImage 处理
                 }}
                 />
               </div>
@@ -3877,12 +3879,12 @@ const MessagePage: React.FC = () => {
                   ←
                 </button>
               )}
-              <img 
+              <LazyImage 
                 src={'/static/service.png'} 
                 alt={t('messages.service')} 
                 className={styles.chatHeaderServiceAvatar}
-                onError={(e) => {
-                                    e.currentTarget.src = '/static/avatar1.png';
+                onError={() => {
+                  // 错误已由 LazyImage 处理
                 }}
               />
               <div className={styles.chatHeaderServiceInfo}>
@@ -3912,14 +3914,13 @@ const MessagePage: React.FC = () => {
                 onClick={() => setShowTaskDetailModal(true)}
               >
                 {(activeTask.images && Array.isArray(activeTask.images) && activeTask.images.length > 0 && activeTask.images[0]) ? (
-                  <img
+                  <LazyImage
                     src={getTaskImageUrl(activeTask.images[0], API_BASE_URL) || activeTask.images[0]}
                     alt={activeTask.title}
                     className={styles.chatHeaderTaskImageImg}
-                    onError={(e) => {
+                    onError={() => {
                       // 如果任务图片加载失败，显示任务类型emoji图标
-                      e.currentTarget.style.display = 'none';
-                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                      const placeholder = document.querySelector(`.${styles.chatHeaderTaskImagePlaceholder}`) as HTMLElement;
                       if (placeholder) {
                         placeholder.style.display = 'flex';
                       }
@@ -4104,7 +4105,7 @@ const MessagePage: React.FC = () => {
                                 className={styles.applicationItem}
                               >
                                 <div className={styles.applicationItemHeader}>
-                                  <img
+                                  <LazyImage
                                     src={app.applicant_avatar || '/static/avatar1.png'}
                                     alt={app.applicant_name || '用户'}
                                     className={styles.applicationItemAvatar}
@@ -4165,7 +4166,7 @@ const MessagePage: React.FC = () => {
                                           await loadApplications(activeTaskId);
                                           await loadTasks();
                                         } catch (error: any) {
-                                                                                    alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
+                                                                                    alert(getErrorMessage(error));
                                         }
                                       }}
                                       className={`${styles.applicationActionButton} ${styles.applicationActionButtonAccept}`}
@@ -4180,7 +4181,7 @@ const MessagePage: React.FC = () => {
                                           alert(t('messages.notifications.applicationRejected'));
                                           await loadApplications(activeTaskId);
                                         } catch (error: any) {
-                                                                                    alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
+                                                                                    alert(getErrorMessage(error));
                                         }
                                       }}
                                       className={`${styles.applicationActionButton} ${styles.applicationActionButtonReject}`}
@@ -4322,7 +4323,7 @@ const MessagePage: React.FC = () => {
                       }}
                     >
                       {!isOwn && showAvatar && (
-                        <img
+                        <LazyImage
                           src={msg.sender_avatar || '/default-avatar.png'}
                           alt={msg.sender_name || '用户'}
                           onClick={() => {
@@ -4340,10 +4341,10 @@ const MessagePage: React.FC = () => {
                             transition: 'transform 0.2s'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.1)';
+                            (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
+                            (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
                           }}
                         />
                       )}
@@ -4496,7 +4497,7 @@ const MessagePage: React.FC = () => {
                               {msg.attachments.map((att: any) => (
                                 <div key={att.id} style={{ marginTop: '4px' }}>
                                   {att.attachment_type === 'image' && (att.url || att.blob_id) && (
-                                    <img
+                                    <LazyImage
                                       src={att.url || `/api/blobs/${att.blob_id}`}
                                       alt="图片附件"
                                       style={{ maxWidth: '200px', borderRadius: '6px', cursor: 'pointer' }}
@@ -4647,7 +4648,7 @@ const MessagePage: React.FC = () => {
                         </div>
                       </div>
                     ) : isImageMessage ? (
-                      <img 
+                      <LazyImage 
                         src={msg.content.replace('[图片]', '')} 
                         alt="图片" 
                         style={{ maxWidth: '200px', borderRadius: '8px' }}
@@ -4772,7 +4773,7 @@ const MessagePage: React.FC = () => {
                   >
                     ×
                   </button>
-                  <img
+                  <LazyImage
                     src={imagePreview}
                     alt="预览"
                     style={{
@@ -5116,7 +5117,7 @@ const MessagePage: React.FC = () => {
                   >
                     ×
                   </button>
-                  <img
+                  <LazyImage
                     src={imagePreview}
                     alt="预览"
                     style={{
@@ -5618,7 +5619,7 @@ const MessagePage: React.FC = () => {
         }}>
           <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.reviewModalHeader}>
-              <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+              <LazyImage src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
               <h3 className={styles.reviewModalTitle}>
                 {t('messages.rateService')}
               </h3>
@@ -5922,7 +5923,7 @@ const MessagePage: React.FC = () => {
                     }
                     alert(t('messages.notifications.applicationSubmitted'));
                   } catch (error: any) {
-                                        alert(error.response?.data?.detail || t('messages.notifications.applicationFailed'));
+                                        alert(getErrorMessage(error));
                   }
                 }}
                 style={{
@@ -6042,7 +6043,7 @@ const MessagePage: React.FC = () => {
                       gap: '12px',
                       marginBottom: '12px'
                     }}>
-                      <img
+                      <LazyImage
                         src={app.applicant_avatar || '/static/avatar1.png'}
                         alt={app.applicant_name || '用户'}
                         style={{
@@ -6126,7 +6127,7 @@ const MessagePage: React.FC = () => {
                                 await loadTasks();
                               }
                             } catch (error: any) {
-                                                            alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
+                                                            alert(getErrorMessage(error));
                             }
                           }}
                           style={{
@@ -6163,7 +6164,7 @@ const MessagePage: React.FC = () => {
                                 await loadApplications(activeTaskId);
                               }
                             } catch (error: any) {
-                                                            alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
+                                                            alert(getErrorMessage(error));
                             }
                           }}
                           style={{
@@ -6275,7 +6276,7 @@ const MessagePage: React.FC = () => {
             </div>
             
             {/* 图片预览 */}
-            <img
+            <LazyImage
               src={previewImageUrl}
               alt="图片预览"
               style={{
@@ -6406,7 +6407,7 @@ const MessagePage: React.FC = () => {
             </button>
             
             {/* 图片 */}
-            <img
+            <LazyImage
               src={previewImageUrl}
               alt="图片预览"
               style={{
@@ -6417,8 +6418,7 @@ const MessagePage: React.FC = () => {
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
               }}
               onError={(e) => {
-                                const img = e.currentTarget;
-                img.style.display = 'none';
+                // 错误已由 LazyImage 处理
                 const errorDiv = document.createElement('div');
                 errorDiv.style.cssText = `
                   color: white;
@@ -6430,6 +6430,7 @@ const MessagePage: React.FC = () => {
                   border: 2px dashed rgba(255, 255, 255, 0.3);
                 `;
                 errorDiv.textContent = '图片加载失败';
+                const img = e.currentTarget;
                 img.parentNode?.appendChild(errorDiv);
               }}
             />
@@ -6967,7 +6968,7 @@ const MessagePage: React.FC = () => {
                       await loadApplications(activeTaskId);
                     }
                   } catch (error: any) {
-                                        showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
+                    showToast('error', getErrorMessage(error) || t('messages.notifications.sendMessageFailed'));
                   }
                 }}
                 style={{

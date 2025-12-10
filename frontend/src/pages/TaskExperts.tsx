@@ -14,6 +14,7 @@ import SEOHead from '../components/SEOHead';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import ServiceListModal from '../components/ServiceListModal';
 import ExpertDetailModal from '../components/ExpertDetailModal';
+import LazyImage from '../components/LazyImage';
 import styles from './TaskExperts.module.css';
 
 interface TaskExpert {
@@ -870,11 +871,10 @@ const TaskExperts: React.FC = () => {
                 {/* 专家头部信息 */}
                 <div className={styles.expertHeader}>
                   <div className={styles.avatarContainer}>
-                    <img
+                    <LazyImage
                       src={expert.avatar}
                       alt={expert.name}
                       className={styles.avatar}
-                      loading="lazy"
                     />
                     {expert.is_verified && (
                       <div className={styles.verifiedBadge}>
@@ -1128,7 +1128,7 @@ const TaskExperts: React.FC = () => {
                                 zIndex: 0,
                               }}
                             >
-                              <img
+                              <LazyImage
                                 src={activityImage}
                                 alt={activity.title}
                                 style={{
@@ -1479,7 +1479,7 @@ const TaskExperts: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              <img
+              <LazyImage
                 src={selectedActivity.images && selectedActivity.images.length > 0 
                   ? selectedActivity.images[0] 
                   : selectedActivity.service_images && selectedActivity.service_images.length > 0

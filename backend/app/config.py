@@ -94,19 +94,34 @@ class Config:
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
     # CORS配置 - 安全配置
-    ALLOWED_ORIGINS = os.getenv(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080,https://www.link2ur.com,https://api.link2ur.com"
-    ).split(",")
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    IS_PRODUCTION = ENVIRONMENT == "production"
+    
+    if IS_PRODUCTION:
+        # 生产环境：只允许特定域名
+        ALLOWED_ORIGINS = os.getenv(
+            "ALLOWED_ORIGINS", 
+            "https://www.link2ur.com,https://link2ur.com"
+        ).split(",")
+    else:
+        # 开发环境：允许本地开发服务器
+        ALLOWED_ORIGINS = os.getenv(
+            "ALLOWED_ORIGINS", 
+            "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000"
+        ).split(",")
     
     # 过滤空字符串
     ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
     
     # 如果没有配置，使用默认安全配置
     if not ALLOWED_ORIGINS or ALLOWED_ORIGINS == [""]:
-        ALLOWED_ORIGINS = ["http://localhost:3000"]  # 默认只允许本地开发
+        if IS_PRODUCTION:
+            ALLOWED_ORIGINS = ["https://www.link2ur.com"]  # 生产环境默认
+        else:
+            ALLOWED_ORIGINS = ["http://localhost:3000"]  # 开发环境默认
     
     # 允许的HTTP方法
-    ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     
     # 允许的请求头
     ALLOWED_HEADERS = [
@@ -115,7 +130,17 @@ class Config:
         "X-CSRF-Token",
         "X-Requested-With",
         "Accept",
-        "Origin"
+        "Origin",
+        "X-Session-ID",  # 移动端会话ID
+        "X-User-ID"      # 移动端用户ID
+    ]
+    
+    # 暴露的响应头（前端可以访问）
+    EXPOSE_HEADERS = [
+        "X-Total-Count",
+        "X-Page-Count",
+        "X-Page-Size",
+        "X-Current-Page"
     ]
 
     # 邮箱配置

@@ -203,8 +203,24 @@ function clearRetryCounters() {
 }
 
 // 响应拦截器 - 处理认证失败、token刷新和CSRF错误
+// 性能监控：记录API调用时间
+api.interceptors.request.use((config) => {
+  // 使用类型断言添加 metadata 属性
+  (config as any).metadata = { startTime: performance.now() };
+  return config;
+});
+
 api.interceptors.response.use(
   response => {
+    // 记录API性能
+    const metadata = (response.config as any).metadata;
+    if (metadata?.startTime) {
+      const duration = performance.now() - metadata.startTime;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[API] ${response.config.method?.toUpperCase()} ${response.config.url}: ${duration.toFixed(2)}ms`);
+      }
+    }
+    
     // 成功响应后清理重试计数器
     if (response.status >= 200 && response.status < 300) {
       const globalKey = 'global_401_retry';
@@ -216,6 +232,15 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
+    // 记录API错误性能
+    const metadata = error.config ? (error.config as any).metadata : undefined;
+    if (metadata?.startTime) {
+      const duration = performance.now() - metadata.startTime;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[API Error] ${error.config.method?.toUpperCase()} ${error.config.url}: ${duration.toFixed(2)}ms`);
+      }
+    }
+    
     // 处理速率限制错误（429）
     if (error.response?.status === 429) {
       const retryAfter = error.response.headers['retry-after'] || error.response.headers['Retry-After'];

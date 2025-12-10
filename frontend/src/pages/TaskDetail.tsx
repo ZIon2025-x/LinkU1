@@ -19,6 +19,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import LazyImage from '../components/LazyImage';
+import { getErrorMessage } from '../utils/errorHandler';
 import styles from './TaskDetail.module.css';
 
 // 配置dayjs插件
@@ -1197,7 +1199,7 @@ const TaskDetail: React.FC = () => {
       setTask(res.data);
       await loadApplications();
     } catch (error: any) {
-            alert(error.response?.data?.detail || '批准申请者失败');
+            alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1265,7 +1267,7 @@ const TaskDetail: React.FC = () => {
         await checkUserApplication();
         await loadParticipants();
       } catch (error: any) {
-                alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
+                alert(getErrorMessage(error));
       } finally {
         setActionLoading(false);
       }
@@ -1323,7 +1325,7 @@ const TaskDetail: React.FC = () => {
       setTask(res.data);
       await checkUserApplication();
     } catch (error: any) {
-            alert(error.response?.data?.detail || '申请任务失败');
+            alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1358,7 +1360,7 @@ const TaskDetail: React.FC = () => {
         await loadParticipants();
       }
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1387,7 +1389,7 @@ const TaskDetail: React.FC = () => {
                   }
       }, 1000);
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1407,7 +1409,7 @@ const TaskDetail: React.FC = () => {
       const res = await api.get(`/api/tasks/${id}`);
       setTask(res.data);
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1429,7 +1431,7 @@ const TaskDetail: React.FC = () => {
       const res = await api.get(`/api/tasks/${id}`);
       setTask(res.data);
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -1520,7 +1522,7 @@ const TaskDetail: React.FC = () => {
       // 重新加载评价
       await loadTaskReviews();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '评价提交失败');
+      alert(getErrorMessage(error));
     } finally {
       setActionLoading(false);
     }
@@ -3027,7 +3029,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                                                alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
+                                                                alert(getErrorMessage(error));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3060,7 +3062,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(getErrorMessage(error));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3098,7 +3100,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(getErrorMessage(error));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3131,7 +3133,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(getErrorMessage(error));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3302,7 +3304,7 @@ const TaskDetail: React.FC = () => {
                 setTask(res.data);
                 await loadParticipants();
               } catch (error: any) {
-                                alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
+                                alert(getErrorMessage(error));
               } finally {
                 setActionLoading(false);
               }
@@ -3360,7 +3362,7 @@ const TaskDetail: React.FC = () => {
                   const res = await api.get(`/api/tasks/${id}`);
                   setTask(res.data);
                 } catch (error: any) {
-                                    alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
+                                    alert(getErrorMessage(error));
                 } finally {
                   setActionLoading(false);
                 }
@@ -3474,7 +3476,7 @@ const TaskDetail: React.FC = () => {
                 setTask(res.data);
                 await loadParticipants();
               } catch (error: any) {
-                                alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
+                                alert(getErrorMessage(error));
               } finally {
                 setActionLoading(false);
               }
@@ -3862,7 +3864,7 @@ const TaskDetail: React.FC = () => {
         >
           <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.reviewModalHeader}>
-              <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+              <LazyImage src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
               <h2 className={styles.reviewModalTitle}>
                 {t('myTasks.actions.review')}
               </h2>

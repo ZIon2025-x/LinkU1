@@ -6,6 +6,7 @@ import {
   UserOutlined, ClockCircleOutlined, CheckOutlined, CheckCircleOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { 
   getForumNotifications, markForumNotificationRead, markAllForumNotificationsRead,
@@ -20,6 +21,7 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
+import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumNotifications.module.css';
 
 const { Title, Text } = Typography;
@@ -128,7 +130,7 @@ const ForumNotifications: React.FC = () => {
       setNotifications(allNotifications);
       setTotal((forumResponse.total || 0) + taskNotifications.length);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -162,7 +164,7 @@ const ForumNotifications: React.FC = () => {
       loadNotifications();
       loadUnreadCount();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -176,7 +178,7 @@ const ForumNotifications: React.FC = () => {
       loadNotifications();
       loadUnreadCount();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -381,7 +383,7 @@ const ForumNotifications: React.FC = () => {
 
           {loading ? (
             <div className={styles.loadingContainer}>
-              <Spin size="large" />
+              <SkeletonLoader type="post" count={3} />
             </div>
           ) : notifications.length === 0 ? (
             <Empty description={t('forum.noNotifications')} />

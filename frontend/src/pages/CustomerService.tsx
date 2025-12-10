@@ -6,6 +6,7 @@ import api, { getCustomerServiceSessions, getCustomerServiceMessages, getCustome
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import LazyImage from '../components/LazyImage';
 import './CustomerService.css';
 
 // 时区检测和转换工具函数
@@ -1604,7 +1605,7 @@ const CustomerService: React.FC = () => {
         <div className="status-card">
           <div className="status-header">
             <div className="service-avatar">
-              <img 
+              <LazyImage 
                 src="/static/service.png"
                 alt="客服头像" 
                 className="avatar-image"
@@ -2000,7 +2001,7 @@ const CustomerService: React.FC = () => {
                         position: 'relative'
                       }}
                     >
-                      <img 
+                      <LazyImage 
                         src={session.user_avatar} 
                         alt="用户头像" 
                         style={{ 
@@ -2094,7 +2095,7 @@ const CustomerService: React.FC = () => {
                         opacity: 0.7
                       }}
                     >
-                      <img 
+                      <LazyImage 
                         src={session.user_avatar} 
                         alt="用户头像" 
                         style={{ 
@@ -2164,7 +2165,7 @@ const CustomerService: React.FC = () => {
                 alignItems: 'center',
                 gap: 12
               }}>
-                <img 
+                <LazyImage 
                   src={selectedSession.user_avatar}
                   alt="用户头像" 
                   style={{ 

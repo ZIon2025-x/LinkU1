@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import LazyImage from './LazyImage';
 
 interface HamburgerMenuProps {
   user: any;
@@ -144,7 +145,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
                   {/* 用户头像和信息 */}
                   <div className="user-info">
-                    <img
+                    <LazyImage
                       src={user.avatar || '/static/avatar1.png'}
                       alt={t('common.avatar')}
                       className="user-avatar"

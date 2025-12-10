@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Select, Modal, Form, message, Empty, Tag, Input, Pagination, Spin, Upload, Image } from 'antd';
 import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import {
   applyCustomLeaderboard,
@@ -101,7 +102,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       } else if (error.response?.status >= 500) {
         message.error('服务器错误，请稍后重试');
       } else {
-        message.error(error.response?.data?.detail || t('forum.loadingFailed'));
+        message.error(getErrorMessage(error));
       }
     } finally {
       setLoading(false);
@@ -139,7 +140,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                 throw new Error('上传失败：响应格式错误');
       }
     } catch (error: any) {
-            const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || t('forum.imageUploadFailed');
+            const errorMessage = getErrorMessage(error);
       message.error(`${t('forum.imageUploadFailed')}: ${errorMessage}`);
       throw error;
     } finally {
@@ -197,7 +198,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       setCoverImageUrl('');
       loadLeaderboards();
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('forum.applyFailed');
+            const errorMsg = getErrorMessage(error);
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {

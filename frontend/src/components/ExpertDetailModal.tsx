@@ -3,6 +3,7 @@ import { Spin, Rate } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getTaskExpert } from '../api';
+import LazyImage from './LazyImage';
 
 interface ExpertDetailModalProps {
   isOpen: boolean;
@@ -137,7 +138,7 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
                   borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <img
+                <LazyImage
                   src={expert.avatar || 'https://via.placeholder.com/80'}
                   alt={expert.expert_name || expert.name}
                   style={{

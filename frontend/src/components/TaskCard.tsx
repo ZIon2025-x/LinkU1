@@ -2,6 +2,7 @@ import React from 'react';
 import TaskTitle from './TaskTitle';
 import { TASK_TYPES } from '../pages/Tasks';
 import { Language } from '../contexts/LanguageContext';
+import LazyImage from './LazyImage';
 import styles from './TaskCard.module.css';
 
 interface TaskCardProps {
@@ -95,7 +96,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
         
         {/* 任务图片 */}
         {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
-          <img
+          <LazyImage
             key={`task-img-${task.id}-${String(task.images[0])}`}
             src={String(task.images[0])}
             alt={task.title}
@@ -110,16 +111,14 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
               backgroundColor: 'transparent',
               display: 'block'
             }}
-            loading="lazy"
-            onLoad={(e) => {
-              const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+            onLoad={() => {
+              const placeholder = document.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
               if (placeholder) {
                 placeholder.style.display = 'none';
               }
             }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+            onError={() => {
+              const placeholder = document.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
               if (!placeholder) {
                 const placeholderDiv = document.createElement('div');
                 placeholderDiv.className = `task-icon-placeholder-${task.id}`;
@@ -140,7 +139,10 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                     ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
                   </div>
                 `;
-                e.currentTarget.parentElement?.appendChild(placeholderDiv);
+                const parentElement = document.querySelector(`.task-card-${task.id}`) || document.querySelector(`[data-task-id="${task.id}"]`);
+                if (parentElement) {
+                  parentElement.appendChild(placeholderDiv);
+                }
               } else {
                 placeholder.style.display = 'flex';
               }

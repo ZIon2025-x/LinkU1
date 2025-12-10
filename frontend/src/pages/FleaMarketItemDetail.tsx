@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { message, Button, Space, Modal, Input, InputNumber, Rate, Card, Spin, Empty, Image } from 'antd';
+import { message, Button, Space, Modal, Input, InputNumber, Rate, Card, Empty, Image } from 'antd';
 import { 
   HeartOutlined, 
   HeartFilled, 
@@ -19,6 +19,9 @@ import SEOHead from '../components/SEOHead';
 import FleaMarketStructuredData from '../components/FleaMarketStructuredData';
 import HreflangManager from '../components/HreflangManager';
 import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
+import LazyImage from '../components/LazyImage';
+import SkeletonLoader from '../components/SkeletonLoader';
+import { getErrorMessage } from '../utils/errorHandler';
 import styles from './FleaMarketItemDetail.module.css';
 
 const { TextArea } = Input;
@@ -105,7 +108,7 @@ const FleaMarketItemDetail: React.FC = () => {
         }
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '加载商品详情失败');
+            message.error(getErrorMessage(error));
       if (error.response?.status === 404) {
         navigate(`/${language}/flea-market`);
       }
@@ -133,7 +136,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setIsFavorited(!isFavorited);
       message.success(isFavorited ? '已取消收藏' : '收藏成功');
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '操作失败');
+            message.error(getErrorMessage(error));
     } finally {
       setFavoriteLoading(false);
     }
@@ -158,7 +161,7 @@ const FleaMarketItemDetail: React.FC = () => {
           message.success('购买成功！任务已创建');
           navigate(`/${language}/message`);
         } catch (error: any) {
-                    message.error(error.response?.data?.detail || '购买失败');
+                    message.error(getErrorMessage(error));
         } finally {
           setPurchaseLoading(false);
         }
@@ -181,7 +184,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setProposedPrice(undefined);
       setPurchaseMessage('');
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '提交失败');
+            message.error(getErrorMessage(error));
     } finally {
       setPurchaseLoading(false);
     }
@@ -201,7 +204,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '举报失败');
+            message.error(getErrorMessage(error));
     }
   }, [itemId, reportReason, reportDescription, currentUser]);
 
@@ -217,7 +220,7 @@ const FleaMarketItemDetail: React.FC = () => {
       // 重新加载商品信息以更新刷新时间
       await loadItem();
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
+            message.error(getErrorMessage(error));
     } finally {
       setRefreshLoading(false);
     }
@@ -226,9 +229,7 @@ const FleaMarketItemDetail: React.FC = () => {
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.loadingContainer}>
-          <Spin size="large" />
-        </div>
+        <SkeletonLoader type="task" count={1} />
       </div>
     );
   }
@@ -322,7 +323,7 @@ const FleaMarketItemDetail: React.FC = () => {
                       className={`${styles.thumbnail} ${currentImageIndex === index ? styles.active : ''}`}
                       onClick={() => setCurrentImageIndex(index)}
                     >
-                      <img src={img} alt={`${item.title} ${index + 1}`} />
+                      <LazyImage src={img} alt={`${item.title} ${index + 1}`} />
                     </div>
                   ))}
                 </div>
@@ -409,7 +410,7 @@ const FleaMarketItemDetail: React.FC = () => {
                           message.success(t('fleaMarket.deleteSuccess') || '删除成功');
                           navigate(`/${language}/flea-market`);
                         } catch (error: any) {
-                          message.error(error.response?.data?.detail || '删除失败');
+                          message.error(getErrorMessage(error));
                         }
                       }
                     });

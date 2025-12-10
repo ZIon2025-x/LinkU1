@@ -7,6 +7,7 @@ import {
   UserOutlined, EditOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { getForumPosts, getForumCategory, deleteForumPost, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
@@ -18,6 +19,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
+import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumPostList.module.css';
 
 const { Title, Text } = Typography;
@@ -173,7 +175,7 @@ const ForumPostList: React.FC = () => {
           message.success(t('forum.deleteSuccess'));
           loadPosts();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -212,7 +214,7 @@ const ForumPostList: React.FC = () => {
         </header>
         <div className={styles.headerSpacer} />
         <div className={styles.loadingContainer}>
-          <Spin size="large" />
+          <SkeletonLoader type="post" count={3} />
         </div>
       </div>
     );
@@ -287,7 +289,7 @@ const ForumPostList: React.FC = () => {
 
         {loading ? (
           <div className={styles.loadingContainer}>
-            <Spin size="large" />
+            <SkeletonLoader type="post" count={3} />
           </div>
         ) : posts.length === 0 ? (
           <Empty description={t('forum.noPosts')} />

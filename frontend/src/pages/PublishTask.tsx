@@ -5,6 +5,9 @@ import { TASK_TYPES, CITIES } from './Tasks';
 import api, { getPublicSystemSettings, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { compressImage } from '../utils/imageCompression';
+import LazyImage from '../components/LazyImage';
+import { getErrorMessage } from '../utils/errorHandler';
+import { validateTaskTitle, validateTaskDescription } from '../utils/inputValidators';
 import SEOHead from '../components/SEOHead';
 
 // 移动端检测函数
@@ -150,7 +153,7 @@ const PublishTask: React.FC = () => {
           message.error(`图片 ${file.name} 上传失败`);
         }
       } catch (error: any) {
-                message.error(`图片 ${file.name} 上传失败: ${error.response?.data?.detail || error.message}`);
+                message.error(`图片 ${file.name} 上传失败: ${getErrorMessage(error)}`);
       } finally {
         setUploadingImages(prev => {
           const newArr = [...prev];
@@ -196,6 +199,20 @@ const PublishTask: React.FC = () => {
       setError(t('publishTask.fillAllFields'));
       return;
     }
+    
+    // 输入验证
+    const titleValidation = validateTaskTitle(form.title.trim());
+    if (!titleValidation.valid) {
+      setError(titleValidation.message || '任务标题格式不正确');
+      return;
+    }
+    
+    const descriptionValidation = validateTaskDescription(form.description.trim());
+    if (!descriptionValidation.valid) {
+      setError(descriptionValidation.message || '任务描述格式不正确');
+      return;
+    }
+    
     setLoading(true);
     try {
       await api.post('/api/tasks', {
@@ -700,7 +717,7 @@ const PublishTask: React.FC = () => {
                     background: '#f3f4f6',
                     border: '2px solid #e5e7eb'
                   }}>
-                    <img
+                    <LazyImage
                       src={url}
                       alt={`任务图片 ${index + 1}`}
                       style={{
@@ -709,7 +726,6 @@ const PublishTask: React.FC = () => {
                         objectFit: 'cover',
                         display: 'block'
                       }}
-                      loading="lazy"
                     />
                     <button
                       onClick={() => handleRemoveImage(index)}

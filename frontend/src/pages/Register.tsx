@@ -8,6 +8,8 @@ import LoginModal from '../components/LoginModal';
 import api from '../api';
 import SEOHead from '../components/SEOHead';
 import HreflangManager from '../components/HreflangManager';
+import { getErrorMessage } from '../utils/errorHandler';
+import { validateEmail, validateName } from '../utils/inputValidators';
 
 const { Text, Paragraph } = Typography;
 
@@ -246,43 +248,7 @@ const Register: React.FC = () => {
         }, 1500);
       }
     } catch (err: any) {
-            let msg = t('register.registrationError');
-      
-      // 处理不同的错误格式
-      if (err?.response?.data) {
-        const errorData = err.response.data;
-        
-        // 优先使用 message 字段
-        if (errorData.message) {
-          msg = errorData.message;
-        } 
-        // 然后尝试 detail 字段
-        else if (errorData.detail) {
-          if (typeof errorData.detail === 'string') {
-            msg = errorData.detail;
-          } else if (Array.isArray(errorData.detail)) {
-            msg = errorData.detail.map((item: any) => item.msg || item).join('；');
-          } else if (typeof errorData.detail === 'object' && errorData.detail.msg) {
-            msg = errorData.detail.msg;
-          } else {
-            msg = JSON.stringify(errorData.detail);
-          }
-        }
-        // 最后尝试 error 字段
-        else if (errorData.error) {
-          msg = errorData.error;
-        }
-      } 
-      // 处理网络错误或其他错误
-      else if (err?.message) {
-        if (err.message.includes('Network Error') || err.message.includes('timeout')) {
-          msg = t('errors.networkError');
-        } else {
-          msg = err.message;
-        }
-      }
-      
-      setErrorMsg(msg);
+      setErrorMsg(getErrorMessage(err));
     }
   };
 
@@ -330,9 +296,15 @@ const Register: React.FC = () => {
             name="name" 
             rules={[
               { required: true, message: t('register.usernameRequired') },
-              { min: 2, message: t('register.usernameTooShort') },
-              { max: 50, message: t('register.usernameTooLong') },
-              { pattern: /^[a-zA-Z0-9_-]+$/, message: t('register.usernameInvalid') }
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const result = validateName(value);
+                  return result.valid
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(result.message));
+                }
+              }
             ]}
           > 
             <Input placeholder={t('register.username')} />
@@ -343,7 +315,15 @@ const Register: React.FC = () => {
             name="email" 
             rules={[
               { required: true, message: t('register.emailRequired') },
-              { type: 'email', message: t('register.emailInvalid') }
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const result = validateEmail(value);
+                  return result.valid
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(result.message));
+                }
+              }
             ]}
           > 
             <Input placeholder={t('register.email')} />

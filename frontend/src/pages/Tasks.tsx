@@ -28,6 +28,10 @@ import { WS_BASE_URL } from '../config';
 import { useTaskSorting } from '../hooks/useTaskSorting';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import { Grid, GridImperativeAPI } from 'react-window';
+import LazyImage from '../components/LazyImage';
+import SkeletonLoader from '../components/SkeletonLoader';
+import { getErrorMessage } from '../utils/errorHandler';
+import { performanceMonitor } from '../utils/performanceMonitor';
 import { injectTasksStyles } from '../styles/Tasks.styles';
 import { TaskType } from '../constants/taskTypes';
 import styles from './Tasks.module.css';
@@ -369,6 +373,11 @@ const Tasks: React.FC = () => {
   // 注入样式（只需调用一次）
   useEffect(() => {
     injectTasksStyles();
+  }, []);
+
+  // 性能监控
+  useEffect(() => {
+    performanceMonitor.measurePageLoad('TasksPage');
   }, []);
   
   // 获取翻译后的任务类型名称
@@ -1497,7 +1506,7 @@ const Tasks: React.FC = () => {
       setApplyMessage('');
       setNegotiatedPrice(undefined);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('tasks.acceptFailed'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -1691,7 +1700,7 @@ const Tasks: React.FC = () => {
             zIndex: 0,
           }}
         >
-          <img
+          <LazyImage
             src={activityImage}
             alt={activity.title}
             style={{
@@ -2156,10 +2165,7 @@ const Tasks: React.FC = () => {
 
           {/* 任务列表 - 动态使用虚拟滚动 */}
           {loading ? (
-            <div className={styles.loadingContainer}>
-              <div className={styles.loadingIcon}>⏳</div>
-              <div>加载中...</div>
-            </div>
+            <SkeletonLoader type="task" count={5} />
           ) : displayTasks.length === 0 ? (
             <div className={styles.emptyContainer}>
               <div className={styles.emptyIcon}>📝</div>
@@ -2543,7 +2549,7 @@ const Tasks: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              <img
+              <LazyImage
                 src={selectedActivity.images && selectedActivity.images.length > 0 
                   ? selectedActivity.images[0] 
                   : selectedActivity.service_images && selectedActivity.service_images.length > 0

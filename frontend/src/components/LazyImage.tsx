@@ -1,66 +1,157 @@
-import React from 'react';
+/**
+ * 图片懒加载组件
+ * 使用 Intersection Observer API 实现图片懒加载，提升页面性能
+ */
+import React, { useState, useRef, useEffect } from 'react';
+import { Spin } from 'antd';
 
-interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-  src: string; // 基础图片 URL（必须，组件内部会处理格式和响应式）
-  alt: string; // 必须
+interface LazyImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  placeholder?: string;
+  width?: number | string;
+  height?: number | string;
+  style?: React.CSSProperties;
+  onLoad?: () => void;
+  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  onClick?: () => void;
+  title?: string;
+  onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void;
+  rootMargin?: string; // Intersection Observer 的 rootMargin
 }
 
-/**
- * 懒加载图片组件（优化版）
- * 使用原生 loading="lazy" 和 <picture> 标签实现现代图片格式支持
- * 支持 AVIF/WebP 格式降级，响应式图片，自动懒加载
- */
-const LazyImage: React.FC<LazyImageProps> = ({
-  src,
-  alt,
+const LazyImage: React.FC<LazyImageProps> = ({ 
+  src, 
+  alt, 
   className,
-  sizes: propSizes,
-  ...imgProps
+  placeholder = '/placeholder.png',
+  width,
+  height,
+  style,
+  onLoad,
+  onError,
+  onClick,
+  title,
+  onMouseEnter,
+  onMouseLeave,
+  rootMargin = '50px'
 }) => {
-  // 提取基础路径（去除扩展名）
-  const srcBase = src.replace(/\.(jpg|jpeg|png|webp|avif)$/i, '');
-  
-  // 使用传入的 sizes 或默认值，避免重复 props
-  const sizes = propSizes || "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
-  
-  return (
-    <picture>
-      {/* AVIF 格式（最佳压缩） */}
-      <source
-        srcSet={`
-          ${srcBase}.avif?w=400 400w,
-          ${srcBase}.avif?w=800 800w,
-          ${srcBase}.avif?w=1200 1200w
-        `}
-        type="image/avif"
-        sizes={sizes}
-      />
-      {/* WebP 格式（次优） */}
-      <source
-        srcSet={`
-          ${srcBase}.webp?w=400 400w,
-          ${srcBase}.webp?w=800 800w,
-          ${srcBase}.webp?w=1200 1200w
-        `}
-        type="image/webp"
-        sizes={sizes}
-      />
-      {/* 降级方案：原始格式 */}
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    // 如果浏览器不支持 Intersection Observer，直接加载图片
+    if (!('IntersectionObserver' in window)) {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { 
+        rootMargin,
+        threshold: 0.01 // 图片进入视口1%时开始加载
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+      observer.disconnect();
+    };
+  }, [rootMargin]);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    if (onLoad) {
+      onLoad();
+    }
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setHasError(true);
+    if (onError) {
+      onError(e);
+    }
+  };
+
+  // 如果图片加载失败，显示占位符
+  if (hasError && placeholder) {
+    return (
       <img
-        src={`${srcBase}.jpg`}
-        srcSet={`
-          ${srcBase}.jpg?w=400 400w,
-          ${srcBase}.jpg?w=800 800w,
-          ${srcBase}.jpg?w=1200 1200w
-        `}
-        sizes={sizes}
-        loading="lazy"
-        decoding="async"
+        ref={imgRef}
+        src={placeholder}
         alt={alt}
         className={className}
-        {...imgProps}
+        width={width}
+        height={height}
+        style={style}
+        loading="lazy"
       />
-    </picture>
+    );
+  }
+
+  return (
+    <div 
+      ref={imgRef}
+      style={{ 
+        position: 'relative',
+        width: width || '100%',
+        height: height || 'auto',
+        ...style
+      }}
+      className={className}
+    >
+      {!isInView && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f0f0f0'
+        }}>
+          <Spin size="small" />
+        </div>
+      )}
+      {isInView && (
+        <img
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          onLoad={handleLoad}
+          onError={handleError}
+          style={{
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
+        />
+      )}
+    </div>
   );
 };
 

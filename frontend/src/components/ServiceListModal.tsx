@@ -11,6 +11,7 @@ import ServiceDetailModal from './ServiceDetailModal';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import LazyImage from './LazyImage';
 
 interface ServiceListModalProps {
   isOpen: boolean;
@@ -408,7 +409,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                     {/* 服务图片 */}
                     {service.images && service.images.length > 0 && (
-                      <img
+                      <LazyImage
                         src={service.images[0]}
                         alt={service.service_name}
                         style={{

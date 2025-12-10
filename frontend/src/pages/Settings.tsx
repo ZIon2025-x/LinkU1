@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
+import { validateEmail, validateName } from '../utils/inputValidators';
+import LazyImage from '../components/LazyImage';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -200,6 +203,23 @@ const Settings: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      // 验证输入
+      if (formData.name) {
+        const nameValidation = validateName(formData.name);
+        if (!nameValidation.valid) {
+          message.error(nameValidation.message);
+          return;
+        }
+      }
+      
+      if (formData.email) {
+        const emailValidation = validateEmail(formData.email);
+        if (!emailValidation.valid) {
+          message.error(emailValidation.message);
+          return;
+        }
+      }
+      
       // 保存个人资料（名字、常住城市、语言偏好）
       // 构建请求体，只包含需要更新的字段
       const updatePayload: any = {};
@@ -365,7 +385,7 @@ const Settings: React.FC = () => {
         });
       }, 1000);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '发送验证码失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -400,7 +420,7 @@ const Settings: React.FC = () => {
         });
       }, 1000);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '发送验证码失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -640,7 +660,7 @@ const Settings: React.FC = () => {
                   marginBottom: isMobile ? '20px' : '30px',
                   gap: isMobile ? '16px' : '0'
                 }}>
-                  <img
+                  <LazyImage
                     src={formatAvatarUrl(user?.avatar)}
                     alt="头像"
                     style={{

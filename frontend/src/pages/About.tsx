@@ -19,6 +19,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import LazyImage from '../components/LazyImage';
 import './About.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -316,7 +317,7 @@ const About: React.FC = () => {
           </Col>
           <Col xs={24} lg={12}>
             <div className="story-image">
-              <img 
+              <LazyImage 
                 src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
                 alt={t('about.ourTeam')} 
                 className="story-img"
@@ -409,7 +410,7 @@ const About: React.FC = () => {
           <Row gutter={[48, 48]} align="middle">
             <Col xs={0} lg={12} className="vision-image-col">
               <div className="vision-image">
-                <img 
+                <LazyImage 
                   src="/static/logo.png" 
                   alt={t('about.vision')} 
                   className="vision-img"

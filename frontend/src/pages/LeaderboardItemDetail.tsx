@@ -23,6 +23,7 @@ import { fetchCurrentUser } from '../api';
 import { compressImage } from '../utils/imageCompression';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -86,7 +87,7 @@ const LeaderboardItemDetail: React.FC = () => {
         setPagination(prev => ({ ...prev, current: 1, total: votesData?.length || 0 }));
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('forum.loadingFailed'));
+      message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -132,7 +133,7 @@ const LeaderboardItemDetail: React.FC = () => {
         message.success(t('forum.voteCancelled'));
         loadData();
       } catch (error: any) {
-        message.error(error.response?.data?.detail || t('forum.cancelVoteFailed'));
+        message.error(getErrorMessage(error));
       }
     } else {
       setCurrentVoteType(voteType);
@@ -170,7 +171,7 @@ const LeaderboardItemDetail: React.FC = () => {
       // 重新加载留言列表
       loadVotes(1);
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
+            const errorMsg = getErrorMessage(error);
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
@@ -206,7 +207,7 @@ const LeaderboardItemDetail: React.FC = () => {
           : vote
       ));
     } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || error.message || t('forum.likeFailed');
+            const errorMsg = getErrorMessage(error);
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
@@ -590,7 +591,7 @@ const LeaderboardItemDetail: React.FC = () => {
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
-                            const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
+                            const errorMsg = getErrorMessage(error);
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);

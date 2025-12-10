@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import { compressImage } from '../utils/imageCompression';
+import { getErrorMessage } from '../utils/errorHandler';
+import LazyImage from '../components/LazyImage';
 import styles from './AdminDashboard.module.css';
 import api, { 
   getDashboardStats, 
@@ -580,7 +582,7 @@ const AdminDashboard: React.FC = () => {
       setNewCustomerService({ name: '', email: '', password: '' });
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '创建失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -596,7 +598,7 @@ const AdminDashboard: React.FC = () => {
       setNewAdminUser({ name: '', username: '', email: '', password: '', is_super_admin: 0 });
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '创建失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -612,7 +614,7 @@ const AdminDashboard: React.FC = () => {
           message.success('客服账号删除成功！');
           loadDashboardData();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || '删除失败');
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -630,7 +632,7 @@ const AdminDashboard: React.FC = () => {
           message.success('管理员账号删除成功！');
           loadDashboardData();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || '删除失败');
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -649,7 +651,7 @@ const AdminDashboard: React.FC = () => {
       setShowSendNotificationModal(false);
       setStaffNotificationForm({ recipientId: '', recipientType: '', title: '', content: '' });
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '发送失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -670,7 +672,7 @@ const AdminDashboard: React.FC = () => {
       message.success('用户等级更新成功！');
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '更新失败');
+      message.error(getErrorMessage(error));
     } finally {
       setUserActionLoading(null);
     }
@@ -683,7 +685,7 @@ const AdminDashboard: React.FC = () => {
       message.success(isBanned ? '用户已封禁' : '用户已解封');
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败');
+      message.error(getErrorMessage(error));
     } finally {
       setUserActionLoading(null);
     }
@@ -700,7 +702,7 @@ const AdminDashboard: React.FC = () => {
       message.success(isSuspended ? `用户已暂停${suspendDuration}天` : '用户已恢复');
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '操作失败');
+      message.error(getErrorMessage(error));
     } finally {
       setUserActionLoading(null);
     }
@@ -737,7 +739,7 @@ const AdminDashboard: React.FC = () => {
       message.success('通知发送成功！');
       setNotificationForm({ title: '', content: '', user_ids: [] });
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '发送失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -746,7 +748,7 @@ const AdminDashboard: React.FC = () => {
       await notifyCustomerService(csId, message);
       alert('提醒发送成功！');
     } catch (error: any) {
-      alert(error.response?.data?.detail || '发送失败');
+      alert(getErrorMessage(error));
     }
   };
 
@@ -766,7 +768,7 @@ const AdminDashboard: React.FC = () => {
         message.error('清理失败');
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '清理失败，请稍后重试');
+            message.error(getErrorMessage(error));
     } finally {
       setCleanupLoading(false);
     }
@@ -1706,7 +1708,7 @@ const AdminDashboard: React.FC = () => {
                               await loadDashboardData();
                               message.success('任务达人删除成功！');
                             } catch (error: any) {
-                                                            message.error(error.response?.data?.detail || '删除失败');
+                                                            message.error(getErrorMessage(error));
                             }
                           }
                         });
@@ -1916,17 +1918,10 @@ const AdminDashboard: React.FC = () => {
                   flexShrink: 0
                 }}>
                   {taskExpertForm.avatar ? (
-                    <img
+                    <LazyImage
                       key={taskExpertForm.avatar}
                       src={taskExpertForm.avatar}
                       alt="头像预览"
-                      onError={(e) => {
-                                                const img = e.currentTarget;
-                        const parent = img.parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<span style="font-size: 10px; color: #ff4d4f;">加载失败</span>';
-                        }
-                      }}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -1991,7 +1986,7 @@ const AdminDashboard: React.FC = () => {
                             message.error('图片上传失败，请重试');
                           }
                         } catch (error: any) {
-                                                    message.error(error.response?.data?.detail || '图片上传失败，请重试');
+                                                    message.error(getErrorMessage(error));
                         } finally {
                           setUploadingAvatar(false);
                           e.target.value = '';
@@ -2460,7 +2455,7 @@ const AdminDashboard: React.FC = () => {
                                         const data = await getExpertServicesAdmin(taskExpertForm.id);
                                         setExpertServices(data.services || []);
                                       } catch (error: any) {
-                                                                                message.error(error.response?.data?.detail || '更新失败');
+                                                                                message.error(getErrorMessage(error));
                                       }
                                     }}
                                     style={{
@@ -2490,7 +2485,7 @@ const AdminDashboard: React.FC = () => {
                                             const data = await getExpertServicesAdmin(taskExpertForm.id);
                                             setExpertServices(data.services || []);
                                           } catch (error: any) {
-                                                                                        message.error(error.response?.data?.detail || '删除失败');
+                                                                                        message.error(getErrorMessage(error));
                                           }
                                         }
                                       });
@@ -2874,7 +2869,7 @@ const AdminDashboard: React.FC = () => {
                               const data = await getExpertServicesAdmin(taskExpertForm.id);
                               setExpertServices(data.services || []);
                             } catch (error: any) {
-                                                            message.error(error.response?.data?.detail || '更新失败');
+                                                            message.error(getErrorMessage(error));
                             }
                           }}
                           style={{
@@ -2996,7 +2991,7 @@ const AdminDashboard: React.FC = () => {
                                         const data = await getExpertActivitiesAdmin(taskExpertForm.id);
                                         setExpertActivities(data.activities || []);
                                       } catch (error: any) {
-                                                                                message.error(error.response?.data?.detail || '更新失败');
+                                                                                message.error(getErrorMessage(error));
                                       }
                                     }}
                                     style={{
@@ -3026,7 +3021,7 @@ const AdminDashboard: React.FC = () => {
                                             const data = await getExpertActivitiesAdmin(taskExpertForm.id);
                                             setExpertActivities(data.activities || []);
                                           } catch (error: any) {
-                                                                                        message.error(error.response?.data?.detail || '删除失败');
+                                                                                        message.error(getErrorMessage(error));
                                           }
                                         }
                                       });
@@ -3087,7 +3082,7 @@ const AdminDashboard: React.FC = () => {
                       message.error('请输入任务达人名称');
                     }
                   } catch (error: any) {
-                                        const errorMsg = error.response?.data?.detail || '操作失败，请重试';
+                                        const errorMsg = getErrorMessage(error);
                     message.error(errorMsg);
                   }
                 }}
@@ -3325,7 +3320,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div>
                           <strong>头像:</strong> {request.expert?.avatar ? (
-                            <img src={request.expert.avatar} alt="当前头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                            <LazyImage src={request.expert.avatar} alt="当前头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                           ) : '-'}
                         </div>
                       </td>
@@ -3338,7 +3333,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div>
                           <strong>头像:</strong> {request.new_avatar ? (
-                            <img src={request.new_avatar} alt="新头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                            <LazyImage src={request.new_avatar} alt="新头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                           ) : '-'}
                         </div>
                       </td>
@@ -3567,7 +3562,7 @@ const AdminDashboard: React.FC = () => {
                   )}
                   {selectedProfileUpdate.new_avatar && (
                     <div>
-                      头像: <img src={selectedProfileUpdate.new_avatar} alt="新头像" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                      头像: <LazyImage src={selectedProfileUpdate.new_avatar} alt="新头像" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                     </div>
                   )}
                 </div>
@@ -3909,7 +3904,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-            const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+            const errorDetail = getErrorMessage(error);
       message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     }
   };
@@ -3949,7 +3944,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '更新失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -3965,7 +3960,7 @@ const AdminDashboard: React.FC = () => {
           message.success('邀请码删除成功！');
           loadDashboardData();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || '删除失败');
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -3989,7 +3984,7 @@ const AdminDashboard: React.FC = () => {
       });
       setShowInvitationCodeModal(true);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '获取详情失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -4499,7 +4494,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-            const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+            const errorDetail = getErrorMessage(error);
       message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     }
   };
@@ -4537,7 +4532,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '更新失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -4553,7 +4548,7 @@ const AdminDashboard: React.FC = () => {
           message.success('板块删除成功！');
           loadDashboardData();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || '删除失败');
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -6084,7 +6079,7 @@ const AdminDashboard: React.FC = () => {
       setFleaMarketItems(response.items || []);
       setFleaMarketItemsTotal(response.total || 0);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '加载商品列表失败');
+      message.error(getErrorMessage(error));
     } finally {
       setFleaMarketItemsLoading(false);
     }
@@ -6126,7 +6121,7 @@ const AdminDashboard: React.FC = () => {
       setFleaMarketItemForm({});
       loadFleaMarketItems();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '更新失败');
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -6141,7 +6136,7 @@ const AdminDashboard: React.FC = () => {
           message.success('商品删除成功！');
           loadFleaMarketItems();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || '删除失败');
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -6161,7 +6156,7 @@ const AdminDashboard: React.FC = () => {
       // 注意：API返回的是数组，没有total字段，这里需要根据实际情况调整
       setLeaderboardVotesTotal(Array.isArray(data) ? data.length : 0);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '加载投票记录失败');
+            message.error(getErrorMessage(error));
     } finally {
       setLeaderboardVotesLoading(false);
     }
@@ -6189,7 +6184,7 @@ const AdminDashboard: React.FC = () => {
       });
       setPendingLeaderboards(Array.isArray(data) ? data : []);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '加载待审核榜单失败');
+            message.error(getErrorMessage(error));
     } finally {
       setLeaderboardsLoading(false);
     }
@@ -6290,7 +6285,7 @@ const AdminDashboard: React.FC = () => {
       // 重新加载列表
       await loadPendingLeaderboards();
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '审核失败');
+            message.error(getErrorMessage(error));
     } finally {
       setReviewingLeaderboard(null);
     }
@@ -7833,7 +7828,7 @@ const AdminDashboard: React.FC = () => {
                     )}
                     {leaderboard.cover_image && (
                       <div style={{ marginBottom: '12px' }}>
-                        <img
+                        <LazyImage
                           src={leaderboard.cover_image}
                           alt="封面"
                           style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '4px', objectFit: 'cover' }}
@@ -7920,7 +7915,7 @@ const AdminDashboard: React.FC = () => {
               <div>
                 <strong>榜单封面图片：</strong>
                 <div style={{ marginTop: '8px' }}>
-                  <img
+                  <LazyImage
                     src={selectedLeaderboardForReview.cover_image}
                     alt="榜单封面"
                     style={{

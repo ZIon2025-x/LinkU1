@@ -12,6 +12,8 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { Typography } from 'antd';
+import { getErrorMessage } from '../utils/errorHandler';
+import { validateName } from '../utils/inputValidators';
 import styles from './ForumCreatePost.module.css';
 
 const { Title } = Typography;
@@ -114,7 +116,7 @@ const ForumCreatePost: React.FC = () => {
         category_id: response.category.id
       });
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     } finally {
       setPostLoading(false);
     }
@@ -132,8 +134,7 @@ const ForumCreatePost: React.FC = () => {
       }
       navigate(`/${lang}/forum/category/${values.category_id}`);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || t('forum.error');
-      message.error(errorMsg);
+      message.error(getErrorMessage(error));
       
       // 处理频率限制错误
       if (error.response?.status === 429) {
@@ -257,7 +258,16 @@ const ForumCreatePost: React.FC = () => {
                 label={t('forum.postTitle')}
                 rules={[
                   { required: true, message: t('forum.postTitle') },
-                  { min: 1, max: 200, message: t('forum.titleLength') }
+                  { min: 1, max: 200, message: t('forum.titleLength') },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const validation = validateName(value);
+                      return validation.valid 
+                        ? Promise.resolve() 
+                        : Promise.reject(new Error(validation.message));
+                    }
+                  }
                 ]}
               >
                 <Input

@@ -27,6 +27,8 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import SafeContent from '../components/SafeContent';
+import { getErrorMessage } from '../utils/errorHandler';
+import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumPostDetail.module.css';
 
 const { Title, Text } = Typography;
@@ -499,7 +501,7 @@ const ForumPostDetail: React.FC = () => {
           navigate(`/${lang}/forum`);
         }, 2000);
       } else {
-        message.error(error.response?.data?.detail || t('forum.error'));
+        message.error(getErrorMessage(error));
       }
     } finally {
       setLoading(false);
@@ -536,7 +538,7 @@ const ForumPostDetail: React.FC = () => {
         });
       }
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -558,7 +560,7 @@ const ForumPostDetail: React.FC = () => {
         });
       }
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -592,7 +594,7 @@ const ForumPostDetail: React.FC = () => {
         return prevReplies.map(updateReply);
       });
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -621,7 +623,7 @@ const ForumPostDetail: React.FC = () => {
       loadReplies();
       loadPost(); // 更新回复数
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     } finally {
       setReplyLoading(false);
     }
@@ -637,7 +639,7 @@ const ForumPostDetail: React.FC = () => {
           message.success(t('forum.deleteSuccess'));
           navigate(`/${lang}/forum/category/${post?.category.id}`);
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -654,7 +656,7 @@ const ForumPostDetail: React.FC = () => {
           loadReplies();
           loadPost();
         } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -685,7 +687,7 @@ const ForumPostDetail: React.FC = () => {
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-      message.error(error.response?.data?.detail || t('forum.error'));
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -942,8 +944,8 @@ const ForumPostDetail: React.FC = () => {
           </div>
         </header>
         <div className={styles.headerSpacer} />
-        <div className={styles.loadingContainer}>
-          <Spin size="large" />
+        <div className={styles.content}>
+          <SkeletonLoader type="post" count={1} />
         </div>
       </div>
     );

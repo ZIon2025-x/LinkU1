@@ -6,6 +6,7 @@ import {
   SearchOutlined, UserOutlined, ClockCircleOutlined, FireOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 import { searchForumPosts, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { message } from 'antd';
@@ -17,6 +18,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumSearch.module.css';
 
 const { Title, Text } = Typography;
@@ -120,7 +122,7 @@ const ForumSearch: React.FC = () => {
       }
       setSearchParams(newParams);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -197,7 +199,7 @@ const ForumSearch: React.FC = () => {
 
         {loading ? (
           <div className={styles.loadingContainer}>
-            <Spin size="large" />
+            <SkeletonLoader type="post" count={3} />
           </div>
         ) : searchKeyword.trim() && posts.length === 0 ? (
           <Empty description={t('forum.noSearchResults')} />

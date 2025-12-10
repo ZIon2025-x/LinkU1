@@ -350,7 +350,15 @@ class EmailVerificationManager:
                 if user and user.is_verified == 1:
                     logger.warning(f"用户已验证，token可能已被使用: {email}")
                     return None
-                # 如果用户未验证，允许验证（向后兼容旧token）
+                # 检查PendingUser表中是否有相同token但不同邮箱的记录（防止token被重复使用）
+                other_pending = db.query(models.PendingUser).filter(
+                    models.PendingUser.verification_token == token,
+                    models.PendingUser.email != email
+                ).first()
+                if other_pending:
+                    logger.warning(f"Token已被其他用户使用: {email}")
+                    return None
+                # 如果用户未验证且没有其他pending用户使用相同token，允许验证（向后兼容）
                 logger.info(f"Redis中没有token记录，但允许验证（向后兼容）: {email}")
         else:
             # Redis不可用，检查用户是否已经验证过

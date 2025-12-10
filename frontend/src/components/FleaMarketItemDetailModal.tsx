@@ -15,6 +15,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { getErrorMessage } from '../utils/errorHandler';
+import LazyImage from './LazyImage';
 import styles from './FleaMarketItemDetailModal.module.css';
 
 const { TextArea } = Input;
@@ -124,7 +126,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         }
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.loadItemError') || '加载商品详情失败');
+            message.error(getErrorMessage(error));
       if (error.response?.status === 404) {
         onClose();
       }
@@ -192,7 +194,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onFavoriteChanged(itemId, newFavoritedState);
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '操作失败');
+            message.error(getErrorMessage(error));
     } finally {
       setFavoriteLoading(false);
     }
@@ -218,7 +220,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           onClose();
           navigate(`/${language}/message`);
         } catch (error: any) {
-                    message.error(error.response?.data?.detail || '购买失败');
+                    message.error(getErrorMessage(error));
         } finally {
           setPurchaseLoading(false);
         }
@@ -244,7 +246,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onItemUpdated();
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '提交失败');
+            message.error(getErrorMessage(error));
     } finally {
       setPurchaseLoading(false);
     }
@@ -268,7 +270,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.reportError') || '举报失败');
+            message.error(getErrorMessage(error));
     } finally {
       setReportLoading(false);
     }
@@ -294,7 +296,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setCounterPrice(undefined);
       loadPurchaseRequests();
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.counterOfferError') || '议价失败');
+            message.error(getErrorMessage(error));
     } finally {
       setCounterOfferLoading(false);
     }
@@ -317,7 +319,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           message.success(t('fleaMarket.rejectPurchaseSuccess') || '购买申请已拒绝');
           loadPurchaseRequests();
         } catch (error: any) {
-                    message.error(error.response?.data?.detail || t('fleaMarket.rejectPurchaseError') || '拒绝失败');
+                    message.error(getErrorMessage(error));
         } finally {
           setRejectLoading(null);
         }
@@ -342,7 +344,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onItemUpdated();
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
+            message.error(getErrorMessage(error));
     } finally {
       setRefreshLoading(false);
     }
@@ -394,7 +396,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
               {item.images && item.images.length > 0 ? (
                 <>
                   <div className={styles.mainImage}>
-                    <img
+                    <LazyImage
                       src={item.images[currentImageIndex]}
                       alt={item.title}
                       className={styles.mainImageImg}
@@ -408,7 +410,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                           className={`${styles.thumbnail} ${currentImageIndex === index ? styles.active : ''}`}
                           onClick={() => setCurrentImageIndex(index)}
                         >
-                          <img src={img} alt={`${item.title} ${index + 1}`} />
+                          <LazyImage src={img} alt={`${item.title} ${index + 1}`} />
                         </div>
                       ))}
                     </div>
@@ -516,7 +518,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                                 onItemUpdated();
                               }
                             } catch (error: any) {
-                              message.error(error.response?.data?.detail || '删除失败');
+                              message.error(getErrorMessage(error));
                             }
                           }
                         });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
+import { performanceMonitor } from '../utils/performanceMonitor';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards, getPublicStats, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -22,6 +23,7 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
+import LazyImage from '../components/LazyImage';
 import styles from './Home.module.css';
 
 // 配置dayjs插件
@@ -267,7 +269,12 @@ const Home: React.FC = () => {
     : (t('home.metaDescription') || (language === 'zh'
       ? 'Link²Ur是专业任务发布与技能匹配平台，连接有技能的人与需要帮助的人。提供家政、跑腿、校园、二手等多类型任务服务。让价值创造更高效，立即开始！'
       : 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'));
-  
+
+  // 性能监控
+  useEffect(() => {
+    performanceMonitor.measurePageLoad('HomePage');
+  }, []);
+
   // Task types array - using translations
   const TASK_TYPES = [
     t('taskCategories.housekeeping'),
@@ -1252,7 +1259,7 @@ const Home: React.FC = () => {
                         overflow: 'hidden',
                         background: '#f1f5f9'
                       }}>
-                        <img
+                        <LazyImage
                           src={leaderboard.cover_image}
                           alt={leaderboard.name}
                           style={{
@@ -1517,7 +1524,7 @@ const Home: React.FC = () => {
                     }}>
                       {post.author && (
                         <>
-                          <img
+                          <LazyImage
                             src={post.author.avatar || 'https://via.placeholder.com/32'}
                             alt={post.author.name}
                             style={{
@@ -1916,7 +1923,7 @@ const Home: React.FC = () => {
                       marginBottom: isMobile ? '16px' : '20px'
                     }}>
                       <div style={{ position: 'relative' }}>
-                        <img
+                        <LazyImage
                           src={expert.avatar || 'https://via.placeholder.com/72'}
                           alt={expert.name}
                           style={{
@@ -2141,7 +2148,7 @@ const Home: React.FC = () => {
         className={styles.fleaMarketFloatButton}
         title={t('fleaMarket.cardTitle') || '跳蚤市场'}
       >
-        <img 
+        <LazyImage 
           src="/static/Flea.png" 
           alt="跳蚤市场"
           className={styles.fleaMarketIcon}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import LazyImage from '../LazyImage';
 
 interface PrivateImageDisplayProps {
   imageId: string;
@@ -142,7 +143,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
   }
 
   return (
-    <img 
+    <LazyImage 
       src={imageUrl} 
       alt={alt} 
       style={{
@@ -152,7 +153,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
         height: 'auto'
       }}
       onError={() => {
-                setError(true);
+        setError(true);
       }}
     />
   );

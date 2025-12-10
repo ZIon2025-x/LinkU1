@@ -17,6 +17,8 @@ from sqlalchemy.orm.attributes import NO_VALUE
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.utils.time_utils import get_utc_time
+from app.performance_monitor import measure_api_performance
+from app.cache import cache_response
 
 logger = logging.getLogger(__name__)
 
@@ -1540,11 +1542,13 @@ async def get_visible_forums(
 
 
 @router.get("/categories", response_model=schemas.ForumCategoryListResponse)
+@measure_api_performance("get_categories")
+@cache_response(ttl=300, key_prefix="forum_categories")  # 缓存5分钟
 async def get_categories(
     include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取板块列表
+    """获取板块列表（已应用缓存和性能监控）
     
     可选参数：
     - include_latest_post: 如果为 True，每个板块会包含最新帖子的简要信息（标题、作者、最后回复时间等）
@@ -1708,6 +1712,8 @@ async def get_categories(
 
 
 @router.get("/categories/{category_id}", response_model=schemas.ForumCategoryOut)
+@measure_api_performance("get_forum_category")
+@cache_response(ttl=300, key_prefix="forum_category")  # 缓存5分钟
 async def get_category(
     category_id: int,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
@@ -1999,6 +2005,7 @@ async def delete_category(
 # ==================== 帖子 API ====================
 
 @router.get("/posts", response_model=schemas.ForumPostListResponse)
+@measure_api_performance("list_forum_posts")
 async def get_posts(
     category_id: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
@@ -2174,6 +2181,7 @@ async def get_posts(
 
 
 @router.get("/posts/{post_id}", response_model=schemas.ForumPostOut)
+@measure_api_performance("get_forum_post")
 async def get_post(
     post_id: int,
     request: Request,
@@ -3140,6 +3148,8 @@ async def hide_post(
 # ==================== 回复 API ====================
 
 @router.get("/posts/{post_id}/replies", response_model=schemas.ForumReplyListResponse)
+@measure_api_performance("get_forum_replies")
+@cache_response(ttl=180, key_prefix="forum_replies")  # 缓存3分钟
 async def get_replies(
     post_id: int,
     page: int = Query(1, ge=1),
@@ -4015,6 +4025,7 @@ async def toggle_favorite(
 # ==================== 搜索 API ====================
 
 @router.get("/search", response_model=schemas.ForumSearchResponse)
+@measure_api_performance("search_forum_posts")
 async def search_posts(
     q: str = Query(..., min_length=1, max_length=100),
     category_id: Optional[int] = Query(None),
@@ -5381,6 +5392,8 @@ async def fix_forum_statistics(
 # ==================== 热门内容 API ====================
 
 @router.get("/hot-posts", response_model=schemas.ForumPostListResponse)
+@measure_api_performance("get_hot_posts")
+@cache_response(ttl=180, key_prefix="forum_hot_posts")  # 缓存3分钟
 async def get_hot_posts(
     category_id: Optional[int] = Query(None, description="板块ID（可选）"),
     limit: int = Query(20, ge=1, le=100, description="返回数量"),
@@ -5528,6 +5541,7 @@ async def get_hot_posts(
 # ==================== 用户论坛统计 API ====================
 
 @router.get("/users/{user_id}/stats")
+@measure_api_performance("get_user_forum_stats")
 async def get_user_forum_stats(
     user_id: str,
     current_user: Optional[models.User] = Depends(get_current_user_optional),

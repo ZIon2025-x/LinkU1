@@ -39,9 +39,25 @@ async def security_headers_middleware(request: Request, call_next):
     
     # 必需的安全头
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"  # 改为SAMEORIGIN以支持iframe嵌入（如果需要）
     # ⚠️ X-XSS-Protection 已废弃，不设置
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # 添加Permissions-Policy（限制浏览器功能）
+    response.headers["Permissions-Policy"] = (
+        "geolocation=(), "
+        "microphone=(), "
+        "camera=(), "
+        "payment=(), "
+        "usb=(), "
+        "magnetometer=(), "
+        "gyroscope=(), "
+        "accelerometer=()"
+    )
+    
+    # 如果使用HTTPS，添加HSTS（HTTP Strict Transport Security）
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     
     return response
 

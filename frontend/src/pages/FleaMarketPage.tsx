@@ -18,6 +18,10 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import FleaMarketItemDetailModal from '../components/FleaMarketItemDetailModal';
 import { compressImage } from '../utils/imageCompression';
+import LazyImage from '../components/LazyImage';
+import SkeletonLoader from '../components/SkeletonLoader';
+import { validateName } from '../utils/inputValidators';
+import { getErrorMessage } from '../utils/errorHandler';
 import styles from './FleaMarketPage.module.css';
 import headerStyles from './Home.module.css';
 
@@ -195,7 +199,7 @@ const FleaMarketPage: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-            message.error('标记通知为已读失败，请重试');
+      message.error(getErrorMessage(error));
     }
   }, []);
 
@@ -206,7 +210,7 @@ const FleaMarketPage: React.FC = () => {
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
-            message.error('标记所有通知为已读失败，请重试');
+      message.error(getErrorMessage(error));
     }
   }, []);
 
@@ -284,7 +288,7 @@ const FleaMarketPage: React.FC = () => {
         setItems([]);
       }
       setHasMore(false);
-            message.error(error.response?.data?.detail || t('fleaMarket.loadError'));
+            message.error(getErrorMessage(error));
     } finally {
       if (isLoadMore) {
         setLoadingMore(false);
@@ -382,7 +386,7 @@ const FleaMarketPage: React.FC = () => {
                 setMyFavoriteItems([]);
       }
     } catch (error: any) {
-            message.error(error.response?.data?.detail || '加载失败，请重试');
+      message.error(getErrorMessage(error));
     } finally {
       setLoadingMyItems(false);
     }
@@ -469,12 +473,22 @@ const FleaMarketPage: React.FC = () => {
 
   // 提交商品 - 使用useCallback优化
   const handleSubmit = useCallback(async () => {
+    // 输入验证
     if (!formData.title.trim()) {
       message.error(t('fleaMarket.titleRequired'));
       return;
     }
+    const titleValidation = validateName(formData.title.trim());
+    if (!titleValidation.valid) {
+      message.error(titleValidation.message);
+      return;
+    }
     if (!formData.description.trim()) {
       message.error(t('fleaMarket.descriptionRequired'));
+      return;
+    }
+    if (formData.description.trim().length < 10) {
+      message.error('描述至少需要10个字符');
       return;
     }
     if (formData.price <= 0) {
@@ -527,7 +541,7 @@ const FleaMarketPage: React.FC = () => {
         loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
       }, 500);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('fleaMarket.submitError'));
+      message.error(getErrorMessage(error));
     } finally {
       setUploading(false);
     }
@@ -547,7 +561,7 @@ const FleaMarketPage: React.FC = () => {
             loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
           }, 300);
         } catch (error: any) {
-                    message.error(error.response?.data?.detail || t('fleaMarket.deleteError'));
+          message.error(getErrorMessage(error));
         }
       }
     });
@@ -636,10 +650,11 @@ const FleaMarketPage: React.FC = () => {
         {/* 商品图片 - 占满整个卡片 */}
         <div className={styles.itemImageWrapper}>
           {item.images && item.images.length > 0 ? (
-            <img
-              alt={item.title}
+            <LazyImage
               src={item.images[0]}
+              alt={item.title}
               className={styles.itemImage}
+              placeholder="/placeholder.png"
             />
           ) : (
             <div className={styles.itemImagePlaceholder}>
@@ -952,10 +967,7 @@ const FleaMarketPage: React.FC = () => {
       {/* 商品列表 */}
       <div className={styles.itemsSection}>
         {loading && filteredItems.length === 0 ? (
-          <div className={styles.loadingContainer}>
-            <Spin size="large" />
-            <p className={styles.loadingText}>{t('common.loading')}</p>
-          </div>
+          <SkeletonLoader type="task" count={6} />
         ) : filteredItems.length === 0 ? (
           <div className={styles.emptyContainer}>
             <div className={styles.emptyIcon}>🛍️</div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
 import { useLanguage } from '../../contexts/LanguageContext';
+import LazyImage from '../../components/LazyImage';
 
 interface Contact {
   id: string;
@@ -156,7 +157,7 @@ const ContactList: React.FC<ContactListProps> = ({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ position: 'relative' }}>
-                    <img
+                    <LazyImage
                       src={contact.avatar}
                       alt={contact.name}
                       style={{

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { respondNegotiation, replyApplicationMessage, getNegotiationTokens, markForumNotificationRead } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getErrorMessage } from '../utils/errorHandler';
 
 interface Notification {
   id: number;
@@ -213,7 +214,7 @@ const NegotiationOfferNotification: React.FC<{
                 alert('已同意议价');
                 onMarkAsRead(notification.id);
               } catch (error: any) {
-                                alert(error.response?.data?.detail || '操作失败，请重试');
+                                alert(getErrorMessage(error));
               }
             }}
             style={{
@@ -256,7 +257,7 @@ const NegotiationOfferNotification: React.FC<{
                 alert('已拒绝议价');
                 onMarkAsRead(notification.id);
               } catch (error: any) {
-                                alert(error.response?.data?.detail || '操作失败，请重试');
+                                alert(getErrorMessage(error));
               }
             }}
             style={{
@@ -1332,7 +1333,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                         setReplyContent('');
                         onMarkAsRead(selectedNotification.id);
                       } catch (error: any) {
-                                                alert(error.response?.data?.detail || '回复失败，请重试');
+                                                alert(getErrorMessage(error));
                       } finally {
                         setReplying(false);
                       }
