@@ -1482,7 +1482,7 @@ const MyTasks: React.FC = () => {
             >
               <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.reviewModalHeader}>
-                  <LazyImage src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+                  <LazyImage src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} width={40} height={40} />
                   <h2 className={styles.reviewModalTitle}>
                     {t('myTasks.actions.review')}
                   </h2>

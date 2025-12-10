@@ -141,9 +141,9 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
                 <LazyImage
                   src={expert.avatar || 'https://via.placeholder.com/80'}
                   alt={expert.expert_name || expert.name}
+                  width={80}
+                  height={80}
                   style={{
-                    width: '80px',
-                    height: '80px',
                     borderRadius: '50%',
                     objectFit: 'cover',
                     border: '2px solid rgba(255, 255, 255, 0.3)'

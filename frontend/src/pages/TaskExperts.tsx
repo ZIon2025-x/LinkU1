@@ -875,6 +875,8 @@ const TaskExperts: React.FC = () => {
                       src={expert.avatar}
                       alt={expert.name}
                       className={styles.avatar}
+                      width={72}
+                      height={72}
                     />
                     {expert.is_verified && (
                       <div className={styles.verifiedBadge}>

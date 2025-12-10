@@ -3320,7 +3320,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div>
                           <strong>头像:</strong> {request.expert?.avatar ? (
-                            <LazyImage src={request.expert.avatar} alt="当前头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                            <LazyImage src={request.expert.avatar} alt="当前头像" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                           ) : '-'}
                         </div>
                       </td>
@@ -3333,7 +3333,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div>
                           <strong>头像:</strong> {request.new_avatar ? (
-                            <LazyImage src={request.new_avatar} alt="新头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                            <LazyImage src={request.new_avatar} alt="新头像" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                           ) : '-'}
                         </div>
                       </td>
@@ -3562,7 +3562,7 @@ const AdminDashboard: React.FC = () => {
                   )}
                   {selectedProfileUpdate.new_avatar && (
                     <div>
-                      头像: <LazyImage src={selectedProfileUpdate.new_avatar} alt="新头像" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                      头像: <LazyImage src={selectedProfileUpdate.new_avatar} alt="新头像" width={60} height={60} style={{ borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
                     </div>
                   )}
                 </div>

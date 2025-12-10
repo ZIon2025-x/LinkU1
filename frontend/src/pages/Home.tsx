@@ -1926,9 +1926,9 @@ const Home: React.FC = () => {
                         <LazyImage
                           src={expert.avatar || 'https://via.placeholder.com/72'}
                           alt={expert.name}
+                          width={isMobile ? 56 : 72}
+                          height={isMobile ? 56 : 72}
                           style={{
-                            width: isMobile ? '56px' : '72px',
-                            height: isMobile ? '56px' : '72px',
                             borderRadius: '50%',
                             objectFit: 'cover',
                             border: isMobile ? '2px solid #e2e8f0' : '3px solid #e2e8f0',

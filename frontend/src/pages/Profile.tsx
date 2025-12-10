@@ -254,9 +254,9 @@ const Profile: React.FC = () => {
                 src={user.avatar || '/static/avatar1.png'}
                 alt={t('profile.avatar')}
                 onError={() => {}}
+                width={120}
+                height={120}
                 style={{
-                  width: '120px',
-                  height: '120px',
                   borderRadius: '50%',
                   border: '4px solid #3b82f6',
                   objectFit: 'cover',

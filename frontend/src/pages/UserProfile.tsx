@@ -359,9 +359,9 @@ const UserProfile: React.FC = () => {
                 <LazyImage
                   src={profile.user.avatar || '/static/avatar1.png'}
                   alt="头像"
+                  width={140}
+                  height={140}
                   style={{
-                    width: 140,
-                    height: 140,
                     borderRadius: '50%',
                     objectFit: 'cover',
                     border: '6px solid rgba(255, 255, 255, 0.8)',

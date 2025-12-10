@@ -160,9 +160,9 @@ const ContactList: React.FC<ContactListProps> = ({
                     <LazyImage
                       src={contact.avatar}
                       alt={contact.name}
+                      width={40}
+                      height={40}
                       style={{
-                        width: '40px',
-                        height: '40px',
                         borderRadius: '50%',
                         objectFit: 'cover'
                       }}

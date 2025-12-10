@@ -149,6 +149,8 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                       src={user.avatar || '/static/avatar1.png'}
                       alt={t('common.avatar')}
                       className="user-avatar"
+                      width={40}
+                      height={40}
                     />
                     <div className="user-details">
                       <div className="user-name">{user.name}</div>
