@@ -124,13 +124,16 @@ const LazyImage: React.FC<LazyImageProps> = ({
     );
   }
 
+  // 判断是否使用固定尺寸（传入了 width 和 height）
+  const hasFixedSize = width && height;
+  
   return (
     <div 
       ref={imgRef}
       style={{ 
         position: 'relative',
         width: width || '100%',
-        height: height || 'auto',
+        height: hasFixedSize ? height : (height || 'auto'),
         overflow: 'hidden',
         ...style
       }}
@@ -164,9 +167,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
             opacity: isLoaded ? 1 : 0,
             transition: 'opacity 0.3s ease-in-out',
             width: '100%',
-            height: '100%',
+            height: hasFixedSize ? '100%' : 'auto',
             maxWidth: '100%',
-            maxHeight: '100%',
+            maxHeight: hasFixedSize ? '100%' : 'none',
             objectFit: 'cover',
             display: 'block'
           }}

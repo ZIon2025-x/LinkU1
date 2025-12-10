@@ -1535,9 +1535,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                       objectFit: 'cover', 
                                       borderRadius: 4,
                                       border: '1px solid #e8e8e8',
-                                      cursor: 'pointer',
-                                      maxWidth: '100%',
-                                      maxHeight: '100%'
+                                      cursor: 'pointer'
                                     }}
                                     preview
                                     loading="lazy"

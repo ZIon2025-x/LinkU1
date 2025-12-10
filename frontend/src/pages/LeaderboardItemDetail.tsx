@@ -269,7 +269,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   alt={item.name}
                   width={250}
                   height={250}
-                  style={{ objectFit: 'cover', borderRadius: 8, maxWidth: '100%', maxHeight: '100%', width: '100%', height: 'auto' }}
+                  style={{ objectFit: 'cover', borderRadius: 8 }}
                   preview
                 />
                 {item.images.length > 1 && (
@@ -281,7 +281,7 @@ const LeaderboardItemDetail: React.FC = () => {
                         alt={`${item.name} - ${t('forum.image')} ${idx + 2}`}
                         width={70}
                         height={70}
-                        style={{ objectFit: 'cover', borderRadius: 4, maxWidth: '100%', maxHeight: '100%' }}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
                         preview
                       />
                     ))}
