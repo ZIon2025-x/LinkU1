@@ -557,63 +557,67 @@ const UserProfile: React.FC = () => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: 20
           }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              borderRadius: 16,
-              padding: 24,
-              textAlign: 'center',
-              color: '#fff',
-              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
+            {profile.stats.posted_tasks > 0 && (
               <div style={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '50%'
-              }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
-                  {profile.stats.posted_tasks}
-                </div>
-                <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.postedTasks')}
+                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                borderRadius: 16,
+                padding: 24,
+                textAlign: 'center',
+                color: '#fff',
+                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: 80,
+                  height: 80,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '50%'
+                }} />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+                    {profile.stats.posted_tasks}
+                  </div>
+                  <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('userProfile.postedTasks')}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             
-            <div style={{
-              background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-              borderRadius: 16,
-              padding: 24,
-              textAlign: 'center',
-              color: '#fff',
-              boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
+            {profile.stats.taken_tasks > 0 && (
               <div style={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 80,
-                height: 80,
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '50%'
-              }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
-                  {profile.stats.taken_tasks}
-                </div>
-                <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.takenTasks')}
+                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                borderRadius: 16,
+                padding: 24,
+                textAlign: 'center',
+                color: '#fff',
+                boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: -20,
+                  right: -20,
+                  width: 80,
+                  height: 80,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '50%'
+                }} />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+                    {profile.stats.taken_tasks}
+                  </div>
+                  <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('userProfile.takenTasks')}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             
             <div style={{
               background: 'linear-gradient(135deg, #2196F3, #1976D2)',
@@ -855,23 +859,35 @@ const UserProfile: React.FC = () => {
                       marginBottom: 16
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          background: review.is_anonymous 
-                            ? 'linear-gradient(45deg, #667eea, #764ba2)' 
-                            : 'linear-gradient(45deg, #4CAF50, #45a049)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#fff',
-                          fontSize: 16,
-                          fontWeight: 'bold',
-                          boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                        }}>
-                          {review.is_anonymous ? '?' : review.reviewer_name.charAt(0).toUpperCase()}
-                        </div>
+                        {review.is_anonymous ? (
+                          <LazyImage
+                            src="/static/any.png"
+                            alt={t('userProfile.anonymousUser')}
+                            width={40}
+                            height={40}
+                            style={{
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(45deg, #4CAF50, #45a049)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                          }}>
+                            {review.reviewer_name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <div style={{ 
                             fontSize: 16, 

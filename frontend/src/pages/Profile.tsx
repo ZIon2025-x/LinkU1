@@ -702,6 +702,33 @@ const Profile: React.FC = () => {
                       gap: '12px',
                       marginBottom: '12px'
                     }}>
+                      {review.is_anonymous ? (
+                        <LazyImage
+                          src="/static/any.png"
+                          alt={t('profile.anonymousUser')}
+                          width={40}
+                          height={40}
+                          style={{
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <LazyImage
+                          src={review.reviewer_avatar || '/static/avatar1.png'}
+                          alt={review.reviewer_name}
+                          width={40}
+                          height={40}
+                          style={{
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            flexShrink: 0
+                          }}
+                        />
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{
                           display: 'flex',
