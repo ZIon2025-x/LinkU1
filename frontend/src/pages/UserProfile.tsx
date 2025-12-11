@@ -860,49 +860,18 @@ const UserProfile: React.FC = () => {
                       marginBottom: 16
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {review.is_anonymous || review.reviewer_name === '匿名用户' || review.reviewer_name === t('userProfile.anonymousUser') ? (
-                          <LazyImage
-                            src="/static/any.png"
-                            alt={t('userProfile.anonymousUser')}
-                            width={40}
-                            height={40}
-                            style={{
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                            }}
-                          />
-                        ) : (
-                          review.reviewer_avatar && review.reviewer_avatar.trim() ? (
-                            <LazyImage
-                              src={review.reviewer_avatar}
-                              alt={review.reviewer_name}
-                              width={40}
-                              height={40}
-                              style={{
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                              }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: '50%',
-                              background: 'linear-gradient(45deg, #4CAF50, #45a049)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#fff',
-                              fontSize: 16,
-                              fontWeight: 'bold',
-                              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                            }}>
-                              {review.reviewer_name.charAt(0).toUpperCase()}
-                            </div>
-                          )
-                        )}
+                        {/* 他人用户主页：所有评价都显示为匿名 */}
+                        <LazyImage
+                          src="/static/any.png"
+                          alt={t('userProfile.anonymousUser')}
+                          width={40}
+                          height={40}
+                          style={{
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                          }}
+                        />
                         <div>
                           <div style={{ 
                             fontSize: 16, 
@@ -910,9 +879,8 @@ const UserProfile: React.FC = () => {
                             color: '#333',
                             marginBottom: 4
                           }}>
-                            {review.is_anonymous || review.reviewer_name === '匿名用户' || review.reviewer_name === t('userProfile.anonymousUser') 
-                              ? t('userProfile.anonymousUser') 
-                              : review.reviewer_name}
+                            {/* 他人用户主页：所有评价都显示为匿名 */}
+                            {t('userProfile.anonymousUser')}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {renderStars(review.rating)}
