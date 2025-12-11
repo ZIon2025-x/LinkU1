@@ -873,7 +873,7 @@ const UserProfile: React.FC = () => {
                             }}
                           />
                         ) : (
-                          review.reviewer_avatar ? (
+                          review.reviewer_avatar && review.reviewer_avatar.trim() ? (
                             <LazyImage
                               src={review.reviewer_avatar}
                               alt={review.reviewer_name}

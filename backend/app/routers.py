@@ -1856,6 +1856,7 @@ def user_profile(
                 "task_id": r.task_id,
                 "is_anonymous": bool(r.is_anonymous),
                 "reviewer_name": "匿名用户" if r.is_anonymous else user.name,
+                "reviewer_avatar": "" if r.is_anonymous else (user.avatar or ""),
             }
             for r, user in reviews
         ],
