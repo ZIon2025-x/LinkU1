@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -448,13 +448,48 @@ const MyTasks: React.FC = () => {
     }
   };
 
-  const handleCancelTask = async (taskId: number) => {
-    const reason = prompt(t('myTasks.cancelReason'));
-    if (reason === null) return; // 用户取消了输入
-    
+  const handleCancelTask = useCallback((taskId: number) => {
+    // 使用 Modal 替代 prompt，避免阻塞主线程
+    Modal.confirm({
+      title: t('myTasks.cancelReason') || '请输入取消原因（可选）',
+      content: (
+        <input
+          type="text"
+          id={`cancel-reason-input-${taskId}`}
+          placeholder={t('myTasks.cancelReason') || '请输入取消原因（可选）'}
+          style={{
+            width: '100%',
+            padding: '8px',
+            marginTop: '8px',
+            border: '1px solid #d9d9d9',
+            borderRadius: '4px'
+          }}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const input = document.getElementById(`cancel-reason-input-${taskId}`) as HTMLInputElement;
+              const reason = input?.value || undefined;
+              Modal.destroyAll();
+              executeCancelTask(taskId, reason);
+            }
+          }}
+        />
+      ),
+      okText: '确定',
+      cancelText: '取消',
+      onOk: () => {
+        const input = document.getElementById(`cancel-reason-input-${taskId}`) as HTMLInputElement;
+        const reason = input?.value || undefined;
+        executeCancelTask(taskId, reason);
+      }
+    });
+  }, [t]);
+
+  const executeCancelTask = useCallback(async (taskId: number, reason?: string) => {
     setActionLoading(taskId);
     try {
-      const result = await cancelTask(taskId, reason || undefined);
+      const result = await cancelTask(taskId, reason);
       
       // 检查返回的消息，判断是直接取消还是提交审核
       if (result && (result.request_id || result.message?.includes('review') || result.message?.includes('审核'))) {
@@ -466,9 +501,12 @@ const MyTasks: React.FC = () => {
         message.success(t('myTasks.alerts.taskCancelled'));
       }
       
-      loadTasks();
+      // 延迟加载任务列表，避免阻塞UI
+      setTimeout(() => {
+        loadTasks();
+      }, 100);
     } catch (error: any) {
-            // 检查是否是 CSRF token 错误
+      // 检查是否是 CSRF token 错误
       if (error.response?.status === 401) {
         if (error.response?.data?.detail?.includes('CSRF')) {
           message.error('验证失败，请刷新页面后重试');
@@ -488,7 +526,9 @@ const MyTasks: React.FC = () => {
           // 如果已经有待审核请求，也添加到列表中
           setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
           message.info('您的取消请求正在审核中，请耐心等待');
-          loadTasks();
+          setTimeout(() => {
+            loadTasks();
+          }, 100);
         } else if (errorMsg.includes('cannot be cancelled') || errorMsg.includes('不能取消') || errorMsg.includes('状态')) {
           // 任务状态不允许取消
           let cancelErrorMsg = '该任务当前状态不允许取消';
@@ -512,7 +552,7 @@ const MyTasks: React.FC = () => {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [t]);
 
   const handleUpdateVisibility = async (taskId: number, isPublic: number) => {
     setActionLoading(taskId);
@@ -1338,7 +1378,13 @@ const MyTasks: React.FC = () => {
                       {/* 多人任务的参与者不显示取消按钮，而是显示申请退出按钮 */}
                       {!task.is_multi_participant && (task.status === 'open' || task.status === 'taken' || task.status === 'in_progress') && (
                         <button
-                          onClick={() => !pendingCancelTasks.has(task.id) && handleCancelTask(task.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!pendingCancelTasks.has(task.id) && actionLoading !== task.id) {
+                              handleCancelTask(task.id);
+                            }
+                          }}
                           disabled={actionLoading === task.id || pendingCancelTasks.has(task.id)}
                           className={`${styles.taskCardButton} ${styles.taskCardButtonCancel} ${(actionLoading === task.id || pendingCancelTasks.has(task.id)) ? styles.taskCardButtonDisabled : ''}`}
                           style={{

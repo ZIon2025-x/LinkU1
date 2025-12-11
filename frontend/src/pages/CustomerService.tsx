@@ -1609,6 +1609,8 @@ const CustomerService: React.FC = () => {
                 src="/static/service.png"
                 alt="客服头像" 
                 className="avatar-image"
+                width={60}
+                height={60}
               />
               <div className={`status-indicator ${isOnline ? 'online' : 'offline'}`}></div>
             </div>
@@ -2004,9 +2006,9 @@ const CustomerService: React.FC = () => {
                       <LazyImage 
                         src={session.user_avatar} 
                         alt="用户头像" 
+                        width={40}
+                        height={40}
                         style={{ 
-                          width: 40, 
-                          height: 40, 
                           borderRadius: '50%',
                           objectFit: 'cover'
                         }} 
@@ -2098,9 +2100,9 @@ const CustomerService: React.FC = () => {
                       <LazyImage 
                         src={session.user_avatar} 
                         alt="用户头像" 
+                        width={40}
+                        height={40}
                         style={{ 
-                          width: 40, 
-                          height: 40, 
                           borderRadius: '50%',
                           objectFit: 'cover',
                           filter: 'grayscale(50%)'
@@ -2168,15 +2170,18 @@ const CustomerService: React.FC = () => {
                 <LazyImage 
                   src={selectedSession.user_avatar}
                   alt="用户头像" 
+                  width={40}
+                  height={40}
                   style={{ 
-                    width: 40, 
-                    height: 40, 
                     borderRadius: '50%',
                     objectFit: 'cover'
                   }}
                   onError={(e) => {
                     // 如果用户头像加载失败，使用默认头像
-                    e.currentTarget.src = '/static/avatar1.png';
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (img) {
+                      img.src = '/static/avatar1.png';
+                    }
                   }}
                 />
                 <div style={{ flex: 1 }}>
