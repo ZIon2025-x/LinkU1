@@ -101,7 +101,7 @@ const ForumCreatePost: React.FC = () => {
       
       setCategories(filteredCategories);
     } catch (error: any) {
-      console.error('加载板块列表失败:', error);
+      // 静默处理错误
       setCategories([]);
     }
   };

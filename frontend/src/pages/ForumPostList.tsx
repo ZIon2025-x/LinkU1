@@ -105,9 +105,8 @@ const ForumPostList: React.FC = () => {
         // 显示友好提示并跳转回论坛首页
         message.error('板块不存在或无访问权限');
         navigate(`/${lang}/forum`);
-      } else {
-        console.error('加载板块失败:', error);
       }
+      // 静默处理其他错误
     }
   };
 

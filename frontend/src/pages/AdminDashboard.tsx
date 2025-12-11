@@ -488,7 +488,7 @@ const AdminDashboard: React.FC = () => {
         });
         setUniversities(res.data?.data?.items || []);
       } catch (error) {
-        console.error('加载大学列表失败:', error);
+        // 静默处理错误，不影响主流程
       }
     };
     loadUniversities();

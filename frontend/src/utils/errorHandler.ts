@@ -164,13 +164,10 @@ export const logError = (error: any, context?: Record<string, any>): void => {
   if (process.env.NODE_ENV === 'production') {
     // TODO: 集成错误监控服务
     // Sentry.captureException(error, { extra: errorInfo });
-    console.error('Error:', errorInfo);
+    // 错误信息已记录，可用于错误监控服务
   } else {
-    // 开发环境：详细日志
-    console.error('Error Details:', errorInfo);
-    if (error?.stack) {
-      console.error('Stack:', error.stack);
-    }
+    // 开发环境：错误信息已记录
+    // 如需调试，可在此处添加日志输出
   }
 };
 

@@ -46,6 +46,7 @@ interface UserProfileType {
     task_id: string;  // 现在ID是字符串类型
     is_anonymous: boolean;
     reviewer_name: string;
+    reviewer_avatar?: string;  // 评价者头像（可选）
   }>;
 }
 
@@ -859,7 +860,7 @@ const UserProfile: React.FC = () => {
                       marginBottom: 16
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {review.is_anonymous ? (
+                        {review.is_anonymous || review.reviewer_name === '匿名用户' || review.reviewer_name === t('userProfile.anonymousUser') ? (
                           <LazyImage
                             src="/static/any.png"
                             alt={t('userProfile.anonymousUser')}
@@ -872,21 +873,35 @@ const UserProfile: React.FC = () => {
                             }}
                           />
                         ) : (
-                          <div style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            background: 'linear-gradient(45deg, #4CAF50, #45a049)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: 16,
-                            fontWeight: 'bold',
-                            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                          }}>
-                            {review.reviewer_name.charAt(0).toUpperCase()}
-                          </div>
+                          review.reviewer_avatar ? (
+                            <LazyImage
+                              src={review.reviewer_avatar}
+                              alt={review.reviewer_name}
+                              width={40}
+                              height={40}
+                              style={{
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(45deg, #4CAF50, #45a049)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              fontSize: 16,
+                              fontWeight: 'bold',
+                              boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                            }}>
+                              {review.reviewer_name.charAt(0).toUpperCase()}
+                            </div>
+                          )
                         )}
                         <div>
                           <div style={{ 
@@ -895,7 +910,9 @@ const UserProfile: React.FC = () => {
                             color: '#333',
                             marginBottom: 4
                           }}>
-                            {t('userProfile.anonymousUser')}
+                            {review.is_anonymous || review.reviewer_name === '匿名用户' || review.reviewer_name === t('userProfile.anonymousUser') 
+                              ? t('userProfile.anonymousUser') 
+                              : review.reviewer_name}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {renderStars(review.rating)}

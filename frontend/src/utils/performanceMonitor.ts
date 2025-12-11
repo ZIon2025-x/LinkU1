@@ -41,10 +41,7 @@ class PerformanceMonitor {
       this.metrics.shift();
     }
 
-    // 在开发环境输出日志
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Performance] ${name}: ${value.toFixed(2)}ms`, metadata || '');
-    }
+    // 性能监控数据已记录，可用于后续分析
   }
 
   /**

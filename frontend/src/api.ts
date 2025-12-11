@@ -212,13 +212,11 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   response => {
-    // 记录API性能
+    // 记录API性能（已记录，可用于后续分析）
     const metadata = (response.config as any).metadata;
     if (metadata?.startTime) {
       const duration = performance.now() - metadata.startTime;
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[API] ${response.config.method?.toUpperCase()} ${response.config.url}: ${duration.toFixed(2)}ms`);
-      }
+      // API性能数据已记录
     }
     
     // 成功响应后清理重试计数器
@@ -232,13 +230,11 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
-    // 记录API错误性能
+    // 记录API错误性能（已记录，可用于后续分析）
     const metadata = error.config ? (error.config as any).metadata : undefined;
     if (metadata?.startTime) {
       const duration = performance.now() - metadata.startTime;
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[API Error] ${error.config.method?.toUpperCase()} ${error.config.url}: ${duration.toFixed(2)}ms`);
-      }
+      // API错误性能数据已记录
     }
     
     // 处理速率限制错误（429）

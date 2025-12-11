@@ -86,7 +86,6 @@ const Forum: React.FC = () => {
     } catch (error: any) {
       // API失败时设置为空数组，显示"暂无板块"提示
       // 如果是权限错误（404），也显示空数组（隐藏学校板块存在性）
-      console.error('加载板块列表失败:', error);
       setCategories([]);
     } finally {
       setLoading(false);

@@ -106,7 +106,6 @@ const StudentVerification: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error('加载认证状态失败:', error);
       message.error(error?.response?.data?.detail?.message || t('settings.loadingStatus'));
     } finally {
       setLoading(false);
@@ -124,7 +123,7 @@ const StudentVerification: React.FC = () => {
         setUniversities(response.data.items || []);
       }
     } catch (error) {
-      console.error('加载大学列表失败:', error);
+      // 静默处理错误
     }
   };
 
