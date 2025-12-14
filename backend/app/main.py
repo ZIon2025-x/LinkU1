@@ -331,6 +331,10 @@ app.include_router(student_verification_router, prefix="/api/student-verificatio
 from app.admin_student_verification_routes import router as admin_student_verification_router
 app.include_router(admin_student_verification_router, prefix="/api/admin", tags=["管理员-学生认证"])
 
+# Banner 广告管理路由
+from app.admin_banner_routes import router as admin_banner_router
+app.include_router(admin_banner_router, tags=["管理员-Banner广告管理"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

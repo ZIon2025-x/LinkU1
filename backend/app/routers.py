@@ -7816,3 +7816,38 @@ def cleanup_all_old_tasks_files_api(
     except Exception as e:
         logger.error(f"清理任务文件失败: {e}")
         raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
+# ==================== Banner 广告 API ====================
+
+@router.get("/banners")
+@cache_response(ttl=300, key_prefix="banners")  # 缓存5分钟
+def get_banners(
+    db: Session = Depends(get_db),
+):
+    """获取滚动广告列表（用于 iOS app）"""
+    try:
+        # 查询所有启用的 banner，按 order 字段升序排序
+        banners = db.query(models.Banner).filter(
+            models.Banner.is_active == True
+        ).order_by(models.Banner.order.asc()).all()
+        
+        # 转换为返回格式
+        banner_list = []
+        for banner in banners:
+            banner_list.append({
+                "id": banner.id,
+                "image_url": banner.image_url,
+                "title": banner.title,
+                "subtitle": banner.subtitle,
+                "link_url": banner.link_url,
+                "link_type": banner.link_type,
+                "order": banner.order
+            })
+        
+        return {
+            "banners": banner_list
+        }
+    except Exception as e:
+        logger.error(f"获取 banner 列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取广告列表失败")

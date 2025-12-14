@@ -2496,3 +2496,27 @@ class VerificationHistory(Base):
         Index('idx_verification_history_action', 'action'),
         Index('idx_verification_history_created_at', 'created_at'),
     )
+
+
+# ==================== Banner 广告系统模型 ====================
+
+class Banner(Base):
+    """滚动广告表"""
+    __tablename__ = "banners"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    image_url = Column(String(500), nullable=False)  # 广告图片URL
+    title = Column(String(200), nullable=False)  # 广告标题
+    subtitle = Column(String(300), nullable=True)  # 副标题
+    link_url = Column(String(500), nullable=True)  # 跳转链接
+    link_type = Column(String(20), default="internal")  # 链接类型：internal（内部链接）或 external（外部链接）
+    order = Column(Integer, default=0)  # 排序顺序，数字越小越靠前
+    is_active = Column(Boolean, default=True)  # 是否启用
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    __table_args__ = (
+        Index('idx_banners_order', 'order'),
+        Index('idx_banners_is_active', 'is_active'),
+        Index('idx_banners_active_order', 'is_active', 'order'),
+    )

@@ -2862,3 +2862,63 @@ class ReportListResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
+
+# ==================== Banner 广告系统 Schemas ====================
+
+class BannerBase(BaseModel):
+    """Banner 基础 Schema"""
+    image_url: str = Field(..., max_length=500, description="广告图片URL")
+    title: str = Field(..., max_length=200, description="广告标题")
+    subtitle: Optional[str] = Field(None, max_length=300, description="副标题")
+    link_url: Optional[str] = Field(None, max_length=500, description="跳转链接")
+    link_type: str = Field(default="internal", description="链接类型：internal（内部链接）或 external（外部链接）")
+    order: int = Field(default=0, description="排序顺序，数字越小越靠前")
+    is_active: bool = Field(default=True, description="是否启用")
+
+
+class BannerCreate(BannerBase):
+    """创建 Banner Schema"""
+    pass
+
+
+class BannerUpdate(BaseModel):
+    """更新 Banner Schema"""
+    image_url: Optional[str] = Field(None, max_length=500, description="广告图片URL")
+    title: Optional[str] = Field(None, max_length=200, description="广告标题")
+    subtitle: Optional[str] = Field(None, max_length=300, description="副标题")
+    link_url: Optional[str] = Field(None, max_length=500, description="跳转链接")
+    link_type: Optional[str] = Field(None, description="链接类型：internal（内部链接）或 external（外部链接）")
+    order: Optional[int] = Field(None, description="排序顺序，数字越小越靠前")
+    is_active: Optional[bool] = Field(None, description="是否启用")
+
+
+class BannerOut(BaseModel):
+    """Banner 输出 Schema"""
+    id: int
+    image_url: str
+    title: str
+    subtitle: Optional[str] = None
+    link_url: Optional[str] = None
+    link_type: str
+    order: int
+    is_active: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class BannerListResponse(BaseModel):
+    """Banner 列表分页响应"""
+    total: int
+    page: int
+    limit: int
+    data: List[BannerOut]
+
+
+class BannerOrderUpdate(BaseModel):
+    """Banner 排序更新 Schema"""
+    id: int
+    order: int
