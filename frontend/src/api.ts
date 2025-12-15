@@ -2984,4 +2984,112 @@ export const getUserStudentVerificationStatus = async (userId: string) => {
   return res.data;
 };
 
+// ==================== Banner 广告管理 API ====================
+
+// 获取 Banner 列表（公开接口）
+export const getBanners = async () => {
+  const res = await api.get('/api/banners');
+  return res.data;
+};
+
+// 获取 Banner 列表（管理员）
+export const getBannersAdmin = async (params?: {
+  page?: number;
+  limit?: number;
+  is_active?: boolean;
+}) => {
+  const res = await api.get('/api/admin/banners', { params });
+  return res.data;
+};
+
+// 获取 Banner 详情（管理员）
+export const getBannerDetailAdmin = async (bannerId: number) => {
+  const res = await api.get(`/api/admin/banners/${bannerId}`);
+  return res.data;
+};
+
+// 创建 Banner（管理员）
+export const createBanner = async (data: {
+  image_url: string;
+  title: string;
+  subtitle?: string;
+  link_url?: string;
+  link_type?: 'internal' | 'external';
+  order?: number;
+  is_active?: boolean;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/admin/banners', data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 更新 Banner（管理员）
+export const updateBanner = async (bannerId: number, data: {
+  image_url?: string;
+  title?: string;
+  subtitle?: string;
+  link_url?: string;
+  link_type?: 'internal' | 'external';
+  order?: number;
+  is_active?: boolean;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/admin/banners/${bannerId}`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 删除 Banner（管理员）
+export const deleteBanner = async (bannerId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/admin/banners/${bannerId}`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 切换 Banner 状态（管理员）
+export const toggleBannerStatus = async (bannerId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.patch(`/api/admin/banners/${bannerId}/toggle-status`, null, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 批量删除 Banner（管理员）
+export const batchDeleteBanners = async (bannerIds: number[]) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/admin/banners/batch-delete', bannerIds, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 批量更新 Banner 排序（管理员）
+export const batchUpdateBannerOrder = async (orderUpdates: Array<{ id: number; order: number }>) => {
+  const token = await getCSRFToken();
+  const res = await api.put('/api/admin/banners/batch-update-order', orderUpdates, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 上传 Banner 图片（管理员）
+export const uploadBannerImage = async (file: File) => {
+  const token = await getCSRFToken();
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await api.post('/api/admin/banners/upload-image', formData, {
+    headers: {
+      'X-CSRF-Token': token,
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return res.data;
+};
+
 export default api; 

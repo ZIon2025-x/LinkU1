@@ -71,7 +71,16 @@ import api, {
   getCustomLeaderboardsAdmin,
   reviewCustomLeaderboard,
   getLeaderboardItemsAdmin,
-  deleteLeaderboardItemAdmin
+  deleteLeaderboardItemAdmin,
+  getBannersAdmin,
+  getBannerDetailAdmin,
+  createBanner,
+  updateBanner,
+  deleteBanner,
+  toggleBannerStatus,
+  batchDeleteBanners,
+  batchUpdateBannerOrder,
+  uploadBannerImage
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -358,6 +367,25 @@ const AdminDashboard: React.FC = () => {
     status?: string;
     seller_id?: string;
   }>({});
+
+  // Banner 管理状态
+  const [banners, setBanners] = useState<any[]>([]);
+  const [bannersPage, setBannersPage] = useState(1);
+  const [bannersTotal, setBannersTotal] = useState(0);
+  const [bannersLoading, setBannersLoading] = useState(false);
+  const [bannersActiveFilter, setBannersActiveFilter] = useState<boolean | undefined>(undefined);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    id: undefined as number | undefined,
+    image_url: '',
+    title: '',
+    subtitle: '',
+    link_url: '',
+    link_type: 'internal' as 'internal' | 'external',
+    order: 0,
+    is_active: true
+  });
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [showFleaMarketItemModal, setShowFleaMarketItemModal] = useState(false);
   const [fleaMarketItemForm, setFleaMarketItemForm] = useState<any>({});
   const [showReportProcessModal, setShowReportProcessModal] = useState(false);
@@ -456,6 +484,8 @@ const AdminDashboard: React.FC = () => {
         await loadPendingLeaderboards();
       } else if (activeTab === 'leaderboard-items') {
         await loadLeaderboardItems();
+      } else if (activeTab === 'banners') {
+        await loadBanners();
       }
     } catch (error: any) {
             let errorMsg = '加载数据失败';
@@ -6239,6 +6269,164 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab, leaderboardItemsPage, leaderboardItemsFilter, loadLeaderboardItems]);
 
+  // ==================== Banner 管理函数 ====================
+  
+  // 加载 Banner 列表
+  const loadBanners = useCallback(async () => {
+    setBannersLoading(true);
+    try {
+      const data = await getBannersAdmin({
+        page: bannersPage,
+        limit: 20,
+        is_active: bannersActiveFilter
+      });
+      setBanners(data.data || []);
+      setBannersTotal(data.total || 0);
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setBannersLoading(false);
+    }
+  }, [bannersPage, bannersActiveFilter]);
+
+  // 当切换到 Banner 管理标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'banners') {
+      const timer = setTimeout(() => {
+        loadBanners();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, bannersPage, bannersActiveFilter, loadBanners]);
+
+  // 创建 Banner
+  const handleCreateBanner = async () => {
+    if (!bannerForm.image_url || !bannerForm.title) {
+      message.warning('请填写图片URL和标题');
+      return;
+    }
+    try {
+      await createBanner({
+        image_url: bannerForm.image_url,
+        title: bannerForm.title,
+        subtitle: bannerForm.subtitle || undefined,
+        link_url: bannerForm.link_url || undefined,
+        link_type: bannerForm.link_type,
+        order: bannerForm.order || 0,
+        is_active: bannerForm.is_active
+      });
+      message.success('Banner 创建成功！');
+      setShowBannerModal(false);
+      setBannerForm({
+        id: undefined,
+        image_url: '',
+        title: '',
+        subtitle: '',
+        link_url: '',
+        link_type: 'internal',
+        order: 0,
+        is_active: true
+      });
+      loadBanners();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  };
+
+  // 更新 Banner
+  const handleUpdateBanner = async () => {
+    if (!bannerForm.id) return;
+    if (!bannerForm.image_url || !bannerForm.title) {
+      message.warning('请填写图片URL和标题');
+      return;
+    }
+    try {
+      await updateBanner(bannerForm.id, {
+        image_url: bannerForm.image_url,
+        title: bannerForm.title,
+        subtitle: bannerForm.subtitle || undefined,
+        link_url: bannerForm.link_url || undefined,
+        link_type: bannerForm.link_type,
+        order: bannerForm.order,
+        is_active: bannerForm.is_active
+      });
+      message.success('Banner 更新成功！');
+      setShowBannerModal(false);
+      setBannerForm({
+        id: undefined,
+        image_url: '',
+        title: '',
+        subtitle: '',
+        link_url: '',
+        link_type: 'internal',
+        order: 0,
+        is_active: true
+      });
+      loadBanners();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  };
+
+  // 删除 Banner
+  const handleDeleteBanner = async (bannerId: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个 Banner 吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteBanner(bannerId);
+          message.success('Banner 删除成功！');
+          loadBanners();
+        } catch (error: any) {
+          message.error(getErrorMessage(error));
+        }
+      }
+    });
+  };
+
+  // 切换 Banner 状态
+  const handleToggleBannerStatus = async (bannerId: number) => {
+    try {
+      await toggleBannerStatus(bannerId);
+      message.success('Banner 状态已更新！');
+      loadBanners();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  };
+
+  // 编辑 Banner
+  const handleEditBanner = async (banner: any) => {
+    setBannerForm({
+      id: banner.id,
+      image_url: banner.image_url,
+      title: banner.title,
+      subtitle: banner.subtitle || '',
+      link_url: banner.link_url || '',
+      link_type: banner.link_type || 'internal',
+      order: banner.order || 0,
+      is_active: banner.is_active !== undefined ? banner.is_active : true
+    });
+    setShowBannerModal(true);
+  };
+
+  // 上传图片
+  const handleUploadImage = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const result = await uploadBannerImage(file);
+      setBannerForm({...bannerForm, image_url: result.url});
+      message.success('图片上传成功！');
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // 删除竞品
   const handleDeleteLeaderboardItem = async (itemId: number, itemName: string) => {
     Modal.confirm({
@@ -7762,6 +7950,471 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 渲染 Banner 管理
+  const renderBanners = useCallback(() => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>Banner 广告管理</h2>
+        <button
+          onClick={() => {
+            setBannerForm({
+              id: undefined,
+              image_url: '',
+              title: '',
+              subtitle: '',
+              link_url: '',
+              link_type: 'internal',
+              order: 0,
+              is_active: true
+            });
+            setShowBannerModal(true);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#28a745',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          创建 Banner
+        </button>
+      </div>
+
+      {/* 筛选器 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <label style={{ fontWeight: 'bold' }}>状态筛选：</label>
+        <select
+          value={bannersActiveFilter === undefined ? '' : bannersActiveFilter ? 'true' : 'false'}
+          onChange={(e) => {
+            const value = e.target.value;
+            setBannersActiveFilter(value === '' ? undefined : value === 'true');
+            setBannersPage(1);
+            setTimeout(() => loadBanners(), 100);
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}
+        >
+          <option value="">全部</option>
+          <option value="true">启用</option>
+          <option value="false">禁用</option>
+        </select>
+      </div>
+
+      {/* Banner 列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {bannersLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : banners.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+            暂无 Banner 数据
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>图片</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>标题</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>副标题</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>链接</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>链接类型</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>排序</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {banners.map((banner: any) => (
+                <tr key={banner.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{banner.id}</td>
+                  <td style={{ padding: '12px' }}>
+                    <img 
+                      src={banner.image_url} 
+                      alt={banner.title}
+                      style={{ width: '80px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="40"%3E%3Crect width="80" height="40" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3E无图片%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {banner.title}
+                  </td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {banner.subtitle || '-'}
+                  </td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {banner.link_url || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {banner.link_type === 'internal' ? '内部链接' : '外部链接'}
+                  </td>
+                  <td style={{ padding: '12px' }}>{banner.order}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: banner.is_active ? '#d4edda' : '#f8d7da',
+                      color: banner.is_active ? '#155724' : '#721c24',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {banner.is_active ? '启用' : '禁用'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleEditBanner(banner)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleToggleBannerStatus(banner.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #ffc107',
+                          background: 'white',
+                          color: '#ffc107',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        {banner.is_active ? '禁用' : '启用'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBanner(banner.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #dc3545',
+                          background: 'white',
+                          color: '#dc3545',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {bannersTotal > 20 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+          <button
+            onClick={() => {
+              if (bannersPage > 1) {
+                setBannersPage(bannersPage - 1);
+                setTimeout(() => loadBanners(), 100);
+              }
+            }}
+            disabled={bannersPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: bannersPage === 1 ? '#f5f5f5' : 'white',
+              color: bannersPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: bannersPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
+            第 {bannersPage} 页，共 {Math.ceil(bannersTotal / 20)} 页
+          </span>
+          <button
+            onClick={() => {
+              if (bannersPage < Math.ceil(bannersTotal / 20)) {
+                setBannersPage(bannersPage + 1);
+                setTimeout(() => loadBanners(), 100);
+              }
+            }}
+            disabled={bannersPage >= Math.ceil(bannersTotal / 20)}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: bannersPage >= Math.ceil(bannersTotal / 20) ? '#f5f5f5' : 'white',
+              color: bannersPage >= Math.ceil(bannersTotal / 20) ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: bannersPage >= Math.ceil(bannersTotal / 20) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+
+      {/* 创建/编辑 Banner 模态框 */}
+      {showBannerModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            minWidth: '500px',
+            maxWidth: '700px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+              {bannerForm.id ? '编辑 Banner' : '创建 Banner'}
+            </h3>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                图片 URL <span style={{ color: 'red' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={bannerForm.image_url}
+                  onChange={(e) => setBannerForm({...bannerForm, image_url: e.target.value})}
+                  placeholder="请输入图片 URL"
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '5px'
+                  }}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleUploadImage(file);
+                    }
+                  }}
+                  disabled={uploadingImage}
+                  style={{ display: 'none' }}
+                  id="banner-image-upload"
+                />
+                <label
+                  htmlFor="banner-image-upload"
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #007bff',
+                    background: uploadingImage ? '#ccc' : 'white',
+                    color: '#007bff',
+                    borderRadius: '4px',
+                    cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    marginTop: '5px',
+                    display: 'inline-block'
+                  }}
+                >
+                  {uploadingImage ? '上传中...' : '上传图片'}
+                </label>
+              </div>
+              {bannerForm.image_url && (
+                <img 
+                  src={bannerForm.image_url} 
+                  alt="预览"
+                  style={{ 
+                    marginTop: '10px', 
+                    maxWidth: '100%', 
+                    maxHeight: '200px', 
+                    borderRadius: '4px',
+                    border: '1px solid #ddd'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                标题 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={bannerForm.title}
+                onChange={(e) => setBannerForm({...bannerForm, title: e.target.value})}
+                placeholder="请输入广告标题"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>副标题</label>
+              <input
+                type="text"
+                value={bannerForm.subtitle}
+                onChange={(e) => setBannerForm({...bannerForm, subtitle: e.target.value})}
+                placeholder="请输入副标题（可选）"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>跳转链接</label>
+              <input
+                type="text"
+                value={bannerForm.link_url}
+                onChange={(e) => setBannerForm({...bannerForm, link_url: e.target.value})}
+                placeholder="请输入跳转链接（可选）"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>链接类型</label>
+              <select
+                value={bannerForm.link_type}
+                onChange={(e) => setBannerForm({...bannerForm, link_type: e.target.value as 'internal' | 'external'})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              >
+                <option value="internal">内部链接</option>
+                <option value="external">外部链接</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>排序顺序</label>
+              <input
+                type="number"
+                value={bannerForm.order}
+                onChange={(e) => setBannerForm({...bannerForm, order: parseInt(e.target.value) || 0})}
+                placeholder="数字越小越靠前"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={bannerForm.is_active}
+                  onChange={(e) => setBannerForm({...bannerForm, is_active: e.target.checked})}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 'bold' }}>启用</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowBannerModal(false);
+                  setBannerForm({
+                    id: undefined,
+                    image_url: '',
+                    title: '',
+                    subtitle: '',
+                    link_url: '',
+                    link_type: 'internal',
+                    order: 0,
+                    is_active: true
+                  });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={bannerForm.id ? handleUpdateBanner : handleCreateBanner}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {bannerForm.id ? '更新' : '创建'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ), [banners, bannersPage, bannersTotal, bannersLoading, bannersActiveFilter, showBannerModal, bannerForm, uploadingImage, loadBanners, handleCreateBanner, handleUpdateBanner, handleDeleteBanner, handleToggleBannerStatus, handleEditBanner, handleUploadImage]);
+
   // 渲染榜单审核管理
   const renderLeaderboardReview = () => (
     <div>
@@ -8196,6 +8849,12 @@ const AdminDashboard: React.FC = () => {
               onClick={() => handleTabChange('invitation-codes')}
             >
               🎫 邀请码管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'banners')}
+              onClick={() => handleTabChange('banners')}
+            >
+              🎨 Banner管理
             </button>
           </div>
         </div>
