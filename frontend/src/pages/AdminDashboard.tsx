@@ -6300,7 +6300,7 @@ const AdminDashboard: React.FC = () => {
   }, [activeTab, bannersPage, bannersActiveFilter, loadBanners]);
 
   // 创建 Banner
-  const handleCreateBanner = async () => {
+  const handleCreateBanner = useCallback(async () => {
     if (!bannerForm.image_url || !bannerForm.title) {
       message.warning('请填写图片URL和标题');
       return;
@@ -6331,10 +6331,10 @@ const AdminDashboard: React.FC = () => {
     } catch (error: any) {
       message.error(getErrorMessage(error));
     }
-  };
+  }, [bannerForm, loadBanners]);
 
   // 更新 Banner
-  const handleUpdateBanner = async () => {
+  const handleUpdateBanner = useCallback(async () => {
     if (!bannerForm.id) return;
     if (!bannerForm.image_url || !bannerForm.title) {
       message.warning('请填写图片URL和标题');
@@ -6366,10 +6366,10 @@ const AdminDashboard: React.FC = () => {
     } catch (error: any) {
       message.error(getErrorMessage(error));
     }
-  };
+  }, [bannerForm, loadBanners]);
 
   // 删除 Banner
-  const handleDeleteBanner = async (bannerId: number) => {
+  const handleDeleteBanner = useCallback(async (bannerId: number) => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除这个 Banner 吗？',
@@ -6385,10 +6385,10 @@ const AdminDashboard: React.FC = () => {
         }
       }
     });
-  };
+  }, [loadBanners]);
 
   // 切换 Banner 状态
-  const handleToggleBannerStatus = async (bannerId: number) => {
+  const handleToggleBannerStatus = useCallback(async (bannerId: number) => {
     try {
       await toggleBannerStatus(bannerId);
       message.success('Banner 状态已更新！');
@@ -6396,10 +6396,10 @@ const AdminDashboard: React.FC = () => {
     } catch (error: any) {
       message.error(getErrorMessage(error));
     }
-  };
+  }, [loadBanners]);
 
   // 编辑 Banner
-  const handleEditBanner = async (banner: any) => {
+  const handleEditBanner = useCallback((banner: any) => {
     setBannerForm({
       id: banner.id,
       image_url: banner.image_url,
@@ -6411,21 +6411,21 @@ const AdminDashboard: React.FC = () => {
       is_active: banner.is_active !== undefined ? banner.is_active : true
     });
     setShowBannerModal(true);
-  };
+  }, []);
 
   // 上传图片
-  const handleUploadImage = async (file: File) => {
+  const handleUploadImage = useCallback(async (file: File) => {
     setUploadingImage(true);
     try {
       const result = await uploadBannerImage(file);
-      setBannerForm({...bannerForm, image_url: result.url});
+      setBannerForm(prev => ({...prev, image_url: result.url}));
       message.success('图片上传成功！');
     } catch (error: any) {
       message.error(getErrorMessage(error));
     } finally {
       setUploadingImage(false);
     }
-  };
+  }, []);
 
   // 删除竞品
   const handleDeleteLeaderboardItem = async (itemId: number, itemName: string) => {
@@ -8413,7 +8413,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  ), [banners, bannersPage, bannersTotal, bannersLoading, bannersActiveFilter, showBannerModal, bannerForm, uploadingImage, loadBanners, handleCreateBanner, handleUpdateBanner, handleDeleteBanner, handleToggleBannerStatus, handleEditBanner, handleUploadImage]);
+  ), [banners, bannersPage, bannersTotal, bannersLoading, bannersActiveFilter, showBannerModal, bannerForm, uploadingImage, handleCreateBanner, handleUpdateBanner, handleDeleteBanner, handleToggleBannerStatus, handleEditBanner, handleUploadImage, loadBanners]);
 
   // 渲染榜单审核管理
   const renderLeaderboardReview = () => (
@@ -8900,6 +8900,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
             {activeTab === 'leaderboard-review' && renderLeaderboardReview()}
             {activeTab === 'leaderboard-items' && renderLeaderboardItems()}
+            {activeTab === 'banners' && renderBanners()}
           </div>
         )}
       </div>
