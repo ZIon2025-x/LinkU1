@@ -12,6 +12,29 @@ from app.redis_cache import get_redis_client
 logger = logging.getLogger(__name__)
 
 
+def _convert_to_serializable(obj: Any) -> Any:
+    """
+    将对象转换为可序列化的格式
+    处理 Pydantic 模型、字典、列表等
+    """
+    # 如果是 Pydantic 模型，转换为字典
+    if hasattr(obj, 'model_dump'):
+        return obj.model_dump()
+    elif hasattr(obj, 'dict'):
+        return obj.dict()
+    
+    # 如果是字典，递归处理值
+    if isinstance(obj, dict):
+        return {k: _convert_to_serializable(v) for k, v in obj.items()}
+    
+    # 如果是列表或元组，递归处理元素
+    if isinstance(obj, (list, tuple)):
+        return [_convert_to_serializable(item) for item in obj]
+    
+    # 其他类型直接返回
+    return obj
+
+
 def cache_response(ttl: int = 300, key_prefix: str = "cache"):
     """
     API响应缓存装饰器
@@ -49,17 +72,26 @@ def cache_response(ttl: int = 300, key_prefix: str = "cache"):
                 if cached:
                     try:
                         cached_data = json.loads(cached)
-                        logger.debug(f"缓存命中: {cache_key}")
-                        return cached_data
+                        # 检查缓存数据格式是否正确（应该是字典，不是字符串）
+                        if isinstance(cached_data, str):
+                            # 旧格式的缓存（字符串），清除它
+                            logger.warning(f"检测到旧格式缓存（字符串），已清除: {cache_key}")
+                            redis_client.delete(cache_key)
+                        else:
+                            logger.debug(f"缓存命中: {cache_key}")
+                            return cached_data
                     except json.JSONDecodeError:
-                        logger.warning(f"缓存数据格式错误: {cache_key}")
+                        logger.warning(f"缓存数据格式错误，已清除: {cache_key}")
+                        redis_client.delete(cache_key)
                 
                 # 执行函数
                 result = await func(*args, **kwargs)
                 
                 # 存储到缓存（只缓存可序列化的结果）
                 try:
-                    result_str = json.dumps(result, default=str)
+                    # 将 Pydantic 模型转换为字典
+                    serializable_result = _convert_to_serializable(result)
+                    result_str = json.dumps(serializable_result, default=str)
                     redis_client.setex(cache_key, ttl, result_str)
                     logger.debug(f"缓存已设置: {cache_key}, TTL: {ttl}秒")
                 except (TypeError, ValueError) as e:
@@ -92,17 +124,26 @@ def cache_response(ttl: int = 300, key_prefix: str = "cache"):
                 if cached:
                     try:
                         cached_data = json.loads(cached)
-                        logger.debug(f"缓存命中: {cache_key}")
-                        return cached_data
+                        # 检查缓存数据格式是否正确（应该是字典，不是字符串）
+                        if isinstance(cached_data, str):
+                            # 旧格式的缓存（字符串），清除它
+                            logger.warning(f"检测到旧格式缓存（字符串），已清除: {cache_key}")
+                            redis_client.delete(cache_key)
+                        else:
+                            logger.debug(f"缓存命中: {cache_key}")
+                            return cached_data
                     except json.JSONDecodeError:
-                        logger.warning(f"缓存数据格式错误: {cache_key}")
+                        logger.warning(f"缓存数据格式错误，已清除: {cache_key}")
+                        redis_client.delete(cache_key)
                 
                 # 执行函数
                 result = func(*args, **kwargs)
                 
                 # 存储到缓存
                 try:
-                    result_str = json.dumps(result, default=str)
+                    # 将 Pydantic 模型转换为字典
+                    serializable_result = _convert_to_serializable(result)
+                    result_str = json.dumps(serializable_result, default=str)
                     redis_client.setex(cache_key, ttl, result_str)
                     logger.debug(f"缓存已设置: {cache_key}, TTL: {ttl}秒")
                 except (TypeError, ValueError) as e:
