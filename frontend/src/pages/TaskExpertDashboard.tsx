@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 任务达人管理后台
  * 路径: /task-experts/me/dashboard
  * 功能: 服务管理、申请管理
@@ -1134,11 +1134,11 @@ const TaskExpertDashboard: React.FC = () => {
                       {service.description && service.description.length > 100 ? '...' : ''}
                     </div>
                     
-                    <div className={styles.flexBetween} style={{ marginBottom: '12px' }}>
+                    <div className={styles.servicePriceRow}>
                       <div className={styles.servicePrice}>
                         {service.currency} {service.base_price.toFixed(2)}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#718096' }}>
+                      <div className={styles.serviceApplicationCount}>
                         {service.application_count} 申请
                       </div>
                     </div>
@@ -1163,7 +1163,7 @@ const TaskExpertDashboard: React.FC = () => {
                           管理时间段
                         </button>
                       )}
-                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                      <div className={styles.serviceCardActions}>
                         <button
                           onClick={() => handleEditService(service)}
                           className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSmall}`}
@@ -2006,57 +2006,32 @@ const TaskExpertDashboard: React.FC = () => {
       {/* 创建多人活动弹窗 */}
       {showCreateMultiTaskModal && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className={styles.modalOverlay}
           onClick={() => setShowCreateMultiTaskModal(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '600px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-            }}
+            className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>创建多人活动</h3>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>创建多人活动</h3>
               <button
                 onClick={() => setShowCreateMultiTaskModal(false)}
-                style={{
-                  padding: '6px 12px',
-                  border: 'none',
-                  background: '#dc3545',
-                  color: 'white',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
+                className={styles.modalClose}
               >
-                关闭
+                ×
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* 选择服务（必填） */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
                   关联服务 <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <select
                   value={createMultiTaskForm.service_id || ''}
+                  className={styles.formInput}
                   onChange={(e) => {
                     const serviceId = e.target.value ? parseInt(e.target.value) : undefined;
                     const selectedService = serviceId ? services.find(s => s.id === serviceId) : undefined;
@@ -2117,13 +2092,6 @@ const TaskExpertDashboard: React.FC = () => {
                       }));
                     }
                   }}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
                   required
                 >
                   <option value="">请选择服务</option>
@@ -2141,41 +2109,28 @@ const TaskExpertDashboard: React.FC = () => {
               </div>
 
               {/* 活动标题 */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
                   活动标题 <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={createMultiTaskForm.title}
                   onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, title: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
+                  className={styles.formInput}
                   required
                 />
               </div>
 
               {/* 活动描述 */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
                   活动描述 <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <textarea
                   value={createMultiTaskForm.description}
                   onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, description: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    minHeight: '100px',
-                  }}
+                  className={styles.formTextarea}
                   required
                 />
               </div>
@@ -3556,52 +3511,38 @@ const TaskExpertDashboard: React.FC = () => {
       {/* 议价弹窗 */}
       {showCounterOfferModal && selectedApplication && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className={styles.modalOverlay}
           onClick={() => setShowCounterOfferModal(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '500px',
-              width: '100%',
-            }}
+            className={styles.modalContent}
+            style={{ maxWidth: '500px' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>
-              再次议价
-            </h3>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                再次议价
+              </h3>
+              <button
+                onClick={() => setShowCounterOfferModal(false)}
+                className={styles.modalClose}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>
                 议价价格 ({selectedApplication.currency || 'GBP'})
               </label>
               <input
                 type="number"
                 value={counterPrice || ''}
                 onChange={(e) => setCounterPrice(parseFloat(e.target.value) || undefined)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
+                className={styles.formInput}
               />
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>
                 说明（可选）
               </label>
               <textarea
