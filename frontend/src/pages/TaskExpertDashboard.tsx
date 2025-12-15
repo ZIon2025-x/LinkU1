@@ -237,11 +237,8 @@ const TaskExpertDashboard: React.FC = () => {
         start_date: today.toISOString().split('T')[0],
         end_date: futureDate.toISOString().split('T')[0],
       };
-      console.log('请求时间段参数:', params); // 调试日志
       // 任务达人创建活动时，使用认证接口（需要登录）
       const slots = await getServiceTimeSlots(serviceId, params);
-      console.log('加载的时间段数据:', slots); // 调试日志
-      console.log('时间段数量:', Array.isArray(slots) ? slots.length : 0); // 调试日志
       const slotsArray = Array.isArray(slots) ? slots : [];
       
       // 分析时间段的日期分布
@@ -261,39 +258,8 @@ const TaskExpertDashboard: React.FC = () => {
         }
       });
       
-      console.log('时间段详情:', slotsArray.map((s: any) => ({
-        id: s.id,
-        slot_start_datetime: s.slot_start_datetime,
-        slot_end_datetime: s.slot_end_datetime,
-        slot_date: s.slot_date,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        converted_date_uk: (() => {
-          const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
-          try {
-            return TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
-          } catch {
-            return s.slot_date;
-          }
-        })(),
-        is_available: s.is_available,
-        is_expired: s.is_expired,
-        current_participants: s.current_participants,
-        max_participants: s.max_participants,
-      }))); // 调试日志
-      
-      console.log('时间段日期分布:', dateDistribution);
-      console.log('时间段日期范围:', {
-        min_date: Object.keys(dateDistribution).sort()[0],
-        max_date: Object.keys(dateDistribution).sort().slice(-1)[0],
-        total_dates: Object.keys(dateDistribution).length,
-        total_slots: slotsArray.length
-      });
-      
       setAvailableTimeSlots(slotsArray);
     } catch (err: any) {
-      console.error('加载时间段失败:', err);
-      console.error('错误详情:', err.response?.data); // 调试日志
       message.error('加载时间段失败');
       setAvailableTimeSlots([]);
     } finally {
@@ -309,14 +275,11 @@ const TaskExpertDashboard: React.FC = () => {
   const loadPendingRequest = async () => {
     try {
       const request = await getMyProfileUpdateRequest();
-      setPendingRequest(request);
-    } catch (err: any) {
-      // 如果没有待审核请求，忽略错误
-      if (err.response?.status !== 404) {
-        console.error('加载待审核请求失败:', err);
+        setPendingRequest(request);
+      } catch (err: any) {
+        // 如果没有待审核请求，忽略错误
       }
-    }
-  };
+    };
 
   // 使用 useCallback 优化标签页切换处理函数
   const handleTabChange = useCallback((tab: 'dashboard' | 'services' | 'applications' | 'multi-tasks' | 'schedule') => {
@@ -354,12 +317,11 @@ const TaskExpertDashboard: React.FC = () => {
   }, [activeTab, user]);
 
   // 当打开创建多人活动模态框时，确保服务列表已加载
-  useEffect(() => {
-    if (showCreateMultiTaskModal && services.length === 0 && !loadingServices) {
-      console.log('打开创建多人活动模态框，但服务列表为空，开始加载服务列表...');
-      loadServices();
-    }
-  }, [showCreateMultiTaskModal]);
+    useEffect(() => {
+      if (showCreateMultiTaskModal && services.length === 0 && !loadingServices) {
+        loadServices();
+      }
+    }, [showCreateMultiTaskModal]);
 
   const loadData = async () => {
     try {
@@ -387,10 +349,9 @@ const TaskExpertDashboard: React.FC = () => {
     setLoadingDashboardStats(true);
     try {
       const stats = await getExpertDashboardStats();
-      setDashboardStats(stats);
-    } catch (err: any) {
-      console.error('加载仪表盘数据失败:', err);
-      message.error('加载仪表盘数据失败');
+        setDashboardStats(stats);
+      } catch (err: any) {
+        message.error('加载仪表盘数据失败');
     } finally {
       setLoadingDashboardStats(false);
     }
@@ -417,25 +378,22 @@ const TaskExpertDashboard: React.FC = () => {
       // 分别处理两个请求，避免一个失败导致全部失败
       try {
         const scheduleDataResult = await getExpertSchedule({ start_date: startDate, end_date: endDate });
-        setScheduleData(scheduleDataResult);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || '未知错误';
-      console.error('加载时刻表数据失败:', errorMessage, err);
-      message.error(`加载时刻表数据失败: ${errorMessage}`);
+          setScheduleData(scheduleDataResult);
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.detail || err.message || '未知错误';
+        message.error(`加载时刻表数据失败: ${errorMessage}`);
       setScheduleData(null);
     }
       
       try {
-        const closedDatesResult = await getClosedDates({ start_date: startDate, end_date: endDate });
-        setClosedDates(Array.isArray(closedDatesResult) ? closedDatesResult : []);
-      } catch (err: any) {
-        console.error('加载关门日期失败:', err);
-        // 关门日期加载失败不影响时刻表显示，只记录错误
-        setClosedDates([]);
+          const closedDatesResult = await getClosedDates({ start_date: startDate, end_date: endDate });
+          setClosedDates(Array.isArray(closedDatesResult) ? closedDatesResult : []);
+        } catch (err: any) {
+          // 关门日期加载失败不影响时刻表显示
+          setClosedDates([]);
       }
-    } catch (err: any) {
-      console.error('加载时刻表失败:', err);
-      message.error('加载时刻表失败');
+      } catch (err: any) {
+        message.error('加载时刻表失败');
     } finally {
       setLoadingSchedule(false);
     }
@@ -444,13 +402,10 @@ const TaskExpertDashboard: React.FC = () => {
   const loadServices = async () => {
     setLoadingServices(true);
     try {
-      // 获取所有服务（包括active和inactive），但在创建任务时只显示active的
-      const data = await getMyTaskExpertServices();
-      console.log('服务列表API返回数据:', data);
-      // API返回的数据结构可能是 { items: [...] } 或直接是数组
-      const servicesList = Array.isArray(data) ? data : (data.items || []);
-      console.log('解析后的服务列表:', servicesList);
-      console.log('active服务数量:', servicesList.filter((s: any) => s.status === 'active').length);
+        // 获取所有服务（包括active和inactive），但在创建任务时只显示active的
+        const data = await getMyTaskExpertServices();
+        // API返回的数据结构可能是 { items: [...] } 或直接是数组
+        const servicesList = Array.isArray(data) ? data : (data.items || []);
       
       // 从后端返回的服务数据中提取时间段信息
       // 后端直接返回 has_time_slots 等字段，不需要嵌套在 time_slot_config 中
@@ -554,11 +509,10 @@ const TaskExpertDashboard: React.FC = () => {
         }
         groupedByDate[slotDateUK].push(slot);
       });
-      setTimeSlotManagementSlots(slotsArray);
-    } catch (err: any) {
-      console.error('加载时间段失败:', err);
-      message.error('加载时间段失败');
-      setTimeSlotManagementSlots([]);
+        setTimeSlotManagementSlots(slotsArray);
+      } catch (err: any) {
+        message.error('加载时间段失败');
+        setTimeSlotManagementSlots([]);
     } finally {
       setLoadingTimeSlotManagement(false);
     }
@@ -670,10 +624,9 @@ const TaskExpertDashboard: React.FC = () => {
     try {
       await deleteTaskExpertService(serviceId);
       message.success('服务已删除');
-      loadServices();
-    } catch (err: any) {
-      console.error('删除服务失败:', err);
-      const errorMessage = err.response?.data?.detail || err.message || '删除服务失败';
+        loadServices();
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.detail || err.message || '删除服务失败';
       // 显示更详细的错误信息，400错误显示更长时间
       if (err.response?.status === 400) {
         message.error(errorMessage, 5); // 显示5秒，让用户有足够时间阅读
@@ -707,11 +660,10 @@ const TaskExpertDashboard: React.FC = () => {
     try {
       await rejectServiceApplication(applicationId, reason);
       message.success('申请已拒绝');
-      // ⚠️ 后台刷新，不阻塞 UI
-      loadApplications().catch(err => {
-        console.error('刷新申请列表失败:', err);
-        // 如果刷新失败，恢复原状态
-        setApplications(originalApplications);
+        // ⚠️ 后台刷新，不阻塞 UI
+        loadApplications().catch(err => {
+          // 如果刷新失败，恢复原状态
+          setApplications(originalApplications);
       });
     } catch (err: any) {
       // 如果失败，恢复原状态
@@ -748,13 +700,11 @@ const TaskExpertDashboard: React.FC = () => {
 
 
   // 加载多人任务列表
-  const loadMultiTasks = async () => {
-    if (!user) {
-      console.log('loadMultiTasks: 用户未加载，跳过');
-      return;
-    }
-    console.log('loadMultiTasks: 开始加载多人活动，用户ID:', user.id);
-    setLoadingMultiTasks(true);
+    const loadMultiTasks = async () => {
+      if (!user) {
+        return;
+      }
+      setLoadingMultiTasks(true);
     try {
       // 获取任务达人创建的所有活动
       const response = await api.get('/api/activities', {
@@ -762,10 +712,9 @@ const TaskExpertDashboard: React.FC = () => {
           expert_id: user.id,
           limit: 100
         }
-      });
-      const activities = response.data || [];
-      console.log('loadMultiTasks: 加载到', activities.length, '个活动', activities);
-      setMultiTasks(activities);
+        });
+        const activities = response.data || [];
+        setMultiTasks(activities);
       
       // 将已结束的活动默认添加到折叠集合中
       const completedActivityIds = activities
@@ -788,7 +737,6 @@ const TaskExpertDashboard: React.FC = () => {
                 status: 'all'  // 获取所有状态的任务
               }
             });
-            console.log(`活动 ${activity.id} 的任务响应:`, tasksResponse.data);
             
             // 处理不同的返回格式
             let relatedTasks = [];
@@ -802,7 +750,6 @@ const TaskExpertDashboard: React.FC = () => {
               }
             }
             
-            console.log(`活动 ${activity.id} 的关联任务数量:`, relatedTasks.length, relatedTasks);
             tasksMap[activity.id] = relatedTasks;
             
             // 为每个任务加载参与者（按任务分组）
@@ -818,7 +765,6 @@ const TaskExpertDashboard: React.FC = () => {
                   participantsMap[activity.id][task.id] = participantsData.participants || [];
                 } catch (error: any) {
                   const errorMessage = error.response?.data?.detail || error.message || '未知错误';
-                  console.error(`加载任务 ${task.id} 的参与者失败:`, errorMessage, error);
                   participantsMap[activity.id][task.id] = [];
                 }
               } else {
@@ -827,7 +773,6 @@ const TaskExpertDashboard: React.FC = () => {
               }
             }
           } catch (error) {
-            console.error(`加载活动 ${activity.id} 的关联任务失败:`, error);
             participantsMap[activity.id] = {};
             tasksMap[activity.id] = [];
           }
@@ -837,7 +782,6 @@ const TaskExpertDashboard: React.FC = () => {
       setActivityTasks(tasksMap);
     } catch (err: any) {
                       message.error('加载多人活动列表失败');
-                      console.error('加载多人活动失败:', err);
     } finally {
       setLoadingMultiTasks(false);
     }
@@ -1714,7 +1658,6 @@ const TaskExpertDashboard: React.FC = () => {
                                 message.success('活动已删除');
                                 await loadMultiTasks();
                               } catch (err: any) {
-                                console.error('删除活动失败:', err);
                                 message.error(err.response?.data?.detail || '删除失败，请重试');
                               }
                             }}
@@ -1843,7 +1786,6 @@ const TaskExpertDashboard: React.FC = () => {
                                               // 并行删除所有服务的时间段，提高效率
                                               const deletePromises = serviceIds.map(serviceId => 
                                                 deleteTimeSlotsByDate(serviceId, date).catch(err => {
-                                                  console.error(`删除服务 ${serviceId} 的时间段失败:`, err);
                                                   throw err;
                                                 })
                                               );
@@ -1863,7 +1805,6 @@ const TaskExpertDashboard: React.FC = () => {
                                               await loadSchedule();
                                             } catch (err: any) {
                                               hideLoading();
-                                              console.error('删除时间段失败:', err);
                                               message.error(err.response?.data?.detail || err.message || '删除失败，请重试');
                                             }
                                           }}
@@ -2059,11 +2000,6 @@ const TaskExpertDashboard: React.FC = () => {
                     
                     // 如果服务有时间段，加载时间段列表并设置默认日期
                     if (selectedService?.has_time_slots && serviceId) {
-                      console.log('服务有时间段，开始加载时间段数据:', {
-                        serviceId,
-                        has_time_slots: selectedService.has_time_slots,
-                        service: selectedService
-                      }); // 调试日志
                       // 设置默认日期为今天
                       const today = new Date().toISOString().split('T')[0];
                       // 使用函数式更新确保service_id不会丢失
@@ -2076,11 +2012,6 @@ const TaskExpertDashboard: React.FC = () => {
                       // 加载时间段列表
                       loadTimeSlotsForCreateTask(serviceId);
                     } else {
-                      console.log('服务没有时间段:', {
-                        serviceId,
-                        has_time_slots: selectedService?.has_time_slots,
-                        selectedService
-                      }); // 调试日志
                       setAvailableTimeSlots([]);
                       // 使用函数式更新确保service_id不会丢失
                       setCreateMultiTaskForm(prev => ({
@@ -2558,16 +2489,6 @@ const TaskExpertDashboard: React.FC = () => {
                           ? createMultiTaskForm.selected_time_slot_date.split('T')[0] 
                           : '';
                         
-                        console.log('开始过滤时间段:', {
-                          selectedDateStr,
-                          total_slots: availableTimeSlots.length,
-                          availableTimeSlots_sample: availableTimeSlots.slice(0, 3).map((s: any) => ({
-                            id: s.id,
-                            slot_start_datetime: s.slot_start_datetime,
-                            slot_date: s.slot_date,
-                            start_time: s.start_time,
-                          }))
-                        });
                         
                         const filteredSlots = availableTimeSlots.filter((slot: any) => {
                           // 使用UTC时间转换为英国时间进行日期匹配
@@ -2605,7 +2526,6 @@ const TaskExpertDashboard: React.FC = () => {
                               slotDateUK = slotDateUK.replace(' (GMT)', '');
                             }
                           } catch (error) {
-                            console.error('日期转换失败:', { slotStartStr, error, slot });
                             return false;
                           }
                           
@@ -2613,63 +2533,10 @@ const TaskExpertDashboard: React.FC = () => {
                           
                           // 输出前几个和匹配的时间段的详细日志
                           if (isDateMatch || slot.id <= 5) {
-                            console.log('时间段过滤（创建活动）:', {
-                              slot_id: slot.id,
-                              slot_start_datetime: slot.slot_start_datetime,
-                              slot_date: slot.slot_date,
-                              start_time: slot.start_time,
-                              slotStartStr,
-                              slotDateUK,
-                              selectedDateStr,
-                              isDateMatch,
-                              is_available: slot.is_available,
-                            });
                           }
                           
                           return isDateMatch;
                         });
-                        
-                        // 输出过滤结果和示例数据，帮助调试
-                        const sampleSlotDates = availableTimeSlots.slice(0, 5).map((s: any) => {
-                          const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
-                          try {
-                            let dateStr = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
-                            // 去掉时区后缀
-                            if (dateStr.includes(' (GMT)') || dateStr.includes(' (BST)')) {
-                              dateStr = dateStr.replace(' (GMT)', '').replace(' (BST)', '');
-                            }
-                            return dateStr;
-                          } catch {
-                            return s.slot_date;
-                          }
-                        });
-                        
-                        console.log('时间段过滤结果:', {
-                          total_slots: availableTimeSlots.length,
-                          filtered_count: filteredSlots.length,
-                          selected_date: createMultiTaskForm.selected_time_slot_date,
-                          selectedDateStr,
-                          service_id: createMultiTaskForm.service_id,
-                          sample_slot_dates: sampleSlotDates,
-                          first_few_slots: availableTimeSlots.slice(0, 3).map((s: any) => ({
-                            id: s.id,
-                            slot_start_datetime: s.slot_start_datetime,
-                            slot_date: s.slot_date,
-                            converted_date: (() => {
-                              const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
-                              try {
-                                let dateStr = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
-                                // 去掉时区后缀
-                                if (dateStr.includes(' (GMT)') || dateStr.includes(' (BST)')) {
-                                  dateStr = dateStr.replace(' (GMT)', '').replace(' (BST)', '');
-                                }
-                                return dateStr;
-                              } catch {
-                                return s.slot_date;
-                              }
-                            })()
-                          }))
-                        }); // 调试日志
                         
                         return filteredSlots.length === 0 ? (
                           <div style={{ 
@@ -3115,12 +2982,6 @@ const TaskExpertDashboard: React.FC = () => {
                       };
                       
                       // 调试日志
-                      console.log('创建多人活动 - 活动数据:', {
-                        expert_service_id: taskData.expert_service_id,
-                        service_id: createMultiTaskForm.service_id,
-                        selectedService: selectedService,
-                        taskData: taskData
-                      });
                       
                       // 如果服务有时间段，必须选择时间段
                       if (selectedService.has_time_slots) {
@@ -3182,12 +3043,6 @@ const TaskExpertDashboard: React.FC = () => {
                       setShowCreateMultiTaskModal(false);
                       await loadMultiTasks();
                     } catch (err: any) {
-                      console.error('创建多人活动失败:', err);
-                      console.error('错误详情:', {
-                        response: err.response?.data,
-                        service_id: createMultiTaskForm.service_id,
-                        selectedService: selectedService
-                      });
                       const errorMessage = err.response?.data?.detail || err.message || '创建失败';
                       message.error(errorMessage);
                     }
@@ -3359,7 +3214,6 @@ const TaskExpertDashboard: React.FC = () => {
                       // 重新加载时间段列表
                       await loadTimeSlotManagement(selectedServiceForTimeSlot.id);
                     } catch (err: any) {
-                      console.error('创建时间段失败:', err);
                       message.error(err.response?.data?.detail || '创建时间段失败');
                     } finally {
                       setCreatingTimeSlot(false);
@@ -3951,7 +3805,6 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         const userData = await fetchCurrentUser();
         setCurrentUser(userData);
       } catch (err) {
-        console.error('加载用户信息失败:', err);
       }
     };
     loadUser();
@@ -4042,7 +3895,6 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
           });
           message.success('时间段已创建');
         } catch (err: any) {
-          console.error('创建时间段失败:', err);
           // 不阻止服务保存，只提示警告
           message.warning('服务已保存，但时间段创建失败，请稍后手动创建时间段');
         }
@@ -4348,7 +4200,6 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                         message.error('图片上传失败，请重试');
                       }
                     } catch (error: any) {
-                      console.error('图片上传失败:', error);
                       message.error(error.response?.data?.detail || '图片上传失败，请重试');
                     } finally {
                       setUploadingImages(prev => prev.filter((_, i) => i !== imageIndex));
