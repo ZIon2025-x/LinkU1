@@ -1071,3 +1071,4 @@ logger.error(f"Payment failed: error={error}, task_id={task_id}")
 **文档版本**：v1.0  
 **最后更新**：2024年  
 **维护者**：LinkU 开发团队
+

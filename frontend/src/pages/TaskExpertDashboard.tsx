@@ -34,7 +34,6 @@ import {
   createExpertMultiParticipantTask,
   getServiceTimeSlots,
   getServiceTimeSlotsPublic,
-  batchCreateServiceTimeSlots,
   deleteTimeSlotsByDate,
   deleteServiceTimeSlot,
   getExpertDashboardStats,
