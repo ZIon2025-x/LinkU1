@@ -3079,11 +3079,16 @@ export const batchUpdateBannerOrder = async (orderUpdates: Array<{ id: number; o
 };
 
 // 上传 Banner 图片（管理员）
-export const uploadBannerImage = async (file: File) => {
+export const uploadBannerImage = async (file: File, bannerId?: number) => {
   const token = await getCSRFToken();
   const formData = new FormData();
   formData.append('image', file);
+  const params: any = {};
+  if (bannerId) {
+    params.banner_id = bannerId;
+  }
   const res = await api.post('/api/admin/banners/upload-image', formData, {
+    params,
     headers: {
       'X-CSRF-Token': token,
       'Content-Type': 'multipart/form-data'

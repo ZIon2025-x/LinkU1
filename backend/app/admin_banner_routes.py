@@ -144,6 +144,41 @@ def update_banner(
             detail="link_url 格式无效，必须是有效的 URL"
         )
     
+    # 如果更换了图片，删除旧图片
+    old_image_url = banner.image_url
+    if "image_url" in update_data and update_data["image_url"] != old_image_url and old_image_url:
+        try:
+            import os
+            from urllib.parse import urlparse
+            
+            # 从 URL 中提取文件名
+            parsed = urlparse(old_image_url)
+            path = parsed.path
+            # 路径格式：/uploads/images/banner/{banner_id}/filename
+            path_parts = path.split('/')
+            if len(path_parts) >= 5 and path_parts[2] == 'images' and path_parts[3] == 'banner':
+                filename = path_parts[-1]
+                
+                # 检测部署环境
+                railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+                use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+                
+                # 确定存储目录
+                if railway_env and not use_cloud_storage:
+                    base_public_dir = Path("/data/uploads/public/images")
+                else:
+                    base_public_dir = Path("uploads/public/images")
+                
+                # 构建文件路径
+                image_file = base_public_dir / "banner" / str(banner_id) / filename
+                
+                # 删除文件
+                if image_file.exists() and image_file.is_file():
+                    image_file.unlink()
+                    logger.info(f"删除 Banner {banner_id} 的旧图片: {filename}")
+        except Exception as e:
+            logger.warning(f"删除 Banner {banner_id} 的旧图片失败: {e}")
+    
     for field, value in update_data.items():
         setattr(banner, field, value)
     
@@ -165,21 +200,64 @@ def delete_banner(
     db: Session = Depends(get_db)
 ):
     """删除 Banner（管理员）"""
+    import os
+    from urllib.parse import urlparse
+    
     banner = db.query(models.Banner).filter(models.Banner.id == banner_id).first()
     if not banner:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Banner 不存在"
         )
-    
+
+    # 删除 Banner 图片
+    if banner.image_url:
+        try:
+            # 从 URL 中提取文件名
+            parsed = urlparse(banner.image_url)
+            path = parsed.path
+            # 路径格式：/uploads/images/banner/{banner_id}/filename
+            path_parts = path.split('/')
+            if len(path_parts) >= 5 and path_parts[2] == 'images' and path_parts[3] == 'banner':
+                filename = path_parts[-1]
+                
+                # 检测部署环境
+                railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+                use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+                
+                # 确定存储目录
+                if railway_env and not use_cloud_storage:
+                    base_public_dir = Path("/data/uploads/public/images")
+                else:
+                    base_public_dir = Path("uploads/public/images")
+                
+                # 构建文件路径
+                image_file = base_public_dir / "banner" / str(banner_id) / filename
+                
+                # 删除文件
+                if image_file.exists() and image_file.is_file():
+                    image_file.unlink()
+                    logger.info(f"删除 Banner {banner_id} 的图片: {filename}")
+                    
+                    # 如果文件夹为空，尝试删除它
+                    banner_dir = image_file.parent
+                    try:
+                        if banner_dir.exists() and not any(banner_dir.iterdir()):
+                            banner_dir.rmdir()
+                            logger.info(f"删除空的 Banner 图片文件夹: {banner_dir}")
+                    except Exception as e:
+                        logger.debug(f"删除 Banner 图片文件夹失败（可能不为空）: {banner_dir}: {e}")
+        except Exception as e:
+            logger.warning(f"删除 Banner {banner_id} 的图片失败: {e}")
+
     db.delete(banner)
     db.commit()
-    
+
     # 清除缓存
     clear_banner_cache()
-    
+
     logger.info(f"管理员 {current_admin.id} ({current_admin.name}) 删除了 Banner ID: {banner_id}")
-    
+
     return {
         "success": True,
         "message": "Banner 删除成功"
@@ -352,6 +430,7 @@ def batch_update_banner_order(
 @router.post("/banners/upload-image")
 async def upload_banner_image(
     image: UploadFile = File(...),
+    banner_id: Optional[int] = Query(None, description="Banner ID（编辑时提供，新建时可不提供）"),
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -389,9 +468,16 @@ async def upload_banner_image(
         else:
             base_public_dir = Path("uploads/public/images")
         
-        # Banner 图片存储在 banner 子目录
+        # Banner 图片存储在 banner 子目录，按 banner_id 分类
         sub_dir = "banner"
-        public_image_dir = base_public_dir / sub_dir
+        if banner_id:
+            # 编辑时：使用 banner_id 作为子文件夹
+            resource_subdir = str(banner_id)
+            public_image_dir = base_public_dir / sub_dir / resource_subdir
+        else:
+            # 新建时：使用临时文件夹
+            resource_subdir = f"temp_{current_admin.id}"
+            public_image_dir = base_public_dir / sub_dir / resource_subdir
         
         # 确保目录存在
         public_image_dir.mkdir(parents=True, exist_ok=True)
@@ -407,7 +493,10 @@ async def upload_banner_image(
         
         # 生成公开URL
         base_url = Config.FRONTEND_URL.rstrip('/') if hasattr(Config, 'FRONTEND_URL') else "http://localhost:3000"
-        image_url = f"{base_url}/uploads/images/{sub_dir}/{unique_filename}"
+        if banner_id:
+            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
+        else:
+            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
         
         logger.info(f"管理员 {current_admin.id} ({current_admin.name}) 上传了 Banner 图片: {image_url}")
         

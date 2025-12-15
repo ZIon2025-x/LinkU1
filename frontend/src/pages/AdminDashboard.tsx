@@ -6417,7 +6417,15 @@ const AdminDashboard: React.FC = () => {
   const handleUploadImage = useCallback(async (file: File) => {
     setUploadingImage(true);
     try {
-      const result = await uploadBannerImage(file);
+      // 压缩图片
+      const compressedFile = await compressImage(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      });
+      
+      // 上传压缩后的图片
+      const result = await uploadBannerImage(compressedFile, bannerForm.id);
       setBannerForm(prev => ({...prev, image_url: result.url}));
       message.success('图片上传成功！');
     } catch (error: any) {
@@ -6425,7 +6433,7 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setUploadingImage(false);
     }
-  }, []);
+  }, [bannerForm.id]);
 
   // 删除竞品
   const handleDeleteLeaderboardItem = async (itemId: number, itemName: string) => {

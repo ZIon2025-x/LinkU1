@@ -346,12 +346,13 @@ if RAILWAY_ENVIRONMENT:
     (UPLOAD_DIR / "public").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images").mkdir(parents=True, exist_ok=True)
     # 创建分类子目录（子文件夹会在上传时按需创建）
-    (UPLOAD_DIR / "public" / "images" / "expert_avatars").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "public" / "images" / "service_images").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "public" / "images" / "public").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "public" / "images" / "leaderboard_items").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "public" / "images" / "leaderboard_covers").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "public" / "files").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "expert_avatars").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "service_images").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "public").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "leaderboard_items").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "leaderboard_covers").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "images" / "banner").mkdir(parents=True, exist_ok=True)
+        (UPLOAD_DIR / "public" / "files").mkdir(parents=True, exist_ok=True)
     # 私有目录（需要签名URL访问）
     (UPLOAD_DIR / "private").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "private" / "images").mkdir(parents=True, exist_ok=True)
@@ -377,6 +378,7 @@ else:
     (UPLOAD_DIR / "public" / "images" / "public").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "leaderboard_items").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "leaderboard_covers").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "public" / "images" / "banner").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "files").mkdir(exist_ok=True)
     # 私有目录
     (UPLOAD_DIR / "private").mkdir(exist_ok=True)
