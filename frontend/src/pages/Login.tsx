@@ -43,6 +43,7 @@ const Login: React.FC = () => {
   const [countdown, setCountdown] = useState(0);
   const [emailForCode, setEmailForCode] = useState('');
   const [phoneForCode, setPhoneForCode] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+44'); // 仅支持英国
   const countdownTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // 生成canonical URL
@@ -409,6 +410,7 @@ const Login: React.FC = () => {
               setLoginMethod('phone');
               setCodeSent(false);
               setVerificationCode('');
+              setPhoneCountryCode('+44'); // 重置为英国
               setErrorMsg('');
             }}
             style={{ flex: 1 }}
@@ -502,20 +504,41 @@ const Login: React.FC = () => {
               name="phone" 
               rules={[
                 { required: true, message: t('auth.enterPhone') },
-                { pattern: /^1[3-9]\d{9}$/, message: t('auth.phonePlaceholder') }
+                { pattern: /^07\d{9}$/, message: '请输入11位英国手机号（以07开头）' }
               ]}
             > 
-              <Input 
-                placeholder={t('auth.phonePlaceholder')} 
-                disabled={codeSent}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, ''); // 只允许数字
-                  if (!codeSent) {
-                    setPhoneForCode(value);
-                  }
-                }}
-                maxLength={11}
-              />
+              <Input.Group compact>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0 12px',
+                  border: '1px solid #d9d9d9',
+                  borderRight: 'none',
+                  borderRadius: '4px 0 0 4px',
+                  backgroundColor: codeSent ? '#f5f5f5' : '#fff',
+                  fontSize: '16px',
+                  minWidth: '90px',
+                  justifyContent: 'center',
+                  color: '#666'
+                }}>
+                  🇬🇧 +44
+                </div>
+                <Input 
+                  placeholder="7700123456"
+                  disabled={codeSent}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    if (!codeSent) {
+                      setPhoneForCode(phoneCountryCode + value);
+                    }
+                  }}
+                  maxLength={11}
+                  style={{
+                    width: 'calc(100% - 90px)',
+                    borderRadius: '0 4px 4px 0'
+                  }}
+                />
+              </Input.Group>
             </Form.Item>
             {codeSent && (
               <>

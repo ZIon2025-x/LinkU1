@@ -35,6 +35,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     phone: '',
     invitationCode: ''
   });
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+44'); // 仅支持英国
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -612,12 +613,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
         // 如果是手机号验证码登录模式
         if (loginMethod === 'phone') {
           if (!codeSent) {
-            // 发送手机验证码
-            await handleSendPhoneCode(formData.phone);
+            // 发送手机验证码（使用完整号码：国家代码+手机号）
+            const fullPhone = phoneForCode || (phoneCountryCode + formData.phone);
+            await handleSendPhoneCode(fullPhone);
             return;
           } else {
-            // 使用手机验证码登录
-            await handlePhoneCodeLogin(phoneForCode || formData.phone, verificationCode);
+            // 使用手机验证码登录（使用完整号码）
+            const fullPhone = phoneForCode || (phoneCountryCode + formData.phone);
+            await handlePhoneCodeLogin(fullPhone, verificationCode);
             return;
           }
         }
@@ -916,38 +919,63 @@ const LoginModal: React.FC<LoginModalProps> = ({
               }}>
                 {t('common.phone')}
               </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, ''); // 只允许数字
-                  setFormData(prev => ({ ...prev, phone: value }));
-                  if (!codeSent) {
-                    setPhoneForCode(value);
-                  }
-                }}
-                placeholder={t('auth.phonePlaceholder')}
-                required
-                disabled={codeSent}
-                maxLength={11}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
-                  backgroundColor: codeSent ? '#f5f5f5' : '#fff'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#ddd';
-                }}
-              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {/* 国家代码选择（仅支持英国） */}
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    backgroundColor: codeSent ? '#f5f5f5' : '#fff',
+                    minWidth: '100px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666'
+                  }}
+                >
+                  🇬🇧 +44
+                </div>
+                {/* 手机号输入 */}
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    setFormData(prev => ({ ...prev, phone: value }));
+                    if (!codeSent && value) {
+                      // 存储完整号码（包含国家代码）
+                      setPhoneForCode(phoneCountryCode + value);
+                    }
+                  }}
+                  placeholder="7700123456"
+                  required
+                  disabled={codeSent}
+                  maxLength={15}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
+                    backgroundColor: codeSent ? '#f5f5f5' : '#fff'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#ddd';
+                    // 更新完整号码
+                    if (!codeSent && formData.phone) {
+                      setPhoneForCode(phoneCountryCode + formData.phone);
+                    }
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -1120,7 +1148,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 />
               </div>
               <div style={{ textAlign: 'center', marginBottom: '16px', color: '#666', fontSize: '12px' }}>
-                <div>{t('auth.codeSentToPhone').replace('{phone}', phoneForCode)}</div>
+                <div>{t('auth.codeSentToPhone').replace('{phone}', phoneForCode || (phoneCountryCode + formData.phone))}</div>
                 {countdown > 0 && (
                   <div style={{ marginTop: '4px' }}>
                     {t('auth.codeExpiresIn').replace('{seconds}', String(countdown))}
@@ -1770,6 +1798,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   setCodeSent(false);
                   setVerificationCode('');
                   setPhoneForCode('');
+                  setPhoneCountryCode('+44'); // 重置为默认英国
                   setError('');
                 }}
                 style={{

@@ -915,14 +915,21 @@ def send_phone_verification_code(
         
         phone = request_data.phone.strip()
         
-        # 验证手机号格式
-        try:
-            phone_digits = StringValidator.validate_phone(phone)
-        except ValueError as e:
+        # 验证手机号格式（前端已发送完整号码，如 +447700123456）
+        # 验证格式：必须以 + 开头，后面是10-15位数字
+        import re
+        if not phone.startswith('+'):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
+                detail="手机号格式不正确，必须以国家代码开头（如 +44）"
             )
+        if not re.match(r'^\+\d{10,15}$', phone):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号格式不正确，请检查国家代码和手机号"
+            )
+        
+        phone_digits = phone  # 直接使用前端发送的完整号码
         
         # 发送短信（使用 Twilio）
         try:
@@ -952,21 +959,30 @@ def send_phone_verification_code(
                 # 尝试发送短信
                 sms_sent = twilio_sms.send_verification_code(phone_digits, verification_code, language)
             
-            if not sms_sent:
-                # 如果 Twilio 发送失败，在开发环境中记录日志
-                if os.getenv("ENVIRONMENT", "production") == "development":
-                    if verification_code:
-                        logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机验证码: {phone_digits} -> {verification_code}")
+                if not sms_sent:
+                    # 如果 Twilio 发送失败，在开发环境中记录日志
+                    if os.getenv("ENVIRONMENT", "production") == "development":
+                        if verification_code:
+                            logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机验证码: {phone_digits} -> {verification_code}")
+                        else:
+                            logger.warning(f"[开发环境] Twilio Verify API 发送失败: {phone_digits}")
                     else:
-                        logger.warning(f"[开发环境] Twilio Verify API 发送失败: {phone_digits}")
+                        logger.error(f"Twilio 短信发送失败: phone={phone_digits}")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="发送验证码失败，请稍后重试"
+                        )
                 else:
-                    logger.error(f"Twilio 短信发送失败: phone={phone_digits}")
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="发送验证码失败，请稍后重试"
-                    )
-            else:
-                logger.info(f"手机验证码已通过 Twilio 发送: phone={phone_digits}")
+                    logger.info(f"手机验证码已通过 Twilio 发送: phone={phone_digits}")
+        except ValueError as e:
+            # 检测中国审核错误
+            if str(e) == "CHINA_VETTING_REQUIRED":
+                logger.error(f"Twilio 需要审核才能向中国手机号发送短信: phone={phone_digits}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="向中国手机号发送短信需要 Twilio 审核，请联系管理员或使用邮箱验证码登录"
+                )
+            raise
         except ImportError:
             # 如果 Twilio 未安装，在开发环境中记录日志
             logger.warning("Twilio 模块未安装，无法发送短信")
@@ -1035,14 +1051,21 @@ def login_with_phone_verification_code(
         phone = login_data.phone.strip()
         verification_code = login_data.verification_code.strip()
         
-        # 验证并清理手机号格式
-        try:
-            phone_digits = StringValidator.validate_phone(phone)
-        except ValueError as e:
+        # 验证手机号格式（前端已发送完整号码，如 +447700123456）
+        # 验证格式：必须以 + 开头，后面是10-15位数字
+        import re
+        if not phone.startswith('+'):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e)
+                detail="手机号格式不正确，必须以国家代码开头（如 +44）"
             )
+        if not re.match(r'^\+\d{10,15}$', phone):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号格式不正确，请检查国家代码和手机号"
+            )
+        
+        phone_digits = phone  # 直接使用前端发送的完整号码
         
         # 验证验证码（支持 Twilio Verify API 和自定义验证码）
         verification_success = False

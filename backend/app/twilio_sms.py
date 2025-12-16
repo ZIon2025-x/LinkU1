@@ -83,6 +83,12 @@ class TwilioSMS:
                 logger.info(f"Verify API 验证码发送成功: phone={formatted_phone}, sid={verification.sid}, status={verification.status}")
                 return True
             except TwilioRestException as e:
+                error_msg = str(e)
+                # 检测特定的错误类型
+                if '60220' in error_msg or 'use case vetting' in error_msg.lower() or 'whitelisted' in error_msg.lower():
+                    logger.error(f"Twilio Verify API 错误（需要审核）: {e}")
+                    # 抛出特殊异常，让调用者知道这是需要审核的错误
+                    raise ValueError("CHINA_VETTING_REQUIRED")
                 logger.error(f"Twilio Verify API 错误: {e}")
                 return False
             except TwilioException as e:
@@ -116,6 +122,12 @@ class TwilioSMS:
             logger.info(f"短信发送成功: phone={formatted_phone}, message_sid={message_obj.sid}")
             return True
         except TwilioRestException as e:
+            error_msg = str(e)
+            # 检测特定的错误类型（中国手机号需要审核）
+            if '60220' in error_msg or 'use case vetting' in error_msg.lower() or 'whitelisted' in error_msg.lower():
+                logger.error(f"Twilio Messages API 错误（需要审核）: {e}")
+                # 抛出特殊异常，让调用者知道这是需要审核的错误
+                raise ValueError("CHINA_VETTING_REQUIRED")
             logger.error(f"Twilio API 错误: {e}")
             return False
         except TwilioException as e:
@@ -208,41 +220,41 @@ class TwilioSMS:
     
     def _format_phone_number(self, phone: str) -> Optional[str]:
         """
-        格式化手机号，添加国家代码
+        格式化手机号（简化版：前端已发送完整号码，只需验证格式）
         
         Args:
-            phone: 手机号（可能包含或不包含国家代码）
+            phone: 手机号（前端已包含国家代码，如 +447700123456）
         
         Returns:
-            str: 格式化后的手机号（包含国家代码），如果格式无效则返回 None
+            str: 格式化后的手机号（如果格式有效），如果格式无效则返回 None
         """
-        # 移除所有非数字字符
+        # 如果已经以 + 开头，直接返回（前端已发送完整号码）
+        if phone.startswith('+'):
+            # 验证格式：+ 后应该是数字
+            import re
+            if re.match(r'^\+\d{10,15}$', phone):
+                return phone
+            else:
+                logger.warning(f"手机号格式无效（长度或格式错误）: {phone}")
+                return None
+        
+        # 如果以 00 开头，替换为 +（兼容旧格式）
+        if phone.startswith('00'):
+            formatted = '+' + phone[2:]
+            import re
+            if re.match(r'^\+\d{10,15}$', formatted):
+                return formatted
+        
+        # 如果前端没有发送 + 开头的号码，记录警告但尝试格式化（向后兼容）
         import re
         digits = re.sub(r'\D', '', phone)
         
-        # 如果已经以 + 开头，直接返回
-        if phone.startswith('+'):
-            return phone
-        
-        # 如果以 00 开头，替换为 +
-        if phone.startswith('00'):
-            return '+' + phone[2:]
-        
-        # 中国手机号：11位数字，添加 +86
-        if len(digits) == 11 and digits.startswith('1'):
-            return f"+86{digits}"
-        
-        # 如果已经是国际格式（10-15位数字），假设是中国号码
-        if 10 <= len(digits) <= 15:
-            # 如果以 86 开头，添加 +
-            if digits.startswith('86'):
-                return '+' + digits
-            # 否则假设是中国号码
-            if len(digits) == 11:
-                return f"+86{digits}"
+        # 如果以44开头（英国国家代码），添加 +
+        if digits.startswith('44') and len(digits) >= 10:
+            return '+' + digits
         
         # 如果无法识别，返回 None
-        logger.warning(f"无法格式化手机号: {phone}")
+        logger.warning(f"手机号格式无效（需要以+开头）: {phone}")
         return None
 
 
