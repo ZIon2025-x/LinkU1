@@ -852,7 +852,10 @@ def send_email_verification_code(
     """发送邮箱验证码"""
     try:
         # CAPTCHA 验证（强制要求，防止恶意刷验证码）
-        if captcha_verifier.is_enabled():
+        captcha_enabled = captcha_verifier.is_enabled()
+        logger.info(f"发送邮箱验证码请求: email={request_data.email}, CAPTCHA启用={captcha_enabled}, 收到token={bool(request_data.captcha_token)}")
+        
+        if captcha_enabled:
             if not request_data.captcha_token:
                 logger.warning(f"发送验证码请求缺少 CAPTCHA token: email={request_data.email}, IP={get_client_ip(request)}")
                 raise HTTPException(
@@ -872,6 +875,9 @@ def send_email_verification_code(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="人机验证失败，请重新完成验证后再试"
                 )
+            logger.info(f"CAPTCHA 验证成功: email={request_data.email}")
+        else:
+            logger.info(f"CAPTCHA 未启用，跳过验证: email={request_data.email}")
         
         # 针对特定邮箱的速率限制（更严格）
         # 创建临时请求对象用于邮箱级别的速率限制
@@ -985,7 +991,10 @@ def send_phone_verification_code(
     """发送手机验证码"""
     try:
         # CAPTCHA 验证（强制要求，防止恶意刷验证码）
-        if captcha_verifier.is_enabled():
+        captcha_enabled = captcha_verifier.is_enabled()
+        logger.info(f"发送手机验证码请求: phone={request_data.phone}, CAPTCHA启用={captcha_enabled}, 收到token={bool(request_data.captcha_token)}")
+        
+        if captcha_enabled:
             if not request_data.captcha_token:
                 logger.warning(f"发送验证码请求缺少 CAPTCHA token: phone={request_data.phone}, IP={get_client_ip(request)}")
                 raise HTTPException(
@@ -1005,6 +1014,9 @@ def send_phone_verification_code(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="人机验证失败，请重新完成验证后再试"
                 )
+            logger.info(f"CAPTCHA 验证成功: phone={request_data.phone}")
+        else:
+            logger.info(f"CAPTCHA 未启用，跳过验证: phone={request_data.phone}")
         
         import re
         from app.validators import StringValidator

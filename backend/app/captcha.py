@@ -54,8 +54,11 @@ class CaptchaVerifier:
             response = requests.post(url, data=data, timeout=5.0)
             result = response.json()
             
+            logger.info(f"reCAPTCHA 验证请求: token长度={len(token) if token else 0}, IP={remote_ip}, 响应={result}")
+            
             if result.get("success"):
                 # reCAPTCHA v2 成功即通过（用户已点击"我不是机器人"）
+                logger.info(f"reCAPTCHA 验证成功: hostname={result.get('hostname')}, challenge_ts={result.get('challenge_ts')}")
                 return {
                     "success": True,
                     "challenge_ts": result.get("challenge_ts"),
@@ -63,7 +66,19 @@ class CaptchaVerifier:
                 }
             else:
                 error_codes = result.get("error-codes", [])
-                logger.warning(f"reCAPTCHA 验证失败: {error_codes}, IP: {remote_ip}")
+                error_msg = f"reCAPTCHA 验证失败: {error_codes}, IP: {remote_ip}, token前10字符: {token[:10] if token and len(token) > 10 else 'N/A'}"
+                
+                # 详细错误信息
+                if 'invalid-input-response' in error_codes:
+                    error_msg += " (token无效或已过期，请重新完成验证)"
+                elif 'invalid-input-secret' in error_codes:
+                    error_msg += " (Secret Key配置错误)"
+                elif 'missing-input-response' in error_codes:
+                    error_msg += " (缺少token)"
+                elif 'missing-input-secret' in error_codes:
+                    error_msg += " (缺少Secret Key)"
+                
+                logger.warning(error_msg)
                 return {
                     "success": False,
                     "error": "reCAPTCHA 验证失败，请重新验证",

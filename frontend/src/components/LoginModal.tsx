@@ -467,6 +467,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setLoading(true);
     setError('');
     try {
+      console.log('发送手机验证码请求:', { phone: phone.trim(), captchaToken: captchaToken ? `${captchaToken.substring(0, 20)}...` : 'null' });
       const res = await api.post('/api/secure-auth/send-phone-verification-code', {
         phone: phone.trim(),
         captcha_token: captchaToken || null,
@@ -1101,7 +1102,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 onVerify={(token) => {
                   setCaptchaToken(token);
                   setError(''); // 清除错误
-                  console.log('CAPTCHA 验证成功，token 已设置');
+                  console.log('CAPTCHA 验证成功，token 已设置:', token ? `${token.substring(0, 20)}...` : 'null');
                 }}
                 onError={(error) => {
                   setError('人机验证失败，请重试');
