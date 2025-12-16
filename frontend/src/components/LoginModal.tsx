@@ -53,23 +53,38 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [captchaType, setCaptchaType] = useState<'recaptcha' | 'hcaptcha' | null>(null);
   const [captchaEnabled, setCaptchaEnabled] = useState(false);
   
-  // 获取 CAPTCHA 配置
+  // 获取 CAPTCHA 配置（弹窗打开时获取）
   React.useEffect(() => {
+    if (!isOpen) return;
+    
     const fetchCaptchaConfig = async () => {
       try {
+        console.log('正在获取 CAPTCHA 配置...');
         const res = await api.get('/api/secure-auth/captcha-site-key');
+        console.log('CAPTCHA 配置获取结果:', res.data);
         if (res.data.enabled && res.data.site_key) {
           setCaptchaSiteKey(res.data.site_key);
           setCaptchaType(res.data.type || 'recaptcha');
           setCaptchaEnabled(true);
+          console.log('CAPTCHA 已启用:', { 
+            siteKey: res.data.site_key, 
+            type: res.data.type,
+            enabled: true
+          });
+        } else {
+          console.log('CAPTCHA 未启用或未配置:', res.data);
+          setCaptchaEnabled(false);
+          setCaptchaSiteKey(null);
         }
       } catch (error) {
         // CAPTCHA 未配置或获取失败，继续使用（开发环境）
-        console.log('CAPTCHA not configured, skipping');
+        console.error('CAPTCHA 配置获取失败:', error);
+        setCaptchaEnabled(false);
+        setCaptchaSiteKey(null);
       }
     };
     fetchCaptchaConfig();
-  }, []);
+  }, [isOpen]);
 
   // 清理倒计时
   React.useEffect(() => {
@@ -1055,34 +1070,66 @@ const LoginModal: React.FC<LoginModalProps> = ({
           )}
 
           {/* CAPTCHA 组件（交互式验证，发送验证码前必须完成） */}
-          {captchaEnabled && captchaSiteKey && !codeSent && (isLogin && (loginMethod === 'code' || loginMethod === 'phone')) && (
+          {/* 只在验证码登录模式下显示，且未发送验证码时 */}
+          {(() => {
+            // 调试：记录显示条件
+            if (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && !codeSent) {
+              console.log('CAPTCHA 显示条件检查:', {
+                isLogin,
+                loginMethod,
+                codeSent,
+                captchaEnabled,
+                captchaSiteKey: captchaSiteKey ? '已设置' : '未设置',
+                shouldShow: captchaEnabled && captchaSiteKey
+              });
+            }
+            return isLogin && (loginMethod === 'code' || loginMethod === 'phone') && !codeSent && captchaEnabled && captchaSiteKey;
+          })() && (
             <div style={{ marginBottom: '16px' }}>
               <div style={{ 
                 fontSize: '14px', 
                 color: '#666', 
                 marginBottom: '8px',
-                textAlign: 'center'
+                textAlign: 'center',
+                fontWeight: '500'
               }}>
-                请完成人机验证
+                ⚠ 请完成人机验证（防止恶意刷验证码）
               </div>
               <Captcha
-                siteKey={captchaSiteKey}
+                siteKey={captchaSiteKey || undefined}
                 type={captchaType || 'recaptcha'}
                 onVerify={(token) => {
                   setCaptchaToken(token);
                   setError(''); // 清除错误
+                  console.log('CAPTCHA 验证成功，token 已设置');
                 }}
                 onError={(error) => {
                   setError('人机验证失败，请重试');
                   setCaptchaToken('');
+                  console.error('CAPTCHA 验证失败:', error);
                 }}
                 onExpire={() => {
                   setError('验证已过期，请重新验证');
                   setCaptchaToken('');
+                  console.warn('CAPTCHA 验证已过期');
                 }}
                 theme="light"
                 size="normal"
               />
+              {captchaToken && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '4px',
+                  textAlign: 'center',
+                  color: '#3b82f6',
+                  fontSize: '12px'
+                }}>
+                  ✓ 验证已完成
+                </div>
+              )}
             </div>
           )}
 

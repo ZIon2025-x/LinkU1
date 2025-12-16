@@ -13,8 +13,8 @@ from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
-# 验证码有效期（秒）- 5分钟
-VERIFICATION_CODE_EXPIRE_SECONDS = 5 * 60
+# 验证码有效期（秒）- 10分钟（与手机验证码保持一致）
+VERIFICATION_CODE_EXPIRE_SECONDS = 10 * 60
 
 # Redis键前缀
 CODE_KEY_PREFIX = "email_verification_code"

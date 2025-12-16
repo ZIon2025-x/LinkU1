@@ -927,7 +927,7 @@ def send_email_verification_code(
         # 生成6位数字验证码
         verification_code = generate_verification_code(6)
         
-        # 存储验证码到Redis，有效期5分钟
+        # 存储验证码到Redis，有效期10分钟
         if not store_verification_code(email, verification_code):
             logger.error(f"存储验证码失败: email={email}")
             raise HTTPException(
@@ -962,7 +962,7 @@ def send_email_verification_code(
         return {
             "message": "验证码已发送到您的邮箱",
             "email": email,
-            "expires_in": 300  # 5分钟
+            "expires_in": 600  # 10分钟
         }
         
     except HTTPException:
@@ -1243,8 +1243,13 @@ def login_with_phone_verification_code(
                 detail="验证码错误或已过期"
             )
         
-        # 查找用户
+        # 查找用户（使用手机号，不是邮箱）
+        logger.info(f"手机号验证码登录：查找用户 phone={phone_digits}")
         user = crud.get_user_by_phone(db, phone_digits)
+        if user:
+            logger.info(f"通过手机号找到用户: id={user.id}, name={user.name}, phone={user.phone}, email={user.email}")
+        else:
+            logger.info(f"手机号 {phone_digits} 未找到用户，将创建新用户")
         
         # 如果用户不存在，自动创建新用户
         is_new_user = False
@@ -1451,8 +1456,13 @@ def login_with_verification_code(
                 detail="验证码错误或已过期"
             )
         
-        # 查找用户
+        # 查找用户（使用邮箱，不是手机号）
+        logger.info(f"邮箱验证码登录：查找用户 email={email}")
         user = crud.get_user_by_email(db, email)
+        if user:
+            logger.info(f"通过邮箱找到用户: id={user.id}, name={user.name}, email={user.email}, phone={user.phone}")
+        else:
+            logger.info(f"邮箱 {email} 未找到用户，将创建新用户")
         
         # 如果用户不存在，自动创建新用户
         is_new_user = False

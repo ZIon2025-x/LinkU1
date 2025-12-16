@@ -80,7 +80,20 @@ class TwilioSMS:
                     to=formatted_phone,
                     channel='sms'
                 )
-                logger.info(f"Verify API 验证码发送成功: phone={formatted_phone}, sid={verification.sid}, status={verification.status}")
+                # Verify API 发送后状态通常是 "pending"，这是正常的
+                # 表示验证码已发送，等待用户输入验证码
+                # 只有当用户输入验证码并验证通过后，状态才会变成 "approved"
+                logger.info(
+                    f"Verify API 验证码发送成功: "
+                    f"phone={formatted_phone}, "
+                    f"sid={verification.sid}, "
+                    f"status={verification.status}, "
+                    f"date_created={verification.date_created}, "
+                    f"valid={verification.valid}"
+                )
+                # status 为 "pending" 是正常的，表示验证码已发送
+                if verification.status == 'pending':
+                    logger.info(f"验证码已发送到 {formatted_phone}，等待用户输入验证码（状态：pending 是正常的）")
                 return True
             except TwilioRestException as e:
                 error_msg = str(e)
@@ -177,7 +190,20 @@ class TwilioSMS:
                 code=code
             )
             is_valid = verification_check.status == 'approved'
-            logger.info(f"验证码验证结果: phone={formatted_phone}, status={verification_check.status}, valid={is_valid}")
+            logger.info(
+                f"验证码验证结果: "
+                f"phone={formatted_phone}, "
+                f"status={verification_check.status}, "
+                f"valid={is_valid}, "
+                f"sid={verification_check.sid}"
+            )
+            # 如果状态不是 approved，记录详细信息
+            if not is_valid:
+                logger.warning(
+                    f"验证码验证失败: phone={formatted_phone}, "
+                    f"status={verification_check.status}, "
+                    f"可能原因：验证码错误、已过期或未发送"
+                )
             return is_valid
         except TwilioRestException as e:
             logger.error(f"Twilio Verify API 验证错误: {e}")

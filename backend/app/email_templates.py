@@ -50,7 +50,7 @@ def get_login_verification_code_email(language: str, verification_code: str) -> 
             
             <p style="color: #666; font-size: 14px;">
                 <strong>重要提示：</strong><br>
-                • 验证码有效期为 5 分钟<br>
+                • 验证码有效期为 10 分钟<br>
                 • 验证码只能使用一次<br>
                 • 如果您没有尝试登录，请忽略此邮件<br>
                 • 请勿将验证码泄露给他人
@@ -77,7 +77,7 @@ def get_login_verification_code_email(language: str, verification_code: str) -> 
             
             <p style="color: #666; font-size: 14px;">
                 <strong>Important:</strong><br>
-                • The verification code is valid for 5 minutes<br>
+                • The verification code is valid for 10 minutes<br>
                 • The verification code can only be used once<br>
                 • If you did not attempt to log in, please ignore this email<br>
                 • Do not share the verification code with others
@@ -111,7 +111,7 @@ def get_email_update_verification_code_email(language: str, new_email: str, veri
             
             <p style="color: #666; font-size: 14px;">
                 <strong>重要提示：</strong><br>
-                • 验证码有效期为 5 分钟<br>
+                • 验证码有效期为 10 分钟<br>
                 • 验证码只能使用一次<br>
                 • 如果您没有尝试修改邮箱，请忽略此邮件<br>
                 • 请勿将验证码泄露给他人
@@ -139,7 +139,7 @@ def get_email_update_verification_code_email(language: str, new_email: str, veri
             
             <p style="color: #666; font-size: 14px;">
                 <strong>Important:</strong><br>
-                • The verification code is valid for 5 minutes<br>
+                • The verification code is valid for 10 minutes<br>
                 • The verification code can only be used once<br>
                 • If you did not attempt to update your email, please ignore this email<br>
                 • Do not share the verification code with others
