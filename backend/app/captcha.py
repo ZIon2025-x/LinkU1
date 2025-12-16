@@ -5,7 +5,7 @@ CAPTCHA 验证模块
 
 import os
 import logging
-import httpx
+import requests
 from typing import Optional, Dict, Any
 from fastapi import HTTPException, status
 
@@ -51,9 +51,8 @@ class CaptchaVerifier:
             if remote_ip:
                 data["remoteip"] = remote_ip
             
-            with httpx.Client(timeout=5.0) as client:
-                response = client.post(url, data=data)
-                result = response.json()
+            response = requests.post(url, data=data, timeout=5.0)
+            result = response.json()
                 
                 if result.get("success"):
                     # reCAPTCHA v2 成功即通过（用户已点击"我不是机器人"）
@@ -88,9 +87,8 @@ class CaptchaVerifier:
             if remote_ip:
                 data["remoteip"] = remote_ip
             
-            with httpx.Client(timeout=5.0) as client:
-                response = client.post(url, data=data)
-                result = response.json()
+            response = requests.post(url, data=data, timeout=5.0)
+            result = response.json()
                 
                 if result.get("success"):
                     return {
