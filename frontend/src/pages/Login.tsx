@@ -83,7 +83,7 @@ const Login: React.FC = () => {
       
       setEmailForCode(email.trim().toLowerCase());
       setCodeSent(true);
-      setCountdown(300); // 5分钟倒计时
+      setCountdown(600); // 10分钟倒计时
       message.success(t('auth.codeSent') || '验证码已发送');
       
       // 开始倒计时
@@ -128,7 +128,7 @@ const Login: React.FC = () => {
       
       setPhoneForCode(phone.trim());
       setCodeSent(true);
-      setCountdown(300); // 5分钟倒计时
+      setCountdown(600); // 10分钟倒计时
       message.success(t('auth.codeSent') || '验证码已发送');
       
       // 开始倒计时

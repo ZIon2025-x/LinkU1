@@ -31,10 +31,30 @@ def get_user_by_email(db: Session, email: str):
 
 def get_user_by_phone(db: Session, phone: str):
     """通过手机号查找用户"""
-    # 清理手机号格式（移除所有非数字字符）
+    # 支持多种格式：
+    # 1. 带 + 的完整格式（如 +447536144090）
+    # 2. 11位数字以07开头（如 07700123456）
+    # 3. 清理后的数字格式
+    
+    # 先尝试直接匹配（完整格式）
+    user = db.query(models.User).filter(models.User.phone == phone).first()
+    if user:
+        return user
+    
+    # 如果直接匹配失败，尝试格式化后匹配
     import re
-    phone_digits = re.sub(r'\D', '', phone)
-    return db.query(models.User).filter(models.User.phone == phone_digits).first()
+    digits = re.sub(r'\D', '', phone)
+    
+    # 如果是11位数字以07开头（英国号码），转换为 +44 格式
+    if len(digits) == 11 and digits.startswith('07'):
+        uk_number = digits[1:]  # 去掉开头的0
+        formatted_phone = f"+44{uk_number}"
+        user = db.query(models.User).filter(models.User.phone == formatted_phone).first()
+        if user:
+            return user
+    
+    # 尝试清理格式后匹配（向后兼容）
+    return db.query(models.User).filter(models.User.phone == digits).first()
 
 
 def get_user_by_id(db: Session, user_id: str):

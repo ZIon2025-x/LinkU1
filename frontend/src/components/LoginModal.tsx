@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import VerificationModal from './VerificationModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import Captcha from './Captcha';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -47,6 +48,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [countdown, setCountdown] = useState(0);
   const [phoneForCode, setPhoneForCode] = useState('');
   const countdownTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaSiteKey, setCaptchaSiteKey] = useState<string | null>(null);
+  const [captchaType, setCaptchaType] = useState<'recaptcha' | 'hcaptcha' | null>(null);
+  const [captchaEnabled, setCaptchaEnabled] = useState(false);
   
   // 清理倒计时
   React.useEffect(() => {
@@ -376,16 +381,21 @@ const LoginModal: React.FC<LoginModalProps> = ({
   }, []);
 
   // 发送验证码
-  const handleSendCode = async (email: string) => {
+  const handleSendCode = async (email: string, captchaToken?: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/api/secure-auth/send-verification-code', {
         email: email.trim().toLowerCase(),
+        captcha_token: captchaToken || null,
       });
       
       setCodeSent(true);
-      setCountdown(300); // 5分钟倒计时
+      setCountdown(600); // 10分钟倒计时
+      // 发送成功后清除 CAPTCHA token，下次发送需要重新验证
+      if (captchaEnabled) {
+        setCaptchaToken('');
+      }
       message.success(t('auth.codeSent') || '验证码已发送');
       
       // 开始倒计时
@@ -420,17 +430,22 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // 发送手机验证码
-  const handleSendPhoneCode = async (phone: string) => {
+  const handleSendPhoneCode = async (phone: string, captchaToken?: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/api/secure-auth/send-phone-verification-code', {
         phone: phone.trim(),
+        captcha_token: captchaToken || null,
       });
       
       setPhoneForCode(phone.trim());
       setCodeSent(true);
-      setCountdown(300); // 5分钟倒计时
+      setCountdown(600); // 10分钟倒计时
+      // 发送成功后清除 CAPTCHA token，下次发送需要重新验证
+      if (captchaEnabled) {
+        setCaptchaToken('');
+      }
       message.success(t('auth.codeSent') || '验证码已发送');
       
       // 开始倒计时
@@ -465,13 +480,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // 验证码登录（邮箱）
-  const handleCodeLogin = async (email: string, code: string) => {
+  const handleCodeLogin = async (email: string, code: string, captchaToken?: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/api/secure-auth/login-with-code', {
         email: email.trim().toLowerCase(),
         verification_code: code.trim(),
+        captcha_token: captchaToken || null,
       });
       
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
@@ -528,13 +544,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // 手机号验证码登录
-  const handlePhoneCodeLogin = async (phone: string, code: string) => {
+  const handlePhoneCodeLogin = async (phone: string, code: string, captchaToken?: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/api/secure-auth/login-with-phone-code', {
         phone: phone.trim(),
         verification_code: code.trim(),
+        captcha_token: captchaToken || null,
       });
       
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
@@ -596,16 +613,26 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setError('');
 
     try {
+      // 检查 CAPTCHA 验证（交互式验证，用户必须完成）
+      if (captchaEnabled && captchaSiteKey && !codeSent) {
+        if (!captchaToken) {
+          setError('请先完成人机验证');
+          setLoading(false);
+          return;
+        }
+      }
+      const currentCaptchaToken = captchaToken;
+
       if (isLogin) {
         // 如果是邮箱验证码登录模式
         if (loginMethod === 'code') {
           if (!codeSent) {
             // 发送验证码
-            await handleSendCode(formData.email);
+            await handleSendCode(formData.email, currentCaptchaToken);
             return;
           } else {
             // 使用验证码登录
-            await handleCodeLogin(formData.email, verificationCode);
+            await handleCodeLogin(formData.email, verificationCode, currentCaptchaToken);
             return;
           }
         }
@@ -615,12 +642,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
           if (!codeSent) {
             // 发送手机验证码（使用完整号码：国家代码+手机号）
             const fullPhone = phoneForCode || (phoneCountryCode + formData.phone);
-            await handleSendPhoneCode(fullPhone);
+            await handleSendPhoneCode(fullPhone, currentCaptchaToken);
             return;
           } else {
             // 使用手机验证码登录（使用完整号码）
             const fullPhone = phoneForCode || (phoneCountryCode + formData.phone);
-            await handlePhoneCodeLogin(fullPhone, verificationCode);
+            await handlePhoneCodeLogin(fullPhone, verificationCode, currentCaptchaToken);
             return;
           }
         }
@@ -679,11 +706,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
           return;
         }
         
+        // 组合完整的手机号（国家代码 + 手机号）
+        const fullPhone = formData.phone ? (phoneCountryCode + formData.phone) : null;
+        
         const res = await api.post('/api/users/register', {
           email: formData.email,
           password: formData.password,
           name: formData.username,  // 改为 name
-          phone: formData.phone,
+          phone: fullPhone,  // 发送完整的手机号（包含国家代码）
           invitation_code: formData.invitationCode || null,  // 邀请码
           agreed_to_terms: agreedToTerms,  // 记录用户同意状态
           terms_agreed_at: new Date().toISOString()  // 记录同意时间
@@ -713,6 +743,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           phone: '',
           invitationCode: ''
         });
+        setPhoneCountryCode('+44'); // 重置国家代码
       }
     } catch (err: any) {
                   let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
@@ -907,6 +938,22 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
+          {/* CAPTCHA 组件（hCaptcha 需要显示，reCAPTCHA v3 是无感知的） */}
+          {captchaEnabled && captchaSiteKey && captchaType === 'hcaptcha' && !codeSent && (
+            <div style={{ marginBottom: '16px' }}>
+              <Captcha
+                siteKey={captchaSiteKey}
+                type="hcaptcha"
+                onVerify={(token) => {
+                  setCaptchaToken(token);
+                }}
+                onError={(error) => {
+                  setError('人机验证失败，请重试');
+                }}
+              />
+            </div>
+          )}
+
           {/* 手机号输入（手机号验证码登录时显示） */}
           {isLogin && loginMethod === 'phone' && (
             <div style={{ marginBottom: '16px' }}>
@@ -943,7 +990,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   name="phone"
                   value={formData.phone}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    let value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    // 如果是英国号码（+44），且以07开头，去掉开头的0
+                    if (phoneCountryCode === '+44' && value.startsWith('07') && value.length === 11) {
+                      value = value.substring(1); // 去掉开头的0，变成 7700123456
+                    }
                     setFormData(prev => ({ ...prev, phone: value }));
                     if (!codeSent && value) {
                       // 存储完整号码（包含国家代码）
@@ -971,11 +1022,49 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     e.target.style.borderColor = '#ddd';
                     // 更新完整号码
                     if (!codeSent && formData.phone) {
-                      setPhoneForCode(phoneCountryCode + formData.phone);
+                      let phoneValue = formData.phone;
+                      // 如果是英国号码（+44），且以07开头，去掉开头的0
+                      if (phoneCountryCode === '+44' && phoneValue.startsWith('07') && phoneValue.length === 11) {
+                        phoneValue = phoneValue.substring(1);
+                        setFormData(prev => ({ ...prev, phone: phoneValue }));
+                      }
+                      setPhoneForCode(phoneCountryCode + phoneValue);
                     }
                   }}
                 />
               </div>
+            </div>
+          )}
+
+          {/* CAPTCHA 组件（交互式验证，发送验证码前必须完成） */}
+          {captchaEnabled && captchaSiteKey && !codeSent && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#666', 
+                marginBottom: '8px',
+                textAlign: 'center'
+              }}>
+                请完成人机验证
+              </div>
+              <Captcha
+                siteKey={captchaSiteKey}
+                type={captchaType || 'recaptcha'}
+                onVerify={(token) => {
+                  setCaptchaToken(token);
+                  setError(''); // 清除错误
+                }}
+                onError={(error) => {
+                  setError('人机验证失败，请重试');
+                  setCaptchaToken('');
+                }}
+                onExpire={() => {
+                  setError('验证已过期，请重新验证');
+                  setCaptchaToken('');
+                }}
+                theme="light"
+                size="normal"
+              />
             </div>
           )}
 
@@ -1086,7 +1175,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => handleSendCode(formData.email)}
+                  onClick={async () => {
+                    // 重新发送验证码时，需要重新完成验证
+                    if (captchaEnabled && captchaSiteKey) {
+                      if (!captchaToken) {
+                        message.error('请先完成人机验证');
+                        return;
+                      }
+                      // 重置验证状态，要求用户重新验证
+                      setCaptchaToken('');
+                      message.info('请重新完成人机验证后发送');
+                      return;
+                    }
+                    await handleSendCode(formData.email, captchaToken);
+                  }}
                   disabled={countdown > 0 || loading}
                   style={{
                     background: 'none',
@@ -1158,7 +1260,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => handleSendPhoneCode(phoneForCode)}
+                  onClick={async () => {
+                    // 重新发送验证码时，必须重新完成验证（防止重复使用同一个 token）
+                    if (captchaEnabled && captchaSiteKey) {
+                      // 重置验证状态，要求用户重新验证
+                      setCaptchaToken('');
+                      setCodeSent(false); // 允许重新显示验证框
+                      message.warning('请重新完成人机验证后发送');
+                      return;
+                    }
+                    await handleSendPhoneCode(phoneForCode, captchaToken);
+                  }}
                   disabled={countdown > 0 || loading}
                   style={{
                     background: 'none',
@@ -1302,28 +1414,55 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 }}>
                   {t('auth.phone')}
                 </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder={t('auth.phonePlaceholder')}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #ddd',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    boxSizing: 'border-box',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#ddd';
-                  }}
-                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* 国家代码显示（仅支持英国） */}
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      backgroundColor: '#fff',
+                      minWidth: '100px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#666'
+                    }}
+                  >
+                    🇬🇧 +44
+                  </div>
+                  {/* 手机号输入 */}
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                      // 如果是英国号码（+44），且以07开头，去掉开头的0
+                      if (phoneCountryCode === '+44' && value.startsWith('07') && value.length === 11) {
+                        value = value.substring(1); // 去掉开头的0，变成 7700123456
+                      }
+                      setFormData(prev => ({ ...prev, phone: value }));
+                    }}
+                    placeholder="7700123456"
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#ddd';
+                    }}
+                  />
+                </div>
               </div>
 
               {/* 邀请码输入框 */}
@@ -1584,11 +1723,23 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {/* 提交按钮 */}
           <button
             type="submit"
-            disabled={loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)}
+            disabled={
+              loading || 
+              (!isLogin && !agreedToTerms) || 
+              (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
+              (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
+              (captchaEnabled && captchaSiteKey && !codeSent && !captchaToken ? true : false)
+            }
             style={{
               width: '100%',
               padding: '14px',
-              backgroundColor: (loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)) ? '#ccc' : '#3b82f6',
+              backgroundColor: (
+                loading || 
+                (!isLogin && !agreedToTerms) || 
+                (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
+                (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
+                (captchaEnabled && captchaSiteKey && !codeSent && !captchaToken ? true : false)
+              ) ? '#ccc' : '#3b82f6',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -1623,6 +1774,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 setIsLogin(!isLogin);
                 setAgreedToTerms(false); // 切换时重置同意状态
                 setError(''); // 清空错误信息
+                setCodeSent(false);
+                setVerificationCode('');
+                setPhoneForCode('');
+                setPhoneCountryCode('+44'); // 重置国家代码
               }}
               style={{
                 background: 'none',

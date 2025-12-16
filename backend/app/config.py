@@ -51,7 +51,13 @@ class Config:
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", None)
     TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", None)
     TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", None)  # Messages API 需要（需购买手机号）
-    TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID", None)  # Verify API 需要（不需要购买手机号，推荐）  # Twilio 分配的号码
+    TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID", None)  # Verify API 需要（不需要购买手机号，推荐）
+    
+    # CAPTCHA 配置
+    RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", None)  # Google reCAPTCHA v3 Secret Key
+    RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", None)  # Google reCAPTCHA v3 Site Key
+    HCAPTCHA_SECRET_KEY = os.getenv("HCAPTCHA_SECRET_KEY", None)  # hCaptcha Secret Key
+    HCAPTCHA_SITE_KEY = os.getenv("HCAPTCHA_SITE_KEY", None)  # hCaptcha Site Key  # Twilio 分配的号码
     
     # Railway Redis配置检测
     if RAILWAY_ENVIRONMENT:

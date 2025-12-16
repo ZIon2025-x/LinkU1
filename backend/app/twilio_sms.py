@@ -109,9 +109,9 @@ class TwilioSMS:
         
         # 根据语言选择短信内容
         if language == 'zh':
-            message = f"您的 Link²Ur 登录验证码是：{code}，有效期5分钟。请勿泄露给他人。"
+            message = f"您的 Link²Ur 登录验证码是：{code}，有效期10分钟。请勿泄露给他人。"
         else:
-            message = f"Your Link²Ur verification code is: {code}. Valid for 5 minutes. Do not share with others."
+            message = f"Your Link²Ur verification code is: {code}. Valid for 10 minutes. Do not share with others."
         
         try:
             message_obj = self.client.messages.create(
@@ -196,9 +196,9 @@ class TwilioSMS:
         
         # 根据语言选择短信内容
         if language == 'zh':
-            message = f"您的 Link²Ur 手机号修改验证码是：{code}，有效期5分钟。请勿泄露给他人。"
+            message = f"您的 Link²Ur 手机号修改验证码是：{code}，有效期10分钟。请勿泄露给他人。"
         else:
-            message = f"Your Link²Ur phone number update verification code is: {code}. Valid for 5 minutes. Do not share with others."
+            message = f"Your Link²Ur phone number update verification code is: {code}. Valid for 10 minutes. Do not share with others."
         
         try:
             message_obj = self.client.messages.create(
@@ -252,6 +252,11 @@ class TwilioSMS:
         # 如果以44开头（英国国家代码），添加 +
         if digits.startswith('44') and len(digits) >= 10:
             return '+' + digits
+        
+        # 英国手机号：11位数字，以07开头，去掉开头的0，添加 +44
+        if len(digits) == 11 and digits.startswith('07'):
+            uk_number = digits[1:]  # 去掉开头的0
+            return f"+44{uk_number}"
         
         # 如果无法识别，返回 None
         logger.warning(f"手机号格式无效（需要以+开头）: {phone}")

@@ -6,6 +6,7 @@
 import json
 import logging
 import os
+import time
 from typing import Any, Dict
 from datetime import datetime
 from app.utils.time_utils import get_utc_time, format_iso_utc
@@ -23,7 +24,8 @@ from app.secure_auth import (
 )
 from app.cookie_manager import CookieManager
 from app.security import get_password_hash, verify_password, log_security_event, generate_strong_password
-from app.rate_limiting import rate_limit
+from app.rate_limiting import rate_limit, rate_limiter
+from app.captcha import captcha_verifier
 from app.verification_code_manager import (
     generate_verification_code,
     store_verification_code,
@@ -41,6 +43,16 @@ logger = logging.getLogger(__name__)
 
 # 创建安全认证路由器
 secure_auth_router = APIRouter(prefix="/api/secure-auth", tags=["安全认证"])
+
+@secure_auth_router.get("/captcha-site-key", response_model=Dict[str, Any])
+def get_captcha_site_key():
+    """获取 CAPTCHA site key（前端使用）"""
+    site_key = captcha_verifier.get_site_key()
+    return {
+        "site_key": site_key,
+        "enabled": captcha_verifier.is_enabled(),
+        "type": "recaptcha" if captcha_verifier.use_recaptcha else "hcaptcha" if captcha_verifier.use_hcaptcha else None
+    }
 
 @secure_auth_router.post("/login", response_model=Dict[str, Any])
 @rate_limit("login")
@@ -839,6 +851,68 @@ def send_email_verification_code(
 ):
     """发送邮箱验证码"""
     try:
+        # CAPTCHA 验证（强制要求，防止恶意刷验证码）
+        if captcha_verifier.is_enabled():
+            if not request_data.captcha_token:
+                logger.warning(f"发送验证码请求缺少 CAPTCHA token: email={request_data.email}, IP={get_client_ip(request)}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="必须完成人机验证才能发送验证码"
+                )
+            
+            client_ip = get_client_ip(request)
+            captcha_result = captcha_verifier.verify(request_data.captcha_token, client_ip)
+            if not captcha_result.get("success"):
+                logger.warning(f"CAPTCHA 验证失败: email={request_data.email}, IP={client_ip}, error={captcha_result.get('error')}")
+                # 记录安全事件
+                log_security_event(
+                    "CAPTCHA_FAILED", request_data.email, client_ip, f"CAPTCHA验证失败: {captcha_result.get('error')}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="人机验证失败，请重新完成验证后再试"
+                )
+        
+        # 针对特定邮箱的速率限制（更严格）
+        # 创建临时请求对象用于邮箱级别的速率限制
+        from types import SimpleNamespace
+        email_rate_request = SimpleNamespace()
+        email_rate_request.headers = request.headers
+        email_rate_request.client = request.client
+        email_rate_request.cookies = request.cookies
+        
+        # 使用邮箱作为标识符进行速率限制
+        email_rate_key = f"rate_limit:send_code_per_email:email:{request_data.email.strip().lower()}"
+        try:
+            # 手动检查速率限制
+            if rate_limiter.redis_client:
+                current_time = int(time.time())
+                window = 600  # 10分钟
+                limit = 3
+                window_start = current_time - window
+                
+                # 移除过期的请求
+                rate_limiter.redis_client.zremrangebyscore(email_rate_key, 0, window_start)
+                
+                # 获取当前窗口内的请求数
+                current_requests = rate_limiter.redis_client.zcard(email_rate_key)
+                
+                if current_requests >= limit:
+                    logger.warning(f"邮箱验证码发送频率限制: email={request_data.email}, 已发送 {current_requests} 次")
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"该邮箱验证码发送过于频繁，请10分钟后再试"
+                    )
+                
+                # 添加当前请求
+                rate_limiter.redis_client.zadd(email_rate_key, {str(current_time): current_time})
+                rate_limiter.redis_client.expire(email_rate_key, window)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"邮箱速率限制检查失败: {e}")
+            # 失败时继续，不阻止请求
+        
         email = request_data.email.strip().lower()
         
         # 验证邮箱格式
@@ -910,10 +984,64 @@ def send_phone_verification_code(
 ):
     """发送手机验证码"""
     try:
+        # CAPTCHA 验证（强制要求，防止恶意刷验证码）
+        if captcha_verifier.is_enabled():
+            if not request_data.captcha_token:
+                logger.warning(f"发送验证码请求缺少 CAPTCHA token: phone={request_data.phone}, IP={get_client_ip(request)}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="必须完成人机验证才能发送验证码"
+                )
+            
+            client_ip = get_client_ip(request)
+            captcha_result = captcha_verifier.verify(request_data.captcha_token, client_ip)
+            if not captcha_result.get("success"):
+                logger.warning(f"CAPTCHA 验证失败: phone={request_data.phone}, IP={client_ip}, error={captcha_result.get('error')}")
+                # 记录安全事件
+                log_security_event(
+                    "CAPTCHA_FAILED", request_data.phone, client_ip, f"CAPTCHA验证失败: {captcha_result.get('error')}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="人机验证失败，请重新完成验证后再试"
+                )
+        
         import re
         from app.validators import StringValidator
         
         phone = request_data.phone.strip()
+        
+        # 针对特定手机号的速率限制（更严格）
+        phone_rate_key = f"rate_limit:send_code_per_phone:phone:{phone}"
+        try:
+                # 手动检查速率限制
+            if rate_limiter.redis_client:
+                current_time = int(time.time())
+                window = 600  # 10分钟
+                limit = 3
+                window_start = current_time - window
+                
+                # 移除过期的请求
+                rate_limiter.redis_client.zremrangebyscore(phone_rate_key, 0, window_start)
+                
+                # 获取当前窗口内的请求数
+                current_requests = rate_limiter.redis_client.zcard(phone_rate_key)
+                
+                if current_requests >= limit:
+                    logger.warning(f"手机验证码发送频率限制: phone={phone}, 已发送 {current_requests} 次")
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"该手机号验证码发送过于频繁，请10分钟后再试"
+                    )
+                
+                # 添加当前请求
+                rate_limiter.redis_client.zadd(phone_rate_key, {str(current_time): current_time})
+                rate_limiter.redis_client.expire(phone_rate_key, window)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"手机号速率限制检查失败: {e}")
+            # 失败时继续，不阻止请求
         
         # 验证手机号格式（前端已发送完整号码，如 +447700123456）
         # 验证格式：必须以 + 开头，后面是10-15位数字
@@ -945,7 +1073,7 @@ def send_phone_verification_code(
                 # 生成6位数字验证码
                 verification_code = generate_phone_code(6)
                 
-                # 存储验证码到Redis，有效期5分钟
+                # 存储验证码到Redis，有效期10分钟
                 if not store_phone_code(phone_digits, verification_code):
                     logger.error(f"存储手机验证码失败: phone={phone_digits}")
                     raise HTTPException(
@@ -1022,7 +1150,7 @@ def send_phone_verification_code(
         return {
             "message": "验证码已发送到您的手机",
             "phone": phone_digits,
-            "expires_in": 300  # 5分钟
+            "expires_in": 600  # 10分钟
         }
         
     except HTTPException:
@@ -1045,6 +1173,23 @@ def login_with_phone_verification_code(
 ):
     """使用手机号验证码登录，新用户自动创建"""
     try:
+        # CAPTCHA 验证（登录时也验证，防止暴力破解）
+        if captcha_verifier.is_enabled():
+            if not login_data.captcha_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="需要完成人机验证"
+                )
+            
+            client_ip = get_client_ip(request)
+            captcha_result = captcha_verifier.verify(login_data.captcha_token, client_ip)
+            if not captcha_result.get("success"):
+                logger.warning(f"CAPTCHA 验证失败: phone={login_data.phone}, IP={client_ip}, error={captcha_result.get('error')}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="人机验证失败，请重试"
+                )
+        
         import re
         from app.validators import StringValidator
         
@@ -1127,12 +1272,15 @@ def login_with_phone_verification_code(
                         break
                 username = f"user{user_id}"
             
-            # 创建新用户（手机号登录时，邮箱为空）
+            # 创建新用户（手机号登录时，生成虚拟邮箱）
+            # 使用格式：phone_{手机号}@link2ur.com 作为虚拟邮箱
+            # 这样可以满足数据库 NOT NULL 约束，同时可以通过邮箱格式识别是手机号用户
+            virtual_email = f"phone_{phone_digits.replace('+', '').replace('-', '').replace(' ', '')}@link2ur.com"
             try:
                 db_user = models.User(
                     id=user_id,
                     name=username,
-                    email=None,  # 手机号登录时，邮箱为空
+                    email=virtual_email.lower(),  # 手机号登录时，使用虚拟邮箱
                     hashed_password=hashed_password,
                     phone=phone_digits,
                     avatar="",
@@ -1265,6 +1413,23 @@ def login_with_verification_code(
 ):
     """使用邮箱验证码登录，新用户自动创建"""
     try:
+        # CAPTCHA 验证（登录时也验证，防止暴力破解）
+        if captcha_verifier.is_enabled():
+            if not login_data.captcha_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="需要完成人机验证"
+                )
+            
+            client_ip = get_client_ip(request)
+            captcha_result = captcha_verifier.verify(login_data.captcha_token, client_ip)
+            if not captcha_result.get("success"):
+                logger.warning(f"CAPTCHA 验证失败: email={login_data.email}, IP={client_ip}, error={captcha_result.get('error')}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="人机验证失败，请重试"
+                )
+        
         email = login_data.email.strip().lower()
         verification_code = login_data.verification_code.strip()
         

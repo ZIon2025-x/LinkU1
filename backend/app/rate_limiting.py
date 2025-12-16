@@ -187,6 +187,11 @@ RATE_LIMITS = {
     "forgot_password": {"limit": 3, "window": 3600},  # 3次/小时
     "reset_password": {"limit": 5, "window": 3600},  # 5次/小时
     
+    # 验证码发送相关（更严格的限制）
+    "send_code": {"limit": 5, "window": 300},  # 5次/5分钟（每个IP或用户）
+    "send_code_per_phone": {"limit": 3, "window": 600},  # 每个手机号 3次/10分钟
+    "send_code_per_email": {"limit": 3, "window": 600},  # 每个邮箱 3次/10分钟
+    
     # 客服登录相关
     "cs_login": {"limit": 3, "window": 300},  # 3次/5分钟（更严格）
     "cs_refresh": {"limit": 10, "window": 60},  # 10次/分钟

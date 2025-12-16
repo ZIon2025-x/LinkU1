@@ -37,20 +37,24 @@ class UserLogin(BaseModel):
 class EmailVerificationCodeRequest(BaseModel):
     """请求发送邮箱验证码"""
     email: str
+    captcha_token: Optional[str] = None  # CAPTCHA 验证 token
 
 class EmailVerificationCodeLogin(BaseModel):
     """使用邮箱验证码登录"""
     email: str
     verification_code: str
+    captcha_token: Optional[str] = None  # CAPTCHA 验证 token
 
 class PhoneVerificationCodeRequest(BaseModel):
     """请求发送手机验证码"""
     phone: str
+    captcha_token: Optional[str] = None  # CAPTCHA 验证 token
 
 class PhoneVerificationCodeLogin(BaseModel):
     """使用手机号验证码登录"""
     phone: str
     verification_code: str
+    captcha_token: Optional[str] = None  # CAPTCHA 验证 token
 
 class UpdateEmailRequest(BaseModel):
     """请求发送邮箱修改验证码"""

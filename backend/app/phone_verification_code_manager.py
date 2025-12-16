@@ -13,8 +13,8 @@ from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
-# 验证码有效期（秒）- 5分钟
-VERIFICATION_CODE_EXPIRE_SECONDS = 5 * 60
+# 验证码有效期（秒）- 10分钟（与 Twilio Verify API 保持一致）
+VERIFICATION_CODE_EXPIRE_SECONDS = 10 * 60
 
 # Redis键前缀
 CODE_KEY_PREFIX = "phone_verification_code"
@@ -26,7 +26,7 @@ def generate_verification_code(length: int = 6) -> str:
 
 
 def store_verification_code(phone: str, code: str) -> bool:
-    """存储验证码到Redis，有效期5分钟"""
+    """存储验证码到Redis，有效期10分钟"""
     try:
         redis_client = get_redis_client()
         if not redis_client:
@@ -41,7 +41,7 @@ def store_verification_code(phone: str, code: str) -> bool:
             "expires_at": format_iso_utc(get_utc_time() + timedelta(seconds=VERIFICATION_CODE_EXPIRE_SECONDS))
         }
         
-        # 存储验证码，设置5分钟过期时间
+        # 存储验证码，设置10分钟过期时间
         redis_client.setex(
             key,
             VERIFICATION_CODE_EXPIRE_SECONDS,
