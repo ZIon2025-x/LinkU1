@@ -50,7 +50,8 @@ class Config:
     # Twilio SMS 配置
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", None)
     TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", None)
-    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", None)  # Twilio 分配的号码
+    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", None)  # Messages API 需要（需购买手机号）
+    TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID", None)  # Verify API 需要（不需要购买手机号，推荐）  # Twilio 分配的号码
     
     # Railway Redis配置检测
     if RAILWAY_ENVIRONMENT:

@@ -924,30 +924,41 @@ def send_phone_verification_code(
                 detail=str(e)
             )
         
-        # 生成6位数字验证码
-        verification_code = generate_phone_code(6)
-        
-        # 存储验证码到Redis，有效期5分钟
-        if not store_phone_code(phone_digits, verification_code):
-            logger.error(f"存储手机验证码失败: phone={phone_digits}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="发送验证码失败，请稍后重试"
-            )
-        
         # 发送短信（使用 Twilio）
         try:
             from app.twilio_sms import twilio_sms
-            # 获取用户语言偏好（默认为中文）
-            language = 'zh'  # 可以从请求中获取，暂时默认为中文
             
-            # 尝试发送短信
-            sms_sent = twilio_sms.send_verification_code(phone_digits, verification_code, language)
+            # 如果使用 Twilio Verify API，不需要生成和存储验证码
+            if twilio_sms.use_verify_api and twilio_sms.verify_client:
+                # Verify API 会自动生成验证码，直接发送
+                sms_sent = twilio_sms.send_verification_code(phone_digits, language='zh')
+                verification_code = None  # Verify API 不需要我们存储验证码
+            else:
+                # Messages API 需要自己生成验证码
+                # 生成6位数字验证码
+                verification_code = generate_phone_code(6)
+                
+                # 存储验证码到Redis，有效期5分钟
+                if not store_phone_code(phone_digits, verification_code):
+                    logger.error(f"存储手机验证码失败: phone={phone_digits}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="发送验证码失败，请稍后重试"
+                    )
+                
+                # 获取用户语言偏好（默认为中文）
+                language = 'zh'  # 可以从请求中获取，暂时默认为中文
+                
+                # 尝试发送短信
+                sms_sent = twilio_sms.send_verification_code(phone_digits, verification_code, language)
             
             if not sms_sent:
                 # 如果 Twilio 发送失败，在开发环境中记录日志
                 if os.getenv("ENVIRONMENT", "production") == "development":
-                    logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机验证码: {phone_digits} -> {verification_code}")
+                    if verification_code:
+                        logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机验证码: {phone_digits} -> {verification_code}")
+                    else:
+                        logger.warning(f"[开发环境] Twilio Verify API 发送失败: {phone_digits}")
                 else:
                     logger.error(f"Twilio 短信发送失败: phone={phone_digits}")
                     raise HTTPException(
@@ -960,6 +971,10 @@ def send_phone_verification_code(
             # 如果 Twilio 未安装，在开发环境中记录日志
             logger.warning("Twilio 模块未安装，无法发送短信")
             if os.getenv("ENVIRONMENT", "production") == "development":
+                # 生成验证码用于开发环境测试
+                verification_code = generate_phone_code(6)
+                if not store_phone_code(phone_digits, verification_code):
+                    logger.error(f"存储手机验证码失败: phone={phone_digits}")
                 logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
             else:
                 logger.error("Twilio 模块未安装，无法发送短信")
@@ -973,7 +988,15 @@ def send_phone_verification_code(
             logger.error(f"发送短信时发生异常: {e}")
             # 在开发环境中，即使发送失败也继续（记录验证码）
             if os.getenv("ENVIRONMENT", "production") == "development":
-                logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
+                # 如果使用 Verify API，无法获取验证码，只能提示
+                if twilio_sms.use_verify_api:
+                    logger.warning(f"[开发环境] Twilio Verify API 异常，无法获取验证码: {phone_digits}")
+                else:
+                    # Messages API 模式下，记录生成的验证码
+                    if 'verification_code' not in locals():
+                        verification_code = generate_phone_code(6)
+                        store_phone_code(phone_digits, verification_code)
+                    logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
             else:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1021,8 +1044,21 @@ def login_with_phone_verification_code(
                 detail=str(e)
             )
         
-        # 验证验证码
-        if not verify_phone_code(phone_digits, verification_code):
+        # 验证验证码（支持 Twilio Verify API 和自定义验证码）
+        verification_success = False
+        try:
+            from app.twilio_sms import twilio_sms
+            # 如果使用 Twilio Verify API，使用其验证方法
+            if twilio_sms.use_verify_api and twilio_sms.verify_client:
+                verification_success = twilio_sms.verify_code(phone_digits, verification_code)
+            else:
+                # 否则使用自定义验证码（存储在 Redis 中）
+                verification_success = verify_phone_code(phone_digits, verification_code)
+        except Exception as e:
+            logger.error(f"验证码验证过程出错: {e}")
+            verification_success = False
+        
+        if not verification_success:
             logger.warning(f"手机验证码验证失败: phone={phone_digits}")
             client_ip = get_client_ip(request)
             log_security_event(
