@@ -84,11 +84,18 @@ class TwilioSMS:
                 return True
             except TwilioRestException as e:
                 error_msg = str(e)
+                error_code = getattr(e, 'code', None) or str(e.status) if hasattr(e, 'status') else None
+                
                 # 检测特定的错误类型
+                # 60220: 中国手机号需要审核
                 if '60220' in error_msg or 'use case vetting' in error_msg.lower() or 'whitelisted' in error_msg.lower():
                     logger.error(f"Twilio Verify API 错误（需要审核）: {e}")
-                    # 抛出特殊异常，让调用者知道这是需要审核的错误
                     raise ValueError("CHINA_VETTING_REQUIRED")
+                # 60410: 号码因可疑活动被临时封禁
+                elif '60410' in error_msg or error_code == 60410 or 'fraudulent activities' in error_msg.lower() or 'temporarily blocked' in error_msg.lower():
+                    logger.error(f"Twilio Verify API 错误（号码被封禁）: {e}")
+                    raise ValueError("PHONE_BLOCKED")
+                
                 logger.error(f"Twilio Verify API 错误: {e}")
                 return False
             except TwilioException as e:
@@ -123,11 +130,18 @@ class TwilioSMS:
             return True
         except TwilioRestException as e:
             error_msg = str(e)
-            # 检测特定的错误类型（中国手机号需要审核）
+            error_code = getattr(e, 'code', None) or str(e.status) if hasattr(e, 'status') else None
+            
+            # 检测特定的错误类型
+            # 60220: 中国手机号需要审核
             if '60220' in error_msg or 'use case vetting' in error_msg.lower() or 'whitelisted' in error_msg.lower():
                 logger.error(f"Twilio Messages API 错误（需要审核）: {e}")
-                # 抛出特殊异常，让调用者知道这是需要审核的错误
                 raise ValueError("CHINA_VETTING_REQUIRED")
+            # 60410: 号码因可疑活动被临时封禁
+            elif '60410' in error_msg or error_code == 60410 or 'fraudulent activities' in error_msg.lower() or 'temporarily blocked' in error_msg.lower():
+                logger.error(f"Twilio Messages API 错误（号码被封禁）: {e}")
+                raise ValueError("PHONE_BLOCKED")
+            
             logger.error(f"Twilio API 错误: {e}")
             return False
         except TwilioException as e:

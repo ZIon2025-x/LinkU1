@@ -1103,12 +1103,18 @@ def send_phone_verification_code(
                 else:
                     logger.info(f"手机验证码已通过 Twilio 发送: phone={phone_digits}")
         except ValueError as e:
-            # 检测中国审核错误
+            # 检测特定的 Twilio 错误
             if str(e) == "CHINA_VETTING_REQUIRED":
                 logger.error(f"Twilio 需要审核才能向中国手机号发送短信: phone={phone_digits}")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="向中国手机号发送短信需要 Twilio 审核，请联系管理员或使用邮箱验证码登录"
+                )
+            elif str(e) == "PHONE_BLOCKED":
+                logger.error(f"Twilio 检测到可疑活动，手机号被临时封禁: phone={phone_digits}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="该手机号因可疑活动被临时封禁，请稍后再试或使用邮箱验证码登录。如有疑问，请联系客服。"
                 )
             raise
         except ImportError:

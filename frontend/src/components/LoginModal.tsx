@@ -53,6 +53,24 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [captchaType, setCaptchaType] = useState<'recaptcha' | 'hcaptcha' | null>(null);
   const [captchaEnabled, setCaptchaEnabled] = useState(false);
   
+  // 获取 CAPTCHA 配置
+  React.useEffect(() => {
+    const fetchCaptchaConfig = async () => {
+      try {
+        const res = await api.get('/api/secure-auth/captcha-site-key');
+        if (res.data.enabled && res.data.site_key) {
+          setCaptchaSiteKey(res.data.site_key);
+          setCaptchaType(res.data.type || 'recaptcha');
+          setCaptchaEnabled(true);
+        }
+      } catch (error) {
+        // CAPTCHA 未配置或获取失败，继续使用（开发环境）
+        console.log('CAPTCHA not configured, skipping');
+      }
+    };
+    fetchCaptchaConfig();
+  }, []);
+
   // 清理倒计时
   React.useEffect(() => {
     return () => {
@@ -1037,7 +1055,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           )}
 
           {/* CAPTCHA 组件（交互式验证，发送验证码前必须完成） */}
-          {captchaEnabled && captchaSiteKey && !codeSent && (
+          {captchaEnabled && captchaSiteKey && !codeSent && (isLogin && (loginMethod === 'code' || loginMethod === 'phone')) && (
             <div style={{ marginBottom: '16px' }}>
               <div style={{ 
                 fontSize: '14px', 
