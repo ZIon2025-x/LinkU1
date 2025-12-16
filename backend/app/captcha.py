@@ -31,7 +31,8 @@ class CaptchaVerifier:
         self.use_hcaptcha = self.hcaptcha_enabled and not self.recaptcha_enabled
         
         if self.use_recaptcha:
-            logger.info("CAPTCHA: 使用 Google reCAPTCHA v2（交互式验证）")
+            logger.info(f"CAPTCHA: 使用 Google reCAPTCHA v2（交互式验证）")
+            logger.info(f"CAPTCHA 配置检查: Site Key前10字符={self.recaptcha_site_key[:10] if self.recaptcha_site_key else 'N/A'}, Secret Key前10字符={self.recaptcha_secret_key[:10] if self.recaptcha_secret_key else 'N/A'}")
         elif self.use_hcaptcha:
             logger.info("CAPTCHA: 使用 hCaptcha")
         else:
@@ -54,7 +55,7 @@ class CaptchaVerifier:
             response = requests.post(url, data=data, timeout=5.0)
             result = response.json()
             
-            logger.info(f"reCAPTCHA 验证请求: token长度={len(token) if token else 0}, IP={remote_ip}, 响应={result}")
+            logger.info(f"reCAPTCHA 验证请求: token长度={len(token) if token else 0}, IP={remote_ip}, Secret Key前10字符={self.recaptcha_secret_key[:10] if self.recaptcha_secret_key else 'N/A'}, 响应={result}")
             
             if result.get("success"):
                 # reCAPTCHA v2 成功即通过（用户已点击"我不是机器人"）

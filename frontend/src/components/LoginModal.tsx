@@ -5,7 +5,7 @@ import api from '../api';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import VerificationModal from './VerificationModal';
 import { useLanguage } from '../contexts/LanguageContext';
-import Captcha from './Captcha';
+import Captcha, { CaptchaRef } from './Captcha';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -52,6 +52,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [captchaSiteKey, setCaptchaSiteKey] = useState<string | null>(null);
   const [captchaType, setCaptchaType] = useState<'recaptcha' | 'hcaptcha' | null>(null);
   const [captchaEnabled, setCaptchaEnabled] = useState(false);
+  const captchaRef = React.useRef<CaptchaRef>(null);
   
   // 获取 CAPTCHA 配置（弹窗打开时获取）
   React.useEffect(() => {
@@ -1097,6 +1098,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 ⚠ 请完成人机验证（防止恶意刷验证码）
               </div>
               <Captcha
+                ref={captchaRef}
                 siteKey={captchaSiteKey || undefined}
                 type={captchaType || 'recaptcha'}
                 onVerify={(token) => {
@@ -1108,11 +1110,21 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   setError('人机验证失败，请重试');
                   setCaptchaToken('');
                   console.error('CAPTCHA 验证失败:', error);
+                  // 重置 CAPTCHA，让用户重新验证
+                  if (captchaRef.current) {
+                    setTimeout(() => {
+                      captchaRef.current?.reset();
+                    }, 500);
+                  }
                 }}
                 onExpire={() => {
                   setError('验证已过期，请重新验证');
                   setCaptchaToken('');
                   console.warn('CAPTCHA 验证已过期');
+                  // 重置 CAPTCHA
+                  if (captchaRef.current) {
+                    captchaRef.current.reset();
+                  }
                 }}
                 theme="light"
                 size="normal"

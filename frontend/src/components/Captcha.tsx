@@ -3,7 +3,7 @@
  * 支持 Google reCAPTCHA v2（交互式）和 hCaptcha
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 
 interface CaptchaProps {
   onVerify: (token: string) => void;
@@ -13,6 +13,10 @@ interface CaptchaProps {
   type?: 'recaptcha' | 'hcaptcha';
   theme?: 'light' | 'dark';
   size?: 'normal' | 'compact';
+}
+
+export interface CaptchaRef {
+  reset: () => void;
 }
 
 declare global {
@@ -45,7 +49,7 @@ declare global {
   }
 }
 
-const Captcha: React.FC<CaptchaProps> = ({ 
+const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ 
   onVerify, 
   onError,
   onExpire,
@@ -53,7 +57,7 @@ const Captcha: React.FC<CaptchaProps> = ({
   type = 'recaptcha',
   theme = 'light',
   size = 'normal'
-}) => {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetId, setWidgetId] = useState<number | string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -213,17 +217,28 @@ const Captcha: React.FC<CaptchaProps> = ({
 
   const reset = () => {
     if (type === 'hcaptcha' && widgetId && window.hcaptcha) {
-      window.hcaptcha.reset(widgetId as string);
-      setIsVerified(false);
+      try {
+        window.hcaptcha.reset(widgetId as string);
+        setIsVerified(false);
+        console.log('hCaptcha 已重置');
+      } catch (e) {
+        console.error('重置 hCaptcha 失败:', e);
+      }
     } else if (type === 'recaptcha' && widgetId && window.grecaptcha) {
-      window.grecaptcha.reset(widgetId as number);
-      setIsVerified(false);
+      try {
+        window.grecaptcha.reset(widgetId as number);
+        setIsVerified(false);
+        console.log('reCAPTCHA 已重置');
+      } catch (e) {
+        console.error('重置 reCAPTCHA 失败:', e);
+      }
     }
   };
 
-  // reset 方法用于内部重置验证状态
-  // 如果需要暴露给父组件，应该使用 forwardRef 和 useImperativeHandle
-  // 目前不需要暴露，因为父组件通过 onVerify/onError/onExpire 回调处理状态
+  // 暴露 reset 方法给父组件
+  useImperativeHandle(ref, () => ({
+    reset
+  }));
 
   return (
     <div 
@@ -236,7 +251,9 @@ const Captcha: React.FC<CaptchaProps> = ({
       }}
     />
   );
-};
+});
+
+Captcha.displayName = 'Captcha';
 
 export default Captcha;
 

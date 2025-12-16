@@ -48,6 +48,7 @@ secure_auth_router = APIRouter(prefix="/api/secure-auth", tags=["安全认证"])
 def get_captcha_site_key():
     """获取 CAPTCHA site key（前端使用）"""
     site_key = captcha_verifier.get_site_key()
+    logger.info(f"CAPTCHA 配置查询: enabled={captcha_verifier.is_enabled()}, type={'recaptcha' if captcha_verifier.use_recaptcha else 'hcaptcha' if captcha_verifier.use_hcaptcha else None}, site_key前10字符={site_key[:10] if site_key else 'N/A'}")
     return {
         "site_key": site_key,
         "enabled": captcha_verifier.is_enabled(),
@@ -1191,14 +1192,10 @@ def login_with_phone_verification_code(
 ):
     """使用手机号验证码登录，新用户自动创建"""
     try:
-        # CAPTCHA 验证（登录时也验证，防止暴力破解）
-        if captcha_verifier.is_enabled():
-            if not login_data.captcha_token:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="需要完成人机验证"
-                )
-            
+        # CAPTCHA 验证（登录时可选，因为用户已经通过验证码验证）
+        # 注意：发送验证码时已经完成了 CAPTCHA 验证，登录时不再强制要求
+        if captcha_verifier.is_enabled() and login_data.captcha_token:
+            # 如果提供了 CAPTCHA token，则验证（可选）
             client_ip = get_client_ip(request)
             captcha_result = captcha_verifier.verify(login_data.captcha_token, client_ip)
             if not captcha_result.get("success"):
@@ -1207,6 +1204,10 @@ def login_with_phone_verification_code(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="人机验证失败，请重试"
                 )
+            logger.info(f"CAPTCHA 验证成功（登录）: phone={login_data.phone}")
+        else:
+            # 登录时不强制要求 CAPTCHA（用户已通过验证码验证）
+            logger.info(f"登录请求: phone={login_data.phone}, CAPTCHA token={'已提供' if login_data.captcha_token else '未提供（允许）'}")
         
         import re
         from app.validators import StringValidator
@@ -1436,14 +1437,10 @@ def login_with_verification_code(
 ):
     """使用邮箱验证码登录，新用户自动创建"""
     try:
-        # CAPTCHA 验证（登录时也验证，防止暴力破解）
-        if captcha_verifier.is_enabled():
-            if not login_data.captcha_token:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="需要完成人机验证"
-                )
-            
+        # CAPTCHA 验证（登录时可选，因为用户已经通过验证码验证）
+        # 注意：发送验证码时已经完成了 CAPTCHA 验证，登录时不再强制要求
+        if captcha_verifier.is_enabled() and login_data.captcha_token:
+            # 如果提供了 CAPTCHA token，则验证（可选）
             client_ip = get_client_ip(request)
             captcha_result = captcha_verifier.verify(login_data.captcha_token, client_ip)
             if not captcha_result.get("success"):
@@ -1452,6 +1449,10 @@ def login_with_verification_code(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="人机验证失败，请重试"
                 )
+            logger.info(f"CAPTCHA 验证成功（登录）: email={login_data.email}")
+        else:
+            # 登录时不强制要求 CAPTCHA（用户已通过验证码验证）
+            logger.info(f"登录请求: email={login_data.email}, CAPTCHA token={'已提供' if login_data.captcha_token else '未提供（允许）'}")
         
         email = login_data.email.strip().lower()
         verification_code = login_data.verification_code.strip()
