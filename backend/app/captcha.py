@@ -53,22 +53,22 @@ class CaptchaVerifier:
             
             response = requests.post(url, data=data, timeout=5.0)
             result = response.json()
-                
-                if result.get("success"):
-                    # reCAPTCHA v2 成功即通过（用户已点击"我不是机器人"）
-                    return {
-                        "success": True,
-                        "challenge_ts": result.get("challenge_ts"),
-                        "hostname": result.get("hostname")
-                    }
-                else:
-                    error_codes = result.get("error-codes", [])
-                    logger.warning(f"reCAPTCHA 验证失败: {error_codes}, IP: {remote_ip}")
-                    return {
-                        "success": False,
-                        "error": "reCAPTCHA 验证失败，请重新验证",
-                        "error_codes": error_codes
-                    }
+            
+            if result.get("success"):
+                # reCAPTCHA v2 成功即通过（用户已点击"我不是机器人"）
+                return {
+                    "success": True,
+                    "challenge_ts": result.get("challenge_ts"),
+                    "hostname": result.get("hostname")
+                }
+            else:
+                error_codes = result.get("error-codes", [])
+                logger.warning(f"reCAPTCHA 验证失败: {error_codes}, IP: {remote_ip}")
+                return {
+                    "success": False,
+                    "error": "reCAPTCHA 验证失败，请重新验证",
+                    "error_codes": error_codes
+                }
         except Exception as e:
             logger.error(f"reCAPTCHA 验证请求失败: {e}")
             return {"success": False, "error": f"验证请求失败: {str(e)}"}
@@ -89,21 +89,21 @@ class CaptchaVerifier:
             
             response = requests.post(url, data=data, timeout=5.0)
             result = response.json()
-                
-                if result.get("success"):
-                    return {
-                        "success": True,
-                        "challenge_ts": result.get("challenge_ts"),
-                        "hostname": result.get("hostname")
-                    }
-                else:
-                    error_codes = result.get("error-codes", [])
-                    logger.warning(f"hCaptcha 验证失败: {error_codes}, IP: {remote_ip}")
-                    return {
-                        "success": False,
-                        "error": "hCaptcha 验证失败",
-                        "error_codes": error_codes
-                    }
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "challenge_ts": result.get("challenge_ts"),
+                    "hostname": result.get("hostname")
+                }
+            else:
+                error_codes = result.get("error-codes", [])
+                logger.warning(f"hCaptcha 验证失败: {error_codes}, IP: {remote_ip}")
+                return {
+                    "success": False,
+                    "error": "hCaptcha 验证失败",
+                    "error_codes": error_codes
+                }
         except Exception as e:
             logger.error(f"hCaptcha 验证请求失败: {e}")
             return {"success": False, "error": f"验证请求失败: {str(e)}"}
