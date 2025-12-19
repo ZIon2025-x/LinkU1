@@ -1,0 +1,110 @@
+# SwiftLint 配置文件 - 企业级代码规范
+
+# 规则配置
+disabled_rules:
+  - trailing_whitespace  # 允许尾随空格（某些情况下需要）
+  - line_length         # 行长度限制（由编辑器处理）
+
+# 规则选项
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - operator_usage_whitespace
+  - overridden_super_call
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strong_iboutlet
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+  - vertical_parameter_alignment_on_call
+  - yoda_condition
+
+# 规则配置
+line_length:
+  warning: 120
+  error: 200
+  ignores_urls: true
+  ignores_function_declarations: true
+  ignores_comments: true
+
+function_body_length:
+  warning: 100
+  error: 200
+
+function_parameter_count:
+  warning: 6
+  error: 8
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 1000
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+nesting:
+  type_level: 2
+  function_level: 3
+
+identifier_name:
+  min_length: 2
+  max_length: 60
+  excluded:
+    - id
+    - x
+    - y
+    - z
+    - db
+
+type_name:
+  min_length: 3
+  max_length: 60
+
+# 排除的文件和目录
+excluded:
+  - Pods
+  - .build
+  - DerivedData
+  - link2ur.xcodeproj
+  - link2ur.xcworkspace
+  - "**/*.generated.swift"
+  - "**/Generated"
+
+# 自定义规则
+custom_rules:
+  # 禁止使用 print，应使用 Logger
+  no_print:
+    name: "禁止使用 print"
+    regex: '\bprint\s*\('
+    message: "请使用 Logger 而不是 print"
+    severity: warning
+  
+  # 强制使用 guard let 而不是 if let（在可选绑定中）
+  prefer_guard_let:
+    name: "优先使用 guard let"
+    regex: 'if\s+let\s+\w+\s*=\s*\w+\s*\{'
+    message: "优先使用 guard let 进行可选绑定"
+    severity: warning
+  
+  # 禁止强制解包（除非有注释说明）
+  no_force_unwrap:
+    name: "禁止强制解包"
+    regex: '!\s*(?!//\s*force\s*unwrap)'
+    message: "避免使用强制解包，使用可选绑定或可选链"
+    severity: error
+
+# 报告器
+reporter: "xcode"
+

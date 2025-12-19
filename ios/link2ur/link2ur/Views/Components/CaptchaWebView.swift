@@ -1,0 +1,198 @@
+import SwiftUI
+import WebKit
+
+/// CAPTCHA WebView 组件
+/// 支持 Google reCAPTCHA v2 和 hCaptcha
+struct CaptchaWebView: UIViewRepresentable {
+    let siteKey: String
+    let captchaType: String  // "recaptcha" 或 "hcaptcha"
+    let onVerify: (String) -> Void  // 验证成功回调，返回 token
+    let onError: ((String) -> Void)?  // 错误回调
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        let coordinator = context.coordinator
+        
+        // 添加消息处理器
+        let messageHandler = CaptchaMessageHandler(
+            onVerify: coordinator.onVerify,
+            onError: coordinator.onError ?? { _ in }
+        )
+        configuration.userContentController.add(messageHandler, name: "captchaCallback")
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = coordinator
+        
+        // 配置 WebView
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        
+        // 保存 messageHandler 引用
+        coordinator.messageHandler = messageHandler
+        
+        // 获取后端 API 的 baseURL 作为 baseURL（用于域名验证）
+        // reCAPTCHA 需要验证域名，所以必须使用与 site key 配置匹配的域名
+        // 通常应该是前端域名（www.link2ur.com）而不是 API 域名
+        let baseURL = URL(string: Constants.Frontend.baseURL) ?? URL(string: "https://www.link2ur.com")!
+        
+        // 加载 CAPTCHA HTML
+        let html = generateCaptchaHTML(siteKey: siteKey, type: captchaType)
+        webView.loadHTMLString(html, baseURL: baseURL)
+        
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        // 如果 siteKey 或 type 改变，重新加载
+        // 这里可以添加重新加载逻辑
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onVerify: onVerify, onError: onError)
+    }
+    
+    /// 生成 CAPTCHA HTML
+    private func generateCaptchaHTML(siteKey: String, type: String) -> String {
+        if type == "recaptcha" {
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .captcha-container {
+                        background: white;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                </style>
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+            </head>
+            <body>
+                <div class="captcha-container">
+                    <div class="g-recaptcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired"></div>
+                </div>
+                <script>
+                    function onCaptchaSuccess(token) {
+                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                    }
+                    function onCaptchaExpired() {
+                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                    }
+                </script>
+            </body>
+            </html>
+            """
+        } else if type == "hcaptcha" {
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .captcha-container {
+                        background: white;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                </style>
+                <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+            </head>
+            <body>
+                <div class="captcha-container">
+                    <div class="h-captcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired"></div>
+                </div>
+                <script>
+                    function onCaptchaSuccess(token) {
+                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                    }
+                    function onCaptchaExpired() {
+                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                    }
+                </script>
+            </body>
+            </html>
+            """
+        } else {
+            return """
+            <!DOCTYPE html>
+            <html>
+            <body>
+                <p>不支持的 CAPTCHA 类型</p>
+            </body>
+            </html>
+            """
+        }
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        let onVerify: (String) -> Void
+        let onError: ((String) -> Void)?
+        var messageHandler: CaptchaMessageHandler?
+        
+        init(onVerify: @escaping (String) -> Void, onError: ((String) -> Void)?) {
+            self.onVerify = onVerify
+            self.onError = onError
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // WebView 加载完成
+            // 消息处理器已经在 makeUIView 中设置
+        }
+        
+        deinit {
+            // 清理消息处理器
+            messageHandler = nil
+        }
+    }
+}
+
+/// CAPTCHA 消息处理器
+class CaptchaMessageHandler: NSObject, WKScriptMessageHandler {
+    let onVerify: (String) -> Void
+    let onError: (String) -> Void
+    
+    init(onVerify: @escaping (String) -> Void, onError: @escaping (String) -> Void) {
+        self.onVerify = onVerify
+        self.onError = onError
+    }
+    
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any],
+              let type = body["type"] as? String else {
+            onError("无效的消息格式")
+            return
+        }
+        
+        if type == "success", let token = body["token"] as? String {
+            onVerify(token)
+        } else if type == "expired" {
+            onError("验证已过期，请重新验证")
+        } else {
+            onError("验证失败")
+        }
+    }
+}
+

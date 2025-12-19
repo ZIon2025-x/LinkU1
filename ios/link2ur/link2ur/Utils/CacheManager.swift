@@ -1,0 +1,624 @@
+import Foundation
+
+/// 缓存管理器 - 企业级缓存系统（内存 + 磁盘）
+/// 提供高性能的内存缓存和持久化的磁盘缓存
+public class CacheManager {
+    public static let shared = CacheManager()
+    
+    // MARK: - 企业级缓存组件
+    
+    /// 内存缓存（NSCache）- 快速访问
+    private let memoryCache = NSCache<NSString, AnyObject>()
+    
+    /// 磁盘缓存目录
+    private let fileManager = FileManager.default
+    private let cacheDirectory: URL
+    
+    /// 线程安全锁
+    private let lock = NSLock()
+    
+    // 缓存过期时间（秒）- 根据数据类型设置不同过期时间
+    private let defaultCacheExpirationTime: TimeInterval = 300 // 5分钟（默认）
+    private let shortCacheExpirationTime: TimeInterval = 180 // 3分钟（频繁更新的数据）
+    private let longCacheExpirationTime: TimeInterval = 600 // 10分钟（相对稳定的数据）
+    
+    // 缓存大小限制（字节）
+    private let maxCacheSize: Int64 = 50 * 1024 * 1024 // 50MB
+    
+    // 获取特定数据类型的缓存过期时间
+    private func cacheExpirationTime(forKey key: String) -> TimeInterval {
+        if key.contains("tasks") || key.contains("activities") {
+            return shortCacheExpirationTime // 任务和活动更新频繁
+        } else if key.contains("leaderboards") || key.contains("task_experts") {
+            return longCacheExpirationTime // 排行榜和达人相对稳定
+        }
+        return defaultCacheExpirationTime
+    }
+    
+    private init() {
+        // 配置内存缓存
+        memoryCache.countLimit = 100 // 最多缓存100个对象
+        memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50MB 内存限制
+        
+        // 配置磁盘缓存目录
+        let cachesPath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        cacheDirectory = cachesPath.appendingPathComponent("Link2UrCache", isDirectory: true)
+        
+        // 创建缓存目录（如果不存在）
+        if !fileManager.fileExists(atPath: cacheDirectory.path) {
+            try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        }
+    }
+    
+    // MARK: - 企业级缓存方法（内存 + 磁盘）
+    
+    /// 企业级方法：存储到内存和磁盘（支持过期时间）
+    /// - Parameters:
+    ///   - object: 要缓存的对象（必须是 Codable 和 AnyObject，即 class 类型）
+    ///   - key: 缓存键
+    ///   - expiration: 过期时间（秒），nil 表示使用默认过期策略
+    public func set<T: Codable & AnyObject>(_ object: T, forKey key: String, expiration: TimeInterval? = nil) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // 存储到内存缓存
+        memoryCache.setObject(object, forKey: key as NSString)
+        
+        // 存储到磁盘缓存
+        try setDiskCache(object, forKey: key, expiration: expiration)
+    }
+    
+    /// 企业级方法：从内存或磁盘获取（优先内存）
+    /// - Parameters:
+    ///   - key: 缓存键
+    ///   - type: 对象类型
+    /// - Returns: 缓存的对象，如果不存在或已过期则返回 nil
+    public func get<T: Codable & AnyObject>(forKey key: String, as type: T.Type) -> T? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // 先尝试从内存缓存获取
+        if let cached = memoryCache.object(forKey: key as NSString) as? T {
+            return cached
+        }
+        
+        // 再尝试从磁盘缓存获取
+        if let cached = getDiskCache(forKey: key, as: type) {
+            // 回填到内存缓存
+            memoryCache.setObject(cached, forKey: key as NSString)
+            return cached
+        }
+        
+        return nil
+    }
+    
+    /// 仅存储到内存缓存（用于非 Codable 对象，如 UIImage）
+    public func setMemoryCache<T: AnyObject>(_ object: T, forKey key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        memoryCache.setObject(object, forKey: key as NSString)
+    }
+    
+    /// 仅从内存缓存获取
+    public func getMemoryCache<T>(forKey key: String, as type: T.Type) -> T? {
+        lock.lock()
+        defer { lock.unlock() }
+        return memoryCache.object(forKey: key as NSString) as? T
+    }
+    
+    /// 仅存储到磁盘缓存（支持过期时间）
+    public func setDiskCache<T: Codable>(_ object: T, forKey key: String, expiration: TimeInterval? = nil) throws {
+        let cacheItem = DiskCacheItem(
+            data: object,
+            expirationDate: expiration.map { Date().addingTimeInterval($0) }
+        )
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(cacheItem)
+        let fileURL = cacheDirectory.appendingPathComponent("\(key).json")
+        
+        // 检查缓存大小，如果超过限制则清理
+        checkAndCleanCacheIfNeeded()
+        
+        try data.write(to: fileURL)
+        
+        // 保存缓存时间戳（用于兼容旧版本的时间戳检查）
+        saveCacheTimestamp(forKey: key)
+    }
+    
+    /// 仅从磁盘缓存获取
+    public func getDiskCache<T: Decodable>(forKey key: String, as type: T.Type) -> T? {
+        let fileURL = cacheDirectory.appendingPathComponent("\(key).json")
+        
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            return nil
+        }
+        
+        // 检查缓存是否过期（使用旧版本的时间戳检查作为后备）
+        if isCacheExpired(forKey: key) {
+            Logger.warning("缓存已过期 [\(key)]，将清除", category: .cache)
+            clearCache(forKey: key)
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            // 尝试解码为企业级格式（带过期时间）
+            if let cacheItem = try? decoder.decode(DiskCacheItemWrapper<T>.self, from: data) {
+                // 检查是否过期
+                if let expirationDate = cacheItem.expirationDate, expirationDate < Date() {
+                    try? fileManager.removeItem(at: fileURL)
+                    return nil
+                }
+                return cacheItem.data
+            }
+            
+            // 兼容旧格式（直接解码）
+            return try decoder.decode(type, from: data)
+        } catch {
+            Logger.error("缓存加载失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+            return nil
+        }
+    }
+    
+    // MARK: - 协议方法（向后兼容）
+    
+    /// 保存数据到缓存（协议方法，兼容旧代码）
+    /// 自动使用内存+磁盘缓存，使用默认过期策略
+    public func save<T: Codable>(_ data: T, forKey key: String) {
+        // 对于值类型（struct），只能存储到磁盘
+        // 对于引用类型（class），可以同时存储到内存和磁盘
+        if data is AnyObject {
+            // 引用类型：使用企业级方法
+            do {
+                let expiration = cacheExpirationTime(forKey: key)
+                try setDiskCache(data, forKey: key, expiration: expiration)
+                // 注意：值类型无法存储到 NSCache，所以只存磁盘
+            } catch {
+                Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+            }
+        } else {
+            // 值类型：只存储到磁盘
+            do {
+                let expiration = cacheExpirationTime(forKey: key)
+                try setDiskCache(data, forKey: key, expiration: expiration)
+            } catch {
+                Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+            }
+        }
+    }
+    
+    /// 从缓存加载数据（协议方法，兼容旧代码）
+    /// 优先从内存获取，然后从磁盘获取
+    public func load<T: Codable>(_ type: T.Type, forKey key: String) -> T? {
+        // 先尝试从内存获取（仅适用于引用类型）
+        if let cached = memoryCache.object(forKey: key as NSString) as? T {
+            return cached
+        }
+        
+        // 从磁盘获取
+        return getDiskCache(forKey: key, as: type)
+    }
+    
+    /// 清除指定缓存（内存 + 磁盘）
+    func clearCache(forKey key: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // 清除内存缓存
+        memoryCache.removeObject(forKey: key as NSString)
+        
+        // 清除磁盘缓存
+        let fileURL = cacheDirectory.appendingPathComponent("\(key).json")
+        let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
+        
+        try? fileManager.removeItem(at: fileURL)
+        try? fileManager.removeItem(at: timestampURL)
+    }
+    
+    /// 清除所有缓存（内存 + 磁盘）
+    func clearAllCache() {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // 清除内存缓存
+        memoryCache.removeAllObjects()
+        
+        // 清除磁盘缓存
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                try? fileManager.removeItem(at: file)
+            }
+            Logger.success("所有缓存已清除", category: .cache)
+        } catch {
+            Logger.error("清除缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    // MARK: - 协议适配方法（CacheManagerProtocol）
+    
+    /// 协议适配：remove(forKey:) -> clearCache(forKey:)
+    public func remove(forKey key: String) {
+        clearCache(forKey: key)
+    }
+    
+    /// 协议适配：clearAll() -> clearAllCache()
+    public func clearAll() {
+        clearAllCache()
+    }
+    
+    /// 检查并清理缓存（如果超过大小限制）
+    private func checkAndCleanCacheIfNeeded() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])
+            
+            // 计算总缓存大小
+            var totalSize: Int64 = 0
+            var fileInfos: [(url: URL, size: Int64, date: Date)] = []
+            
+            for file in files {
+                let resourceValues = try file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                if let size = resourceValues.fileSize,
+                   let date = resourceValues.contentModificationDate {
+                    totalSize += Int64(size)
+                    fileInfos.append((url: file, size: Int64(size), date: date))
+                }
+            }
+            
+            // 如果超过限制，删除最旧的文件
+            if totalSize > maxCacheSize {
+                // 按修改时间排序，最旧的在前
+                fileInfos.sort { $0.date < $1.date }
+                
+                var removedSize: Int64 = 0
+                for fileInfo in fileInfos {
+                    if totalSize - removedSize <= maxCacheSize * 8 / 10 { // 清理到80%以下
+                        break
+                    }
+                    try? fileManager.removeItem(at: fileInfo.url)
+                    removedSize += fileInfo.size
+                    totalSize -= fileInfo.size
+                }
+                
+                print("🧹 缓存清理完成，释放了 \(removedSize / 1024 / 1024)MB 空间")
+            }
+        } catch {
+            print("⚠️ 检查缓存大小失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 获取当前缓存大小（字节）
+    func getCacheSize() -> Int64 {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey])
+            var totalSize: Int64 = 0
+            for file in files {
+                if let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                    totalSize += Int64(size)
+                }
+            }
+            return totalSize
+        } catch {
+            return 0
+        }
+    }
+    
+    // MARK: - 缓存失效策略
+    
+    /// 清除任务相关缓存
+    func invalidateTasksCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                if file.lastPathComponent.contains("tasks") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("任务缓存已清除", category: .cache)
+        } catch {
+            print("⚠️ 清除任务缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 清除活动相关缓存
+    func invalidateActivitiesCache() {
+        clearCache(forKey: "activities")
+        print("✅ 活动缓存已清除")
+    }
+    
+    /// 清除论坛帖子相关缓存
+    func invalidateForumPostsCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                if file.lastPathComponent.contains("forum_posts") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("论坛帖子缓存已清除", category: .cache)
+        } catch {
+            print("⚠️ 清除论坛帖子缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 清除跳蚤市场相关缓存
+    func invalidateFleaMarketCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                if file.lastPathComponent.contains("flea_market") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("跳蚤市场缓存已清除", category: .cache)
+        } catch {
+            print("⚠️ 清除跳蚤市场缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 清除任务达人相关缓存
+    func invalidateTaskExpertsCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                if file.lastPathComponent.contains("task_experts") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("任务达人缓存已清除", category: .cache)
+        } catch {
+            print("⚠️ 清除任务达人缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 清除排行榜相关缓存
+    func invalidateLeaderboardsCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                if file.lastPathComponent.contains("leaderboards") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("排行榜缓存已清除", category: .cache)
+        } catch {
+            print("⚠️ 清除排行榜缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 清除所有过期缓存
+    func clearExpiredCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.contentModificationDateKey])
+            var clearedCount = 0
+            for file in files {
+                // 只检查 JSON 文件，跳过时间戳文件
+                if file.lastPathComponent.hasSuffix(".json") {
+                    let key = String(file.lastPathComponent.dropLast(5)) // 移除 .json 后缀
+                    if isCacheExpired(forKey: key) {
+                        try? fileManager.removeItem(at: file)
+                        // 同时删除对应的时间戳文件
+                        let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
+                        try? fileManager.removeItem(at: timestampURL)
+                        clearedCount += 1
+                    }
+                }
+            }
+            if clearedCount > 0 {
+                print("🧹 已清除 \(clearedCount) 个过期缓存文件")
+            }
+        } catch {
+            print("⚠️ 清除过期缓存失败: \(error.localizedDescription)")
+        }
+    }
+    
+    /// 获取缓存统计信息
+    func getCacheStats() -> (fileCount: Int, totalSize: Int64, oldestDate: Date?, newestDate: Date?) {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])
+            
+            var totalSize: Int64 = 0
+            var dates: [Date] = []
+            var fileCount = 0
+            
+            for file in files {
+                // 只统计 JSON 文件
+                if file.lastPathComponent.hasSuffix(".json") {
+                    fileCount += 1
+                    if let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                        totalSize += Int64(size)
+                    }
+                    if let date = try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate {
+                        dates.append(date)
+                    }
+                }
+            }
+            
+            return (
+                fileCount: fileCount,
+                totalSize: totalSize,
+                oldestDate: dates.min(),
+                newestDate: dates.max()
+            )
+        } catch {
+            return (fileCount: 0, totalSize: 0, oldestDate: nil, newestDate: nil)
+        }
+    }
+    
+    // MARK: - 缓存时间戳管理
+    
+    private func saveCacheTimestamp(forKey key: String) {
+        let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
+        let timestamp = String(Date().timeIntervalSince1970)
+        try? timestamp.write(to: timestampURL, atomically: true, encoding: .utf8)
+    }
+    
+    private func getCacheTimestamp(forKey key: String) -> Date? {
+        let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
+        guard let timestampString = try? String(contentsOf: timestampURL, encoding: .utf8),
+              let timestamp = Double(timestampString) else {
+            return nil
+        }
+        return Date(timeIntervalSince1970: timestamp)
+    }
+    
+    private func isCacheExpired(forKey key: String) -> Bool {
+        guard let timestamp = getCacheTimestamp(forKey: key) else {
+            return true
+        }
+        let expirationTime = cacheExpirationTime(forKey: key)
+        return Date().timeIntervalSince(timestamp) > expirationTime
+    }
+    
+    // MARK: - 特定数据类型的缓存方法
+    
+    /// 保存任务列表
+    func saveTasks(_ tasks: [Task], category: String? = nil, city: String? = nil) {
+        let key = cacheKeyForTasks(category: category, city: city)
+        save(tasks, forKey: key)
+    }
+    
+    /// 加载任务列表
+    func loadTasks(category: String? = nil, city: String? = nil) -> [Task]? {
+        let key = cacheKeyForTasks(category: category, city: city)
+        return load([Task].self, forKey: key)
+    }
+    
+    /// 保存活动列表
+    func saveActivities(_ activities: [Activity]) {
+        save(activities, forKey: "activities")
+    }
+    
+    /// 加载活动列表
+    func loadActivities() -> [Activity]? {
+        return load([Activity].self, forKey: "activities")
+    }
+    
+    /// 保存论坛帖子列表
+    func saveForumPosts(_ posts: [ForumPost], categoryId: Int? = nil) {
+        let key = cacheKeyForForumPosts(categoryId: categoryId)
+        save(posts, forKey: key)
+    }
+    
+    /// 加载论坛帖子列表
+    func loadForumPosts(categoryId: Int? = nil) -> [ForumPost]? {
+        let key = cacheKeyForForumPosts(categoryId: categoryId)
+        return load([ForumPost].self, forKey: key)
+    }
+    
+    /// 保存跳蚤市场商品列表
+    func saveFleaMarketItems(_ items: [FleaMarketItem], category: String? = nil) {
+        let key = cacheKeyForFleaMarketItems(category: category)
+        save(items, forKey: key)
+    }
+    
+    /// 加载跳蚤市场商品列表
+    func loadFleaMarketItems(category: String? = nil) -> [FleaMarketItem]? {
+        let key = cacheKeyForFleaMarketItems(category: category)
+        return load([FleaMarketItem].self, forKey: key)
+    }
+    
+    /// 保存任务达人列表
+    func saveTaskExperts(_ experts: [TaskExpert], category: String? = nil, location: String? = nil) {
+        let key = cacheKeyForTaskExperts(category: category, location: location)
+        save(experts, forKey: key)
+    }
+    
+    /// 加载任务达人列表
+    func loadTaskExperts(category: String? = nil, location: String? = nil) -> [TaskExpert]? {
+        let key = cacheKeyForTaskExperts(category: category, location: location)
+        return load([TaskExpert].self, forKey: key)
+    }
+    
+    /// 保存排行榜列表
+    func saveLeaderboards(_ leaderboards: [CustomLeaderboard], location: String? = nil, sort: String? = nil) {
+        let key = cacheKeyForLeaderboards(location: location, sort: sort)
+        save(leaderboards, forKey: key)
+    }
+    
+    /// 加载排行榜列表
+    func loadLeaderboards(location: String? = nil, sort: String? = nil) -> [CustomLeaderboard]? {
+        let key = cacheKeyForLeaderboards(location: location, sort: sort)
+        return load([CustomLeaderboard].self, forKey: key)
+    }
+    
+    // MARK: - 缓存键生成
+    
+    private func cacheKeyForTasks(category: String?, city: String?) -> String {
+        var key = "tasks"
+        if let category = category {
+            key += "_cat_\(category)"
+        }
+        if let city = city {
+            key += "_city_\(city)"
+        }
+        return key
+    }
+    
+    private func cacheKeyForForumPosts(categoryId: Int?) -> String {
+        if let categoryId = categoryId {
+            return "forum_posts_cat_\(categoryId)"
+        }
+        return "forum_posts_all"
+    }
+    
+    private func cacheKeyForFleaMarketItems(category: String?) -> String {
+        if let category = category {
+            return "flea_market_items_cat_\(category)"
+        }
+        return "flea_market_items_all"
+    }
+    
+    private func cacheKeyForTaskExperts(category: String?, location: String?) -> String {
+        var key = "task_experts"
+        if let category = category {
+            key += "_cat_\(category)"
+        }
+        if let location = location {
+            key += "_loc_\(location)"
+        }
+        return key
+    }
+    
+    private func cacheKeyForLeaderboards(location: String?, sort: String?) -> String {
+        var key = "leaderboards"
+        if let location = location {
+            key += "_loc_\(location)"
+        }
+        if let sort = sort {
+            key += "_sort_\(sort)"
+        }
+        return key
+    }
+}
+
+// MARK: - 企业级缓存数据结构
+
+/// 磁盘缓存项（用于存储过期时间）
+/// 注意：使用泛型包装器以支持只符合 Decodable 的类型
+private struct DiskCacheItemWrapper<T: Decodable>: Decodable {
+    let data: T
+    let expirationDate: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case data
+        case expirationDate
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        data = try container.decode(T.self, forKey: .data)
+        expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
+    }
+}
+
+/// 磁盘缓存项（用于编码，需要 Codable）
+private struct DiskCacheItem<T: Codable>: Codable {
+    let data: T
+    let expirationDate: Date?
+}
