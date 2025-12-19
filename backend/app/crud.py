@@ -1844,6 +1844,38 @@ def cancel_expired_tasks(db: Session):
                             if applicants_updated > 0:
                                 logger.info(f"任务 {task.id} 已同步更新 {applicants_updated} 个申请状态为 rejected")
                         
+                        # 如果是多人任务，同步更新 task_participants 表中的参与者状态
+                        if task.is_multi_participant:
+                            # 先查询需要更新的参与者（用于后续通知）
+                            query_participants_sql = text("""
+                                SELECT DISTINCT user_id 
+                                FROM task_participants 
+                                WHERE task_id = :task_id 
+                                  AND status NOT IN ('cancelled', 'exited', 'completed')
+                            """)
+                            participants_result = db.execute(query_participants_sql, {"task_id": task.id})
+                            multi_participant_user_ids = [row[0] for row in participants_result.fetchall()]
+                            
+                            # 更新 task_participants 表中所有非终态的参与者状态为 cancelled
+                            if multi_participant_user_ids:
+                                update_participants_sql = text("""
+                                    UPDATE task_participants 
+                                    SET status = 'cancelled', 
+                                        cancelled_at = :now_utc,
+                                        updated_at = :now_utc
+                                    WHERE task_id = :task_id 
+                                      AND status NOT IN ('cancelled', 'exited', 'completed')
+                                """)
+                                result = db.execute(update_participants_sql, {"task_id": task.id, "now_utc": now_utc})
+                                participants_updated = result.rowcount
+                                if participants_updated > 0:
+                                    logger.info(f"任务 {task.id} 已同步更新 {participants_updated} 个多人任务参与者状态为 cancelled")
+                                
+                                # 将多人任务参与者也加入通知列表
+                                for uid in multi_participant_user_ids:
+                                    if uid not in applicant_user_ids:
+                                        applicant_user_ids.append(uid)
+                        
                         # 提交 savepoint
                         savepoint.commit()
                     except Exception as e:

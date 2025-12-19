@@ -982,17 +982,9 @@ class AsyncTaskCRUD:
             await db.refresh(application)
             print(f"DEBUG: 成功创建申请记录，ID: {application.id}")
             
-            # 更新任务状态为taken（如果有申请者）
-            try:
-                await db.execute(
-                    update(models.Task)
-                    .where(models.Task.id == task_id)
-                    .values(status="taken")
-                )
-                await db.commit()
-                print(f"DEBUG: 已更新任务 {task_id} 状态为 taken")
-            except Exception as e:
-                print(f"DEBUG: 更新任务状态失败（不影响申请流程）: {e}")
+            # 注意：新流程中，申请后任务保持 open 状态
+            # 只有发布者批准申请后，任务才变为 in_progress 状态
+            # 不再在申请时将任务状态更新为 taken
             
             # 自动发送消息给任务发布者
             try:

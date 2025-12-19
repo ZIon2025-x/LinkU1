@@ -352,7 +352,6 @@
 /* Begin XCSwiftPackageProductDependency section */
 		1491C6B52EDF931E0054DEAA /* LinkU */ = {
 			isa = XCSwiftPackageProductDependency;
-			packageProductReference = 1491C6B42EDF931E0054DEAA /* XCLocalSwiftPackageReference ".." */;
 			productName = LinkU;
 		};
 /* End XCSwiftPackageProductDependency section */

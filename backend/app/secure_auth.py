@@ -558,20 +558,22 @@ def is_fingerprint_similar(original: str, current: str, threshold: float = 0.7) 
     return similarity >= threshold
 
 def is_mobile_request(request: Request) -> bool:
-    """检测是否为移动端请求"""
-    # 检查 X-Platform 头（iOS/Android 等移动端应用设置）
-    platform = request.headers.get("X-Platform", "").lower()
-    if platform in ["ios", "android", "mobile"]:
+    """
+    检测是否为经过验证的移动端请求
+    
+    使用严格验证：必须同时满足 X-Platform 和 User-Agent 匹配
+    """
+    from app.csrf import verify_mobile_request
+    
+    # 使用严格的移动端验证
+    is_valid, platform = verify_mobile_request(request)
+    if is_valid:
+        logger.debug(f"移动端请求验证通过: 平台={platform}")
         return True
     
-    # 检查 User-Agent
-    user_agent = request.headers.get("user-agent", "").lower()
-    mobile_keywords = [
-        'link2ur-ios', 'link2ur-android',  # 自定义 App User-Agent
-        'mobile', 'iphone', 'ipad', 'android', 'blackberry',
-        'windows phone', 'opera mini', 'iemobile'
-    ]
-    return any(keyword in user_agent for keyword in mobile_keywords)
+    # 验证失败
+    logger.debug(f"移动端请求验证失败: {platform}")
+    return False
 
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话"""

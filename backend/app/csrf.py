@@ -5,10 +5,12 @@ CSRF保护模块
 
 import secrets
 import hashlib
-from typing import Optional
+import hmac
+from typing import Optional, Tuple
 from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,96 @@ CSRF_TOKEN_LENGTH = 32
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
 CSRF_COOKIE_MAX_AGE = 3600  # 1小时
+
+# 移动端应用签名密钥（用于验证请求来自真正的 App）
+# 必须通过环境变量 MOBILE_APP_SECRET 设置，不提供默认值
+MOBILE_APP_SECRET = os.environ.get("MOBILE_APP_SECRET")
+if not MOBILE_APP_SECRET:
+    logger.warning("⚠️ MOBILE_APP_SECRET 环境变量未设置，移动端签名验证将失败！")
+
+# 已知的合法移动端平台和对应的 User-Agent 前缀
+VALID_MOBILE_PLATFORMS = {
+    "ios": "Link2Ur-iOS",
+    "android": "Link2Ur-Android",
+}
+
+
+def verify_mobile_request(request: Request) -> Tuple[bool, str]:
+    """
+    严格验证移动端请求的合法性
+    
+    验证条件（必须同时满足）：
+    1. X-Platform 头必须是 iOS 或 Android
+    2. User-Agent 必须包含对应平台的应用标识
+    3. X-App-Signature 头必须是有效的 HMAC 签名（必需）
+    4. X-App-Timestamp 时间戳在有效期内（5分钟）
+    
+    Returns:
+        Tuple[bool, str]: (是否验证通过, 平台名称或错误原因)
+    """
+    # 1. 检查 X-Platform 头
+    platform = request.headers.get("X-Platform", "").lower()
+    if platform not in VALID_MOBILE_PLATFORMS:
+        return False, f"未知平台: {platform}"
+    
+    # 2. 检查 User-Agent 是否匹配平台
+    user_agent = request.headers.get("User-Agent", "").lower()
+    expected_ua_prefix = VALID_MOBILE_PLATFORMS[platform].lower()
+    if expected_ua_prefix not in user_agent:
+        logger.warning(f"移动端验证失败: User-Agent 不匹配 - 平台={platform}, UA={user_agent[:50]}")
+        return False, "User-Agent 与平台不匹配"
+    
+    # 3. 检查应用签名（必需验证）
+    # 签名格式: HMAC-SHA256(session_id + timestamp, MOBILE_APP_SECRET)
+    app_signature = request.headers.get("X-App-Signature")
+    app_timestamp = request.headers.get("X-App-Timestamp")
+    session_id = request.headers.get("X-Session-ID", "")
+    
+    # 签名和时间戳是必需的
+    if not app_signature or not app_timestamp:
+        logger.warning(f"移动端验证失败: 缺少签名或时间戳 - 平台={platform}")
+        return False, "缺少应用签名或时间戳"
+    
+    # 检查密钥是否已配置
+    if not MOBILE_APP_SECRET:
+        logger.error("移动端验证失败: MOBILE_APP_SECRET 环境变量未设置")
+        return False, "服务器配置错误"
+    
+    try:
+        # 验证时间戳（5分钟有效期）
+        import time
+        current_time = int(time.time())
+        request_time = int(app_timestamp)
+        if abs(current_time - request_time) > 300:  # 5分钟
+            logger.warning(f"移动端签名验证失败: 时间戳过期 - 当前={current_time}, 请求={request_time}")
+            return False, "请求时间戳过期"
+        
+        # 验证 HMAC 签名
+        message = f"{session_id}{app_timestamp}".encode()
+        expected_signature = hmac.new(
+            MOBILE_APP_SECRET.encode(),
+            message,
+            hashlib.sha256
+        ).hexdigest()
+        
+        if not hmac.compare_digest(app_signature, expected_signature):
+            logger.warning(f"移动端签名验证失败: 签名不匹配 - 平台={platform}")
+            return False, "应用签名无效"
+            
+        logger.debug(f"移动端签名验证通过: 平台={platform}")
+    except (ValueError, TypeError) as e:
+        logger.warning(f"移动端签名验证异常: {e}")
+        return False, "签名验证异常"
+    
+    # 完整验证通过（平台 + User-Agent + 签名）
+    logger.debug(f"移动端请求完整验证通过: 平台={platform}")
+    return True, platform
+
+
+def is_verified_mobile_request(request: Request) -> bool:
+    """检查是否为经过验证的移动端请求"""
+    is_valid, _ = verify_mobile_request(request)
+    return is_valid
 
 class CSRFProtection:
     """CSRF保护类"""
@@ -78,6 +170,22 @@ class CSRFProtectedHTTPBearer(HTTPBearer):
                 scheme="Bearer", credentials=token
             )
         
+        # 尝试从 X-Session-ID 头获取（仅限经过验证的移动端请求）
+        # 必须通过严格的移动端验证才能跳过 CSRF 检查
+        x_session_id = request.headers.get("X-Session-ID")
+        if x_session_id:
+            # 严格验证移动端请求
+            is_valid_mobile, reason = verify_mobile_request(request)
+            if is_valid_mobile:
+                # 验证通过，允许使用 X-Session-ID 认证（无需 CSRF）
+                return HTTPAuthorizationCredentials(
+                    scheme="Bearer", credentials=x_session_id
+                )
+            else:
+                # 验证失败，记录警告并拒绝
+                logger.warning(f"移动端验证失败，拒绝 X-Session-ID 认证: {reason}")
+                # 不返回，继续尝试其他认证方式
+        
         # 如果从Cookie获取session_id，需要CSRF保护
         session_id = request.cookies.get("session_id")
         if session_id:
@@ -117,6 +225,22 @@ class SyncCSRFProtectedHTTPBearer(HTTPBearer):
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=token
             )
+        
+        # 尝试从 X-Session-ID 头获取（仅限经过验证的移动端请求）
+        # 必须通过严格的移动端验证才能跳过 CSRF 检查
+        x_session_id = request.headers.get("X-Session-ID")
+        if x_session_id:
+            # 严格验证移动端请求
+            is_valid_mobile, reason = verify_mobile_request(request)
+            if is_valid_mobile:
+                # 验证通过，允许使用 X-Session-ID 认证（无需 CSRF）
+                return HTTPAuthorizationCredentials(
+                    scheme="Bearer", credentials=x_session_id
+                )
+            else:
+                # 验证失败，记录警告并拒绝
+                logger.warning(f"移动端验证失败，拒绝 X-Session-ID 认证: {reason}")
+                # 不返回，继续尝试其他认证方式
         
         # 如果从Cookie获取session_id，需要CSRF保护
         session_id = request.cookies.get("session_id")
