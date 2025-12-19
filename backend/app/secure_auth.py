@@ -557,6 +557,22 @@ def is_fingerprint_similar(original: str, current: str, threshold: float = 0.7) 
     logger.debug(f"设备指纹相似度: {similarity:.2f} (阈值: {threshold})")
     return similarity >= threshold
 
+def is_mobile_request(request: Request) -> bool:
+    """检测是否为移动端请求"""
+    # 检查 X-Platform 头（iOS/Android 等移动端应用设置）
+    platform = request.headers.get("X-Platform", "").lower()
+    if platform in ["ios", "android", "mobile"]:
+        return True
+    
+    # 检查 User-Agent
+    user_agent = request.headers.get("user-agent", "").lower()
+    mobile_keywords = [
+        'link2ur-ios', 'link2ur-android',  # 自定义 App User-Agent
+        'mobile', 'iphone', 'ipad', 'android', 'blackberry',
+        'windows phone', 'opera mini', 'iemobile'
+    ]
+    return any(keyword in user_agent for keyword in mobile_keywords)
+
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话"""
     # 会话验证中（已移除DEBUG日志以提升性能）
@@ -584,25 +600,37 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     if not session:
         return None
     
+    # 检测是否为移动端请求
+    is_mobile = is_mobile_request(request)
     
     # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = get_device_fingerprint(request)
     if session.device_fingerprint != current_fingerprint:
-        logger.warning(f"设备指纹不匹配 - session: {session_id[:8]}...")
+        logger.warning(f"设备指纹不匹配 - session: {session_id[:8]}... (移动端: {is_mobile})")
         logger.warning(f"原始指纹: {session.device_fingerprint}")
         logger.warning(f"当前指纹: {current_fingerprint}")
         
+        # 移动端使用更宽松的阈值 (0.4)，Web端使用标准阈值 (0.7)
+        threshold = 0.4 if is_mobile else 0.7
+        
         # 检查指纹差异是否在可接受范围内（允许部分变化）
-        if is_fingerprint_similar(session.device_fingerprint, current_fingerprint):
-            logger.info("设备指纹相似，允许访问但记录警告")
+        if is_fingerprint_similar(session.device_fingerprint, current_fingerprint, threshold):
+            logger.info(f"设备指纹相似 (阈值: {threshold})，允许访问并更新指纹")
             # 更新会话的设备指纹为新的指纹
             session.device_fingerprint = current_fingerprint
             SecureAuthManager.update_session(session_id, session)
         else:
-            logger.error("设备指纹差异过大，可能存在会话劫持，拒绝访问")
-            # 撤销可疑会话
-            SecureAuthManager.revoke_session(session_id)
-            return None
+            # 移动端：指纹不匹配时不撤销会话，只更新指纹并记录警告
+            # 这是因为移动端的 Accept-Language 等可能因系统设置变化
+            if is_mobile:
+                logger.warning(f"移动端设备指纹差异较大，但不撤销会话，更新为新指纹")
+                session.device_fingerprint = current_fingerprint
+                SecureAuthManager.update_session(session_id, session)
+            else:
+                logger.error("设备指纹差异过大，可能存在会话劫持，拒绝访问")
+                # 撤销可疑会话（仅限 Web 端）
+                SecureAuthManager.revoke_session(session_id)
+                return None
     
     return session
 

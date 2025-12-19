@@ -588,11 +588,11 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                 
                 # 保存refresh token到Redis，绑定IP和设备指纹
                 if USE_REDIS and redis_client and request:
-                    from app.secure_auth import get_client_ip, get_device_fingerprint
+                    from app.security import get_client_ip
                     refresh_data = {
                         "service_id": service_id,
                         "ip_address": get_client_ip(request),
-                        "device_fingerprint": get_device_fingerprint(request),
+                        "device_fingerprint": ServiceAuthManager.get_device_fingerprint(request),
                         "created_at": format_iso_utc(get_utc_time()),
                         "expires_at": format_iso_utc(get_utc_time() + timedelta(hours=12)),
                         "last_used": None  # 记录最后使用时间，用于频率限制
