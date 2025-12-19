@@ -738,16 +738,13 @@ struct RecentActivitiesSection: View {
                 )
                 .padding(AppSpacing.md)
             } else {
-                ForEach(viewModel.activities) { activity in
+                ForEach(Array(viewModel.activities.enumerated()), id: \.element.id) { index, activity in
                     ActivityRow(activity: activity)
                         .onAppear {
-                            // 当显示最后1个或2个项目时，加载更多（接近底部时触发）
-                            if let lastActivity = viewModel.activities.last,
-                               let secondLastActivity = viewModel.activities.dropLast().last,
-                               (activity.id == lastActivity.id || activity.id == secondLastActivity.id) {
-                                if viewModel.hasMore && !viewModel.isLoadingMore {
-                                    viewModel.loadMoreActivities()
-                                }
+                            // 当显示最后3个项目时，加载更多
+                            let threshold = viewModel.activities.count - 3
+                            if index >= threshold && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                                viewModel.loadMoreActivities()
                             }
                         }
                 }
@@ -761,10 +758,14 @@ struct RecentActivitiesSection: View {
                         Spacer()
                     }
                 } else if !viewModel.hasMore && !viewModel.activities.isEmpty {
-                    Text("没有更多动态了")
-                        .font(.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                        .padding()
+                    HStack {
+                        Spacer()
+                        Text("没有更多动态了")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textTertiary)
+                            .padding()
+                        Spacer()
+                    }
                 }
             }
         }

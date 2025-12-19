@@ -301,6 +301,7 @@ struct MessageBubble: View {
     let isFromCurrentUser: Bool
     @State private var showFullImage = false
     @State private var selectedImageUrl: String?
+    @State private var selectedImageIndex: Int = 0
     
     var body: some View {
         HStack(alignment: .bottom, spacing: AppSpacing.sm) {
@@ -375,7 +376,7 @@ struct MessageBubble: View {
         .padding(.horizontal, AppSpacing.sm)
         .fullScreenCover(isPresented: $showFullImage) {
             if let imageUrl = selectedImageUrl {
-                FullScreenImageView(imageUrl: imageUrl, isPresented: $showFullImage)
+                FullScreenImageView(images: [imageUrl], selectedIndex: $selectedImageIndex, isPresented: $showFullImage)
             }
         }
     }
@@ -385,93 +386,5 @@ struct MessageBubble: View {
     }
 }
 
-// 全屏图片查看器
-struct FullScreenImageView: View {
-    let imageUrl: String
-    @Binding var isPresented: Bool
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-    
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            
-            AsyncImageView(
-                urlString: imageUrl,
-                placeholder: Image(systemName: "photo"),
-                width: UIScreen.main.bounds.width,
-                height: UIScreen.main.bounds.height,
-                contentMode: .fit,
-                cornerRadius: 0
-            )
-            .scaleEffect(scale)
-            .offset(offset)
-            .gesture(
-                MagnificationGesture()
-                    .onChanged { value in
-                        scale = lastScale * value
-                    }
-                    .onEnded { _ in
-                        lastScale = scale
-                        if scale < 1.0 {
-                            withAnimation(.spring()) {
-                                scale = 1.0
-                                lastScale = 1.0
-                            }
-                        }
-                    }
-            )
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        offset = CGSize(
-                            width: lastOffset.width + value.translation.width,
-                            height: lastOffset.height + value.translation.height
-                        )
-                    }
-                    .onEnded { _ in
-                        lastOffset = offset
-                        if scale <= 1.0 {
-                            withAnimation(.spring()) {
-                                offset = .zero
-                                lastOffset = .zero
-                            }
-                        }
-                    }
-            )
-            .onTapGesture(count: 2) {
-                withAnimation(.spring()) {
-                    if scale > 1.0 {
-                        scale = 1.0
-                        lastScale = 1.0
-                        offset = .zero
-                        lastOffset = .zero
-                    } else {
-                        scale = 2.0
-                        lastScale = 2.0
-                    }
-                }
-            }
-            
-            // 关闭按钮
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: { isPresented = false }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white.opacity(0.8))
-                            .padding()
-                    }
-                }
-                Spacer()
-            }
-        }
-        .onTapGesture {
-            isPresented = false
-        }
-    }
-}
+// FullScreenImageView 定义在 Views/Shared/FullScreenImageView.swift
 

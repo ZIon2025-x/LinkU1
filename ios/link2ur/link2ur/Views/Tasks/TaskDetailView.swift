@@ -127,16 +127,20 @@ struct TaskDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button(action: {
+                        Button {
                             showShareSheet = true
-                        }) {
+                        } label: {
                             Label("分享", systemImage: "square.and.arrow.up")
                         }
                     } label: {
-                        Image(systemName: "ellipsis")
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 20))
                             .foregroundColor(AppColors.primary)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 44, height: 44) // 增大点击区域
+                            .contentShape(Rectangle())
                     }
+                    .menuStyle(.automatic)
+                    .menuIndicator(.hidden)
                 }
             }
             .fullScreenCover(isPresented: $showFullScreenImage) {
@@ -149,7 +153,11 @@ struct TaskDetailView: View {
                 reviewModal
             }
             .sheet(isPresented: $showShareSheet) {
-                shareSheet
+                if let task = viewModel.task {
+                    ShareSheet(items: [buildShareText(for: task), buildShareURL(for: task)])
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                }
             }
             .alert("取消任务", isPresented: $showCancelConfirm) {
                 cancelTaskAlert
@@ -277,17 +285,6 @@ struct TaskDetailView: View {
         
         // 加载评价
         viewModel.loadReviews(taskId: taskId)
-    }
-    
-    @ViewBuilder
-    private var shareSheet: some View {
-        if let task = viewModel.task {
-            // 构建分享内容
-            let shareText = buildShareText(for: task)
-            let shareURL = buildShareURL(for: task)
-            
-            ShareSheet(items: [shareText, shareURL])
-        }
     }
     
     private func buildShareText(for task: Task) -> String {

@@ -72,17 +72,27 @@ class RecentActivityViewModel: ObservableObject {
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     private var visibleCategoryIds: Set<Int> = [] // 用户可见的板块ID集合
-    private var currentPage = 1  // 当前页码
-    private let pageSize = 5  // 每页数量（每次加载5条）
-    private let initialLimit = 5  // 初始加载数量
+    
+    // 分页状态 - 每种数据源独立分页
+    private var forumPage = 1
+    private var fleaMarketPage = 1
+    private var leaderboardPage = 1
+    private let pageSize = 10  // 每页获取数量
+    private var displayedCount = 0  // 已显示的数量
+    private let batchSize = 5  // 每次显示的数量
+    
+    // 各数据源是否还有更多
+    private var hasMoreForum = true
+    private var hasMoreFleaMarket = true
+    private var hasMoreLeaderboard = true
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
     }
     
-    func loadRecentActivities(limit: Int? = nil, loadMore: Bool = false) {
-        // 如果正在加载或没有更多数据，不执行加载
-        if isLoading || isLoadingMore || (!loadMore && !activities.isEmpty) {
+    func loadRecentActivities(loadMore: Bool = false) {
+        // 如果正在加载，不执行
+        if isLoading || isLoadingMore {
             return
         }
         
@@ -91,14 +101,18 @@ class RecentActivityViewModel: ObservableObject {
             return
         }
         
-        let loadLimit = limit ?? (loadMore ? pageSize : initialLimit)
-        
         if loadMore {
             isLoadingMore = true
-            currentPage += 1
         } else {
             isLoading = true
-            currentPage = 1
+            // 重置分页状态
+            forumPage = 1
+            fleaMarketPage = 1
+            leaderboardPage = 1
+            displayedCount = 0
+            hasMoreForum = true
+            hasMoreFleaMarket = true
+            hasMoreLeaderboard = true
             activities = []
             hasMore = true
         }
@@ -107,22 +121,27 @@ class RecentActivityViewModel: ObservableObject {
         // 首先获取用户可见的板块列表（用于过滤帖子）
         let visibleCategories = apiService.getForumCategories(includeAll: false, viewAs: nil, includeLatestPost: false)
         
-        // 并行获取三种类型的数据（获取更多数据，因为可能被过滤）
-        let forumPosts = apiService.getForumPosts(page: currentPage, pageSize: loadLimit * 3, sort: "latest") // 获取更多帖子，因为可能被过滤
-        let fleaMarketItems = apiService.getFleaMarketItems(page: currentPage, pageSize: loadLimit)
-        let leaderboards = apiService.getCustomLeaderboards(page: currentPage, limit: loadLimit * 2) // 获取更多排行榜，只显示已审核通过的
+        // 并行获取三种类型的数据
+        let forumPosts = apiService.getForumPosts(page: forumPage, pageSize: pageSize, sort: "latest")
+        let fleaMarketItems = apiService.getFleaMarketItems(page: fleaMarketPage, pageSize: pageSize)
+        let leaderboards = apiService.getCustomLeaderboards(page: leaderboardPage, limit: pageSize)
         
         // 使用嵌套 Zip 组合四个发布者
         Publishers.Zip(
             visibleCategories,
             Publishers.Zip3(forumPosts, fleaMarketItems, leaderboards)
         )
-            .flatMap { [weak self] (categoriesResponse, otherData) -> AnyPublisher<([RecentActivity], Bool), APIError> in
+            .flatMap { [weak self] (categoriesResponse, otherData) -> AnyPublisher<[RecentActivity], APIError> in
                 guard let self = self else {
-                    return Just(([], false)).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                    return Just([]).setFailureType(to: APIError.self).eraseToAnyPublisher()
                 }
                 
                 let (postsResponse, itemsResponse, leaderboardsResponse) = otherData
+                
+                // 更新各数据源的分页状态
+                self.hasMoreForum = postsResponse.posts.count >= self.pageSize
+                self.hasMoreFleaMarket = itemsResponse.items.count >= self.pageSize
+                self.hasMoreLeaderboard = leaderboardsResponse.items.count >= self.pageSize
                 
                 // 保存用户可见的板块ID集合
                 self.visibleCategoryIds = Set(categoriesResponse.categories.map { $0.id })
@@ -130,28 +149,20 @@ class RecentActivityViewModel: ObservableObject {
                 var allActivities: [RecentActivity] = []
                 
                 // 添加论坛帖子（只添加用户有权限看到的）
-                // 如果可见板块列表为空，说明可能是未登录用户，后端应该已经做了权限过滤，允许显示所有帖子
                 let hasVisibleCategories = !self.visibleCategoryIds.isEmpty
                 
                 for post in postsResponse.posts {
-                    // 检查帖子所属板块是否在可见板块列表中
                     var shouldInclude = false
                     
                     if hasVisibleCategories {
-                        // 如果有可见板块列表，需要检查权限
                         if let category = post.category {
-                            // 如果帖子有板块信息，检查是否在可见板块列表中
                             if self.visibleCategoryIds.contains(category.id) {
                                 shouldInclude = true
                             }
                         } else {
-                            // 如果帖子没有板块信息，可能是旧数据
-                            // 为了安全，跳过（无法验证权限）
                             continue
                         }
                     } else {
-                        // 如果没有可见板块列表（未登录用户），后端应该已经做了权限过滤
-                        // 允许显示所有帖子
                         shouldInclude = true
                     }
                     
@@ -167,9 +178,8 @@ class RecentActivityViewModel: ObservableObject {
                     }
                 }
                 
-                // 添加发起排行榜的活动（只显示已审核通过的排行榜，status="active"）
+                // 添加发起排行榜的活动（只显示已审核通过的排行榜）
                 for leaderboard in leaderboardsResponse.items {
-                    // 只显示已审核通过的排行榜
                     if leaderboard.status == "active" {
                         allActivities.append(RecentActivity(leaderboard: leaderboard))
                     }
@@ -180,13 +190,7 @@ class RecentActivityViewModel: ObservableObject {
                     activity1.createdAt > activity2.createdAt
                 }
                 
-                // 限制返回数量
-                let limitedActivities = Array(allActivities.prefix(loadLimit))
-                
-                // 检查是否还有更多数据（如果合并后的数据量达到限制，可能还有更多）
-                let hasMoreData = allActivities.count >= loadLimit
-                
-                return Just((limitedActivities, hasMoreData))
+                return Just(allActivities)
                     .setFailureType(to: APIError.self)
                     .eraseToAnyPublisher()
             }
@@ -196,23 +200,24 @@ class RecentActivityViewModel: ObservableObject {
                 self.isLoading = false
                 self.isLoadingMore = false
                 if case .failure(let error) = result {
-                    // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载最近活动")
                     self.errorMessage = error.userFriendlyMessage
-                    // 加载失败时，回退页码
-                    if loadMore {
-                        self.currentPage -= 1
-                    }
                 }
-            }, receiveValue: { [weak self] (newActivities, hasMoreData) in
+            }, receiveValue: { [weak self] newActivities in
                 guard let self = self else { return }
+                
                 if loadMore {
-                    // 追加数据，但要去重（基于 ID）
+                    // 加载更多：追加数据，去重
                     let existingIds = Set(self.activities.map { $0.id })
                     let uniqueNewActivities = newActivities.filter { !existingIds.contains($0.id) }
                     self.activities.append(contentsOf: uniqueNewActivities)
+                    
+                    // 增加各数据源的页码
+                    self.forumPage += 1
+                    self.fleaMarketPage += 1
+                    self.leaderboardPage += 1
                 } else {
-                    // 替换数据，也要去重（防止后端返回重复数据）
+                    // 首次加载：替换数据，去重
                     var seenIds = Set<String>()
                     self.activities = newActivities.filter { activity in
                         if seenIds.contains(activity.id) {
@@ -222,7 +227,9 @@ class RecentActivityViewModel: ObservableObject {
                         return true
                     }
                 }
-                self.hasMore = hasMoreData
+                
+                // 检查是否还有更多数据
+                self.hasMore = self.hasMoreForum || self.hasMoreFleaMarket || self.hasMoreLeaderboard
             })
             .store(in: &cancellables)
     }
@@ -230,5 +237,10 @@ class RecentActivityViewModel: ObservableObject {
     /// 加载更多数据
     func loadMoreActivities() {
         loadRecentActivities(loadMore: true)
+    }
+    
+    /// 刷新数据（强制重新加载）
+    func refresh() {
+        loadRecentActivities(loadMore: false)
     }
 }

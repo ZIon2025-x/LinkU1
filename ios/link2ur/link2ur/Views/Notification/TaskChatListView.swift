@@ -269,11 +269,38 @@ struct TaskChatView: View {
     @State private var showImagePicker = false
     @State private var showTaskDetail = false
     @State private var selectedImage: UIImage?
+    @State private var showCustomerService = false
     
     // 计算键盘避让的底部 padding
     private var keyboardPadding: CGFloat {
         guard keyboardObserver.keyboardHeight > 0 else { return 0 }
         return max(keyboardObserver.keyboardHeight - 60, 0)
+    }
+    
+    // 判断任务是否已完成或取消（不允许发送消息）
+    private var isTaskClosed: Bool {
+        guard let status = taskChat?.taskStatus ?? taskChat?.status else {
+            return false
+        }
+        let closedStatuses = ["completed", "cancelled", "pending_confirmation"]
+        return closedStatuses.contains(status.lowercased())
+    }
+    
+    // 根据任务状态返回提示文本
+    private var closedStatusText: String {
+        guard let status = taskChat?.taskStatus ?? taskChat?.status else {
+            return "任务已结束"
+        }
+        switch status.lowercased() {
+        case "completed":
+            return "任务已完成，无法发送消息"
+        case "cancelled":
+            return "任务已取消，无法发送消息"
+        case "pending_confirmation":
+            return "任务待确认，暂停发送消息"
+        default:
+            return "任务已结束"
+        }
     }
     
     init(taskId: Int, taskTitle: String, taskChat: TaskChatItem? = nil) {
@@ -380,106 +407,138 @@ struct TaskChatView: View {
                     Divider()
                         .background(AppColors.separator)
                     
-                    HStack(spacing: AppSpacing.sm) {
-                        // ➕ 更多功能按钮
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showActionMenu.toggle()
-                                // 收起键盘
-                                if showActionMenu {
-                                    isInputFocused = false
-                                }
-                            }
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(showActionMenu ? AppColors.primary : AppColors.cardBackground)
-                                    .frame(width: 36, height: 36)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(showActionMenu ? Color.clear : AppColors.separator.opacity(0.5), lineWidth: 1)
-                                    )
-                                
-                                Image(systemName: "plus")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(showActionMenu ? .white : AppColors.textSecondary)
-                                    .rotationEffect(.degrees(showActionMenu ? 45 : 0))
-                            }
-                        }
-                        
-                        // 输入框
+                    // 根据任务状态显示不同的输入区域
+                    if isTaskClosed {
+                        // 任务已结束，显示提示
                         HStack(spacing: AppSpacing.sm) {
-                            TextField("输入消息...", text: $messageText, axis: .vertical)
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(AppColors.textTertiary)
+                            
+                            Text(closedStatusText)
                                 .font(AppTypography.body)
-                                .lineLimit(1...4)
-                                .focused($isInputFocused)
-                                .disabled(viewModel.isSending)
-                                .onSubmit {
-                                    sendMessage()
-                                }
-                                .onChange(of: isInputFocused) { focused in
-                                    if focused && showActionMenu {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            showActionMenu = false
-                                        }
-                                    }
-                                }
+                                .foregroundColor(AppColors.textTertiary)
+                            
+                            Spacer()
+                            
+                            // 查看任务详情按钮
+                            Button(action: { showTaskDetail = true }) {
+                                Text("查看详情")
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(AppColors.primary)
+                                    .padding(.horizontal, AppSpacing.sm)
+                                    .padding(.vertical, 6)
+                                    .background(AppColors.primaryLight)
+                                    .cornerRadius(AppCornerRadius.small)
+                            }
                         }
                         .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, AppSpacing.md)
                         .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.pill)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppCornerRadius.pill)
-                                .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
-                        )
-                        
-                        // 发送按钮 - 渐变设计
-                        Button(action: sendMessage) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: messageText.isEmpty || viewModel.isSending ? [AppColors.textTertiary, AppColors.textTertiary] : AppColors.gradientPrimary),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
+                    } else {
+                        // 正常输入区域
+                        HStack(spacing: AppSpacing.sm) {
+                            // ➕ 更多功能按钮
+                            Button(action: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    showActionMenu.toggle()
+                                    // 收起键盘
+                                    if showActionMenu {
+                                        isInputFocused = false
+                                    }
+                                }
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(showActionMenu ? AppColors.primary : AppColors.cardBackground)
+                                        .frame(width: 36, height: 36)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(showActionMenu ? Color.clear : AppColors.separator.opacity(0.5), lineWidth: 1)
                                         )
-                                    )
-                                    .frame(width: 40, height: 40)
-                                
-                                if viewModel.isSending {
-                                    ProgressView()
-                                        .tint(.white)
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "arrow.up")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
+                                    
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(showActionMenu ? .white : AppColors.textSecondary)
+                                        .rotationEffect(.degrees(showActionMenu ? 45 : 0))
                                 }
                             }
-                        }
-                        .disabled(messageText.isEmpty || viewModel.isSending)
-                        .opacity(messageText.isEmpty || viewModel.isSending ? 0.5 : 1.0)
-                        .animation(.easeInOut(duration: 0.2), value: messageText.isEmpty)
-                        .animation(.easeInOut(duration: 0.2), value: viewModel.isSending)
-                    }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(AppColors.cardBackground)
-                    
-                    // 功能菜单面板
-                    if showActionMenu {
-                        ChatActionMenuView(
-                            onImagePicker: {
-                                showActionMenu = false
-                                showImagePicker = true
-                            },
-                            onViewTaskDetail: {
-                                showActionMenu = false
-                                showTaskDetail = true
+                            
+                            // 输入框
+                            HStack(spacing: AppSpacing.sm) {
+                                TextField("输入消息...", text: $messageText, axis: .vertical)
+                                    .font(AppTypography.body)
+                                    .lineLimit(1...4)
+                                    .focused($isInputFocused)
+                                    .disabled(viewModel.isSending)
+                                    .onSubmit {
+                                        sendMessage()
+                                    }
+                                    .onChange(of: isInputFocused) { focused in
+                                        if focused && showActionMenu {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                showActionMenu = false
+                                            }
+                                        }
+                                    }
                             }
-                        )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, 10)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.pill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppCornerRadius.pill)
+                                    .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                            )
+                            
+                            // 发送按钮 - 渐变设计
+                            Button(action: sendMessage) {
+                                ZStack {
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: messageText.isEmpty || viewModel.isSending ? [AppColors.textTertiary, AppColors.textTertiary] : AppColors.gradientPrimary),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 40, height: 40)
+                                    
+                                    if viewModel.isSending {
+                                        ProgressView()
+                                            .tint(.white)
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "arrow.up")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            }
+                            .disabled(messageText.isEmpty || viewModel.isSending)
+                            .opacity(messageText.isEmpty || viewModel.isSending ? 0.5 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: messageText.isEmpty)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.isSending)
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColors.cardBackground)
+                        
+                        // 功能菜单面板
+                        if showActionMenu {
+                            ChatActionMenuView(
+                                onImagePicker: {
+                                    showActionMenu = false
+                                    showImagePicker = true
+                                },
+                                onViewTaskDetail: {
+                                    showActionMenu = false
+                                    showTaskDetail = true
+                                }
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                     }
                 }
                 // 使用系统级键盘处理，避免约束冲突
@@ -491,6 +550,45 @@ struct TaskChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        showTaskDetail = true
+                    } label: {
+                        Label("任务详情", systemImage: "doc.text")
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        showCustomerService = true
+                    } label: {
+                        Label("需要帮助", systemImage: "questionmark.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.primary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.automatic)
+                .menuIndicator(.hidden)
+            }
+        }
+        .background {
+            // 使用隐藏的 NavigationLink 实现导航
+            NavigationLink(destination: CustomerServiceView().environmentObject(appState), isActive: $showCustomerService) {
+                EmptyView()
+            }
+            .hidden()
+            
+            NavigationLink(destination: TaskDetailView(taskId: taskId).environmentObject(appState), isActive: $showTaskDetail) {
+                EmptyView()
+            }
+            .hidden()
+        }
         .sheet(isPresented: $showLogin) {
             LoginView()
         }
@@ -503,10 +601,6 @@ struct TaskChatView: View {
                 uploadAndSendImage(image)
                 selectedImage = nil
             }
-        }
-        .navigationDestination(isPresented: $showTaskDetail) {
-            TaskDetailView(taskId: taskId)
-                .environmentObject(appState)
         }
         .onAppear {
             if !appState.isAuthenticated {

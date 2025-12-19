@@ -143,58 +143,94 @@ struct CustomerServiceView: View {
                     }
                     
                     // 输入区域 - 使用系统级键盘处理
-                    HStack(spacing: AppSpacing.sm) {
-                        // 连接按钮（仅在未连接时显示）
-                        if viewModel.chat == nil {
+                    if viewModel.chat?.isEnded == 1 {
+                        // 对话已结束，显示提示信息
+                        HStack(spacing: AppSpacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(AppColors.textTertiary)
+                            
+                            Text("对话已结束，如需帮助请重新发起对话")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textTertiary)
+                            
+                            Spacer()
+                            
+                            // 重新连接按钮
                             Button(action: {
-                                viewModel.connectToService { success in
-                                    if success {
-                                        // 连接成功，消息会自动加载
+                                // 清空当前对话，重新连接
+                                viewModel.chat = nil
+                                viewModel.messages = []
+                                viewModel.service = nil
+                            }) {
+                                Text("新对话")
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, AppSpacing.sm)
+                                    .padding(.vertical, 6)
+                                    .background(AppColors.primary)
+                                    .cornerRadius(AppCornerRadius.small)
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                    } else {
+                        // 正常输入区域
+                        HStack(spacing: AppSpacing.sm) {
+                            // 连接按钮（仅在未连接时显示）
+                            if viewModel.chat == nil {
+                                Button(action: {
+                                    viewModel.connectToService { success in
+                                        if success {
+                                            // 连接成功，消息会自动加载
+                                        }
+                                    }
+                                }) {
+                                    if viewModel.isConnecting {
+                                        ProgressView()
+                                            .tint(AppColors.primary)
+                                    } else {
+                                        Image(systemName: "phone.fill")
+                                            .font(.title3)
+                                            .foregroundColor(AppColors.primary)
                                     }
                                 }
-                            }) {
-                                if viewModel.isConnecting {
+                                .disabled(viewModel.isConnecting)
+                                .frame(width: 44, height: 44)
+                            }
+                            
+                            TextField("输入消息...", text: $messageText)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .lineLimit(1...4)
+                                .focused($isInputFocused)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.sentences)
+                                .submitLabel(.send)
+                                .disabled(viewModel.isSending || viewModel.chat == nil)
+                                .onSubmit {
+                                    sendMessage()
+                                }
+                            
+                            Button(action: sendMessage) {
+                                if viewModel.isSending {
                                     ProgressView()
                                         .tint(AppColors.primary)
                                 } else {
-                                    Image(systemName: "phone.fill")
-                                        .font(.title3)
-                                        .foregroundColor(AppColors.primary)
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(messageText.isEmpty ? AppColors.textSecondary : AppColors.primary)
                                 }
                             }
-                            .disabled(viewModel.isConnecting)
-                            .frame(width: 44, height: 44)
+                            .disabled(messageText.isEmpty || viewModel.isSending || viewModel.chat == nil)
                         }
-                        
-                        TextField("输入消息...", text: $messageText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .lineLimit(1...4)
-                            .focused($isInputFocused)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.sentences)
-                            .submitLabel(.send)
-                            .disabled(viewModel.isSending || viewModel.chat?.isEnded == 1 || viewModel.chat == nil)
-                            .onSubmit {
-                                sendMessage()
-                            }
-                        
-                        Button(action: sendMessage) {
-                            if viewModel.isSending {
-                                ProgressView()
-                                    .tint(AppColors.primary)
-                            } else {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(messageText.isEmpty ? AppColors.textSecondary : AppColors.primary)
-                            }
-                        }
-                        .disabled(messageText.isEmpty || viewModel.isSending || viewModel.chat?.isEnded == 1 || viewModel.chat == nil)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                        .background(AppColors.cardBackground)
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(AppColors.cardBackground)
                     // 使用系统级键盘处理，避免约束冲突
-                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                    // .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
                 
                 // 连接中覆盖层
@@ -229,16 +265,19 @@ struct CustomerServiceView: View {
                         }
                     }
                     
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("结束对话") {
-                            viewModel.endChat { success in
-                                if success {
-                                    messageText = ""
+                    // 仅当对话未结束时显示"结束对话"按钮
+                    if viewModel.chat?.isEnded != 1 {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("结束对话") {
+                                viewModel.endChat { success in
+                                    if success {
+                                        messageText = ""
+                                    }
                                 }
                             }
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.error)
                         }
-                        .font(AppTypography.subheadline)
-                        .foregroundColor(AppColors.error)
                     }
                 } else if !viewModel.chats.isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -380,51 +419,85 @@ struct CustomerServiceMessageBubble: View {
     let message: CustomerServiceMessage
     let isFromCurrentUser: Bool
     
+    // 判断是否是系统消息
+    private var isSystemMessage: Bool {
+        // 系统消息：senderType 为空或为 "system"，或者 messageType 为 "system"
+        let senderType = message.senderType?.lowercased()
+        let messageType = message.messageType?.lowercased()
+        return senderType == nil || senderType == "system" || messageType == "system"
+    }
+    
     var body: some View {
-        HStack {
-            if isFromCurrentUser {
+        if isSystemMessage {
+            // 系统消息样式 - 居中显示
+            HStack {
+                Spacer()
+                
+                HStack(spacing: AppSpacing.xs) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textTertiary)
+                    
+                    Text(message.content)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+                .background(AppColors.separator.opacity(0.3))
+                .cornerRadius(AppCornerRadius.pill)
+                
                 Spacer()
             }
-            
-            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: AppSpacing.xs) {
-                Group {
-                    if isFromCurrentUser {
-                        Text(message.content)
-                            .font(AppTypography.body)
-                            .foregroundColor(.white)
-                            .padding(AppSpacing.sm)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: AppColors.gradientPrimary),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(AppCornerRadius.medium)
-                    } else {
-                        Text(message.content)
-                            .font(AppTypography.body)
-                            .foregroundColor(AppColors.textPrimary)
-                            .padding(AppSpacing.sm)
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.medium)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                    .stroke(AppColors.divider, lineWidth: 0.5)
-                            )
-                    }
+            .padding(.vertical, AppSpacing.xs)
+        } else {
+            // 普通消息样式
+            HStack {
+                if isFromCurrentUser {
+                    Spacer()
                 }
                 
-                if let createdAt = message.createdAt {
-                    Text(formatTime(createdAt))
-                        .font(AppTypography.caption2)
-                        .foregroundColor(AppColors.textTertiary)
+                VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: AppSpacing.xs) {
+                    Group {
+                        if isFromCurrentUser {
+                            Text(message.content)
+                                .font(AppTypography.body)
+                                .foregroundColor(.white)
+                                .padding(AppSpacing.sm)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: AppColors.gradientPrimary),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(AppCornerRadius.medium)
+                        } else {
+                            Text(message.content)
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.cardBackground)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(AppColors.divider, lineWidth: 0.5)
+                                )
+                        }
+                    }
+                    
+                    if let createdAt = message.createdAt {
+                        Text(formatTime(createdAt))
+                            .font(AppTypography.caption2)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
                 }
-            }
-            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: isFromCurrentUser ? .trailing : .leading)
-            
-            if !isFromCurrentUser {
-                Spacer()
+                .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: isFromCurrentUser ? .trailing : .leading)
+                
+                if !isFromCurrentUser {
+                    Spacer()
+                }
             }
         }
     }

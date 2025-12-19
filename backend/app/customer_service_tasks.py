@@ -299,6 +299,21 @@ def auto_end_timeout_chats(db: Session, timeout_minutes: int = 2) -> Dict[str, A
                 # 最后消息是客服发的或没有消息，说明用户不活跃
                 timeout_type = "user_inactive"
             
+            # 在聊天中插入系统消息，告知对话已结束
+            try:
+                end_message = CustomerServiceMessage(
+                    chat_id=chat.chat_id,
+                    sender_id=None,
+                    sender_type="system",
+                    content="对话已因长时间无活动自动结束。如需继续咨询，请重新发起对话。",
+                    message_type="system",
+                    created_at=get_utc_time()
+                )
+                db.add(end_message)
+                db.flush()
+            except Exception as e:
+                logger.error(f"Failed to insert timeout end message for chat {chat.chat_id}: {e}")
+            
             # 结束对话，记录原因
             crud.end_customer_service_chat(
                 db,
@@ -366,6 +381,25 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                 if recent_notification:
                     # 最近1分钟内已发送过通知，跳过
                     continue
+                
+                # 超时警告消息内容
+                warning_content = "⚠️ 对话即将超时：由于长时间无活动，对话将在1分钟后自动结束，请尽快回复。"
+                
+                # 在聊天中插入系统消息（这样 iOS 端轮询时会看到）
+                try:
+                    system_message = CustomerServiceMessage(
+                        chat_id=chat.chat_id,
+                        sender_id=None,
+                        sender_type="system",
+                        content=warning_content,
+                        message_type="system",
+                        created_at=get_utc_time()
+                    )
+                    db.add(system_message)
+                    db.flush()
+                    logger.info(f"Inserted timeout warning message for chat {chat.chat_id}")
+                except Exception as e:
+                    logger.error(f"Failed to insert timeout warning message for chat {chat.chat_id}: {e}")
                 
                 # 创建超时预警通知
                 crud.create_notification(
