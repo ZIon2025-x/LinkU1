@@ -185,26 +185,30 @@ struct ProfileView: View {
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.md)
                             
-                            // 退出登录按钮 - 符合 HIG
+                            // 退出登录按钮 - 现代化破坏性操作设计
                             Button(action: {
+                                HapticFeedback.warning()
                                 showLogoutAlert = true
                             }) {
-                                HStack {
-                                    Spacer()
+                                HStack(spacing: 8) {
+                                    IconStyle.icon("rectangle.portrait.and.arrow.right", size: 18, weight: .semibold)
                                     Text("退出登录")
-                                        .font(AppTypography.body)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(AppColors.error)
-                                    Spacer()
+                                        .font(AppTypography.bodyBold)
                                 }
-                                .padding(.vertical, AppSpacing.md)
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(AppCornerRadius.medium)
+                                .foregroundColor(AppColors.error)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(AppColors.error.opacity(0.08))
+                                .cornerRadius(AppCornerRadius.large)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                                        .stroke(AppColors.error.opacity(0.15), lineWidth: 1)
+                                )
                             }
                             .buttonStyle(ScaleButtonStyle())
-                            .padding(.top, AppSpacing.lg)
+                            .padding(.top, AppSpacing.xl)
                             .padding(.horizontal, AppSpacing.md)
-                            .padding(.bottom, AppSpacing.xl)
+                            .padding(.bottom, AppSpacing.xxl)
                         }
                     }
                 } else {

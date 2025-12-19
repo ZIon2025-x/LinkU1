@@ -71,32 +71,40 @@ struct TaskExpertListView: View {
                     }
                     
                     // 内容区域
-                    if viewModel.isLoading && viewModel.experts.isEmpty {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    } else if viewModel.experts.isEmpty {
-                        Spacer()
-                        EmptyStateView(
-                            icon: "person.3.fill",
-                            title: "暂无任务达人",
-                            message: searchText.isEmpty ? "还没有任务达人，敬请期待..." : "没有找到相关达人"
-                        )
-                        Spacer()
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: AppSpacing.md) {
-                                ForEach(viewModel.experts) { expert in
-                                    NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
-                                        ExpertCard(expert: expert)
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                }
+                    Group {
+                        if viewModel.isLoading && viewModel.experts.isEmpty {
+                            VStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
                             }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.sm)
+                        } else if viewModel.experts.isEmpty {
+                            VStack {
+                                Spacer()
+                                EmptyStateView(
+                                    icon: "person.3.fill",
+                                    title: "暂无任务达人",
+                                    message: searchText.isEmpty ? "还没有任务达人，敬请期待..." : "没有找到相关达人"
+                                )
+                                Spacer()
+                            }
+                        } else {
+                            ScrollView {
+                                LazyVStack(spacing: AppSpacing.md) {
+                                    ForEach(viewModel.experts) { expert in
+                                        NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
+                                            ExpertCard(expert: expert)
+                                        }
+                                        .buttonStyle(ScaleButtonStyle())
+                                    }
+                                }
+                                .padding(.horizontal, AppSpacing.md)
+                                .padding(.vertical, AppSpacing.sm)
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppColors.background)
                 }
             }
             .navigationTitle("任务达人")
@@ -241,39 +249,41 @@ struct ExpertCard: View {
     
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            // 头像
-            AvatarView(
-                urlString: expert.avatar,
-                size: 68,
-                placeholder: Image(systemName: "person.fill")
-            )
-            .overlay(
+            // 头像 - 带光晕效果
+            ZStack {
                 Circle()
-                    .stroke(AppColors.background, lineWidth: 2)
-            )
-            .shadow(color: AppColors.primary.opacity(0.15), radius: 6, x: 0, y: 3)
+                    .fill(AppColors.primary.opacity(0.1))
+                    .frame(width: 74, height: 74)
+                
+                AvatarView(
+                    urlString: expert.avatar,
+                    size: 68,
+                    placeholder: Image(systemName: "person.fill")
+                )
+                .clipShape(Circle())
+            }
+            .shadow(color: AppColors.primary.opacity(0.1), radius: 8, x: 0, y: 4)
             
             // 信息
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                Text(expert.name)
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
+                HStack(spacing: 4) {
+                    Text(expert.name)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
                 
-                    // 认证徽章（如果有）
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 14))
+                    // 认证徽章
+                    IconStyle.icon("checkmark.seal.fill", size: 14)
                         .foregroundColor(AppColors.primary)
                 }
                 
                 if let bio = expert.bio, !bio.isEmpty {
                     Text(bio)
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
                 } else {
                     Text("暂无简介")
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
                 
@@ -281,48 +291,47 @@ struct ExpertCard: View {
                 HStack(spacing: 12) {
                     // 评分
                     if let rating = expert.avgRating {
-                        HStack(spacing: 2) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 10))
+                        HStack(spacing: 3) {
+                            IconStyle.icon("star.fill", size: 10)
                             Text(String(format: "%.1f", rating))
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(AppTypography.caption)
+                                .fontWeight(.bold)
                         }
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(AppColors.warning.opacity(0.1))
-                            .foregroundColor(AppColors.warning)
-                        .cornerRadius(4)
+                        .background(
+                            Capsule()
+                                .fill(AppColors.warning.opacity(0.12))
+                        )
+                        .foregroundColor(AppColors.warning)
                     }
                     
-                    // 单数
-                    if let completed = expert.completedTasks {
-                        HStack(spacing: 2) {
+                    // 单数和完成率
+                    HStack(spacing: 4) {
+                        if let completed = expert.completedTasks {
                             Text("\(completed)单")
-                                .font(.system(size: 12))
+                                .font(AppTypography.caption)
                         }
-                            .foregroundColor(AppColors.textSecondary)
+                        
+                        if let rate = expert.completionRate {
+                            Text("·")
+                            Text("\(String(format: "%.0f", rate))%完成率")
+                                .font(AppTypography.caption)
+                        }
                     }
-                    
-                    // 完成率
-                    if let rate = expert.completionRate {
-                        Text("·")
-                            .foregroundColor(AppColors.textTertiary)
-                        Text("完成率 \(String(format: "%.0f", rate))%")
-                            .font(.system(size: 12))
-                            .foregroundColor(AppColors.textSecondary)
-                    }
+                    .foregroundColor(AppColors.textSecondary)
                 }
+                .padding(.top, 2)
             }
             
             Spacer()
             
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AppColors.textTertiary)
+            IconStyle.icon("chevron.right", size: 14, weight: .semibold)
+                .foregroundColor(AppColors.textQuaternary)
         }
         .padding(AppSpacing.md)
         .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cornerRadius(AppCornerRadius.large)
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }
 }

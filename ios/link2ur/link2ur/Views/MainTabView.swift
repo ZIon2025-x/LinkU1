@@ -29,6 +29,12 @@ public struct MainTabView: View {
                         // 更新 previousSelection 为 0，确保中间占位视图显示首页
                         previousSelection = 0
                     }
+                    
+                    // 添加触觉反馈
+                    if selection != newValue {
+                        HapticFeedback.selection()
+                    }
+                    
                     // 更新 selection
                     selection = newValue
                 }

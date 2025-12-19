@@ -315,7 +315,7 @@ struct CategoryCard: View {
                                     Image(systemName: "person.fill")
                                         .font(.system(size: 9, weight: .medium))
                                     Text(author.name)
-                                        .font(.system(size: 10))
+                                        .font(AppTypography.caption2)
                                 }
                                 .foregroundColor(AppColors.textSecondary)
                             }
@@ -325,7 +325,7 @@ struct CategoryCard: View {
                                     Image(systemName: "clock.fill")
                                         .font(.system(size: 9, weight: .medium))
                                     Text(formatTime(lastReplyAt))
-                                        .font(.system(size: 10))
+                                        .font(AppTypography.caption2)
                                 }
                                 .foregroundColor(AppColors.textTertiary)
                             }
@@ -334,7 +334,7 @@ struct CategoryCard: View {
                                 Image(systemName: "bubble.right.fill")
                                     .font(.system(size: 9, weight: .medium))
                                 Text("\(latestPost.replyCount)")
-                                    .font(.system(size: 10))
+                                    .font(AppTypography.caption2)
                             }
                             .foregroundColor(AppColors.textTertiary)
                             
@@ -342,7 +342,7 @@ struct CategoryCard: View {
                                 Image(systemName: "eye.fill")
                                     .font(.system(size: 9, weight: .medium))
                                 Text(latestPost.viewCount.formatCount())
-                                    .font(.system(size: 10))
+                                    .font(AppTypography.caption2)
                             }
                             .foregroundColor(AppColors.textTertiary)
                         }

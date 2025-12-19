@@ -1198,11 +1198,13 @@ async def websocket_chat(
     
     # 如果Cookie中没有session_id，尝试从查询参数获取（向后兼容）
     if not session_id:
-        session_id = websocket.query_params.get("session_id")
+        # 支持 session_id 和 token 两种参数名（iOS使用token）
+        session_id = websocket.query_params.get("session_id") or websocket.query_params.get("token")
         if session_id:
-            logger.debug(f"Found session_id in query params for user {user_id}")
+            logger.debug(f"Found session_id/token in query params for user {user_id}")
     
     if not session_id:
+        logger.warning(f"WebSocket connection rejected: Missing session_id/token for user {user_id}")
         await websocket.close(code=1008, reason="Missing session_id")
         return
 

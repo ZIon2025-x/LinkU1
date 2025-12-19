@@ -15,7 +15,7 @@ struct BannerCarouselView: View {
         if banners.isEmpty {
             EmptyView()
         } else {
-            VStack(spacing: 0) {
+            ZStack(alignment: .bottom) {
                 // 轮播内容
                 TabView(selection: $currentIndex) {
                     ForEach(0..<banners.count, id: \.self) { index in
@@ -26,36 +26,32 @@ struct BannerCarouselView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: cardHeight)
-                .onAppear {
-                    setupAutoScroll()
-                }
-                .onDisappear {
-                    stopAutoScroll()
-                }
-                .onChange(of: currentIndex) { _ in
-                    resetAutoScroll()
-                }
                 
-                // 底部指示器 - 更现代的设计
+                // 底部指示器 - 悬浮在 Banner 上方，更现代的设计
                 if banners.count > 1 {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         ForEach(0..<banners.count, id: \.self) { index in
                             Capsule()
-                                .fill(index == currentIndex ? AppColors.primary : AppColors.textTertiary.opacity(0.25))
-                                .frame(width: index == currentIndex ? 24 : 6, height: 6)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentIndex)
+                                .fill(index == currentIndex ? Color.white : Color.white.opacity(0.4))
+                                .frame(width: index == currentIndex ? 18 : 6, height: 6)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
-                    )
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 12)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentIndex)
                 }
+            }
+            .onAppear {
+                setupAutoScroll()
+            }
+            .onDisappear {
+                stopAutoScroll()
+            }
+            .onChange(of: currentIndex) { _ in
+                resetAutoScroll()
             }
         }
     }
@@ -116,19 +112,19 @@ struct BannerCard: View {
             .frame(height: 180)
             .clipped()
             
-            // 渐变遮罩（底部，用于文字可读性）
+            // 底部内容遮罩（更柔和的渐变，增强沉浸感）
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.clear,
-                    Color.black.opacity(0.3)
+                    Color.black.opacity(0.6),
+                    Color.black.opacity(0.2),
+                    Color.clear
                 ]),
-                startPoint: .top,
-                endPoint: .bottom
+                startPoint: .bottom,
+                endPoint: .top
             )
-            .frame(height: 80)
-            .frame(maxWidth: .infinity, alignment: .bottom)
+            .frame(height: 100)
             
-            // 文字信息（如果有标题或副标题）
+            // 文字信息（使用更精致的排版）
             if !banner.title.isEmpty || banner.subtitle != nil {
                 VStack(alignment: .leading, spacing: 4) {
                     if !banner.title.isEmpty {
@@ -136,39 +132,25 @@ struct BannerCard: View {
                             .font(AppTypography.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
-                            .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
-                            .lineLimit(2)
                     }
                     if let subtitle = banner.subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(.white.opacity(0.9))
-                            .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
-                            .lineLimit(1)
+                            .font(AppTypography.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white.opacity(0.85))
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                .padding(.bottom, 24) // 为指示器留出更多空间
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(0.2),
-                            Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 4)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
     }
     
     // 根据链接类型决定跳转目标

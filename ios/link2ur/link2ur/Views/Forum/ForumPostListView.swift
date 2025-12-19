@@ -82,22 +82,20 @@ struct PostCard: View {
                 // 标签行（更紧凑）
                 HStack(spacing: AppSpacing.xs) {
                     if post.isPinned {
-                        BadgeView(text: "置顶", icon: "flame.fill", color: AppColors.error)
+                        BadgeView(text: "置顶", icon: "pin.fill", color: AppColors.error)
                     }
                     if post.isFeatured {
                         BadgeView(text: "精华", icon: "star.fill", color: AppColors.warning)
                     }
                     if post.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 10, weight: .medium))
+                        IconStyle.icon("lock.fill", size: 10, weight: .medium)
                             .foregroundColor(AppColors.textTertiary)
                     }
                 }
                 
                 // 标题
                 Text(post.title)
-                    .font(AppTypography.body)
-                    .fontWeight(.semibold)
+                    .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -109,90 +107,61 @@ struct PostCard: View {
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
             }
             
-            // 底部信息栏（更简洁）
-            HStack(spacing: AppSpacing.sm) {
-                // 作者信息（限制宽度，避免占用太多空间）
+            // 底部信息栏 - 更通透的排版
+            HStack(spacing: 0) {
+                // 作者信息
                 if let author = post.author {
                     NavigationLink(destination: UserProfileView(userId: author.id)) {
-                        HStack(spacing: AppSpacing.xs) {
+                        HStack(spacing: 6) {
                             AvatarView(
                                 urlString: author.avatar,
-                                size: 18,
+                                size: 20,
                                 placeholder: Image(systemName: "person.circle.fill")
                             )
+                            .clipShape(Circle())
                             
                             Text(author.name)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                                 .lineLimit(1)
                             
-                            // 官方标识（参考前端：蓝色 Tag）
                             if author.isAdmin == true {
                                 Text("官方")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(AppTypography.caption2)
+                                    .fontWeight(.bold)
                                     .foregroundColor(.white)
-                                    .padding(.horizontal, 4)
+                                    .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(AppColors.primary)
-                                    .cornerRadius(AppCornerRadius.tiny)
+                                    .clipShape(Capsule())
                             }
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .layoutPriority(1) // 作者信息优先级较低
                 }
                 
-                Spacer(minLength: 8) // 最小间距
+                Spacer(minLength: 12)
                 
-                // 时间（限制最大宽度）
-                Text(formatTime(post.lastReplyAt ?? post.createdAt))
-                    .font(AppTypography.caption2)
-                    .foregroundColor(AppColors.textTertiary)
-                    .lineLimit(1)
-                    .layoutPriority(2) // 时间优先级中等
-                
-                // 统计信息（紧凑布局，确保不被遮挡）
-                HStack(spacing: AppSpacing.sm) {
+                // 统计信息
+                HStack(spacing: 12) {
                     CompactStatItem(icon: "eye", count: post.viewCount)
                     CompactStatItem(icon: "bubble.right", count: post.replyCount)
                     CompactStatItem(icon: "heart", count: post.likeCount)
                 }
-                .layoutPriority(3) // 统计信息优先级最高，确保不被遮挡
             }
+            .padding(.top, 4)
         }
         .padding(AppSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                .stroke(AppColors.divider, lineWidth: 0.5)
-        )
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }
     
     private func formatTime(_ timeString: String) -> String {
         return DateFormatterHelper.shared.formatTime(timeString)
-    }
-}
-
-// 紧凑统计项组件
-struct CompactStatItem: View {
-    let icon: String
-    let count: Int
-    
-    var body: some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 12) // 固定图标宽度，避免布局抖动
-            Text(count.formatCount())
-                .font(.system(size: 11))
-                .lineLimit(1) // 确保文本不换行
-                .minimumScaleFactor(0.8) // 如果空间不足，稍微缩小字体
-        }
-        .foregroundColor(AppColors.textTertiary)
     }
 }
 

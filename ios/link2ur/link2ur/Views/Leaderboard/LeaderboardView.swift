@@ -63,38 +63,28 @@ struct LeaderboardCard: View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             // 封面和标题
             HStack(spacing: AppSpacing.md) {
-                // 封面图片 - 更大更美观
+                // 封面图片
                 if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
-                    AsyncImage(url: coverImage.toImageURL()) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [AppColors.primary.opacity(0.2), AppColors.primary.opacity(0.1)]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
+                    AsyncImageView(
+                        urlString: coverImage,
+                        placeholder: Image(systemName: "photo.fill")
+                    )
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 100, height: 100)
-                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
                 } else {
                     ZStack {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.7)]),
+                                    gradient: Gradient(colors: AppColors.gradientPrimary),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 100, height: 100)
                         
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 40))
+                        IconStyle.icon("trophy.fill", size: 40)
                             .foregroundColor(.white)
                     }
                 }
@@ -102,22 +92,24 @@ struct LeaderboardCard: View {
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     Text(leaderboard.name)
                         .font(AppTypography.title3)
+                        .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
                     if let description = leaderboard.description {
                         Text(description)
-                            .font(AppTypography.subheadline)
+                            .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                             .lineLimit(2)
+                            .multilineTextAlignment(.leading)
                     }
                     
                     if let location = leaderboard.location {
                         HStack(spacing: 4) {
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 12))
+                            IconStyle.icon("mappin.circle.fill", size: 12)
                             Text(location)
-                                .font(AppTypography.caption)
+                                .font(AppTypography.caption2)
+                                .fontWeight(.medium)
                         }
                         .foregroundColor(AppColors.textSecondary)
                     }
@@ -126,41 +118,19 @@ struct LeaderboardCard: View {
                 Spacer()
             }
             
-            Divider()
-                .background(AppColors.separator)
+            Divider().background(AppColors.divider)
             
-            // 统计信息 - 更美观
-            HStack(spacing: AppSpacing.xl) {
-                HStack(spacing: AppSpacing.xs) {
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 14))
-                    Text(leaderboard.itemCount.formatCount())
-                        .font(AppTypography.caption)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor(AppColors.textSecondary)
-                
-                HStack(spacing: AppSpacing.xs) {
-                    Image(systemName: "hand.thumbsup.fill")
-                        .font(.system(size: 14))
-                    Text(leaderboard.voteCount.formatCount())
-                        .font(AppTypography.caption)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor(AppColors.textSecondary)
-                
-                HStack(spacing: AppSpacing.xs) {
-                    Image(systemName: "eye.fill")
-                        .font(.system(size: 14))
-                    Text(leaderboard.viewCount.formatCount())
-                        .font(AppTypography.caption)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor(AppColors.textSecondary)
+            // 统计信息
+            HStack(spacing: 24) {
+                CompactStatItem(icon: "square.grid.2x2.fill", count: leaderboard.itemCount)
+                CompactStatItem(icon: "hand.thumbsup.fill", count: leaderboard.voteCount)
+                CompactStatItem(icon: "eye.fill", count: leaderboard.viewCount)
             }
         }
         .padding(AppSpacing.md)
-        .cardStyle()
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }
 }
 

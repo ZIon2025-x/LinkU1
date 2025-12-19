@@ -169,7 +169,7 @@ struct ItemCard: View {
                     HStack {
                         Spacer()
                         Text("£\(String(format: "%.2f", item.price))")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.sm)
@@ -196,17 +196,17 @@ struct ItemCard: View {
                 // 商品信息 - 底部叠加显示
                 VStack(alignment: .leading, spacing: 6) {
                     Text(item.title)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(AppTypography.bodyBold)
                         .foregroundColor(.white)
                         .lineLimit(2)
                         .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 2)
                     
                     if let location = item.location, !location.isEmpty {
                         HStack(spacing: 4) {
-                            Text("📍")
-                                .font(.system(size: 12))
+                            IconStyle.icon("mappin.circle.fill", size: 12)
                             Text(location)
-                                .font(.system(size: 12, weight: .medium))
+                                .font(AppTypography.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)

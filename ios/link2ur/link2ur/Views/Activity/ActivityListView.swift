@@ -141,142 +141,108 @@ struct ActivityCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             // 图片区域（如果有图片）
             if let images = activity.images, let firstImage = images.first, !firstImage.isEmpty {
-                AsyncImage(url: firstImage.toImageURL()) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 180)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-                    case .failure(_), .empty:
-                        placeholderBackground()
-                    @unknown default:
-                        placeholderBackground()
-                    }
-                }
-                .id(firstImage) // 使用图片URL作为id，优化缓存
+                AsyncImageView(
+                    urlString: firstImage,
+                    placeholder: Image(systemName: "photo.fill")
+                )
+                .aspectRatio(contentMode: .fill)
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .id(firstImage)
+            } else {
+                placeholderBackground()
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                // Header
-                HStack(alignment: .top, spacing: AppSpacing.md) {
-                    // Icon
-                    ZStack {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        isEnded ? AppColors.textSecondary.opacity(0.2) : AppColors.primary.opacity(0.2),
-                                        isEnded ? AppColors.textSecondary.opacity(0.1) : AppColors.primary.opacity(0.1)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 56, height: 56)
-                        
-                        IconStyle.icon("calendar.badge.plus", size: IconStyle.large)
-                            .foregroundColor(isEnded ? AppColors.textSecondary : AppColors.primary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                        HStack(spacing: AppSpacing.sm) {
-                            Text(activity.title)
-                                .font(AppTypography.title3)
-                                .foregroundColor(isEnded ? AppColors.textSecondary : AppColors.textPrimary)
-                                .lineLimit(2)
-                            
-                            if showEndedBadge && isEnded {
-                                Text("已结束")
-                                    .font(AppTypography.caption2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, AppSpacing.sm)
-                                    .padding(.vertical, 2)
-                                    .background(AppColors.textSecondary)
-                                    .cornerRadius(AppCornerRadius.small)
-                            }
-                        }
-                        
-                        if !activity.description.isEmpty {
-                            Text(activity.description)
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.textSecondary)
-                                .lineLimit(2)
-                        }
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.top, AppSpacing.md)
-            
-            Divider()
-                .background(AppColors.separator)
-            
-            // Info Row
-            HStack(spacing: AppSpacing.lg) {
-                // Participants
-                HStack(spacing: AppSpacing.xs) {
-                    IconStyle.icon("person.2.fill", size: IconStyle.small)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text("\(activity.currentParticipants)/\(activity.maxParticipants)")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-                
-                // Location
-                HStack(spacing: AppSpacing.xs) {
-                    IconStyle.icon("mappin.circle.fill", size: IconStyle.small)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text(activity.location)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-                
-                // Price
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let discountPrice = activity.discountedPricePerParticipant {
-                        Text(formatPrice(discountPrice, currency: activity.currency))
+                // 内容头部
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    HStack(alignment: .top) {
+                        Text(activity.title)
                             .font(AppTypography.title3)
                             .fontWeight(.bold)
-                            .foregroundColor(AppColors.primary)
+                            .foregroundColor(isEnded ? AppColors.textSecondary : AppColors.textPrimary)
+                            .lineLimit(2)
                         
-                        if let discount = activity.discountPercentage {
-                            Text("\(Int(discount))% OFF")
+                        Spacer()
+                        
+                        if showEndedBadge && isEnded {
+                            Text("已结束")
                                 .font(AppTypography.caption2)
-                                .foregroundColor(AppColors.error)
-                        }
-                    } else {
-                        Text(formatPrice(activity.originalPricePerParticipant, currency: activity.currency))
-                            .font(AppTypography.title3)
-                            .fontWeight(.bold)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppColors.textSecondary)
+                                .clipShape(Capsule())
+                        } else {
+                            // 价格标签
+                            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                Text(activity.currency == "GBP" ? "£" : "¥")
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.bold)
+                                Text(String(format: "%.0f", activity.discountedPricePerParticipant ?? activity.originalPricePerParticipant))
+                                    .font(AppTypography.title3)
+                                    .fontWeight(.bold)
+                            }
                             .foregroundColor(AppColors.primary)
+                        }
+                    }
+                    
+                    if !activity.description.isEmpty {
+                        Text(activity.description)
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
                     }
                 }
-            }
-            
-            // Badges
-            if activity.hasTimeSlots {
-                HStack(spacing: AppSpacing.sm) {
-                    BadgeView(text: "时间段服务", color: .orange)
+                
+                Divider().background(AppColors.divider)
+                
+                // 底部信息栏
+                HStack(spacing: 16) {
+                    // 参与人数
+                    HStack(spacing: 4) {
+                        IconStyle.icon("person.2.fill", size: 12)
+                        Text("\(activity.currentParticipants)/\(activity.maxParticipants)")
+                            .font(AppTypography.caption)
+                    }
+                    
+                    // 地点
+                    HStack(spacing: 4) {
+                        IconStyle.icon("mappin.circle.fill", size: 12)
+                        Text(activity.location)
+                            .font(AppTypography.caption)
+                            .lineLimit(1)
+                    }
+                    
                     Spacer()
+                    
+                    // 标签
+                    if activity.hasTimeSlots {
+                        Text("预约制")
+                            .font(AppTypography.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(AppColors.warning.opacity(0.12))
+                            .foregroundColor(AppColors.warning)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
                 }
+                .foregroundColor(AppColors.textSecondary)
             }
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.bottom, AppSpacing.md)
+            .padding(AppSpacing.md)
         }
-        .cardStyle()
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }
     
     private func placeholderBackground() -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+            Rectangle()
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -289,17 +255,9 @@ struct ActivityCardView: View {
                 )
                 .frame(height: 180)
             
-            IconStyle.icon("calendar.badge.plus", size: IconStyle.large)
+            IconStyle.icon("calendar.badge.plus", size: 40)
                 .foregroundColor(AppColors.primary.opacity(0.3))
         }
-    }
-    
-    private func formatPrice(_ price: Double, currency: String) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: price)) ?? "\(currency) \(Int(price))"
     }
 }
 

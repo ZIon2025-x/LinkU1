@@ -35,20 +35,29 @@ struct HomeView: View {
                         // 中间三个标签（符合 HIG 间距）
                         HStack(spacing: 0) {
                             TabButton(title: "达人", isSelected: selectedTab == 0) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = 0
+                                if selectedTab != 0 {
+                                    HapticFeedback.selection()
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedTab = 0
+                                    }
                                 }
                             }
                             
                             TabButton(title: "推荐", isSelected: selectedTab == 1) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = 1
+                                if selectedTab != 1 {
+                                    HapticFeedback.selection()
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedTab = 1
+                                    }
                                 }
                             }
                             
                             TabButton(title: "附近", isSelected: selectedTab == 2) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedTab = 2
+                                if selectedTab != 2 {
+                                    HapticFeedback.selection()
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedTab = 2
+                                    }
                                 }
                             }
                         }
@@ -129,24 +138,22 @@ struct TabButton: View {
                     .font(AppTypography.body) // 使用 body
                     .fontWeight(isSelected ? .semibold : .regular)
                     .foregroundColor(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
+                    .scaleEffect(isSelected ? 1.05 : 1.0)
                 
                 // 选中时的下划线（符合 HIG）
-                if isSelected {
+                ZStack {
                     Capsule()
-                        .fill(AppColors.primary)
+                        .fill(isSelected ? AppColors.primary : Color.clear)
                         .frame(height: 3)
-                        .frame(width: 28)
-                        .transition(.scale.combined(with: .opacity))
-                } else {
-                    Capsule()
-                        .fill(Color.clear)
-                        .frame(height: 3)
-                        .frame(width: 28)
+                        .frame(width: isSelected ? 28 : 0)
                 }
+                .frame(height: 3)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
             }
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -417,8 +424,7 @@ struct TaskExpertListContentView: View {
                     Button(action: {
                         showFilter = true
                     }) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.system(size: 20))
+                        IconStyle.icon("line.3.horizontal.decrease.circle", size: 20)
                             .foregroundColor(selectedCategory != nil || selectedCity != nil ? AppColors.primary : AppColors.textSecondary)
                             .padding(AppSpacing.sm)
                             .background(AppColors.cardBackground)
@@ -458,32 +464,40 @@ struct TaskExpertListContentView: View {
                 }
                 
                 // 内容区域
-                if viewModel.isLoading && viewModel.experts.isEmpty {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                } else if viewModel.experts.isEmpty {
-                    Spacer()
-                    EmptyStateView(
-                        icon: "person.3.fill",
-                        title: "暂无任务达人",
-                        message: "还没有任务达人，敬请期待..."
-                    )
-                    Spacer()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(viewModel.experts) { expert in
-                                NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
-                                    ExpertCard(expert: expert)
-                                }
-                                .buttonStyle(ScaleButtonStyle())
-                            }
+                Group {
+                    if viewModel.isLoading && viewModel.experts.isEmpty {
+                        VStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
                         }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
+                    } else if viewModel.experts.isEmpty {
+                        VStack {
+                            Spacer()
+                            EmptyStateView(
+                                icon: "person.3.fill",
+                                title: "暂无任务达人",
+                                message: "还没有任务达人，敬请期待..."
+                            )
+                            Spacer()
+                        }
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: AppSpacing.md) {
+                                ForEach(viewModel.experts) { expert in
+                                    NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
+                                        ExpertCard(expert: expert)
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                }
+                            }
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(AppColors.background)
             }
         }
         .sheet(isPresented: $showSearch) {

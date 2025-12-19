@@ -3,11 +3,12 @@ import SwiftUI
 // 统一的加载状态视图组件
 struct LoadingView: View {
     var message: String? = nil
+    @State private var opacity = 0.0
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
             ProgressView()
-                .scaleEffect(1.1)
+                .scaleEffect(1.2)
                 .tint(AppColors.primary)
             
             if let message = message {
@@ -18,6 +19,12 @@ struct LoadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(AppSpacing.xl)
+        .opacity(opacity)
+        .onAppear {
+            withAnimation(.easeIn(duration: 0.3)) {
+                opacity = 1.0
+            }
+        }
     }
 }
 

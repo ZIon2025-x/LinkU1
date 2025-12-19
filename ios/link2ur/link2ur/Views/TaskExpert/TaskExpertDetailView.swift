@@ -14,103 +14,97 @@ struct TaskExpertDetailView: View {
             } else if let expert = viewModel.expert {
                 ScrollView {
                     VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                        // 任务达人信息
+                        // 任务达人信息 - 升级为更现代的卡片
                         VStack(spacing: AppSpacing.md) {
-                            // 头像
-                            AvatarView(
-                                urlString: expert.avatar,
-                                size: 100,
-                                placeholder: Image(systemName: "person.fill")
-                            )
+                            // 头像 - 带精致边框
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 108, height: 108)
+                                
+                                AvatarView(
+                                    urlString: expert.avatar,
+                                    size: 100,
+                                    placeholder: Image(systemName: "person.fill")
+                                )
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                            }
+                            .shadow(color: AppColors.primary.opacity(0.2), radius: 10, x: 0, y: 5)
                             
                             // 名称
-                            Text(expert.name)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.textPrimary)
+                            HStack(spacing: 6) {
+                                Text(expert.name)
+                                    .font(AppTypography.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                IconStyle.icon("checkmark.seal.fill", size: 20)
+                                    .foregroundColor(AppColors.primary)
+                            }
                             
                             // 简介
                             if let bio = expert.bio {
                                 Text(bio)
-                                    .font(.body)
+                                    .font(AppTypography.body)
                                     .foregroundColor(AppColors.textSecondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, AppSpacing.md)
                             }
                             
-                            // 统计信息
-                            HStack(spacing: 32) {
-                                if let rating = expert.avgRating {
-                                    VStack {
-                                        Text(String(format: "%.1f", rating))
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(AppColors.warning)
-                                        Text("评分")
-                                            .font(.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
-                                }
-                                
-                                if let completed = expert.completedTasks {
-                                    VStack {
-                                        Text("\(completed)")
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(AppColors.primary)
-                                        Text("已完成")
-                                            .font(.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
-                                }
-                                
-                                if let rate = expert.completionRate {
-                                    VStack {
-                                        Text("\(String(format: "%.0f", rate))%")
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(AppColors.success)
-                                        Text("完成率")
-                                            .font(.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
-                                }
+                            // 统计信息 - 现代网格布局
+                            HStack(spacing: 0) {
+                                ExpertStatItem(value: String(format: "%.1f", expert.avgRating ?? 0), label: "评分", color: AppColors.warning)
+                                Divider().frame(height: 30).padding(.horizontal, AppSpacing.md)
+                                ExpertStatItem(value: "\(expert.completedTasks ?? 0)", label: "已完成", color: AppColors.primary)
+                                Divider().frame(height: 30).padding(.horizontal, AppSpacing.md)
+                                ExpertStatItem(value: "\(String(format: "%.0f", expert.completionRate ?? 0))%", label: "完成率", color: AppColors.success)
                             }
                             .padding(.top, AppSpacing.sm)
                         }
-                        .padding(AppSpacing.md)
+                        .padding(.vertical, AppSpacing.xl)
                         .frame(maxWidth: .infinity)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+                        .background(
+                            AppColors.cardBackground
+                                .overlay(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [AppColors.primary.opacity(0.05), Color.clear]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                        )
+                        .cornerRadius(AppCornerRadius.xlarge)
+                        .shadow(color: AppShadow.medium.color, radius: AppShadow.medium.radius, x: AppShadow.medium.x, y: AppShadow.medium.y)
                         
                         // 服务列表
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             Text("服务菜单")
-                                .font(.title2)
+                                .font(AppTypography.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(AppColors.textPrimary)
-                                .padding(.horizontal, AppSpacing.md)
                             
                             if viewModel.services.isEmpty {
-                                Text("暂无服务")
-                                    .font(.subheadline)
-                                    .foregroundColor(AppColors.textSecondary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
+                                EmptyStateView(icon: "bag.badge.questionmark", title: "暂无服务", message: "该达人暂时没有上架服务")
+                                    .frame(height: 200)
                             } else {
                                 ForEach(viewModel.services) { service in
                                     NavigationLink(destination: ServiceDetailView(serviceId: service.id)) {
                                         ServiceCard(service: service)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
+                                    .buttonStyle(ScaleButtonStyle())
                                 }
                             }
                         }
-                        .padding(.top, AppSpacing.md)
                     }
                     .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.vertical, AppSpacing.md)
                 }
             }
         }
@@ -122,6 +116,26 @@ struct TaskExpertDetailView: View {
     }
 }
 
+// 统计项组件
+struct ExpertStatItem: View {
+    let value: String
+    let label: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(AppTypography.title3)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            Text(label)
+                .font(AppTypography.caption)
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
 // 服务卡片
 struct ServiceCard: View {
     let service: TaskExpertService
@@ -129,66 +143,71 @@ struct ServiceCard: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             // 服务图片
-            if let images = service.images, let firstImage = images.first {
-                AsyncImage(url: firstImage.toImageURL()) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
+            ZStack {
+                if let images = service.images, let firstImage = images.first {
+                    AsyncImageView(
+                        urlString: firstImage,
+                        placeholder: Image(systemName: "photo.fill")
+                    )
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 90, height: 90)
+                    .clipped()
+                } else {
+                    Rectangle()
                         .fill(AppColors.primaryLight)
-                }
-                .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.small))
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
-                        .fill(AppColors.primaryLight)
-                        .frame(width: 80, height: 80)
-                    Image(systemName: "photo.fill")
-                        .foregroundColor(AppColors.primary)
+                        .frame(width: 90, height: 90)
+                    IconStyle.icon("photo.fill", size: 24)
+                        .foregroundColor(AppColors.primary.opacity(0.3))
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
             
             // 服务信息
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(service.serviceName)
-                    .font(.headline)
+                    .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
                 
                 if let description = service.description {
                     Text(description)
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
                 }
                 
-                HStack {
-                    Text("¥ \(String(format: "%.2f", service.basePrice))")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(AppColors.error)
+                Spacer(minLength: 0)
+                
+                HStack(alignment: .bottom) {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("£")
+                            .font(AppTypography.caption)
+                            .fontWeight(.bold)
+                        Text(String(format: "%.2f", service.basePrice))
+                            .font(AppTypography.title3)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(AppColors.error)
+                    
+                    Spacer()
                     
                     if service.hasTimeSlots == true {
-                        Label("时间段", systemImage: "clock.fill")
-                            .font(.caption)
+                        Label("可约", systemImage: "calendar")
+                            .font(AppTypography.caption2)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppColors.primaryLight)
                             .foregroundColor(AppColors.primary)
+                            .clipShape(Capsule())
                     }
                 }
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
+            .padding(.vertical, 4)
         }
-        .padding(AppSpacing.md)
+        .padding(AppSpacing.sm)
         .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cornerRadius(AppCornerRadius.large)
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
-        .padding(.horizontal, AppSpacing.md)
     }
 }
-
