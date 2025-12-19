@@ -379,41 +379,27 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
                 
                 # 通过WebSocket推送通知更新事件
                 try:
-                    from app.main import active_connections
-                    import json
-                    user_ws = active_connections.get(chat.user_id)
-                    if user_ws:
-                        # 发送通知更新事件
-                        notification_update = {
-                            "type": "notification_created",
-                            "notification_type": "chat_timeout_warning",
-                            "chat_id": chat.chat_id,
-                            "title": "对话即将超时",
-                            "content": "您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。"
-                        }
-                        # 使用异步方式发送（Celery任务中需要创建新的事件循环）
-                        import asyncio
-                        try:
-                            # 尝试获取当前事件循环
-                            try:
-                                loop = asyncio.get_event_loop()
-                                if loop.is_running():
-                                    # 如果事件循环正在运行，创建任务
-                                    asyncio.create_task(user_ws.send_text(json.dumps(notification_update)))
-                                else:
-                                    # 如果事件循环未运行，运行直到完成
-                                    loop.run_until_complete(user_ws.send_text(json.dumps(notification_update)))
-                            except RuntimeError:
-                                # 如果没有事件循环，创建新的
-                                asyncio.run(user_ws.send_text(json.dumps(notification_update)))
-                        except Exception as ws_error:
-                            logger.error(f"Failed to send timeout warning via WebSocket to user {chat.user_id}: {ws_error}")
-                            # 如果连接失败，从活跃连接中移除
-                            try:
-                                from app.main import active_connections
-                                active_connections.pop(chat.user_id, None)
-                            except:
-                                pass
+                    from app.websocket_manager import get_ws_manager
+                    import asyncio
+                    
+                    ws_manager = get_ws_manager()
+                    notification_update = {
+                        "type": "notification_created",
+                        "notification_type": "chat_timeout_warning",
+                        "chat_id": chat.chat_id,
+                        "title": "对话即将超时",
+                        "content": "您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。"
+                    }
+                    
+                    # 使用 WebSocketManager 发送消息
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            asyncio.create_task(ws_manager.send_to_user(chat.user_id, notification_update))
+                        else:
+                            loop.run_until_complete(ws_manager.send_to_user(chat.user_id, notification_update))
+                    except RuntimeError:
+                        asyncio.run(ws_manager.send_to_user(chat.user_id, notification_update))
                 except Exception as e:
                     logger.error(f"Failed to push timeout warning notification via WebSocket: {e}")
                 

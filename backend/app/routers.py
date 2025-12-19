@@ -3510,24 +3510,22 @@ def assign_customer_service(
             # 向客服发送用户连接通知
             try:
                 import asyncio
-                import json
-                from app.main import active_connections
+                from app.websocket_manager import get_ws_manager
                 
-                if service.id in active_connections:
-                    notification_message = {
-                        "type": "user_connected",
-                        "user_info": {
-                            "id": current_user.id,
-                            "name": current_user.name or f"用户{current_user.id}",
-                        },
-                        "chat_id": chat_data["chat_id"],
-                        "timestamp": format_iso_utc(get_utc_time()),
-                    }
-                    asyncio.create_task(
-                        active_connections[service.id].send_text(
-                            json.dumps(notification_message)
-                        )
-                    )
+                ws_manager = get_ws_manager()
+                notification_message = {
+                    "type": "user_connected",
+                    "user_info": {
+                        "id": current_user.id,
+                        "name": current_user.name or f"用户{current_user.id}",
+                    },
+                    "chat_id": chat_data["chat_id"],
+                    "timestamp": format_iso_utc(get_utc_time()),
+                }
+                # 使用 WebSocketManager 发送消息
+                asyncio.create_task(
+                    ws_manager.send_to_user(service.id, notification_message)
+                )
             except Exception as e:
                 logger.error(f"发送客服通知失败: {e}")
             
@@ -3864,27 +3862,27 @@ def send_customer_service_message(
     # 通过WebSocket实时推送给用户（使用后台任务异步发送）
     async def send_websocket_message():
         try:
-            from app.main import active_connections
-            user_ws = active_connections.get(chat["user_id"])
-            if user_ws:
-                # 构建消息响应
-                message_response = {
-                    "from": current_user.id,
-                    "receiver_id": chat["user_id"],
-                    "content": message["content"],
-                    "created_at": str(message["created_at"]),
-                    "sender_type": "customer_service",
-                    "original_sender_id": current_user.id,
-                    "chat_id": chat_id,
-                    "message_id": message["id"],
-                }
-                try:
-                    await user_ws.send_text(json.dumps(message_response))
-                    logger.info(f"Customer service message sent to user {chat['user_id']} via WebSocket")
-                except Exception as ws_error:
-                    logger.error(f"Failed to send WebSocket message to user {chat['user_id']}: {ws_error}")
-                    # 如果连接失败，从活跃连接中移除
-                    active_connections.pop(chat["user_id"], None)
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
+            
+            # 构建消息响应
+            message_response = {
+                "from": current_user.id,
+                "receiver_id": chat["user_id"],
+                "content": message["content"],
+                "created_at": str(message["created_at"]),
+                "sender_type": "customer_service",
+                "original_sender_id": current_user.id,
+                "chat_id": chat_id,
+                "message_id": message["id"],
+            }
+            
+            # 使用 WebSocketManager 发送消息
+            success = await ws_manager.send_to_user(chat["user_id"], message_response)
+            if success:
+                logger.info(f"Customer service message sent to user {chat['user_id']} via WebSocket")
+            else:
+                logger.debug(f"User {chat['user_id']} not connected via WebSocket")
         except Exception as e:
             # WebSocket推送失败不应该影响消息发送
             logger.error(f"Failed to push message via WebSocket: {e}")
@@ -5385,21 +5383,18 @@ async def timeout_end_customer_service_chat(
 
         # 通过WebSocket通知用户对话已结束
         try:
-            from app.main import active_connections
-            if chat["user_id"] in active_connections:
-                logger.info(f"通过WebSocket通知用户 {chat['user_id']} 对话已结束")
-                timeout_message = {
-                    "type": "chat_timeout",
-                    "chat_id": chat_id,
-                    "content": "由于长时间没有收到你的信息，本次对话已结束"
-                }
-                try:
-                    await active_connections[chat["user_id"]].send_text(
-                        json.dumps(timeout_message)
-                    )
-                    logger.info(f"已通过WebSocket发送超时消息给用户 {chat['user_id']}")
-                except Exception as ws_error:
-                    logger.error(f"WebSocket发送失败: {ws_error}")
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
+            
+            timeout_message = {
+                "type": "chat_timeout",
+                "chat_id": chat_id,
+                "content": "由于长时间没有收到你的信息，本次对话已结束"
+            }
+            
+            success = await ws_manager.send_to_user(chat["user_id"], timeout_message)
+            if success:
+                logger.info(f"已通过WebSocket发送超时消息给用户 {chat['user_id']}")
             else:
                 logger.info(f"用户 {chat['user_id']} 不在线，无法通过WebSocket发送")
         except Exception as e:

@@ -908,7 +908,8 @@ async def send_task_message(
         
         # 通过WebSocket广播消息给所有参与者
         try:
-            from app.main import active_connections
+            from app.websocket_manager import get_ws_manager
+            ws_manager = get_ws_manager()
             
             # 获取所有参与者ID
             participant_ids = set()
@@ -959,15 +960,9 @@ async def send_task_message(
             # 向所有参与者（除了发送者）广播消息
             for participant_id in participant_ids:
                 if participant_id != current_user.id:
-                    participant_ws = active_connections.get(participant_id)
-                    if participant_ws:
-                        try:
-                            await participant_ws.send_text(json.dumps(message_response))
-                            logger.debug(f"Task message broadcasted to participant {participant_id}")
-                        except Exception as e:
-                            logger.error(f"Failed to broadcast message to participant {participant_id}: {e}")
-                            # 如果连接失败，从活跃连接中移除
-                            active_connections.pop(participant_id, None)
+                    success = await ws_manager.send_to_user(participant_id, message_response)
+                    if success:
+                        logger.debug(f"Task message broadcasted to participant {participant_id}")
         except Exception as e:
             # WebSocket广播失败不应该影响消息发送
             logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)
