@@ -259,6 +259,10 @@ app.include_router(time_validation_router, tags=["时间验证"])
 # 添加sitemap路由（不需要/api前缀，直接访问/sitemap.xml）
 app.include_router(sitemap_router, tags=["SEO"])
 
+# 添加 SSR 路由（为社交媒体爬虫提供正确的 Open Graph meta 标签）
+from app.ssr_routes import ssr_router
+app.include_router(ssr_router, tags=["SSR"])
+
 # 添加Analytics路由（用于收集Web Vitals性能指标）
 from app.analytics_routes import router as analytics_router
 app.include_router(analytics_router, tags=["Analytics"])

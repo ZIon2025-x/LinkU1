@@ -137,7 +137,7 @@ struct TaskChatRow: View {
             // 内容区域
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 // 标题和时间
-                HStack(alignment: .top) {
+                HStack(alignment: .center, spacing: AppSpacing.sm) {
                     Text(taskChat.title)
                         .font(AppTypography.body)
                         .fontWeight(taskChat.unreadCount ?? 0 > 0 ? .bold : .semibold)
@@ -146,7 +146,8 @@ struct TaskChatRow: View {
                     
                     Spacer()
                     
-                    VStack(alignment: .trailing, spacing: 6) {
+                    // 时间和未读数在同一行
+                    HStack(spacing: 8) {
                         // 优先使用 lastMessageTime，如果没有则使用 lastMessage.createdAt
                         if let lastTime = taskChat.lastMessageTime ?? taskChat.lastMessage?.createdAt {
                             Text(formatTime(lastTime))
@@ -156,23 +157,16 @@ struct TaskChatRow: View {
                         
                         // 未读数 - 渐变背景
                         if let unreadCount = taskChat.unreadCount, unreadCount > 0 {
-                            ZStack {
-                                Capsule()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [AppColors.error, AppColors.error.opacity(0.8)]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .frame(width: unreadCount > 9 ? 28 : 20, height: 20)
-                                
-                                Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
-                                    .font(AppTypography.caption2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, unreadCount > 9 ? 6 : 0)
-                            }
+                            Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                                .font(AppTypography.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, unreadCount > 9 ? 8 : 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule()
+                                        .fill(AppColors.error)
+                                )
                         }
                     }
                 }

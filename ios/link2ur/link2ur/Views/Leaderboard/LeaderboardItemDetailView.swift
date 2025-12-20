@@ -14,6 +14,7 @@ struct LeaderboardItemDetailView: View {
     @State private var currentVoteType: String?
     @State private var voteComment: String = ""
     @State private var isAnonymous: Bool = false
+    @State private var selectedImageIndex = 0
     
     var body: some View {
         ZStack {
@@ -21,243 +22,140 @@ struct LeaderboardItemDetailView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.item == nil {
-                ProgressView()
+                LoadingView(message: "加载详情中...")
             } else if let item = viewModel.item {
-                KeyboardAvoidingScrollView(extraPadding: 20) {
+                ScrollView {
                     VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                        // 竞品信息卡片
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            // 图片轮播
-                            if let images = item.images, !images.isEmpty {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: AppSpacing.sm) {
-                                        ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
-                                            AsyncImage(url: imageUrl.toImageURL()) { phase in
-                                                switch phase {
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .aspectRatio(contentMode: .fill)
-                                                case .failure(_), .empty:
-                                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                        .fill(AppColors.primaryLight)
-                                                @unknown default:
-                                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                        .fill(AppColors.primaryLight)
-                                                }
-                                            }
-                                            .frame(width: UIScreen.main.bounds.width - 64, height: 250)
-                                            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
-                                        }
-                                    }
-                                    .padding(.horizontal, AppSpacing.md)
-                                }
-                            }
-                            
-                            // 名称
-                            Text(item.name)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            // 提交者信息
-                            if let submitter = item.submitter {
-                                NavigationLink(destination: UserProfileView(userId: submitter.id)) {
-                                    HStack(spacing: 8) {
-                                        AvatarView(
-                                            urlString: submitter.avatar,
-                                            size: 32,
-                                            placeholder: Image(systemName: "person.circle.fill")
-                                        )
-                                        
-                                        Text("由 \(submitter.name) 提交")
-                                            .font(.subheadline)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                            
-                            Divider()
-                            
-                            // 描述
-                            if let description = item.description {
-                                Text(description)
-                                    .font(.body)
-                                    .foregroundColor(AppColors.textPrimary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            
-                            // 联系信息
-                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                if let address = item.address, !address.isEmpty {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "mappin.circle.fill")
-                                            .foregroundColor(AppColors.primary)
-                                        Text(address)
-                                            .font(.subheadline)
-                                            .foregroundColor(AppColors.textPrimary)
-                                    }
-                                }
-                                
-                                if let phone = item.phone, !phone.isEmpty {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "phone.circle.fill")
-                                            .foregroundColor(AppColors.primary)
-                                        Text(phone)
-                                            .font(.subheadline)
-                                            .foregroundColor(AppColors.textPrimary)
-                                    }
-                                }
-                                
-                                if let website = item.website, !website.isEmpty {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "globe")
-                                            .foregroundColor(AppColors.primary)
-                                        Link(website, destination: URL(string: website) ?? URL(string: "https://")!)
-                                            .font(.subheadline)
-                                            .foregroundColor(AppColors.primary)
-                                    }
-                                }
-                            }
-                            .padding(.top, AppSpacing.sm)
-                            
-                            // 投票统计
-                            HStack(spacing: 20) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "hand.thumbsup.fill")
-                                        .font(.system(size: 14))
-                                    Text(upvotes.formatCount())
-                                        .font(AppTypography.subheadline)
-                                }
-                                .foregroundColor(AppColors.textSecondary)
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "hand.thumbsdown.fill")
-                                        .font(.system(size: 14))
-                                    Text(downvotes.formatCount())
-                                        .font(AppTypography.subheadline)
-                                }
-                                .foregroundColor(AppColors.textSecondary)
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "chart.bar.fill")
-                                        .font(.system(size: 14))
-                                    Text("净投票: \(netVotes.formatCount())")
-                                        .font(AppTypography.subheadline)
-                                }
-                                .foregroundColor(AppColors.textSecondary)
-                            }
-                            .padding(.top, AppSpacing.sm)
-                        }
-                        .padding(AppSpacing.md)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+                        // 1. 图片展示区域
+                        LeaderboardItemImageSection(images: item.images ?? [], selectedIndex: $selectedImageIndex)
                         
-                        // 投票按钮
-                        HStack(spacing: AppSpacing.md) {
-                            Button(action: {
-                                if appState.isAuthenticated {
-                                    // 如果已经点赞，取消投票
-                                    if voteType == "upvote" {
-                                        viewModel.voteItem(itemId: itemId, voteType: "remove", comment: nil, isAnonymous: false) { success, up, down, net in
-                                            if success {
-                                                voteType = nil
-                                                upvotes = up
-                                                downvotes = down
-                                                netVotes = net
-                                                // 重新加载 item 以获取最新的 userVote 状态
-                                                viewModel.loadItem(itemId: itemId)
-                                                viewModel.loadComments(itemId: itemId)
-                                            }
+                        VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                            // 2. 核心信息卡片
+                            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                                Text(item.name)
+                                    .font(AppTypography.title)
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                if let submitter = item.submitter {
+                                    NavigationLink(destination: UserProfileView(userId: submitter.id)) {
+                                        HStack(spacing: 8) {
+                                            AvatarView(
+                                                urlString: submitter.avatar,
+                                                size: 28,
+                                                placeholder: Image(systemName: "person.circle.fill")
+                                            )
+                                            .clipShape(Circle())
+                                            
+                                            Text("由 \(submitter.name) 提交")
+                                                .font(AppTypography.subheadline)
+                                                .foregroundColor(AppColors.textSecondary)
+                                            
+                                            Spacer()
+                                            
+                                            IconStyle.icon("chevron.right", size: 12)
+                                                .foregroundColor(AppColors.textQuaternary)
                                         }
-                                    } else {
-                                        // 弹出投票留言弹窗
-                                        currentVoteType = "upvote"
-                                        voteComment = ""
-                                        isAnonymous = false
-                                        showVoteModal = true
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 12)
+                                        .background(AppColors.background.opacity(0.5))
+                                        .cornerRadius(AppCornerRadius.medium)
                                     }
-                                } else {
-                                    showLogin = true
+                                    .buttonStyle(ScaleButtonStyle())
                                 }
-                            }) {
-                                HStack {
-                                    Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                    Text("支持")
+                                
+                                Divider().background(AppColors.divider)
+                                
+                                if let description = item.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(AppTypography.body)
+                                        .foregroundColor(AppColors.textPrimary)
+                                        .lineSpacing(6)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(voteType == "upvote" ? AppColors.success.opacity(0.1) : AppColors.primaryLight)
-                                .foregroundColor(voteType == "upvote" ? AppColors.success : AppColors.primary)
-                                .cornerRadius(AppCornerRadius.medium)
+                                
+                                // 联系信息
+                                LeaderboardItemContactView(item: item)
+                            }
+                            .padding(AppSpacing.lg)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+                            
+                            // 3. 投票交互区
+                            VStack(spacing: AppSpacing.md) {
+                                HStack(spacing: AppSpacing.md) {
+                                    VoteActionButton(
+                                        title: "支持",
+                                        icon: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsup",
+                                        isSelected: voteType == "upvote",
+                                        color: AppColors.success,
+                                        count: upvotes,
+                                        action: { handleVoteAction(type: "upvote") }
+                                    )
+                                    
+                                    VoteActionButton(
+                                        title: "反对",
+                                        icon: voteType == "downvote" ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                                        isSelected: voteType == "downvote",
+                                        color: AppColors.error,
+                                        count: downvotes,
+                                        action: { handleVoteAction(type: "downvote") }
+                                    )
+                                }
+                                
+                                if netVotes != 0 {
+                                    HStack {
+                                        Spacer()
+                                        Text("当前净投票分: \(netVotes)")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 4)
+                                            .background(AppColors.background)
+                                            .cornerRadius(AppCornerRadius.small)
+                                        Spacer()
+                                    }
+                                }
                             }
                             
-                            Button(action: {
-                                if appState.isAuthenticated {
-                                    // 如果已经点踩，取消投票
-                                    if voteType == "downvote" {
-                                        viewModel.voteItem(itemId: itemId, voteType: "remove", comment: nil, isAnonymous: false) { success, up, down, net in
-                                            if success {
-                                                voteType = nil
-                                                upvotes = up
-                                                downvotes = down
-                                                netVotes = net
-                                                // 重新加载 item 以获取最新的 userVote 状态
-                                                viewModel.loadItem(itemId: itemId)
-                                                viewModel.loadComments(itemId: itemId)
-                                            }
-                                        }
-                                    } else {
-                                        // 弹出投票留言弹窗
-                                        currentVoteType = "downvote"
-                                        voteComment = ""
-                                        isAnonymous = false
-                                        showVoteModal = true
-                                    }
-                                } else {
-                                    showLogin = true
-                                }
-                            }) {
+                            // 4. 留言列表
+                            VStack(alignment: .leading, spacing: AppSpacing.md) {
                                 HStack {
-                                    Image(systemName: voteType == "downvote" ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                    Text("反对")
+                                    IconStyle.icon("bubble.left.and.bubble.right.fill", size: 18)
+                                        .foregroundColor(AppColors.primary)
+                                    Text("留言 (\(viewModel.comments.count))")
+                                        .font(AppTypography.title3)
+                                        .foregroundColor(AppColors.textPrimary)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(voteType == "downvote" ? AppColors.error.opacity(0.1) : AppColors.primaryLight)
-                                .foregroundColor(voteType == "downvote" ? AppColors.error : AppColors.primary)
-                                .cornerRadius(AppCornerRadius.medium)
+                                .padding(.horizontal, AppSpacing.sm)
+                                
+                                if viewModel.comments.isEmpty {
+                                    VStack(spacing: AppSpacing.md) {
+                                        IconStyle.icon("text.bubble", size: 40)
+                                            .foregroundColor(AppColors.textQuaternary)
+                                        Text("暂无留言，快来发表你的看法吧")
+                                            .font(AppTypography.body)
+                                            .foregroundColor(AppColors.textTertiary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 40)
+                                    .background(AppColors.cardBackground.opacity(0.5))
+                                    .cornerRadius(AppCornerRadius.large)
+                                } else {
+                                    ForEach(viewModel.comments) { comment in
+                                        LeaderboardCommentCard(comment: comment, viewModel: viewModel)
+                                            .environmentObject(appState)
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)
-                        
-                        // 留言列表（后端只返回有留言的投票，参考后端：comment.isnot(None) && comment != ''）
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text("留言 (\(viewModel.comments.count.formatCount()))")
-                                .font(.headline)
-                                .padding(.horizontal, AppSpacing.md)
-                            
-                            if viewModel.comments.isEmpty {
-                                Text("暂无留言")
-                                    .font(.subheadline)
-                                    .foregroundColor(AppColors.textSecondary)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.vertical, AppSpacing.xl)
-                            } else {
-                                ForEach(viewModel.comments) { comment in
-                                    CommentCard(comment: comment, viewModel: viewModel)
-                                        .environmentObject(appState)
-                                }
-                            }
-                        }
-                        .padding(.top, AppSpacing.md)
-                        
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 40)
+                }
+                .refreshable {
+                    viewModel.loadItem(itemId: itemId)
+                    viewModel.loadComments(itemId: itemId)
                 }
             }
         }
@@ -275,15 +173,14 @@ struct LeaderboardItemDetailView: View {
                     let comment = voteComment.trimmingCharacters(in: .whitespaces).isEmpty ? nil : voteComment.trimmingCharacters(in: .whitespaces)
                     viewModel.voteItem(itemId: itemId, voteType: voteType, comment: comment, isAnonymous: isAnonymous) { success, up, down, net in
                         if success {
-                            // 更新本地状态
+                            HapticFeedback.success()
                             self.upvotes = up
                             self.downvotes = down
                             self.netVotes = net
-                            self.voteType = voteType // 设置投票类型
+                            self.voteType = voteType
                             self.showVoteModal = false
                             self.voteComment = ""
                             self.isAnonymous = false
-                            // 重新加载 item 以获取最新的 userVote 状态（确保刷新后也能正确显示）
                             viewModel.loadItem(itemId: itemId)
                             viewModel.loadComments(itemId: itemId)
                         }
@@ -298,15 +195,11 @@ struct LeaderboardItemDetailView: View {
         }
         .onAppear {
             viewModel.loadItem(itemId: itemId)
-            // loadComments 会在 loadItem 完成后自动调用，避免重复加载
-            // 但为了确保即使 loadItem 失败也能加载留言，这里也调用一次
             viewModel.loadComments(itemId: itemId)
-            // 如果 item 已经存在（例如从列表页传入），立即更新状态
             if let item = viewModel.item {
                 updateVoteState(from: item)
             }
         }
-        // 监听 item.id 的变化，确保数据加载完成后更新投票状态
         .onChange(of: viewModel.item?.id) { newId in
             if let item = viewModel.item, let newId = newId, newId == itemId {
                 updateVoteState(from: item)
@@ -314,208 +207,301 @@ struct LeaderboardItemDetailView: View {
         }
     }
     
-    /// 从 item 更新投票状态
     private func updateVoteState(from item: LeaderboardItem) {
         upvotes = item.upvotes
         downvotes = item.downvotes
         netVotes = item.netVotes
-        // 确保从后端返回的 userVote 正确显示
-        // userVote 可能是 "upvote", "downvote", 或 nil
         voteType = item.userVote
+    }
+    
+    private func handleVoteAction(type: String) {
+        if !appState.isAuthenticated {
+            showLogin = true
+            return
+        }
+        
+        if voteType == type {
+            // 取消投票
+            HapticFeedback.light()
+            viewModel.voteItem(itemId: itemId, voteType: "remove", comment: nil, isAnonymous: false) { success, up, down, net in
+                if success {
+                    voteType = nil
+                    upvotes = up
+                    downvotes = down
+                    netVotes = net
+                    viewModel.loadItem(itemId: itemId)
+                    viewModel.loadComments(itemId: itemId)
+                }
+            }
+        } else {
+            // 弹出留言弹窗
+            currentVoteType = type
+            voteComment = ""
+            isAnonymous = false
+            showVoteModal = true
+            HapticFeedback.selection()
+        }
     }
 }
 
-// 留言卡片
-struct CommentCard: View {
+// MARK: - Subviews
+
+struct LeaderboardItemImageSection: View {
+    let images: [String]
+    @Binding var selectedIndex: Int
+    
+    var body: some View {
+        if !images.isEmpty {
+            ZStack(alignment: .bottom) {
+                TabView(selection: $selectedIndex) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                        AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: UIScreen.main.bounds.width, height: 280) // 显式限制宽度为屏幕宽度
+                            .clipped()
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 280)
+                
+                if images.count > 1 {
+                    HStack(spacing: 6) {
+                        ForEach(0..<images.count, id: \.self) { index in
+                            Capsule()
+                                .fill(selectedIndex == index ? Color.white : Color.white.opacity(0.4))
+                                .frame(width: selectedIndex == index ? 16 : 6, height: 6)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 12)
+                }
+            }
+        } else {
+            ZStack {
+                Rectangle().fill(AppColors.primaryLight)
+                IconStyle.icon("photo.on.rectangle.angled", size: 60).foregroundColor(AppColors.primary.opacity(0.3))
+            }
+            .frame(width: UIScreen.main.bounds.width, height: 200) // 显式限制宽度
+        }
+    }
+}
+
+struct LeaderboardItemContactView: View {
+    let item: LeaderboardItem
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            if let address = item.address, !address.isEmpty {
+                LeaderboardContactRow(icon: "mappin.circle.fill", text: address, color: .red)
+            }
+            if let phone = item.phone, !phone.isEmpty {
+                LeaderboardContactRow(icon: "phone.circle.fill", text: phone, color: .green)
+            }
+            if let website = item.website, !website.isEmpty {
+                if let url = URL(string: website) {
+                    Link(destination: url) {
+                        LeaderboardContactRow(icon: "globe", text: website, color: .blue)
+                    }
+                }
+            }
+        }
+        .padding(.top, AppSpacing.sm)
+    }
+}
+
+struct LeaderboardContactRow: View {
+    let icon: String
+    let text: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            IconStyle.icon(icon, size: 16)
+                .foregroundColor(color)
+            Text(text)
+                .font(AppTypography.subheadline)
+                .foregroundColor(AppColors.textPrimary)
+                .lineLimit(1)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct VoteActionButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let color: Color
+    let count: Int
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                HStack(spacing: 8) {
+                    IconStyle.icon(icon, size: 18)
+                    Text(title)
+                        .fontWeight(.bold)
+                }
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isSelected ? color.opacity(0.15) : AppColors.cardBackground)
+            .foregroundColor(isSelected ? color : AppColors.textSecondary)
+            .cornerRadius(AppCornerRadius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                    .stroke(isSelected ? color.opacity(0.3) : AppColors.separator.opacity(0.5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+struct LeaderboardCommentCard: View {
     let comment: LeaderboardItemComment
     let viewModel: LeaderboardItemDetailViewModel
     @EnvironmentObject var appState: AppState
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 作者信息
-            HStack {
-                // 头像（匿名用户使用灰色，普通用户使用蓝色）
+            HStack(alignment: .top) {
                 AvatarView(
                     urlString: comment.isAnonymous == true ? nil : comment.author?.avatar,
-                    size: 32,
+                    size: 36,
                     avatarType: comment.isAnonymous == true ? .anonymous : nil
                 )
+                .clipShape(Circle())
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        // 投票类型图标
+                        Text(displayName)
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(AppColors.textPrimary)
+                        
                         if let voteType = comment.voteType {
-                            Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
-                                .font(.system(size: 12))
+                            IconStyle.icon(voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsdown.fill", size: 10)
                                 .foregroundColor(voteType == "upvote" ? AppColors.success : AppColors.error)
                         }
                         
-                        // 用户名（匿名用户显示"匿名用户 #序号"）
-                        if comment.isAnonymous == true {
-                            Text("匿名用户")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        } else if let author = comment.author {
-                            Text(author.name)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        } else if let userId = comment.userId {
-                            Text("用户 \(userId)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        } else {
-                            Text("未知用户")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        
-                        // 匿名标签
                         if comment.isAnonymous == true {
                             Text("匿名")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(AppColors.textSecondary)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(AppColors.textTertiary)
                                 .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(4)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(AppColors.separator, lineWidth: 1)
-                                )
+                                .padding(.vertical, 1)
+                                .background(AppColors.background)
+                                .cornerRadius(2)
                         }
                     }
                     
-                    Text(formatTime(comment.createdAt))
-                        .font(.caption)
-                        .foregroundColor(AppColors.textSecondary)
+                    Text(DateFormatterHelper.shared.formatTime(comment.createdAt))
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textQuaternary)
                 }
                 
                 Spacer()
-            }
-            
-            // 留言内容（如果有）
-            if let content = comment.content, !content.isEmpty {
-                Text(content)
-                    .font(.body)
-                    .foregroundColor(AppColors.textPrimary)
-            }
-            
-            // 点赞按钮
-            HStack {
-                Spacer()
+                
+                // 点赞评论按钮
                 Button(action: {
                     if appState.isAuthenticated {
-                        viewModel.likeComment(voteId: comment.id) { success, likeCount, liked in
+                        HapticFeedback.light()
+                        viewModel.likeComment(voteId: comment.id) { success, _, _ in
                             if success {
-                                // 更新本地状态（通过重新加载实现）
                                 viewModel.loadComments(itemId: comment.itemId ?? 0)
                             }
                         }
-                    } else {
-                        // 显示登录提示
                     }
                 }) {
                     HStack(spacing: 4) {
-                        Image(systemName: comment.userLiked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
-                            .font(.system(size: 14))
+                        IconStyle.icon(comment.userLiked == true ? "hand.thumbsup.fill" : "hand.thumbsup", size: 12)
                         Text("\(comment.likeCount ?? 0)")
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                     }
-                    .foregroundColor(comment.userLiked == true ? AppColors.primary : AppColors.textSecondary)
+                    .foregroundColor(comment.userLiked == true ? AppColors.primary : AppColors.textTertiary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(comment.userLiked == true ? AppColors.primary.opacity(0.1) : AppColors.cardBackground)
+                    .background(comment.userLiked == true ? AppColors.primary.opacity(0.1) : Color.clear)
                     .cornerRadius(AppCornerRadius.small)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            .padding(.top, AppSpacing.xs)
+            
+            if let content = comment.content, !content.isEmpty {
+                Text(content)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineSpacing(4)
+                    .padding(.leading, 44)
+            }
         }
         .padding(AppSpacing.md)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
-        .padding(.horizontal, AppSpacing.md)
+        .shadow(color: Color.black.opacity(0.02), radius: 4, x: 0, y: 2)
     }
     
-    private func formatTime(_ timeString: String) -> String {
-        return DateFormatterHelper.shared.formatTime(timeString)
+    private var displayName: String {
+        if comment.isAnonymous == true { return "匿名用户" }
+        return comment.author?.name ?? "用户 \(comment.userId ?? "未知")"
     }
 }
 
-// 投票留言弹窗
 struct VoteCommentModal: View {
     let voteType: String
     @Binding var comment: String
     @Binding var isAnonymous: Bool
     let onConfirm: () -> Void
     let onCancel: () -> Void
-    @FocusState private var isInputFocused: Bool
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    // 留言输入框（可选）
+            Form {
+                Section {
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("留言（可选）")
-                            .font(.subheadline)
+                        Text(voteType == "upvote" ? "支持理由" : "反对理由")
+                            .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
-                            .padding(.horizontal, AppSpacing.md)
                         
-                        EnhancedTextEditor(
-                            title: nil,
-                            placeholder: voteType == "upvote" ? "说说你为什么支持..." : "说说你为什么反对...",
-                            text: $comment,
-                            characterLimit: 500
-                        )
-                        .frame(height: 120)
-                        .padding(.horizontal, AppSpacing.md)
+                        TextEditor(text: $comment)
+                            .frame(minHeight: 120)
+                            .padding(AppSpacing.xs)
+                            .background(AppColors.background)
+                            .cornerRadius(AppCornerRadius.small)
                     }
-                    .padding(.top, AppSpacing.md)
-                    
-                    // 匿名选项
-                    Toggle(isOn: $isAnonymous) {
-                        Text("匿名投票")
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.textPrimary)
+                    .padding(.vertical, AppSpacing.xs)
+                } header: {
+                    Text("发表看法")
+                }
+                
+                Section {
+                    Toggle("匿名投票", isOn: $isAnonymous)
+                        .font(AppTypography.body)
+                }
+                
+                Section {
+                    Button(action: onConfirm) {
+                        Text("提交投票")
+                            .font(AppTypography.bodyBold)
+                            .frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    
-                    // 按钮
-                    HStack(spacing: AppSpacing.md) {
-                        Button(action: onCancel) {
-                            Text("取消")
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(AppColors.cardBackground)
-                                .foregroundColor(AppColors.textPrimary)
-                                .cornerRadius(AppCornerRadius.medium)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                        .stroke(AppColors.separator, lineWidth: 1)
-                                )
-                        }
-                        
-                        Button(action: onConfirm) {
-                            Text("确认")
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(AppColors.primary)
-                                .foregroundColor(.white)
-                                .cornerRadius(AppCornerRadius.medium)
-                        }
-                    }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.top, AppSpacing.lg)
-                    .padding(.bottom, AppSpacing.md)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .listRowInsets(EdgeInsets())
                 }
             }
-            .background(AppColors.background)
+            .navigationTitle(voteType == "upvote" ? "支持竞品" : "反对竞品")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle(voteType == "upvote" ? "支持并留言" : "反对并留言")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消", action: onCancel)
+                }
+            }
         }
-        // 让系统自动处理键盘避让，避免约束冲突
-        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
