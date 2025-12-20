@@ -12,7 +12,8 @@ import logging
 import re
 from typing import Optional
 
-from app.database import get_db, get_async_db_dependency
+from app.database import get_db
+from app.deps import get_async_db_dependency
 from app import models
 
 logger = logging.getLogger(__name__)
