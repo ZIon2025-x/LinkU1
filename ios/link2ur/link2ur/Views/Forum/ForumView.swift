@@ -145,12 +145,12 @@ struct UnauthenticatedForumView: View {
                 .font(.system(size: 64))
                 .foregroundColor(AppColors.textSecondary)
             
-            Text("需要登录")
+            Text(LocalizationKey.forumNeedLogin.localized)
                 .font(AppTypography.title2)
                 .fontWeight(.bold)
                 .foregroundColor(AppColors.textPrimary)
             
-            Text("社区功能仅对已登录且完成学生认证的用户开放")
+            Text(LocalizationKey.forumCommunityLoginMessage.localized)
                 .font(AppTypography.body)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -159,7 +159,7 @@ struct UnauthenticatedForumView: View {
             Button(action: {
                 showLogin = true
             }) {
-                Text("立即登录")
+                Text(LocalizationKey.forumLoginNow.localized)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -184,26 +184,26 @@ struct UnverifiedForumView: View {
                 .font(.system(size: 64))
                 .foregroundColor(AppColors.warning)
             
-            Text("需要学生认证")
+            Text(LocalizationKey.forumNeedStudentVerification.localized)
                 .font(AppTypography.title2)
                 .fontWeight(.bold)
                 .foregroundColor(AppColors.textPrimary)
             
             if let status = verificationStatus {
                 if status.status == "pending" {
-                    Text("您的学生认证申请正在审核中，请耐心等待")
+                    Text(LocalizationKey.forumVerificationPending.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.xl)
                 } else if status.status == "rejected" {
-                    Text("您的学生认证申请未通过，请重新提交")
+                    Text(LocalizationKey.forumVerificationRejected.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, AppSpacing.xl)
                 } else {
-                    Text("请完成学生认证以访问社区功能")
+                    Text(LocalizationKey.forumCompleteVerification.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
@@ -220,7 +220,7 @@ struct UnverifiedForumView: View {
             Button(action: {
                 showVerification = true
             }) {
-                Text("去认证")
+                Text(LocalizationKey.forumGoVerify.localized)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -350,7 +350,7 @@ struct CategoryCard: View {
                     .padding(.top, AppSpacing.xs)
                 } else if category.postCount == 0 || category.postCount == nil {
                     // 如果没有帖子，显示提示
-                    Text("暂无帖子")
+                    Text(LocalizationKey.forumNoPosts.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                         .padding(.top, AppSpacing.xs)

@@ -141,7 +141,7 @@ struct TaskExpertSearchView: View {
                                 selectedCity = nil
                                 performSearch()
                             }) {
-                                Text("清除")
+                                Text(LocalizationKey.taskExpertClear.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.primary)
                             }

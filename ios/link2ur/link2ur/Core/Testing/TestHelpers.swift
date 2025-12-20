@@ -107,7 +107,7 @@ extension XCTestCase {
         var result: Result<T, Error>?
         let expectation = expectation(description: "Awaiting async operation")
         
-        Task {
+        _Concurrency.Task {
             do {
                 let value = try await operation()
                 result = .success(value)

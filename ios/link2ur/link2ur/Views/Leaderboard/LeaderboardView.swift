@@ -2,7 +2,10 @@ import SwiftUI
 
 struct LeaderboardView: View {
     @StateObject private var viewModel = LeaderboardViewModel()
+    @EnvironmentObject var appState: AppState
     @State private var selectedSort = "latest"
+    @State private var showApplyLeaderboard = false
+    @State private var showLogin = false
     
     var body: some View {
         ZStack {
@@ -12,11 +15,29 @@ struct LeaderboardView: View {
             if viewModel.isLoading && viewModel.leaderboards.isEmpty {
                 ProgressView()
             } else if viewModel.leaderboards.isEmpty {
-                EmptyStateView(
-                    icon: "trophy.fill",
-                    title: "暂无排行榜",
-                    message: "还没有排行榜，快来创建第一个吧！"
-                )
+                VStack(spacing: AppSpacing.xl) {
+                    EmptyStateView(
+                        icon: "trophy.fill",
+                        title: "暂无排行榜",
+                        message: "还没有排行榜，快来申请创建第一个吧！"
+                    )
+                    
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            showApplyLeaderboard = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        HStack {
+                            IconStyle.icon("plus.circle.fill", size: 18)
+                            Text("申请新榜单")
+                        }
+                        .font(AppTypography.bodyBold)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .frame(width: 200)
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
@@ -34,13 +55,29 @@ struct LeaderboardView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button("最新") { selectedSort = "latest"; viewModel.loadLeaderboards(sort: selectedSort) }
-                    Button("热门") { selectedSort = "hot"; viewModel.loadLeaderboards(sort: selectedSort) }
-                    Button("投票数") { selectedSort = "votes"; viewModel.loadLeaderboards(sort: selectedSort) }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .foregroundColor(AppColors.primary)
+                HStack(spacing: AppSpacing.sm) {
+                    // 申请按钮
+                    Button {
+                        if appState.isAuthenticated {
+                            showApplyLeaderboard = true
+                        } else {
+                            showLogin = true
+                        }
+                    } label: {
+                        IconStyle.icon("plus.circle.fill", size: 22)
+                            .foregroundColor(AppColors.primary)
+                    }
+                    
+                    // 排序菜单
+                    Menu {
+                        Button("最新") { selectedSort = "latest"; viewModel.loadLeaderboards(sort: selectedSort) }
+                        Button("热门") { selectedSort = "hot"; viewModel.loadLeaderboards(sort: selectedSort) }
+                        Button("投票数") { selectedSort = "votes"; viewModel.loadLeaderboards(sort: selectedSort) }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(AppColors.primary)
+                    }
                 }
             }
         }
@@ -51,6 +88,12 @@ struct LeaderboardView: View {
             if viewModel.leaderboards.isEmpty {
                 viewModel.loadLeaderboards(sort: selectedSort)
             }
+        }
+        .sheet(isPresented: $showApplyLeaderboard) {
+            ApplyLeaderboardView()
+        }
+        .sheet(isPresented: $showLogin) {
+            LoginView()
         }
     }
 }

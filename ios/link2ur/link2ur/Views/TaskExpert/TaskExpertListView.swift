@@ -9,17 +9,17 @@ struct TaskExpertListView: View {
     
     // 任务达人分类映射（根据后端 models.py 中的 category 字段）
     let categories: [(name: String, value: String)] = [
-        ("全部", ""),
-        ("编程", "programming"),
-        ("翻译", "translation"),
-        ("辅导", "tutoring"),
-        ("食品", "food"),
-        ("饮料", "beverage"),
-        ("蛋糕", "cake"),
-        ("跑腿/交通", "errand_transport"),
-        ("社交/娱乐", "social_entertainment"),
-        ("美容/护肤", "beauty_skincare"),
-        ("手工艺", "handicraft")
+        (LocalizationKey.expertCategoryAll.localized, ""),
+        (LocalizationKey.expertCategoryProgramming.localized, "programming"),
+        (LocalizationKey.expertCategoryTranslation.localized, "translation"),
+        (LocalizationKey.expertCategoryTutoring.localized, "tutoring"),
+        (LocalizationKey.expertCategoryFood.localized, "food"),
+        (LocalizationKey.expertCategoryBeverage.localized, "beverage"),
+        (LocalizationKey.expertCategoryCake.localized, "cake"),
+        (LocalizationKey.expertCategoryErrandTransport.localized, "errand_transport"),
+        (LocalizationKey.expertCategorySocialEntertainment.localized, "social_entertainment"),
+        (LocalizationKey.expertCategoryBeautySkincare.localized, "beauty_skincare"),
+        (LocalizationKey.expertCategoryHandicraft.localized, "handicraft")
     ]
     
     // 城市列表
@@ -203,7 +203,7 @@ struct TaskExpertFilterView: View {
             Form {
                 Section("任务类型") {
                     Picker("选择类型", selection: $selectedCategory) {
-                        Text("全部").tag(nil as String?)
+                        Text(LocalizationKey.expertCategoryAll.localized).tag(nil as String?)
                         ForEach(categories, id: \.value) { category in
                             if !category.value.isEmpty {
                                 Text(category.name).tag(category.value as String?)
@@ -214,7 +214,7 @@ struct TaskExpertFilterView: View {
                 
                 Section("所在城市") {
                     Picker("选择城市", selection: $selectedCity) {
-                        Text("全部").tag(nil as String?)
+                        Text(LocalizationKey.expertCategoryAll.localized).tag(nil as String?)
                         ForEach(cities, id: \.self) { city in
                             if city != "全部" {
                                 Text(city).tag(city as String?)
@@ -282,7 +282,7 @@ struct ExpertCard: View {
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
                 } else {
-                    Text("暂无简介")
+                    Text(LocalizationKey.taskExpertNoIntro.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }

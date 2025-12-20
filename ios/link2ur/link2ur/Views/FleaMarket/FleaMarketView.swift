@@ -14,11 +14,11 @@ struct FleaMarketView: View {
                 if viewModel.isLoading && viewModel.items.isEmpty {
                     ProgressView()
                 } else if viewModel.items.isEmpty {
-                    EmptyStateView(
-                        icon: "cart.fill",
-                        title: "暂无商品",
-                        message: "跳蚤市场还没有商品，快来发布第一个吧！"
-                    )
+                EmptyStateView(
+                    icon: "cart.fill",
+                    title: LocalizationKey.fleaMarketNoItems.localized,
+                    message: LocalizationKey.fleaMarketNoItemsMessage.localized
+                )
                 } else {
                     ScrollView {
                         LazyVGrid(columns: [
@@ -37,15 +37,15 @@ struct FleaMarketView: View {
                     }
                 }
             }
-            .navigationTitle("跳蚤市场")
+            .navigationTitle(LocalizationKey.fleaMarketFleaMarket.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .searchable(text: $searchText, prompt: "搜索商品")
+            .searchable(text: $searchText, prompt: LocalizationKey.fleaMarketSearchItems.localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("全部") {
+                        Button(LocalizationKey.postAll.localized) {
                             selectedCategory = nil
                             viewModel.loadItems()
                         }

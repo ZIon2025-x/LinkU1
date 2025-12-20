@@ -84,7 +84,7 @@ struct ApplicationCard: View {
             // 议价信息
             if application.status == "negotiating", let counterPrice = application.counterPrice {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("任务达人提出议价：")
+                    Text(LocalizationKey.taskExpertExpertNegotiatePrice.localized)
                         .font(.caption)
                         .foregroundColor(AppColors.textSecondary)
                     Text("¥ \(String(format: "%.2f", counterPrice))")
@@ -100,7 +100,7 @@ struct ApplicationCard: View {
             if let taskId = application.taskId {
                 NavigationLink(destination: Text("任务详情: \(taskId)")) {
                     HStack {
-                        Text("查看任务")
+                        Text(LocalizationKey.taskExpertViewTask.localized)
                             .font(.subheadline)
                             .foregroundColor(AppColors.primary)
                         Image(systemName: "chevron.right")

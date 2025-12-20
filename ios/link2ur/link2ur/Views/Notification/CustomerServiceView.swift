@@ -57,11 +57,11 @@ struct CustomerServiceView: View {
                                                 .font(.system(size: 48))
                                                 .foregroundColor(AppColors.textTertiary)
                                             
-                                            Text("欢迎使用客服中心")
+                                            Text(LocalizationKey.customerServiceWelcome.localized)
                                                 .font(AppTypography.title3)
                                                 .foregroundColor(AppColors.textPrimary)
                                             
-                                            Text("点击下方连接按钮开始与客服对话")
+                                            Text(LocalizationKey.customerServiceStartConversation.localized)
                                                 .font(AppTypography.subheadline)
                                                 .foregroundColor(AppColors.textSecondary)
                                                 .multilineTextAlignment(.center)
@@ -201,7 +201,7 @@ struct CustomerServiceView: View {
                                 .frame(width: 44, height: 44)
                             }
                             
-                            TextField("输入消息...", text: $messageText)
+                            TextField(LocalizationKey.customerServiceEnterMessage.localized, text: $messageText)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .lineLimit(1...4)
                                 .focused($isInputFocused)
@@ -335,7 +335,7 @@ struct CustomerServiceView: View {
         let trimmedText = messageText.trimmingCharacters(in: .whitespaces)
         guard !trimmedText.isEmpty, !viewModel.isSending else { return }
         guard viewModel.chat?.isEnded != 1 else {
-            viewModel.errorMessage = "对话已结束"
+            viewModel.errorMessage = LocalizationKey.customerServiceConversationEnded.localized
             return
         }
         
@@ -401,7 +401,7 @@ struct WelcomeMessageBubble: View {
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("有什么可以帮助您的吗？")
+                Text(LocalizationKey.customerServiceWhatCanHelp.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
             }
@@ -527,7 +527,7 @@ struct ChatHistoryView: View {
                         Image(systemName: "message.fill")
                             .font(.system(size: 48))
                             .foregroundColor(AppColors.textTertiary)
-                        Text("暂无对话历史")
+                        Text(LocalizationKey.customerServiceNoChatHistory.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textSecondary)
                         Text("开始新的对话吧！")
@@ -548,7 +548,7 @@ struct ChatHistoryView: View {
                     .listStyle(PlainListStyle())
                 }
             }
-            .navigationTitle("对话历史")
+            .navigationTitle(LocalizationKey.customerServiceChatHistory.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -578,7 +578,7 @@ struct ChatHistoryRow: View {
             
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 HStack {
-                    Text("客服对话")
+                    Text(LocalizationKey.customerServiceServiceChat.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -593,7 +593,7 @@ struct ChatHistoryRow: View {
                 
                 HStack {
                     if chat.isEnded == 1 {
-                        Text("已结束")
+                        Text(LocalizationKey.customerServiceEnded.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textTertiary)
                             .padding(.horizontal, AppSpacing.xs)
@@ -601,7 +601,7 @@ struct ChatHistoryRow: View {
                             .background(AppColors.error.opacity(0.1))
                             .cornerRadius(4)
                     } else {
-                        Text("进行中")
+                        Text(LocalizationKey.customerServiceInProgress.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.success)
                             .padding(.horizontal, AppSpacing.xs)
@@ -639,12 +639,12 @@ struct RatingSheetView: View {
             VStack(spacing: AppSpacing.xl) {
                 // 标题
                 VStack(spacing: AppSpacing.sm) {
-                    Text("评价客服")
+                    Text(LocalizationKey.customerServiceRateService.localized)
                         .font(AppTypography.title2)
                         .foregroundColor(AppColors.textPrimary)
                     
                     if let serviceName = viewModel.service?.name {
-                        Text("您对 \(serviceName) 的服务满意吗？")
+                        Text(LocalizationKey.customerServiceSatisfactionQuestion.localized(argument: serviceName))
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
@@ -654,7 +654,7 @@ struct RatingSheetView: View {
                 
                 // 评分选择
                 VStack(spacing: AppSpacing.md) {
-                    Text("请选择评分")
+                    Text(LocalizationKey.customerServiceSelectRating.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -674,7 +674,7 @@ struct RatingSheetView: View {
                 
                 // 评论输入
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Text("评价内容（可选）")
+                    Text(LocalizationKey.customerServiceRatingContent.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -698,7 +698,7 @@ struct RatingSheetView: View {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Text("提交评价")
+                        Text(LocalizationKey.customerServiceSubmitRating.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
                     }

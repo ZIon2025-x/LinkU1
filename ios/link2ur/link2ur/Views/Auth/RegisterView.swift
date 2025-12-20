@@ -59,12 +59,12 @@ struct RegisterView: View {
                         }
                         
                         VStack(spacing: AppSpacing.xs) {
-                            Text("创建账户")
+                            Text(LocalizationKey.authRegister.localized)
                                 .font(AppTypography.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("加入 Link²Ur，开启新体验")
+                            Text("Join \(LocalizationKey.appName.localized), start a new experience")
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -75,8 +75,8 @@ struct RegisterView: View {
                     VStack(spacing: AppSpacing.lg) {
                         // 用户名输入
                         EnhancedTextField(
-                            title: "用户名",
-                            placeholder: "请输入用户名",
+                            title: LocalizationKey.authUsername.localized,
+                            placeholder: LocalizationKey.authEnterUsername.localized,
                             text: $viewModel.registerName,
                             icon: "person.fill",
                             autocapitalization: .never,
@@ -86,8 +86,8 @@ struct RegisterView: View {
                         
                         // 邮箱输入
                         EnhancedTextField(
-                            title: "邮箱",
-                            placeholder: "请输入邮箱",
+                            title: LocalizationKey.authEmail.localized,
+                            placeholder: LocalizationKey.authEnterEmail.localized,
                             text: $viewModel.registerEmail,
                             icon: "envelope.fill",
                             keyboardType: .emailAddress,
@@ -99,21 +99,21 @@ struct RegisterView: View {
                         
                         // 密码输入
                         EnhancedTextField(
-                            title: "密码",
-                            placeholder: "请输入密码",
+                            title: LocalizationKey.authPassword.localized,
+                            placeholder: LocalizationKey.authEnterPassword.localized,
                             text: $viewModel.registerPassword,
                             icon: "lock.fill",
                             isSecure: true,
                             showPasswordToggle: true,
-                            helperText: "至少8个字符，包含字母和数字",
+                            helperText: LocalizationKey.authPasswordHint.localized,
                             isRequired: true
                         )
                         .id("passwordField")
                         
                         // 手机号输入（可选）
                         EnhancedTextField(
-                            title: "手机号",
-                            placeholder: "请输入手机号",
+                            title: LocalizationKey.authPhoneOptional.localized,
+                            placeholder: LocalizationKey.authEnterPhone.localized,
                             text: $viewModel.registerPhone,
                             icon: "phone.fill",
                             keyboardType: .phonePad,
@@ -150,7 +150,7 @@ struct RegisterView: View {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
-                                    Text("注册")
+                                    Text(LocalizationKey.authRegister.localized)
                                         .font(AppTypography.bodyBold)
                                     
                                     Image(systemName: "arrow.right")
@@ -177,11 +177,11 @@ struct RegisterView: View {
                         
                         // 登录链接 - 符合 HIG
                         HStack {
-                            Text("已有账户？")
+                            Text(LocalizationKey.authHasAccount.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                             
-                            Button("立即登录") {
+                            Button(LocalizationKey.authLoginNow.localized) {
                                 dismiss()
                             }
                             .font(AppTypography.subheadline)
@@ -200,8 +200,8 @@ struct RegisterView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .alert("注册成功", isPresented: $showSuccessAlert) {
-            Button("确定") {
+        .alert(LocalizationKey.authRegisterSuccess.localized, isPresented: $showSuccessAlert) {
+            Button(LocalizationKey.commonOk.localized) {
                 if successMessage.contains("验证") {
                     // 需要邮箱验证，返回登录页
                     dismiss()

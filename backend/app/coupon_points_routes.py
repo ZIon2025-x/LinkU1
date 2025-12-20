@@ -450,17 +450,13 @@ def create_task_payment(
     
     # 如果使用积分全额抵扣，直接完成支付
     if final_amount == 0 and points_used > 0:
-        # 扣除积分
-        points_account = get_or_create_points_account(db, current_user.id)
-        points_account.balance -= points_used
-        points_account.total_spent += points_used
-        
-        # 创建积分交易记录
+        # 创建积分交易记录（add_points_transaction 会自动更新账户余额）
+        # 注意：spend 类型的 amount 必须为负数
         add_points_transaction(
             db,
             current_user.id,
             type="spend",
-            amount=points_used,
+            amount=-points_used,  # 消费用负数
             source="platform_fee",
             description=f"任务 #{task_id} 平台服务费支付",
             batch_id=None

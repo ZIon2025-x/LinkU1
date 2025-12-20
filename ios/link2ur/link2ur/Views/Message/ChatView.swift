@@ -39,7 +39,7 @@ struct ChatView: View {
                         ProgressView()
                             .scaleEffect(1.2)
                             .tint(AppColors.primary)
-                        Text("加载消息中...")
+                        Text(LocalizationKey.messagesLoadingMessages.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -62,10 +62,10 @@ struct ChatView: View {
                                         Image(systemName: "message.fill")
                                             .font(.system(size: 48))
                                             .foregroundColor(AppColors.textTertiary)
-                                        Text("还没有消息")
+                                        Text(LocalizationKey.messagesNoMessagesYet.localized)
                                             .font(AppTypography.title3)
                                             .foregroundColor(AppColors.textSecondary)
-                                        Text("开始对话吧！")
+                                        Text(LocalizationKey.messagesStartConversation.localized)
                                             .font(AppTypography.subheadline)
                                             .foregroundColor(AppColors.textTertiary)
                                     }
@@ -119,7 +119,7 @@ struct ChatView: View {
                     HStack(spacing: AppSpacing.sm) {
                         // 输入框容器
                         HStack(spacing: AppSpacing.sm) {
-                            TextField("输入消息...", text: $messageText, axis: .vertical)
+                            TextField(LocalizationKey.messagesEnterMessage.localized, text: $messageText, axis: .vertical)
                                 .font(AppTypography.body)
                                 .lineLimit(1...4)
                                 .focused($isInputFocused)
@@ -193,7 +193,7 @@ struct ChatView: View {
             }
         }
         .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
-        .navigationTitle(partner?.name ?? partner?.email ?? "聊天")
+        .navigationTitle(partner?.name ?? partner?.email ?? LocalizationKey.actionsChat.localized)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showLogin) {
             LoginView()

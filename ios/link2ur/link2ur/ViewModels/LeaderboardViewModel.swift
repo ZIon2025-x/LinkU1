@@ -170,6 +170,39 @@ class LeaderboardViewModel: ObservableObject {
         }
     }
     
+    /// 申请创建新排行榜
+    func applyLeaderboard(name: String, location: String, description: String?, applicationReason: String?, coverImage: String?, completion: @escaping (Bool, String?) -> Void) {
+        isLoading = true
+        errorMessage = nil
+        
+        var body: [String: Any] = [
+            "name": name,
+            "location": location
+        ]
+        
+        if let description = description {
+            body["description"] = description
+        }
+        if let applicationReason = applicationReason {
+            body["application_reason"] = applicationReason
+        }
+        if let coverImage = coverImage {
+            body["cover_image"] = coverImage
+        }
+        
+        apiService.request(CustomLeaderboard.self, "/api/custom-leaderboards/apply", method: "POST", body: body)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoading = false
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "申请排行榜")
+                    completion(false, error.userFriendlyMessage)
+                }
+            }, receiveValue: { leaderboard in
+                completion(true, nil)
+            })
+            .store(in: &cancellables)
+    }
+    
 }
 
 class LeaderboardDetailViewModel: ObservableObject {

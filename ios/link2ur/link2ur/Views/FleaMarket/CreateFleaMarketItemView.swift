@@ -13,144 +13,176 @@ struct CreateFleaMarketItemView: View {
     var body: some View {
         NavigationView {
             KeyboardAvoidingScrollView(extraPadding: 20) {
-                VStack(spacing: AppSpacing.lg) {
-                    // 标题
-                    EnhancedTextField(
-                        title: "商品标题",
-                        placeholder: "请输入商品标题",
-                        text: $viewModel.title,
-                        icon: "tag.fill",
-                        isRequired: true
-                    )
-                    
-                    // 描述
-                    EnhancedTextEditor(
-                        title: "商品描述",
-                        placeholder: "请详细描述商品信息、成色、使用情况等",
-                        text: $viewModel.description,
-                        height: 120,
-                        isRequired: true,
-                        characterLimit: 1000
-                    )
-                    
-                    // 价格
-                    EnhancedNumberField(
-                        title: "价格",
-                        placeholder: "0.00",
-                        value: $viewModel.price,
-                        prefix: "£",
-                        suffix: "GBP",
-                        isRequired: true
-                    )
-                    
-                    // 分类
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("分类")
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
+                VStack(spacing: AppSpacing.xl) {
+                    // 1. 基本信息
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        SectionHeader(title: "商品信息", icon: "bag.fill")
                         
-                        Picker("选择分类", selection: $viewModel.category) {
-                            Text("请选择分类").tag("")
-                            ForEach(viewModel.categories, id: \.self) { category in
-                                Text(category).tag(category)
-                            }
+                        VStack(spacing: AppSpacing.lg) {
+                            // 标题
+                            EnhancedTextField(
+                                title: "商品标题",
+                                placeholder: "品牌、型号、成色等 (例: iPhone 15 Pro)",
+                                text: $viewModel.title,
+                                icon: "tag.fill",
+                                isRequired: true
+                            )
+                            
+                            // 分类
+                            CustomPickerField(
+                                title: "商品分类",
+                                selection: $viewModel.category,
+                                options: viewModel.categories.map { ($0, $0) },
+                                icon: "list.bullet.indent"
+                            )
+                            
+                            // 描述
+                            EnhancedTextEditor(
+                                title: "详情描述",
+                                placeholder: "请详细描述商品信息、成色、使用情况、转手原因等...",
+                                text: $viewModel.description,
+                                height: 150,
+                                isRequired: true,
+                                characterLimit: 1000
+                            )
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .padding()
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
-                        )
                     }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                     
-                    // 位置
-                    EnhancedTextField(
-                        title: "交易地点",
-                        placeholder: "请输入地点或选择Online",
-                        text: $viewModel.location,
-                        icon: "mappin.circle.fill"
-                    )
-                    
-                    // 联系方式
-                    EnhancedTextField(
-                        title: "联系方式",
-                        placeholder: "请输入联系方式",
-                        text: $viewModel.contact,
-                        icon: "phone.fill",
-                        keyboardType: .phonePad
-                    )
-                    
-                    // 图片选择
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("商品图片（可选，最多5张）")
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
+                    // 2. 价格与交易
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        SectionHeader(title: "价格与交易", icon: "dollarsign.circle.fill")
                         
-                        PhotosPicker(selection: $selectedItems, maxSelectionCount: 5, matching: .images) {
-                            HStack {
-                                Image(systemName: "photo.on.rectangle")
-                                Text("选择图片")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppColors.primaryLight)
-                            .foregroundColor(AppColors.primary)
-                            .cornerRadius(AppCornerRadius.medium)
+                        VStack(spacing: AppSpacing.lg) {
+                            // 价格
+                            EnhancedNumberField(
+                                title: "出售价格",
+                                placeholder: "0.00",
+                                value: $viewModel.price,
+                                prefix: "£",
+                                suffix: "GBP",
+                                isRequired: true
+                            )
+                            
+                            // 位置
+                            EnhancedTextField(
+                                title: "交易地点",
+                                placeholder: "请输入地点或 Online",
+                                text: $viewModel.location,
+                                icon: "mappin.and.ellipse"
+                            )
+                            
+                            // 联系方式
+                            EnhancedTextField(
+                                title: "联系方式",
+                                placeholder: "微信、电话或 WhatsApp",
+                                text: $viewModel.contact,
+                                icon: "phone.fill"
+                            )
                         }
-                        .onChange(of: selectedItems) { newValue in
-                            AsyncTask {
-                                viewModel.selectedImages = []
-                                for item in newValue {
-                                    if let data = try? await item.loadTransferable(type: Data.self),
-                                       let image = UIImage(data: data) {
-                                        viewModel.selectedImages.append(image)
-                                    }
-                                }
-                            }
+                    }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                    
+                    // 3. 图片展示
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        HStack {
+                            SectionHeader(title: "商品图片", icon: "photo.on.rectangle.angled")
+                            Spacer()
+                            Text("\(viewModel.selectedImages.count)/5")
+                                .font(AppTypography.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(AppColors.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppColors.primaryLight)
+                                .clipShape(Capsule())
                         }
                         
-                        // 图片预览
-                        if !viewModel.selectedImages.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: AppSpacing.sm) {
-                                    ForEach(Array(viewModel.selectedImages.enumerated()), id: \.offset) { index, image in
-                                        ZStack(alignment: .topTrailing) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 100, height: 100)
-                                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.small))
-                                            
-                                            Button(action: {
-                                                viewModel.selectedImages.remove(at: index)
-                                                selectedItems.remove(at: index)
-                                            }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .foregroundColor(.white)
-                                                    .background(Color.black.opacity(0.6))
-                                                    .clipShape(Circle())
-                                            }
-                                            .padding(4)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: AppSpacing.md) {
+                                // 添加按钮
+                                if viewModel.selectedImages.count < 5 {
+                                    PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - viewModel.selectedImages.count, matching: .images) {
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "plus.viewfinder")
+                                                .font(.system(size: 28))
+                                                .foregroundColor(AppColors.primary)
+                                            Text("添加图片")
+                                                .font(.system(size: 11, weight: .medium))
+                                                .foregroundColor(AppColors.textSecondary)
                                         }
+                                        .frame(width: 90, height: 90)
+                                        .background(AppColors.background)
+                                        .cornerRadius(AppCornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                                        )
+                                    }
+                                    .onChange(of: selectedItems) { _ in
+                                        handleImageSelection()
+                                    }
+                                }
+                                
+                                // 图片预览
+                                ForEach(Array(viewModel.selectedImages.enumerated()), id: \.offset) { index, image in
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 90, height: 90)
+                                            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                        
+                                        Button(action: {
+                                            withAnimation {
+                                                viewModel.selectedImages.remove(at: index)
+                                                selectedItems = []
+                                                HapticFeedback.light()
+                                            }
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                        }
+                                        .padding(4)
                                     }
                                 }
                             }
+                            .padding(.vertical, 4)
                         }
                     }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                     
                     // 错误提示
                     if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(AppColors.error)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(spacing: 8) {
+                            IconStyle.icon("exclamationmark.octagon.fill", size: 16)
+                            Text(errorMessage)
+                                .font(AppTypography.caption)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(AppColors.error)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppColors.error.opacity(0.08))
+                        .cornerRadius(AppCornerRadius.medium)
                     }
                     
                     // 提交按钮
                     Button(action: {
                         if appState.isAuthenticated {
+                            HapticFeedback.success()
                             viewModel.createItem { success in
                                 if success {
                                     dismiss()
@@ -160,26 +192,20 @@ struct CreateFleaMarketItemView: View {
                             showLogin = true
                         }
                     }) {
-                        if viewModel.isLoading || viewModel.isUploading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text("发布商品")
-                                .fontWeight(.semibold)
+                        HStack(spacing: 8) {
+                            if viewModel.isLoading || viewModel.isUploading {
+                                ProgressView().tint(.white)
+                            } else {
+                                IconStyle.icon("cart.fill.badge.plus", size: 18)
+                            }
+                            Text(viewModel.isLoading || viewModel.isUploading ? "正在发布..." : "立即发布商品")
+                                .font(AppTypography.bodyBold)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .foregroundColor(.white)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.8)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(AppCornerRadius.medium)
-                    .disabled(viewModel.isLoading || viewModel.isUploading)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(viewModel.isLoading || viewModel.isUploading || viewModel.title.isEmpty || viewModel.price == nil)
+                    .padding(.top, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.xxl)
                 }
                 .padding(AppSpacing.md)
                 .padding(.bottom, 20)
@@ -203,6 +229,24 @@ struct CreateFleaMarketItemView: View {
                     showLogin = true
                 }
             }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        if viewModel.selectedImages.count < 5 {
+                            viewModel.selectedImages.append(image)
+                        }
+                    }
+                }
+            }
+            selectedItems = [] // 清空以备下次选择
         }
     }
 }

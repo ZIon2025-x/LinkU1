@@ -312,42 +312,54 @@ struct SubmitVerificationView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                Form {
-                    Section {
-                        TextField("学校邮箱", text: $email)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .autocorrectionDisabled()
-                            .font(AppTypography.body)
-                    } header: {
-                        Text("邮箱信息")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Text("请输入您的学校邮箱地址，我们将发送验证邮件到该邮箱。")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    } header: {
-                        Text("说明")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Button(action: submit) {
-                            if isSubmitting {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Text("提交")
-                                    .frame(maxWidth: .infinity)
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 邮箱信息
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "邮箱信息", icon: "envelope.fill")
+                            
+                            VStack(spacing: AppSpacing.lg) {
+                                EnhancedTextField(
+                                    title: "学校邮箱",
+                                    placeholder: "请输入您的 .ac.uk 或 .edu 邮箱",
+                                    text: $email,
+                                    icon: "envelope",
+                                    keyboardType: .emailAddress,
+                                    autocapitalization: .never,
+                                    isRequired: true
+                                )
+                                
+                                Text("说明: 请输入您的学校邮箱地址，我们将发送验证邮件到该邮箱。")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .padding(.horizontal, 4)
                             }
                         }
-                        .disabled(isSubmitting || email.isEmpty)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 提交按钮
+                        Button(action: {
+                            HapticFeedback.success()
+                            submit()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isSubmitting {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    IconStyle.icon("paperplane.fill", size: 18)
+                                }
+                                Text(isSubmitting ? "正在提交..." : "发送验证邮件")
+                                    .font(AppTypography.bodyBold)
+                            }
+                        }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isSubmitting || email.isEmpty)
+                        .padding(.top, AppSpacing.lg)
                     }
+                    .padding(AppSpacing.md)
                 }
             }
             .navigationTitle("提交认证")
@@ -359,7 +371,10 @@ struct SubmitVerificationView: View {
                     }
                 }
             }
-            .alert("错误", isPresented: .constant(submitError != nil)) {
+            .alert("错误", isPresented: Binding(
+                get: { submitError != nil },
+                set: { if !$0 { submitError = nil } }
+            )) {
                 Button("确定", role: .cancel) {
                     submitError = nil
                 }
@@ -413,42 +428,54 @@ struct RenewVerificationView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                Form {
-                    Section {
-                        TextField("学校邮箱", text: $email)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .autocorrectionDisabled()
-                            .font(AppTypography.body)
-                    } header: {
-                        Text("邮箱信息")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Text("请输入您的学校邮箱地址以续期认证。")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    } header: {
-                        Text("说明")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Button(action: renew) {
-                            if isRenewing {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Text("续期")
-                                    .frame(maxWidth: .infinity)
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 邮箱信息
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "续期信息", icon: "arrow.clockwise.circle.fill")
+                            
+                            VStack(spacing: AppSpacing.lg) {
+                                EnhancedTextField(
+                                    title: "学校邮箱",
+                                    placeholder: "请输入您的学校邮箱",
+                                    text: $email,
+                                    icon: "envelope",
+                                    keyboardType: .emailAddress,
+                                    autocapitalization: .never,
+                                    isRequired: true
+                                )
+                                
+                                Text("说明: 请输入您的学校邮箱地址以续期认证。")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .padding(.horizontal, 4)
                             }
                         }
-                        .disabled(isRenewing || email.isEmpty)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 续期按钮
+                        Button(action: {
+                            HapticFeedback.success()
+                            renew()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isRenewing {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    IconStyle.icon("arrow.clockwise", size: 18)
+                                }
+                                Text(isRenewing ? "正在续期..." : "立即续期")
+                                    .font(AppTypography.bodyBold)
+                            }
+                        }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isRenewing || email.isEmpty)
+                        .padding(.top, AppSpacing.lg)
                     }
+                    .padding(AppSpacing.md)
                 }
             }
             .navigationTitle("续期认证")
@@ -460,7 +487,10 @@ struct RenewVerificationView: View {
                     }
                 }
             }
-            .alert("错误", isPresented: .constant(renewError != nil)) {
+            .alert("错误", isPresented: Binding(
+                get: { renewError != nil },
+                set: { if !$0 { renewError = nil } }
+            )) {
                 Button("确定", role: .cancel) {
                     renewError = nil
                 }
@@ -514,42 +544,54 @@ struct ChangeEmailView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                Form {
-                    Section {
-                        TextField("新学校邮箱", text: $newEmail)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .autocorrectionDisabled()
-                            .font(AppTypography.body)
-                    } header: {
-                        Text("新邮箱")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Text("请输入新的学校邮箱地址。")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    } header: {
-                        Text("说明")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    
-                    Section {
-                        Button(action: changeEmail) {
-                            if isChanging {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Text("更换")
-                                    .frame(maxWidth: .infinity)
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 新邮箱信息
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "更换邮箱", icon: "envelope.badge.shield.half.filled")
+                            
+                            VStack(spacing: AppSpacing.lg) {
+                                EnhancedTextField(
+                                    title: "新学校邮箱",
+                                    placeholder: "请输入新的学校邮箱",
+                                    text: $newEmail,
+                                    icon: "envelope",
+                                    keyboardType: .emailAddress,
+                                    autocapitalization: .never,
+                                    isRequired: true
+                                )
+                                
+                                Text("说明: 请输入新的学校邮箱地址，更换后需重新验证。")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .padding(.horizontal, 4)
                             }
                         }
-                        .disabled(isChanging || newEmail.isEmpty)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 更换按钮
+                        Button(action: {
+                            HapticFeedback.success()
+                            changeEmail()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isChanging {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    IconStyle.icon("arrow.left.and.right", size: 18)
+                                }
+                                Text(isChanging ? "正在更换..." : "确认更换")
+                                    .font(AppTypography.bodyBold)
+                            }
+                        }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isChanging || newEmail.isEmpty)
+                        .padding(.top, AppSpacing.lg)
                     }
+                    .padding(AppSpacing.md)
                 }
             }
             .navigationTitle("更换邮箱")
@@ -561,7 +603,10 @@ struct ChangeEmailView: View {
                     }
                 }
             }
-            .alert("错误", isPresented: .constant(changeError != nil)) {
+            .alert("错误", isPresented: Binding(
+                get: { changeError != nil },
+                set: { if !$0 { changeError = nil } }
+            )) {
                 Button("确定", role: .cancel) {
                     changeError = nil
                 }

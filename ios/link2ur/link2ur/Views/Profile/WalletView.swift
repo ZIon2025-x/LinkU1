@@ -173,17 +173,19 @@ struct PointsAccountCard: View {
         VStack(spacing: AppSpacing.lg) {
             // 余额显示
             VStack(spacing: AppSpacing.sm) {
-                Text("积分余额")
+                Text("points.balance")
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                 
-                Text(account.balanceDisplay)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(AppColors.primary)
-                
-                Text(account.currency)
-                    .font(AppTypography.subheadline)
-                    .foregroundColor(AppColors.textSecondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(account.balance)")
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundColor(AppColors.primary)
+                    
+                    Text("points.unit")
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
             
             Divider()
@@ -192,14 +194,14 @@ struct PointsAccountCard: View {
             // 统计信息
             HStack(spacing: AppSpacing.xl) {
                 StatItem(
-                    label: "累计获得",
-                    value: "\(account.totalEarned / 100)",
+                    label: String(localized: "points.total_earned"),
+                    value: "\(account.totalEarned)",
                     color: AppColors.success
                 )
                 
                 StatItem(
-                    label: "累计消费",
-                    value: "\(account.totalSpent / 100)",
+                    label: String(localized: "points.total_spent"),
+                    value: "\(account.totalSpent)",
                     color: AppColors.warning
                 )
             }

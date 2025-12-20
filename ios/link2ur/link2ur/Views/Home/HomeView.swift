@@ -34,7 +34,7 @@ struct HomeView: View {
                         
                         // 中间三个标签（符合 HIG 间距）
                         HStack(spacing: 0) {
-                            TabButton(title: "达人", isSelected: selectedTab == 0) {
+                            TabButton(title: LocalizationKey.homeExperts.localized, isSelected: selectedTab == 0) {
                                 if selectedTab != 0 {
                                     HapticFeedback.selection()
                                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -43,7 +43,7 @@ struct HomeView: View {
                                 }
                             }
                             
-                            TabButton(title: "推荐", isSelected: selectedTab == 1) {
+                            TabButton(title: LocalizationKey.homeRecommended.localized, isSelected: selectedTab == 1) {
                                 if selectedTab != 1 {
                                     HapticFeedback.selection()
                                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -52,7 +52,7 @@ struct HomeView: View {
                                 }
                             }
                             
-                            TabButton(title: "附近", isSelected: selectedTab == 2) {
+                            TabButton(title: LocalizationKey.homeNearby.localized, isSelected: selectedTab == 2) {
                                 if selectedTab != 2 {
                                     HapticFeedback.selection()
                                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -168,11 +168,11 @@ struct RecommendedContentView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack(alignment: .top, spacing: AppSpacing.md) {
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            Text("你好，\(appState.currentUser?.name ?? "Link²Ur用户")")
+                            Text(String(format: LocalizationKey.homeGreeting.localized, appState.currentUser?.name ?? LocalizationKey.appUser.localized))
                                 .font(AppTypography.title2) // 使用 title2
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("今天想做点什么？")
+                            Text(LocalizationKey.homeWhatToDo.localized)
                                 .font(AppTypography.body) // 使用 body
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -224,8 +224,8 @@ struct NearbyTasksView: View {
             } else if viewModel.tasks.isEmpty {
                 EmptyStateView(
                     icon: "mappin.circle.fill",
-                    title: "附近暂无任务",
-                    message: "附近还没有任务发布，快来发布第一个任务吧！"
+                    title: LocalizationKey.homeNoNearbyTasks.localized,
+                    message: LocalizationKey.homeNoNearbyTasksMessage.localized
                 )
             } else {
                 ScrollView {
@@ -314,53 +314,53 @@ struct MenuView: View {
             List {
                 Section {
                     NavigationLink(destination: ProfileView()) {
-                        Label("我的", systemImage: "person.fill")
+                        Label(LocalizationKey.menuMy.localized, systemImage: "person.fill")
                     }
                     
                     NavigationLink(destination: TasksView()) {
-                        Label("任务大厅", systemImage: "list.bullet")
+                        Label(LocalizationKey.menuTaskHall.localized, systemImage: "list.bullet")
                     }
                     
                     NavigationLink(destination: TaskExpertListView()) {
-                        Label("任务达人", systemImage: "star.fill")
+                        Label(LocalizationKey.menuTaskExperts.localized, systemImage: "star.fill")
                     }
                     
                     NavigationLink(destination: ForumView()) {
-                        Label("论坛", systemImage: "bubble.left.and.bubble.right.fill")
+                        Label(LocalizationKey.menuForum.localized, systemImage: "bubble.left.and.bubble.right.fill")
                     }
                     
                     NavigationLink(destination: LeaderboardView()) {
-                        Label("排行榜", systemImage: "trophy.fill")
+                        Label(LocalizationKey.menuLeaderboard.localized, systemImage: "trophy.fill")
                     }
                     
                     NavigationLink(destination: FleaMarketView()) {
-                        Label("跳蚤市场", systemImage: "cart.fill")
+                        Label(LocalizationKey.menuFleaMarket.localized, systemImage: "cart.fill")
                     }
                     
                     NavigationLink(destination: ActivityListView()) {
-                        Label("活动", systemImage: "calendar.badge.plus")
+                        Label(LocalizationKey.menuActivity.localized, systemImage: "calendar.badge.plus")
                     }
                     
                     NavigationLink(destination: CouponPointsView()) {
-                        Label("积分与优惠券", systemImage: "star.fill")
+                        Label(LocalizationKey.menuPointsCoupons.localized, systemImage: "star.fill")
                     }
                     
                     NavigationLink(destination: StudentVerificationView()) {
-                        Label("学生认证", systemImage: "person.badge.shield.checkmark.fill")
+                        Label(LocalizationKey.menuStudentVerification.localized, systemImage: "person.badge.shield.checkmark.fill")
                     }
                 }
                 
                 Section {
                     NavigationLink(destination: SettingsView()) {
-                        Label("设置", systemImage: "gearshape.fill")
+                        Label(LocalizationKey.menuSettings.localized, systemImage: "gearshape.fill")
                     }
                 }
             }
-            .navigationTitle("菜单")
+            .navigationTitle(LocalizationKey.menuMenu.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.menuClose.localized) {
                         dismiss()
                     }
                 }
@@ -410,7 +410,7 @@ struct TaskExpertListContentView: View {
                     }) {
                         HStack {
                             Image(systemName: "magnifyingglass")
-                            Text("搜索达人")
+                            Text(LocalizationKey.homeSearchExperts.localized)
                                 .font(AppTypography.subheadline)
                         }
                         .foregroundColor(AppColors.textSecondary)
@@ -476,8 +476,8 @@ struct TaskExpertListContentView: View {
                             Spacer()
                             EmptyStateView(
                                 icon: "person.3.fill",
-                                title: "暂无任务达人",
-                                message: "还没有任务达人，敬请期待..."
+                                title: LocalizationKey.homeNoExperts.localized,
+                                message: LocalizationKey.homeNoExpertsMessage.localized
                             )
                             Spacer()
                         }
@@ -859,7 +859,7 @@ struct SearchResultsView: View {
             LazyVStack(spacing: AppSpacing.md) {
                 // 任务结果
                 if !viewModel.filteredTaskResults.isEmpty {
-                    SearchResultSection(title: "任务", count: viewModel.taskResults.count) {
+                    SearchResultSection(title: LocalizationKey.tasksTasks.localized, count: viewModel.taskResults.count) {
                         ForEach(viewModel.filteredTaskResults) { task in
                             NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                 SearchTaskCard(task: task)
@@ -871,7 +871,7 @@ struct SearchResultsView: View {
                 
                 // 达人结果
                 if !viewModel.filteredExpertResults.isEmpty {
-                    SearchResultSection(title: "达人", count: viewModel.expertResults.count) {
+                    SearchResultSection(title: LocalizationKey.homeExperts.localized, count: viewModel.expertResults.count) {
                         ForEach(viewModel.filteredExpertResults) { expert in
                             NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
                                 SearchExpertCard(expert: expert)
@@ -883,7 +883,7 @@ struct SearchResultsView: View {
                 
                 // 跳蚤市场结果
                 if !viewModel.filteredFleaMarketResults.isEmpty {
-                    SearchResultSection(title: "二手商品", count: viewModel.fleaMarketResults.count) {
+                    SearchResultSection(title: LocalizationKey.fleaMarketItems.localized, count: viewModel.fleaMarketResults.count) {
                         ForEach(viewModel.filteredFleaMarketResults) { item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
                                 SearchFleaMarketCard(item: item)
@@ -895,7 +895,7 @@ struct SearchResultsView: View {
                 
                 // 论坛结果
                 if !viewModel.filteredForumResults.isEmpty {
-                    SearchResultSection(title: "论坛帖子", count: viewModel.forumResults.count) {
+                    SearchResultSection(title: LocalizationKey.forumPosts.localized, count: viewModel.forumResults.count) {
                         ForEach(viewModel.filteredForumResults) { post in
                             NavigationLink(destination: ForumPostDetailView(postId: post.id)) {
                                 SearchForumCard(post: post)
@@ -1229,7 +1229,7 @@ struct RecommendedTasksSection: View {
     var body: some View {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
-                Text("推荐任务")
+                Text(LocalizationKey.homeRecommendedTasks.localized)
                     .font(AppTypography.title3) // 使用 title3
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -1237,7 +1237,7 @@ struct RecommendedTasksSection: View {
                 
                 NavigationLink(destination: TasksView()) {
                     HStack(spacing: 4) {
-                        Text("查看全部")
+                        Text(LocalizationKey.commonViewAll.localized)
                             .font(AppTypography.body) // 使用 body
                         IconStyle.icon("chevron.right", size: IconStyle.small)
                     }
@@ -1257,8 +1257,8 @@ struct RecommendedTasksSection: View {
             } else if viewModel.tasks.isEmpty {
                 EmptyStateView(
                     icon: "doc.text.fill",
-                    title: "暂无推荐任务",
-                    message: "还没有推荐任务，快去任务大厅看看吧！"
+                    title: LocalizationKey.homeNoRecommendedTasks.localized,
+                    message: LocalizationKey.homeNoRecommendedTasksMessage.localized
                 )
                 .padding(AppSpacing.md)
             } else {
@@ -1291,7 +1291,7 @@ struct RecentActivitiesSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("最新动态")
+            Text(LocalizationKey.homeLatestActivity.localized)
                 .font(AppTypography.title3) // 使用 title3
                 .foregroundColor(AppColors.textPrimary)
                 .padding(.horizontal, AppSpacing.md)
@@ -1306,8 +1306,8 @@ struct RecentActivitiesSection: View {
             } else if viewModel.activities.isEmpty {
                 EmptyStateView(
                     icon: "bell.fill",
-                    title: "暂无动态",
-                    message: "还没有最新动态"
+                    title: LocalizationKey.homeNoActivity.localized,
+                    message: LocalizationKey.homeNoActivityMessage.localized
                 )
                 .padding(AppSpacing.md)
             } else {
@@ -1333,7 +1333,7 @@ struct RecentActivitiesSection: View {
                 } else if !viewModel.hasMore && !viewModel.activities.isEmpty {
                     HStack {
                         Spacer()
-                        Text("没有更多动态了")
+                        Text(LocalizationKey.homeNoMoreActivity.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textTertiary)
                             .padding()
@@ -1449,7 +1449,7 @@ struct PopularActivitiesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
-                Text("热门活动")
+                Text(LocalizationKey.homeHotEvents.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -1457,7 +1457,7 @@ struct PopularActivitiesSection: View {
                 
                 NavigationLink(destination: ActivityListView()) {
                     HStack(spacing: 4) {
-                        Text("查看全部")
+                        Text(LocalizationKey.commonViewAll.localized)
                             .font(AppTypography.body) // 使用 body
                         IconStyle.icon("chevron.right", size: IconStyle.small)
                     }
@@ -1477,8 +1477,8 @@ struct PopularActivitiesSection: View {
             } else if viewModel.activities.isEmpty {
                 EmptyStateView(
                     icon: "calendar.badge.plus",
-                    title: "暂无活动",
-                    message: "目前还没有活动，敬请期待..."
+                    title: LocalizationKey.homeNoEvents.localized,
+                    message: LocalizationKey.homeNoEventsMessage.localized
                 )
                 .padding()
             } else {
@@ -1530,7 +1530,7 @@ struct BannerCarouselSection: View {
                         VStack(spacing: AppSpacing.sm) {
                             ProgressView()
                                 .tint(AppColors.primary)
-                            Text("加载中...")
+                            Text(LocalizationKey.commonLoading.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -1606,12 +1606,12 @@ struct ActivityCardPlaceholder: View {
                 }
                 
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text("查看活动")
+                    Text(LocalizationKey.homeViewEvent.localized)
                         .font(AppTypography.title3)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
-                    Text("点击查看最新活动")
+                    Text(LocalizationKey.homeTapToViewEvents.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
@@ -1628,7 +1628,7 @@ struct ActivityCardPlaceholder: View {
                 HStack(spacing: AppSpacing.xs) {
                     IconStyle.icon("person.2.fill", size: IconStyle.small)
                         .foregroundColor(AppColors.textSecondary)
-                    Text("多人")
+                    Text(LocalizationKey.homeMultiplePeople.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -1638,7 +1638,7 @@ struct ActivityCardPlaceholder: View {
                 HStack(spacing: AppSpacing.xs) {
                     IconStyle.icon("arrow.right.circle.fill", size: IconStyle.small)
                         .foregroundColor(AppColors.primary)
-                    Text("查看")
+                    Text(LocalizationKey.homeView.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.primary)
                 }

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 public enum APIError: Error, LocalizedError {
     case invalidURL
@@ -537,6 +538,26 @@ public class APIService {
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
+    }
+    
+    /// 上传图片的便捷方法 (支持 UIImage 和 path)
+    func uploadImage(_ image: UIImage, path: String, completion: @escaping (Result<String, APIError>) -> Void) {
+        guard let data = image.jpegData(compressionQuality: 0.7) else {
+            completion(.failure(APIError.decodingError(NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]))))
+            return
+        }
+        
+        let filename = "\(path)_\(Int(Date().timeIntervalSince1970)).jpg"
+        
+        self.uploadImage(data, filename: filename)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    completion(.failure(error))
+                }
+            }, receiveValue: { url in
+                completion(.success(url))
+            })
+            .store(in: &cancellables)
     }
     
     // 注册设备Token（用于推送通知）

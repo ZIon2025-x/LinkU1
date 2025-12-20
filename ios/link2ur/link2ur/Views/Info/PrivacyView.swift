@@ -4,7 +4,7 @@ struct PrivacyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("隐私政策")
+                Text(LocalizationKey.infoPrivacyPolicy.localized)
                     .font(AppTypography.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)

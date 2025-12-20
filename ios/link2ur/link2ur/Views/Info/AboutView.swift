@@ -17,7 +17,7 @@ struct AboutView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("连接你我的任务平台")
+                    Text(LocalizationKey.infoConnectPlatform.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }

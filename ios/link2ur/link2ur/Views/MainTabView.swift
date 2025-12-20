@@ -42,14 +42,14 @@ public struct MainTabView: View {
                 HomeView()
                     .id(homeViewResetTrigger) // 使用 id 来强制重置
                     .tabItem {
-                        Label("首页", systemImage: "house.fill")
+                        Label(LocalizationKey.tabsHome.localized, systemImage: "house.fill")
                     }
                     .tag(0)
                 
                 CommunityView()
                     .id("community-tab") // 添加稳定的 ID，确保视图不会被重新创建
                     .tabItem {
-                        Label("社区", systemImage: "person.3.fill")
+                        Label(LocalizationKey.tabsCommunity.localized, systemImage: "person.3.fill")
                     }
                     .tag(1)
                 
@@ -74,13 +74,13 @@ public struct MainTabView: View {
                     }
                 }
                 .tabItem {
-                    Label("发布", systemImage: "plus.circle.fill")
+                    Label(LocalizationKey.tabsCreate.localized, systemImage: "plus.circle.fill")
                 }
                 .tag(2)
                 
                 MessageView()
                     .tabItem {
-                        Label("消息", systemImage: "message.fill")
+                        Label(LocalizationKey.tabsMessages.localized, systemImage: "message.fill")
                     }
                     .tag(3)
                     .badge(appState.unreadNotificationCount + appState.unreadMessageCount > 0 ? 
@@ -89,7 +89,7 @@ public struct MainTabView: View {
                 
                 ProfileView()
                     .tabItem {
-                        Label("我的", systemImage: "person.fill")
+                        Label(LocalizationKey.tabsProfile.localized, systemImage: "person.fill")
                     }
                     .tag(4)
             }
@@ -181,7 +181,7 @@ struct CommunityView: View {
                         HStack(spacing: 0) {
                             // 论坛
                             TabButton(
-                                title: "论坛",
+                                title: LocalizationKey.communityForum.localized,
                                 isSelected: selectedTab == 0
                             ) {
                                 selectedTab = 0
@@ -189,7 +189,7 @@ struct CommunityView: View {
                             
                             // 排行榜
                             TabButton(
-                                title: "排行榜",
+                                title: LocalizationKey.communityLeaderboard.localized,
                                 isSelected: selectedTab == 1
                             ) {
                                 selectedTab = 1

@@ -69,12 +69,12 @@ public struct LoginView: View {
                         }
                         
                         VStack(spacing: AppSpacing.xs) {
-                            Text("Link²Ur")
+                            Text(LocalizationKey.appName.localized)
                                 .font(AppTypography.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("连接你我，创造价值")
+                            Text(LocalizationKey.appTagline.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -82,9 +82,9 @@ public struct LoginView: View {
                     .padding(.bottom, AppSpacing.lg)
                     
                     // 登录方式切换
-                    Picker("登录方式", selection: $viewModel.isPhoneLogin) {
-                        Text("邮箱密码").tag(false)
-                        Text("手机验证码").tag(true)
+                    Picker(LocalizationKey.authLoginMethod.localized, selection: $viewModel.isPhoneLogin) {
+                        Text(LocalizationKey.authEmailPassword.localized).tag(false)
+                        Text(LocalizationKey.authPhoneCode.localized).tag(true)
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal, AppSpacing.md)
@@ -108,7 +108,7 @@ public struct LoginView: View {
                             // 手机验证码登录
                             // 区号和手机号输入
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                Text("手机号")
+                                Text(LocalizationKey.authPhone.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                                 
@@ -158,7 +158,7 @@ public struct LoginView: View {
                                     // 手机号输入
                                     EnhancedTextField(
                                         title: nil,
-                                        placeholder: "请输入手机号",
+                                        placeholder: LocalizationKey.authEnterPhone.localized,
                                         text: $viewModel.phone,
                                         icon: "phone.fill",
                                         keyboardType: .phonePad,
@@ -176,8 +176,8 @@ public struct LoginView: View {
                             // 验证码输入和发送按钮
                             HStack(spacing: AppSpacing.sm) {
                                 EnhancedTextField(
-                                    title: "验证码",
-                                    placeholder: "请输入验证码",
+                                    title: LocalizationKey.authVerificationCode.localized,
+                                    placeholder: LocalizationKey.authEnterCode.localized,
                                     text: $viewModel.verificationCode,
                                     icon: "key.fill",
                                     keyboardType: .numberPad,
@@ -222,7 +222,7 @@ public struct LoginView: View {
                                                 if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
                                                     showCaptcha = true
                                                 } else {
-                                                    viewModel.errorMessage = "无法加载验证码，请稍后重试"
+                                                    viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
                                                 }
                                             }
                                         }
@@ -235,7 +235,7 @@ public struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
                                     } else {
-                                        Text(viewModel.canResendCode ? "发送验证码" : "\(viewModel.countdownSeconds)秒")
+                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)秒")
                                             .font(AppTypography.caption)
                                             .fontWeight(.medium)
                                     }
@@ -295,8 +295,8 @@ public struct LoginView: View {
                             // 邮箱密码登录
                             // 邮箱输入
                             EnhancedTextField(
-                                title: "邮箱",
-                                placeholder: "请输入邮箱",
+                                title: LocalizationKey.authEmail.localized,
+                                placeholder: LocalizationKey.authEnterEmail.localized,
                                 text: $viewModel.email,
                                 icon: "envelope.fill",
                                 keyboardType: .emailAddress,
@@ -311,8 +311,8 @@ public struct LoginView: View {
                             
                             // 密码输入
                             EnhancedTextField(
-                                title: "密码",
-                                placeholder: "请输入密码",
+                                title: LocalizationKey.authPassword.localized,
+                                placeholder: LocalizationKey.authEnterPassword.localized,
                                 text: $viewModel.password,
                                 icon: "lock.fill",
                                 isSecure: true,
@@ -351,7 +351,7 @@ public struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     } else {
-                                        Text("登录")
+                                        Text(LocalizationKey.authLogin.localized)
                                             .font(AppTypography.bodyBold)
                                         
                                         Image(systemName: "arrow.right")
@@ -379,12 +379,12 @@ public struct LoginView: View {
                         
                         // 注册链接 - 符合 HIG
                         HStack {
-                            Text("还没有账号？")
+                            Text(LocalizationKey.authNoAccount.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                             
                             NavigationLink(destination: RegisterView()) {
-                                Text("立即注册")
+                                Text(LocalizationKey.authRegisterNow.localized)
                                     .font(AppTypography.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(AppColors.primary)
@@ -432,7 +432,7 @@ public struct LoginView: View {
                         .ignoresSafeArea()
                     
                     VStack(spacing: AppSpacing.lg) {
-                        Text("请完成人机验证")
+                        Text(LocalizationKey.authCaptchaMessage.localized)
                             .font(AppTypography.title2)
                             .foregroundColor(AppColors.textPrimary)
                             .padding(.top, AppSpacing.xl)
@@ -462,11 +462,11 @@ public struct LoginView: View {
                         Spacer()
                     }
                 }
-                .navigationTitle("人机验证")
+                .navigationTitle(LocalizationKey.authCaptchaTitle.localized)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("取消") {
+                        Button(LocalizationKey.commonCancel.localized) {
                             showCaptcha = false
                         }
                     }

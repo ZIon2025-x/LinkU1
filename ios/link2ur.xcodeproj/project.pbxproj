@@ -97,6 +97,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 1491C68C2EDF90BC0054DEAA;
 			minimizedProjectReferenceProxies = 1;
@@ -263,7 +264,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to provide you with more accurate services and task recommendations";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -296,7 +297,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to provide you with more accurate services and task recommendations";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

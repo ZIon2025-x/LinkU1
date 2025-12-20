@@ -71,7 +71,7 @@ struct ForumPostDetailView: View {
                                                 
                                                 // 官方标识（参考前端：蓝色 Tag）
                                                 if author.isAdmin == true {
-                                                    Text("官方")
+                                                    Text(LocalizationKey.forumOfficial.localized)
                                                         .font(.system(size: 11, weight: .semibold))
                                                         .foregroundColor(.white)
                                                         .padding(.horizontal, 6)
@@ -195,7 +195,7 @@ struct ForumPostDetailView: View {
                         
                         // 回复列表
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text("回复 (\(post.replyCount.formatCount()))")
+                            Text(LocalizationKey.forumReplies.localized(argument: post.replyCount.formatCount()))
                                 .font(.headline)
                                 .padding(.horizontal, AppSpacing.md)
                             
@@ -206,7 +206,7 @@ struct ForumPostDetailView: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, AppSpacing.md)
                             } else if viewModel.replies.isEmpty {
-                                Text("暂无回复")
+                                Text(LocalizationKey.forumNoReplies.localized)
                                     .font(.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                                     .frame(maxWidth: .infinity, alignment: .center)

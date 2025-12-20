@@ -85,7 +85,7 @@ struct TaskExpertDetailView: View {
                         
                         // 服务列表
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text("服务菜单")
+                            Text(LocalizationKey.taskExpertServiceMenu.localized)
                                 .font(AppTypography.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(AppColors.textPrimary)

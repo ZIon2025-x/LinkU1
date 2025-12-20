@@ -4,7 +4,7 @@ struct TermsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("服务条款")
+                Text(LocalizationKey.infoTermsOfService.localized)
                     .font(AppTypography.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)

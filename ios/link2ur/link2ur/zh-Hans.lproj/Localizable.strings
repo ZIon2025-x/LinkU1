@@ -1,0 +1,513 @@
+/* 
+  Localizable.strings
+  link2ur
+  
+  简体中文本地化
+*/
+
+// MARK: - Common
+"common.ok" = "确定";
+"common.cancel" = "取消";
+"common.confirm" = "确认";
+"common.delete" = "删除";
+"common.save" = "保存";
+"common.edit" = "编辑";
+"common.close" = "关闭";
+"common.retry" = "重试";
+"common.loading" = "加载中...";
+"common.search" = "搜索";
+"common.clear" = "清空";
+"common.submit" = "提交";
+"common.back" = "返回";
+"common.next" = "下一步";
+"common.finish" = "完成";
+"common.share" = "分享";
+"common.more" = "更多";
+"common.view_all" = "查看全部";
+
+// MARK: - App
+"app.name" = "Link²Ur";
+"app.tagline" = "连接你我，创造价值";
+"app.user" = "Link²Ur用户";
+
+// MARK: - Auth
+"auth.login" = "登录";
+"auth.register" = "注册";
+"auth.logout" = "退出登录";
+"auth.email" = "邮箱";
+"auth.password" = "密码";
+"auth.phone" = "手机号";
+"auth.verification_code" = "验证码";
+"auth.send_code" = "发送验证码";
+"auth.resend_code" = "重新发送";
+"auth.login_method" = "登录方式";
+"auth.email_password" = "邮箱密码";
+"auth.phone_code" = "手机验证码";
+"auth.enter_email" = "请输入邮箱";
+"auth.enter_password" = "请输入密码";
+"auth.enter_phone" = "请输入手机号";
+"auth.enter_code" = "请输入验证码";
+"auth.no_account" = "还没有账号？";
+"auth.has_account" = "已有账户？";
+"auth.register_now" = "立即注册";
+"auth.login_now" = "立即登录";
+"auth.register_success" = "注册成功";
+"auth.captcha_title" = "人机验证";
+"auth.captcha_message" = "请完成人机验证";
+"auth.captcha_error" = "无法加载验证码，请稍后重试";
+"auth.username" = "用户名";
+"auth.enter_username" = "请输入用户名";
+"auth.password_hint" = "至少8个字符，包含字母和数字";
+"auth.phone_optional" = "手机号（可选）";
+
+// MARK: - Home
+"home.experts" = "达人";
+"home.recommended" = "推荐";
+"home.nearby" = "附近";
+"home.greeting" = "你好，%@";
+"home.what_to_do" = "今天想做点什么？";
+"home.menu" = "菜单";
+"home.search_experts" = "搜索达人";
+"home.search" = "搜索";
+"home.no_results" = "没有找到相关结果";
+"home.try_other_keywords" = "试试其他关键词";
+"home.search_history" = "搜索历史";
+"home.hot_searches" = "热门搜索";
+"home.no_nearby_tasks" = "附近暂无任务";
+"home.no_nearby_tasks_message" = "附近还没有任务发布，快来发布第一个任务吧！";
+"home.no_experts" = "暂无任务达人";
+"home.no_experts_message" = "还没有任务达人，敬请期待...";
+"home.recommended_tasks" = "推荐任务";
+"home.no_recommended_tasks" = "暂无推荐任务";
+"home.no_recommended_tasks_message" = "还没有推荐任务，快去任务大厅看看吧！";
+"home.latest_activity" = "最新动态";
+"home.no_activity" = "暂无动态";
+"home.no_activity_message" = "还没有最新动态";
+"home.no_more_activity" = "没有更多动态了";
+"home.hot_events" = "热门活动";
+"home.no_events" = "暂无活动";
+"home.no_events_message" = "目前还没有活动，敬请期待...";
+"home.view_event" = "查看活动";
+"home.tap_to_view_events" = "点击查看最新活动";
+"home.multiple_people" = "多人";
+"home.view" = "查看";
+
+// MARK: - Tasks
+"tasks.task_detail" = "任务详情";
+"tasks.load_failed" = "加载失败";
+"tasks.cancel_task" = "取消任务";
+"tasks.cancel_task_confirm" = "确定要取消这个任务吗？";
+"tasks.apply" = "申请";
+"tasks.apply_task" = "申请任务";
+"tasks.apply_message" = "留言（可选）";
+"tasks.apply_info" = "申请信息";
+"tasks.price_negotiation" = "价格协商";
+"tasks.apply_hint" = "向发布者说明你的申请理由，有助于提高申请成功率";
+"tasks.submit_application" = "提交申请";
+"tasks.no_applicants" = "暂无申请者";
+"tasks.applicants_list" = "申请者列表 (%d)";
+"tasks.message_label" = "留言: %@";
+"tasks.task_description" = "任务描述";
+"tasks.time_info" = "时间信息";
+"tasks.publish_time" = "发布时间";
+"tasks.deadline" = "截止时间";
+"tasks.publisher" = "发布者";
+"tasks.your_task" = "这是您发布的任务";
+"tasks.manage_task" = "您可以在下方查看申请者并管理任务";
+"tasks.reviews" = "评价 (%d)";
+"tasks.no_task_images" = "暂无任务图片";
+"tasks.points_reward" = "%d 积分";
+"tasks.share_to" = "分享到...";
+"tasks.task" = "任务";
+"tasks.tasks" = "任务";
+
+// MARK: - Task Experts
+"experts.experts" = "任务达人";
+"experts.become_expert" = "成为达人";
+"experts.search_experts" = "搜索任务达人";
+"experts.apply_now" = "立即申请";
+"experts.login_to_apply" = "登录后申请";
+
+// MARK: - Forum
+"forum.forum" = "论坛";
+"forum.all_posts" = "全部帖子";
+"forum.no_posts" = "暂无帖子";
+"forum.no_posts_message" = "这个板块还没有帖子，快来发布第一个吧！";
+"forum.search_posts" = "搜索帖子";
+"forum.posts" = "帖子";
+
+// MARK: - Flea Market
+"flea_market.flea_market" = "跳蚤市场";
+"flea_market.no_items" = "暂无商品";
+"flea_market.no_items_message" = "跳蚤市场还没有商品，快来发布第一个吧！";
+"flea_market.search_items" = "搜索商品";
+"flea_market.items" = "商品";
+
+// MARK: - Profile
+"profile.profile" = "个人中心";
+"profile.my_tasks" = "我的任务";
+"profile.my_posts" = "我的帖子";
+"profile.settings" = "设置";
+"profile.about" = "关于";
+"profile.logout" = "退出登录";
+"profile.logout_confirm" = "确定要退出登录吗？";
+
+// MARK: - Messages
+"messages.messages" = "消息";
+"messages.chat" = "聊天";
+"messages.send" = "发送";
+"messages.enter_message" = "输入消息";
+
+// MARK: - Leaderboard
+"leaderboard.leaderboard" = "排行榜";
+"leaderboard.rank" = "排名";
+"leaderboard.points" = "积分";
+"leaderboard.user" = "用户";
+
+// MARK: - Notifications
+"notifications.notifications" = "通知";
+"notifications.no_notifications" = "暂无通知";
+"notifications.mark_all_read" = "全部标记为已读";
+
+// MARK: - Student Verification
+"student_verification.verification" = "学生认证";
+"student_verification.submit" = "提交认证";
+"student_verification.upload_document" = "上传证件";
+
+// MARK: - Customer Service
+"customer_service.customer_service" = "客服中心";
+"customer_service.chat_with_service" = "联系客服";
+
+// MARK: - Activity
+"activity.activity" = "动态";
+"activity.recent_activity" = "最近动态";
+
+// MARK: - Search
+"search.search" = "搜索";
+"search.results" = "结果";
+"search.no_results" = "没有找到相关结果";
+"search.try_other_keywords" = "试试其他关键词";
+
+// MARK: - Errors
+"error.network_error" = "网络错误";
+"error.unknown_error" = "未知错误";
+"error.invalid_input" = "输入无效";
+"error.login_failed" = "登录失败";
+"error.register_failed" = "注册失败";
+
+// MARK: - Success
+"success.operation_success" = "操作成功";
+"success.saved" = "已保存";
+"success.deleted" = "已删除";
+
+// MARK: - Currency
+"currency.pound" = "£";
+"currency.points" = "积分";
+
+// MARK: - Points
+"points.balance" = "积分余额";
+"points.unit" = "积分";
+"points.total_earned" = "累计获得";
+"points.total_spent" = "累计消费";
+"points.balance_after" = "余额";
+"points.amount_format" = "%d 积分";
+"points.balance_format" = "余额: %d 积分";
+
+// MARK: - Time
+"time.just_now" = "刚刚";
+"time.minutes_ago" = "%d分钟前";
+"time.hours_ago" = "%d小时前";
+"time.days_ago" = "%d天前";
+"time.weeks_ago" = "%d周前";
+"time.months_ago" = "%d个月前";
+"time.years_ago" = "%d年前";
+
+// MARK: - Tabs
+"tabs.home" = "首页";
+"tabs.community" = "社区";
+"tabs.create" = "发布";
+"tabs.messages" = "消息";
+"tabs.profile" = "我的";
+
+// MARK: - Community
+"community.forum" = "论坛";
+"community.leaderboard" = "排行榜";
+
+// MARK: - Post
+"post.pinned" = "置顶";
+"post.featured" = "精华";
+"post.official" = "官方";
+"post.all" = "全部";
+
+// MARK: - Actions
+"actions.approve" = "批准";
+"actions.reject" = "拒绝";
+"actions.chat" = "聊天";
+"actions.share" = "分享";
+"actions.cancel" = "取消";
+"actions.confirm" = "确定";
+"actions.submit" = "提交";
+"actions.loading_messages" = "加载消息中...";
+"actions.no_messages_yet" = "还没有消息";
+"actions.start_conversation" = "开始对话吧！";
+"actions.enter_message" = "输入消息...";
+"actions.private_message" = "私信";
+"actions.processing" = "处理中...";
+"actions.mark_complete" = "标记任务完成";
+"actions.confirm_complete" = "确认任务完成";
+"actions.contact_recipient" = "联系接受者";
+"actions.contact_poster" = "联系发布者";
+"actions.rate_task" = "评价任务";
+"actions.cancel_task" = "取消任务";
+"actions.apply_for_task" = "申请参与任务";
+"actions.optional_message" = "留言（可选）";
+"actions.negotiate_price" = "想要协商价格";
+"actions.apply_reason_hint" = "向发布者说明你的申请理由，有助于提高申请成功率";
+"actions.submit_application" = "提交申请";
+"actions.cancel_reason" = "取消原因（可选）";
+"actions.share_to" = "分享到...";
+
+// MARK: - Profile
+"profile.user" = "用户";
+"profile.my_tasks" = "我的任务";
+"profile.my_tasks_subtitle" = "查看我发布和接取的任务";
+"profile.my_posts" = "我的发布";
+"profile.my_posts_subtitle" = "查看我发布的内容";
+"profile.my_wallet" = "我的钱包";
+"profile.my_wallet_subtitle" = "查看余额和交易记录";
+"profile.my_applications" = "我的申请";
+"profile.my_applications_subtitle" = "查看服务申请记录";
+"profile.points_coupons" = "积分与优惠券";
+"profile.points_coupons_subtitle" = "查看积分、优惠券和签到";
+"profile.student_verification" = "学生认证";
+"profile.student_verification_subtitle" = "验证学生身份享受优惠";
+"profile.activity" = "活动";
+"profile.activity_subtitle" = "查看和参加活动";
+"profile.settings" = "设置";
+"profile.settings_subtitle" = "应用设置和偏好";
+"profile.logout" = "退出登录";
+"profile.welcome" = "欢迎使用 Link²Ur";
+"profile.login_prompt" = "登录后即可使用全部功能";
+"profile.confirm_logout" = "确认退出";
+"profile.logout_message" = "确定要退出登录吗？";
+
+// MARK: - Task Detail
+"task_detail.task_detail" = "任务详情";
+"task_detail.share" = "分享";
+"task_detail.cancel_task" = "取消任务";
+"task_detail.cancel_task_confirm" = "确定要取消这个任务吗？";
+"task_detail.no_task_images" = "暂无任务图片";
+"task_detail.vip_task" = "VIP任务";
+"task_detail.super_task" = "超级任务";
+"task_detail.task_description" = "任务描述";
+"task_detail.time_info" = "时间信息";
+"task_detail.publish_time" = "发布时间";
+"task_detail.deadline" = "截止时间";
+"task_detail.publisher" = "发布者";
+"task_detail.email_not_provided" = "未提供邮箱";
+"task_detail.your_task" = "这是您发布的任务";
+"task_detail.manage_task" = "您可以在下方查看申请者并管理任务";
+"task_detail.reviews" = "评价 (%d)";
+"task_detail.anonymous_user" = "匿名用户";
+"task_detail.unknown_user" = "未知用户";
+"task_detail.apply_info" = "申请信息";
+"task_detail.price_negotiation" = "价格协商";
+"task_detail.apply_reason_hint" = "向发布者说明你的申请理由，有助于提高申请成功率";
+"task_detail.submit_application" = "提交申请";
+"task_detail.applicants_list" = "申请者列表 (%d)";
+"task_detail.no_applicants" = "暂无申请者";
+"task_detail.message_label" = "留言: %@";
+"task_detail.waiting_review" = "等待发布者审核";
+"task_detail.task_completed" = "任务已完成";
+"task_detail.application_approved" = "申请已通过";
+"task_detail.application_rejected" = "申请被拒绝";
+"task_detail.unknown_status" = "未知状态";
+"task_detail.application_success" = "您已成功申请此任务，请等待发布者审核。";
+"task_detail.task_completed_message" = "恭喜！您已完成任务，请等待发布者确认。";
+"task_detail.application_approved_message" = "恭喜！您的申请已通过，可以开始执行任务了。";
+"task_detail.application_rejected_message" = "很抱歉，您的申请未通过审核。";
+"task_detail.pending_review" = "待审核";
+"task_detail.approved" = "已通过";
+"task_detail.rejected" = "已拒绝";
+"task_detail.unknown" = "未知";
+"task_detail.quality_good" = "工作质量好";
+"task_detail.on_time" = "准时";
+"task_detail.responsible" = "负责任";
+"task_detail.good_attitude" = "态度好";
+"task_detail.skilled" = "技能熟练";
+"task_detail.trustworthy" = "值得信赖";
+"task_detail.recommended" = "推荐";
+"task_detail.excellent" = "优秀";
+"task_detail.task_clear" = "任务清晰";
+"task_detail.communication_timely" = "沟通及时";
+"task_detail.payment_timely" = "付款及时";
+"task_detail.reasonable_requirements" = "要求合理";
+"task_detail.pleasant_cooperation" = "合作愉快";
+"task_detail.professional_efficient" = "专业高效";
+
+// MARK: - Messages
+"messages.loading_messages" = "加载消息中...";
+"messages.no_messages_yet" = "还没有消息";
+"messages.start_conversation" = "开始对话吧！";
+"messages.enter_message" = "输入消息...";
+"messages.no_task_chats" = "暂无任务聊天";
+"messages.no_task_chats_message" = "还没有任务相关的聊天记录";
+"messages.customer_service" = "客服中心";
+"messages.contact_service" = "联系客服获取帮助";
+"messages.interaction_info" = "互动信息";
+"messages.view_forum_interactions" = "查看论坛互动消息";
+"messages.no_interactions" = "暂无互动消息";
+"messages.no_interactions_message" = "还没有收到任何互动通知";
+"messages.click_to_view" = "点击查看消息";
+
+// MARK: - Permissions
+"permission.location_usage_description" = "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐";
+
+// MARK: - Customer Service
+"customer_service.welcome" = "欢迎使用客服中心";
+"customer_service.start_conversation" = "点击下方连接按钮开始与客服对话";
+"customer_service.loading_messages" = "加载消息中...";
+"customer_service.queue_position" = "排队位置: 第 %d 位";
+"customer_service.estimated_wait" = "预计等待时间: %d 秒";
+"customer_service.conversation_ended" = "对话已结束，如需帮助请重新发起对话";
+"customer_service.new_conversation" = "新对话";
+"customer_service.enter_message" = "输入消息...";
+"customer_service.connecting" = "正在连接客服...";
+"customer_service.end_conversation" = "结束对话";
+"customer_service.history" = "历史";
+"customer_service.login_required" = "请先登录后再使用客服功能";
+"customer_service.conversation_ended" = "对话已结束";
+"customer_service.what_can_help" = "有什么可以帮助您的吗？";
+"customer_service.no_chat_history" = "暂无对话历史";
+"customer_service.start_new_conversation" = "开始新的对话吧！";
+"customer_service.chat_history" = "对话历史";
+"customer_service.done" = "完成";
+"customer_service.service_chat" = "客服对话";
+"customer_service.ended" = "已结束";
+"customer_service.in_progress" = "进行中";
+"customer_service.rate_service" = "评价客服";
+"customer_service.satisfaction_question" = "您对 %@ 的服务满意吗？";
+"customer_service.select_rating" = "请选择评分";
+"customer_service.rating_content" = "评价内容（可选）";
+"customer_service.submit_rating" = "提交评价";
+"customer_service.rate_service_title" = "评价客服";
+"customer_service.skip" = "跳过";
+
+// MARK: - Rating
+"rating.very_poor" = "非常差";
+"rating.poor" = "差";
+"rating.average" = "一般";
+"rating.good" = "好";
+"rating.excellent" = "非常好";
+"rating.rating" = "评分";
+"rating.select_tags" = "选择标签（可选）";
+"rating.comment" = "评论（可选）";
+"rating.anonymous" = "匿名评价";
+"rating.submit" = "提交评价";
+
+// MARK: - Menu
+"menu.menu" = "菜单";
+"menu.my" = "我的";
+"menu.task_hall" = "任务大厅";
+"menu.task_experts" = "任务达人";
+"menu.forum" = "论坛";
+"menu.leaderboard" = "排行榜";
+"menu.flea_market" = "跳蚤市场";
+"menu.activity" = "活动";
+"menu.points_coupons" = "积分与优惠券";
+"menu.student_verification" = "学生认证";
+"menu.settings" = "设置";
+"menu.close" = "关闭";
+
+// MARK: - Task Categories
+"task_category.all" = "全部";
+"task_category.housekeeping" = "清洁家政";
+"task_category.campus_life" = "校园生活";
+"task_category.secondhand_rental" = "二手租赁";
+"task_category.errand_running" = "跑腿代购";
+"task_category.skill_service" = "技能服务";
+"task_category.social_help" = "社交互助";
+"task_category.transportation" = "交通用车";
+"task_category.pet_care" = "宠物寄养";
+"task_category.life_convenience" = "生活便利";
+"task_category.other" = "其他";
+
+// MARK: - Expert Categories
+"expert_category.all" = "全部";
+"expert_category.programming" = "编程";
+"expert_category.translation" = "翻译";
+"expert_category.tutoring" = "辅导";
+"expert_category.food" = "食品";
+"expert_category.beverage" = "饮料";
+"expert_category.cake" = "蛋糕";
+"expert_category.errand_transport" = "跑腿/交通";
+"expert_category.social_entertainment" = "社交/娱乐";
+"expert_category.beauty_skincare" = "美容/护肤";
+"expert_category.handicraft" = "手工艺";
+
+// MARK: - Create Task
+"create_task.basic_info" = "基本信息";
+"create_task.reward_location" = "报酬与地点";
+"create_task.currency" = "货币";
+"create_task.task_type" = "任务类型";
+"create_task.images" = "图片";
+"create_task.add_images" = "添加图片";
+
+// MARK: - Task Expert
+"task_expert.become_expert" = "成为达人";
+"task_expert.become_expert_title" = "成为任务达人";
+"task_expert.showcase_skills" = "展示您的专业技能，获得更多任务机会";
+"task_expert.benefits" = "成为达人的好处";
+"task_expert.how_to_apply" = "如何申请？";
+"task_expert.apply_now" = "立即申请";
+"task_expert.login_to_apply" = "登录后申请";
+"task_expert.application_info" = "申请信息";
+"task_expert.application_hint" = "请介绍您的专业技能、经验和优势，这将帮助平台更好地了解您。";
+"task_expert.submit_application" = "提交申请";
+"task_expert.application_submitted" = "您的申请已提交，我们将在3-5个工作日内完成审核。";
+"task_expert.no_intro" = "暂无简介";
+"task_expert.service_menu" = "服务菜单";
+"task_expert.optional_time_slots" = "可选时间段";
+"task_expert.no_available_slots" = "暂无可用时间段";
+"task_expert.apply_service" = "申请服务";
+"task_expert.optional" = "可选";
+"task_expert.full" = "已满";
+"task_expert.application_message" = "申请留言";
+"task_expert.negotiate_price" = "议价金额";
+"task_expert.expert_negotiate_price" = "任务达人提出议价：";
+"task_expert.view_task" = "查看任务";
+"task_expert.task_details" = "任务详情: %@";
+"task_expert.clear" = "清除";
+
+// MARK: - Forum
+"forum.need_login" = "需要登录";
+"forum.community_login_message" = "社区功能仅对已登录且完成学生认证的用户开放";
+"forum.login_now" = "立即登录";
+"forum.need_student_verification" = "需要学生认证";
+"forum.verification_pending" = "您的学生认证申请正在审核中，请耐心等待";
+"forum.verification_rejected" = "您的学生认证申请未通过，请重新提交";
+"forum.complete_verification" = "请完成学生认证以访问社区功能";
+"forum.go_verify" = "去认证";
+"forum.no_posts" = "暂无帖子";
+"forum.official" = "官方";
+"forum.replies" = "回复 (%d)";
+"forum.load_replies_failed" = "加载回复失败: %@";
+"forum.no_replies" = "暂无回复";
+"forum.reply" = "回复";
+"forum.post_reply" = "发布回复";
+"forum.select_section" = "选择板块";
+"forum.please_select_section" = "请选择板块";
+"forum.publish" = "发布";
+
+// MARK: - Info
+"info.connect_platform" = "连接你我的任务平台";
+"info.contact_us" = "联系我们";
+"info.member_benefits" = "会员权益";
+"info.faq" = "常见问题";
+"info.need_help" = "需要帮助？";
+"info.contact_admin" = "联系管理员了解更多会员信息";
+"info.contact_service" = "联系客服";
+"info.terms_of_service" = "服务条款";
+"info.privacy_policy" = "隐私政策";
+"info.last_updated" = "最后更新：2024年1月1日";
+

@@ -67,12 +67,12 @@ struct ServiceDetailView: View {
                             if service.hasTimeSlots == true {
                                 Divider()
                                 
-                                Text("可选时间段")
+                                Text(LocalizationKey.taskExpertOptionalTimeSlots.localized)
                                     .font(.headline)
                                     .foregroundColor(AppColors.textPrimary)
                                 
                                 if viewModel.timeSlots.isEmpty {
-                                    Text("暂无可用时间段")
+                                    Text(LocalizationKey.taskExpertNoAvailableSlots.localized)
                                         .font(.subheadline)
                                         .foregroundColor(AppColors.textSecondary)
                                 } else {
@@ -91,7 +91,7 @@ struct ServiceDetailView: View {
                         Button(action: {
                             showApplySheet = true
                         }) {
-                            Text("申请服务")
+                            Text(LocalizationKey.taskExpertApplyService.localized)
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
@@ -164,7 +164,7 @@ struct TimeSlotCard: View {
                     .background(AppColors.success)
                     .cornerRadius(AppCornerRadius.small)
             } else {
-                Text("已满")
+                Text(LocalizationKey.taskExpertFull.localized)
                     .font(.caption)
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)

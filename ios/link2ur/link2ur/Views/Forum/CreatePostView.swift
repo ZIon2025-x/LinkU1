@@ -9,115 +9,99 @@ struct CreatePostView: View {
     var body: some View {
         NavigationView {
             KeyboardAvoidingScrollView(extraPadding: 20) {
-                VStack(spacing: AppSpacing.lg) {
-                    // 标题
-                    EnhancedTextField(
-                        title: "帖子标题",
-                        placeholder: "请输入标题",
-                        text: $viewModel.title,
-                        icon: "text.bubble.fill",
-                        isRequired: true
-                    )
-                    
-                    // 分类选择
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        HStack(spacing: AppSpacing.xs) {
-                            Text("选择板块")
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.textSecondary)
-                            Text("*")
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.error)
-                        }
+                VStack(spacing: AppSpacing.xl) {
+                    // 1. 标题与板块
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        SectionHeader(title: "基本信息", icon: "doc.text.fill")
                         
-                        Picker("选择板块", selection: $viewModel.selectedCategoryId) {
-                            Text("请选择板块").tag(nil as Int?)
-                            ForEach(viewModel.categories) { category in
-                                Text(category.name).tag(category.id as Int?)
-                            }
+                        VStack(spacing: AppSpacing.lg) {
+                            // 标题
+                            EnhancedTextField(
+                                title: "帖子标题",
+                                placeholder: "给你的帖子起一个吸引人的标题吧",
+                                text: $viewModel.title,
+                                icon: "pencil.line",
+                                isRequired: true
+                            )
+                            
+                            // 分类选择
+                            CustomPickerField(
+                                title: LocalizationKey.forumSelectSection.localized,
+                                selection: Binding(
+                                    get: { viewModel.selectedCategoryId != nil ? "\(viewModel.selectedCategoryId!)" : "" },
+                                    set: { newValue in viewModel.selectedCategoryId = Int(newValue) }
+                                ),
+                                options: viewModel.categories.map { ("\($0.id)", $0.name) },
+                                icon: "tray.full.fill"
+                            )
                         }
-                        .pickerStyle(MenuPickerStyle())
-                        .padding()
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                .stroke(AppColors.primary.opacity(0.2), lineWidth: 1)
+                    }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                    
+                    // 2. 帖子内容
+                    VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        SectionHeader(title: "帖子内容", icon: "text.alignleft")
+                        
+                        EnhancedTextEditor(
+                            title: nil,
+                            placeholder: "分享你的见解、经验或提问，友善发言，共同进步...",
+                            text: $viewModel.content,
+                            height: 250,
+                            isRequired: true,
+                            characterLimit: 2000
                         )
                     }
-                    
-                    // 内容
-                    EnhancedTextEditor(
-                        title: "帖子内容",
-                        placeholder: "请输入帖子内容",
-                        text: $viewModel.content,
-                        height: 200,
-                        isRequired: true,
-                        characterLimit: 2000
-                    )
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                     
                     // 错误提示
                     if let errorMessage = viewModel.errorMessage {
-                        HStack(spacing: AppSpacing.xs) {
-                            IconStyle.icon("exclamationmark.circle.fill", size: IconStyle.small)
-                                .foregroundColor(AppColors.error)
+                        HStack(spacing: 8) {
+                            IconStyle.icon("exclamationmark.octagon.fill", size: 16)
                             Text(errorMessage)
                                 .font(AppTypography.caption)
-                                .foregroundColor(AppColors.error)
+                                .fontWeight(.medium)
                         }
+                        .foregroundColor(AppColors.error)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .background(AppColors.error.opacity(0.08))
+                        .cornerRadius(AppCornerRadius.medium)
                     }
                     
                     // 发布按钮
                     Button(action: {
-                        print("🔘 发布按钮被点击")
                         if appState.isAuthenticated {
-                            print("✅ 用户已登录，开始发布帖子")
+                            HapticFeedback.success()
                             viewModel.createPost { success in
-                                print("📝 发布结果: \(success)")
                                 if success {
                                     dismiss()
                                 }
                             }
                         } else {
-                            print("⚠️ 用户未登录，显示登录页面")
                             showLogin = true
                         }
                     }) {
-                        HStack {
+                        HStack(spacing: 8) {
                             if viewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                ProgressView().tint(.white)
                             } else {
-                                Text("发布")
-                                    .fontWeight(.semibold)
+                                IconStyle.icon("paperplane.fill", size: 18)
                             }
+                            Text(viewModel.isLoading ? "正在发布..." : "立即发布")
+                                .font(AppTypography.bodyBold)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundColor(.white)
-                        .background(
-                            Group {
-                                if viewModel.isLoading {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [AppColors.primary.opacity(0.6), AppColors.primary.opacity(0.4)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                } else {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                }
-                            }
-                        )
-                        .cornerRadius(AppCornerRadius.medium)
                     }
-                    .disabled(viewModel.isLoading)
-                    .buttonStyle(ScaleButtonStyle())
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(viewModel.isLoading || viewModel.title.isEmpty || viewModel.content.isEmpty || viewModel.selectedCategoryId == nil)
+                    .padding(.top, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.xxl)
                 }
                 .padding(AppSpacing.md)
                 .padding(.bottom, 20)

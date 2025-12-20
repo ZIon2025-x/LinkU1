@@ -21,7 +21,7 @@ struct MessageView: View {
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
-                        Button("重试") {
+                        Button(LocalizationKey.commonRetry.localized) {
                             viewModel.loadTaskChats()
                         }
                         .buttonStyle(PrimaryButtonStyle())
@@ -53,8 +53,8 @@ struct MessageView: View {
                             if viewModel.taskChats.isEmpty {
                                 EmptyStateView(
                                     icon: "message.fill",
-                                    title: "暂无任务聊天",
-                                    message: "还没有任务相关的聊天记录"
+                                    title: LocalizationKey.messagesNoTaskChats.localized,
+                                    message: LocalizationKey.messagesNoTaskChatsMessage.localized
                                 )
                                 .padding(.top, AppSpacing.lg)
                             } else {
@@ -72,7 +72,7 @@ struct MessageView: View {
                     }
                 }
             }
-            .navigationTitle("消息")
+            .navigationTitle(LocalizationKey.messagesMessages.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -160,11 +160,11 @@ struct CustomerServiceCard: View {
                 
                 // 中间文字
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("客服中心")
+                    Text(LocalizationKey.messagesCustomerService.localized)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                     
-                    Text("联系客服获取帮助")
+                    Text(LocalizationKey.messagesContactService.localized)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -216,11 +216,11 @@ struct InteractionMessageCard: View {
                 
                 // 中间文字
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("互动信息")
+                    Text(LocalizationKey.messagesInteractionInfo.localized)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                     
-                    Text("查看论坛互动消息")
+                    Text(LocalizationKey.messagesViewForumInteractions.localized)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -323,8 +323,8 @@ struct InteractionMessageView: View {
             } else if interactionNotifications.isEmpty {
                 EmptyStateView(
                     icon: "heart.fill",
-                    title: "暂无互动消息",
-                    message: "还没有收到任何互动通知"
+                    title: LocalizationKey.messagesNoInteractions.localized,
+                    message: LocalizationKey.messagesNoInteractionsMessage.localized
                 )
             } else {
                 ScrollView {
@@ -361,7 +361,7 @@ struct InteractionMessageView: View {
                 }
             }
         }
-        .navigationTitle("互动信息")
+        .navigationTitle(LocalizationKey.messagesInteractionInfo.localized)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable {
             viewModel.loadForumNotificationsOnly()
@@ -482,7 +482,7 @@ struct ConversationRow: View {
             // 信息
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 HStack {
-                    Text(contact.name ?? contact.email ?? "用户")
+                    Text(contact.name ?? contact.email ?? LocalizationKey.profileUser.localized)
                         .font(AppTypography.body)
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.textPrimary)
@@ -498,7 +498,7 @@ struct ConversationRow: View {
                 }
                 
                 HStack {
-                    Text("点击查看消息")
+                    Text(LocalizationKey.messagesClickToView.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)

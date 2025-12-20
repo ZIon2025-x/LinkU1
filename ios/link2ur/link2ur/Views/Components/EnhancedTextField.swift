@@ -470,6 +470,80 @@ struct EnhancedNumberField: View {
     }
 }
 
+// MARK: - 通用表单标题组件
+struct SectionHeader: View {
+    let title: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.sm) {
+            IconStyle.icon(icon, size: 16)
+                .foregroundColor(AppColors.primary)
+            Text(title)
+                .font(AppTypography.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.textPrimary)
+        }
+        .padding(.bottom, 4)
+    }
+}
+
+// MARK: - 自定义选择器组件
+struct CustomPickerField: View {
+    let title: String
+    @Binding var selection: String
+    let options: [(value: String, label: String)]
+    var icon: String? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Text(title)
+                .font(AppTypography.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+            
+            Menu {
+                ForEach(options, id: \.value) { option in
+                    Button(action: {
+                        selection = option.value
+                        HapticFeedback.selection()
+                    }) {
+                        HStack {
+                            Text(option.label)
+                            if selection == option.value {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    if let icon = icon {
+                        IconStyle.icon(icon, size: 18)
+                            .foregroundColor(AppColors.primary)
+                    }
+                    
+                    Text(options.first(where: { $0.value == selection })?.label ?? (selection.isEmpty ? "请选择" : selection))
+                        .font(AppTypography.body)
+                        .foregroundColor(selection.isEmpty ? AppColors.textQuaternary : AppColors.textPrimary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textQuaternary)
+                }
+                .padding(AppSpacing.md)
+                .background(AppColors.cardBackground)
+                .cornerRadius(AppCornerRadius.medium)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                        .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                )
+            }
+        }
+    }
+}
+
 // MARK: - 预览
 struct EnhancedTextField_Previews: PreviewProvider {
     static var previews: some View {

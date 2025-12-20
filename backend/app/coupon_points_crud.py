@@ -193,7 +193,7 @@ def claim_coupon(
     ip_address: Optional[str] = None,
     idempotency_key: Optional[str] = None
 ) -> Optional[models.UserCoupon]:
-    """领取优惠券"""
+    """领取优惠券（带并发控制）"""
     # 检查幂等性
     if idempotency_key:
         existing = db.query(models.UserCoupon).filter(
@@ -202,8 +202,11 @@ def claim_coupon(
         if existing:
             return existing
     
-    # 获取优惠券
-    coupon = get_coupon_by_id(db, coupon_id)
+    # 使用 SELECT FOR UPDATE 锁定优惠券记录，防止并发超发
+    coupon = db.query(models.Coupon).filter(
+        models.Coupon.id == coupon_id
+    ).with_for_update().first()
+    
     if not coupon:
         return None
     
@@ -222,7 +225,7 @@ def claim_coupon(
         if user_coupon_count >= coupon.per_user_limit:
             return None
     
-    # 检查全局余量（total_quantity）
+    # 检查全局余量（total_quantity）- 已在锁内，安全
     if coupon.total_quantity:
         total_issued = db.query(models.UserCoupon).filter(
             models.UserCoupon.coupon_id == coupon_id,
@@ -424,7 +427,7 @@ def check_in(
     ip_address: Optional[str] = None,
     idempotency_key: Optional[str] = None
 ) -> tuple[Optional[models.CheckIn], Optional[str]]:
-    """每日签到"""
+    """每日签到（带并发控制）"""
     from zoneinfo import ZoneInfo
     from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
     
@@ -441,7 +444,18 @@ def check_in(
         if existing:
             return existing, None
     
-    # 检查今天是否已签到
+    # 使用 SELECT FOR UPDATE 锁定用户的积分账户，防止并发签到
+    # 这里锁定积分账户而不是签到记录，因为签到记录可能不存在
+    from app.coupon_points_crud import get_or_create_points_account
+    points_account = db.query(models.PointsAccount).filter(
+        models.PointsAccount.user_id == user_id
+    ).with_for_update().first()
+    
+    # 如果没有积分账户，先创建一个（会在后续发放奖励时用到）
+    if not points_account:
+        points_account = get_or_create_points_account(db, user_id)
+    
+    # 检查今天是否已签到（在锁内检查，安全）
     today_check_in = get_check_in_today(db, user_id, timezone_str)
     if today_check_in:
         return None, "今天已经签到过了"
@@ -600,7 +614,7 @@ def use_invitation_code(
     user_id: str,
     invitation_code_id: int
 ) -> tuple[bool, Optional[str]]:
-    """使用邀请码（注册时调用）"""
+    """使用邀请码（注册时调用，带并发控制）"""
     # 检查是否已使用
     existing = db.query(models.UserInvitationUsage).filter(
         models.UserInvitationUsage.user_id == user_id,
@@ -610,13 +624,30 @@ def use_invitation_code(
     if existing:
         return False, "该邀请码已被使用"
     
-    # 获取邀请码
+    # 使用 SELECT FOR UPDATE 锁定邀请码记录，防止并发超额使用
     invitation_code = db.query(models.InvitationCode).filter(
         models.InvitationCode.id == invitation_code_id
-    ).first()
+    ).with_for_update().first()
     
     if not invitation_code:
         return False, "邀请码不存在"
+    
+    # 再次检查邀请码有效性（在锁内检查）
+    if not invitation_code.is_active:
+        return False, "邀请码已禁用"
+    
+    now = get_utc_time()
+    if now < invitation_code.valid_from or now > invitation_code.valid_until:
+        return False, "邀请码已过期"
+    
+    # 检查使用次数限制（在锁内检查，安全）
+    if invitation_code.max_uses:
+        used_count = db.query(models.UserInvitationUsage).filter(
+            models.UserInvitationUsage.invitation_code_id == invitation_code_id,
+            models.UserInvitationUsage.reward_received == True
+        ).count()
+        if used_count >= invitation_code.max_uses:
+            return False, "邀请码使用次数已达上限"
     
     # 创建使用记录
     usage = models.UserInvitationUsage(

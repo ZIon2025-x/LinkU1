@@ -9,17 +9,17 @@ struct TasksView: View {
     
     // 任务分类映射 (显示名称 -> 后端值)
     let categories: [(name: String, value: String)] = [
-        ("全部", ""),
-        ("清洁家政", "Housekeeping"),
-        ("校园生活", "Campus Life"),
-        ("二手租赁", "Second-hand & Rental"),
-        ("跑腿代购", "Errand Running"),
-        ("技能服务", "Skill Service"),
-        ("社交互助", "Social Help"),
-        ("交通用车", "Transportation"),
-        ("宠物寄养", "Pet Care"),
-        ("生活便利", "Life Convenience"),
-        ("其他", "Other")
+        (LocalizationKey.taskCategoryAll.localized, ""),
+        (LocalizationKey.taskCategoryHousekeeping.localized, "Housekeeping"),
+        (LocalizationKey.taskCategoryCampusLife.localized, "Campus Life"),
+        (LocalizationKey.taskCategorySecondhandRental.localized, "Second-hand & Rental"),
+        (LocalizationKey.taskCategoryErrandRunning.localized, "Errand Running"),
+        (LocalizationKey.taskCategorySkillService.localized, "Skill Service"),
+        (LocalizationKey.taskCategorySocialHelp.localized, "Social Help"),
+        (LocalizationKey.taskCategoryTransportation.localized, "Transportation"),
+        (LocalizationKey.taskCategoryPetCare.localized, "Pet Care"),
+        (LocalizationKey.taskCategoryLifeConvenience.localized, "Life Convenience"),
+        (LocalizationKey.taskCategoryOther.localized, "Other")
     ]
     @State private var selectedCategoryIndex = 0
     

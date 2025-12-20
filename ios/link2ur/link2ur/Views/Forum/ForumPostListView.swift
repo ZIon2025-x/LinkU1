@@ -18,8 +18,8 @@ struct ForumPostListView: View {
             } else if viewModel.posts.isEmpty {
                 EmptyStateView(
                     icon: "doc.text.magnifyingglass",
-                    title: "暂无帖子",
-                    message: "这个板块还没有帖子，快来发布第一个吧！"
+                    title: LocalizationKey.forumNoPosts.localized,
+                    message: LocalizationKey.forumNoPostsMessage.localized
                 )
             } else {
                 ScrollView {
@@ -36,12 +36,12 @@ struct ForumPostListView: View {
                 }
             }
         }
-        .navigationTitle(category?.name ?? "全部帖子")
+        .navigationTitle(category?.name ?? LocalizationKey.forumAllPosts.localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         // 确保边缘滑动手势正常工作（NavigationStack 默认支持）
-        .searchable(text: $searchText, prompt: "搜索帖子")
+        .searchable(text: $searchText, prompt: LocalizationKey.forumSearchPosts.localized)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
@@ -82,10 +82,10 @@ struct PostCard: View {
                 // 标签行（更紧凑）
                 HStack(spacing: AppSpacing.xs) {
                     if post.isPinned {
-                        BadgeView(text: "置顶", icon: "pin.fill", color: AppColors.error)
+                        BadgeView(text: LocalizationKey.postPinned.localized, icon: "pin.fill", color: AppColors.error)
                     }
                     if post.isFeatured {
-                        BadgeView(text: "精华", icon: "star.fill", color: AppColors.warning)
+                        BadgeView(text: LocalizationKey.postFeatured.localized, icon: "star.fill", color: AppColors.warning)
                     }
                     if post.isLocked {
                         IconStyle.icon("lock.fill", size: 10, weight: .medium)
@@ -129,7 +129,7 @@ struct PostCard: View {
                                 .lineLimit(1)
                             
                             if author.isAdmin == true {
-                                Text("官方")
+                                Text(LocalizationKey.postOfficial.localized)
                                     .font(AppTypography.caption2)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)

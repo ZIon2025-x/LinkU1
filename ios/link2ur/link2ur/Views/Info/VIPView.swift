@@ -13,7 +13,7 @@ struct VIPView: View {
                 
                 // 会员权益
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("会员权益")
+                    Text(LocalizationKey.infoMemberBenefits.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -81,13 +81,13 @@ struct VIPView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("联系管理员了解更多会员信息")
+                    Text(LocalizationKey.infoContactAdmin.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
                     
                     NavigationLink(destination: CustomerServiceView()) {
-                        Text("联系客服")
+                        Text(LocalizationKey.infoContactService.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

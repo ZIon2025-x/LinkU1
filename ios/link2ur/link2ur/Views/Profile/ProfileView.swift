@@ -45,7 +45,7 @@ struct ProfileView: View {
                                 
                                 // 用户名和邮箱 - 符合 HIG
                                 VStack(spacing: AppSpacing.sm) {
-                                    Text(appState.currentUser?.name ?? "用户")
+                                    Text(appState.currentUser?.name ?? LocalizationKey.profileUser.localized)
                                         .font(AppTypography.title2)
                                         .foregroundColor(AppColors.textPrimary)
                                     
@@ -96,8 +96,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: MyTasksView()) {
                                         ProfileRow(
                                             icon: "doc.text.fill",
-                                            title: "我的任务",
-                                            subtitle: "查看我发布和接取的任务",
+                                            title: LocalizationKey.profileMyTasks.localized,
+                                            subtitle: LocalizationKey.profileMyTasksSubtitle.localized,
                                             color: AppColors.primary
                                         )
                                     }
@@ -107,8 +107,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: MyPostsView()) {
                                         ProfileRow(
                                             icon: "cart.fill",
-                                            title: "我的发布",
-                                            subtitle: "查看我发布的内容",
+                                            title: LocalizationKey.profileMyPosts.localized,
+                                            subtitle: LocalizationKey.profileMyPostsSubtitle.localized,
                                             color: AppColors.warning
                                         )
                                     }
@@ -118,8 +118,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: WalletView()) {
                                         ProfileRow(
                                             icon: "wallet.pass.fill",
-                                            title: "我的钱包",
-                                            subtitle: "查看余额和交易记录",
+                                            title: LocalizationKey.profileMyWallet.localized,
+                                            subtitle: LocalizationKey.profileMyWalletSubtitle.localized,
                                             color: AppColors.success
                                         )
                                     }
@@ -129,8 +129,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: MyServiceApplicationsView()) {
                                         ProfileRow(
                                             icon: "hand.raised.fill",
-                                            title: "我的申请",
-                                            subtitle: "查看服务申请记录",
+                                            title: LocalizationKey.profileMyApplications.localized,
+                                            subtitle: LocalizationKey.profileMyApplicationsSubtitle.localized,
                                             color: Color.purple
                                         )
                                     }
@@ -140,8 +140,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: CouponPointsView()) {
                                         ProfileRow(
                                             icon: "star.fill",
-                                            title: "积分与优惠券",
-                                            subtitle: "查看积分、优惠券和签到",
+                                            title: LocalizationKey.profilePointsCoupons.localized,
+                                            subtitle: LocalizationKey.profilePointsCouponsSubtitle.localized,
                                             color: Color.orange
                                         )
                                     }
@@ -151,8 +151,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: StudentVerificationView()) {
                                         ProfileRow(
                                             icon: "person.badge.shield.checkmark.fill",
-                                            title: "学生认证",
-                                            subtitle: "验证学生身份享受优惠",
+                                            title: LocalizationKey.profileStudentVerification.localized,
+                                            subtitle: LocalizationKey.profileStudentVerificationSubtitle.localized,
                                             color: Color.blue
                                         )
                                     }
@@ -162,8 +162,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: ActivityListView()) {
                                         ProfileRow(
                                             icon: "calendar.badge.plus",
-                                            title: "活动",
-                                            subtitle: "查看和参加活动",
+                                            title: LocalizationKey.profileActivity.localized,
+                                            subtitle: LocalizationKey.profileActivitySubtitle.localized,
                                             color: Color.green
                                         )
                                     }
@@ -173,8 +173,8 @@ struct ProfileView: View {
                                     NavigationLink(destination: SettingsView()) {
                                         ProfileRow(
                                             icon: "gearshape.fill",
-                                            title: "设置",
-                                            subtitle: "应用设置和偏好",
+                                            title: LocalizationKey.profileSettings.localized,
+                                            subtitle: LocalizationKey.profileSettingsSubtitle.localized,
                                             color: AppColors.textSecondary
                                         )
                                     }
@@ -192,7 +192,7 @@ struct ProfileView: View {
                             }) {
                                 HStack(spacing: 8) {
                                     IconStyle.icon("rectangle.portrait.and.arrow.right", size: 18, weight: .semibold)
-                                    Text("退出登录")
+                                    Text(LocalizationKey.profileLogout.localized)
                                         .font(AppTypography.bodyBold)
                                 }
                                 .foregroundColor(AppColors.error)
@@ -225,11 +225,11 @@ struct ProfileView: View {
                         
                         // 欢迎文字 - 符合 HIG
                         VStack(spacing: AppSpacing.sm) {
-                            Text("欢迎使用 Link²Ur")
+                            Text(LocalizationKey.profileWelcome.localized)
                                 .font(AppTypography.title2)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("登录后即可使用全部功能")
+                            Text(LocalizationKey.profileLoginPrompt.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -241,7 +241,7 @@ struct ProfileView: View {
                             showLogin = true
                         }) {
                             HStack(spacing: AppSpacing.sm) {
-                                Text("登录")
+                                Text(LocalizationKey.authLogin.localized)
                                     .font(AppTypography.bodyBold)
                                 
                                 Image(systemName: "arrow.right")
@@ -266,20 +266,20 @@ struct ProfileView: View {
                     }
                 }
             }
-            .navigationTitle("我的")
+            .navigationTitle(LocalizationKey.tabsProfile.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
-            .alert("确认退出", isPresented: $showLogoutAlert) {
-                Button("取消", role: .cancel) {}
-                Button("退出", role: .destructive) {
+            .alert(LocalizationKey.profileConfirmLogout.localized, isPresented: $showLogoutAlert) {
+                Button(LocalizationKey.commonCancel.localized, role: .cancel) {}
+                Button(LocalizationKey.profileLogout.localized, role: .destructive) {
                     appState.logout()
                 }
             } message: {
-                Text("确定要退出登录吗？")
+                Text(LocalizationKey.profileLogoutMessage.localized)
             }
         }
     }

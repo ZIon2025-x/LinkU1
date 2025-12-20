@@ -108,10 +108,10 @@ struct TaskDetailView: View {
                 VStack(spacing: AppSpacing.lg) {
                     IconStyle.icon("exclamationmark.triangle.fill", size: 50)
                         .foregroundColor(AppColors.error)
-                    Text("加载失败")
+                    Text(LocalizationKey.tasksLoadFailed.localized)
                         .font(AppTypography.title3) // 使用 title3
                         .foregroundColor(AppColors.textPrimary)
-                    Button("重试") {
+                    Button(LocalizationKey.commonRetry.localized) {
                         viewModel.loadTask(taskId: taskId)
                     }
                     .buttonStyle(PrimaryButtonStyle())
@@ -122,7 +122,7 @@ struct TaskDetailView: View {
     
     var body: some View {
         contentView
-            .navigationTitle("任务详情")
+            .navigationTitle(LocalizationKey.taskDetailTaskDetail.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -132,7 +132,7 @@ struct TaskDetailView: View {
                         Button {
                             showShareSheet = true
                         } label: {
-                            Label("分享", systemImage: "square.and.arrow.up")
+                            Label(LocalizationKey.taskDetailShare.localized, systemImage: "square.and.arrow.up")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -161,10 +161,10 @@ struct TaskDetailView: View {
                         .presentationDragIndicator(.visible)
                 }
             }
-            .alert("取消任务", isPresented: $showCancelConfirm) {
+            .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
             } message: {
-                Text("确定要取消这个任务吗？")
+                Text(LocalizationKey.taskDetailCancelTaskConfirm.localized)
             }
             .sheet(isPresented: $showLogin) {
                 LoginView()
@@ -256,8 +256,8 @@ struct TaskDetailView: View {
     
     @ViewBuilder
     private var cancelTaskAlert: some View {
-        TextField("取消原因（可选）", text: $cancelReason)
-        Button("确定", role: .destructive) {
+        TextField(LocalizationKey.actionsCancelReason.localized, text: $cancelReason)
+        Button(LocalizationKey.actionsConfirm.localized, role: .destructive) {
             actionLoading = true
             viewModel.cancelTask(taskId: taskId, reason: cancelReason.isEmpty ? nil : cancelReason) { success in
                 actionLoading = false
@@ -267,7 +267,7 @@ struct TaskDetailView: View {
                 }
             }
         }
-        Button("取消", role: .cancel) {
+        Button(LocalizationKey.commonCancel.localized, role: .cancel) {
             cancelReason = ""
         }
     }
@@ -694,7 +694,7 @@ struct TaskImageCarouselView: View {
                     VStack(spacing: AppSpacing.md) {
                         IconStyle.icon("photo.on.rectangle.angled", size: 60)
                             .foregroundColor(AppColors.primary.opacity(0.3))
-                        Text("暂无任务图片")
+                        Text(LocalizationKey.taskDetailNoTaskImages.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textTertiary)
                     }
@@ -740,7 +740,7 @@ struct TaskHeaderCard: View {
                 HStack(spacing: AppSpacing.sm) {
                     if let taskLevel = task.taskLevel, taskLevel != "normal" {
                         Label(
-                            taskLevel == "vip" ? "VIP任务" : "超级任务",
+                            taskLevel == "vip" ? LocalizationKey.taskDetailVipTask.localized : LocalizationKey.taskDetailSuperTask.localized,
                             systemImage: taskLevel == "vip" ? "star.fill" : "flame.fill"
                         )
                         .font(AppTypography.caption2)
@@ -848,7 +848,7 @@ struct TaskInfoCard: View {
                 HStack {
                     IconStyle.icon("text.alignleft", size: 18)
                         .foregroundColor(AppColors.primary)
-                    Text("任务描述")
+                    Text(LocalizationKey.taskDetailTaskDescription.localized)
                         .font(AppTypography.title3)
                         .foregroundColor(AppColors.textPrimary)
                 }
@@ -891,7 +891,7 @@ struct TaskTimeInfoView: View {
             HStack {
                 IconStyle.icon("clock.fill", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text("时间信息")
+                Text(LocalizationKey.taskDetailTimeInfo.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -907,7 +907,7 @@ struct TaskTimeInfoView: View {
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("发布时间")
+                        Text(LocalizationKey.taskDetailPublishTime.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                         Text(DateFormatterHelper.shared.formatTime(task.createdAt))
@@ -930,7 +930,7 @@ struct TaskTimeInfoView: View {
                             )
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("截止时间")
+                            Text(LocalizationKey.taskDetailDeadline.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                             Text(DateFormatterHelper.shared.formatDeadline(deadline))
@@ -956,7 +956,7 @@ struct TaskPosterInfoView: View {
             HStack {
                 IconStyle.icon("person.fill", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text("发布者")
+                Text(LocalizationKey.taskDetailPublisher.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -993,7 +993,7 @@ struct TaskPosterInfoView: View {
                             }
                         }
                         
-                        Text(poster.email ?? "未提供邮箱")
+                        Text(poster.email ?? LocalizationKey.taskDetailEmailNotProvided.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -1020,11 +1020,11 @@ struct PosterInfoCard: View {
                 .foregroundColor(AppColors.primary)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("这是您发布的任务")
+                Text(LocalizationKey.taskDetailYourTask.localized)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("您可以在下方查看申请者并管理任务")
+                Text(LocalizationKey.taskDetailManageTask.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
             }
@@ -1064,7 +1064,7 @@ struct TaskActionButtonsView: View {
                         showLogin = true
                     }
                 }) {
-                    Label("申请参与任务", systemImage: "hand.raised.fill")
+                    Label(LocalizationKey.actionsApplyForTask.localized, systemImage: "hand.raised.fill")
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
@@ -1087,7 +1087,7 @@ struct TaskActionButtonsView: View {
                         } else {
                             IconStyle.icon("checkmark.circle.fill", size: 20)
                         }
-                        Text(actionLoading ? "处理中..." : "标记任务完成")
+                        Text(actionLoading ? LocalizationKey.actionsProcessing.localized : LocalizationKey.actionsMarkComplete.localized)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(useGradient: false))
@@ -1112,7 +1112,7 @@ struct TaskActionButtonsView: View {
                         } else {
                             IconStyle.icon("checkmark.seal.fill", size: 20)
                         }
-                        Text(actionLoading ? "处理中..." : "确认任务完成")
+                        Text(actionLoading ? LocalizationKey.actionsProcessing.localized : LocalizationKey.actionsConfirmComplete.localized)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(useGradient: false))
@@ -1123,7 +1123,7 @@ struct TaskActionButtonsView: View {
             // 沟通按钮
             if (task.status == .inProgress || task.status == .pendingConfirmation) && (isPoster || isTaker) {
                 NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: task.title)) {
-                    Label(isPoster ? "联系接受者" : "联系发布者", systemImage: "message.fill")
+                    Label(isPoster ? LocalizationKey.actionsContactRecipient.localized : LocalizationKey.actionsContactPoster.localized, systemImage: "message.fill")
                         .font(AppTypography.bodyBold)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -1139,7 +1139,7 @@ struct TaskActionButtonsView: View {
                 Button(action: {
                     showReviewModal = true
                 }) {
-                    Label("评价任务", systemImage: "star.fill")
+                    Label(LocalizationKey.actionsRateTask.localized, systemImage: "star.fill")
                 }
                 .buttonStyle(PrimaryButtonStyle(useGradient: false))
                 .tint(AppColors.warning)
@@ -1150,7 +1150,7 @@ struct TaskActionButtonsView: View {
                 Button(action: {
                     showCancelConfirm = true
                 }) {
-                    Label("取消任务", systemImage: "xmark.circle")
+                    Label(LocalizationKey.actionsCancelTask.localized, systemImage: "xmark.circle")
                         .font(AppTypography.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(AppColors.error)
@@ -1170,7 +1170,7 @@ struct TaskReviewsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("评价 (\(reviews.count))")
+            Text(LocalizationKey.taskDetailReviews.localized(argument: reviews.count))
                 .font(AppTypography.title3)
                 .foregroundColor(AppColors.textPrimary)
             
@@ -1190,7 +1190,7 @@ struct ReviewRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                Text(review.isAnonymous == true ? "匿名用户" : (review.reviewer?.name ?? "未知用户"))
+                Text(review.isAnonymous == true ? LocalizationKey.taskDetailAnonymousUser.localized : (review.reviewer?.name ?? LocalizationKey.taskDetailUnknownUser.localized))
                     .font(AppTypography.body)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textPrimary)
@@ -1245,30 +1245,44 @@ struct ApplyTaskSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // 内容区域（符合 HIG）
-                Form {
-                    Section {
-                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("留言（可选）")
-                                .font(AppTypography.body) // 使用 body
-                                .foregroundColor(AppColors.textPrimary)
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 申请信息
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "申请信息", icon: "pencil.line")
                             
-                            TextEditor(text: $message)
-                                .frame(minHeight: 120)
-                                .padding(AppSpacing.sm)
-                                .background(AppColors.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.small, style: .continuous))
+                            EnhancedTextEditor(
+                                title: nil,
+                                placeholder: "简单说明您的优势或如何完成任务...",
+                                text: $message,
+                                height: 120,
+                                characterLimit: 500
+                            )
                         }
-                    } header: {
-                        Text("申请信息")
-                    }
-                    
-                    // 价格协商（参考 frontend，仅非多人任务）
-                    if let task = task, task.isMultiParticipant != true {
-                        Section {
-                            Toggle("想要协商价格", isOn: $showNegotiatePrice)
-                                .font(AppTypography.body) // 使用 body
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 价格协商
+                        if let task = task, task.isMultiParticipant != true {
+                            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                                SectionHeader(title: "价格协商", icon: "dollarsign.circle.fill")
+                                
+                                Toggle(isOn: $showNegotiatePrice) {
+                                    HStack {
+                                        Text("我想要协商价格")
+                                            .font(AppTypography.body)
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Spacer()
+                                    }
+                                }
+                                .tint(AppColors.primary)
+                                .padding(.horizontal, 4)
                                 .onChange(of: showNegotiatePrice) { isOn in
                                     if isOn {
                                         negotiatedPrice = task.baseReward ?? task.reward
@@ -1276,35 +1290,44 @@ struct ApplyTaskSheet: View {
                                         negotiatedPrice = nil
                                     }
                                 }
-                            
-                            if showNegotiatePrice {
-                                HStack {
-                                    Text("£")
-                                        .font(AppTypography.body) // 使用 body
-                                    TextField("0.00", value: $negotiatedPrice, format: .number)
-                                        .keyboardType(.decimalPad)
-                                        .textFieldStyle(.roundedBorder)
+                                
+                                if showNegotiatePrice {
+                                    EnhancedNumberField(
+                                        title: "期望金额",
+                                        placeholder: "0.00",
+                                        value: $negotiatedPrice,
+                                        prefix: "£",
+                                        isRequired: true
+                                    )
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                    
+                                    Text("提示: 协商价格可能会影响发布者的选择哦。")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textTertiary)
+                                        .padding(.horizontal, 4)
                                 }
                             }
-                        } header: {
-                            Text("价格协商")
-                        } footer: {
-                            Text("向发布者说明你的申请理由，有助于提高申请成功率")
-                                .font(AppTypography.caption) // 使用 caption
+                            .padding(AppSpacing.md)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         }
-                    }
-                    
-                    Section {
-                        Button(action: onApply) {
-                            Text("提交申请")
-                                .font(AppTypography.bodyBold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(AppColors.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
+                        
+                        // 提交按钮
+                        Button(action: {
+                            HapticFeedback.success()
+                            onApply()
+                        }) {
+                            HStack(spacing: 8) {
+                                IconStyle.icon("hand.raised.fill", size: 18)
+                                Text("提交申请")
+                                    .font(AppTypography.bodyBold)
+                            }
                         }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .padding(.top, AppSpacing.lg)
                     }
+                    .padding(AppSpacing.md)
                 }
             }
             .navigationTitle("申请任务")
@@ -1341,26 +1364,26 @@ struct ApplicationStatusCard: View {
     private var statusText: String {
         switch application.status {
         case "pending":
-            return "等待发布者审核"
+            return LocalizationKey.taskDetailWaitingReview.localized
         case "approved":
-            return task.status == .pendingConfirmation ? "任务已完成" : "申请已通过"
+            return task.status == .pendingConfirmation ? LocalizationKey.taskDetailTaskCompleted.localized : LocalizationKey.taskDetailApplicationApproved.localized
         case "rejected":
-            return "申请被拒绝"
+            return LocalizationKey.taskDetailApplicationRejected.localized
         default:
-            return "未知状态"
+            return LocalizationKey.taskDetailUnknownStatus.localized
         }
     }
     
     private var statusDescription: String {
         switch application.status {
         case "pending":
-            return "您已成功申请此任务，请等待发布者审核。"
+            return LocalizationKey.taskDetailApplicationSuccess.localized
         case "approved":
             return task.status == .pendingConfirmation
-                ? "恭喜！您已完成任务，请等待发布者确认。"
-                : "恭喜！您的申请已通过，可以开始执行任务了。"
+                ? LocalizationKey.taskDetailTaskCompletedMessage.localized
+                : LocalizationKey.taskDetailApplicationApprovedMessage.localized
         case "rejected":
-            return "很抱歉，您的申请未通过审核。"
+            return LocalizationKey.taskDetailApplicationRejectedMessage.localized
         default:
             return ""
         }
@@ -1388,7 +1411,7 @@ struct ApplicationStatusCard: View {
                     .lineLimit(2)
                 
                 if let message = application.message, !message.isEmpty {
-                    Text("留言: \(message)")
+                    Text(LocalizationKey.taskDetailMessageLabel.localized(argument: message))
                         .font(.system(size: 11))
                         .foregroundColor(AppColors.textTertiary)
                         .padding(.top, 2)
@@ -1434,7 +1457,7 @@ struct ApplicationsListView: View {
             HStack {
                 IconStyle.icon("person.2.fill", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text("申请者列表 (\(applications.count))")
+                Text(LocalizationKey.taskDetailApplicantsList.localized(argument: applications.count))
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -1447,7 +1470,7 @@ struct ApplicationsListView: View {
                 VStack(spacing: AppSpacing.sm) {
                     IconStyle.icon("tray", size: 40)
                         .foregroundColor(AppColors.textQuaternary)
-                    Text("暂无申请者")
+                    Text(LocalizationKey.taskDetailNoApplicants.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -1528,7 +1551,7 @@ struct ApplicationItemCard: View {
             if application.status == "pending" {
                 HStack(spacing: AppSpacing.sm) {
                     Button(action: onApprove) {
-                        Text("批准")
+                        Text(LocalizationKey.actionsApprove.localized)
                             .font(AppTypography.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -1540,7 +1563,7 @@ struct ApplicationItemCard: View {
                     .buttonStyle(ScaleButtonStyle())
                     
                     Button(action: onReject) {
-                        Text("拒绝")
+                        Text(LocalizationKey.actionsReject.localized)
                             .font(AppTypography.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -1552,7 +1575,7 @@ struct ApplicationItemCard: View {
                     .buttonStyle(ScaleButtonStyle())
                     
                     NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: taskTitle)) {
-                        Text("私信")
+                        Text(LocalizationKey.actionsPrivateMessage.localized)
                             .font(AppTypography.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -1582,10 +1605,10 @@ struct ApplicationItemCard: View {
     
     private var statusText: String {
         switch application.status {
-        case "pending": return "待审核"
-        case "approved": return "已通过"
-        case "rejected": return "已拒绝"
-        default: return "未知"
+        case "pending": return LocalizationKey.taskDetailPendingReview.localized
+        case "approved": return LocalizationKey.taskDetailApproved.localized
+        case "rejected": return LocalizationKey.taskDetailRejected.localized
+        default: return LocalizationKey.taskDetailUnknown.localized
         }
     }
 }
@@ -1607,13 +1630,13 @@ struct ReviewModal: View {
         
         if isPoster {
             return [
-                "工作质量好", "准时", "负责任", "态度好",
-                "技能熟练", "值得信赖", "推荐", "优秀"
+                "完成质量高", "准时到达", "态度负责", "沟通愉快",
+                "专业高效", "值得信赖", "强烈推荐", "非常优秀"
             ]
         } else {
             return [
-                "任务清晰", "沟通及时", "付款及时", "要求合理",
-                "合作愉快", "推荐", "值得信赖", "专业高效"
+                "任务描述清晰", "沟通及时", "付款爽快", "要求合理",
+                "合作愉快", "强烈推荐", "值得信赖", "非常专业"
             ]
         }
     }
@@ -1624,108 +1647,136 @@ struct ReviewModal: View {
         case 2: return "差"
         case 3: return "一般"
         case 4: return "好"
-        case 5: return "非常好"
+        case 5: return "极好"
         default: return ""
         }
     }
     
     var body: some View {
         NavigationView {
-            Form {
-                // 星级评价（符合 HIG）
-                Section {
-                    VStack(spacing: AppSpacing.sm) {
-                        HStack(spacing: AppSpacing.xs) {
-                            ForEach(1...5, id: \.self) { star in
-                                Button(action: {
-                                    rating = star
-                                }) {
-                                    IconStyle.icon("star.fill", size: IconStyle.xlarge)
-                                        .foregroundColor(star <= (hoverRating > 0 ? hoverRating : rating) ? AppColors.warning : AppColors.textTertiary)
-                                }
-                                .onHover { hovering in
-                                    hoverRating = hovering ? star : 0
-                                }
-                            }
-                        }
-                        
-                        Text(ratingText)
-                            .font(AppTypography.body) // 使用 body
-                            .foregroundColor(AppColors.textPrimary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppSpacing.md)
-                } header: {
-                    Text("评分")
-                }
-                    
-                // 标签选择（符合 HIG）
-                Section {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: AppSpacing.sm) {
-                        ForEach(reviewTags, id: \.self) { tag in
-                            Button(action: {
-                                if selectedTags.contains(tag) {
-                                    selectedTags.removeAll { $0 == tag }
-                                } else {
-                                    selectedTags.append(tag)
-                                }
-                            }) {
-                                Text(tag)
-                                    .font(AppTypography.caption) // 使用 caption
-                                    .foregroundColor(selectedTags.contains(tag) ? .white : AppColors.textPrimary)
-                                    .padding(.horizontal, AppSpacing.sm)
-                                    .padding(.vertical, AppSpacing.xs)
-                                    .background(selectedTags.contains(tag) ? AppColors.primary : AppColors.cardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.small, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: AppCornerRadius.small, style: .continuous)
-                                            .stroke(selectedTags.contains(tag) ? Color.clear : AppColors.separator, lineWidth: 0.5)
-                                    )
-                            }
-                        }
-                    }
-                } header: {
-                    Text("选择标签（可选）")
-                }
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
                 
-                // 评论输入（符合 HIG）
-                Section {
-                    TextEditor(text: $comment)
-                        .frame(minHeight: 120)
-                } header: {
-                    Text("评论（可选）")
-                }
-                
-                // 匿名选项（符合 HIG）
-                Section {
-                    Toggle("匿名评价", isOn: $isAnonymous)
-                }
-                
-                // 提交按钮（符合 HIG）
-                Section {
-                    Button(action: {
-                        // 将标签添加到评论中
-                        if !selectedTags.isEmpty {
-                            let tagsText = selectedTags.joined(separator: "、")
-                            if comment.isEmpty {
-                                comment = tagsText
-                            } else {
-                                comment = "\(tagsText)\n\n\(comment)"
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 评分
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "整体评价", icon: "star.fill")
+                            
+                            VStack(spacing: AppSpacing.sm) {
+                                HStack(spacing: AppSpacing.md) {
+                                    ForEach(1...5, id: \.self) { star in
+                                        Button(action: {
+                                            rating = star
+                                            HapticFeedback.selection()
+                                        }) {
+                                            IconStyle.icon(star <= rating ? "star.fill" : "star", size: 36)
+                                                .foregroundColor(star <= rating ? AppColors.warning : AppColors.textQuaternary)
+                                        }
+                                    }
+                                }
+                                
+                                Text(ratingText)
+                                    .font(AppTypography.bodyBold)
+                                    .foregroundColor(AppColors.warning)
                             }
-                        }
-                        onSubmit()
-                    }) {
-                        Text("提交评价")
-                            .font(AppTypography.bodyBold)
-                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(AppColors.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
+                            .padding(.vertical, AppSpacing.md)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 标签
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "评价标签", icon: "tag.fill")
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: AppSpacing.sm) {
+                                ForEach(reviewTags, id: \.self) { tag in
+                                    Button(action: {
+                                        if selectedTags.contains(tag) {
+                                            selectedTags.removeAll { $0 == tag }
+                                        } else {
+                                            selectedTags.append(tag)
+                                        }
+                                        HapticFeedback.light()
+                                    }) {
+                                        Text(tag)
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(selectedTags.contains(tag) ? .white : AppColors.textPrimary)
+                                            .padding(.horizontal, AppSpacing.sm)
+                                            .padding(.vertical, AppSpacing.sm)
+                                            .frame(maxWidth: .infinity)
+                                            .background(selectedTags.contains(tag) ? AppColors.primary : AppColors.background)
+                                            .cornerRadius(AppCornerRadius.small)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                                                    .stroke(selectedTags.contains(tag) ? Color.clear : AppColors.separator.opacity(0.3), lineWidth: 1)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 3. 评价内容
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "评价内容", icon: "square.and.pencil")
+                            
+                            EnhancedTextEditor(
+                                title: nil,
+                                placeholder: "写下您的合作感受，帮助其他用户参考...",
+                                text: $comment,
+                                height: 150,
+                                characterLimit: 500
+                            )
+                            
+                            Toggle(isOn: $isAnonymous) {
+                                Text("匿名评价")
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            .tint(AppColors.primary)
+                            .padding(.top, 4)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 提交按钮
+                        Button(action: {
+                            HapticFeedback.success()
+                            // 将标签添加到评论中
+                            if !selectedTags.isEmpty {
+                                let tagsText = selectedTags.joined(separator: "、")
+                                if comment.isEmpty {
+                                    comment = tagsText
+                                } else {
+                                    comment = "\(tagsText)\n\n\(comment)"
+                                }
+                            }
+                            onSubmit()
+                        }) {
+                            HStack(spacing: 8) {
+                                IconStyle.icon("checkmark.circle.fill", size: 18)
+                                Text("提交评价")
+                                    .font(AppTypography.bodyBold)
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .padding(.top, AppSpacing.lg)
+                        .padding(.bottom, AppSpacing.xxl)
                     }
+                    .padding(AppSpacing.md)
                 }
             }
             .navigationTitle("评价任务")
@@ -1740,4 +1791,5 @@ struct ReviewModal: View {
         }
     }
 }
+
 

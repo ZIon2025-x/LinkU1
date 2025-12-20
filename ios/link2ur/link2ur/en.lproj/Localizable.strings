@@ -1,0 +1,514 @@
+/* 
+  Localizable.strings
+  link2ur
+  
+  English Localization
+*/
+
+// MARK: - Common
+"common.ok" = "OK";
+"common.cancel" = "Cancel";
+"common.confirm" = "Confirm";
+"common.delete" = "Delete";
+"common.save" = "Save";
+"common.edit" = "Edit";
+"common.close" = "Close";
+"common.retry" = "Retry";
+"common.loading" = "Loading...";
+"common.search" = "Search";
+"common.clear" = "Clear";
+"common.submit" = "Submit";
+"common.back" = "Back";
+"common.next" = "Next";
+"common.finish" = "Finish";
+"common.share" = "Share";
+"common.more" = "More";
+"common.view_all" = "View All";
+
+// MARK: - App
+"app.name" = "Link²Ur";
+"app.tagline" = "Connect you and me, create value";
+"app.user" = "Link²Ur User";
+
+// MARK: - Auth
+"auth.login" = "Login";
+"auth.register" = "Register";
+"auth.logout" = "Logout";
+"auth.email" = "Email";
+"auth.password" = "Password";
+"auth.phone" = "Phone";
+"auth.verification_code" = "Verification Code";
+"auth.send_code" = "Send Code";
+"auth.resend_code" = "Resend Code";
+"auth.login_method" = "Login Method";
+"auth.email_password" = "Email & Password";
+"auth.phone_code" = "Phone Verification";
+"auth.enter_email" = "Enter email";
+"auth.enter_password" = "Enter password";
+"auth.enter_phone" = "Enter phone number";
+"auth.enter_code" = "Enter verification code";
+"auth.no_account" = "Don't have an account?";
+"auth.has_account" = "Already have an account?";
+"auth.register_now" = "Register Now";
+"auth.login_now" = "Login Now";
+"auth.register_success" = "Registration Successful";
+"auth.captcha_title" = "Verification";
+"auth.captcha_message" = "Please complete the verification";
+"auth.captcha_error" = "Unable to load verification, please try again later";
+"auth.username" = "Username";
+"auth.enter_username" = "Enter username";
+"auth.password_hint" = "At least 8 characters, including letters and numbers";
+"auth.phone_optional" = "Phone (Optional)";
+
+// MARK: - Home
+"home.experts" = "Experts";
+"home.recommended" = "Link²Ur";
+"home.nearby" = "Nearby";
+"home.greeting" = "Hello, %@";
+"home.what_to_do" = "What would you like to do today?";
+"home.menu" = "Menu";
+"home.search_experts" = "Search Experts";
+"home.search" = "Search";
+"home.no_results" = "No results found";
+"home.try_other_keywords" = "Try other keywords";
+"home.search_history" = "Search History";
+"home.hot_searches" = "Hot Searches";
+"home.no_nearby_tasks" = "No nearby tasks";
+"home.no_nearby_tasks_message" = "No tasks have been posted nearby yet. Be the first to post one!";
+"home.no_experts" = "No task experts";
+"home.no_experts_message" = "No task experts yet, stay tuned...";
+"home.recommended_tasks" = "Recommended Tasks";
+"home.no_recommended_tasks" = "No recommended tasks";
+"home.no_recommended_tasks_message" = "No recommended tasks yet. Check out the task hall!";
+"home.latest_activity" = "Latest Activity";
+"home.no_activity" = "No activity";
+"home.no_activity_message" = "No latest activity yet";
+"home.no_more_activity" = "No more activity";
+"home.hot_events" = "Hot Events";
+"home.no_events" = "No events";
+"home.no_events_message" = "No events at the moment, stay tuned...";
+"home.view_event" = "View Event";
+"home.tap_to_view_events" = "Tap to view latest events";
+"home.multiple_people" = "Multiple People";
+"home.view" = "View";
+
+// MARK: - Tasks
+"tasks.task_detail" = "Task Details";
+"tasks.load_failed" = "Failed to load";
+"tasks.cancel_task" = "Cancel Task";
+"tasks.cancel_task_confirm" = "Are you sure you want to cancel this task?";
+"tasks.apply" = "Apply";
+"tasks.apply_task" = "Apply for Task";
+"tasks.apply_message" = "Message (Optional)";
+"tasks.apply_info" = "Application Info";
+"tasks.price_negotiation" = "Price Negotiation";
+"tasks.apply_hint" = "Explain your application reason to the publisher to improve success rate";
+"tasks.submit_application" = "Submit Application";
+"tasks.no_applicants" = "No applicants";
+"tasks.applicants_list" = "Applicants List (%d)";
+"tasks.message_label" = "Message: %@";
+"tasks.task_description" = "Task Description";
+"tasks.time_info" = "Time Information";
+"tasks.publish_time" = "Publish Time";
+"tasks.deadline" = "Deadline";
+"tasks.publisher" = "Publisher";
+"tasks.your_task" = "This is your task";
+"tasks.manage_task" = "You can view applicants and manage the task below";
+"tasks.reviews" = "Reviews (%d)";
+"tasks.no_task_images" = "No task images";
+"tasks.points_reward" = "%d Points";
+"tasks.share_to" = "Share to...";
+"tasks.task" = "Task";
+"tasks.tasks" = "Tasks";
+
+// MARK: - Task Experts
+"experts.experts" = "Task Experts";
+"experts.become_expert" = "Become an Expert";
+"experts.search_experts" = "Search Task Experts";
+"experts.apply_now" = "Apply Now";
+"experts.login_to_apply" = "Login to Apply";
+
+// MARK: - Forum
+"forum.forum" = "Forum";
+"forum.all_posts" = "All Posts";
+"forum.no_posts" = "No posts";
+"forum.no_posts_message" = "This section has no posts yet. Be the first to post!";
+"forum.search_posts" = "Search posts";
+"forum.posts" = "Posts";
+
+// MARK: - Flea Market
+"flea_market.flea_market" = "Flea Market";
+"flea_market.no_items" = "No items";
+"flea_market.no_items_message" = "The flea market has no items yet. Be the first to post one!";
+"flea_market.search_items" = "Search items";
+"flea_market.items" = "Items";
+
+// MARK: - Profile
+"profile.profile" = "Profile";
+"profile.my_tasks" = "My Tasks";
+"profile.my_posts" = "My Posts";
+"profile.settings" = "Settings";
+"profile.about" = "About";
+"profile.logout" = "Logout";
+"profile.logout_confirm" = "Are you sure you want to logout?";
+
+// MARK: - Messages
+"messages.messages" = "Messages";
+"messages.chat" = "Chat";
+"messages.send" = "Send";
+"messages.enter_message" = "Enter message";
+
+// MARK: - Leaderboard
+"leaderboard.leaderboard" = "Leaderboard";
+"leaderboard.rank" = "Rank";
+"leaderboard.points" = "Points";
+"leaderboard.user" = "User";
+
+// MARK: - Notifications
+"notifications.notifications" = "Notifications";
+"notifications.no_notifications" = "No notifications";
+"notifications.mark_all_read" = "Mark All as Read";
+
+// MARK: - Student Verification
+"student_verification.verification" = "Student Verification";
+"student_verification.submit" = "Submit Verification";
+"student_verification.upload_document" = "Upload Document";
+
+// MARK: - Customer Service
+"customer_service.customer_service" = "Customer Service";
+"customer_service.chat_with_service" = "Chat with Customer Service";
+
+// MARK: - Activity
+"activity.activity" = "Activity";
+"activity.recent_activity" = "Recent Activity";
+
+// MARK: - Search
+"search.search" = "Search";
+"search.results" = "Results";
+"search.no_results" = "No results found";
+"search.try_other_keywords" = "Try other keywords";
+
+// MARK: - Errors
+"error.network_error" = "Network Error";
+"error.unknown_error" = "Unknown Error";
+"error.invalid_input" = "Invalid Input";
+"error.login_failed" = "Login Failed";
+"error.register_failed" = "Registration Failed";
+
+// MARK: - Success
+"success.operation_success" = "Operation Successful";
+"success.saved" = "Saved";
+"success.deleted" = "Deleted";
+
+// MARK: - Currency
+"currency.pound" = "£";
+"currency.points" = "Points";
+
+// MARK: - Points
+"points.balance" = "Points Balance";
+"points.unit" = "Points";
+"points.total_earned" = "Total Earned";
+"points.total_spent" = "Total Spent";
+"points.balance_after" = "Balance";
+"points.amount_format" = "%d Points";
+"points.balance_format" = "Balance: %d Points";
+
+// MARK: - Time
+"time.just_now" = "Just now";
+"time.minutes_ago" = "%d minutes ago";
+"time.hours_ago" = "%d hours ago";
+"time.days_ago" = "%d days ago";
+"time.weeks_ago" = "%d weeks ago";
+"time.months_ago" = "%d months ago";
+"time.years_ago" = "%d years ago";
+
+// MARK: - Tabs
+"tabs.home" = "Home";
+"tabs.community" = "Community";
+"tabs.create" = "Create";
+"tabs.messages" = "Messages";
+"tabs.profile" = "Profile";
+
+// MARK: - Community
+"community.forum" = "Forum";
+"community.leaderboard" = "Leaderboard";
+
+// MARK: - Post
+"post.pinned" = "Pinned";
+"post.featured" = "Featured";
+"post.official" = "Official";
+"post.all" = "All";
+
+// MARK: - Actions
+"actions.approve" = "Approve";
+"actions.reject" = "Reject";
+"actions.chat" = "Chat";
+"actions.share" = "Share";
+"actions.cancel" = "Cancel";
+"actions.confirm" = "Confirm";
+"actions.submit" = "Submit";
+"actions.loading_messages" = "Loading messages...";
+"actions.no_messages_yet" = "No messages yet";
+"actions.start_conversation" = "Start a conversation!";
+"actions.enter_message" = "Enter message...";
+"actions.private_message" = "Private Message";
+"actions.processing" = "Processing...";
+"actions.mark_complete" = "Mark Task Complete";
+"actions.confirm_complete" = "Confirm Task Complete";
+"actions.contact_recipient" = "Contact Recipient";
+"actions.contact_poster" = "Contact Poster";
+"actions.rate_task" = "Rate Task";
+"actions.cancel_task" = "Cancel Task";
+"actions.apply_for_task" = "Apply for Task";
+"actions.optional_message" = "Message (Optional)";
+"actions.negotiate_price" = "Negotiate Price";
+"actions.apply_reason_hint" = "Explain your application reason to the publisher to improve success rate";
+"actions.submit_application" = "Submit Application";
+"actions.cancel_reason" = "Cancel Reason (Optional)";
+"actions.share_to" = "Share to...";
+
+// MARK: - Profile
+"profile.user" = "User";
+"profile.my_tasks" = "My Tasks";
+"profile.my_tasks_subtitle" = "View tasks I published and accepted";
+"profile.my_posts" = "My Posts";
+"profile.my_posts_subtitle" = "View content I published";
+"profile.my_wallet" = "My Wallet";
+"profile.my_wallet_subtitle" = "View balance and transaction history";
+"profile.my_applications" = "My Applications";
+"profile.my_applications_subtitle" = "View service application records";
+"profile.points_coupons" = "Points & Coupons";
+"profile.points_coupons_subtitle" = "View points, coupons and check-in";
+"profile.student_verification" = "Student Verification";
+"profile.student_verification_subtitle" = "Verify student identity for discounts";
+"profile.activity" = "Activity";
+"profile.activity_subtitle" = "View and participate in activities";
+"profile.settings" = "Settings";
+"profile.settings_subtitle" = "App settings and preferences";
+"profile.logout" = "Logout";
+"profile.welcome" = "Welcome to Link²Ur";
+"profile.login_prompt" = "Login to access all features";
+"profile.confirm_logout" = "Confirm Logout";
+"profile.logout_message" = "Are you sure you want to logout?";
+
+// MARK: - Task Detail
+"task_detail.task_detail" = "Task Details";
+"task_detail.share" = "Share";
+"task_detail.cancel_task" = "Cancel Task";
+"task_detail.cancel_task_confirm" = "Are you sure you want to cancel this task?";
+"task_detail.no_task_images" = "No task images";
+"task_detail.vip_task" = "VIP Task";
+"task_detail.super_task" = "Super Task";
+"task_detail.task_description" = "Task Description";
+"task_detail.time_info" = "Time Information";
+"task_detail.publish_time" = "Publish Time";
+"task_detail.deadline" = "Deadline";
+"task_detail.publisher" = "Publisher";
+"task_detail.email_not_provided" = "Email not provided";
+"task_detail.your_task" = "This is your task";
+"task_detail.manage_task" = "You can view applicants and manage the task below";
+"task_detail.reviews" = "Reviews (%d)";
+"task_detail.anonymous_user" = "Anonymous User";
+"task_detail.unknown_user" = "Unknown User";
+"task_detail.apply_info" = "Application Info";
+"task_detail.price_negotiation" = "Price Negotiation";
+"task_detail.apply_reason_hint" = "Explain your application reason to the publisher to improve success rate";
+"task_detail.submit_application" = "Submit Application";
+"task_detail.applicants_list" = "Applicants List (%d)";
+"task_detail.no_applicants" = "No applicants";
+"task_detail.message_label" = "Message: %@";
+"task_detail.waiting_review" = "Waiting for publisher review";
+"task_detail.task_completed" = "Task Completed";
+"task_detail.application_approved" = "Application Approved";
+"task_detail.application_rejected" = "Application Rejected";
+"task_detail.unknown_status" = "Unknown Status";
+"task_detail.application_success" = "You have successfully applied for this task. Please wait for the publisher to review.";
+"task_detail.task_completed_message" = "Congratulations! You have completed the task. Please wait for the publisher to confirm.";
+"task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
+"task_detail.application_rejected_message" = "Sorry, your application was not approved.";
+"task_detail.pending_review" = "Pending Review";
+"task_detail.approved" = "Approved";
+"task_detail.rejected" = "Rejected";
+"task_detail.unknown" = "Unknown";
+"task_detail.quality_good" = "Good Quality";
+"task_detail.on_time" = "On Time";
+"task_detail.responsible" = "Responsible";
+"task_detail.good_attitude" = "Good Attitude";
+"task_detail.skilled" = "Skilled";
+"task_detail.trustworthy" = "Trustworthy";
+"task_detail.recommended" = "Recommended";
+"task_detail.excellent" = "Excellent";
+"task_detail.task_clear" = "Clear Task";
+"task_detail.communication_timely" = "Timely Communication";
+"task_detail.payment_timely" = "Timely Payment";
+"task_detail.reasonable_requirements" = "Reasonable Requirements";
+"task_detail.pleasant_cooperation" = "Pleasant Cooperation";
+"task_detail.professional_efficient" = "Professional & Efficient";
+
+// MARK: - Messages
+"messages.loading_messages" = "Loading messages...";
+"messages.no_messages_yet" = "No messages yet";
+"messages.start_conversation" = "Start a conversation!";
+"messages.enter_message" = "Enter message...";
+"messages.no_task_chats" = "No Task Chats";
+"messages.no_task_chats_message" = "No task-related chat records yet";
+"messages.customer_service" = "Customer Service";
+"messages.contact_service" = "Contact customer service for help";
+"messages.interaction_info" = "Interaction Info";
+"messages.view_forum_interactions" = "View forum interaction messages";
+"messages.no_interactions" = "No Interactions";
+"messages.no_interactions_message" = "No interaction notifications yet";
+"messages.click_to_view" = "Click to view messages";
+
+// MARK: - Permissions
+"permission.location_usage_description" = "We need to access your location information to provide you with more accurate services and task recommendations";
+
+// MARK: - Customer Service
+"customer_service.welcome" = "Welcome to Customer Service";
+"customer_service.start_conversation" = "Click the connect button below to start chatting with customer service";
+"customer_service.loading_messages" = "Loading messages...";
+"customer_service.queue_position" = "Queue Position: No. %d";
+"customer_service.estimated_wait" = "Estimated Wait Time: %d seconds";
+"customer_service.conversation_ended" = "Conversation ended. Please start a new conversation if you need help.";
+"customer_service.new_conversation" = "New Conversation";
+"customer_service.enter_message" = "Enter message...";
+"customer_service.connecting" = "Connecting to customer service...";
+"customer_service.end_conversation" = "End Conversation";
+"customer_service.history" = "History";
+"customer_service.login_required" = "Please login first to use customer service";
+"customer_service.conversation_ended" = "Conversation ended";
+"customer_service.what_can_help" = "How can we help you?";
+"customer_service.no_chat_history" = "No Chat History";
+"customer_service.start_new_conversation" = "Start a new conversation!";
+"customer_service.chat_history" = "Chat History";
+"customer_service.done" = "Done";
+"customer_service.service_chat" = "Service Chat";
+"customer_service.ended" = "Ended";
+"customer_service.in_progress" = "In Progress";
+"customer_service.rate_service" = "Rate Service";
+"customer_service.satisfaction_question" = "Are you satisfied with %@'s service?";
+"customer_service.select_rating" = "Please select a rating";
+"customer_service.rating_content" = "Rating Content (Optional)";
+"customer_service.submit_rating" = "Submit Rating";
+"customer_service.rate_service_title" = "Rate Service";
+"customer_service.skip" = "Skip";
+
+// MARK: - Rating
+"rating.very_poor" = "Very Poor";
+"rating.poor" = "Poor";
+"rating.average" = "Average";
+"rating.good" = "Good";
+"rating.excellent" = "Excellent";
+"rating.rating" = "Rating";
+"rating.select_tags" = "Select Tags (Optional)";
+"rating.comment" = "Comment (Optional)";
+"rating.anonymous" = "Anonymous Rating";
+"rating.submit" = "Submit Rating";
+
+// MARK: - Menu
+"menu.menu" = "Menu";
+"menu.my" = "My";
+"menu.task_hall" = "Task Hall";
+"menu.task_experts" = "Task Experts";
+"menu.forum" = "Forum";
+"menu.leaderboard" = "Leaderboard";
+"menu.flea_market" = "Flea Market";
+"menu.activity" = "Activity";
+"menu.points_coupons" = "Points & Coupons";
+"menu.student_verification" = "Student Verification";
+"menu.settings" = "Settings";
+"menu.close" = "Close";
+
+// MARK: - Task Categories
+"task_category.all" = "All";
+"task_category.housekeeping" = "Housekeeping";
+"task_category.campus_life" = "Campus Life";
+"task_category.secondhand_rental" = "Second-hand & Rental";
+"task_category.errand_running" = "Errand Running";
+"task_category.skill_service" = "Skill Service";
+"task_category.social_help" = "Social Help";
+"task_category.transportation" = "Transportation";
+"task_category.pet_care" = "Pet Care";
+"task_category.life_convenience" = "Life Convenience";
+"task_category.other" = "Other";
+
+// MARK: - Expert Categories
+"expert_category.all" = "All";
+"expert_category.programming" = "Programming";
+"expert_category.translation" = "Translation";
+"expert_category.tutoring" = "Tutoring";
+"expert_category.food" = "Food";
+"expert_category.beverage" = "Beverage";
+"expert_category.cake" = "Cake";
+"expert_category.errand_transport" = "Errand/Transport";
+"expert_category.social_entertainment" = "Social/Entertainment";
+"expert_category.beauty_skincare" = "Beauty/Skincare";
+"expert_category.handicraft" = "Handicraft";
+
+// MARK: - Create Task
+"create_task.basic_info" = "Basic Information";
+"create_task.reward_location" = "Reward & Location";
+"create_task.currency" = "Currency";
+"create_task.task_type" = "Task Type";
+"create_task.images" = "Images";
+"create_task.add_images" = "Add Images";
+
+// MARK: - Task Expert
+"task_expert.become_expert" = "Become an Expert";
+"task_expert.become_expert_title" = "Become a Task Expert";
+"task_expert.showcase_skills" = "Showcase your professional skills and get more task opportunities";
+"task_expert.benefits" = "Benefits of Becoming an Expert";
+"task_expert.how_to_apply" = "How to Apply?";
+"task_expert.apply_now" = "Apply Now";
+"task_expert.login_to_apply" = "Login to Apply";
+"task_expert.application_info" = "Application Information";
+"task_expert.application_hint" = "Please introduce your professional skills, experience and advantages. This will help the platform better understand you.";
+"task_expert.submit_application" = "Submit Application";
+"task_expert.application_submitted" = "Your application has been submitted. We will complete the review within 3-5 business days.";
+"task_expert.no_intro" = "No Introduction";
+"task_expert.service_menu" = "Service Menu";
+"task_expert.optional_time_slots" = "Optional Time Slots";
+"task_expert.no_available_slots" = "No Available Time Slots";
+"task_expert.apply_service" = "Apply for Service";
+"task_expert.optional" = "Optional";
+"task_expert.full" = "Full";
+"task_expert.application_message" = "Application Message";
+"task_expert.negotiate_price" = "Negotiate Price";
+"task_expert.submit_application" = "Submit Application";
+"task_expert.expert_negotiate_price" = "Task Expert Proposed Price Negotiation:";
+"task_expert.view_task" = "View Task";
+"task_expert.task_details" = "Task Details: %@";
+"task_expert.clear" = "Clear";
+
+// MARK: - Forum
+"forum.need_login" = "Login Required";
+"forum.community_login_message" = "Community features are only available to logged-in users who have completed student verification";
+"forum.login_now" = "Login Now";
+"forum.need_student_verification" = "Student Verification Required";
+"forum.verification_pending" = "Your student verification application is under review. Please wait patiently.";
+"forum.verification_rejected" = "Your student verification application was not approved. Please resubmit.";
+"forum.complete_verification" = "Please complete student verification to access community features";
+"forum.go_verify" = "Go Verify";
+"forum.no_posts" = "No Posts";
+"forum.official" = "Official";
+"forum.replies" = "Replies (%d)";
+"forum.load_replies_failed" = "Failed to load replies: %@";
+"forum.no_replies" = "No Replies";
+"forum.reply" = "Reply";
+"forum.post_reply" = "Post Reply";
+"forum.select_section" = "Select Section";
+"forum.please_select_section" = "Please Select Section";
+"forum.publish" = "Publish";
+
+// MARK: - Info
+"info.connect_platform" = "Connect You and Me Task Platform";
+"info.contact_us" = "Contact Us";
+"info.member_benefits" = "Member Benefits";
+"info.faq" = "FAQ";
+"info.need_help" = "Need Help?";
+"info.contact_admin" = "Contact administrator for more member information";
+"info.contact_service" = "Contact Service";
+"info.terms_of_service" = "Terms of Service";
+"info.privacy_policy" = "Privacy Policy";
+"info.last_updated" = "Last Updated: January 1, 2024";
+

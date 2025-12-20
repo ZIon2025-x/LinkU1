@@ -78,7 +78,8 @@ def check_risk(
     if ip_address:
         # 检查同一IP在短时间内的操作次数
         if action_type == "checkin":
-            max_per_day = int(get_system_setting(db, "max_checkin_per_device_per_day").setting_value) if get_system_setting(db, "max_checkin_per_device_per_day") else 1
+            setting = get_system_setting(db, "max_checkin_per_device_per_day")
+            max_per_day = int(setting.setting_value) if setting else 1
             
             today_start = get_utc_time().replace(hour=0, minute=0, second=0, microsecond=0)
             checkin_count = db.query(func.count(models.CheckIn.id)).filter(
@@ -93,7 +94,8 @@ def check_risk(
                 risk_reasons.append(f"IP {ip_address} 今日签到次数过多")
         
         elif action_type == "coupon_claim":
-            max_per_hour = int(get_system_setting(db, "max_coupon_claim_per_ip_per_hour").setting_value) if get_system_setting(db, "max_coupon_claim_per_ip_per_hour") else 10
+            setting = get_system_setting(db, "max_coupon_claim_per_ip_per_hour")
+            max_per_hour = int(setting.setting_value) if setting else 10
             
             hour_ago = get_utc_time() - timedelta(hours=1)
             claim_count = db.query(func.count(models.UserCoupon.id)).filter(
@@ -138,8 +140,10 @@ def check_risk(
                 risk_reasons.append("用户短时间内频繁获得积分")
     
     # 获取风险阈值
-    high_threshold = int(get_system_setting(db, "risk_score_threshold_high").setting_value) if get_system_setting(db, "risk_score_threshold_high") else 70
-    critical_threshold = int(get_system_setting(db, "risk_score_threshold_critical").setting_value) if get_system_setting(db, "risk_score_threshold_critical") else 90
+    high_setting = get_system_setting(db, "risk_score_threshold_high")
+    high_threshold = int(high_setting.setting_value) if high_setting else 70
+    critical_setting = get_system_setting(db, "risk_score_threshold_critical")
+    critical_threshold = int(critical_setting.setting_value) if critical_setting else 90
     
     # 确定风险等级
     risk_level = "low"

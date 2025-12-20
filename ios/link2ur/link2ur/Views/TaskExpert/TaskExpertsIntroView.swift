@@ -15,12 +15,12 @@ struct TaskExpertsIntroView: View {
                         .foregroundColor(AppColors.primary)
                         .padding(.top, AppSpacing.xl)
                     
-                    Text("成为任务达人")
+                    Text(LocalizationKey.taskExpertBecomeExpertTitle.localized)
                         .font(AppTypography.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("展示您的专业技能，获得更多任务机会")
+                    Text(LocalizationKey.taskExpertShowcaseSkills.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
@@ -284,7 +284,7 @@ struct TaskExpertApplyView: View {
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                     } footer: {
-                        Text("请介绍您的专业技能、经验和优势，这将帮助平台更好地了解您。")
+                        Text(LocalizationKey.taskExpertApplicationHint.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -295,7 +295,7 @@ struct TaskExpertApplyView: View {
                                 ProgressView()
                                     .frame(maxWidth: .infinity)
                             } else {
-                                Text("提交申请")
+                                Text(LocalizationKey.taskExpertSubmitApplication.localized)
                                     .frame(maxWidth: .infinity)
                             }
                         }

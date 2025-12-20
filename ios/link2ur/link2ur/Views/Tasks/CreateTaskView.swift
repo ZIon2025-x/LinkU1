@@ -20,177 +20,122 @@ struct CreateTaskView: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 基本信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            // 标题区域
-                            HStack(spacing: AppSpacing.sm) {
-                                Image(systemName: "doc.text.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(AppColors.primary)
-                                Text("基本信息")
-                                    .font(AppTypography.title3)
-                                    .foregroundColor(AppColors.textPrimary)
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.top, AppSpacing.md)
+                            SectionHeader(title: LocalizationKey.createTaskBasicInfo.localized, icon: "doc.text.fill")
                             
-                            VStack(spacing: AppSpacing.md) {
+                            VStack(spacing: AppSpacing.lg) {
                                 // 标题
                                 EnhancedTextField(
-                                    title: nil,
-                                    placeholder: "任务标题 (例如：急求代取快递)",
+                                    title: "任务标题",
+                                    placeholder: "简要说明您的需求 (例: 代取包裹)",
                                     text: $viewModel.title,
-                                    icon: "text.bubble.fill",
+                                    icon: "pencil.line",
                                     isRequired: true
                                 )
                                 
                                 // 描述
                                 EnhancedTextEditor(
-                                    title: "任务描述",
-                                    placeholder: "请详细描述您的需求、时间、地点等信息",
+                                    title: "任务详情",
+                                    placeholder: "请详细描述您的需求、时间、特殊要求等，越详细越容易被接单哦...",
                                     text: $viewModel.description,
-                                    height: 120,
+                                    height: 150,
                                     isRequired: true,
                                     characterLimit: 1000
                                 )
                             }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.bottom, AppSpacing.md)
                         }
-                        .cardStyle(useMaterial: true)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
                         // 2. 报酬与地点
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            // 标题区域
-                            HStack(spacing: AppSpacing.sm) {
-                                Image(systemName: "dollarsign.circle.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(AppColors.primary)
-                                Text("报酬与地点")
-                                    .font(AppTypography.title3)
-                                    .foregroundColor(AppColors.textPrimary)
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.top, AppSpacing.md)
+                            SectionHeader(title: LocalizationKey.createTaskRewardLocation.localized, icon: "dollarsign.circle.fill")
                             
-                            VStack(spacing: AppSpacing.md) {
+                            VStack(spacing: AppSpacing.lg) {
                                 // 价格与货币
-                                HStack(spacing: AppSpacing.md) {
+                                HStack(alignment: .bottom, spacing: AppSpacing.md) {
                                     EnhancedNumberField(
-                                        title: nil,
+                                        title: "任务酬金",
                                         placeholder: "0.00",
                                         value: $viewModel.price,
-                                        prefix: "£"
+                                        prefix: viewModel.currency == "GBP" ? "£" : (viewModel.currency == "USD" ? "$" : "¥"),
+                                        isRequired: true
                                     )
-                                    .frame(maxWidth: .infinity)
                                     
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("货币")
-                                            .font(AppTypography.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                        
-                                        Picker("货币", selection: $viewModel.currency) {
-                                            Text("GBP").tag("GBP")
-                                            Text("CNY").tag("CNY")
-                                            Text("USD").tag("USD")
-                                        }
-                                        .pickerStyle(MenuPickerStyle())
-                                        .padding(.horizontal, AppSpacing.sm)
-                                        .padding(.vertical, AppSpacing.sm)
-                                        .background(AppColors.cardBackground)
-                                        .cornerRadius(AppCornerRadius.medium)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
-                                        )
-                                    }
-                                    .frame(width: 100)
+                                    CustomPickerField(
+                                        title: LocalizationKey.createTaskCurrency.localized,
+                                        selection: $viewModel.currency,
+                                        options: [
+                                            ("GBP", "GBP (£)"),
+                                            ("CNY", "CNY (¥)"),
+                                            ("USD", "USD ($)")
+                                        ]
+                                    )
+                                    .frame(width: 110)
                                 }
                                 
                                 // 城市
                                 EnhancedTextField(
-                                    title: nil,
-                                    placeholder: "所在城市",
+                                    title: "所在城市",
+                                    placeholder: "例如: London / Birmingham",
                                     text: $viewModel.city,
-                                    icon: "mappin.circle.fill"
+                                    icon: "mappin.and.ellipse",
+                                    isRequired: true
                                 )
                                 
                                 // 任务类型
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("任务类型")
-                                        .font(AppTypography.caption)
-                                        .foregroundColor(AppColors.textSecondary)
-                                    
-                                    Picker("任务类型", selection: $viewModel.taskType) {
-                                        ForEach(viewModel.taskTypes, id: \.value) { taskType in
-                                            Text(taskType.label).tag(taskType.value)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, AppSpacing.sm)
-                                    .padding(.vertical, AppSpacing.sm)
-                                    .background(AppColors.cardBackground)
-                                    .cornerRadius(AppCornerRadius.medium)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                            .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
-                                    )
-                                }
+                                CustomPickerField(
+                                    title: LocalizationKey.createTaskTaskType.localized,
+                                    selection: $viewModel.taskType,
+                                    options: viewModel.taskTypes.map { ($0.value, $0.label) },
+                                    icon: "tag.fill"
+                                )
                             }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.bottom, AppSpacing.md)
                         }
-                        .cardStyle(useMaterial: true)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
-                        // 3. 图片
+                        // 3. 图片展示
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            // 标题区域
                             HStack {
-                                HStack(spacing: AppSpacing.sm) {
-                                    Image(systemName: "photo.on.rectangle")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(AppColors.primary)
-                                    Text("图片")
-                                        .font(AppTypography.title3)
-                                        .foregroundColor(AppColors.textPrimary)
-                                }
+                                SectionHeader(title: LocalizationKey.createTaskImages.localized, icon: "photo.on.rectangle.angled")
                                 Spacer()
                                 Text("\(viewModel.selectedImages.count)/5")
                                     .font(AppTypography.caption)
-                                    .foregroundColor(AppColors.textTertiary)
-                                    .padding(.horizontal, AppSpacing.sm)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(AppColors.primary)
+                                    .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(AppColors.primaryLight)
-                                    .cornerRadius(AppCornerRadius.small)
+                                    .clipShape(Capsule())
                             }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.top, AppSpacing.md)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: AppSpacing.md) {
                                     // 添加按钮
                                     if viewModel.selectedImages.count < 5 {
                                         PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - viewModel.selectedImages.count, matching: .images) {
-                                            VStack(spacing: AppSpacing.sm) {
-                                                ZStack {
-                                                    Circle()
-                                                        .fill(AppColors.primaryLight)
-                                                        .frame(width: 48, height: 48)
-                                                    Image(systemName: "plus.circle.fill")
-                                                        .font(.system(size: 24, weight: .medium))
-                                                        .foregroundColor(AppColors.primary)
-                                                }
-                                                Text("添加图片")
-                                                    .font(AppTypography.caption)
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "plus.viewfinder")
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(AppColors.primary)
+                                                Text(LocalizationKey.createTaskAddImages.localized)
+                                                    .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(AppColors.textSecondary)
                                             }
-                                            .frame(width: 100, height: 100)
-                                            .background(AppColors.cardBackground)
+                                            .frame(width: 90, height: 90)
+                                            .background(AppColors.background)
                                             .cornerRadius(AppCornerRadius.medium)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                    .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [8, 4]))
-                                                    .foregroundColor(AppColors.primary.opacity(0.4))
+                                                    .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
                                             )
+                                        }
+                                        .onChange(of: selectedItems) { _ in
+                                            handleImageSelection()
                                         }
                                     }
                                     
@@ -200,59 +145,53 @@ struct CreateTaskView: View {
                                             Image(uiImage: image)
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fill)
-                                                .frame(width: 100, height: 100)
+                                                .frame(width: 90, height: 90)
                                                 .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                        .stroke(AppColors.separator.opacity(0.2), lineWidth: 1)
-                                                )
                                             
                                             Button(action: {
-                                                viewModel.selectedImages.remove(at: index)
-                                                selectedItems = []
+                                                withAnimation {
+                                                    viewModel.selectedImages.remove(at: index)
+                                                    selectedItems = []
+                                                    HapticFeedback.light()
+                                                }
                                             }) {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .font(.system(size: 20))
                                                     .foregroundColor(.white)
-                                                    .background(
-                                                        Circle()
-                                                            .fill(Color.black.opacity(0.6))
-                                                            .frame(width: 24, height: 24)
-                                                    )
+                                                    .background(Circle().fill(Color.black.opacity(0.5)))
                                             }
-                                            .padding(6)
+                                            .padding(4)
                                         }
                                     }
                                 }
-                                .padding(.horizontal, AppSpacing.md)
                                 .padding(.vertical, 4)
                             }
-                            .padding(.bottom, AppSpacing.md)
                         }
-                        .cardStyle(useMaterial: true)
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
                         // 错误提示
                         if let errorMessage = viewModel.errorMessage {
-                            HStack(spacing: AppSpacing.sm) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                            HStack(spacing: 8) {
+                                IconStyle.icon("exclamationmark.octagon.fill", size: 16)
                                 Text(errorMessage)
-                                    .font(AppTypography.body)
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
                             }
                             .foregroundColor(AppColors.error)
-                            .padding(AppSpacing.md)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(AppColors.errorLight)
+                            .background(AppColors.error.opacity(0.08))
                             .cornerRadius(AppCornerRadius.medium)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                    .stroke(AppColors.error.opacity(0.2), lineWidth: 1)
-                            )
                         }
                         
                         // 提交按钮
                         Button(action: {
                             if appState.isAuthenticated {
+                                HapticFeedback.success()
                                 viewModel.createTask { success in
                                     if success {
                                         dismiss()
@@ -262,39 +201,23 @@ struct CreateTaskView: View {
                                 showLogin = true
                             }
                         }) {
-                            HStack(spacing: AppSpacing.sm) {
+                            HStack(spacing: 8) {
                                 if viewModel.isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    ProgressView().tint(.white)
                                 } else {
-                                    Image(systemName: "paperplane.fill")
-                                        .font(.system(size: 16, weight: .semibold))
+                                    IconStyle.icon("paperplane.fill", size: 18)
                                 }
-                                Text(viewModel.isLoading ? "发布中..." : "立即发布")
-                                    .font(AppTypography.body)
-                                    .fontWeight(.semibold)
+                                Text(viewModel.isLoading ? "正在发布..." : "立即发布任务")
+                                    .font(AppTypography.bodyBold)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: AppColors.gradientPrimary),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(AppCornerRadius.large)
-                            .shadow(color: AppColors.primary.opacity(0.25), radius: 12, x: 0, y: 6)
                         }
-                        .buttonStyle(ScaleButtonStyle())
+                        .buttonStyle(PrimaryButtonStyle())
                         .disabled(viewModel.isLoading || viewModel.isUploading)
                         .padding(.top, AppSpacing.lg)
-                        .padding(.bottom, AppSpacing.xl)
+                        .padding(.bottom, AppSpacing.xxl)
                     }
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.top, AppSpacing.md)
-                    .padding(.bottom, 20)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -315,6 +238,24 @@ struct CreateTaskView: View {
                     showLogin = true
                 }
             }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        if viewModel.selectedImages.count < 5 {
+                            viewModel.selectedImages.append(image)
+                        }
+                    }
+                }
+            }
+            selectedItems = [] // 清空以备下次选择
         }
     }
 }

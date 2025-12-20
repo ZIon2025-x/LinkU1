@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  link2ur
+
+  Localized permission descriptions for Info.plist
+*/
+
+"NSLocationWhenInUseUsageDescription" = "We need to access your location information to provide you with more accurate services and task recommendations";
+
