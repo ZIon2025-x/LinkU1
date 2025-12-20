@@ -7522,6 +7522,8 @@ def batch_create_service_time_slots_admin(
 def get_public_task_experts(
     category: Optional[str] = None,
     location: Optional[str] = Query(None, description="城市筛选"),
+    keyword: Optional[str] = Query(None, description="关键词搜索（搜索名称、简介、技能）"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="返回数量限制"),
     db: Session = Depends(get_db),
 ):
     """获取任务达人列表（公开）"""
@@ -7529,6 +7531,19 @@ def get_public_task_experts(
         query = db.query(models.FeaturedTaskExpert).filter(
             models.FeaturedTaskExpert.is_active == 1
         )
+        
+        # 关键词搜索
+        if keyword:
+            keyword_pattern = f"%{keyword}%"
+            query = query.filter(
+                or_(
+                    models.FeaturedTaskExpert.name.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.bio.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.expertise_areas.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.featured_skills.ilike(keyword_pattern),
+                    models.FeaturedTaskExpert.category.ilike(keyword_pattern),
+                )
+            )
         
         if category:
             query = query.filter(models.FeaturedTaskExpert.category == category)
@@ -7555,6 +7570,10 @@ def get_public_task_experts(
             models.FeaturedTaskExpert.display_order,
             models.FeaturedTaskExpert.created_at.desc()
         )
+        
+        # 限制返回数量
+        if limit:
+            query = query.limit(limit)
         
         experts = query.all()
         

@@ -567,6 +567,91 @@ public class APIService {
     }
 }
 
+// MARK: - Async/Await 版本
+extension APIService {
+    /// Async/await 版本的 GET 请求（支持查询参数）
+    func request<T: Decodable>(
+        _ endpoint: String,
+        method: HTTPMethod = .get,
+        queryParams: [String: String]? = nil,
+        body: [String: Any]? = nil,
+        headers: [String: String]? = nil
+    ) async throws -> T {
+        // 构建 URL（包含查询参数）
+        var urlString = "\(baseURL)\(endpoint)"
+        if let queryParams = queryParams, !queryParams.isEmpty {
+            let queryString = queryParams
+                .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }
+                .joined(separator: "&")
+            urlString += "?\(queryString)"
+        }
+        
+        guard let url = URL(string: urlString) else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = method.rawValue
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 注入 Session ID
+        if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !sessionId.isEmpty {
+            request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            AppSignature.signRequest(&request, sessionId: sessionId)
+        }
+        
+        // 添加自定义 headers
+        if let headers = headers {
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
+        
+        // 添加 body
+        if let body = body {
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        
+        Logger.debug("Async 请求: \(method.rawValue) \(endpoint)", category: .api)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
+            throw APIError.httpError(httpResponse.statusCode)
+        }
+        
+        // 调试输出
+        if let jsonString = String(data: data, encoding: .utf8) {
+            Logger.debug("Async 响应 (\(endpoint)): \(jsonString.prefix(300))", category: .api)
+        }
+        
+        do {
+            // 注意：不使用 convertFromSnakeCase，因为模型的 CodingKeys 已经处理了 snake_case 转换
+            // 这样可以保持与 Combine 版本 request 方法的一致性
+            let decoder = JSONDecoder()
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            Logger.error("Async 解码错误 (\(endpoint)): \(error)", category: .api)
+            throw APIError.decodingError(error)
+        }
+    }
+}
+
+enum HTTPMethod: String {
+    case get = "GET"
+    case post = "POST"
+    case put = "PUT"
+    case delete = "DELETE"
+    case patch = "PATCH"
+}
+
 // 辅助空响应结构体
 struct EmptyResponse: Decodable {}
 

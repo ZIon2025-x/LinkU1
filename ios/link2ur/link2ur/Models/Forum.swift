@@ -159,6 +159,25 @@ struct ForumPost: Codable, Identifiable {
         createdAt = try container.decode(String.self, forKey: .createdAt)
         lastReplyAt = try container.decodeIfPresent(String.self, forKey: .lastReplyAt)
     }
+    
+    // 手动初始化器（用于从搜索结果构造）
+    init(id: Int, title: String, content: String?, contentPreview: String?, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, createdAt: String, lastReplyAt: String?) {
+        self.id = id
+        self.title = title
+        self.content = content
+        self.contentPreview = contentPreview
+        self.category = category
+        self.author = author
+        self.viewCount = viewCount
+        self.replyCount = replyCount
+        self.likeCount = likeCount
+        self.favoriteCount = favoriteCount
+        self.isPinned = isPinned
+        self.isFeatured = isFeatured
+        self.isLocked = isLocked
+        self.createdAt = createdAt
+        self.lastReplyAt = lastReplyAt
+    }
 }
 
 struct ForumPostListResponse: Codable {

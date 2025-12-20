@@ -567,45 +567,100 @@ struct TaskExpertListContentView: View {
 // 搜索视图
 struct SearchView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var searchText = ""
+    @StateObject private var viewModel = SearchViewModel()
+    @FocusState private var isSearchFocused: Bool
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
                 // 搜索框
-                HStack {
+                HStack(spacing: AppSpacing.sm) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(AppColors.textSecondary)
+                        .font(.system(size: 16, weight: .medium))
                     
-                    TextField("搜索任务、达人、商品...", text: $searchText)
+                    TextField("搜索任务、达人、商品...", text: $viewModel.searchText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .submitLabel(.search)
-                        .font(.system(size: 16))
+                        .font(AppTypography.body)
+                        .focused($isSearchFocused)
+                        .onSubmit {
+                            viewModel.search()
+                        }
+                    
+                    if !viewModel.searchText.isEmpty {
+                        Button(action: {
+                            viewModel.searchText = ""
+                            viewModel.clearResults()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
                 }
-                .padding()
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, 12)
                 .background(AppColors.cardBackground)
-                .cornerRadius(10)
-                .padding()
+                .cornerRadius(AppCornerRadius.large)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                        .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                )
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.top, AppSpacing.sm)
                 
-                Spacer()
+                // 类型筛选标签
+                if viewModel.hasResults {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: AppSpacing.sm) {
+                            ForEach(SearchResultType.allCases, id: \.self) { type in
+                                SearchTypeTag(
+                                    type: type,
+                                    isSelected: viewModel.selectedType == type,
+                                    count: countForType(type)
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        viewModel.selectedType = type
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                    }
+                }
                 
-                // 搜索结果或提示
-                if searchText.isEmpty {
-                    VStack(spacing: 16) {
+                // 主内容区
+                if viewModel.isLoading {
+                    Spacer()
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Spacer()
+                } else if viewModel.hasResults {
+                    // 搜索结果
+                    SearchResultsView(viewModel: viewModel)
+                } else if !viewModel.searchText.isEmpty && !viewModel.isLoading {
+                    // 无搜索结果
+                    Spacer()
+                    VStack(spacing: AppSpacing.md) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 50))
                             .foregroundColor(AppColors.textSecondary.opacity(0.5))
-                        Text("输入关键词搜索")
+                        Text("没有找到相关结果")
+                            .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
+                        Text("试试其他关键词")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textTertiary)
                     }
+                    Spacer()
                 } else {
-                    Text("搜索结果：\(searchText)")
-                        .foregroundColor(AppColors.textPrimary)
+                    // 搜索首页：历史记录和热门搜索
+                    SearchHomePage(viewModel: viewModel)
                 }
-                
-                Spacer()
             }
+            .background(AppColors.background)
             .navigationTitle("搜索")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -613,9 +668,513 @@ struct SearchView: View {
                     Button("关闭") {
                         dismiss()
                     }
+                    .foregroundColor(AppColors.primary)
                 }
             }
         }
+        .onAppear {
+            isSearchFocused = true
+        }
+    }
+    
+    private func countForType(_ type: SearchResultType) -> Int {
+        switch type {
+        case .all:
+            return viewModel.totalResultCount
+        case .task:
+            return viewModel.taskResults.count
+        case .expert:
+            return viewModel.expertResults.count
+        case .fleaMarket:
+            return viewModel.fleaMarketResults.count
+        case .forum:
+            return viewModel.forumResults.count
+        }
+    }
+}
+
+// MARK: - 搜索类型标签
+struct SearchTypeTag: View {
+    let type: SearchResultType
+    let isSelected: Bool
+    let count: Int
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(type.rawValue)
+                if count > 0 {
+                    Text("(\(count))")
+                        .font(AppTypography.caption2)
+                }
+            }
+            .font(AppTypography.caption)
+            .fontWeight(isSelected ? .semibold : .regular)
+            .foregroundColor(isSelected ? .white : AppColors.textSecondary)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.xs)
+            .background(isSelected ? AppColors.primary : AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.pill)
+        }
+    }
+}
+
+// MARK: - 搜索首页（历史记录和热门搜索）
+struct SearchHomePage: View {
+    @ObservedObject var viewModel: SearchViewModel
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                // 搜索历史
+                if !viewModel.searchHistory.keywords.isEmpty {
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        HStack {
+                            Text("搜索历史")
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(AppColors.textPrimary)
+                            Spacer()
+                            Button("清空") {
+                                viewModel.clearHistory()
+                            }
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                        }
+                        
+                        FlowLayout(spacing: AppSpacing.sm) {
+                            ForEach(viewModel.searchHistory.keywords, id: \.self) { keyword in
+                                SearchKeywordTag(keyword: keyword, showDelete: true) {
+                                    viewModel.searchWithKeyword(keyword)
+                                } onDelete: {
+                                    viewModel.removeFromHistory(keyword)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                }
+                
+                // 热门搜索
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    Text("热门搜索")
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    FlowLayout(spacing: AppSpacing.sm) {
+                        ForEach(viewModel.hotKeywords, id: \.self) { keyword in
+                            SearchKeywordTag(keyword: keyword, showDelete: false) {
+                                viewModel.searchWithKeyword(keyword)
+                            } onDelete: {}
+                        }
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+            }
+            .padding(.top, AppSpacing.md)
+        }
+    }
+}
+
+// MARK: - 搜索关键词标签
+struct SearchKeywordTag: View {
+    let keyword: String
+    let showDelete: Bool
+    let action: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(keyword)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                
+                if showDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.xs)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.pill)
+        }
+    }
+}
+
+// MARK: - 流式布局
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrangeSubviews(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrangeSubviews(proposal: proposal, subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
+        }
+    }
+    
+    private func arrangeSubviews(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var maxWidth: CGFloat = 0
+        
+        let containerWidth = proposal.width ?? .infinity
+        
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            
+            if currentX + size.width > containerWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            
+            positions.append(CGPoint(x: currentX, y: currentY))
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+            maxWidth = max(maxWidth, currentX)
+        }
+        
+        return (CGSize(width: maxWidth, height: currentY + lineHeight), positions)
+    }
+}
+
+// MARK: - 搜索结果视图
+struct SearchResultsView: View {
+    @ObservedObject var viewModel: SearchViewModel
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.md) {
+                // 任务结果
+                if !viewModel.filteredTaskResults.isEmpty {
+                    SearchResultSection(title: "任务", count: viewModel.taskResults.count) {
+                        ForEach(viewModel.filteredTaskResults) { task in
+                            NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                                SearchTaskCard(task: task)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+                
+                // 达人结果
+                if !viewModel.filteredExpertResults.isEmpty {
+                    SearchResultSection(title: "达人", count: viewModel.expertResults.count) {
+                        ForEach(viewModel.filteredExpertResults) { expert in
+                            NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
+                                SearchExpertCard(expert: expert)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+                
+                // 跳蚤市场结果
+                if !viewModel.filteredFleaMarketResults.isEmpty {
+                    SearchResultSection(title: "二手商品", count: viewModel.fleaMarketResults.count) {
+                        ForEach(viewModel.filteredFleaMarketResults) { item in
+                            NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
+                                SearchFleaMarketCard(item: item)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+                
+                // 论坛结果
+                if !viewModel.filteredForumResults.isEmpty {
+                    SearchResultSection(title: "论坛帖子", count: viewModel.forumResults.count) {
+                        ForEach(viewModel.filteredForumResults) { post in
+                            NavigationLink(destination: ForumPostDetailView(postId: post.id)) {
+                                SearchForumCard(post: post)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+        }
+    }
+}
+
+// MARK: - 搜索结果分区
+struct SearchResultSection<Content: View>: View {
+    let title: String
+    let count: Int
+    let content: () -> Content
+    
+    init(title: String, count: Int, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.count = count
+        self.content = content
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Text(title)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                Text("(\(count))")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                Spacer()
+            }
+            
+            content()
+        }
+    }
+}
+
+// MARK: - 搜索结果卡片
+struct SearchTaskCard: View {
+    let task: Task
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 图片
+            if let images = task.images, let firstImage = images.first, !firstImage.isEmpty {
+                AsyncImage(url: URL(string: firstImage)) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                        .fill(AppColors.cardBackground)
+                }
+                .frame(width: 60, height: 60)
+                .cornerRadius(AppCornerRadius.small)
+            } else {
+                RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                    .fill(AppColors.primary.opacity(0.1))
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Image(systemName: "doc.text.fill")
+                            .foregroundColor(AppColors.primary)
+                    )
+            }
+            
+            // 信息
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                
+                Text(task.description)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(2)
+                
+                HStack {
+                    Text("£\(String(format: "%.0f", task.reward))")
+                        .font(AppTypography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.primary)
+                    
+                    Text("·")
+                        .foregroundColor(AppColors.textTertiary)
+                    
+                    Text(task.location)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+    }
+}
+
+struct SearchExpertCard: View {
+    let expert: TaskExpert
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 头像
+            AsyncImage(url: URL(string: expert.avatar ?? "")) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle()
+                    .fill(AppColors.primary.opacity(0.1))
+                    .overlay(
+                        Text(String(expert.name.prefix(1)))
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(AppColors.primary)
+                    )
+            }
+            .frame(width: 50, height: 50)
+            .clipShape(Circle())
+            
+            // 信息
+            VStack(alignment: .leading, spacing: 4) {
+                Text(expert.name)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                
+                if let bio = expert.bio {
+                    Text(bio)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
+                }
+                
+                HStack {
+                    if let rating = expert.rating {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.orange)
+                            Text(String(format: "%.1f", rating))
+                        }
+                        .font(AppTypography.caption)
+                    }
+                    
+                    if let location = expert.location {
+                        Text("·")
+                            .foregroundColor(AppColors.textTertiary)
+                        Text(location)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+    }
+}
+
+struct SearchFleaMarketCard: View {
+    let item: FleaMarketItem
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 图片
+            if let images = item.images, let firstImage = images.first {
+                AsyncImage(url: URL(string: firstImage)) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                        .fill(AppColors.cardBackground)
+                }
+                .frame(width: 60, height: 60)
+                .cornerRadius(AppCornerRadius.small)
+            } else {
+                RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                    .fill(AppColors.warning.opacity(0.1))
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        Image(systemName: "bag.fill")
+                            .foregroundColor(AppColors.warning)
+                    )
+            }
+            
+            // 信息
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                
+                if let description = item.description {
+                    Text(description)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
+                }
+                
+                Text("£\(String(format: "%.0f", item.price))")
+                    .font(AppTypography.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.error)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+    }
+}
+
+struct SearchForumCard: View {
+    let post: ForumPost
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 图标
+            RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                .fill(AppColors.success.opacity(0.1))
+                .frame(width: 50, height: 50)
+                .overlay(
+                    Image(systemName: "text.bubble.fill")
+                        .foregroundColor(AppColors.success)
+                )
+            
+            // 信息
+            VStack(alignment: .leading, spacing: 4) {
+                Text(post.title)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                
+                HStack(spacing: AppSpacing.sm) {
+                    HStack(spacing: 2) {
+                        Image(systemName: "eye")
+                        Text("\(post.viewCount)")
+                    }
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+                    
+                    HStack(spacing: 2) {
+                        Image(systemName: "heart")
+                        Text("\(post.likeCount)")
+                    }
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
     }
 }
 
