@@ -260,12 +260,16 @@ extension APIService {
     // MARK: - Tasks (任务)
     
     /// 获取任务列表
-    func getTasks(page: Int = 1, pageSize: Int = 20, type: String? = nil, location: String? = nil, keyword: String? = nil, sortBy: String? = nil) -> AnyPublisher<TaskListResponse, APIError> {
+    func getTasks(page: Int = 1, pageSize: Int = 20, type: String? = nil, location: String? = nil, keyword: String? = nil, sortBy: String? = nil, userLatitude: Double? = nil, userLongitude: Double? = nil) -> AnyPublisher<TaskListResponse, APIError> {
         var endpoint = "/api/tasks?page=\(page)&page_size=\(pageSize)"
         if let type = type, type != "all" { endpoint += "&task_type=\(type)" }
         if let location = location, location != "all" { endpoint += "&location=\(location)" }
         if let keyword = keyword { endpoint += "&keyword=\(keyword)" }
         if let sortBy = sortBy { endpoint += "&sort_by=\(sortBy)" }
+        // 添加用户位置参数（用于"附近"功能的距离排序）
+        if let lat = userLatitude, let lon = userLongitude {
+            endpoint += "&user_latitude=\(lat)&user_longitude=\(lon)"
+        }
         // URL 编码处理
         endpoint = endpoint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? endpoint
         

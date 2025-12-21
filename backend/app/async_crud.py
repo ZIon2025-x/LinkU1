@@ -435,6 +435,8 @@ class AsyncTaskCRUD:
         expert_creator_id: Optional[str] = None,
         is_multi_participant: Optional[bool] = None,
         parent_activity_id: Optional[int] = None,
+        user_latitude: Optional[float] = None,
+        user_longitude: Optional[float] = None,
     ) -> tuple[List[models.Task], int]:
         """
         获取任务列表 + 总数（使用缓存 + 精确 count，不用 reltuples 估算）
@@ -545,13 +547,28 @@ class AsyncTaskCRUD:
             if parent_activity_id is not None:
                 base_query = base_query.where(models.Task.parent_activity_id == parent_activity_id)
             
+            # 如果提供了用户位置，过滤掉"Online"任务（用于"附近"功能）
+            if user_latitude is not None and user_longitude is not None:
+                base_query = base_query.where(
+                    ~models.Task.location.ilike("%online%")
+                )
+            
             # 2. 先算 total（缓存 + 精确 count）
+            # 如果有用户位置，total计算会受影响（因为过滤了Online和没有坐标的任务）
+            # 所以缓存键需要包含位置信息
             cache_key = get_tasks_count_cache_key(
                 task_type=task_type,
                 location=location,
                 status=actual_status,  # 包含默认 'open'
                 keyword=keyword,
             )
+            
+            # 如果有用户位置，修改缓存键以区分
+            if user_latitude is not None and user_longitude is not None:
+                # 将位置信息四舍五入到小数点后2位（约1km精度），用于缓存分组
+                lat_rounded = round(user_latitude, 2)
+                lon_rounded = round(user_longitude, 2)
+                cache_key = f"{cache_key}:nearby:{lat_rounded}:{lon_rounded}"
             
             # 尝试从缓存获取总数
             try:
@@ -586,7 +603,36 @@ class AsyncTaskCRUD:
             )
             
             # 排序：注意和 get_tasks_cursor 的约束保持一致
-            if sort_by == "latest":
+            # 如果提供了用户位置，先获取更多任务（用于距离计算），然后在Python中排序
+            # 性能优化：限制查询范围，只处理有坐标的任务，并使用粗略的距离过滤
+            use_distance_sorting = False
+            if user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
+                use_distance_sorting = True
+                
+                # 粗略的距离过滤：使用简单的经纬度范围过滤（约50km范围）
+                # 1度纬度 ≈ 111km，所以 ±0.5度 ≈ ±55km
+                # 1度经度在UK纬度（约51度）≈ 111km * cos(51°) ≈ 70km，所以 ±0.7度 ≈ ±50km
+                lat_range = 0.5  # 约55km
+                lon_range = 0.7  # 约50km（在UK纬度）
+                
+                # 限制只获取有坐标的任务，并且在粗略范围内
+                list_query = list_query.where(
+                    (models.Task.latitude.isnot(None)) & 
+                    (models.Task.longitude.isnot(None)) &
+                    (models.Task.latitude >= user_latitude - lat_range) &
+                    (models.Task.latitude <= user_latitude + lat_range) &
+                    (models.Task.longitude >= user_longitude - lon_range) &
+                    (models.Task.longitude <= user_longitude + lon_range)
+                ).order_by(
+                    models.Task.created_at.desc(), models.Task.id.desc()
+                )
+                
+                # 增加获取数量（用于距离计算），但限制在合理范围内
+                # 例如：如果用户请求20条，我们获取200条来计算距离，然后返回最近的20条
+                max_fetch_for_distance = min(limit * 10, 500)  # 最多500条
+                list_query = list_query.limit(max_fetch_for_distance)
+            elif sort_by == "latest":
+            elif sort_by == "latest":
                 list_query = list_query.order_by(
                     models.Task.created_at.desc(), models.Task.id.desc()
                 )
@@ -618,10 +664,49 @@ class AsyncTaskCRUD:
                     models.Task.created_at.desc(), models.Task.id.desc()
                 )
             
-            list_query = list_query.offset(skip).limit(limit)
+            # 如果不是距离排序，才应用offset和limit（距离排序在Python中处理）
+            if not use_distance_sorting:
+                list_query = list_query.offset(skip).limit(limit)
             
             result = await db.execute(list_query)
             tasks = list(result.scalars().all())
+            
+            # 如果有用户位置，计算距离并按距离排序
+            if user_latitude is not None and user_longitude is not None:
+                from app.utils.location_utils import calculate_distance
+                
+                # 计算每个任务的距离
+                tasks_with_distance = []
+                for task in tasks:
+                    if task.latitude is not None and task.longitude is not None:
+                        distance = calculate_distance(
+                            user_latitude, user_longitude,
+                            float(task.latitude), float(task.longitude)
+                        )
+                        task._distance_km = distance
+                        tasks_with_distance.append((distance, task))
+                    else:
+                        task._distance_km = None
+                        tasks_with_distance.append((999999.0, task))
+                
+                # 如果按距离排序，重新排序并限制距离范围
+                if sort_by in ("distance", "nearby"):
+                    tasks_with_distance.sort(key=lambda x: x[0])
+                    
+                    # 可选：限制距离范围（只返回50km内的任务，提升用户体验）
+                    max_distance_km = 50.0  # 最大距离50km
+                    tasks_with_distance = [
+                        (d, t) for d, t in tasks_with_distance 
+                        if d <= max_distance_km
+                    ]
+                    
+                    # 应用分页：只返回请求的数量
+                    start_idx = skip
+                    end_idx = skip + limit
+                    tasks = [task for _, task in tasks_with_distance[start_idx:end_idx]]
+                else:
+                    # 不按距离排序，只计算距离值用于显示
+                    tasks = [task for _, task in tasks_with_distance]
             
             return tasks, total
         except RuntimeError as e:

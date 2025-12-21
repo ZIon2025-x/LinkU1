@@ -107,6 +107,8 @@ async def get_tasks(
     expert_creator_id: Optional[str] = Query(None),
     is_multi_participant: Optional[bool] = Query(None),
     parent_activity_id: Optional[int] = Query(None),
+    user_latitude: Optional[float] = Query(None, ge=-90, le=90, description="用户纬度（用于距离排序）"),
+    user_longitude: Optional[float] = Query(None, ge=-180, le=180, description="用户经度（用于距离排序）"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
@@ -155,6 +157,8 @@ async def get_tasks(
                 "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
                 "currency": task.currency or "GBP",
                 "location": task.location,
+                "latitude": float(task.latitude) if task.latitude is not None else None,
+                "longitude": float(task.longitude) if task.longitude is not None else None,
                 "task_type": task.task_type,
                 "poster_id": task.poster_id,
                 "taker_id": task.taker_id,
@@ -177,6 +181,11 @@ async def get_tasks(
                 "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
                 "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
             }
+            
+            # 如果有距离信息，添加到返回数据中
+            if hasattr(task, '_distance_km') and task._distance_km is not None:
+                task_data["distance_km"] = round(task._distance_km, 2)
+            
             formatted_tasks.append(task_data)
         
         return {
@@ -190,6 +199,10 @@ async def get_tasks(
         skip = (page - 1) * page_size
         limit = page_size
     
+    # 如果提供了用户位置且没有指定城市，按距离排序（"附近"功能）
+    if user_latitude is not None and user_longitude is not None and location is None:
+        sort_by = "distance"
+    
     tasks, total = await async_crud.async_task_crud.get_tasks_with_total(
         db,
         skip=skip,
@@ -202,6 +215,8 @@ async def get_tasks(
         expert_creator_id=expert_creator_id,
         is_multi_participant=is_multi_participant,
         parent_activity_id=parent_activity_id,
+        user_latitude=user_latitude,
+        user_longitude=user_longitude,
     )
     
     # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
@@ -232,6 +247,8 @@ async def get_tasks(
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
             "currency": task.currency or "GBP",
             "location": task.location,
+            "latitude": float(task.latitude) if task.latitude is not None else None,
+            "longitude": float(task.longitude) if task.longitude is not None else None,
             "task_type": task.task_type,
             "poster_id": task.poster_id,
             "taker_id": task.taker_id,
@@ -254,6 +271,11 @@ async def get_tasks(
             "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
             "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
         }
+        
+        # 如果有距离信息，添加到返回数据中
+        if hasattr(task, '_distance_km') and task._distance_km is not None:
+            task_data["distance_km"] = round(task._distance_km, 2)
+        
         formatted_tasks.append(task_data)
     
     # 返回与前端期望的数据结构兼容的格式

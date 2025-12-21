@@ -63,8 +63,19 @@ class TasksViewModel: ObservableObject {
         currentKeyword = keyword
         currentSortBy = sortBy
         
+        // 如果是"附近"视图（没有指定城市），传递用户位置用于距离排序
+        var userLat: Double? = nil
+        var userLon: Double? = nil
+        if city == nil && keyword == nil {
+            // "附近"视图：传递用户位置
+            if let userLocation = locationService.currentLocation {
+                userLat = userLocation.latitude
+                userLon = userLocation.longitude
+            }
+        }
+        
         // 使用 APIService 的 getTasks 方法
-        apiService.getTasks(page: page, pageSize: pageSize, type: category, location: city, keyword: keyword, sortBy: sortBy)
+        apiService.getTasks(page: page, pageSize: pageSize, type: category, location: city, keyword: keyword, sortBy: sortBy, userLatitude: userLat, userLongitude: userLon)
             .sink(receiveCompletion: { [weak self] completion in
                 self?.isLoading = false
                 self?.isLoadingMore = false
@@ -98,17 +109,11 @@ class TasksViewModel: ObservableObject {
                     self.rawTasks.append(contentsOf: filteredTasks)
                 }
                 
-                // 如果是"附近"视图（没有指定城市和关键词），按距离排序
-                if city == nil && keyword == nil {
-                    print("📍 [TasksViewModel] 附近视图，准备按距离排序")
-                    self.sortTasksByDistance()
+                // 直接使用后端返回的数据（后端已经按距离排序并过滤了Online任务）
+                if page == 1 {
+                    self.tasks = filteredTasks
                 } else {
-                    // 其他情况直接使用原始数据
-                    if page == 1 {
-                        self.tasks = filteredTasks
-                    } else {
-                        self.tasks.append(contentsOf: filteredTasks)
-                    }
+                    self.tasks.append(contentsOf: filteredTasks)
                 }
                 
                 // 如果是第一页，保存到缓存（仅第一页且无搜索关键词时）
@@ -124,14 +129,23 @@ class TasksViewModel: ObservableObject {
                 self.isLoading = false
                 self.isLoadingMore = false
                 
-                // 监听位置更新，当位置可用时重新排序（仅附近视图）
+                // 监听位置更新，当位置可用时重新加载任务（仅附近视图）
                 if city == nil && keyword == nil {
                     self.locationService.$currentLocation
                         .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
                         .sink { [weak self] newLocation in
                             if newLocation != nil {
-                                print("🔄 [TasksViewModel] 位置已更新，重新排序任务列表")
-                                self?.sortTasksByDistance()
+                                print("🔄 [TasksViewModel] 位置已更新，重新加载任务列表")
+                                // 重新加载第一页以获取按新位置排序的任务
+                                self?.loadTasks(
+                                    category: self?.currentCategory,
+                                    city: self?.currentCity,
+                                    status: self?.currentStatus,
+                                    keyword: self?.currentKeyword,
+                                    sortBy: self?.currentSortBy,
+                                    page: 1,
+                                    forceRefresh: true
+                                )
                             }
                         }
                         .store(in: &self.cancellables)
