@@ -632,7 +632,6 @@ class AsyncTaskCRUD:
                 max_fetch_for_distance = min(limit * 10, 500)  # 最多500条
                 list_query = list_query.limit(max_fetch_for_distance)
             elif sort_by == "latest":
-            elif sort_by == "latest":
                 list_query = list_query.order_by(
                     models.Task.created_at.desc(), models.Task.id.desc()
                 )
