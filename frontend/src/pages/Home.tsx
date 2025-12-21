@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
-import { formatViewCount } from '../utils/formatUtils';
+import { formatViewCount, obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskTitle from '../components/TaskTitle';
@@ -1731,9 +1731,9 @@ const Home: React.FC = () => {
                         {task.task_type}
                       </span>
                       <span className={`${styles.taskLocationBadge} ${
-                        task.location === 'Online' ? styles.taskLocationOnline : styles.taskLocationOffline
+                        task.location?.toLowerCase() === 'online' ? styles.taskLocationOnline : styles.taskLocationOffline
                       }`}>
-                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
+                        {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'} {obfuscateLocation(task.location)}
                       </span>
                     </div>
                     

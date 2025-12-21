@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from './LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -1035,7 +1036,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 const shareUrl = `${window.location.origin}${basePath}`;
                 const shareTitle = `${task.title} - Link²Ur任务平台`;
                 const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
-                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: ${displayReward.toFixed(2)} ${task.currency || 'CNY'}\n\n立即查看: ${shareUrl}`;
+                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${obfuscateLocation(task.location)}\n金额: ${displayReward.toFixed(2)} ${task.currency || 'CNY'}\n\n立即查看: ${shareUrl}`;
                 
                 // 先尝试使用Web Share API（需要在用户交互上下文中）
                 if (navigator.share) {
@@ -1311,24 +1312,24 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           </div>
           
           <div style={{
-            background: task.location === 'Online' ? '#e6f3ff' : '#f8fafc',
+            background: task.location?.toLowerCase() === 'online' ? '#e6f3ff' : '#f8fafc',
             padding: '20px',
             borderRadius: '16px',
-            border: task.location === 'Online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
+            border: task.location?.toLowerCase() === 'online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-              {task.location === 'Online' ? '🌐' : '📍'}
+              {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}
             </div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-              {task.location === 'Online' ? t('taskDetail.onlineTaskMethod') : t('taskDetail.offlineLocation')}
+              {task.location?.toLowerCase() === 'online' ? t('taskDetail.onlineTaskMethod') : t('taskDetail.offlineLocation')}
             </div>
             <div style={{ 
               fontSize: '16px', 
               fontWeight: '600', 
-              color: task.location === 'Online' ? '#2563eb' : '#1e293b' 
+              color: task.location?.toLowerCase() === 'online' ? '#2563eb' : '#1e293b' 
             }}>
-              {task.location}
+              {obfuscateLocation(task.location)}
             </div>
           </div>
           

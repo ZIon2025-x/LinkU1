@@ -27,6 +27,8 @@ export interface Task {
   deadline: string;
   reward: number;
   location: string;
+  latitude?: number;  // 纬度（用于地图选点）
+  longitude?: number; // 经度（用于地图选点）
   task_type: string;
   poster_id: string;
   taker_id?: string;

@@ -2765,6 +2765,8 @@ def admin_get_tasks(
             for city in UK_MAIN_CITIES:
                 exclusion_conditions.append(Task.location.ilike(f"%, {city}%"))
                 exclusion_conditions.append(Task.location.ilike(f"{city},%"))
+                exclusion_conditions.append(Task.location.ilike(f"{city}"))
+                exclusion_conditions.append(Task.location.ilike(f"% {city}"))
             exclusion_conditions.append(Task.location.ilike("%online%"))
             query = query.filter(not_(or_(*exclusion_conditions)))
         elif loc.lower() == 'online':
@@ -2772,8 +2774,10 @@ def admin_get_tasks(
         else:
             from sqlalchemy import or_
             query = query.filter(or_(
-                Task.location.ilike(f"%, {loc}%"),
-                Task.location.ilike(f"{loc},%")
+                Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
+                Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
+                Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
+                Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
             ))
 
     # 添加关键词搜索（使用 pg_trgm 优化）

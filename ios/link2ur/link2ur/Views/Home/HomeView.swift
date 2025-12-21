@@ -1031,9 +1031,20 @@ struct SearchTaskCard: View {
                     Text("·")
                         .foregroundColor(AppColors.textTertiary)
                     
-                    Text(task.location.obfuscatedLocation)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textTertiary)
+                    // 位置（模糊显示）
+                    HStack(spacing: 2) {
+                        Image(systemName: task.isOnline ? "globe" : "mappin")
+                            .font(.system(size: 10))
+                        Text(task.location.obfuscatedLocation)
+                            .font(AppTypography.caption)
+                        
+                        // 距离显示
+                        if let distance = task.formattedDistanceFromUser, !task.isOnline {
+                            Text("(\(distance))")
+                                .font(AppTypography.caption)
+                        }
+                    }
+                    .foregroundColor(AppColors.textTertiary)
                 }
             }
             

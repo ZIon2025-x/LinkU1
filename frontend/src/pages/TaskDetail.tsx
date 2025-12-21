@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
@@ -968,7 +969,7 @@ const TaskDetail: React.FC = () => {
           const shareUrl = window.location.origin + window.location.pathname;
           const shareTitle = `${task.title} - Link²Ur任务平台`;
           const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
-          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${displayReward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${obfuscateLocation(task.location)}\n金额: £${displayReward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
           
           // 准备分享数据，如果有任务图片则尝试分享图片
           const shareData: any = {
@@ -2211,24 +2212,24 @@ const TaskDetail: React.FC = () => {
           </div>
           
           <div style={{
-            background: task.location === 'Online' ? '#e6f3ff' : '#f8fafc',
+            background: task.location?.toLowerCase() === 'online' ? '#e6f3ff' : '#f8fafc',
             padding: '20px',
             borderRadius: '16px',
-            border: task.location === 'Online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
+            border: task.location?.toLowerCase() === 'online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-              {task.location === 'Online' ? '🌐' : '📍'}
+              {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}
             </div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-              {task.location === 'Online' ? '任务方式' : '所在城市'}
+              {task.location?.toLowerCase() === 'online' ? '任务方式' : '所在城市'}
             </div>
             <div style={{ 
               fontSize: '16px', 
               fontWeight: '600', 
-              color: task.location === 'Online' ? '#2563eb' : '#1e293b' 
+              color: task.location?.toLowerCase() === 'online' ? '#2563eb' : '#1e293b' 
             }}>
-              {task.location}
+              {obfuscateLocation(task.location)}
             </div>
           </div>
           

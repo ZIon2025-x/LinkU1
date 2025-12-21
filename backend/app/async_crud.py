@@ -333,9 +333,11 @@ class AsyncTaskCRUD:
                     # 使用更精确的城市匹配模式，避免匹配街道名
                     exclusion_conditions = []
                     for city in UK_MAIN_CITIES:
-                        # 匹配 ", City" 或 "City," 模式，确保是城市名而非街道名
+                        # 匹配城市名的多种格式，确保是城市名而非街道名
                         exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                         exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                        exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                        exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                     exclusion_conditions.append(models.Task.location.ilike("%online%"))
                     query = query.where(not_(or_(*exclusion_conditions)))
                 elif location.lower() == 'online':
@@ -343,11 +345,13 @@ class AsyncTaskCRUD:
                     query = query.where(models.Task.location.ilike("%online%"))
                 else:
                     # 使用更精确的城市匹配模式，避免 "Bristol Road" 匹配到 "Bristol"
-                    # 匹配 ", City" 或 "City," 模式
+                    # 匹配城市名称的多种格式
                     from sqlalchemy import or_
                     query = query.where(or_(
                         models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
-                        models.Task.location.ilike(f"{location},%")     # "Birmingham, UK"
+                        models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
+                        models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
+                        models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
                     ))
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
@@ -493,6 +497,8 @@ class AsyncTaskCRUD:
                     for city in UK_MAIN_CITIES:
                         exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                         exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                        exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                        exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                     exclusion_conditions.append(models.Task.location.ilike("%online%"))
                     base_query = base_query.where(not_(or_(*exclusion_conditions)))
                 elif location.lower() == 'online':
@@ -500,8 +506,10 @@ class AsyncTaskCRUD:
                 else:
                     from sqlalchemy import or_
                     base_query = base_query.where(or_(
-                        models.Task.location.ilike(f"%, {location}%"),
-                        models.Task.location.ilike(f"{location},%")
+                        models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
+                        models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
+                        models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
+                        models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
                     ))
             
             # 关键词筛选（和 /tasks 的实现保持一致）
@@ -733,6 +741,8 @@ class AsyncTaskCRUD:
                 for city in UK_MAIN_CITIES:
                     exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                     exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                 exclusion_conditions.append(models.Task.location.ilike("%online%"))
                 query = query.where(not_(or_(*exclusion_conditions)))
             elif location.lower() == 'online':
@@ -741,8 +751,10 @@ class AsyncTaskCRUD:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
                 from sqlalchemy import or_
                 query = query.where(or_(
-                    models.Task.location.ilike(f"%, {location}%"),
-                    models.Task.location.ilike(f"{location},%")
+                    models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
+                    models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
+                    models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
+                    models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
                 ))
         
         if keyword:

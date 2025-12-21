@@ -203,8 +203,8 @@ struct ItemCard: View {
                     
                     if let location = item.location, !location.isEmpty {
                         HStack(spacing: 4) {
-                            IconStyle.icon("mappin.circle.fill", size: 12)
-                            Text(location)
+                            IconStyle.icon(location.lowercased() == "online" ? "globe" : "mappin.circle.fill", size: 12)
+                            Text(location.obfuscatedLocation)
                                 .font(AppTypography.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(.white.opacity(0.9))

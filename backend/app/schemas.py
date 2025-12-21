@@ -1915,6 +1915,8 @@ class FleaMarketItemResponse(BaseModel):
     currency: Literal["GBP"] = "GBP"
     images: List[str]
     location: Optional[str]
+    latitude: Optional[float] = None  # 纬度（用于地图选点和距离计算）
+    longitude: Optional[float] = None  # 经度（用于地图选点和距离计算）
     category: Optional[str]
     status: Literal["active", "sold", "deleted"]
     seller_id: str

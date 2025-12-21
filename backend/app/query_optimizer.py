@@ -60,6 +60,8 @@ class QueryOptimizer:
                 for city in UK_MAIN_CITIES:
                     exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                     exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                 exclusion_conditions.append(models.Task.location.ilike("%online%"))
                 query = query.filter(not_(or_(*exclusion_conditions)))
             elif loc.lower() == 'online':
@@ -67,8 +69,10 @@ class QueryOptimizer:
             else:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
                 query = query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),
-                    models.Task.location.ilike(f"{loc},%")
+                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
+                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
+                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
+                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
                 ))
         
         if filters.get('keyword'):
@@ -146,6 +150,8 @@ class QueryOptimizer:
                 for city in UK_MAIN_CITIES:
                     exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                     exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                 exclusion_conditions.append(models.Task.location.ilike("%online%"))
                 base_query = base_query.filter(not_(or_(*exclusion_conditions)))
             elif loc.lower() == 'online':
@@ -153,8 +159,10 @@ class QueryOptimizer:
             else:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
                 base_query = base_query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),
-                    models.Task.location.ilike(f"{loc},%")
+                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
+                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
+                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
+                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
                 ))
         
         if filters.get('keyword'):
@@ -316,6 +324,8 @@ class AsyncQueryOptimizer:
                 for city in UK_MAIN_CITIES:
                     exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
                     exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
                 exclusion_conditions.append(models.Task.location.ilike("%online%"))
                 query = query.filter(not_(or_(*exclusion_conditions)))
             elif loc.lower() == 'online':
@@ -323,8 +333,10 @@ class AsyncQueryOptimizer:
             else:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
                 query = query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),
-                    models.Task.location.ilike(f"{loc},%")
+                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
+                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
+                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
+                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
                 ))
         
         if filters.get('keyword'):

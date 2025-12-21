@@ -23,11 +23,13 @@ struct LocationPickerView: View {
     @State private var locationError: String?
     @State private var searchText = ""
     @State private var showSearchResults = false
-    @State private var isSearching = false
+    @State private var isSelectingResult = false  // 正在获取搜索结果的详细信息
     @State private var isDragging = false
     @State private var lastUpdateTime = Date()
     @State private var searchDebounceTask: DispatchWorkItem?
     @State private var waitingForInitialLocation = false
+    @State private var isInitializing = false  // 标记是否正在初始化，避免触发地址更新
+    @State private var mapRefreshId = UUID()  // 用于强制刷新地图
     @FocusState private var isSearchFocused: Bool
     
     var body: some View {
@@ -77,7 +79,10 @@ struct LocationPickerView: View {
                 }
             }
             .onAppear {
-                initializeLocation()
+                // 延迟一帧确保绑定值已同步
+                DispatchQueue.main.async {
+                    initializeLocation()
+                }
             }
             .onChange(of: locationService.currentLocation) { newLocation in
                 // 如果正在等待初始位置更新
@@ -92,7 +97,11 @@ struct LocationPickerView: View {
                         center: coordinate,
                         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                     )
-                    updateAddressForCurrentCenter()
+                    // 延迟清除初始化标志并更新地址
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isInitializing = false
+                        updateAddressForCurrentCenter()
+                    }
                 }
             }
             .onTapGesture {
@@ -144,7 +153,7 @@ struct LocationPickerView: View {
                     }
                 }
                 
-                if isSearching {
+                if searchCompleter.isSearching || isSelectingResult {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
@@ -162,6 +171,7 @@ struct LocationPickerView: View {
     
     private var mapView: some View {
         Map(coordinateRegion: $region, interactionModes: .all)
+            .id(mapRefreshId)  // 用于强制刷新地图位置
             .onChange(of: region.center.latitude) { _ in
                 handleRegionChange()
             }
@@ -220,14 +230,17 @@ struct LocationPickerView: View {
     }
     
     private func handleRegionChange() {
+        // 如果正在初始化，不触发地址更新（避免覆盖已有地址）
+        guard !isInitializing else { return }
+        
         isDragging = true
         lastUpdateTime = Date()
         
         // 延迟更新地址（等待用户停止拖动）
         let capturedTime = lastUpdateTime
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            // 只有当这是最后一次更新时才执行
-            if capturedTime == lastUpdateTime {
+            // 只有当这是最后一次更新时才执行，且不在初始化中
+            if capturedTime == lastUpdateTime && !isInitializing {
                 isDragging = false
                 updateAddressForCurrentCenter()
             }
@@ -328,6 +341,17 @@ struct LocationPickerView: View {
                                 }
                                 
                                 Spacer()
+                                
+                                // UK 标识
+                                if isUKLocation(result) {
+                                    Text("UK")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(AppColors.primary)
+                                        .cornerRadius(4)
+                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
@@ -468,26 +492,67 @@ struct LocationPickerView: View {
         return String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
     }
     
+    /// 判断搜索结果是否为 UK 地址
+    private func isUKLocation(_ result: MKLocalSearchCompletion) -> Bool {
+        let text = (result.title + " " + result.subtitle).lowercased()
+        return text.contains("uk") || text.contains("united kingdom") ||
+               text.contains("england") || text.contains("scotland") ||
+               text.contains("wales") || text.contains("northern ireland")
+    }
+    
     private func initializeLocation() {
+        // 标记正在初始化，防止 handleRegionChange 触发地址更新
+        isInitializing = true
+        
+        #if DEBUG
+        print("📍 LocationPicker initializeLocation:")
+        print("   - selectedLatitude: \(String(describing: selectedLatitude))")
+        print("   - selectedLongitude: \(String(describing: selectedLongitude))")
+        print("   - selectedLocation: \(selectedLocation)")
+        #endif
+        
         // 优先使用已保存的坐标
         if let lat = selectedLatitude, let lon = selectedLongitude {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            // 强制更新整个 region
-            region = MKCoordinateRegion(
+            
+            #if DEBUG
+            print("📍 Setting region to: \(lat), \(lon)")
+            #endif
+            
+            // 使用新的 MKCoordinateRegion 实例强制更新
+            let newRegion = MKCoordinateRegion(
                 center: coordinate,
                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
             )
+            
+            // 先设置 region
+            region = newRegion
+            
+            // 刷新地图 ID 强制重新渲染地图到正确位置
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                mapRefreshId = UUID()
+            }
+            
             currentAddress = selectedLocation
             
             // 如果没有地址文本，进行反向地理编码
             if selectedLocation.isEmpty || selectedLocation.lowercased() == "online" {
-                updateAddressForCurrentCenter()
+                // 延迟调用，确保初始化标志已清除
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isInitializing = false
+                    updateAddressForCurrentCenter()
+                }
+            } else {
+                // 延迟清除初始化标志，确保 onChange 不会触发
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isInitializing = false
+                }
             }
         }
         // 其次使用已保存的地址进行地理编码
         else if !selectedLocation.isEmpty && selectedLocation.lowercased() != "online" {
             currentAddress = selectedLocation
-            geocodeAddress(selectedLocation)
+            geocodeAddressAndFinishInit(selectedLocation)
         }
         // 默认使用当前位置
         else {
@@ -507,7 +572,11 @@ struct LocationPickerView: View {
                     center: coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                 )
-                updateAddressForCurrentCenter()
+                // 延迟更新地址并清除初始化标志
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isInitializing = false
+                    updateAddressForCurrentCenter()
+                }
             } else {
                 // 标记正在等待位置更新，onChange 会处理更新
                 waitingForInitialLocation = true
@@ -518,9 +587,30 @@ struct LocationPickerView: View {
                     if waitingForInitialLocation {
                         waitingForInitialLocation = false
                         isLoadingLocation = false
+                        isInitializing = false
                         // 超时后使用默认位置并更新地址
                         updateAddressForCurrentCenter()
                     }
+                }
+            }
+        }
+    }
+    
+    /// 地理编码地址并完成初始化
+    private func geocodeAddressAndFinishInit(_ address: String) {
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            DispatchQueue.main.async {
+                if let placemark = placemarks?.first, let location = placemark.location {
+                    let coordinate = location.coordinate
+                    region = MKCoordinateRegion(
+                        center: coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    )
+                }
+                // 延迟清除初始化标志
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isInitializing = false
                 }
             }
         }
@@ -577,18 +667,21 @@ struct LocationPickerView: View {
     }
     
     private func selectSearchResult(_ result: MKLocalSearchCompletion) {
-        isSearching = true
+        isSelectingResult = true
         showSearchResults = false
         isSearchFocused = false
         searchText = result.title
         HapticFeedback.light()
+        
+        // 标记正在初始化，防止 handleRegionChange 覆盖地址
+        isInitializing = true
         
         let searchRequest = MKLocalSearch.Request(completion: result)
         let search = MKLocalSearch(request: searchRequest)
         
         search.start { response, error in
             DispatchQueue.main.async {
-                isSearching = false
+                isSelectingResult = false
                 
                 if let mapItem = response?.mapItems.first {
                     let coordinate = mapItem.placemark.coordinate
@@ -610,26 +703,15 @@ struct LocationPickerView: View {
                     
                     HapticFeedback.success()
                 }
-            }
-        }
-    }
-    
-    private func geocodeAddress(_ address: String) {
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(address) { placemarks, error in
-            DispatchQueue.main.async {
-                if let placemark = placemarks?.first, let location = placemark.location {
-                    let coordinate = location.coordinate
-                    withAnimation {
-                        region = MKCoordinateRegion(
-                            center: coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                        )
-                    }
+                
+                // 延迟清除初始化标志，确保 handleRegionChange 不会覆盖地址
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    isInitializing = false
                 }
             }
         }
     }
+    
     
     private func useCurrentLocation() {
         if !locationService.isAuthorized {
@@ -729,31 +811,66 @@ struct Triangle: Shape {
 
 class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
     @Published var searchResults: [MKLocalSearchCompletion] = []
+    @Published var isSearching = false
     
     private let completer = MKLocalSearchCompleter()
+    
+    /// UK 区域边界（用于优先显示 UK 结果）
+    private static let ukRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 54.0, longitude: -2.0),
+        span: MKCoordinateSpan(latitudeDelta: 12.0, longitudeDelta: 10.0)
+    )
     
     override init() {
         super.init()
         completer.delegate = self
         completer.resultTypes = [.address, .pointOfInterest]
+        // 设置搜索区域为 UK，提高 UK 地址的搜索优先级
+        completer.region = Self.ukRegion
     }
     
     func search(query: String) {
         guard !query.isEmpty else {
             searchResults = []
+            isSearching = false
             return
         }
+        isSearching = true
         completer.queryFragment = query
     }
     
+    func cancel() {
+        completer.cancel()
+        isSearching = false
+    }
+    
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        DispatchQueue.main.async {
-            self.searchResults = completer.results
+        DispatchQueue.main.async { [weak self] in
+            self?.isSearching = false
+            // 排序：UK 结果优先
+            self?.searchResults = completer.results.sorted { a, b in
+                let aIsUK = self?.isUKLocation(a) ?? false
+                let bIsUK = self?.isUKLocation(b) ?? false
+                if aIsUK && !bIsUK { return true }
+                if !aIsUK && bIsUK { return false }
+                return false
+            }
         }
     }
     
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isSearching = false
+        }
         print("Search completer error: \(error.localizedDescription)")
+    }
+    
+    /// 判断搜索结果是否为 UK 地址
+    private func isUKLocation(_ result: MKLocalSearchCompletion) -> Bool {
+        let text = (result.title + " " + result.subtitle).lowercased()
+        return text.contains("uk") || text.contains("united kingdom") ||
+               text.contains("england") || text.contains("scotland") ||
+               text.contains("wales") || text.contains("northern ireland")
     }
 }
 

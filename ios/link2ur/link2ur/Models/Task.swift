@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 struct Task: Codable, Identifiable {
     let id: Int
@@ -55,6 +56,36 @@ struct Task: Codable, Identifiable {
     var city: String { location }
     var price: Double? { reward }
     var author: User? { poster }
+    
+    /// 任务坐标（如果有经纬度）
+    var coordinate: CLLocationCoordinate2D? {
+        guard let lat = latitude, let lon = longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+    
+    /// 计算距离用户当前位置的距离（公里）
+    func distanceFromUser() -> Double? {
+        guard let taskCoord = coordinate,
+              let userLocation = LocationService.shared.currentLocation else {
+            return nil
+        }
+        let userCoord = CLLocationCoordinate2D(
+            latitude: userLocation.latitude, 
+            longitude: userLocation.longitude
+        )
+        return taskCoord.distance(to: userCoord)
+    }
+    
+    /// 格式化的距离字符串
+    var formattedDistanceFromUser: String? {
+        guard let distance = distanceFromUser() else { return nil }
+        return distance.formattedAsDistance
+    }
+    
+    /// 是否为线上任务
+    var isOnline: Bool {
+        location.lowercased() == "online"
+    }
 }
 
 enum TaskStatus: String, Codable {

@@ -18,6 +18,7 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
+import { obfuscateLocation } from '../utils/formatUtils';
 import styles from './MyTasks.module.css';
 
 // 配置dayjs插件
@@ -1252,10 +1253,10 @@ const MyTasks: React.FC = () => {
                         </div>
                         <div className={styles.taskCardInfoItem}>
                           <span className={styles.taskCardInfoIcon}>
-                            {task.location === 'Online' ? '🌐' : '📍'}
+                            {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}
                           </span>
-                          <span className={task.location === 'Online' ? styles.taskCardInfoTextOnline : styles.taskCardInfoTextNormal}>
-                            {task.location}
+                          <span className={task.location?.toLowerCase() === 'online' ? styles.taskCardInfoTextOnline : styles.taskCardInfoTextNormal}>
+                            {obfuscateLocation(task.location)}
                           </span>
                         </div>
                         <div className={styles.taskCardInfoItem}>

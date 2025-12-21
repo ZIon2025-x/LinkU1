@@ -2,6 +2,7 @@ import React from 'react';
 import { Task, TaskLevel } from '../../types/task';
 import { cardStyles, statusStyles, levelStyles } from '../../utils/taskModalStyles';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
+import { obfuscateLocation } from '../../utils/formatUtils';
 
 interface TaskInfoCardProps {
   task: Task;
@@ -37,19 +38,19 @@ const TaskInfoCard: React.FC<TaskInfoCardProps> = ({
         </div>
       </div>
       
-      <div style={task.location === 'Online' ? cardStyles.onlineCard : cardStyles.infoCard}>
+      <div style={task.location?.toLowerCase() === 'online' ? cardStyles.onlineCard : cardStyles.infoCard}>
         <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-          {task.location === 'Online' ? '🌐' : '📍'}
+          {task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}
         </div>
         <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-          {task.location === 'Online' ? t('taskDetail.onlineTaskMethod') : t('taskDetail.offlineLocation')}
+          {task.location?.toLowerCase() === 'online' ? t('taskDetail.onlineTaskMethod') : t('taskDetail.offlineLocation')}
         </div>
         <div style={{ 
           fontSize: '16px', 
           fontWeight: '600', 
-          color: task.location === 'Online' ? '#2563eb' : '#1e293b' 
+          color: task.location?.toLowerCase() === 'online' ? '#2563eb' : '#1e293b' 
         }}>
-          {task.location}
+          {obfuscateLocation(task.location)}
         </div>
       </div>
       

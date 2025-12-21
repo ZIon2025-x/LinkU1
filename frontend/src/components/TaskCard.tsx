@@ -4,6 +4,7 @@ import { TASK_TYPES } from '../pages/Tasks';
 import { Language } from '../contexts/LanguageContext';
 import LazyImage from './LazyImage';
 import styles from './TaskCard.module.css';
+import { obfuscateLocation } from '../utils/formatUtils';
 
 interface TaskCardProps {
   task: any;
@@ -185,12 +186,12 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
           boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
           maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
         }}>
-          <span>{task.location === 'Online' ? '🌐' : '📍'}</span>
+          <span>{task.location?.toLowerCase() === 'online' ? '🌐' : '📍'}</span>
           <span style={{
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis'
-          }}>{task.location}</span>
+          }}>{obfuscateLocation(task.location)}</span>
         </div>
 
         {/* 任务类型 - 右上角 */}

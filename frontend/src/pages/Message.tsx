@@ -30,6 +30,7 @@ import { useLocation } from 'react-router-dom';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
+import { obfuscateLocation } from '../utils/formatUtils';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -7143,7 +7144,7 @@ const MessagePage: React.FC = () => {
                       }}>
                         <span>💰 £{task.reward || task.base_reward || 0}</span>
                         <span>📋 {task.task_type}</span>
-                        <span>📍 {task.location || '未知'}</span>
+                        <span>📍 {obfuscateLocation(task.location) || '未知'}</span>
                         <span style={{
                           padding: '2px 8px',
                           borderRadius: 4,

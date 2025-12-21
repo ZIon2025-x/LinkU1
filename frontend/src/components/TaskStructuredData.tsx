@@ -2,6 +2,7 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { obfuscateLocation } from '../utils/formatUtils';
 
 dayjs.extend(utc);
 
@@ -65,7 +66,7 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
       "@type": "Place",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": task.location || "London",
+        "addressLocality": obfuscateLocation(task.location) || "London",
         "addressCountry": "GB"
       }
     },
