@@ -199,9 +199,8 @@ async def get_tasks(
         skip = (page - 1) * page_size
         limit = page_size
     
-    # 如果提供了用户位置且没有指定城市，按距离排序（"附近"功能）
-    if user_latitude is not None and user_longitude is not None and location is None:
-        sort_by = "distance"
+    # 不再自动设置距离排序，只有明确传递 sort_by="distance" 或 "nearby" 时才使用距离排序
+    # 推荐任务和任务大厅不使用距离排序，也不隐藏 online 任务
     
     tasks, total = await async_crud.async_task_crud.get_tasks_with_total(
         db,

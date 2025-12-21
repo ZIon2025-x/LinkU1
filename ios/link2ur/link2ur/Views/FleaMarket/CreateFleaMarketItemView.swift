@@ -228,11 +228,13 @@ struct CreateFleaMarketItemView: View {
                 LoginView()
             }
             .sheet(isPresented: $showLocationPicker) {
-                LocationPickerView(
-                    selectedLocation: $viewModel.location,
-                    selectedLatitude: $viewModel.latitude,
-                    selectedLongitude: $viewModel.longitude
-                )
+                NavigationView {
+                    LocationPickerView(
+                        selectedLocation: $viewModel.location,
+                        selectedLatitude: $viewModel.latitude,
+                        selectedLongitude: $viewModel.longitude
+                    )
+                }
             }
             .onAppear {
                 if !appState.isAuthenticated {

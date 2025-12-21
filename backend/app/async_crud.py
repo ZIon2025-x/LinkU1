@@ -547,15 +547,24 @@ class AsyncTaskCRUD:
             if parent_activity_id is not None:
                 base_query = base_query.where(models.Task.parent_activity_id == parent_activity_id)
             
-            # 如果提供了用户位置，过滤掉"Online"任务（用于"附近"功能）
-            if user_latitude is not None and user_longitude is not None:
+            # 只有明确使用距离排序时，才过滤掉"Online"任务（用于"附近"功能）
+            # 推荐任务和任务大厅不使用距离排序，也不隐藏 online 任务
+            if user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
                 base_query = base_query.where(
                     ~models.Task.location.ilike("%online%")
                 )
             
             # 2. 先算 total（缓存 + 精确 count）
-            # 如果有用户位置，total计算会受影响（因为过滤了Online和没有坐标的任务）
-            # 所以缓存键需要包含位置信息
+            # 如果有用户位置且使用距离排序，total计算需要过滤掉没有坐标的任务
+            # 这样 total 才能和实际返回的任务数量匹配
+            count_query_for_total = base_query
+            if user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
+                # 对于距离排序，total 应该只计算有坐标的任务（和 list_query 保持一致）
+                count_query_for_total = count_query_for_total.where(
+                    (models.Task.latitude.isnot(None)) & 
+                    (models.Task.longitude.isnot(None))
+                )
+            
             cache_key = get_tasks_count_cache_key(
                 task_type=task_type,
                 location=location,
@@ -569,6 +578,9 @@ class AsyncTaskCRUD:
                 lat_rounded = round(user_latitude, 2)
                 lon_rounded = round(user_longitude, 2)
                 cache_key = f"{cache_key}:nearby:{lat_rounded}:{lon_rounded}"
+                # 如果使用距离排序，在缓存键中标记
+                if sort_by in ("distance", "nearby"):
+                    cache_key = f"{cache_key}:distance"
             
             # 尝试从缓存获取总数
             try:
@@ -585,7 +597,7 @@ class AsyncTaskCRUD:
                             total = 0
                     else:
                         # 缓存未命中，执行精确 count
-                        count_query = select(func.count()).select_from(base_query.subquery())
+                        count_query = select(func.count()).select_from(count_query_for_total.subquery())
                         total_result = await db.execute(count_query)
                         total = total_result.scalar() or 0
                         # 缓存总数（TTL 可以按需调整）
@@ -593,7 +605,7 @@ class AsyncTaskCRUD:
             except Exception as e:
                 # Redis 不可用时，直接执行 count
                 logger.warning(f"Redis缓存失败，直接执行count: {e}")
-                count_query = select(func.count()).select_from(base_query.subquery())
+                count_query = select(func.count()).select_from(count_query_for_total.subquery())
                 total_result = await db.execute(count_query)
                 total = total_result.scalar() or 0
             
@@ -711,6 +723,9 @@ class AsyncTaskCRUD:
                     # 如果100km内还是没有，返回最近的几个任务（最多5个）
                     if not nearby_tasks and tasks_with_distance:
                         nearby_tasks = tasks_with_distance[:5]
+                    
+                    # 更新 total 为实际可以返回的任务数量（距离过滤后）
+                    total = len(nearby_tasks)
                     
                     # 应用分页：只返回请求的数量
                     start_idx = skip

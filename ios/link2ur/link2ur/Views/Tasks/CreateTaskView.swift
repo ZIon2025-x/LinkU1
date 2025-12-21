@@ -224,11 +224,13 @@ struct CreateTaskView: View {
                 LoginView()
             }
             .sheet(isPresented: $showLocationPicker) {
-                LocationPickerView(
-                    selectedLocation: $viewModel.city,
-                    selectedLatitude: $viewModel.latitude,
-                    selectedLongitude: $viewModel.longitude
-                )
+                NavigationView {
+                    LocationPickerView(
+                        selectedLocation: $viewModel.city,
+                        selectedLatitude: $viewModel.latitude,
+                        selectedLongitude: $viewModel.longitude
+                    )
+                }
             }
             .onAppear {
                 if !appState.isAuthenticated {

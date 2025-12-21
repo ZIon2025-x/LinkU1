@@ -57,11 +57,13 @@ struct LocationInputField: View {
             }
         }
         .sheet(isPresented: $showLocationPicker) {
-            LocationPickerView(
-                selectedLocation: $location,
-                selectedLatitude: $latitude,
-                selectedLongitude: $longitude
-            )
+            NavigationView {
+                LocationPickerView(
+                    selectedLocation: $location,
+                    selectedLatitude: $latitude,
+                    selectedLongitude: $longitude
+                )
+            }
         }
     }
     

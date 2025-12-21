@@ -65,11 +65,12 @@ class TasksViewModel: ObservableObject {
         currentKeyword = keyword
         currentSortBy = sortBy
         
-        // 如果是"附近"视图（没有指定城市），传递用户位置用于距离排序
+        // 只有明确使用距离排序时，才传递用户位置用于距离排序
+        // 推荐任务和任务大厅不使用距离排序，也不隐藏 online 任务
         var userLat: Double? = nil
         var userLon: Double? = nil
-        if city == nil && keyword == nil {
-            // "附近"视图：传递用户位置
+        if sortBy == "distance" || sortBy == "nearby" {
+            // 只有"附近"功能才传递用户位置
             if let userLocation = locationService.currentLocation {
                 userLat = userLocation.latitude
                 userLon = userLocation.longitude

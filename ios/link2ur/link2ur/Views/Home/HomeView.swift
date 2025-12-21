@@ -281,8 +281,8 @@ struct NearbyTasksView: View {
             
             if viewModel.tasks.isEmpty {
                 print("🏠 [NearbyTasksView] 加载任务列表...")
-                // 只加载开放中的任务（不指定城市，用于按距离排序）
-                viewModel.loadTasks(status: "open")
+                // 只加载开放中的任务（不指定城市，使用距离排序）
+                viewModel.loadTasks(status: "open", sortBy: "distance")
             } else {
                 print("🏠 [NearbyTasksView] 任务列表已存在，共\(viewModel.tasks.count)条")
                 // 即使已有数据，也尝试重新排序（如果位置已更新）
@@ -298,8 +298,8 @@ struct NearbyTasksView: View {
                 print("🔄 [NearbyTasksView] 刷新位置...")
                 locationService.requestLocation()
             }
-            // 只加载开放中的任务（不指定城市，用于按距离排序）
-            viewModel.loadTasks(status: "open", forceRefresh: true)
+            // 只加载开放中的任务（不指定城市，使用距离排序）
+            viewModel.loadTasks(status: "open", sortBy: "distance", forceRefresh: true)
         }
     }
 }

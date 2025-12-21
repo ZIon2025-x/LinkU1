@@ -33,51 +33,50 @@ struct LocationPickerView: View {
     @FocusState private var isSearchFocused: Bool
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // 搜索栏
+                searchBar
                 
-                VStack(spacing: 0) {
-                    // 搜索栏
-                    searchBar
+                // 地图视图（带中心指针和控制按钮）
+                ZStack {
+                    mapView
                     
-                    // 地图视图（带中心指针和控制按钮）
-                    ZStack {
-                        mapView
-                        
-                        // 中心指针
-                        centerPinView
-                        
-                        // 地图控制按钮
-                        mapControlButtons
-                        
-                        // 搜索结果列表
-                        if showSearchResults && !searchCompleter.searchResults.isEmpty {
-                            searchResultsList
-                        }
+                    // 中心指针
+                    centerPinView
+                    
+                    // 地图控制按钮
+                    mapControlButtons
+                    
+                    // 搜索结果列表
+                    if showSearchResults && !searchCompleter.searchResults.isEmpty {
+                        searchResultsList
                     }
-                    
-                    // 底部控制面板
-                    bottomPanel
+                }
+                
+                // 底部控制面板
+                bottomPanel
+            }
+        }
+        .navigationTitle("选择位置")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消") {
+                    dismiss()
                 }
             }
-            .navigationTitle("选择位置")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("确定") {
+                    confirmSelection()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("确定") {
-                        confirmSelection()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(currentAddress.isEmpty)
-                }
+                .fontWeight(.semibold)
+                .disabled(currentAddress.isEmpty)
             }
+        }
             .onAppear {
                 // 延迟一帧确保绑定值已同步
                 DispatchQueue.main.async {
@@ -109,7 +108,6 @@ struct LocationPickerView: View {
                 isSearchFocused = false
                 showSearchResults = false
             }
-        }
     }
     
     // MARK: - 搜索栏
