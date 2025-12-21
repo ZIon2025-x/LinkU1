@@ -8,6 +8,8 @@ class CreateTaskViewModel: ObservableObject {
     @Published var price: Double?
     @Published var currency = "GBP"
     @Published var city = ""
+    @Published var latitude: Double?
+    @Published var longitude: Double?
     @Published var category = ""
     @Published var taskType = "Other"
     @Published var selectedImages: [UIImage] = []
@@ -118,6 +120,12 @@ class CreateTaskViewModel: ObservableObject {
                 body["reward"] = price
             }
             
+            // 添加坐标信息（如果存在）
+            if let lat = self.latitude, let lon = self.longitude {
+                body["latitude"] = lat
+                body["longitude"] = lon
+            }
+            
             if !self.uploadedImageUrls.isEmpty {
                 body["images"] = self.uploadedImageUrls
             }
@@ -148,6 +156,8 @@ class CreateTaskViewModel: ObservableObject {
         description = ""
         price = nil
         city = ""
+        latitude = nil
+        longitude = nil
         category = ""
         taskType = "Other"
         selectedImages = []

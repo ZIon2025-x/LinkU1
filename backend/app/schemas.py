@@ -287,7 +287,9 @@ class TaskBase(BaseModel):
     base_reward: Optional[float] = None  # 原始标价
     agreed_reward: Optional[float] = None  # 最终成交价
     currency: Optional[str] = "GBP"  # 货币类型
-    location: str  # Frontend should use QS_TOP100_CITIES options
+    location: str  # Frontend should use QS_TOP100_CITIES options (位置文本，用于显示)
+    latitude: Optional[float] = None  # 纬度（用于地图选点和距离计算）
+    longitude: Optional[float] = None  # 经度（用于地图选点和距离计算）
     task_type: str  # Frontend should use TASK_TYPES options
 
 
@@ -422,6 +424,8 @@ class TaskOut(TaskBase):
             "agreed_reward": float(obj.agreed_reward) if obj.agreed_reward else None,
             "currency": obj.currency,
             "location": obj.location,
+            "latitude": float(obj.latitude) if obj.latitude is not None else None,
+            "longitude": float(obj.longitude) if obj.longitude is not None else None,
             "task_type": obj.task_type,
             "is_multi_participant": getattr(obj, 'is_multi_participant', False),
             "expert_creator_id": getattr(obj, 'expert_creator_id', None),
@@ -1876,7 +1880,9 @@ class FleaMarketItemBase(BaseModel):
     description: str = Field(..., min_length=1)
     price: Decimal = Field(..., gt=0)
     images: List[str] = Field(default_factory=list, max_items=5)
-    location: Optional[str] = Field(None, max_length=100)
+    location: Optional[str] = Field(None, max_length=100)  # 位置文本（用于显示）
+    latitude: Optional[float] = Field(None, ge=-90, le=90)  # 纬度（用于地图选点和距离计算）
+    longitude: Optional[float] = Field(None, ge=-180, le=180)  # 经度（用于地图选点和距离计算）
     category: Optional[str] = Field(None, max_length=100)
     contact: Optional[str] = Field(None, max_length=200)  # 联系方式
 
@@ -1892,7 +1898,9 @@ class FleaMarketItemUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1)
     price: Optional[Decimal] = Field(None, gt=0)
     images: Optional[List[str]] = Field(None, max_items=5)
-    location: Optional[str] = Field(None, max_length=100)
+    location: Optional[str] = Field(None, max_length=100)  # 位置文本（用于显示）
+    latitude: Optional[float] = Field(None, ge=-90, le=90)  # 纬度（用于地图选点和距离计算）
+    longitude: Optional[float] = Field(None, ge=-180, le=180)  # 经度（用于地图选点和距离计算）
     category: Optional[str] = Field(None, max_length=100)
     contact: Optional[str] = Field(None, max_length=200)  # 联系方式
     status: Optional[Literal["deleted"]] = None  # 仅允许设置为deleted

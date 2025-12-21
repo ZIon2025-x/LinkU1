@@ -38,6 +38,12 @@
 "auth.password" = "密码";
 "auth.phone" = "手机号";
 "auth.verification_code" = "验证码";
+
+// MARK: - Login Required
+"login.required" = "需要登录";
+"login.required_for_points" = "请登录后查看积分与优惠券";
+"login.required_for_verification" = "请登录后进行学生认证";
+"login.login_now" = "立即登录";
 "auth.send_code" = "发送验证码";
 "auth.resend_code" = "重新发送";
 "auth.login_method" = "登录方式";
@@ -181,6 +187,9 @@
 // MARK: - Activity
 "activity.activity" = "动态";
 "activity.recent_activity" = "最近动态";
+"activity.ended" = "活动已结束";
+"activity.full" = "已满员";
+"activity.apply" = "申请参加";
 
 // MARK: - Search
 "search.search" = "搜索";

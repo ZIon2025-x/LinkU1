@@ -54,12 +54,7 @@ extension Text {
             .underline()
     }
     
-    /// 添加删除线
-    public func strikethrough(_ active: Bool = true) -> Text {
-        if active {
-            return self.strikethrough()
-        }
-        return self
-    }
+    // 注意: strikethrough 方法已移除，因为 SwiftUI 的 Text 已有原生的 strikethrough() 方法
+    // 自定义版本会导致无限递归
 }
 

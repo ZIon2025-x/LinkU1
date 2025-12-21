@@ -6,6 +6,8 @@ struct Task: Codable, Identifiable {
     let description: String
     let taskType: String  // 后端使用 task_type
     let location: String  // 后端使用 location（不是 city）
+    let latitude: Double?  // 纬度（用于地图选点和距离计算）
+    let longitude: Double?  // 经度（用于地图选点和距离计算）
     let reward: Double  // 后端使用 reward（不是 price）
     let baseReward: Double?
     let agreedReward: Double?
@@ -27,7 +29,7 @@ struct Task: Codable, Identifiable {
     let poster: User?  // 后端可能返回 poster 对象
     
     enum CodingKeys: String, CodingKey {
-        case id, title, description, status, images, currency
+        case id, title, description, status, images, currency, latitude, longitude
         case taskType = "task_type"
         case location
         case reward

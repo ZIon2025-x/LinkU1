@@ -621,6 +621,8 @@ async def create_flea_market_item(
             currency="GBP",
             images=json.dumps(item_data.images) if item_data.images else None,
             location=item_data.location or "Online",
+            latitude=getattr(item_data, "latitude", None),  # 纬度（可选）
+            longitude=getattr(item_data, "longitude", None),  # 经度（可选）
             category=item_data.category,
             contact=item_data.contact,
             status="active",
@@ -762,6 +764,8 @@ async def update_flea_market_item(
             item_data.price is not None,
             item_data.images is not None,
             item_data.location is not None,
+            item_data.latitude is not None,
+            item_data.longitude is not None,
             item_data.category is not None,
             item_data.contact is not None,
         ])
@@ -843,6 +847,10 @@ async def update_flea_market_item(
             
             if item_data.location is not None:
                 update_data["location"] = item_data.location
+            if item_data.latitude is not None:
+                update_data["latitude"] = item_data.latitude
+            if item_data.longitude is not None:
+                update_data["longitude"] = item_data.longitude
             if item_data.category is not None:
                 update_data["category"] = item_data.category
             if item_data.contact is not None:

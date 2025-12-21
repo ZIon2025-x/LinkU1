@@ -12,7 +12,7 @@ struct HomeView: View {
     private let resetNotification = NotificationCenter.default.publisher(for: .resetHomeView)
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()
@@ -308,6 +308,9 @@ struct NearbyTasksView: View {
 struct MenuView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
+    @State private var showLogin = false
+    @State private var navigateToCouponPoints = false
+    @State private var navigateToStudentVerification = false
     
     var body: some View {
         NavigationView {
@@ -341,13 +344,41 @@ struct MenuView: View {
                         Label(LocalizationKey.menuActivity.localized, systemImage: "calendar.badge.plus")
                     }
                     
-                    NavigationLink(destination: CouponPointsView()) {
-                        Label(LocalizationKey.menuPointsCoupons.localized, systemImage: "star.fill")
+                    // 积分优惠券 - 需要登录
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            navigateToCouponPoints = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        HStack {
+                            Label(LocalizationKey.menuPointsCoupons.localized, systemImage: "star.fill")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textTertiary)
+                        }
                     }
+                    .foregroundColor(AppColors.textPrimary)
                     
-                    NavigationLink(destination: StudentVerificationView()) {
-                        Label(LocalizationKey.menuStudentVerification.localized, systemImage: "person.badge.shield.checkmark.fill")
+                    // 学生认证 - 需要登录
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            navigateToStudentVerification = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        HStack {
+                            Label(LocalizationKey.menuStudentVerification.localized, systemImage: "person.badge.shield.checkmark.fill")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textTertiary)
+                        }
                     }
+                    .foregroundColor(AppColors.textPrimary)
                 }
                 
                 Section {
@@ -364,6 +395,19 @@ struct MenuView: View {
                         dismiss()
                     }
                 }
+            }
+            .background(
+                Group {
+                    NavigationLink(destination: CouponPointsView(), isActive: $navigateToCouponPoints) {
+                        EmptyView()
+                    }
+                    NavigationLink(destination: StudentVerificationView(), isActive: $navigateToStudentVerification) {
+                        EmptyView()
+                    }
+                }
+            )
+            .sheet(isPresented: $showLogin) {
+                LoginView()
             }
         }
     }
@@ -1458,7 +1502,7 @@ struct PopularActivitiesSection: View {
                 NavigationLink(destination: ActivityListView()) {
                     HStack(spacing: 4) {
                         Text(LocalizationKey.commonViewAll.localized)
-                            .font(AppTypography.body) // 使用 body
+                            .font(AppTypography.body)
                         IconStyle.icon("chevron.right", size: IconStyle.small)
                     }
                     .foregroundColor(AppColors.primary)

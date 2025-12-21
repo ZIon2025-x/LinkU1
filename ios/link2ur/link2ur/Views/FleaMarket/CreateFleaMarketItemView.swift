@@ -9,6 +9,7 @@ struct CreateFleaMarketItemView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var showLogin = false
+    @State private var showLocationPicker = false
     
     var body: some View {
         NavigationView {
@@ -67,13 +68,32 @@ struct CreateFleaMarketItemView: View {
                                 isRequired: true
                             )
                             
-                            // 位置
-                            EnhancedTextField(
-                                title: "交易地点",
-                                placeholder: "请输入地点或 Online",
-                                text: $viewModel.location,
-                                icon: "mappin.and.ellipse"
-                            )
+                            // 位置选择
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("交易地点")
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                HStack(spacing: 8) {
+                                    EnhancedTextField(
+                                        title: "",
+                                        placeholder: "请输入地点或 Online",
+                                        text: $viewModel.location,
+                                        icon: "mappin.and.ellipse"
+                                    )
+                                    
+                                    Button(action: {
+                                        showLocationPicker = true
+                                    }) {
+                                        Image(systemName: "map.fill")
+                                            .font(.system(size: 18))
+                                            .foregroundColor(.white)
+                                            .frame(width: 44, height: 44)
+                                            .background(AppColors.primary)
+                                            .cornerRadius(AppCornerRadius.medium)
+                                    }
+                                }
+                            }
                             
                             // 联系方式
                             EnhancedTextField(
@@ -223,6 +243,13 @@ struct CreateFleaMarketItemView: View {
             }
             .sheet(isPresented: $showLogin) {
                 LoginView()
+            }
+            .sheet(isPresented: $showLocationPicker) {
+                LocationPickerView(
+                    selectedLocation: $viewModel.location,
+                    selectedLatitude: $viewModel.latitude,
+                    selectedLongitude: $viewModel.longitude
+                )
             }
             .onAppear {
                 if !appState.isAuthenticated {

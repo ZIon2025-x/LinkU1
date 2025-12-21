@@ -8,6 +8,8 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     @Published var price: Double?
     @Published var currency = "GBP"
     @Published var location = "Online"
+    @Published var latitude: Double?
+    @Published var longitude: Double?
     @Published var category = ""
     @Published var contact = ""
     @Published var selectedImages: [UIImage] = []
@@ -101,6 +103,12 @@ class CreateFleaMarketItemViewModel: ObservableObject {
                 "location": self.location
             ]
             
+            // 添加坐标信息（如果存在）
+            if let lat = self.latitude, let lon = self.longitude {
+                body["latitude"] = lat
+                body["longitude"] = lon
+            }
+            
             if !self.category.isEmpty {
                 body["category"] = self.category
             }
@@ -137,6 +145,8 @@ class CreateFleaMarketItemViewModel: ObservableObject {
         description = ""
         price = nil
         location = "Online"
+        latitude = nil
+        longitude = nil
         category = ""
         contact = ""
         selectedImages = []

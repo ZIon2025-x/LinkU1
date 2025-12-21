@@ -48,6 +48,71 @@ struct Activity: Codable, Identifiable {
         case images
         case hasTimeSlots = "has_time_slots"
     }
+    
+    /// 活动是否已结束（状态为 ended/cancelled/completed 或已过截止日期/结束日期）
+    var isEnded: Bool {
+        // 检查状态
+        let endedStatuses = ["ended", "cancelled", "completed", "closed"]
+        if endedStatuses.contains(status.lowercased()) {
+            return true
+        }
+        
+        // 检查截止日期
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        let now = Date()
+        
+        // 检查 activityEndDate
+        if let endDateStr = activityEndDate,
+           let endDate = dateFormatter.date(from: endDateStr) ?? parseDate(endDateStr) {
+            if endDate < now {
+                return true
+            }
+        }
+        
+        // 检查 deadline
+        if let deadlineStr = deadline,
+           let deadlineDate = dateFormatter.date(from: deadlineStr) ?? parseDate(deadlineStr) {
+            if deadlineDate < now {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    /// 是否满员
+    var isFull: Bool {
+        currentParticipants >= maxParticipants
+    }
+    
+    /// 是否可以申请
+    var canApply: Bool {
+        !isEnded && !isFull
+    }
+    
+    /// 辅助方法：解析日期字符串
+    private func parseDate(_ dateStr: String) -> Date? {
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
+            "yyyy-MM-dd'T'HH:mm:ssZ",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd"
+        ]
+        
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        
+        for format in formats {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: dateStr) {
+                return date
+            }
+        }
+        return nil
+    }
 }
 
 // MARK: - Task Participant (任务参与者)

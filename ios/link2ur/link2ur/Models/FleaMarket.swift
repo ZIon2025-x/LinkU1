@@ -21,6 +21,8 @@ struct FleaMarketItem: Codable, Identifiable {
     let category: String
     let images: [String]?
     let location: String? // 后端返回的字段
+    let latitude: Double?  // 纬度（用于地图选点和距离计算）
+    let longitude: Double?  // 经度（用于地图选点和距离计算）
     let sellerId: String
     let seller: User?
     let status: String
@@ -30,7 +32,7 @@ struct FleaMarketItem: Codable, Identifiable {
     let updatedAt: String?
     
     enum CodingKeys: String, CodingKey {
-        case id, title, description, price, currency, category, images, seller, status, location
+        case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
         case sellerId = "seller_id"
         case viewCount = "view_count"
         case refreshedAt = "refreshed_at"
@@ -60,6 +62,8 @@ struct FleaMarketItem: Codable, Identifiable {
         category = try container.decode(String.self, forKey: .category)
         images = try container.decodeIfPresent([String].self, forKey: .images)
         location = try container.decodeIfPresent(String.self, forKey: .location)
+        latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
         sellerId = try container.decode(String.self, forKey: .sellerId)
         seller = try container.decodeIfPresent(User.self, forKey: .seller)
         status = try container.decode(String.self, forKey: .status)
@@ -81,6 +85,8 @@ struct FleaMarketItem: Codable, Identifiable {
         try container.encode(category, forKey: .category)
         try container.encodeIfPresent(images, forKey: .images)
         try container.encodeIfPresent(location, forKey: .location)
+        try container.encodeIfPresent(latitude, forKey: .latitude)
+        try container.encodeIfPresent(longitude, forKey: .longitude)
         try container.encode(sellerId, forKey: .sellerId)
         try container.encodeIfPresent(seller, forKey: .seller)
         try container.encode(status, forKey: .status)

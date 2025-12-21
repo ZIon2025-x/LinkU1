@@ -9,6 +9,7 @@ struct CreateTaskView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var showLogin = false
+    @State private var showLocationPicker = false
     
     var body: some View {
         NavigationView {
@@ -75,14 +76,38 @@ struct CreateTaskView: View {
                                     .frame(width: 110)
                                 }
                                 
-                                // 城市
-                                EnhancedTextField(
-                                    title: "所在城市",
-                                    placeholder: "例如: London / Birmingham",
-                                    text: $viewModel.city,
-                                    icon: "mappin.and.ellipse",
-                                    isRequired: true
-                                )
+                                // 位置选择
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("所在城市")
+                                            .font(AppTypography.subheadline)
+                                            .foregroundColor(AppColors.textSecondary)
+                                        if viewModel.city.isEmpty {
+                                            Text("*")
+                                                .foregroundColor(AppColors.error)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        EnhancedTextField(
+                                            title: "",
+                                            placeholder: "例如: London / Birmingham",
+                                            text: $viewModel.city,
+                                            icon: "mappin.and.ellipse"
+                                        )
+                                        
+                                        Button(action: {
+                                            showLocationPicker = true
+                                        }) {
+                                            Image(systemName: "map.fill")
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.white)
+                                                .frame(width: 44, height: 44)
+                                                .background(AppColors.primary)
+                                                .cornerRadius(AppCornerRadius.medium)
+                                        }
+                                    }
+                                }
                                 
                                 // 任务类型
                                 CustomPickerField(
@@ -232,6 +257,13 @@ struct CreateTaskView: View {
             }
             .sheet(isPresented: $showLogin) {
                 LoginView()
+            }
+            .sheet(isPresented: $showLocationPicker) {
+                LocationPickerView(
+                    selectedLocation: $viewModel.city,
+                    selectedLatitude: $viewModel.latitude,
+                    selectedLongitude: $viewModel.longitude
+                )
             }
             .onAppear {
                 if !appState.isAuthenticated {

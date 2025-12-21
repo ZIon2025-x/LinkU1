@@ -2,10 +2,12 @@ import SwiftUI
 
 // 错误状态视图组件 - 更现代的设计
 struct ErrorStateView: View {
+    let title: String
     let message: String
     let retryAction: (() -> Void)?
     
-    init(message: String, retryAction: (() -> Void)? = nil) {
+    init(title: String = "出错了", message: String, retryAction: (() -> Void)? = nil) {
+        self.title = title
         self.message = message
         self.retryAction = retryAction
     }
@@ -24,7 +26,7 @@ struct ErrorStateView: View {
             }
             
             VStack(spacing: AppSpacing.sm) {
-                Text("出错了")
+                Text(title)
                     .font(AppTypography.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textPrimary)

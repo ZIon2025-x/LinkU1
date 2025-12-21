@@ -180,7 +180,9 @@ class Task(Base):
     base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
     currency = Column(String(3), default="GBP")  # 货币类型
-    location = Column(String(100), nullable=False)
+    location = Column(String(100), nullable=False)  # 位置文本（用于显示）
+    latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
+    longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     task_type = Column(String(50), nullable=False)
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="RESTRICT"))  # 不能删除有任务的用户
     taker_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
@@ -1518,7 +1520,9 @@ class FleaMarketItem(Base):
     price = Column(DECIMAL(12, 2), nullable=False)
     currency = Column(String(3), nullable=False, default="GBP")
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
-    location = Column(String(100), nullable=True)  # 线下交易地点或"Online"
+    location = Column(String(100), nullable=True)  # 位置文本（用于显示，线下交易地点或"Online"）
+    latitude = Column(DECIMAL(10, 8), nullable=True)  # 纬度（用于地图选点和距离计算）
+    longitude = Column(DECIMAL(11, 8), nullable=True)  # 经度（用于地图选点和距离计算）
     category = Column(String(100), nullable=True)
     contact = Column(String(200), nullable=True)  # 预留字段，本期不使用
     status = Column(String(20), nullable=False, default="active")

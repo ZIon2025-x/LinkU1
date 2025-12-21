@@ -8,6 +8,7 @@ public class AppState: ObservableObject {
     @Published public var shouldResetHomeView: Bool = false // 用于触发首页重置
     @Published public var unreadNotificationCount: Int = 0 // 未读通知数量
     @Published public var unreadMessageCount: Int = 0 // 未读消息数量（任务聊天）
+    @Published public var hideTabBar: Bool = false // 控制是否隐藏底部 TabBar
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()

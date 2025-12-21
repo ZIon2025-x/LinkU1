@@ -5,5 +5,5 @@
   Localized permission descriptions for Info.plist
 */
 
-"NSLocationWhenInUseUsageDescription" = "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐";
+"NSLocationWhenInUseUsageDescription" = "我们需要获取您的位置信息，以便在地图上选择任务/商品位置，或使用您当前位置。您也可以选择手动输入位置。";
 

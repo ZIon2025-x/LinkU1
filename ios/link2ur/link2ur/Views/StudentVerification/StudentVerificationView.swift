@@ -3,9 +3,11 @@ import Combine
 
 struct StudentVerificationView: View {
     @StateObject private var viewModel = StudentVerificationViewModel()
+    @EnvironmentObject var appState: AppState
     @State private var showingSubmitSheet = false
     @State private var showingRenewSheet = false
     @State private var showingChangeEmailSheet = false
+    @State private var showLogin = false
     
     var body: some View {
         NavigationView {
@@ -13,7 +15,41 @@ struct StudentVerificationView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                ScrollView {
+                if !appState.isAuthenticated {
+                    // 未登录状态
+                    VStack(spacing: AppSpacing.xl) {
+                        Spacer()
+                        
+                        Image(systemName: "person.badge.shield.checkmark")
+                            .font(.system(size: 80))
+                            .foregroundColor(AppColors.textTertiary)
+                        
+                        Text("login.required")
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text("login.required_for_verification")
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button(action: {
+                            showLogin = true
+                        }) {
+                            Text("login.login_now")
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(.white)
+                                .frame(width: 200)
+                                .padding(.vertical, AppSpacing.md)
+                                .background(AppColors.primary)
+                                .cornerRadius(AppCornerRadius.large)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(AppSpacing.xl)
+                } else {
+                    ScrollView {
                     VStack(spacing: AppSpacing.lg) {
                         if viewModel.isLoading && viewModel.verificationStatus == nil {
                             ProgressView()
@@ -138,8 +174,9 @@ struct StudentVerificationView: View {
                             .padding(.top, AppSpacing.xxl)
                         }
                     }
-                    .padding(.bottom, AppSpacing.xl)
-                }
+                        .padding(.bottom, AppSpacing.xl)
+                    }
+                } // end else (已登录)
             }
             .navigationTitle("学生认证")
             .navigationBarTitleDisplayMode(.large)
@@ -169,6 +206,9 @@ struct StudentVerificationView: View {
                     Text(error)
                 }
             }
+        }
+        .sheet(isPresented: $showLogin) {
+            LoginView()
         }
     }
 }

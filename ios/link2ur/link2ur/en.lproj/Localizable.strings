@@ -38,6 +38,12 @@
 "auth.password" = "Password";
 "auth.phone" = "Phone";
 "auth.verification_code" = "Verification Code";
+
+// MARK: - Login Required
+"login.required" = "Login Required";
+"login.required_for_points" = "Please login to view points and coupons";
+"login.required_for_verification" = "Please login to verify student status";
+"login.login_now" = "Login Now";
 "auth.send_code" = "Send Code";
 "auth.resend_code" = "Resend Code";
 "auth.login_method" = "Login Method";
@@ -181,6 +187,9 @@
 // MARK: - Activity
 "activity.activity" = "Activity";
 "activity.recent_activity" = "Recent Activity";
+"activity.ended" = "Activity Ended";
+"activity.full" = "Full";
+"activity.apply" = "Apply to Join";
 
 // MARK: - Search
 "search.search" = "Search";

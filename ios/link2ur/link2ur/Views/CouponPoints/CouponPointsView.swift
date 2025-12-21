@@ -3,7 +3,9 @@ import Combine
 
 struct CouponPointsView: View {
     @StateObject private var viewModel = CouponPointsViewModel()
+    @EnvironmentObject var appState: AppState
     @State private var selectedTab = 0
+    @State private var showLogin = false
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -12,52 +14,87 @@ struct CouponPointsView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Custom Tab Selector (Modern Design)
-                    HStack(spacing: 0) {
-                        TabSelectorButton(
-                            title: "积分",
-                            isSelected: selectedTab == 0,
-                            icon: "star.fill"
-                        ) {
-                            switchTab(to: 0)
+                if !appState.isAuthenticated {
+                    // 未登录状态
+                    VStack(spacing: AppSpacing.xl) {
+                        Spacer()
+                        
+                        Image(systemName: "star.circle")
+                            .font(.system(size: 80))
+                            .foregroundColor(AppColors.textTertiary)
+                        
+                        Text("login.required")
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text("login.required_for_points")
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button(action: {
+                            showLogin = true
+                        }) {
+                            Text("login.login_now")
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(.white)
+                                .frame(width: 200)
+                                .padding(.vertical, AppSpacing.md)
+                                .background(AppColors.primary)
+                                .cornerRadius(AppCornerRadius.large)
                         }
                         
-                        TabSelectorButton(
-                            title: "优惠券",
-                            isSelected: selectedTab == 1,
-                            icon: "ticket.fill"
-                        ) {
-                            switchTab(to: 1)
-                        }
-                        
-                        TabSelectorButton(
-                            title: "签到",
-                            isSelected: selectedTab == 2,
-                            icon: "calendar.badge.plus"
-                        ) {
-                            switchTab(to: 2)
-                        }
+                        Spacer()
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.top, AppSpacing.xs)
-                    .padding(.bottom, AppSpacing.sm)
-                    .background(AppColors.cardBackground)
-                    .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
-                    
-                    // Content
-                    TabView(selection: $selectedTab) {
-                        PointsView(viewModel: viewModel)
-                            .tag(0)
+                    .padding(AppSpacing.xl)
+                } else {
+                    VStack(spacing: 0) {
+                        // Custom Tab Selector (Modern Design)
+                        HStack(spacing: 0) {
+                            TabSelectorButton(
+                                title: "积分",
+                                isSelected: selectedTab == 0,
+                                icon: "star.fill"
+                            ) {
+                                switchTab(to: 0)
+                            }
+                            
+                            TabSelectorButton(
+                                title: "优惠券",
+                                isSelected: selectedTab == 1,
+                                icon: "ticket.fill"
+                            ) {
+                                switchTab(to: 1)
+                            }
+                            
+                            TabSelectorButton(
+                                title: "签到",
+                                isSelected: selectedTab == 2,
+                                icon: "calendar.badge.plus"
+                            ) {
+                                switchTab(to: 2)
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.top, AppSpacing.xs)
+                        .padding(.bottom, AppSpacing.sm)
+                        .background(AppColors.cardBackground)
+                        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
                         
-                        CouponsView(viewModel: viewModel)
-                            .tag(1)
-                        
-                        CheckInView(viewModel: viewModel)
-                            .tag(2)
+                        // Content
+                        TabView(selection: $selectedTab) {
+                            PointsView(viewModel: viewModel)
+                                .tag(0)
+                            
+                            CouponsView(viewModel: viewModel)
+                                .tag(1)
+                            
+                            CheckInView(viewModel: viewModel)
+                                .tag(2)
+                        }
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                }
+                } // end else (已登录)
             }
             .navigationTitle("积分与优惠券")
             .navigationBarTitleDisplayMode(.inline)
@@ -71,13 +108,18 @@ struct CouponPointsView: View {
                 }
             }
             .onAppear {
-                viewModel.loadPointsAccount()
-                viewModel.loadAvailableCoupons()
-                viewModel.loadMyCoupons()
-                viewModel.loadCheckInStatus()
-                viewModel.loadCheckInRewards()
-                viewModel.loadTransactions()
+                if appState.isAuthenticated {
+                    viewModel.loadPointsAccount()
+                    viewModel.loadAvailableCoupons()
+                    viewModel.loadMyCoupons()
+                    viewModel.loadCheckInStatus()
+                    viewModel.loadCheckInRewards()
+                    viewModel.loadTransactions()
+                }
             }
+        }
+        .sheet(isPresented: $showLogin) {
+            LoginView()
         }
     }
     

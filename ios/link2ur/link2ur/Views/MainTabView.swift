@@ -94,6 +94,8 @@ public struct MainTabView: View {
                     .tag(4)
             }
             .tint(AppColors.primary) // 统一TabBar选中颜色
+            .toolbar(appState.hideTabBar ? .hidden : .visible, for: .tabBar)
+            .animation(.easeInOut(duration: 0.2), value: appState.hideTabBar)
             .onChange(of: selection) { newValue in
                 if newValue == 2 {
                     // 点击中间➕按钮时，不改变 selection，直接触发创建任务

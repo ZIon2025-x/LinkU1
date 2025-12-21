@@ -260,6 +260,8 @@ class AsyncTaskCRUD:
                 description=task.description,
                 task_type=task.task_type,
                 location=task.location,
+                latitude=getattr(task, "latitude", None),  # 纬度（可选）
+                longitude=getattr(task, "longitude", None),  # 经度（可选）
                 reward=task.reward,  # 与base_reward同步
                 base_reward=base_reward_value,  # 原始标价（发布时的价格）
                 agreed_reward=None,  # 初始为空，如果有议价才会设置
