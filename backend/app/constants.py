@@ -4,6 +4,18 @@ WebSocket关闭码协议契约
 修改关闭码/reason需要前后端同步更新
 """
 
+# 预定义的英国主要城市列表（用于位置筛选）
+# 当筛选 "Other" 时，会排除这些城市
+UK_MAIN_CITIES = [
+    "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", 
+    "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", 
+    "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", 
+    "Leicester", "York", "Aberdeen", "Bath", "Dundee", 
+    "Reading", "St Andrews", "Belfast", "Brighton", "Durham", 
+    "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", 
+    "Cambridge", "Oxford"
+]
+
 # WebSocket关闭码协议契约
 WS_CLOSE_CODE_NORMAL = 1000  # 正常关闭（仅用于"新连接替换"场景）
 WS_CLOSE_CODE_HEARTBEAT_TIMEOUT = 4001  # 心跳超时（应用自定义，需要重连）

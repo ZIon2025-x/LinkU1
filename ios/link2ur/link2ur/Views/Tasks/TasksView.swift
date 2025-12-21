@@ -279,10 +279,10 @@ struct TaskCard: View {
                     endPoint: .bottom
                 )
                 
-                // 顶部标签栏（位置标签）
+                // 顶部标签栏（位置标签 - 模糊显示，只显示城市）
                 HStack {
                     // 位置标签（使用 SF Symbols）
-                    Label(task.location, systemImage: task.location == "Online" ? "globe" : "mappin.circle.fill")
+                    Label(task.location.obfuscatedLocation, systemImage: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill")
                         .font(AppTypography.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)

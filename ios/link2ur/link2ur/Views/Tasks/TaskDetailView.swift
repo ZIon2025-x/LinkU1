@@ -372,7 +372,7 @@ struct TaskShareSheet: View {
                     // 任务信息
                     HStack(spacing: AppSpacing.md) {
                         Label("£\(String(format: "%.0f", task.reward))", systemImage: "sterlingsign.circle")
-                        Label(task.location, systemImage: "mappin.circle")
+                        Label(task.location.obfuscatedLocation, systemImage: task.location.lowercased() == "online" ? "globe" : "mappin.circle")
                     }
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textTertiary)
@@ -771,7 +771,7 @@ struct TaskHeaderCard: View {
                 TaskRewardView(task: task)
             }
             
-            // 分类和位置标签
+            // 分类和位置标签（位置模糊显示，只显示城市）
             HStack(spacing: AppSpacing.sm) {
                 Label(task.taskType, systemImage: "tag.fill")
                     .font(AppTypography.caption)
@@ -782,7 +782,7 @@ struct TaskHeaderCard: View {
                     .background(AppColors.primaryLight)
                     .clipShape(Capsule())
                 
-                Label(task.location, systemImage: task.location == "Online" ? "globe" : "mappin.circle.fill")
+                Label(task.location.obfuscatedLocation, systemImage: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill")
                     .font(AppTypography.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textSecondary)

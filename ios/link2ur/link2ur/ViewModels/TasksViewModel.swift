@@ -71,12 +71,7 @@ class TasksViewModel: ObservableObject {
                 if case .failure(let error) = completion {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务列表")
-                    // 使用用户友好的错误消息
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }

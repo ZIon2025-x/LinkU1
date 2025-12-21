@@ -1,15 +1,22 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import MapKit
 
 @available(iOS 16.0, *)
 struct CreateFleaMarketItemView: View {
     @StateObject private var viewModel = CreateFleaMarketItemViewModel()
+    @StateObject private var locationSearchCompleter = LocationSearchCompleter()
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var showLogin = false
     @State private var showLocationPicker = false
+    @State private var showLocationSuggestions = false
+    @State private var isSearchingLocation = false
+    @State private var searchDebounceTask: DispatchWorkItem?
+    @State private var isProgrammaticLocationUpdate = false  // 标记是否是程序设置（非用户手动输入）
+    @FocusState private var isLocationFocused: Bool
     
     var body: some View {
         NavigationView {
@@ -68,32 +75,8 @@ struct CreateFleaMarketItemView: View {
                                 isRequired: true
                             )
                             
-                            // 位置选择
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("交易地点")
-                                    .font(AppTypography.subheadline)
-                                    .foregroundColor(AppColors.textSecondary)
-                                
-                                HStack(spacing: 8) {
-                                    EnhancedTextField(
-                                        title: "",
-                                        placeholder: "请输入地点或 Online",
-                                        text: $viewModel.location,
-                                        icon: "mappin.and.ellipse"
-                                    )
-                                    
-                                    Button(action: {
-                                        showLocationPicker = true
-                                    }) {
-                                        Image(systemName: "map.fill")
-                                            .font(.system(size: 18))
-                                            .foregroundColor(.white)
-                                            .frame(width: 44, height: 44)
-                                            .background(AppColors.primary)
-                                            .cornerRadius(AppCornerRadius.medium)
-                                    }
-                                }
-                            }
+                            // 位置选择 - 带搜索建议
+                            locationInputSection
                             
                             // 联系方式
                             EnhancedTextField(
@@ -259,7 +242,263 @@ struct CreateFleaMarketItemView: View {
         }
     }
     
+    // MARK: - 位置输入区域（带搜索建议）
+    
+    private var locationInputSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("交易地点")
+                .font(AppTypography.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+            
+            ZStack(alignment: .top) {
+                VStack(spacing: 0) {
+                    // 输入框和地图按钮
+                    HStack(spacing: 8) {
+                        // 位置输入框
+                        HStack(spacing: 10) {
+                            // 点击切换为 Online 模式
+                            Button(action: {
+                                isProgrammaticLocationUpdate = true
+                                viewModel.location = "Online"
+                                viewModel.latitude = nil
+                                viewModel.longitude = nil
+                                showLocationSuggestions = false
+                                locationSearchCompleter.searchResults = []
+                                isLocationFocused = false
+                                HapticFeedback.light()
+                            }) {
+                                Image(systemName: viewModel.location.lowercased() == "online" ? "globe" : "mappin.and.ellipse")
+                                    .foregroundColor(viewModel.location.lowercased() == "online" ? AppColors.success : AppColors.primary)
+                                    .frame(width: 20)
+                            }
+                            
+                            TextField("搜索地点或输入 Online", text: $viewModel.location)
+                                .font(AppTypography.body)
+                                .autocorrectionDisabled()
+                                .focused($isLocationFocused)
+                                .onChange(of: viewModel.location) { newValue in
+                                    // 如果是程序设置的值，不触发搜索和清除坐标
+                                    if isProgrammaticLocationUpdate {
+                                        isProgrammaticLocationUpdate = false
+                                        return
+                                    }
+                                    
+                                    // 防抖处理
+                                    searchDebounceTask?.cancel()
+                                    
+                                    // 如果是 Online 或为空，不触发搜索
+                                    if newValue.lowercased() == "online" || newValue.isEmpty {
+                                        showLocationSuggestions = false
+                                        locationSearchCompleter.searchResults = []
+                                        return
+                                    }
+                                    
+                                    // 手动输入时清除坐标
+                                    viewModel.latitude = nil
+                                    viewModel.longitude = nil
+                                    
+                                    let task = DispatchWorkItem {
+                                        locationSearchCompleter.search(query: newValue)
+                                        showLocationSuggestions = true
+                                    }
+                                    searchDebounceTask = task
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
+                                }
+                                .onChange(of: isLocationFocused) { focused in
+                                    // 当失去焦点时，如果有地址但没有经纬度，自动进行地理编码
+                                    if !focused {
+                                        showLocationSuggestions = false
+                                        geocodeAddressIfNeeded()
+                                    }
+                                }
+                            
+                            // 清除按钮
+                            if !viewModel.location.isEmpty {
+                                Button(action: {
+                                    viewModel.location = ""
+                                    viewModel.latitude = nil
+                                    viewModel.longitude = nil
+                                    showLocationSuggestions = false
+                                    locationSearchCompleter.searchResults = []
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(AppColors.textSecondary)
+                                        .font(.system(size: 16))
+                                }
+                            }
+                            
+                            // 已选择位置的指示器
+                            if viewModel.latitude != nil && viewModel.longitude != nil {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(AppColors.success)
+                                    .font(.system(size: 16))
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(AppColors.background)
+                        .cornerRadius(AppCornerRadius.medium)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                .stroke(AppColors.separator, lineWidth: 1)
+                        )
+                        
+                        // 地图选点按钮
+                        Button(action: {
+                            showLocationSuggestions = false
+                            showLocationPicker = true
+                        }) {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(AppColors.primary)
+                                .cornerRadius(AppCornerRadius.medium)
+                        }
+                    }
+                    
+                    // 搜索建议列表
+                    if showLocationSuggestions && !locationSearchCompleter.searchResults.isEmpty {
+                        locationSuggestionsList
+                    }
+                }
+            }
+            
+            // 坐标提示（如果已选择）
+            if let lat = viewModel.latitude, let lon = viewModel.longitude {
+                HStack(spacing: 4) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 10))
+                    Text(String(format: "%.4f, %.4f", lat, lon))
+                        .font(.system(size: 11))
+                }
+                .foregroundColor(AppColors.textSecondary)
+                .padding(.top, 4)
+            }
+        }
+    }
+    
+    // MARK: - 位置搜索建议列表
+    
+    private var locationSuggestionsList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(locationSearchCompleter.searchResults.prefix(5).enumerated()), id: \.element) { index, result in
+                Button(action: {
+                    selectLocationSuggestion(result)
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "mappin.circle.fill")
+                            .foregroundColor(AppColors.primary)
+                            .font(.system(size: 18))
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(result.title)
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textPrimary)
+                                .lineLimit(1)
+                            
+                            if !result.subtitle.isEmpty {
+                                Text(result.subtitle)
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "arrow.up.left")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(AppColors.cardBackground)
+                }
+                
+                if index < min(locationSearchCompleter.searchResults.count, 5) - 1 {
+                    Divider()
+                        .padding(.leading, 44)
+                }
+            }
+        }
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                .stroke(AppColors.separator, lineWidth: 1)
+        )
+        .padding(.top, 4)
+    }
+    
     // MARK: - Helper Methods
+    
+    private func selectLocationSuggestion(_ result: MKLocalSearchCompletion) {
+        isSearchingLocation = true
+        showLocationSuggestions = false
+        isLocationFocused = false // 隐藏键盘
+        HapticFeedback.light()
+        
+        let searchRequest = MKLocalSearch.Request(completion: result)
+        let search = MKLocalSearch(request: searchRequest)
+        
+        search.start { response, error in
+            DispatchQueue.main.async {
+                isSearchingLocation = false
+                
+                if let mapItem = response?.mapItems.first {
+                    let coordinate = mapItem.placemark.coordinate
+                    
+                    // 更新位置信息（先设置坐标）
+                    viewModel.latitude = coordinate.latitude
+                    viewModel.longitude = coordinate.longitude
+                    
+                    // 标记为程序设置，避免 onChange 清除坐标
+                    isProgrammaticLocationUpdate = true
+                    
+                    // 优先使用搜索结果的原始标题（保留邮编等详细信息）
+                    // 如果有副标题，组合显示
+                    if !result.subtitle.isEmpty {
+                        viewModel.location = "\(result.title), \(result.subtitle)"
+                    } else {
+                        viewModel.location = result.title
+                    }
+                    
+                    // 清空搜索结果
+                    locationSearchCompleter.searchResults = []
+                    
+                    HapticFeedback.success()
+                }
+            }
+        }
+    }
+    
+    /// 当用户手动输入地址但没有从建议列表选择时，自动进行地理编码获取经纬度
+    private func geocodeAddressIfNeeded() {
+        // 如果已经有经纬度或者地址为空/Online，则不需要地理编码
+        guard !viewModel.location.isEmpty,
+              viewModel.location.lowercased() != "online",
+              viewModel.latitude == nil || viewModel.longitude == nil else {
+            return
+        }
+        
+        isSearchingLocation = true
+        
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(viewModel.location) { placemarks, error in
+            DispatchQueue.main.async {
+                isSearchingLocation = false
+                
+                if let placemark = placemarks?.first,
+                   let location = placemark.location {
+                    viewModel.latitude = location.coordinate.latitude
+                    viewModel.longitude = location.coordinate.longitude
+                    HapticFeedback.success()
+                }
+            }
+        }
+    }
     
     private func handleImageSelection() {
         _Concurrency.Task {
@@ -277,4 +516,3 @@ struct CreateFleaMarketItemView: View {
         }
     }
 }
-

@@ -5,7 +5,7 @@
 
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session, selectinload, joinedload
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
@@ -52,7 +52,24 @@ class QueryOptimizer:
             query = query.filter(models.Task.task_type == filters['task_type'])
         
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
-            query = query.filter(models.Task.location == filters['location'])
+            loc = filters['location']
+            if loc.lower() == 'other':
+                # "Other" 筛选：排除所有预定义城市和 Online
+                from app.constants import UK_MAIN_CITIES
+                exclusion_conditions = []
+                for city in UK_MAIN_CITIES:
+                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                exclusion_conditions.append(models.Task.location.ilike("%online%"))
+                query = query.filter(not_(or_(*exclusion_conditions)))
+            elif loc.lower() == 'online':
+                query = query.filter(models.Task.location.ilike("%online%"))
+            else:
+                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
+                query = query.filter(or_(
+                    models.Task.location.ilike(f"%, {loc}%"),
+                    models.Task.location.ilike(f"{loc},%")
+                ))
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -121,7 +138,24 @@ class QueryOptimizer:
             base_query = base_query.filter(models.Task.task_type == filters['task_type'])
         
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
-            base_query = base_query.filter(models.Task.location == filters['location'])
+            loc = filters['location']
+            if loc.lower() == 'other':
+                # "Other" 筛选：排除所有预定义城市和 Online
+                from app.constants import UK_MAIN_CITIES
+                exclusion_conditions = []
+                for city in UK_MAIN_CITIES:
+                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                exclusion_conditions.append(models.Task.location.ilike("%online%"))
+                base_query = base_query.filter(not_(or_(*exclusion_conditions)))
+            elif loc.lower() == 'online':
+                base_query = base_query.filter(models.Task.location.ilike("%online%"))
+            else:
+                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
+                base_query = base_query.filter(or_(
+                    models.Task.location.ilike(f"%, {loc}%"),
+                    models.Task.location.ilike(f"{loc},%")
+                ))
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -274,7 +308,24 @@ class AsyncQueryOptimizer:
             query = query.filter(models.Task.task_type == filters['task_type'])
         
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
-            query = query.filter(models.Task.location == filters['location'])
+            loc = filters['location']
+            if loc.lower() == 'other':
+                # "Other" 筛选：排除所有预定义城市和 Online
+                from app.constants import UK_MAIN_CITIES
+                exclusion_conditions = []
+                for city in UK_MAIN_CITIES:
+                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
+                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
+                exclusion_conditions.append(models.Task.location.ilike("%online%"))
+                query = query.filter(not_(or_(*exclusion_conditions)))
+            elif loc.lower() == 'online':
+                query = query.filter(models.Task.location.ilike("%online%"))
+            else:
+                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
+                query = query.filter(or_(
+                    models.Task.location.ilike(f"%, {loc}%"),
+                    models.Task.location.ilike(f"{loc},%")
+                ))
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"

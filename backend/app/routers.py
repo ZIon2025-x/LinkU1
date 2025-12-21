@@ -2754,9 +2754,27 @@ def admin_get_tasks(
     if task_type and task_type.strip():
         query = query.filter(Task.task_type == task_type)
 
-    # 添加城市筛选
+    # 添加城市筛选（使用精确城市匹配，避免街道名误匹配）
     if location and location.strip():
-        query = query.filter(Task.location == location)
+        loc = location.strip()
+        if loc.lower() == 'other':
+            # "Other" 筛选：排除所有预定义城市和 Online
+            from app.constants import UK_MAIN_CITIES
+            from sqlalchemy import not_, or_
+            exclusion_conditions = []
+            for city in UK_MAIN_CITIES:
+                exclusion_conditions.append(Task.location.ilike(f"%, {city}%"))
+                exclusion_conditions.append(Task.location.ilike(f"{city},%"))
+            exclusion_conditions.append(Task.location.ilike("%online%"))
+            query = query.filter(not_(or_(*exclusion_conditions)))
+        elif loc.lower() == 'online':
+            query = query.filter(Task.location.ilike("%online%"))
+        else:
+            from sqlalchemy import or_
+            query = query.filter(or_(
+                Task.location.ilike(f"%, {loc}%"),
+                Task.location.ilike(f"{loc},%")
+            ))
 
     # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():

@@ -10,7 +10,7 @@ import CoreLocation
 import Combine
 
 /// 位置信息模型
-public struct LocationInfo: Codable {
+public struct LocationInfo: Codable, Equatable {
     public let latitude: Double
     public let longitude: Double
     public let timestamp: Date

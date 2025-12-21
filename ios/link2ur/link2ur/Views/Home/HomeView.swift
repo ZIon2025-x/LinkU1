@@ -1031,7 +1031,7 @@ struct SearchTaskCard: View {
                     Text("·")
                         .foregroundColor(AppColors.textTertiary)
                     
-                    Text(task.location)
+                    Text(task.location.obfuscatedLocation)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }

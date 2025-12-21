@@ -164,6 +164,50 @@ extension String {
             return String(self[range])
         }
     }
+    
+    // MARK: - 位置处理
+    
+    /// 获取模糊化的位置信息（只显示城市名称，保护用户隐私）
+    /// 例如："B16 9NS, Birmingham, UK" -> "Birmingham, UK"
+    /// 例如："123 Main Street, London, UK" -> "London, UK"
+    var obfuscatedLocation: String {
+        // 如果是 "Online" 或为空，直接返回
+        let trimmed = self.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed.lowercased() == "online" {
+            return trimmed
+        }
+        
+        // 按逗号分隔
+        let components = trimmed.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        
+        // 如果只有一个部分，直接返回
+        if components.count <= 1 {
+            return trimmed
+        }
+        
+        // 检测第一个部分是否是邮编（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA）
+        let firstComponent = components[0]
+        let isPostcode = firstComponent.matches("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s*[0-9][A-Z]{2}$") ||
+                         firstComponent.matches("^[0-9]{5}(-[0-9]{4})?$") // 美国邮编
+        
+        // 检测第一个部分是否包含门牌号（以数字开头）
+        let hasStreetNumber = firstComponent.matches("^[0-9]+\\s")
+        
+        if isPostcode || hasStreetNumber {
+            // 移除第一个部分（邮编或街道地址），返回剩余部分
+            if components.count >= 2 {
+                return components.dropFirst().joined(separator: ", ")
+            }
+        }
+        
+        // 如果有3个或更多部分，取最后两个（通常是城市和国家）
+        if components.count >= 3 {
+            return components.suffix(2).joined(separator: ", ")
+        }
+        
+        // 否则返回原始内容（只有两个部分，可能就是城市和国家）
+        return trimmed
+    }
 }
 
 

@@ -22,11 +22,7 @@ class MessageViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载会话列表")
-                    if case let apiError as APIError = error {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] contacts in
                 self?.conversations = contacts
@@ -110,11 +106,7 @@ class ChatViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载消息历史")
-                    if case let apiError as APIError = error {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] messages in
                 self?.messages = messages.sorted { msg1, msg2 in

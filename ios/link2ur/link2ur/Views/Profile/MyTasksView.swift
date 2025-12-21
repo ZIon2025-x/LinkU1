@@ -477,7 +477,7 @@ struct EnhancedTaskCard: View {
                 HStack(spacing: 0) {
                     InfoItemCompact(icon: "dollarsign.circle.fill", text: "£\(String(format: "%.2f", task.baseReward ?? task.reward))", color: AppColors.success)
                     Spacer()
-                    InfoItemCompact(icon: task.location == "Online" ? "globe" : "mappin.circle.fill", text: task.location, color: AppColors.primary)
+                    InfoItemCompact(icon: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill", text: task.location.obfuscatedLocation, color: AppColors.primary)
                 }
                 
                 HStack(spacing: 0) {

@@ -136,11 +136,7 @@ class CreateTaskViewModel: ObservableObject {
                     if case .failure(let error) = result {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "创建任务")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                         completion(false)
                     }
                 }, receiveValue: { [weak self] _ in
