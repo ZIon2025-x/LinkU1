@@ -20,12 +20,14 @@ class TasksViewModel: ObservableObject {
         self.locationService = locationService ?? LocationService.shared
     }
     private var cancellables = Set<AnyCancellable>()
+    private var locationUpdateCancellable: AnyCancellable? // 位置更新监听器（单独管理）
     private var currentCategory: String?
     private var currentCity: String?
     private var currentStatus: String?
     private var currentKeyword: String?
     private var currentSortBy: String?
     private var rawTasks: [Task] = [] // 保存原始数据，用于重新排序
+    private var lastLocationUpdateTime: Date? // 记录上次位置更新时间，用于防抖
     
     func loadTasks(category: String? = nil, city: String? = nil, status: String? = nil, keyword: String? = nil, sortBy: String? = nil, page: Int = 1, pageSize: Int = 50, forceRefresh: Bool = false) {
         // 如果页码为1，说明是重新加载，重置状态
@@ -130,25 +132,57 @@ class TasksViewModel: ObservableObject {
                 self.isLoadingMore = false
                 
                 // 监听位置更新，当位置可用时重新加载任务（仅附近视图）
+                // 取消之前的监听器，避免重复触发
+                locationUpdateCancellable?.cancel()
+                
                 if city == nil && keyword == nil {
-                    self.locationService.$currentLocation
-                        .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
+                    locationUpdateCancellable = self.locationService.$currentLocation
+                        .debounce(for: .seconds(2), scheduler: DispatchQueue.main) // 增加防抖时间到2秒
                         .sink { [weak self] newLocation in
-                            if newLocation != nil {
-                                print("🔄 [TasksViewModel] 位置已更新，重新加载任务列表")
-                                // 重新加载第一页以获取按新位置排序的任务
-                                self?.loadTasks(
-                                    category: self?.currentCategory,
-                                    city: self?.currentCity,
-                                    status: self?.currentStatus,
-                                    keyword: self?.currentKeyword,
-                                    sortBy: self?.currentSortBy,
-                                    page: 1,
-                                    forceRefresh: true
-                                )
+                            guard let self = self,
+                                  let newLocation = newLocation else { return }
+                            
+                            // 检查位置是否真的发生了变化（避免微小变化触发重新加载）
+                            let now = Date()
+                            if let lastUpdate = self.lastLocationUpdateTime,
+                               now.timeIntervalSince(lastUpdate) < 5.0 {
+                                // 5秒内只更新一次
+                                return
                             }
+                            
+                            // 检查位置变化是否足够大（至少100米）
+                            if let lastLocation = self.locationService.currentLocation {
+                                let distance = CLLocation(
+                                    latitude: lastLocation.latitude,
+                                    longitude: lastLocation.longitude
+                                ).distance(from: CLLocation(
+                                    latitude: newLocation.latitude,
+                                    longitude: newLocation.longitude
+                                ))
+                                
+                                if distance < 100 {
+                                    // 位置变化小于100米，不重新加载
+                                    return
+                                }
+                            }
+                            
+                            print("🔄 [TasksViewModel] 位置已更新，重新加载任务列表")
+                            self.lastLocationUpdateTime = now
+                            
+                            // 重新加载第一页以获取按新位置排序的任务
+                            self.loadTasks(
+                                category: self.currentCategory,
+                                city: self.currentCity,
+                                status: self.currentStatus,
+                                keyword: self.currentKeyword,
+                                sortBy: self.currentSortBy,
+                                page: 1,
+                                forceRefresh: true
+                            )
                         }
-                        .store(in: &self.cancellables)
+                } else {
+                    // 不是附近视图，取消位置监听
+                    locationUpdateCancellable = nil
                 }
             })
             .store(in: &cancellables)

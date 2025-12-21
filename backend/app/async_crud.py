@@ -609,11 +609,11 @@ class AsyncTaskCRUD:
             if user_latitude is not None and user_longitude is not None and sort_by in ("distance", "nearby"):
                 use_distance_sorting = True
                 
-                # 粗略的距离过滤：使用简单的经纬度范围过滤（约50km范围）
-                # 1度纬度 ≈ 111km，所以 ±0.5度 ≈ ±55km
-                # 1度经度在UK纬度（约51度）≈ 111km * cos(51°) ≈ 70km，所以 ±0.7度 ≈ ±50km
-                lat_range = 0.5  # 约55km
-                lon_range = 0.7  # 约50km（在UK纬度）
+                # 粗略的距离过滤：使用简单的经纬度范围过滤（扩大范围以确保有结果）
+                # 1度纬度 ≈ 111km，所以 ±1度 ≈ ±111km
+                # 1度经度在UK纬度（约51度）≈ 111km * cos(51°) ≈ 70km，所以 ±1.5度 ≈ ±105km
+                lat_range = 1.0  # 约111km（扩大范围）
+                lon_range = 1.5  # 约105km（在UK纬度，扩大范围）
                 
                 # 限制只获取有坐标的任务，并且在粗略范围内
                 list_query = list_query.where(
@@ -693,16 +693,29 @@ class AsyncTaskCRUD:
                     tasks_with_distance.sort(key=lambda x: x[0])
                     
                     # 可选：限制距离范围（只返回50km内的任务，提升用户体验）
-                    max_distance_km = 50.0  # 最大距离50km
-                    tasks_with_distance = [
+                    # 但如果50km内没有任务，返回最近的几个任务（最多100km）
+                    max_distance_km = 50.0  # 首选最大距离50km
+                    nearby_tasks = [
                         (d, t) for d, t in tasks_with_distance 
                         if d <= max_distance_km
                     ]
                     
+                    # 如果50km内没有任务，放宽到100km
+                    if not nearby_tasks and tasks_with_distance:
+                        max_distance_km = 100.0
+                        nearby_tasks = [
+                            (d, t) for d, t in tasks_with_distance 
+                            if d <= max_distance_km
+                        ]
+                    
+                    # 如果100km内还是没有，返回最近的几个任务（最多5个）
+                    if not nearby_tasks and tasks_with_distance:
+                        nearby_tasks = tasks_with_distance[:5]
+                    
                     # 应用分页：只返回请求的数量
                     start_idx = skip
                     end_idx = skip + limit
-                    tasks = [task for _, task in tasks_with_distance[start_idx:end_idx]]
+                    tasks = [task for _, task in nearby_tasks[start_idx:end_idx]]
                 else:
                     # 不按距离排序，只计算距离值用于显示
                     tasks = [task for _, task in tasks_with_distance]
