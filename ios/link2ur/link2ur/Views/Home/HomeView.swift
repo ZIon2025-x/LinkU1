@@ -279,16 +279,23 @@ struct NearbyTasksView: View {
                 }
             }
             
-            if viewModel.tasks.isEmpty {
-                print("🏠 [NearbyTasksView] 加载任务列表...")
-                // 只加载开放中的任务（不指定城市，使用距离排序）
-                viewModel.loadTasks(status: "open", sortBy: "distance")
-            } else {
-                print("🏠 [NearbyTasksView] 任务列表已存在，共\(viewModel.tasks.count)条")
-                // 即使已有数据，也尝试重新排序（如果位置已更新）
-                if locationService.currentLocation != nil {
-                    print("🏠 [NearbyTasksView] 位置已可用，触发重新排序...")
+            // 如果有位置，立即加载任务；否则等待位置更新
+            if let _ = locationService.currentLocation {
+                if viewModel.tasks.isEmpty {
+                    print("🏠 [NearbyTasksView] 位置已可用，加载任务列表...")
+                    viewModel.loadTasks(status: "open", sortBy: "distance")
+                } else {
+                    print("🏠 [NearbyTasksView] 任务列表已存在，共\(viewModel.tasks.count)条")
                 }
+            } else {
+                print("🏠 [NearbyTasksView] 等待位置获取...")
+            }
+        }
+        .onChange(of: locationService.currentLocation) { newLocation in
+            // 当位置更新时，如果任务列表为空，自动加载任务
+            if let _ = newLocation, viewModel.tasks.isEmpty {
+                print("🏠 [NearbyTasksView] 位置已更新，加载任务列表...")
+                viewModel.loadTasks(status: "open", sortBy: "distance")
             }
         }
         .refreshable {
@@ -313,7 +320,7 @@ struct MenuView: View {
     @State private var navigateToStudentVerification = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section {
                     NavigationLink(destination: ProfileView()) {
@@ -396,16 +403,12 @@ struct MenuView: View {
                     }
                 }
             }
-            .background(
-                Group {
-                    NavigationLink(destination: CouponPointsView(), isActive: $navigateToCouponPoints) {
-                        EmptyView()
-                    }
-                    NavigationLink(destination: StudentVerificationView(), isActive: $navigateToStudentVerification) {
-                        EmptyView()
-                    }
-                }
-            )
+            .navigationDestination(isPresented: $navigateToCouponPoints) {
+                CouponPointsView()
+            }
+            .navigationDestination(isPresented: $navigateToStudentVerification) {
+                StudentVerificationView()
+            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }

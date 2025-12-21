@@ -627,19 +627,33 @@ class AsyncTaskCRUD:
                 lat_range = 1.0  # 约111km（扩大范围）
                 lon_range = 1.5  # 约105km（在UK纬度，扩大范围）
                 
-                # 限制只获取有坐标的任务，并且在粗略范围内
+                # 获取有坐标的任务（在粗略范围内）和没有坐标的任务（用于城市匹配）
+                # 使用 OR 条件：有坐标且在范围内 OR 没有坐标
+                from sqlalchemy import or_, and_
                 list_query = list_query.where(
-                    (models.Task.latitude.isnot(None)) & 
-                    (models.Task.longitude.isnot(None)) &
-                    (models.Task.latitude >= user_latitude - lat_range) &
-                    (models.Task.latitude <= user_latitude + lat_range) &
-                    (models.Task.longitude >= user_longitude - lon_range) &
-                    (models.Task.longitude <= user_longitude + lon_range)
+                    or_(
+                        # 有坐标且在粗略范围内
+                        and_(
+                            models.Task.latitude.isnot(None),
+                            models.Task.longitude.isnot(None),
+                            models.Task.latitude >= user_latitude - lat_range,
+                            models.Task.latitude <= user_latitude + lat_range,
+                            models.Task.longitude >= user_longitude - lon_range,
+                            models.Task.longitude <= user_longitude + lon_range
+                        ),
+                        # 没有坐标的任务（将在后续按城市匹配排序）
+                        and_(
+                            or_(
+                                models.Task.latitude.is_(None),
+                                models.Task.longitude.is_(None)
+                            )
+                        )
+                    )
                 ).order_by(
                     models.Task.created_at.desc(), models.Task.id.desc()
                 )
                 
-                # 增加获取数量（用于距离计算），但限制在合理范围内
+                # 增加获取数量（用于距离计算和城市匹配），但限制在合理范围内
                 # 例如：如果用户请求20条，我们获取200条来计算距离，然后返回最近的20条
                 max_fetch_for_distance = min(limit * 10, 500)  # 最多500条
                 list_query = list_query.limit(max_fetch_for_distance)
@@ -685,30 +699,96 @@ class AsyncTaskCRUD:
             # 如果有用户位置，计算距离并按距离排序
             if user_latitude is not None and user_longitude is not None:
                 from app.utils.location_utils import calculate_distance
+                from app.constants import UK_MAIN_CITIES
                 
-                # 计算每个任务的距离
+                # 根据用户坐标判断大致城市（用于匹配没有坐标的任务）
+                def get_user_city_from_coords(lat: float, lon: float) -> list:
+                    """根据坐标判断用户可能所在的城市列表"""
+                    # UK主要城市的坐标范围（粗略判断）
+                    city_ranges = {
+                        "London": (51.3, 51.7, -0.5, 0.3),
+                        "Birmingham": (52.3, 52.6, -2.0, -1.7),
+                        "Manchester": (53.3, 53.6, -2.4, -2.0),
+                        "Edinburgh": (55.8, 56.0, -3.3, -3.0),
+                        "Glasgow": (55.7, 55.9, -4.4, -4.1),
+                        "Bristol": (51.4, 51.5, -2.7, -2.5),
+                        "Sheffield": (53.3, 53.4, -1.6, -1.4),
+                        "Leeds": (53.7, 53.9, -1.7, -1.4),
+                        "Nottingham": (52.9, 53.0, -1.3, -1.1),
+                        "Newcastle": (54.9, 55.0, -1.7, -1.5),
+                        "Southampton": (50.8, 51.0, -1.5, -1.3),
+                        "Liverpool": (53.3, 53.5, -3.0, -2.8),
+                        "Cardiff": (51.4, 51.5, -3.3, -3.1),
+                        "Coventry": (52.3, 52.5, -1.6, -1.4),
+                        "Exeter": (50.7, 50.8, -3.6, -3.4),
+                        "Leicester": (52.6, 52.7, -1.2, -1.0),
+                        "York": (53.9, 54.0, -1.1, -0.9),
+                        "Aberdeen": (57.1, 57.2, -2.2, -2.0),
+                        "Bath": (51.3, 51.4, -2.4, -2.3),
+                        "Dundee": (56.4, 56.5, -3.0, -2.9),
+                        "Reading": (51.4, 51.5, -1.0, -0.9),
+                        "St Andrews": (56.3, 56.4, -2.8, -2.7),
+                        "Belfast": (54.5, 54.7, -6.0, -5.8),
+                        "Brighton": (50.8, 50.9, -0.2, 0.0),
+                        "Durham": (54.7, 54.8, -1.6, -1.5),
+                        "Norwich": (52.6, 52.7, 1.2, 1.3),
+                        "Swansea": (51.6, 51.7, -4.0, -3.9),
+                        "Loughborough": (52.7, 52.8, -1.2, -1.1),
+                        "Lancaster": (54.0, 54.1, -2.8, -2.7),
+                        "Warwick": (52.2, 52.3, -1.6, -1.5),
+                        "Cambridge": (52.2, 52.3, 0.0, 0.2),
+                        "Oxford": (51.7, 51.8, -1.3, -1.2),
+                    }
+                    
+                    matched_cities = []
+                    for city, (min_lat, max_lat, min_lon, max_lon) in city_ranges.items():
+                        if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
+                            matched_cities.append(city)
+                    return matched_cities
+                
+                # 获取用户可能所在的城市列表
+                user_cities = get_user_city_from_coords(user_latitude, user_longitude)
+                
+                # 计算每个任务的距离或城市匹配度
                 tasks_with_distance = []
                 for task in tasks:
                     if task.latitude is not None and task.longitude is not None:
+                        # 有坐标：计算精确距离
                         distance = calculate_distance(
                             user_latitude, user_longitude,
                             float(task.latitude), float(task.longitude)
                         )
                         task._distance_km = distance
-                        tasks_with_distance.append((distance, task))
+                        tasks_with_distance.append((distance, task, True))  # True表示有坐标
                     else:
+                        # 没有坐标：根据位置字符串匹配城市
                         task._distance_km = None
-                        tasks_with_distance.append((999999.0, task))
+                        location_lower = (task.location or "").lower()
+                        
+                        # 检查任务位置是否包含用户所在城市
+                        city_match = False
+                        for city in user_cities:
+                            if city.lower() in location_lower:
+                                city_match = True
+                                break
+                        
+                        if city_match:
+                            # 匹配用户城市，给予一个较大的距离值（排在有坐标任务之后）
+                            tasks_with_distance.append((50000.0, task, False))  # False表示无坐标但匹配城市
+                        else:
+                            # 不匹配，给予更大的距离值（排在最后）
+                            tasks_with_distance.append((999999.0, task, False))
                 
                 # 如果按距离排序，重新排序并限制距离范围
                 if sort_by in ("distance", "nearby"):
-                    tasks_with_distance.sort(key=lambda x: x[0])
+                    # 排序：先按距离，然后按是否有坐标（有坐标优先）
+                    tasks_with_distance.sort(key=lambda x: (x[0], not x[2]))
                     
                     # 可选：限制距离范围（只返回50km内的任务，提升用户体验）
                     # 但如果50km内没有任务，返回最近的几个任务（最多100km）
                     max_distance_km = 50.0  # 首选最大距离50km
                     nearby_tasks = [
-                        (d, t) for d, t in tasks_with_distance 
+                        (d, t) for d, t, has_coords in tasks_with_distance 
                         if d <= max_distance_km
                     ]
                     
@@ -716,13 +796,17 @@ class AsyncTaskCRUD:
                     if not nearby_tasks and tasks_with_distance:
                         max_distance_km = 100.0
                         nearby_tasks = [
-                            (d, t) for d, t in tasks_with_distance 
+                            (d, t) for d, t, has_coords in tasks_with_distance 
                             if d <= max_distance_km
                         ]
                     
-                    # 如果100km内还是没有，返回最近的几个任务（最多5个）
+                    # 如果100km内还是没有，返回最近的几个任务（包括匹配城市的无坐标任务）
                     if not nearby_tasks and tasks_with_distance:
-                        nearby_tasks = tasks_with_distance[:5]
+                        # 优先返回有坐标的任务，然后是匹配城市的无坐标任务
+                        nearby_tasks = [
+                            (d, t) for d, t, has_coords in tasks_with_distance 
+                            if d < 999999.0  # 排除完全不匹配的
+                        ][:min(limit * 2, 20)]  # 最多返回20个
                     
                     # 更新 total 为实际可以返回的任务数量（距离过滤后）
                     total = len(nearby_tasks)
@@ -733,7 +817,7 @@ class AsyncTaskCRUD:
                     tasks = [task for _, task in nearby_tasks[start_idx:end_idx]]
                 else:
                     # 不按距离排序，只计算距离值用于显示
-                    tasks = [task for _, task in tasks_with_distance]
+                    tasks = [task for _, task, _ in tasks_with_distance]
             
             return tasks, total
         except RuntimeError as e:

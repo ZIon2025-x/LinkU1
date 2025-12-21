@@ -609,6 +609,8 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         agreed_reward=None,  # 初始为空，如果有议价才会设置
         currency=getattr(task, "currency", "GBP") or "GBP",  # 货币类型
         location=task.location,
+        latitude=getattr(task, "latitude", None),  # 纬度（可选）
+        longitude=getattr(task, "longitude", None),  # 经度（可选）
         task_type=task.task_type,
         poster_id=user_id,
         status="open",
