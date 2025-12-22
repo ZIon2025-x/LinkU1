@@ -87,121 +87,119 @@ struct FleaMarketView: View {
     }
 }
 
-// 商品卡片 - Web风格（图片占满，信息叠加）
+// 商品卡片 - 现代卡片风格 (Xiaohongshu/Instagram 风格)
 struct ItemCard: View {
     let item: FleaMarketItem
     
     var body: some View {
-        GeometryReader { geometry in
-            let width = geometry.size.width
-            let height = width // 正方形卡片
-            
-            ZStack(alignment: .bottom) {
-                // 商品图片 - 占满整个卡片 - 使用 AsyncImageView 优化图片加载和缓存
+        VStack(alignment: .leading, spacing: 0) {
+            // 1. 商品图片 (正方形)
+            ZStack(alignment: .topTrailing) {
                 if let images = item.images, let firstImage = images.first, !firstImage.isEmpty {
                     AsyncImageView(
                         urlString: firstImage,
                         placeholder: Image(systemName: "bag.fill"),
-                        width: width,
-                        height: height,
+                        width: nil, // 自动填满
+                        height: nil,
                         contentMode: .fill,
                         cornerRadius: 0
                     )
-                    .frame(width: width, height: height)
+                    .aspectRatio(1, contentMode: .fill)
+                    .frame(maxWidth: .infinity)
                     .clipped()
                 } else {
                     ZStack {
                         Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.2),
-                                        Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.1)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        Text("🛍️")
-                            .font(.system(size: 48))
-                            .opacity(0.6)
+                            .fill(AppColors.primaryLight.opacity(0.5))
+                            .aspectRatio(1, contentMode: .fill)
+                        
+                        VStack(spacing: 8) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .font(.system(size: 32))
+                                .foregroundColor(AppColors.primary.opacity(0.3))
+                            Text("暂无图片")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppColors.primary.opacity(0.4))
+                        }
                     }
-                    .frame(width: width, height: height)
                 }
                 
-                // 渐变遮罩层 - 底部用于文字可读性
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.black.opacity(0.7),
-                        Color.black.opacity(0.3),
-                        Color.clear
-                    ]),
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-                .frame(width: width, height: height * 0.5)
-                .offset(y: height * 0.5)
+                // 分类角标 (可选)
+                Text(item.category)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Capsule())
+                    .padding(8)
+            }
+            
+            // 2. 商品信息区域
+            VStack(alignment: .leading, spacing: 8) {
+                // 标题
+                Text(item.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(height: 40, alignment: .topLeading)
                 
-                // 价格标签 - 右上角
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text("£\(String(format: "%.2f", item.price))")
-                            .font(AppTypography.bodyBold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.sm)
-                            .background(
-                                Capsule()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color(red: 0.063, green: 0.725, blue: 0.451),
-                                                Color(red: 0.020, green: 0.392, blue: 0.412)
-                                            ]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                            )
-                            .shadow(color: Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.4), radius: 6, x: 0, y: 3)
-                            .padding(.top, 12)
-                            .padding(.trailing, 12)
-                    }
+                // 价格与位置
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("£")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                    
+                    Text(String(format: "%.2f", item.price))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                    
                     Spacer()
-                }
-                
-                // 商品信息 - 底部叠加显示
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title)
-                        .font(AppTypography.bodyBold)
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 2)
                     
                     if let location = item.location, !location.isEmpty {
-                        HStack(spacing: 4) {
-                            IconStyle.icon(location.lowercased() == "online" ? "globe" : "mappin.circle.fill", size: 12)
+                        HStack(spacing: 2) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 10))
                             Text(location.obfuscatedLocation)
-                                .font(AppTypography.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white.opacity(0.9))
+                                .font(.system(size: 10))
                         }
-                        .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .foregroundColor(AppColors.textTertiary)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                
+                // 分隔线
+                Divider()
+                    .padding(.vertical, 2)
+                
+                // 底部统计信息
+                HStack {
+                    if let seller = item.seller {
+                        HStack(spacing: 4) {
+                            AvatarView(urlString: seller.avatar, size: 18, placeholder: Image(systemName: "person.circle.fill"))
+                                .clipShape(Circle())
+                            Text(seller.name)
+                                .font(.system(size: 10))
+                                .foregroundColor(AppColors.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 3) {
+                        Image(systemName: "eye")
+                            .font(.system(size: 10))
+                        Text(item.viewCount.formatCount())
+                            .font(.system(size: 10, design: .rounded))
+                    }
+                    .foregroundColor(AppColors.textQuaternary)
+                }
             }
-            .background(AppColors.cardBackground)
-            .cornerRadius(AppCornerRadius.large)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                    .stroke(Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.1), lineWidth: 1)
-            )
-            .shadow(color: AppShadow.medium.color, radius: AppShadow.medium.radius, x: AppShadow.medium.x, y: AppShadow.medium.y)
+            .padding(12)
         }
-        .aspectRatio(1, contentMode: .fit) // 强制正方形
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }

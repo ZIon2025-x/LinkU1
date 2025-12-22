@@ -10,6 +10,8 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     private let maxReconnectAttempts = 5
     @Published var isConnected = false
     private var currentUserId: String?
+    private var isConnecting = false // 防止并发连接
+    private let connectionQueue = DispatchQueue(label: "com.link2ur.websocket.connection")
     
     // 发布接收到的消息
     let messageSubject = PassthroughSubject<Message, Never>()
@@ -23,43 +25,68 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     }
     
     func connect(token: String, userId: String) {
-        // 如果已经连接到同一个用户，不需要重新连接
-        if isConnected && currentUserId == userId {
-            print("✅ WebSocket 已连接到用户 \(userId)，跳过重复连接")
-            return
+        connectionQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // 如果已经连接到同一个用户，不需要重新连接
+            if self.isConnected && self.currentUserId == userId {
+                print("✅ WebSocket 已连接到用户 \(userId)，跳过重复连接")
+                return
+            }
+            
+            // 如果正在连接中，等待完成
+            if self.isConnecting {
+                print("⏳ WebSocket 正在连接中，跳过重复连接")
+                return
+            }
+            
+            // 如果连接到不同用户，先断开旧连接
+            if self.isConnected || self.webSocketTask != nil {
+                print("🔄 断开旧连接")
+                self.forceDisconnect()
+                // 等待一小段时间确保旧连接完全关闭
+                Thread.sleep(forTimeInterval: 0.5)
+            }
+            
+            self.isConnecting = true
+            self.currentUserId = userId
+            // 保存userId到UserDefaults以便重连时使用
+            UserDefaults.standard.set(userId, forKey: "current_user_id")
+            
+            let urlString = "\(Constants.API.wsURL)/ws/chat/\(userId)?token=\(token)"
+            guard let url = URL(string: urlString) else {
+                print("❌ WebSocket URL 无效: \(urlString)")
+                self.isConnecting = false
+                return
+            }
+            
+            print("🔌 正在连接 WebSocket: \(urlString)")
+            
+            DispatchQueue.main.async {
+                self.webSocketTask = self.session?.webSocketTask(with: url)
+                self.webSocketTask?.resume()
+                self.receiveMessage()
+            }
         }
-        
-        // 如果连接到不同用户，先断开旧连接
-        if isConnected {
-            print("🔄 切换到新用户，断开旧连接")
-            disconnect()
-        }
-        
-        currentUserId = userId
-        // 保存userId到UserDefaults以便重连时使用
-        UserDefaults.standard.set(userId, forKey: "current_user_id")
-        
-        let urlString = "\(Constants.API.wsURL)/ws/chat/\(userId)?token=\(token)"
-        guard let url = URL(string: urlString) else {
-            print("❌ WebSocket URL 无效: \(urlString)")
-            return
-        }
-        
-        print("🔌 正在连接 WebSocket: \(urlString)")
-        webSocketTask = session?.webSocketTask(with: url)
-        webSocketTask?.resume()
-        
-        receiveMessage()
     }
     
     func disconnect() {
+        connectionQueue.async { [weak self] in
+            self?.forceDisconnect()
+        }
+    }
+    
+    private func forceDisconnect() {
         // 取消正在进行的重连
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
         
+        // 取消 WebSocket 任务
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
+        
         isConnected = false
+        isConnecting = false
         currentUserId = nil
         reconnectAttempts = 0
         // 清除存储的userId
@@ -181,65 +208,106 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     private var reconnectWorkItem: DispatchWorkItem?
     
     private func reconnect() {
-        // 如果已经在重连中，取消之前的重连任务
-        reconnectWorkItem?.cancel()
-        
-        guard !isConnected && reconnectAttempts < maxReconnectAttempts else {
-            if reconnectAttempts >= maxReconnectAttempts {
-                print("❌ WebSocket 重连次数已达上限（\(maxReconnectAttempts)次），停止重连")
-            }
-            return
-        }
-        
-        reconnectAttempts += 1
-        let delay = Double(reconnectAttempts) * 2.0
-        
-        print("🔄 WebSocket 尝试重连（第 \(reconnectAttempts)/\(maxReconnectAttempts) 次，延迟 \(delay) 秒）")
-        
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self, !self.isConnected else { return }
+        connectionQueue.async { [weak self] in
+            guard let self = self else { return }
             
-            // 从存储的userId和Keychain获取token
-            if let userId = self.currentUserId,
-               let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                self.connect(token: token, userId: userId)
-            } else if let storedUserId = UserDefaults.standard.string(forKey: "current_user_id"),
-                      let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                // 使用存储的userId
-                self.connect(token: token, userId: storedUserId)
-            } else {
-                print("❌ WebSocket 重连失败：无法获取用户ID或token")
-                // 如果无法获取用户信息，停止重连
-                self.reconnectAttempts = self.maxReconnectAttempts
+            // 如果已经在重连中或已连接，取消重连
+            if self.isConnecting || self.isConnected {
+                print("⏳ WebSocket 正在连接或已连接，跳过重连")
+                return
             }
+            
+            // 如果已经在重连中，取消之前的重连任务
+            reconnectWorkItem?.cancel()
+            
+            guard self.reconnectAttempts < self.maxReconnectAttempts else {
+                print("❌ WebSocket 重连次数已达上限（\(self.maxReconnectAttempts)次），停止重连")
+                return
+            }
+            
+            self.reconnectAttempts += 1
+            let delay = Double(self.reconnectAttempts) * 2.0
+            
+            print("🔄 WebSocket 尝试重连（第 \(self.reconnectAttempts)/\(self.maxReconnectAttempts) 次，延迟 \(delay) 秒）")
+            
+            let workItem = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                
+                // 再次检查连接状态
+                guard !self.isConnected && !self.isConnecting else {
+                    print("⏳ WebSocket 已在连接中，取消重连")
+                    return
+                }
+                
+                // 确保旧连接已完全关闭
+                if self.webSocketTask != nil {
+                    print("🧹 清理旧的 WebSocket 连接")
+                    self.forceDisconnect()
+                    Thread.sleep(forTimeInterval: 0.5)
+                }
+                
+                // 从存储的userId和Keychain获取token
+                if let userId = self.currentUserId,
+                   let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+                    self.connect(token: token, userId: userId)
+                } else if let storedUserId = UserDefaults.standard.string(forKey: "current_user_id"),
+                          let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+                    // 使用存储的userId
+                    self.connect(token: token, userId: storedUserId)
+                } else {
+                    print("❌ WebSocket 重连失败：无法获取用户ID或token")
+                    // 如果无法获取用户信息，停止重连
+                    self.reconnectAttempts = self.maxReconnectAttempts
+                }
+            }
+            
+            self.reconnectWorkItem = workItem
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: workItem)
         }
-        
-        reconnectWorkItem = workItem
-        DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: workItem)
     }
     
     // MARK: - URLSessionWebSocketDelegate
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
         print("WebSocket connected")
-        isConnected = true
-        reconnectAttempts = 0
+        connectionQueue.async { [weak self] in
+            self?.isConnected = true
+            self?.isConnecting = false
+            self?.reconnectAttempts = 0
+        }
     }
     
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("WebSocket disconnected, closeCode: \(closeCode.rawValue)")
-        isConnected = false
+        let closeCodeValue = closeCode.rawValue
+        print("WebSocket disconnected, closeCode: \(closeCodeValue)")
         
-        // 根据关闭代码决定是否重连
-        // .goingAway (1001) = 正常关闭，不需要重连
-        // .normalClosure (1000) = 正常关闭，不需要重连
-        // 其他代码 = 异常关闭，需要重连
-        switch closeCode {
-        case .goingAway, .normalClosure:
-            print("🔌 WebSocket 正常关闭，不重连")
-            reconnectAttempts = 0
-        default:
-            print("⚠️ WebSocket 异常关闭，尝试重连")
-            reconnect()
+        connectionQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.isConnected = false
+            self.isConnecting = false
+            
+            // 根据关闭代码决定是否重连
+            // .goingAway (1001) = 正常关闭，不需要重连
+            // .normalClosure (1000) = 正常关闭，不需要重连
+            // 4001 = 可能是认证失败或客户端错误，需要重新获取 token 或停止重连
+            // 其他代码 = 异常关闭，需要重连
+            switch closeCode {
+            case .goingAway, .normalClosure:
+                print("🔌 WebSocket 正常关闭，不重连")
+                self.reconnectAttempts = 0
+            default:
+                // 处理 4001 错误代码（可能是认证失败）
+                if closeCodeValue == 4001 {
+                    print("⚠️ WebSocket 关闭代码 4001（可能是认证失败），延迟重连")
+                    // 对于认证失败，延迟更长时间再重连，给用户时间重新登录
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                        self.reconnect()
+                    }
+                } else {
+                    print("⚠️ WebSocket 异常关闭（代码: \(closeCodeValue)），尝试重连")
+                    self.reconnect()
+                }
+            }
         }
     }
 }

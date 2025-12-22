@@ -89,41 +89,128 @@ extension ChatViewModel {
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
     @Published var errorMessage: String?
     @Published var partner: Contact?
+    @Published var hasMoreMessages = true
+    @Published var isInitialLoadComplete = false
+    
+    // 分页参数
+    private let pageSize = 20
+    private var currentOffset = 0
     
     // 使用依赖注入获取服务
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
-    private let partnerId: String
+    let partnerId: String
+    
+    // 缓存键
+    private var cacheKey: String { "chat_messages_\(partnerId)" }
     
     init(partnerId: String, partner: Contact? = nil, apiService: APIService? = nil) {
         self.partnerId = partnerId
         self.partner = partner
         self.apiService = apiService ?? APIService.shared
+        
+        // 尝试从缓存加载
+        loadFromCache()
     }
     
     deinit {
         cancellables.removeAll()
     }
     
+    // MARK: - 缓存管理
+    
+    private func loadFromCache() {
+        if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
+           let cachedMessages = try? JSONDecoder().decode([Message].self, from: cachedData) {
+            self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+            Logger.debug("从缓存加载了 \(cachedMessages.count) 条消息", category: .cache)
+        }
+    }
+    
+    private func saveToCache() {
+        // 只缓存最新的100条消息
+        let messagesToCache = Array(messages.suffix(100))
+        if let data = try? JSONEncoder().encode(messagesToCache) {
+            UserDefaults.standard.set(data, forKey: cacheKey)
+            Logger.debug("缓存了 \(messagesToCache.count) 条消息", category: .cache)
+        }
+    }
+    
+    // MARK: - 加载消息
+    
+    /// 加载最新消息（首次进入或刷新）
     func loadMessages() {
         isLoading = true
-        apiService.getMessageHistory(userId: partnerId)
+        currentOffset = 0
+        
+        apiService.getMessageHistory(userId: partnerId, limit: pageSize, offset: 0)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
+                self?.isInitialLoadComplete = true
                 if case .failure(let error) = result {
-                    // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载消息历史")
                     self?.errorMessage = error.userFriendlyMessage
                 }
-            }, receiveValue: { [weak self] messages in
-                self?.messages = messages.sorted { msg1, msg2 in
-                    // 按时间排序（处理可选的 createdAt）
-                    let time1 = msg1.createdAt ?? ""
-                    let time2 = msg2.createdAt ?? ""
-                    return time1 < time2
+            }, receiveValue: { [weak self] newMessages in
+                guard let self = self else { return }
+                
+                // 按时间排序
+                let sortedMessages = newMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                
+                // 如果返回的消息数小于 pageSize，说明没有更多了
+                self.hasMoreMessages = newMessages.count >= self.pageSize
+                self.currentOffset = newMessages.count
+                
+                // 合并新消息和缓存的消息
+                var allMessages = self.messages
+                for msg in sortedMessages {
+                    if !allMessages.contains(where: { $0.id == msg.id }) {
+                        allMessages.append(msg)
+                    }
                 }
+                
+                self.messages = allMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                
+                // 保存到缓存
+                self.saveToCache()
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 加载更多历史消息（向上滚动时调用）
+    func loadMoreMessages() {
+        guard !isLoadingMore && hasMoreMessages else { return }
+        
+        isLoadingMore = true
+        
+        apiService.getMessageHistory(userId: partnerId, limit: pageSize, offset: currentOffset)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingMore = false
+                if case .failure(let error) = result {
+                    Logger.error("加载更多消息失败: \(error)", category: .api)
+                }
+            }, receiveValue: { [weak self] olderMessages in
+                guard let self = self else { return }
+                
+                // 如果返回的消息数小于 pageSize，说明没有更多了
+                self.hasMoreMessages = olderMessages.count >= self.pageSize
+                self.currentOffset += olderMessages.count
+                
+                // 将旧消息插入到列表前面
+                var allMessages = self.messages
+                for msg in olderMessages {
+                    if !allMessages.contains(where: { $0.id == msg.id }) {
+                        allMessages.append(msg)
+                    }
+                }
+                
+                self.messages = allMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                
+                // 保存到缓存
+                self.saveToCache()
             })
             .store(in: &cancellables)
     }
@@ -141,13 +228,18 @@ class ChatViewModel: ObservableObject {
                     completion(false)
                 }
             }, receiveValue: { [weak self] message in
-                self?.isSending = false
-                self?.messages.append(message)
-                self?.messages.sort { msg1, msg2 in
-                    let time1 = msg1.createdAt ?? ""
-                    let time2 = msg2.createdAt ?? ""
-                    return time1 < time2
+                guard let self = self else { return }
+                self.isSending = false
+                
+                // 添加新消息
+                if !self.messages.contains(where: { $0.id == message.id }) {
+                    self.messages.append(message)
+                    self.messages.sort { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
                 }
+                
+                // 保存到缓存
+                self.saveToCache()
+                
                 completion(true)
             })
             .store(in: &cancellables)
@@ -166,8 +258,15 @@ class TaskChatDetailViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var messages: [Message] = []
     @Published var isLoading = false
+    @Published var isLoadingMore = false
     @Published var isSending = false
     @Published var errorMessage: String?
+    @Published var hasMoreMessages = true
+    @Published var isInitialLoadComplete = false
+    
+    // 分页参数
+    private let pageSize = 20
+    private var currentCursor: String?
     
     private let apiService = APIService.shared
     var cancellables = Set<AnyCancellable>() // 改为公开，以便在 View 中使用
@@ -175,15 +274,39 @@ class TaskChatDetailViewModel: ObservableObject {
     private let taskChat: TaskChatItem?
     private var partnerId: String? // 对方用户ID（poster 或 taker）
     
+    // 缓存键
+    private var cacheKey: String { "task_chat_messages_\(taskId)" }
+    
     init(taskId: Int, taskChat: TaskChatItem? = nil) {
         self.taskId = taskId
         self.taskChat = taskChat
-        // 从 taskChat 中确定对方用户ID
+        // 从缓存加载
+        loadFromCache()
     }
     
     deinit {
         cancellables.removeAll()
     }
+    
+    // MARK: - 缓存管理
+    
+    private func loadFromCache() {
+        if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
+           let cachedMessages = try? JSONDecoder().decode([Message].self, from: cachedData) {
+            self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+            Logger.debug("从缓存加载了 \(cachedMessages.count) 条任务聊天消息", category: .cache)
+        }
+    }
+    
+    private func saveToCache() {
+        // 只缓存最新的100条消息
+        let messagesToCache = Array(messages.suffix(100))
+        if let data = try? JSONEncoder().encode(messagesToCache) {
+            UserDefaults.standard.set(data, forKey: cacheKey)
+            Logger.debug("缓存了 \(messagesToCache.count) 条任务聊天消息", category: .cache)
+        }
+    }
+    
     // 注意：taskChat 会在 loadMessages 方法中使用，这里先保存
     
     func loadMessages(currentUserId: String?) {
@@ -268,6 +391,12 @@ class TaskChatDetailViewModel: ObservableObject {
                     return time1 < time2
                 }
                 Logger.success("任务聊天消息加载成功，共\(self.messages.count)条", category: .api)
+                
+                // 标记首次加载完成
+                self.isInitialLoadComplete = true
+                
+                // 保存到缓存
+                self.saveToCache()
                 
                 // 加载成功后，标记最新消息为已读（只在有消息ID时调用）
                 if let lastMessage = self.messages.last, let messageId = lastMessage.messageId {

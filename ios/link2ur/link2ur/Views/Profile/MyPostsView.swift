@@ -194,19 +194,13 @@ struct MyItemCard: View {
             // 图片
             ZStack(alignment: .topTrailing) {
                 if let images = item.images, let firstImage = images.first {
-                    AsyncImageView(urlString: firstImage) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Rectangle()
-                            .fill(AppColors.textQuaternary.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(AppColors.textQuaternary)
-                            )
-                    }
+                    AsyncImageView(
+                        urlString: firstImage,
+                        placeholder: Image(systemName: "photo"),
+                        height: 130,
+                        contentMode: .fill,
+                        cornerRadius: AppCornerRadius.medium
+                    )
                     .frame(height: 130)
                     .clipped()
                     .cornerRadius(AppCornerRadius.medium)
@@ -223,7 +217,7 @@ struct MyItemCard: View {
                 }
                 
                 // 状态标签
-                StatusBadge(category: category, status: item.status)
+                MyItemStatusBadge(category: category, status: item.status)
                     .padding(6)
             }
             
@@ -260,7 +254,7 @@ struct MyItemCard: View {
 
 // MARK: - 状态标签
 
-struct StatusBadge: View {
+struct MyItemStatusBadge: View {
     let category: MyItemsCategory
     let status: String
     

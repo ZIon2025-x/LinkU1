@@ -68,13 +68,14 @@ def send_task_application_notification(
         notification_content = "\n".join(content_parts)
         
         # 创建通知
+        # related_id 始终使用 task_id，因为通知的目的是让用户跳转到任务详情页
         notification = crud.create_notification(
             db=db,
             user_id=task.poster_id,
             type="task_application",
             title="新任务申请",
             content=notification_content,
-            related_id=str(application_id) if application_id else str(task.id)
+            related_id=str(task.id)  # 始终使用 task_id，确保前端可以正确跳转
         )
         print(f"DEBUG: 通知创建结果: {notification}")
         

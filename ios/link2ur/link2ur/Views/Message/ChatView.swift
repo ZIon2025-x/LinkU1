@@ -60,7 +60,31 @@ struct ChatView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 0) {
+                            LazyVStack(spacing: 0) {
+                                // 加载更多指示器（在顶部）
+                                if viewModel.hasMoreMessages {
+                                    Button(action: {
+                                        viewModel.loadMoreMessages()
+                                    }) {
+                                        HStack(spacing: 8) {
+                                            if viewModel.isLoadingMore {
+                                                ProgressView()
+                                                    .scaleEffect(0.8)
+                                            } else {
+                                                Image(systemName: "arrow.up.circle")
+                                                    .font(.system(size: 14))
+                                            }
+                                            Text(viewModel.isLoadingMore ? "加载中..." : "加载更多历史消息")
+                                                .font(.system(size: 13))
+                                        }
+                                        .foregroundColor(AppColors.textSecondary)
+                                        .padding(.vertical, 12)
+                                        .frame(maxWidth: .infinity)
+                                    }
+                                    .disabled(viewModel.isLoadingMore)
+                                    .id("load_more_button")
+                                }
+                                
                                 if viewModel.messages.isEmpty {
                                     // 空状态
                                     VStack(spacing: AppSpacing.md) {
@@ -95,9 +119,25 @@ struct ChatView: View {
                         .refreshable {
                             viewModel.loadMessages()
                         }
+                        .onAppear {
+                            // 首次进入时滚动到底部
+                            if !viewModel.messages.isEmpty {
+                                scrollToBottom(proxy: proxy, delay: 0.2)
+                            }
+                        }
                         .onChange(of: viewModel.messages.count) { newCount in
-                            // 新消息时滚动到底部（防抖处理）
+                            // 只有新消息添加时才滚动到底部（不是加载更多历史时）
                             if newCount > 0 {
+                                // 检查是否是新增消息（通过比较最后一条消息ID）
+                                if let lastMessage = viewModel.messages.last,
+                                   lastMessage.id != lastMessageId {
+                                    scrollToBottom(proxy: proxy, delay: 0.1)
+                                }
+                            }
+                        }
+                        .onChange(of: viewModel.isInitialLoadComplete) { completed in
+                            // 首次加载完成后滚动到底部
+                            if completed && !viewModel.messages.isEmpty {
                                 scrollToBottom(proxy: proxy, delay: 0.1)
                             }
                         }

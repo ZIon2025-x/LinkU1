@@ -65,16 +65,13 @@ struct TaskExpertDetailView: View {
                             }
                             
                             // 底部间距
-                            Spacer().frame(height: 120)
+                            Spacer().frame(height: 40)
                         }
                         .padding(.top, 24)
                     }
                 }
                 .ignoresSafeArea(edges: .top)
                 .scrollIndicators(.hidden)
-                
-                // 5. 底部固定联系栏
-                bottomActionBar(expert: expert)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -209,109 +206,74 @@ struct TaskExpertDetailView: View {
         .cornerRadius(20)
         .padding(.horizontal, 16)
     }
-    
-    @ViewBuilder
-    private func bottomActionBar(expert: TaskExpert) -> some View {
-        HStack(spacing: 16) {
-            Button(action: {
-                // 联系达人逻辑
-                HapticFeedback.selection()
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                    Text("咨询达人")
-                        .fontWeight(.bold)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(AppColors.primary)
-                .foregroundColor(.white)
-                .cornerRadius(27)
-                .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 12)
-        .padding(.bottom, 24)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
-                .ignoresSafeArea(edges: .bottom)
-        )
-    }
 }
 
-// MARK: - Refined Service Card
+// MARK: - ServiceCard
 
 struct ServiceCard: View {
     let service: TaskExpertService
     
     var body: some View {
         HStack(spacing: 16) {
-            // 图片
-            ZStack {
-                if let images = service.images, let firstImage = images.first {
-                    AsyncImageView(urlString: firstImage, placeholder: Image(systemName: "photo.fill"))
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 100, height: 100)
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .fill(AppColors.primaryLight)
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .foregroundColor(AppColors.primary.opacity(0.3))
-                        )
-                }
+            // 服务图片
+            if let images = service.images, let firstImage = images.first {
+                AsyncImageView(
+                    urlString: firstImage,
+                    placeholder: Image(systemName: "photo"),
+                    width: 100,
+                    height: 100,
+                    contentMode: .fill,
+                    cornerRadius: AppCornerRadius.medium
+                )
+                .frame(width: 100, height: 100)
+                .clipped()
+                .cornerRadius(AppCornerRadius.medium)
+            } else {
+                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                    .fill(AppColors.textQuaternary.opacity(0.2))
+                    .frame(width: 100, height: 100)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 24))
+                            .foregroundColor(AppColors.textQuaternary)
+                    )
             }
-            .cornerRadius(12)
             
-            // 信息
+            // 服务信息
             VStack(alignment: .leading, spacing: 8) {
                 Text(service.serviceName)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
                 
-                if let description = service.description {
+                if let description = service.description, !description.isEmpty {
                     Text(description)
                         .font(.system(size: 13))
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(2)
-                        .lineSpacing(2)
                 }
                 
-                Spacer(minLength: 0)
+                Spacer()
                 
-                HStack(alignment: .bottom) {
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("£")
-                            .font(.system(size: 12, weight: .bold))
-                        Text(String(format: "%.2f", service.basePrice))
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                    }
-                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                // 价格
+                HStack {
+                    Text("£\(String(format: "%.2f", service.basePrice))")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(AppColors.primary)
                     
                     Spacer()
                     
-                    if service.hasTimeSlots == true {
-                        Text("可预约")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(AppColors.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppColors.primaryLight)
-                            .cornerRadius(6)
-                    }
+                    // 查看详情箭头
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AppColors.textTertiary)
                 }
             }
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(12)
-        .background(Color(UIColor.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .padding(16)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 }

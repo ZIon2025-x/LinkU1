@@ -77,6 +77,14 @@ struct TaskDetailView: View {
             if viewModel.isLoading && viewModel.task == nil {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let errorMessage = viewModel.errorMessage, viewModel.task == nil {
+                // 显示错误状态
+                ErrorStateView(
+                    message: errorMessage,
+                    retryAction: {
+                        viewModel.loadTask(taskId: taskId)
+                    }
+                )
             } else if let task = viewModel.task {
                 TaskDetailContentView(
                     task: task,
