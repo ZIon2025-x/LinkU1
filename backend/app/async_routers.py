@@ -946,7 +946,7 @@ async def get_notifications(
         db, current_user.id, skip=skip, limit=limit, unread_only=unread_only
     )
     
-    # 对于 application_message 和 negotiation_offer 类型，通过 related_id (application_id) 查询 task_id
+    # 对于任务相关通知，设置 task_id 字段
     result = []
     for notification in notifications:
         notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
@@ -965,6 +965,11 @@ async def get_notifications(
                     notification_dict["task_id"] = application.task_id
             except Exception as e:
                 logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
+        # 如果是 task_application 类型，related_id 应该是 task_id（但为了安全，也设置 task_id 字段）
+        elif notification.type == "task_application" and notification.related_id:
+            # 对于 task_application 类型，related_id 应该就是 task_id
+            # 但为了确保一致性，也设置 task_id 字段
+            notification_dict["task_id"] = notification.related_id
         
         result.append(schemas.NotificationOut(**notification_dict))
     

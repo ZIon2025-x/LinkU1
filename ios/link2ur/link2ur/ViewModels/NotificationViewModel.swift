@@ -38,15 +38,7 @@ class NotificationViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
-                if case .failure(let error) = result {
-                    // 使用 ErrorHandler 统一处理错误
-                    ErrorHandler.shared.handle(error, context: "加载通知")
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
-                }
+                // 由于使用了 .catch，错误已经被处理，这里不会收到 failure
             }, receiveValue: { [weak self] (systemNotifs, forumNotifs) in
                 self?.notifications = systemNotifs
                 self?.forumNotifications = forumNotifs

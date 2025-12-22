@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import LinkPresentation
+import Combine
 
 struct TaskDetailView: View {
     let taskId: Int
@@ -1796,10 +1797,6 @@ struct ApplicationMessageSheet: View {
             receiveValue: { _ in }
         )
         .store(in: &cancellables)
-    }
-}
-        default: return LocalizationKey.taskDetailUnknown.localized
-        }
     }
 }
 

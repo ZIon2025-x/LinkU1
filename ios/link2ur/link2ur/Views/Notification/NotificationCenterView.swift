@@ -270,21 +270,24 @@ struct SystemMessageView: View {
             return taskId
         }
         
-        guard let type = notification.type else { return notification.relatedId }
+        guard let type = notification.type else { return nil }
         
         let lowercasedType = type.lowercased()
         
         // 对于 negotiation_offer 和 application_message 类型，related_id 是 application_id，不是 task_id
-        // 这些通知应该使用 taskId 字段（后端已添加）
+        // 这些通知必须使用 taskId 字段（后端已添加）
         if lowercasedType == "negotiation_offer" || lowercasedType == "application_message" {
             return nil  // 如果没有 taskId，不跳转
         }
         
-        // 对于 task_application 类型，related_id 是 task_id（后端已修复）
+        // 对于 task_application 类型，优先使用 taskId，如果没有则使用 relatedId（应该是 task_id）
+        // 但为了安全，如果 relatedId 存在且看起来合理，可以使用它
         if lowercasedType == "task_application" {
+            // 如果后端没有设置 taskId，尝试使用 relatedId（应该是 task_id）
+            // 但要注意：某些旧数据可能 relatedId 是 application_id，所以优先使用 taskId
             return notification.relatedId
         } else if lowercasedType.contains("task") {
-            // 其他任务相关通知，related_id 就是 task_id
+            // 其他任务相关通知，related_id 应该是 task_id
             return notification.relatedId
         }
         

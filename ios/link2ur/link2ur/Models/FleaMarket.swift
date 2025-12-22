@@ -172,6 +172,7 @@ struct MyFavoritesResponse: Decodable {
     let total: Int
     let page: Int
     let pageSize: Int
+    let hasMore: Bool?
     
     struct FavoriteItem: Decodable {
         let id: Int
@@ -187,7 +188,8 @@ struct MyFavoritesResponse: Decodable {
     
     enum CodingKeys: String, CodingKey {
         case items, total, page
-        case pageSize = "page_size"
+        case pageSize
+        case hasMore
     }
 }
 
