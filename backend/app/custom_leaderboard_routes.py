@@ -1439,6 +1439,15 @@ async def get_item_votes(
     # 构建返回数据
     votes_out = []
     for vote in votes:
+        # 对于非匿名用户，包含完整的用户信息（名字和头像）
+        author_info = None
+        if not vote.is_anonymous and vote.user:
+            author_info = {
+                "id": vote.user.id,
+                "name": vote.user.name or f"用户{vote.user.id}",
+                "avatar": vote.user.avatar or ""
+            }
+        
         vote_dict = {
             "id": vote.id,
             "item_id": vote.item_id,
@@ -1448,6 +1457,7 @@ async def get_item_votes(
             "is_anonymous": vote.is_anonymous,
             "like_count": vote.like_count or 0,  # 留言点赞数
             "user_liked": vote.id in user_liked_votes if current_user else None,  # 当前用户是否已点赞
+            "author": author_info,  # 添加用户信息（非匿名用户显示真实名字和头像）
             "created_at": vote.created_at,
             "updated_at": vote.updated_at
         }
