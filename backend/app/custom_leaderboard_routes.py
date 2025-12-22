@@ -1337,14 +1337,19 @@ async def get_item_detail(
     created_at = item.created_at if item.created_at is not None else get_utc_time()
     updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
     
-    # 加载提交者信息（非匿名用户显示真实名字和头像）
+    # 加载提交者信息（通过显式查询避免懒加载问题）
     submitter_info = None
-    if item.submitter:
-        submitter_info = {
-            "id": item.submitter.id,
-            "name": item.submitter.name or f"用户{item.submitter.id}",
-            "avatar": item.submitter.avatar or ""
-        }
+    if item.submitted_by:
+        submitter_result = await db.execute(
+            select(models.User).where(models.User.id == item.submitted_by)
+        )
+        submitter = submitter_result.scalar_one_or_none()
+        if submitter:
+            submitter_info = {
+                "id": submitter.id,
+                "name": submitter.name or f"用户{submitter.id}",
+                "avatar": submitter.avatar or ""
+            }
     
     item_dict = {
         "id": item.id,
