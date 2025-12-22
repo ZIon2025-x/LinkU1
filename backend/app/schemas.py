@@ -2769,6 +2769,7 @@ class LeaderboardVoteOut(BaseModel):
     is_anonymous: bool  # 是否匿名
     like_count: int = 0  # 留言点赞数
     user_liked: Optional[bool] = None  # 当前用户是否已点赞（如果已登录）
+    author: Optional[dict] = None  # 非匿名用户的信息（包含 id, name, avatar）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
