@@ -951,8 +951,9 @@ async def get_notifications(
     for notification in notifications:
         notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
         
-        # 如果是 application_message 或 negotiation_offer 类型，related_id 是 application_id
-        if notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
+        # 对于需要从 TaskApplication 表查询 task_id 的通知类型
+        # application_message, negotiation_offer, task_application 的 related_id 都是 application_id
+        if notification.type in ["application_message", "negotiation_offer", "task_application"] and notification.related_id:
             try:
                 # 通过 application_id 查询 task_id
                 application_query = select(models.TaskApplication).where(
@@ -963,13 +964,10 @@ async def get_notifications(
                 
                 if application:
                     notification_dict["task_id"] = application.task_id
+                else:
+                    logger.warning(f"Application not found for notification {notification.id}, related_id: {notification.related_id}")
             except Exception as e:
                 logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
-        # 如果是 task_application 类型，related_id 应该是 task_id（但为了安全，也设置 task_id 字段）
-        elif notification.type == "task_application" and notification.related_id:
-            # 对于 task_application 类型，related_id 应该就是 task_id
-            # 但为了确保一致性，也设置 task_id 字段
-            notification_dict["task_id"] = notification.related_id
         
         result.append(schemas.NotificationOut(**notification_dict))
     
