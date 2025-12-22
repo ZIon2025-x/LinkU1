@@ -1428,6 +1428,7 @@ async def get_item_votes(
     
     # 批量查询非匿名用户的信息（避免N+1查询）
     non_anonymous_user_ids = [vote.user_id for vote in votes if not vote.is_anonymous]
+    logger.info(f"非匿名用户ID列表: {non_anonymous_user_ids}")
     users_map = {}
     if non_anonymous_user_ids:
         users_result = await db.execute(
@@ -1435,6 +1436,7 @@ async def get_item_votes(
         )
         users = users_result.scalars().all()
         users_map = {user.id: user for user in users}
+        logger.info(f"查询到的用户数量: {len(users)}, 用户信息: {[(u.id, u.name, u.avatar) for u in users]}")
     
     # 查询当前用户对留言的点赞状态
     user_liked_votes = set()
@@ -1458,12 +1460,14 @@ async def get_item_votes(
         author_info = None
         if not vote.is_anonymous:
             user = users_map.get(vote.user_id)
+            logger.info(f"Vote {vote.id}: user_id={vote.user_id}, is_anonymous={vote.is_anonymous}, found_user={user is not None}")
             if user:
                 author_info = {
                     "id": user.id,
                     "name": user.name or f"用户{user.id}",
                     "avatar": user.avatar or ""
                 }
+                logger.info(f"Vote {vote.id}: author_info={author_info}")
         
         vote_dict = {
             "id": vote.id,
