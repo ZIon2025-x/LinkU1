@@ -11,9 +11,9 @@ public final class ImageCache: ObservableObject {
     private let cacheDirectory: URL
     
     private init() {
-        // 配置内存缓存
-        cache.countLimit = 100
-        cache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+        // 配置内存缓存（优化：减少内存占用）
+        cache.countLimit = 50  // 减少缓存数量
+        cache.totalCostLimit = 30 * 1024 * 1024 // 30MB（减少内存占用）
         
         // 创建磁盘缓存目录
         let urls = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
@@ -51,8 +51,8 @@ public final class ImageCache: ObservableObject {
             .map { data, _ -> UIImage? in
                 // 优化：在后台线程解码图片
                 guard let image = UIImage(data: data) else { return nil }
-                // 优化图片大小（减少内存占用）- 限制最大尺寸为 2048x2048
-                return self.optimizeImageSize(image, maxSize: CGSize(width: 2048, height: 2048))
+                // 优化图片大小（减少内存占用）- 限制最大尺寸为 1200x1200（优化性能）
+                return self.optimizeImageSize(image, maxSize: CGSize(width: 1200, height: 1200))
             }
             .catch { _ in Just(nil) }
             .handleEvents(receiveOutput: { [weak self] image in

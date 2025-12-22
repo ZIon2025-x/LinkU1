@@ -73,36 +73,24 @@ struct LocationInputField: View {
         HStack(spacing: 8) {
             // 位置输入框
             HStack(spacing: 10) {
-                // Online 切换按钮
+                // Online 切换按钮（只显示图标）
                 if showOnlineOption {
                     Button(action: {
                         toggleOnline()
                         HapticFeedback.medium()
                     }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: isOnline ? "globe.americas.fill" : "mappin.and.ellipse")
-                                .font(.system(size: 14, weight: .bold))
-                            
-                            if isOnline {
-                                Text("Online")
-                                    .font(.system(size: 11, weight: .heavy))
-                                    .textCase(.uppercase)
-                            } else {
-                                Text("线上")
-                                    .font(.system(size: 11, weight: .bold))
-                            }
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(isOnline ? AppColors.success.opacity(0.12) : AppColors.primary.opacity(0.08))
-                        )
-                        .foregroundColor(isOnline ? AppColors.success : AppColors.primary)
-                        .overlay(
-                            Capsule()
-                                .stroke(isOnline ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.15), lineWidth: 1)
-                        )
+                        Image(systemName: isOnline ? "globe.americas.fill" : "mappin.and.ellipse")
+                            .font(.system(size: 16, weight: .bold))
+                            .frame(width: 32, height: 32)
+                            .background(
+                                Circle()
+                                    .fill(isOnline ? AppColors.success.opacity(0.12) : AppColors.primary.opacity(0.08))
+                            )
+                            .foregroundColor(isOnline ? AppColors.success : AppColors.primary)
+                            .overlay(
+                                Circle()
+                                    .stroke(isOnline ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.15), lineWidth: 1)
+                            )
                     }
                     .buttonStyle(PlainButtonStyle())
                 }

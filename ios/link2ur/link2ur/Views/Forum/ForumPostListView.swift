@@ -7,6 +7,7 @@ struct ForumPostListView: View {
     @State private var searchText = ""
     @State private var showCreatePost = false
     @State private var showLogin = false
+    @State private var searchTask: DispatchWorkItem?
     
     var body: some View {
         ZStack {
@@ -63,10 +64,40 @@ struct ForumPostListView: View {
             LoginView()
         }
         .refreshable {
-            viewModel.loadPosts(categoryId: category?.id, forceRefresh: true)
+            let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            // 确保始终传递 categoryId，限制在当前板块
+            viewModel.loadPosts(
+                categoryId: category?.id,
+                keyword: keyword.isEmpty ? nil : keyword,
+                forceRefresh: true
+            )
         }
-        .onAppear {
-            viewModel.loadPosts(categoryId: category?.id)
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
+            if viewModel.posts.isEmpty && !viewModel.isLoading {
+                // 确保传递 categoryId，限制在当前板块
+                viewModel.loadPosts(categoryId: category?.id)
+            }
+        }
+        .onChange(of: searchText) { newValue in
+            // 取消之前的搜索任务
+            searchTask?.cancel()
+            
+            // 创建新的搜索任务（防抖）
+            let keyword = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            let workItem = DispatchWorkItem {
+                // 确保始终传递 categoryId，即使搜索也要限制在当前板块
+                // 这样搜索时只会搜索当前板块的帖子，不会搜索所有板块
+                viewModel.loadPosts(
+                    categoryId: category?.id,  // 始终传递 categoryId，限制在当前板块
+                    keyword: keyword.isEmpty ? nil : keyword,
+                    forceRefresh: true
+                )
+            }
+            searchTask = workItem
+            
+            // 延迟500ms执行搜索
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
         }
     }
 }

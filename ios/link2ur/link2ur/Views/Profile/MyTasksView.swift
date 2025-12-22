@@ -11,13 +11,6 @@ struct MyTasksView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 统计概览（参考 frontend）- 固定区域，不参与刷新
-                StatsOverviewView(viewModel: viewModel)
-                    .padding(.vertical, AppSpacing.md)
-                    .background(AppColors.cardBackground)
-                
-                Divider()
-                
                 // 标签页（参考 frontend）
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppSpacing.sm) {
@@ -99,13 +92,18 @@ struct MyTasksView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .onAppear {
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
             // 设置当前用户ID
             if let userId = appState.currentUser?.id {
                 viewModel.currentUserId = userId
             }
-            // 每次页面出现时都刷新数据，确保申请状态是最新的
-            viewModel.loadTasks()
+            // 延迟加载数据，避免在页面出现时立即加载导致卡顿
+            if viewModel.tasks.isEmpty && !viewModel.isLoading {
+                // 延迟100ms加载，让页面先渲染完成
+                try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000)
+                viewModel.loadTasks()
+            }
         }
         .onChange(of: appState.currentUser?.id) { newUserId in
             // 当用户ID变化时更新
@@ -145,95 +143,6 @@ struct MyTasksView: View {
         case .cancelled:
             return "您还没有已取消的任务"
         }
-    }
-}
-
-// 统计概览组件（参考 frontend）
-struct StatsOverviewView: View {
-    @ObservedObject var viewModel: MyTasksViewModel
-    
-    var body: some View {
-        HStack(spacing: AppSpacing.xs) {
-            MyTasksStatItem(
-                value: "\(viewModel.totalTasksCount)",
-                label: "总任务",
-                color: AppColors.primary
-            )
-            
-            MyTasksStatItem(
-                value: "\(viewModel.postedTasksCount)",
-                label: "我发布的",
-                color: AppColors.success
-            )
-            
-            MyTasksStatItem(
-                value: "\(viewModel.takenTasksCount)",
-                label: "我接受的",
-                color: AppColors.warning
-            )
-            
-            MyTasksStatItem(
-                value: "\(viewModel.completedTasksCount)",
-                label: "已完成",
-                color: AppColors.textSecondary
-            )
-        }
-        .padding(.horizontal, AppSpacing.md)
-    }
-}
-
-struct MyTasksStatItem: View {
-    let value: String
-    let label: String
-    let color: Color
-    
-    private var icon: String {
-        switch label {
-        case "总任务": return "list.bullet.rectangle"
-        case "我发布的": return "square.and.pencil"
-        case "我接受的": return "hand.raised.fill"
-        case "已完成": return "checkmark.circle.fill"
-        default: return "doc.text.fill"
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: AppSpacing.sm) {
-            // 图标
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [color.opacity(0.2), color.opacity(0.1)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(color)
-            }
-            
-            // 数值
-            Text(value)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(color)
-            
-            // 标签
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(AppColors.textSecondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 100)
-        .padding(.vertical, AppSpacing.md)
-        .padding(.horizontal, AppSpacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                .fill(AppColors.cardBackground)
-        )
-        .shadow(color: color.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -332,7 +241,7 @@ struct MyTasksApplicationCard: View {
                 HStack(spacing: 0) {
                     InfoItemCompact(icon: "dollarsign.circle.fill", text: "£\(String(format: "%.2f", application.taskReward))", color: AppColors.success)
                     Spacer()
-                    InfoItemCompact(icon: "mappin.circle.fill", text: application.taskLocation, color: AppColors.primary)
+                    InfoItemCompact(icon: "mappin.circle.fill", text: application.taskLocation.obfuscatedLocation, color: AppColors.primary)
                 }
                 
                 InfoItemCompact(icon: "calendar", text: DateFormatterHelper.shared.formatFullTime(application.createdAt), color: AppColors.textSecondary)

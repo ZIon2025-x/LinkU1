@@ -160,10 +160,11 @@ struct TabButton: View {
 // 推荐内容视图（原来的首页内容）
 struct RecommendedContentView: View {
     @EnvironmentObject var appState: AppState
+    @State private var hasAppeared = false
     
     var body: some View {
         ScrollView {
-            VStack(spacing: AppSpacing.lg) {
+            LazyVStack(spacing: AppSpacing.lg) {
                 // 顶部欢迎区域（符合 Apple HIG，使用系统字体和间距）
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack(alignment: .top, spacing: AppSpacing.md) {
@@ -191,19 +192,45 @@ struct RecommendedContentView: View {
                 .padding(.top, AppSpacing.lg)
                 .padding(.bottom, AppSpacing.md)
                 
-                // 广告轮播
+                // 广告轮播（优先加载）
                 BannerCarouselSection()
-                    .id("BannerCarouselSection") // 添加 ID 以便调试
+                    .id("BannerCarouselSection")
                 
-                // 推荐任务
+                // 推荐任务（优先加载）
                 RecommendedTasksSection()
                 
-                // 热门活动
-                PopularActivitiesSection()
+                // 热门活动（延迟加载，优化首次加载性能）
+                if hasAppeared {
+                    PopularActivitiesSection()
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                } else {
+                    // 占位符，保持布局稳定
+                    Color.clear
+                        .frame(height: 200)
+                }
                 
-                // 最新动态
-                RecentActivitiesSection()
-                .padding(.bottom, AppSpacing.xl)
+                // 最新动态（延迟加载，优化首次加载性能）
+                if hasAppeared {
+                    RecentActivitiesSection()
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                } else {
+                    // 占位符，保持布局稳定
+                    Color.clear
+                        .frame(height: 150)
+                }
+                
+                Spacer()
+                    .frame(height: AppSpacing.xl)
+            }
+        }
+        .onAppear {
+            // 延迟加载非关键内容，优化首次加载性能
+            // 先加载关键内容（广告和推荐任务），然后延迟加载其他内容
+            if !hasAppeared {
+                // 延迟300ms加载非关键内容，让关键内容先显示
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    hasAppeared = true
+                }
             }
         }
     }
@@ -258,21 +285,34 @@ struct NearbyTasksView: View {
                 }
             }
         }
-        .onAppear {
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
             initializeLocationService(
                 locationService: locationService,
                 viewName: "NearbyTasksView"
             ) {
-                if viewModel.tasks.isEmpty {
-                    viewModel.loadTasks(status: "open", sortBy: "distance")
+                // 延迟加载任务，避免阻塞主线程
+                if viewModel.tasks.isEmpty && !viewModel.isLoading {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        // 获取用户当前城市，显示所有同城任务，按距离排序
+                        let city = locationService.currentCityName
+                        viewModel.loadTasks(city: city, status: "open", sortBy: "distance")
+                    }
                 }
             }
         }
+        .onChange(of: locationService.currentCityName) { cityName in
+            // 当城市更新时，重新加载同城任务
+            if let cityName = cityName, !cityName.isEmpty {
+                print("🏠 [NearbyTasksView] 城市已更新: \(cityName)，加载同城任务列表...")
+                viewModel.loadTasks(city: cityName, status: "open", sortBy: "distance", forceRefresh: true)
+            }
+        }
         .onChange(of: locationService.currentLocation) { newLocation in
-            // 当位置更新时，如果任务列表为空，自动加载任务
-            if let _ = newLocation, viewModel.tasks.isEmpty {
-                print("🏠 [NearbyTasksView] 位置已更新，加载任务列表...")
-                viewModel.loadTasks(status: "open", sortBy: "distance")
+            // 当位置更新时，如果任务列表为空且城市名可用，自动加载任务
+            if let _ = newLocation, let cityName = locationService.currentCityName, !cityName.isEmpty, viewModel.tasks.isEmpty {
+                print("🏠 [NearbyTasksView] 位置已更新，加载同城任务列表...")
+                viewModel.loadTasks(city: cityName, status: "open", sortBy: "distance")
             }
         }
         .refreshable {
@@ -282,8 +322,9 @@ struct NearbyTasksView: View {
                 print("🔄 [NearbyTasksView] 刷新位置...")
                 locationService.requestLocation()
             }
-            // 只加载开放中的任务（不指定城市，使用距离排序）
-            viewModel.loadTasks(status: "open", sortBy: "distance", forceRefresh: true)
+            // 加载所有同城任务，按距离排序
+            let city = locationService.currentCityName
+            viewModel.loadTasks(city: city, status: "open", sortBy: "distance", forceRefresh: true)
         }
     }
 }
@@ -540,7 +581,8 @@ struct TaskExpertListContentView: View {
                 }
             )
         }
-        .onAppear {
+        .task {
+            // 使用 task 替代 onAppear，避免重复调用
             initializeLocationService(
                 locationService: locationService,
                 viewName: "TaskExpertListContentView"
@@ -1295,15 +1337,16 @@ struct RecommendedTasksSection: View {
                                     .frame(width: 200)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .drawingGroup() // 优化复杂视图的渲染性能
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
                 }
             }
         }
-        .onAppear {
-            if viewModel.tasks.isEmpty {
-                // 只加载开放中的任务
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
+            if viewModel.tasks.isEmpty && !viewModel.isLoading {
                 viewModel.loadTasks(status: "open")
             }
         }
@@ -1336,12 +1379,14 @@ struct RecentActivitiesSection: View {
                 )
                 .padding(AppSpacing.md)
             } else {
-                ForEach(Array(viewModel.activities.enumerated()), id: \.element.id) { index, activity in
+                // 限制最多显示15条
+                ForEach(Array(viewModel.activities.prefix(15).enumerated()), id: \.element.id) { index, activity in
                     ActivityRow(activity: activity)
                         .onAppear {
-                            // 当显示最后3个项目时，加载更多
-                            let threshold = viewModel.activities.count - 3
-                            if index >= threshold && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading {
+                            // 当显示最后3个项目时，加载更多（但不超过15条）
+                            let displayedCount = min(15, viewModel.activities.count)
+                            let threshold = max(0, displayedCount - 3)
+                            if index >= threshold && viewModel.hasMore && !viewModel.isLoadingMore && !viewModel.isLoading && viewModel.activities.count < 15 {
                                 viewModel.loadMoreActivities()
                             }
                         }
@@ -1367,8 +1412,9 @@ struct RecentActivitiesSection: View {
                 }
             }
         }
-        .onAppear {
-            if viewModel.activities.isEmpty {
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
+            if viewModel.activities.isEmpty && !viewModel.isLoading {
                 viewModel.loadRecentActivities()
             }
         }
@@ -1523,9 +1569,10 @@ struct PopularActivitiesSection: View {
                 }
             }
         }
-        .onAppear {
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
             // 只加载状态为 "open" 的活动（开放中的活动）
-            if viewModel.activities.isEmpty {
+            if viewModel.activities.isEmpty && !viewModel.isLoading {
                 viewModel.loadActivities(status: "open", includeEnded: false)
             }
         }
@@ -1570,8 +1617,11 @@ struct BannerCarouselSection: View {
                 BannerCarouselView(banners: viewModel.banners)
             }
         }
-        .onAppear {
-            viewModel.loadBanners()
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
+            if viewModel.banners.isEmpty && !viewModel.isLoading {
+                viewModel.loadBanners()
+            }
         }
     }
 }
@@ -1680,37 +1730,56 @@ struct ActivityCardPlaceholder: View {
 }
 
 // MARK: - Location Service Helper
-/// 初始化位置服务（提取重复逻辑）
+/// 初始化位置服务（提取重复逻辑，添加防重复调用机制）
+private var locationServiceInitialized = Set<String>()
+
 fileprivate func initializeLocationService(
     locationService: LocationService,
     viewName: String,
     onLocationReady: @escaping () -> Void
 ) {
-    Logger.debug("\(viewName) onAppear - 开始初始化", category: .ui)
-    Logger.debug("\(viewName) 位置服务状态:", category: .ui)
-    Logger.debug("  - 授权状态: \(locationService.authorizationStatus.rawValue)", category: .ui)
-    Logger.debug("  - 是否已授权: \(locationService.isAuthorized)", category: .ui)
-    Logger.debug("  - 当前位置: \(locationService.currentLocation != nil ? "已获取" : "未获取")", category: .ui)
-    
-    // 请求位置权限（用于距离排序）
-    if !locationService.isAuthorized {
-        Logger.debug("\(viewName) 请求位置权限...", category: .ui)
-        locationService.requestAuthorization()
-    } else {
-        Logger.debug("\(viewName) 位置权限已授权，开始更新位置...", category: .ui)
-        locationService.startUpdatingLocation()
-        // 也主动请求一次位置（如果还没有）
-        if locationService.currentLocation == nil {
-            Logger.debug("\(viewName) 主动请求位置...", category: .ui)
-            locationService.requestLocation()
+    // 防止重复初始化（同一视图多次调用）
+    if locationServiceInitialized.contains(viewName) {
+        Logger.debug("\(viewName) 位置服务已初始化，跳过重复调用", category: .ui)
+        // 如果已有位置，立即执行回调
+        if locationService.currentLocation != nil {
+            onLocationReady()
         }
+        return
     }
     
-    // 如果有位置，立即执行回调；否则等待位置更新
-    if locationService.currentLocation != nil {
-        Logger.debug("\(viewName) 位置已可用", category: .ui)
-        onLocationReady()
-    } else {
-        Logger.debug("\(viewName) 等待位置获取...", category: .ui)
+    locationServiceInitialized.insert(viewName)
+    
+    // 使用后台线程处理，避免阻塞主线程
+    DispatchQueue.global(qos: .userInitiated).async {
+        let isAuthorized = locationService.isAuthorized
+        let hasLocation = locationService.currentLocation != nil
+        
+        DispatchQueue.main.async {
+            // 请求位置权限（用于距离排序）
+            if !isAuthorized {
+                locationService.requestAuthorization()
+            } else if !hasLocation {
+                // 延迟请求位置，避免阻塞主线程
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    locationService.requestLocation()
+                }
+            }
+            
+            // 如果有位置，延迟执行回调，避免阻塞主线程
+            if hasLocation {
+                // 延迟执行，让视图先渲染完成
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    onLocationReady()
+                }
+            } else {
+                // 延迟执行回调，避免阻塞主线程
+                // 位置更新会通过 onChange 监听器触发
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    // 如果位置仍未获取，也执行回调（使用默认排序）
+                    onLocationReady()
+                }
+            }
+        }
     }
 }

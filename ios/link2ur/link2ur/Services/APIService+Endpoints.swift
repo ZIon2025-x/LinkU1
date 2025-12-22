@@ -385,9 +385,19 @@ extension APIService {
     /// 获取帖子列表
     func getForumPosts(page: Int = 1, pageSize: Int = 20, categoryId: Int? = nil, sort: String = "latest", keyword: String? = nil) -> AnyPublisher<ForumPostListResponse, APIError> {
         var endpoint = "/api/forum/posts?page=\(page)&page_size=\(pageSize)&sort=\(sort)"
-        if let categoryId = categoryId { endpoint += "&category_id=\(categoryId)" }
-        if let keyword = keyword { endpoint += "&q=\(keyword)" }
-        endpoint = endpoint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? endpoint
+        // 确保 categoryId 被正确传递（即使搜索时也要限制在当前板块）
+        if let categoryId = categoryId { 
+            endpoint += "&category_id=\(categoryId)" 
+        }
+        if let keyword = keyword, !keyword.isEmpty { 
+            // 对关键词进行 URL 编码
+            if let encodedKeyword = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                endpoint += "&q=\(encodedKeyword)"
+            } else {
+                endpoint += "&q=\(keyword)"
+            }
+        }
+        Logger.debug("论坛帖子 API 请求: \(endpoint)", category: .api)
         return request(ForumPostListResponse.self, endpoint)
     }
     

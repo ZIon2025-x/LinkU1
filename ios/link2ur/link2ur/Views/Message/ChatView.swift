@@ -102,12 +102,11 @@ struct ChatView: View {
                                     .padding(.top, 100)
                                 } else {
                                     LazyVStack(spacing: AppSpacing.sm) {
-                                        ForEach(viewModel.messages) { message in
+                                        ForEach(viewModel.messages, id: \.id) { message in
                                             MessageBubble(
                                                 message: message,
                                                 isFromCurrentUser: isMessageFromCurrentUser(message)
                                             )
-                                            .id(message.id)
                                         }
                                     }
                                     .padding(.horizontal, AppSpacing.md)

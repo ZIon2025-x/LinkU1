@@ -279,7 +279,7 @@ struct ProfileView: View {
             .toolbar {
                 if appState.isAuthenticated {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(destination: EditProfileView()) {
+                        NavigationLink(destination: EditProfileView(viewModel: EditProfileViewModel(currentUser: appState.currentUser))) {
                             Image(systemName: "pencil")
                                 .foregroundColor(AppColors.primary)
                         }

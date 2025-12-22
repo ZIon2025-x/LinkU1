@@ -264,6 +264,9 @@ struct TaskChatView: View {
     @State private var showTaskDetail = false
     @State private var selectedImage: UIImage?
     @State private var showCustomerService = false
+    @State private var showLocationDetail = false
+    @State private var taskDetail: Task?
+    @StateObject private var taskDetailViewModel = TaskDetailViewModel()
     
     // 计算键盘避让的底部 padding
     private var keyboardPadding: CGFloat {
@@ -576,6 +579,7 @@ struct TaskChatView: View {
                         // 功能菜单面板
                         if showActionMenu {
                             ChatActionMenuView(
+                                taskStatus: taskChat?.taskStatus ?? taskChat?.status,
                                 onImagePicker: {
                                     showActionMenu = false
                                     showImagePicker = true
@@ -583,6 +587,10 @@ struct TaskChatView: View {
                                 onViewTaskDetail: {
                                     showActionMenu = false
                                     showTaskDetail = true
+                                },
+                                onViewLocationDetail: {
+                                    showActionMenu = false
+                                    loadTaskDetailAndShowLocation()
                                 }
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -645,6 +653,29 @@ struct TaskChatView: View {
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
+        }
+        .sheet(isPresented: $showLocationDetail) {
+            NavigationStack {
+                if let task = taskDetail {
+                    TaskLocationDetailView(
+                        location: task.location,
+                        latitude: task.latitude,
+                        longitude: task.longitude
+                    )
+                } else if let task = taskDetailViewModel.task {
+                    TaskLocationDetailView(
+                        location: task.location,
+                        latitude: task.latitude,
+                        longitude: task.longitude
+                    )
+                }
+            }
+        }
+        .onReceive(taskDetailViewModel.$task.compactMap { $0 }) { task in
+            // 当任务加载完成时，如果 showLocationDetail 为 true，更新 taskDetail
+            if showLocationDetail && taskDetail == nil {
+                taskDetail = task
+            }
         }
         .onChange(of: selectedImage) { newImage in
             if let image = newImage {
@@ -777,6 +808,17 @@ struct TaskChatView: View {
     }
     
     // 判断是否为系统消息
+    // 加载任务详情并显示位置
+    private func loadTaskDetailAndShowLocation() {
+        // 先设置 showLocationDetail 为 true，这样 onReceive 可以捕获任务加载
+        showLocationDetail = true
+        taskDetailViewModel.loadTask(taskId: taskId)
+        // 如果任务已经加载，立即设置 taskDetail
+        if let task = taskDetailViewModel.task {
+            taskDetail = task
+        }
+    }
+    
     private func isSystemMessage(_ message: Message) -> Bool {
         // 系统消息的特征：msgType 为 system，或者 senderId 为 nil
         return message.msgType == .system || message.senderId == nil
@@ -867,8 +909,16 @@ struct SystemMessageBubble: View {
 
 // 聊天功能菜单组件
 struct ChatActionMenuView: View {
+    let taskStatus: String?
     let onImagePicker: () -> Void
     let onViewTaskDetail: () -> Void
+    let onViewLocationDetail: () -> Void
+    
+    // 判断是否应该显示详细地址按钮（仅在 in_progress 或 pending_confirmation 时显示）
+    private var shouldShowLocationDetail: Bool {
+        guard let status = taskStatus?.lowercased() else { return false }
+        return status == "in_progress" || status == "pending_confirmation"
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -891,6 +941,16 @@ struct ChatActionMenuView: View {
                     color: AppColors.primary,
                     action: onViewTaskDetail
                 )
+                
+                // 详细地址（仅在任务进行中或待确认时显示）
+                if shouldShowLocationDetail {
+                    ChatActionButton(
+                        icon: "mappin.circle.fill",
+                        title: "详细地址",
+                        color: AppColors.warning,
+                        action: onViewLocationDetail
+                    )
+                }
                 
                 Spacer()
             }

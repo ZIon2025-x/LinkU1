@@ -120,14 +120,16 @@ struct TasksView: View {
                                 GridItem(.flexible(), spacing: AppSpacing.md),
                                 GridItem(.flexible(), spacing: AppSpacing.md)
                             ], spacing: AppSpacing.md) {
-                                ForEach(viewModel.tasks) { task in
+                                ForEach(viewModel.tasks, id: \.id) { task in
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                         TaskCard(task: task)
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     .onAppear {
-                                        // 当显示最后一个任务时，加载更多
-                                        if task.id == viewModel.tasks.last?.id {
+                                        // 性能优化：只在接近最后一个任务时加载更多（提前3个）
+                                        let threshold = max(0, viewModel.tasks.count - 3)
+                                        if let index = viewModel.tasks.firstIndex(where: { $0.id == task.id }),
+                                           index >= threshold {
                                             viewModel.loadMoreTasks()
                                         }
                                     }
@@ -154,24 +156,41 @@ struct TasksView: View {
             .sheet(isPresented: $showFilter) {
                 TaskFilterView(selectedCategory: $selectedCategory, selectedCity: $selectedCity)
             }
-            // 性能优化：合并 onChange，避免重复调用 applyFilters
+            // 性能优化：合并 onChange，使用防抖避免频繁调用
             .onChange(of: selectedCategory) { _ in
-                applyFilters()
+                applyFiltersWithDebounce()
             }
             .onChange(of: selectedCity) { _ in
-                applyFilters()
+                applyFiltersWithDebounce()
             }
             .refreshable {
                 // 强制刷新，清除缓存并重新加载
                 viewModel.loadTasks(status: "open", forceRefresh: true)
             }
-            .onAppear {
-                if viewModel.tasks.isEmpty {
+            .task {
+                // 使用 task 替代 onAppear，避免重复加载
+                if viewModel.tasks.isEmpty && !viewModel.isLoading {
                     // 默认只加载开放中的任务
                     viewModel.loadTasks(status: "open")
                 }
             }
         }
+    
+    @State private var filterWorkItem: DispatchWorkItem?
+    
+    private func applyFiltersWithDebounce() {
+        // 取消之前的任务
+        filterWorkItem?.cancel()
+        
+        // 创建新的防抖任务
+        let workItem = DispatchWorkItem {
+            applyFilters()
+        }
+        filterWorkItem = workItem
+        
+        // 延迟300ms执行，避免频繁调用
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+    }
     
     private func applyFilters() {
         // 重新加载任务，应用筛选条件（只显示开放中的任务）

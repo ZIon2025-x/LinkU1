@@ -53,11 +53,8 @@ class ForumViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    // error 已经是 APIError 类型，直接使用
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -77,8 +74,14 @@ class ForumViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func loadPosts(categoryId: Int? = nil, page: Int = 1, forceRefresh: Bool = false) {
+    func loadPosts(categoryId: Int? = nil, keyword: String? = nil, page: Int = 1, forceRefresh: Bool = false) {
         let startTime = Date()
+        
+        // 防止重复请求
+        guard !isLoading || page > 1 else {
+            Logger.warning("论坛帖子请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
         
         isLoading = true
         
@@ -87,8 +90,8 @@ class ForumViewModel: ObservableObject {
             CacheManager.shared.invalidateForumPostsCache()
         }
         
-        // 尝试从缓存加载数据（仅第一页，且非强制刷新）
-        if page == 1 && !forceRefresh {
+        // 尝试从缓存加载数据（仅第一页，且非强制刷新，且无搜索关键词）
+        if page == 1 && !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
             if let cachedPosts = CacheManager.shared.loadForumPosts(categoryId: categoryId) {
                 self.posts = cachedPosts
                 Logger.success("从缓存加载了 \(self.posts.count) 个帖子", category: .cache)
@@ -97,12 +100,24 @@ class ForumViewModel: ObservableObject {
             }
         }
         
-        var endpoint = "/api/forum/posts?page=\(page)&page_size=20"
+        // 使用 APIService 的 getForumPosts 方法，支持 keyword 参数
+        // 确保传递 categoryId，限制搜索范围在当前板块
+        Logger.debug("加载论坛帖子 - categoryId: \(categoryId?.description ?? "nil"), keyword: \(keyword?.description ?? "nil")", category: .api)
+        
+        // 构建 endpoint 字符串用于性能监控
+        var endpoint = "/api/forum/posts?page=\(page)&page_size=20&sort=latest"
         if let categoryId = categoryId {
             endpoint += "&category_id=\(categoryId)"
         }
+        if let keyword = keyword, !keyword.isEmpty {
+            if let encodedKeyword = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                endpoint += "&q=\(encodedKeyword)"
+            } else {
+                endpoint += "&q=\(keyword)"
+            }
+        }
         
-        apiService.request(ForumPostListResponse.self, endpoint, method: "GET")
+        apiService.getForumPosts(page: page, pageSize: 20, categoryId: categoryId, sort: "latest", keyword: keyword)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
@@ -116,11 +131,8 @@ class ForumViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    // error 已经是 APIError 类型，直接使用
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -171,11 +183,8 @@ class ForumPostDetailViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载帖子详情")
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    // error 已经是 APIError 类型，直接使用
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] post in
                 self?.post = post
@@ -192,11 +201,8 @@ class ForumPostDetailViewModel: ObservableObject {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载帖子回复")
                     Logger.error("加载回复失败: \(error.localizedDescription)", category: .api)
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    // error 已经是 APIError 类型，直接使用
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] response in
                 Logger.success("成功加载 \(response.replies.count) 条回复", category: .api)

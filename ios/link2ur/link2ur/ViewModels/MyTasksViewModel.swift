@@ -101,39 +101,79 @@ class MyTasksViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    // 统计数据
+    // 缓存统计数据，避免重复计算
+    private var cachedStats: (total: Int, posted: Int, taken: Int, completed: Int, pending: Int)?
+    private var lastTasksCount: Int = 0
+    private var lastApplicationsCount: Int = 0
+    private var lastUserId: String?
+    
+    // 统计数据（使用缓存优化性能）
     var totalTasksCount: Int {
-        tasks.count
+        updateStatsIfNeeded()
+        return cachedStats?.total ?? 0
     }
     
     var postedTasksCount: Int {
-        guard let userId = currentUserId else { return 0 }
-        return tasks.filter { task in
-            if let posterId = task.posterId, String(posterId) == userId {
-                return task.status != .cancelled
-            }
-            return false
-        }.count
+        updateStatsIfNeeded()
+        return cachedStats?.posted ?? 0
     }
     
     var takenTasksCount: Int {
-        guard let userId = currentUserId else { return 0 }
-        return tasks.filter { task in
-            if let takerId = task.takerId, String(takerId) == userId {
-                return task.status != .cancelled
-            }
-            return false
-        }.count
+        updateStatsIfNeeded()
+        return cachedStats?.taken ?? 0
     }
     
     var completedTasksCount: Int {
-        tasks.filter { $0.status == .completed }.count
+        updateStatsIfNeeded()
+        return cachedStats?.completed ?? 0
     }
     
     var pendingApplicationsCount: Int {
-        applications.filter { app in
+        updateStatsIfNeeded()
+        return cachedStats?.pending ?? 0
+    }
+    
+    private func updateStatsIfNeeded() {
+        // 如果数据没有变化，使用缓存
+        if cachedStats != nil,
+           tasks.count == lastTasksCount,
+           applications.count == lastApplicationsCount,
+           currentUserId == lastUserId {
+            return
+        }
+        
+        // 重新计算统计数据
+        let total = tasks.count
+        let posted: Int
+        let taken: Int
+        let completed = tasks.filter { $0.status == .completed }.count
+        let pending = applications.filter { app in
             app.status == "pending" && app.taskStatus != "cancelled"
         }.count
+        
+        if let userId = currentUserId {
+            posted = tasks.filter { task in
+                if let posterId = task.posterId, String(posterId) == userId {
+                    return task.status != .cancelled
+                }
+                return false
+            }.count
+            
+            taken = tasks.filter { task in
+                if let takerId = task.takerId, String(takerId) == userId {
+                    return task.status != .cancelled
+                }
+                return false
+            }.count
+        } else {
+            posted = 0
+            taken = 0
+        }
+        
+        cachedStats = (total, posted, taken, completed, pending)
+        lastTasksCount = tasks.count
+        lastApplicationsCount = applications.count
+        lastUserId = currentUserId
     }
     
     // 获取待处理申请列表
@@ -143,37 +183,61 @@ class MyTasksViewModel: ObservableObject {
         }
     }
     
-    // 根据当前标签页获取过滤后的任务
+    // 缓存过滤后的任务，避免重复计算
+    private var cachedFilteredTasks: [Task]?
+    private var lastFilterKey: String = ""
+    
+    // 根据当前标签页获取过滤后的任务（使用缓存优化性能）
     func getFilteredTasks() -> [Task] {
         guard let userId = currentUserId else { return [] }
         
+        // 生成缓存键
+        let filterKey = "\(currentTab.rawValue)_\(userId)_\(tasks.count)"
+        
+        // 如果过滤条件没变，返回缓存
+        if let cached = cachedFilteredTasks, filterKey == lastFilterKey {
+            return cached
+        }
+        
+        // 重新计算过滤后的任务
+        let filtered: [Task]
         switch currentTab {
         case .all:
-            return tasks
+            filtered = tasks
         case .posted:
-            return tasks.filter { task in
+            filtered = tasks.filter { task in
                 if let posterId = task.posterId, String(posterId) == userId {
                     return task.status != .cancelled
                 }
                 return false
             }
         case .taken:
-            return tasks.filter { task in
+            filtered = tasks.filter { task in
                 if let takerId = task.takerId, String(takerId) == userId {
                     return task.status != .cancelled
                 }
                 return false
             }
         case .pending:
-            return [] // 待处理申请显示在单独的列表中
+            filtered = [] // 待处理申请显示在单独的列表中
         case .completed:
-            return tasks.filter { $0.status == .completed }
+            filtered = tasks.filter { $0.status == .completed }
         case .cancelled:
-            return tasks.filter { $0.status == .cancelled }
+            filtered = tasks.filter { $0.status == .cancelled }
         }
+        
+        cachedFilteredTasks = filtered
+        lastFilterKey = filterKey
+        return filtered
     }
     
     func loadTasks() {
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.warning("我的任务请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -252,6 +316,9 @@ class MyTasksViewModel: ObservableObject {
                 }
                 
                 self.tasks = filteredTasks
+                // 清除缓存，触发重新计算
+                self.cachedStats = nil
+                self.cachedFilteredTasks = nil
             })
             .store(in: &cancellables)
         
@@ -260,7 +327,10 @@ class MyTasksViewModel: ObservableObject {
             .sink(receiveCompletion: { _ in
                 // 静默处理错误，不影响主任务列表
             }, receiveValue: { [weak self] applications in
-                self?.applications = applications
+                guard let self = self else { return }
+                self.applications = applications
+                // 清除缓存，触发重新计算
+                self.cachedStats = nil
             })
             .store(in: &cancellables)
     }

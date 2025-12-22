@@ -13,7 +13,12 @@ public class AppState: ObservableObject {
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
     private var refreshTimer: Timer?
-    private let refreshInterval: TimeInterval = 30 // 每30秒刷新一次
+    private let refreshInterval: TimeInterval = 60 // 每60秒刷新一次（减少请求频率）
+    private var isLoadingNotificationCount = false // 防止重复请求
+    private var isLoadingMessageCount = false // 防止重复请求
+    private var lastNotificationRefreshTime: Date? // 记录上次刷新时间
+    private var lastMessageRefreshTime: Date? // 记录上次刷新时间
+    private let minRefreshInterval: TimeInterval = 5 // 最小刷新间隔（秒）
     
     public init() {
         setupNotifications()
@@ -35,11 +40,7 @@ public class AppState: ObservableObject {
                     WebSocketService.shared.connect(token: token, userId: user.id)
                 }
                 
-                // 加载未读通知数量
-                self?.loadUnreadNotificationCount()
-                self?.loadUnreadMessageCount()
-                
-                // 开始定期刷新未读数量
+                // 开始定期刷新未读数量（会立即加载一次）
                 self?.startPeriodicRefresh()
                 
                 // 登录成功后，请求位置权限并获取位置
@@ -73,21 +74,12 @@ public class AppState: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // 监听应用进入前台事件
+        // 监听应用进入前台事件（合并处理，避免重复调用）
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .merge(with: NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main) // 防抖，避免两个通知同时触发
             .sink { [weak self] _ in
-                // 应用进入前台时，立即刷新未读数量
-                if self?.isAuthenticated == true {
-                    self?.loadUnreadNotificationCount()
-                    self?.loadUnreadMessageCount()
-                }
-            }
-            .store(in: &cancellables)
-        
-        // 监听应用变为活跃状态
-        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
-            .sink { [weak self] _ in
-                // 应用变为活跃时，立即刷新未读数量
+                // 应用进入前台或变为活跃时，刷新未读数量
                 if self?.isAuthenticated == true {
                     self?.loadUnreadNotificationCount()
                     self?.loadUnreadMessageCount()
@@ -103,9 +95,24 @@ public class AppState: ObservableObject {
             return
         }
         
+        // 防止重复请求
+        guard !isLoadingNotificationCount else {
+            return
+        }
+        
+        // 检查最小刷新间隔
+        if let lastRefresh = lastNotificationRefreshTime,
+           Date().timeIntervalSince(lastRefresh) < minRefreshInterval {
+            return
+        }
+        
+        isLoadingNotificationCount = true
+        lastNotificationRefreshTime = Date()
+        
         apiService.getUnreadNotificationCount()
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingNotificationCount = false
                 if case .failure(let error) = result {
                     print("⚠️ 加载未读通知数量失败: \(error.localizedDescription)")
                 }
@@ -130,9 +137,24 @@ public class AppState: ObservableObject {
             return
         }
         
+        // 防止重复请求
+        guard !isLoadingMessageCount else {
+            return
+        }
+        
+        // 检查最小刷新间隔
+        if let lastRefresh = lastMessageRefreshTime,
+           Date().timeIntervalSince(lastRefresh) < minRefreshInterval {
+            return
+        }
+        
+        isLoadingMessageCount = true
+        lastMessageRefreshTime = Date()
+        
         apiService.getUnreadMessageCount()
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingMessageCount = false
                 if case .failure(let error) = result {
                     print("⚠️ 加载未读消息数量失败: \(error.localizedDescription)")
                 }
@@ -199,11 +221,7 @@ public class AppState: ObservableObject {
                         WebSocketService.shared.connect(token: token, userId: user.id)
                     }
                     
-                    // 加载未读通知数量
-                    self?.loadUnreadNotificationCount()
-                    self?.loadUnreadMessageCount()
-                    
-                    // 开始定期刷新未读数量
+                    // 开始定期刷新未读数量（会立即加载一次）
                     self?.startPeriodicRefresh()
                     
                     // 检查登录状态后，请求位置权限并获取位置

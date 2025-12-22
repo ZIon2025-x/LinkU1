@@ -289,19 +289,33 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             // 根据关闭代码决定是否重连
             // .goingAway (1001) = 正常关闭，不需要重连
             // .normalClosure (1000) = 正常关闭，不需要重连
-            // 4001 = 可能是认证失败或客户端错误，需要重新获取 token 或停止重连
+            // 4001 = 认证失败，需要检查token有效性
             // 其他代码 = 异常关闭，需要重连
             switch closeCode {
             case .goingAway, .normalClosure:
                 print("🔌 WebSocket 正常关闭，不重连")
                 self.reconnectAttempts = 0
             default:
-                // 处理 4001 错误代码（可能是认证失败）
+                // 处理 4001 错误代码（认证失败）
                 if closeCodeValue == 4001 {
-                    print("⚠️ WebSocket 关闭代码 4001（可能是认证失败），延迟重连")
-                    // 对于认证失败，延迟更长时间再重连，给用户时间重新登录
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                        self.reconnect()
+                    print("⚠️ WebSocket 关闭代码 4001（认证失败）")
+                    // 检查token是否存在
+                    if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty {
+                        print("⚠️ Token 存在，但认证失败，可能是token已过期。延迟重连（等待token刷新）")
+                        // 延迟重连，给token刷新机制时间
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                            // 再次检查token是否仍然存在
+                            if let newToken = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !newToken.isEmpty {
+                                self.reconnect()
+                            } else {
+                                print("❌ Token 已清除，停止 WebSocket 重连")
+                                self.reconnectAttempts = self.maxReconnectAttempts
+                            }
+                        }
+                    } else {
+                        print("❌ Token 不存在，停止 WebSocket 重连")
+                        // Token不存在，停止重连
+                        self.reconnectAttempts = self.maxReconnectAttempts
                     }
                 } else {
                     print("⚠️ WebSocket 异常关闭（代码: \(closeCodeValue)），尝试重连")

@@ -48,12 +48,13 @@ struct AsyncImageView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
                                 )
                         case .success(let image):
-                            // 加载成功
+                            // 加载成功（性能优化：使用 drawingGroup 优化渲染）
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: contentMode)
                                 .frame(width: width, height: height)
                                 .cornerRadius(cornerRadius)
+                                .drawingGroup() // 优化复杂视图的渲染性能
                         case .failure(let error):
                             // 加载失败
                             placeholder

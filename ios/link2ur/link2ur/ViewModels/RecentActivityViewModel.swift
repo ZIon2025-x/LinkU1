@@ -76,6 +76,7 @@ class RecentActivityViewModel: ObservableObject {
     private var allLoadedActivities: [RecentActivity] = []
     private var displayedCount = 0
     private let batchSize = 5  // 每次显示5条
+    private let maxDisplayCount = 15  // 最多显示15条
     
     // 分页状态
     private var forumPage = 1
@@ -219,8 +220,10 @@ class RecentActivityViewModel: ObservableObject {
     
     /// 显示更多条目
     private func showMoreItems() {
+        // 限制最多显示15条
+        let maxIndex = min(maxDisplayCount, allLoadedActivities.count)
         let startIndex = displayedCount
-        let endIndex = min(displayedCount + batchSize, allLoadedActivities.count)
+        let endIndex = min(displayedCount + batchSize, maxIndex)
         
         if startIndex < endIndex {
             let newItems = Array(allLoadedActivities[startIndex..<endIndex])
@@ -228,8 +231,8 @@ class RecentActivityViewModel: ObservableObject {
             displayedCount = endIndex
         }
         
-        // 更新 hasMore 状态
-        hasMore = displayedCount < allLoadedActivities.count || hasMoreFromServer
+        // 更新 hasMore 状态：如果已达到最大显示数量，不再显示更多
+        hasMore = displayedCount < maxIndex && (displayedCount < allLoadedActivities.count || hasMoreFromServer)
     }
     
     /// 刷新数据

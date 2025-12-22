@@ -98,16 +98,6 @@ struct CouponPointsView: View {
             }
             .navigationTitle("积分与优惠券")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(AppColors.textPrimary)
-                    }
-                }
-            }
-            .enableSwipeBack()
             .onAppear {
                 if appState.isAuthenticated {
                     viewModel.loadPointsAccount()

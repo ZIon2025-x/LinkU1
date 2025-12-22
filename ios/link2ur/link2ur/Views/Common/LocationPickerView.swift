@@ -173,6 +173,7 @@ struct LocationPickerView: View {
     
     private var mapView: some View {
         Map(coordinateRegion: $region, interactionModes: .all)
+            .id(mapRefreshId) // 使用 id 强制刷新地图
             .id(mapRefreshId)  // 用于强制刷新地图位置
             .onChange(of: region.center.latitude) { _ in
                 handleRegionChange()
@@ -521,18 +522,23 @@ struct LocationPickerView: View {
             print("📍 Setting region to: \(lat), \(lon)")
             #endif
             
-            // 使用新的 MKCoordinateRegion 实例强制更新
+            // 使用更精确的 span（减少偏移）
             let newRegion = MKCoordinateRegion(
                 center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01) // 更小的 span 提高精度
             )
             
             // 先设置 region
             region = newRegion
             
-            // 刷新地图 ID 强制重新渲染地图到正确位置
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // 刷新地图 ID 强制重新渲染地图到正确位置（增加延迟确保地图完全加载）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 mapRefreshId = UUID()
+                // 再次确保 region 设置正确
+                region = MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
             }
             
             currentAddress = selectedLocation
@@ -540,13 +546,13 @@ struct LocationPickerView: View {
             // 如果没有地址文本，进行反向地理编码
             if selectedLocation.isEmpty || selectedLocation.lowercased() == "online" {
                 // 延迟调用，确保初始化标志已清除
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     isInitializing = false
                     updateAddressForCurrentCenter()
                 }
             } else {
                 // 延迟清除初始化标志，确保 onChange 不会触发
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                     isInitializing = false
                 }
             }
@@ -629,7 +635,7 @@ struct LocationPickerView: View {
                 isLoadingAddress = false
                 
                 if let placemark = placemarks?.first {
-                    // 构建完整地址
+                    // 构建完整地址（包含邮编）
                     var addressParts: [String] = []
                     
                     // 地点名称
@@ -637,6 +643,11 @@ struct LocationPickerView: View {
                        name != placemark.locality,
                        name != placemark.subLocality {
                         addressParts.append(name)
+                    }
+                    
+                    // 街道地址
+                    if let thoroughfare = placemark.thoroughfare {
+                        addressParts.append(thoroughfare)
                     }
                     
                     // 区/街道
@@ -647,6 +658,11 @@ struct LocationPickerView: View {
                     // 城市
                     if let locality = placemark.locality {
                         addressParts.append(locality)
+                    }
+                    
+                    // 邮编（重要：添加到地址中）
+                    if let postalCode = placemark.postalCode {
+                        addressParts.append(postalCode)
                     }
                     
                     // 如果没有城市，使用行政区
@@ -687,8 +703,9 @@ struct LocationPickerView: View {
                 
                 if let mapItem = response?.mapItems.first {
                     let coordinate = mapItem.placemark.coordinate
+                    let placemark = mapItem.placemark
                     
-                    // 更新地图区域
+                    // 更新地图区域（使用更精确的 span）
                     withAnimation {
                         region = MKCoordinateRegion(
                             center: coordinate,
@@ -696,11 +713,27 @@ struct LocationPickerView: View {
                         )
                     }
                     
-                    // 优先使用搜索结果的原始标题（保留邮编等详细信息）
+                    // 构建完整地址（包含邮编）
+                    var addressParts: [String] = []
+                    
+                    // 优先使用搜索结果的原始标题
+                    addressParts.append(result.title)
+                    
+                    // 如果有副标题，添加
                     if !result.subtitle.isEmpty {
-                        currentAddress = "\(result.title), \(result.subtitle)"
-                    } else {
-                        currentAddress = result.title
+                        addressParts.append(result.subtitle)
+                    }
+                    
+                    // 从 placemark 获取邮编（如果搜索结果中没有）
+                    if let postalCode = placemark.postalCode, !addressParts.contains(postalCode) {
+                        addressParts.append(postalCode)
+                    }
+                    
+                    currentAddress = addressParts.joined(separator: ", ")
+                    
+                    // 刷新地图 ID 确保位置准确
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        mapRefreshId = UUID()
                     }
                     
                     HapticFeedback.success()
@@ -788,6 +821,7 @@ struct LocationPickerView: View {
             selectedLongitude = nil
             selectedLocation = "Online"
         } else {
+            // 确保坐标精确保存（使用当前 region 的中心点）
             selectedLatitude = region.center.latitude
             selectedLongitude = region.center.longitude
             selectedLocation = currentAddress

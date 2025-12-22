@@ -125,7 +125,12 @@ extension String {
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined()
         #else
-        return self.md5Hash
+        // 如果没有 CryptoKit，使用 CommonCrypto 的 SHA256
+        var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        _ = data.withUnsafeBytes {
+            CC_SHA256($0.baseAddress, CC_LONG(data.count), &digest)
+        }
+        return digest.map { String(format: "%02x", $0) }.joined()
         #endif
     }
     
@@ -185,41 +190,82 @@ extension String {
             return trimmed
         }
         
-        // 检测第一个部分是否是邮编（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA）
-        let firstComponent = components[0]
-        let isPostcode = firstComponent.matches("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s*[0-9][A-Z]{2}$") ||
-                         firstComponent.matches("^[0-9]{5}(-[0-9]{4})?$") // 美国邮编
+        // 邮编格式检测（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA, B15 3EN）
+        let postcodePattern = "^[A-Z]{1,2}[0-9][0-9A-Z]?\\s*[0-9][A-Z]{2}$"
+        let usPostcodePattern = "^[0-9]{5}(-[0-9]{4})?$"
+        let isPostcode: (String) -> Bool = { component in
+            component.matches(postcodePattern) || component.matches(usPostcodePattern)
+        }
         
         // 检测第一个部分是否包含门牌号（以数字开头）
+        let firstComponent = components[0]
         let hasStreetNumber = firstComponent.matches("^[0-9]+\\s")
         
-        if isPostcode || hasStreetNumber {
-            // 移除第一个部分（邮编或街道地址），返回剩余部分
-            if components.count >= 2 {
-                return components.dropFirst().joined(separator: ", ")
+        // 过滤掉邮编和街道地址，只保留城市相关的部分
+        var filteredComponents = components
+        
+        // 移除第一个部分（如果是街道地址）
+        if hasStreetNumber && filteredComponents.count > 1 {
+            filteredComponents.removeFirst()
+        }
+        
+        // 移除所有邮编
+        filteredComponents = filteredComponents.filter { !isPostcode($0) }
+        
+        // 返回最后两个部分（通常是城市和国家，或区域和城市）
+        if filteredComponents.count >= 2 {
+            let lastTwo = Array(filteredComponents.suffix(2))
+            return lastTwo.joined(separator: ", ")
+        } else if filteredComponents.count == 1 {
+            // 只有一个部分，直接返回
+            return filteredComponents[0]
+        }
+        
+        // 如果过滤后没有内容，返回原始内容的最后两个非邮编部分
+        var validComponents: [String] = []
+        for component in components.reversed() {
+            if !isPostcode(component) && !component.matches("^[0-9]+\\s") {
+                validComponents.insert(component, at: 0)
+                if validComponents.count >= 2 {
+                    break
+                }
             }
         }
         
-        // 如果有3个或更多部分，取最后两个（通常是城市和国家）
-        if components.count >= 3 {
+        if validComponents.count >= 2 {
+            return validComponents.suffix(2).joined(separator: ", ")
+        } else if validComponents.count == 1 {
+            return validComponents[0]
+        }
+        
+        // 最后的回退：返回原始内容的最后两个部分
+        if components.count >= 2 {
             return components.suffix(2).joined(separator: ", ")
         }
         
-        // 否则返回原始内容（只有两个部分，可能就是城市和国家）
         return trimmed
     }
 }
 
 
 extension String {
-    /// MD5 哈希（使用 CommonCrypto）
+    /// MD5 哈希（已弃用，使用 SHA256 替代）
+    /// 注意：此方法仅用于非安全用途（如缓存文件名）
+    /// 为了保持向后兼容，此方法现在使用 SHA256 实现
     var md5Hash: String {
+        // 使用 SHA256 替代 MD5（对于缓存文件名等非安全用途，SHA256 同样适用）
         guard let data = self.data(using: .utf8) else { return self }
-        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+        #if canImport(CryptoKit)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
+        #else
+        // 如果没有 CryptoKit，使用 CommonCrypto 的 SHA256
+        var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
         _ = data.withUnsafeBytes {
-            CC_MD5($0.baseAddress, CC_LONG(data.count), &digest)
+            CC_SHA256($0.baseAddress, CC_LONG(data.count), &digest)
         }
         return digest.map { String(format: "%02x", $0) }.joined()
+        #endif
     }
 }
 

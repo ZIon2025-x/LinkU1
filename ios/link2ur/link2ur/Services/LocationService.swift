@@ -36,6 +36,7 @@ public class LocationService: NSObject, ObservableObject {
     private let locationManager = CLLocationManager()
     private let geocoder = CLGeocoder()  // 用于反向地理编码
     private var cancellables = Set<AnyCancellable>()
+    private var isUpdatingLocation = false  // 自定义标志，跟踪是否正在更新位置
     
     private override init() {
         super.init()
@@ -76,13 +77,20 @@ public class LocationService: NSObject, ObservableObject {
             return
         }
         
+        // 如果已经在更新位置，不需要重复调用
+        guard !isUpdatingLocation else {
+            return
+        }
+        
         locationError = nil
+        isUpdatingLocation = true
         locationManager.startUpdatingLocation()
     }
     
     /// 停止更新位置
     public func stopUpdatingLocation() {
         locationManager.stopUpdatingLocation()
+        isUpdatingLocation = false
     }
     
     /// 获取一次位置（不持续更新）
@@ -90,6 +98,12 @@ public class LocationService: NSObject, ObservableObject {
         guard locationManager.authorizationStatus == .authorizedWhenInUse || 
               locationManager.authorizationStatus == .authorizedAlways else {
             requestAuthorization()
+            return
+        }
+        
+        // 如果已经有位置且时间较近（5分钟内），不需要重新请求
+        if let currentLocation = currentLocation,
+           Date().timeIntervalSince(currentLocation.timestamp) < 300 {
             return
         }
         
@@ -140,7 +154,7 @@ public class LocationService: NSObject, ObservableObject {
                 return
             }
             
-            if let error = error {
+            if error != nil {
                 // 反向地理编码失败，静默处理
                 completion(nil)
                 return
@@ -182,6 +196,8 @@ extension LocationService: CLLocationManagerDelegate {
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            // 重置更新标志
+            self.isUpdatingLocation = false
             self.currentLocation = locationInfo
             self.locationError = nil
         }
@@ -202,6 +218,9 @@ extension LocationService: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            
+            // 重置更新标志
+            self.isUpdatingLocation = false
             
             // 检查错误类型
             if let clError = error as? CLError {
