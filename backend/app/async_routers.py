@@ -951,9 +951,13 @@ async def get_notifications(
     for notification in notifications:
         notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
         
-        # 对于需要从 TaskApplication 表查询 task_id 的通知类型
-        # application_message, negotiation_offer, task_application 的 related_id 都是 application_id
-        if notification.type in ["application_message", "negotiation_offer", "task_application"] and notification.related_id:
+        # task_application 类型：related_id 直接就是 task_id（创建通知时已设置）
+        if notification.type == "task_application" and notification.related_id:
+            notification_dict["task_id"] = notification.related_id
+        
+        # application_message 和 negotiation_offer 类型：related_id 是 application_id
+        # 需要通过 TaskApplication 表查询 task_id
+        elif notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
             try:
                 # 通过 application_id 查询 task_id
                 application_query = select(models.TaskApplication).where(

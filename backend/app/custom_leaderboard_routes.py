@@ -1337,6 +1337,15 @@ async def get_item_detail(
     created_at = item.created_at if item.created_at is not None else get_utc_time()
     updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
     
+    # 加载提交者信息（非匿名用户显示真实名字和头像）
+    submitter_info = None
+    if item.submitter:
+        submitter_info = {
+            "id": item.submitter.id,
+            "name": item.submitter.name or f"用户{item.submitter.id}",
+            "avatar": item.submitter.avatar or ""
+        }
+    
     item_dict = {
         "id": item.id,
         "leaderboard_id": item.leaderboard_id,
