@@ -1421,6 +1421,16 @@ async def get_item_votes(
     result = await db.execute(query)
     votes = result.scalars().all()
     
+    # 批量查询非匿名用户的信息（避免N+1查询）
+    non_anonymous_user_ids = [vote.user_id for vote in votes if not vote.is_anonymous]
+    users_map = {}
+    if non_anonymous_user_ids:
+        users_result = await db.execute(
+            select(models.User).where(models.User.id.in_(non_anonymous_user_ids))
+        )
+        users = users_result.scalars().all()
+        users_map = {user.id: user for user in users}
+    
     # 查询当前用户对留言的点赞状态
     user_liked_votes = set()
     if current_user:
@@ -1441,12 +1451,14 @@ async def get_item_votes(
     for vote in votes:
         # 对于非匿名用户，包含完整的用户信息（名字和头像）
         author_info = None
-        if not vote.is_anonymous and vote.user:
-            author_info = {
-                "id": vote.user.id,
-                "name": vote.user.name or f"用户{vote.user.id}",
-                "avatar": vote.user.avatar or ""
-            }
+        if not vote.is_anonymous:
+            user = users_map.get(vote.user_id)
+            if user:
+                author_info = {
+                    "id": user.id,
+                    "name": user.name or f"用户{user.id}",
+                    "avatar": user.avatar or ""
+                }
         
         vote_dict = {
             "id": vote.id,
