@@ -236,6 +236,10 @@ struct CreateFleaMarketItemView: View {
                     )
                 }
             }
+            .onDisappear {
+                // 用户体验优化：视图消失时自动收起键盘
+                isLocationFocused = false
+            }
             .onAppear {
                 if !appState.isAuthenticated {
                     showLogin = true
@@ -267,11 +271,33 @@ struct CreateFleaMarketItemView: View {
                                 showLocationSuggestions = false
                                 locationSearchCompleter.searchResults = []
                                 isLocationFocused = false
-                                HapticFeedback.light()
+                                HapticFeedback.medium()
                             }) {
-                                Image(systemName: viewModel.location.lowercased() == "online" ? "globe" : "mappin.and.ellipse")
-                                    .foregroundColor(viewModel.location.lowercased() == "online" ? AppColors.success : AppColors.primary)
-                                    .frame(width: 20)
+                                let isOnline = viewModel.location.lowercased() == "online"
+                                HStack(spacing: 4) {
+                                    Image(systemName: isOnline ? "globe.americas.fill" : "mappin.and.ellipse")
+                                        .font(.system(size: 14, weight: .bold))
+                                    
+                                    if isOnline {
+                                        Text("Online")
+                                            .font(.system(size: 11, weight: .heavy))
+                                            .textCase(.uppercase)
+                                    } else {
+                                        Text("线上")
+                                            .font(.system(size: 11, weight: .bold))
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(isOnline ? AppColors.success.opacity(0.12) : AppColors.primary.opacity(0.08))
+                                )
+                                .foregroundColor(isOnline ? AppColors.success : AppColors.primary)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(isOnline ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.15), lineWidth: 1)
+                                )
                             }
                             
                             TextField("搜索地点或输入 Online", text: $viewModel.location)

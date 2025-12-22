@@ -40,7 +40,7 @@ struct ForumPostListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        // 确保边缘滑动手势正常工作（NavigationStack 默认支持）
+        .enableSwipeBack()
         .searchable(text: $searchText, prompt: LocalizationKey.forumSearchPosts.localized)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

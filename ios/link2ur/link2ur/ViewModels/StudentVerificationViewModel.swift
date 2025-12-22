@@ -16,6 +16,10 @@ class StudentVerificationViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     // MARK: - Load Status
     
     func loadStatus() {

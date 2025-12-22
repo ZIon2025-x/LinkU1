@@ -108,7 +108,13 @@ class UserProfileViewModel: ObservableObject {
                 receiveCompletion: { [weak self] completion in
                     self?.isLoading = false
                     if case .failure(let error) = completion {
-                        self?.errorMessage = error.localizedDescription
+                        // 使用 ErrorHandler 统一处理错误
+                        ErrorHandler.shared.handle(error, context: "加载用户资料")
+                        if let apiError = error as? APIError {
+                            self?.errorMessage = apiError.userFriendlyMessage
+                        } else {
+                            self?.errorMessage = error.localizedDescription
+                        }
                     }
                 },
                 receiveValue: { [weak self] profile in

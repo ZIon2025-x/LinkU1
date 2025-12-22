@@ -152,7 +152,7 @@
 // MARK: - Profile
 "profile.profile" = "Profile";
 "profile.my_tasks" = "My Tasks";
-"profile.my_posts" = "My Posts";
+"profile.my_posts" = "My Items";
 "profile.settings" = "Settings";
 "profile.about" = "About";
 "profile.logout" = "Logout";
@@ -280,8 +280,8 @@
 "profile.user" = "User";
 "profile.my_tasks" = "My Tasks";
 "profile.my_tasks_subtitle" = "View tasks I published and accepted";
-"profile.my_posts" = "My Posts";
-"profile.my_posts_subtitle" = "View content I published";
+"profile.my_posts" = "My Items";
+"profile.my_posts_subtitle" = "Manage my second-hand items";
 "profile.my_wallet" = "My Wallet";
 "profile.my_wallet_subtitle" = "View balance and transaction history";
 "profile.my_applications" = "My Applications";
@@ -500,7 +500,7 @@
 "forum.go_verify" = "Go Verify";
 "forum.no_posts" = "No Posts";
 "forum.official" = "Official";
-"forum.replies" = "Replies (%d)";
+"forum.replies" = "Replies (%@)";
 "forum.load_replies_failed" = "Failed to load replies: %@";
 "forum.no_replies" = "No Replies";
 "forum.reply" = "Reply";

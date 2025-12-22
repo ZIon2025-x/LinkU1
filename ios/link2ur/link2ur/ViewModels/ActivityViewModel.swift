@@ -3,12 +3,14 @@ import Combine
 
 @MainActor
 class ActivityViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var activities: [Activity] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedActivity: Activity?
     @Published var timeSlots: [ServiceTimeSlot] = []
     @Published var isLoadingTimeSlots = false
+    @Published var expert: TaskExpert? // 活动发布者的达人信息
     
     private var cancellables = Set<AnyCancellable>()
     // 使用依赖注入获取服务
@@ -18,9 +20,22 @@ class ActivityViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     // MARK: - Load Activities
     
     func loadActivities(expertId: String? = nil, status: String? = nil, includeEnded: Bool = false, forceRefresh: Bool = false) {
+        let startTime = Date()
+        let endpoint = "/api/activities"
+        
+        // 防止重复请求：如果正在加载且不是强制刷新，则跳过
+        guard !isLoading || forceRefresh else {
+            Logger.warning("请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -33,7 +48,7 @@ class ActivityViewModel: ObservableObject {
         if !forceRefresh && expertId == nil && status == nil && !includeEnded {
             if let cachedActivities = CacheManager.shared.loadActivities() {
                 self.activities = cachedActivities
-                print("✅ 从缓存加载了 \(self.activities.count) 个活动")
+                Logger.success("从缓存加载了 \(self.activities.count) 个活动", category: .cache)
                 isLoading = false
                 // 继续在后台刷新数据
             }
@@ -67,15 +82,31 @@ class ActivityViewModel: ObservableObject {
                 .receive(on: DispatchQueue.main)
                 .sink(
                     receiveCompletion: { [weak self] completion in
+                        let duration = Date().timeIntervalSince(startTime)
                         self?.isLoading = false
                         if case .failure(let error) = completion {
                             // 使用 ErrorHandler 统一处理错误
                             ErrorHandler.shared.handle(error, context: "加载活动列表")
+                            // 记录性能指标
+                            self?.performanceMonitor.recordNetworkRequest(
+                                endpoint: endpoint,
+                                method: "GET",
+                                duration: duration,
+                                error: error
+                            )
                             if let apiError = error as? APIError {
                                 self?.errorMessage = apiError.userFriendlyMessage
                             } else {
                                 self?.errorMessage = error.localizedDescription
                             }
+                        } else {
+                            // 记录成功请求的性能指标
+                            self?.performanceMonitor.recordNetworkRequest(
+                                endpoint: endpoint,
+                                method: "GET",
+                                duration: duration,
+                                statusCode: 200
+                            )
                         }
                     },
                     receiveValue: { [weak self] activities in
@@ -84,7 +115,7 @@ class ActivityViewModel: ObservableObject {
                         // 保存到缓存（仅在没有筛选条件时）
                         if expertId == nil && status == nil && !includeEnded {
                             CacheManager.shared.saveActivities(activities)
-                            print("✅ 已缓存 \(activities.count) 个活动")
+                            Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
                         }
                     }
                 )
@@ -95,15 +126,31 @@ class ActivityViewModel: ObservableObject {
                 .receive(on: DispatchQueue.main)
                 .sink(
                     receiveCompletion: { [weak self] completion in
+                        let duration = Date().timeIntervalSince(startTime)
                         self?.isLoading = false
                         if case .failure(let error) = completion {
                             // 使用 ErrorHandler 统一处理错误
                             ErrorHandler.shared.handle(error, context: "加载活动列表")
+                            // 记录性能指标
+                            self?.performanceMonitor.recordNetworkRequest(
+                                endpoint: endpoint,
+                                method: "GET",
+                                duration: duration,
+                                error: error
+                            )
                             if let apiError = error as? APIError {
                                 self?.errorMessage = apiError.userFriendlyMessage
                             } else {
                                 self?.errorMessage = error.localizedDescription
                             }
+                        } else {
+                            // 记录成功请求的性能指标
+                            self?.performanceMonitor.recordNetworkRequest(
+                                endpoint: endpoint,
+                                method: "GET",
+                                duration: duration,
+                                statusCode: 200
+                            )
                         }
                     },
                     receiveValue: { [weak self] activities in
@@ -112,7 +159,7 @@ class ActivityViewModel: ObservableObject {
                         // 保存到缓存（仅在没有筛选条件时）
                         if expertId == nil && status == nil && !includeEnded {
                             CacheManager.shared.saveActivities(activities)
-                            print("✅ 已缓存 \(activities.count) 个活动")
+                            Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
                         }
                     }
                 )
@@ -125,6 +172,7 @@ class ActivityViewModel: ObservableObject {
     func loadActivityDetail(activityId: Int) {
         isLoading = true
         errorMessage = nil
+        expert = nil // 重置达人信息
         
         apiService.getActivityDetail(activityId: activityId)
             .receive(on: DispatchQueue.main)
@@ -144,6 +192,26 @@ class ActivityViewModel: ObservableObject {
                 receiveValue: { [weak self] activity in
                     self?.selectedActivity = activity
                     self?.isLoading = false
+                    // 加载达人信息
+                    self?.loadExpertInfo(expertId: activity.expertId)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Load Expert Info
+    
+    private func loadExpertInfo(expertId: String) {
+        apiService.request(TaskExpert.self, "/api/task-experts/\(expertId)", method: "GET")
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("加载达人信息失败: \(error.localizedDescription)", category: .api)
+                    }
+                },
+                receiveValue: { [weak self] expert in
+                    self?.expert = expert
                 }
             )
             .store(in: &cancellables)
@@ -175,7 +243,7 @@ class ActivityViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载时间段")
-                        print("加载时间段失败: \(error.localizedDescription)")
+                        Logger.error("加载时间段失败: \(error.localizedDescription)", category: .api)
                         self?.timeSlots = []
                     }
                 },

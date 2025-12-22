@@ -3,6 +3,7 @@ import Combine
 import CoreLocation
 
 class LeaderboardViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var leaderboards: [CustomLeaderboard] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -17,13 +18,20 @@ class LeaderboardViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
         self.locationService = locationService ?? LocationService.shared
     }
+    
+    deinit {
+        cancellables.removeAll()
+    }
+    
     private var rawLeaderboards: [CustomLeaderboard] = [] // 保存原始数据，用于重新排序
     private var currentSort: String = "latest" // 保存当前排序方式
     
     func loadLeaderboards(location: String? = nil, sort: String = "latest") {
+        let startTime = Date()
+        
         // 防止重复请求
         guard !isRequesting else {
-            print("⚠️ 排行榜请求已在进行中，跳过重复请求")
+            Logger.warning("排行榜请求已在进行中，跳过重复请求", category: .api)
             return
         }
         
@@ -35,7 +43,7 @@ class LeaderboardViewModel: ObservableObject {
         if location == nil && sort == "latest" {
             if let cachedLeaderboards = CacheManager.shared.loadLeaderboards(location: nil, sort: "latest") {
                 self.leaderboards = cachedLeaderboards
-                print("✅ 从缓存加载了 \(self.leaderboards.count) 个排行榜")
+                Logger.success("从缓存加载了 \(self.leaderboards.count) 个排行榜", category: .cache)
                 isLoading = false
                 isRequesting = false
                 // 继续在后台刷新数据
@@ -58,14 +66,30 @@ class LeaderboardViewModel: ObservableObject {
         // 后端返回格式：{"items": [...]}
         apiService.request(CustomLeaderboardListResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 self?.isRequesting = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载排行榜")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     self?.errorMessage = error.userFriendlyMessage
-                    print("❌ 排行榜加载失败: \(error)")
-                    print("请求URL: \(endpoint)")
+                    Logger.error("排行榜加载失败: \(error)", category: .api)
+                    Logger.debug("请求URL: \(endpoint)", category: .api)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
@@ -85,14 +109,14 @@ class LeaderboardViewModel: ObservableObject {
                 }
                 
                 self.isRequesting = false
-                print("✅ 排行榜加载成功，共\(self.leaderboards.count)条")
+                Logger.success("排行榜加载成功，共\(self.leaderboards.count)条", category: .api)
                 if self.leaderboards.isEmpty {
-                    print("⚠️ 警告：返回的items数组为空")
+                    Logger.warning("警告：返回的items数组为空", category: .api)
                 }
                 // 保存到缓存（仅在没有筛选条件时）
                 if location == nil && sort == "latest" {
                     CacheManager.shared.saveLeaderboards(self.leaderboards, location: nil, sort: "latest")
-                    print("✅ 已缓存 \(self.leaderboards.count) 个排行榜")
+                    Logger.success("已缓存 \(self.leaderboards.count) 个排行榜", category: .cache)
                 }
                 
                 // 如果是默认状态（latest），监听位置更新以重新排序
@@ -123,7 +147,7 @@ class LeaderboardViewModel: ObservableObject {
                 longitude: userLocation.longitude
             )
             
-            print("📍 开始按距离排序排行榜，用户位置: \(userLocation.latitude), \(userLocation.longitude)")
+            Logger.debug("开始按距离排序排行榜，用户位置: \(userLocation.latitude), \(userLocation.longitude)", category: .general)
             
             // 计算每个排行榜的距离
             leaderboards = leaderboards.map { leaderboard in
@@ -133,11 +157,6 @@ class LeaderboardViewModel: ObservableObject {
                     to: leaderboard.location
                 )
                 leaderboard.distance = distance
-                
-                if let loc = leaderboard.location, let dist = distance {
-                    print("  - \(leaderboard.name) (\(loc)): \(String(format: "%.2f", dist)) km, 浏览量: \(leaderboard.viewCount)")
-                }
-                
                 return leaderboard
             }
             
@@ -155,10 +174,10 @@ class LeaderboardViewModel: ObservableObject {
                 return distance1 < distance2
             }
             
-            print("✅ 已按距离和浏览量排序排行榜（共\(leaderboards.count)条）")
+            Logger.success("已按距离和浏览量排序排行榜（共\(leaderboards.count)条）", category: .general)
         } else {
             // 如果用户位置不可用，只按浏览量排序（由高到低）
-            print("⚠️ 用户位置不可用，按浏览量排序")
+            Logger.warning("用户位置不可用，按浏览量排序", category: .general)
             leaderboards.sort { board1, board2 in
                 return board1.viewCount > board2.viewCount
             }
@@ -219,6 +238,10 @@ class LeaderboardDetailViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadLeaderboard(leaderboardId: Int) {
@@ -403,6 +426,10 @@ class LeaderboardItemDetailViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadItem(itemId: Int) {

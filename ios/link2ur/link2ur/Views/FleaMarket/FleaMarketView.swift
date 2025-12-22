@@ -41,6 +41,7 @@ struct FleaMarketView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .enableSwipeBack()
             .searchable(text: $searchText, prompt: LocalizationKey.fleaMarketSearchItems.localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -96,42 +97,19 @@ struct ItemCard: View {
             let height = width // 正方形卡片
             
             ZStack(alignment: .bottom) {
-                // 商品图片 - 占满整个卡片
+                // 商品图片 - 占满整个卡片 - 使用 AsyncImageView 优化图片加载和缓存
                 if let images = item.images, let firstImage = images.first, !firstImage.isEmpty {
-                    AsyncImage(url: firstImage.toImageURL()) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: width, height: height)
-                                .clipped()
-                        case .failure(_), .empty:
-                            ZStack {
-                                Rectangle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.2),
-                                                Color(red: 0.063, green: 0.725, blue: 0.451).opacity(0.1)
-                                            ]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                Text("🛍️")
-                                    .font(.system(size: 48))
-                                    .opacity(0.6)
-                            }
-                            .frame(width: width, height: height)
-                        @unknown default:
-                            Rectangle()
-                                .fill(AppColors.cardBackground)
-                                .frame(width: width, height: height)
-                        }
-                    }
+                    AsyncImageView(
+                        urlString: firstImage,
+                        placeholder: Image(systemName: "bag.fill"),
+                        width: width,
+                        height: height,
+                        contentMode: .fill,
+                        cornerRadius: 0
+                    )
+                    .frame(width: width, height: height)
+                    .clipped()
                 } else {
-                    // 无图片时显示占位符
                     ZStack {
                         Rectangle()
                             .fill(

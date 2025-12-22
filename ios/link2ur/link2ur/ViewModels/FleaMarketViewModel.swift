@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class FleaMarketViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var items: [FleaMarketItem] = []
     @Published var categories: [FleaMarketCategory] = []
     @Published var isLoading = false
@@ -13,6 +14,10 @@ class FleaMarketViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadCategories() {
@@ -29,6 +34,8 @@ class FleaMarketViewModel: ObservableObject {
     }
     
     func loadItems(category: String? = nil, keyword: String? = nil, page: Int = 1, forceRefresh: Bool = false) {
+        let startTime = Date()
+        
         isLoading = true
         
         // 强制刷新时清除缓存
@@ -40,7 +47,7 @@ class FleaMarketViewModel: ObservableObject {
         if page == 1 && !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
             if let cachedItems = CacheManager.shared.loadFleaMarketItems(category: category) {
                 self.items = cachedItems
-                print("✅ 从缓存加载了 \(self.items.count) 个跳蚤市场商品")
+                Logger.success("从缓存加载了 \(self.items.count) 个跳蚤市场商品", category: .cache)
                 isLoading = false
                 // 继续在后台刷新数据
             }
@@ -56,15 +63,31 @@ class FleaMarketViewModel: ObservableObject {
         
         apiService.request(FleaMarketItemListResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载跳蚤市场商品")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 if page == 1 {
@@ -72,7 +95,7 @@ class FleaMarketViewModel: ObservableObject {
                     // 保存到缓存（仅第一页且无搜索关键词时）
                     if keyword == nil || keyword?.isEmpty == true {
                         CacheManager.shared.saveFleaMarketItems(response.items, category: category)
-                        print("✅ 已缓存 \(response.items.count) 个跳蚤市场商品")
+                        Logger.success("已缓存 \(response.items.count) 个跳蚤市场商品", category: .cache)
                     }
                 } else {
                     self?.items.append(contentsOf: response.items)
@@ -86,9 +109,15 @@ class FleaMarketDetailViewModel: ObservableObject {
     @Published var item: FleaMarketItem?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isFavorited = false
+    @Published var isTogglingFavorite = false
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
+    
+    deinit {
+        cancellables.removeAll()
+    }
     
     func loadItem(itemId: String) {
         isLoading = true
@@ -100,6 +129,46 @@ class FleaMarketDetailViewModel: ObservableObject {
                 }
             }, receiveValue: { [weak self] item in
                 self?.item = item
+                // 加载商品后检查收藏状态
+                self?.checkFavoriteStatus(itemId: itemId)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 检查当前商品是否已被收藏
+    func checkFavoriteStatus(itemId: String) {
+        apiService.request(MyFavoritesResponse.self, "/api/flea-market/favorites?page=1&page_size=100", method: "GET")
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.error("检查收藏状态失败: \(error.localizedDescription)", category: .network)
+                }
+            }, receiveValue: { [weak self] response in
+                // 检查当前商品是否在收藏列表中
+                let favoriteItemIds = response.items.map { $0.itemId }
+                self?.isFavorited = favoriteItemIds.contains(itemId)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 切换收藏状态
+    func toggleFavorite(itemId: String, completion: @escaping (Bool) -> Void) {
+        guard !isTogglingFavorite else { return }
+        isTogglingFavorite = true
+        
+        apiService.request(FavoriteToggleResponse.self, "/api/flea-market/items/\(itemId)/favorite", method: "POST", body: [:])
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isTogglingFavorite = false
+                if case .failure(let error) = result {
+                    Logger.error("切换收藏状态失败: \(error.localizedDescription)", category: .network)
+                    completion(false)
+                }
+            }, receiveValue: { [weak self] response in
+                if response.success {
+                    self?.isFavorited = response.data.isFavorited
+                    completion(true)
+                } else {
+                    completion(false)
+                }
             })
             .store(in: &cancellables)
     }

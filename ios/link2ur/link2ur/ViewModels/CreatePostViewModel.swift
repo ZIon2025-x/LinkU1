@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class CreatePostViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var title = ""
     @Published var content = ""
     @Published var selectedCategoryId: Int?
@@ -17,6 +18,10 @@ class CreatePostViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadCategories() {
         // 使用正确的API端点，后端会根据用户认证信息自动筛选对应学校的板块
         apiService.getForumCategories(includeAll: false, viewAs: nil, includeLatestPost: true)
@@ -27,16 +32,19 @@ class CreatePostViewModel: ObservableObject {
                     !(category.isAdminOnly ?? false)
                 }
                 self?.categories = filteredCategories
-                print("✅ 加载了 \(filteredCategories.count) 个可用的论坛板块（已过滤管理员专用板块）")
+                Logger.success("加载了 \(filteredCategories.count) 个可用的论坛板块（已过滤管理员专用板块）", category: .api)
             })
             .store(in: &cancellables)
     }
     
     func createPost(completion: @escaping (Bool) -> Void) {
-        print("📝 CreatePostViewModel.createPost 被调用")
-        print("📝 标题: \(title)")
-        print("📝 内容长度: \(content.count)")
-        print("📝 分类ID: \(selectedCategoryId ?? -1)")
+        let startTime = Date()
+        let endpoint = "/api/forum/posts"
+        
+        Logger.debug("CreatePostViewModel.createPost 被调用", category: .api)
+        Logger.debug("标题: \(title)", category: .api)
+        Logger.debug("内容长度: \(content.count)", category: .api)
+        Logger.debug("分类ID: \(selectedCategoryId ?? -1)", category: .api)
         
         guard !title.isEmpty, !content.isEmpty, let categoryId = selectedCategoryId else {
             let missingFields = [
@@ -45,7 +53,7 @@ class CreatePostViewModel: ObservableObject {
                 selectedCategoryId == nil ? "板块" : nil
             ].compactMap { $0 }
             errorMessage = "请填写所有必填项：\(missingFields.joined(separator: "、"))"
-            print("❌ 验证失败: \(errorMessage ?? "")")
+            Logger.warning("验证失败: \(errorMessage ?? "")", category: .api)
             completion(false)
             return
         }
@@ -59,20 +67,36 @@ class CreatePostViewModel: ObservableObject {
             "category_id": categoryId
         ]
         
-        print("📤 发送发布请求: \(body)")
+        Logger.debug("发送发布请求", category: .api)
         
-        apiService.request(ForumPost.self, "/api/forum/posts", method: "POST", body: body)
+        apiService.request(ForumPost.self, endpoint, method: "POST", body: body)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "发布帖子")
-                    print("❌ 发布失败: \(error.localizedDescription)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("发布失败: \(error.localizedDescription)", category: .api)
                     self?.errorMessage = error.userFriendlyMessage
                     completion(false)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] post in
-                print("✅ 发布成功: \(post.title)")
+                Logger.success("发布成功: \(post.title)", category: .api)
                 self?.reset()
                 completion(true)
             })

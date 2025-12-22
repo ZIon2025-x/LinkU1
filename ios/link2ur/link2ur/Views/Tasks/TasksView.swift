@@ -154,6 +154,7 @@ struct TasksView: View {
             .sheet(isPresented: $showFilter) {
                 TaskFilterView(selectedCategory: $selectedCategory, selectedCity: $selectedCity)
             }
+            // 性能优化：合并 onChange，避免重复调用 applyFilters
             .onChange(of: selectedCategory) { _ in
                 applyFilters()
             }
@@ -246,23 +247,19 @@ struct TaskCard: View {
         VStack(spacing: 0) {
             // 图片区域（符合 HIG，使用系统圆角）
             ZStack(alignment: .top) {
-                // 图片背景
+                // 图片背景 - 使用 AsyncImageView 优化图片加载和缓存
                 if let images = task.images, let firstImage = images.first, !firstImage.isEmpty {
-                    AsyncImage(url: firstImage.toImageURL()) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 180)
-                                .frame(maxWidth: .infinity)
-                                .clipped()
-                        case .failure(_), .empty:
-                            placeholderBackground()
-                        @unknown default:
-                            placeholderBackground()
-                        }
-                    }
+                    AsyncImageView(
+                        urlString: firstImage,
+                        placeholder: Image(systemName: "photo"),
+                        width: nil,
+                        height: 180,
+                        contentMode: .fill,
+                        cornerRadius: 0
+                    )
+                    .frame(height: 180)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
                     .id(firstImage) // 使用图片URL作为id，优化缓存
                 } else {
                     placeholderBackground()

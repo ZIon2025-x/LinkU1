@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class CustomerServiceViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var messages: [CustomerServiceMessage] = []
     @Published var chat: CustomerServiceChat?
     @Published var service: CustomerServiceInfo?
@@ -42,24 +43,35 @@ class CustomerServiceViewModel: ObservableObject {
             return
         }
         
-        print("🔍 [CustomerServiceViewModel] 开始连接客服...")
-        print("🔍 [CustomerServiceViewModel] 当前 Session ID: \(sessionId.prefix(20))...")
+        let startTime = Date()
+        let endpoint = "/api/customer-service/assign"
+        
+        Logger.debug("开始连接客服...", category: .api)
+        Logger.debug("当前 Session ID: \(sessionId.prefix(20))...", category: .auth)
         
         apiService.assignCustomerService()
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isConnecting = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "连接客服")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
                     // 处理不同类型的错误
                     if case APIError.unauthorized = error {
                         self?.errorMessage = "登录已过期，请重新登录"
-                        print("❌ [CustomerServiceViewModel] 连接客服失败: 登录已过期")
+                        Logger.error("连接客服失败: 登录已过期", category: .auth)
                     } else if case APIError.httpError(401) = error {
                         // 401 错误：Session 刷新后仍然失败，可能是后端验证问题
                         // 不立即清除 Session，因为可能是临时问题
                         self?.errorMessage = "认证失败，请稍后重试或重新登录"
-                        print("❌ [CustomerServiceViewModel] 连接客服失败: 401 未授权（Session 刷新后仍失败）")
+                        Logger.error("连接客服失败: 401 未授权（Session 刷新后仍失败）", category: .auth)
                         // 注意：不在这里清除 Session，让用户决定是否重新登录
                         // 如果用户需要重新登录，可以在登录页面处理
                     } else {
@@ -68,27 +80,36 @@ class CustomerServiceViewModel: ObservableObject {
                         } else {
                             self?.errorMessage = error.localizedDescription
                         }
-                        print("❌ [CustomerServiceViewModel] 连接客服失败: \(error.localizedDescription)")
+                        Logger.error("连接客服失败: \(error.localizedDescription)", category: .api)
                     }
                     completion(false)
                 }
             }, receiveValue: { [weak self] response in
-                print("✅ [CustomerServiceViewModel] 收到响应")
+                let duration = Date().timeIntervalSince(startTime)
+                Logger.success("收到响应", category: .api)
+                // 记录性能指标
+                self?.performanceMonitor.recordNetworkRequest(
+                    endpoint: endpoint,
+                    method: "POST",
+                    duration: duration,
+                    statusCode: 200
+                )
+                
                 if let error = response.error {
                     // 没有可用客服，已加入排队
-                    print("⚠️ [CustomerServiceViewModel] 没有可用客服: \(error)")
+                    Logger.warning("没有可用客服: \(error)", category: .api)
                     self?.queueStatus = response.queueStatus
                     self?.errorMessage = response.message ?? "暂无在线客服"
                     if let queueStatus = response.queueStatus {
-                        print("📊 [CustomerServiceViewModel] 排队状态: 位置 \(queueStatus.position ?? 0), 等待时间 \(queueStatus.estimatedWaitTime ?? 0)秒")
+                        Logger.info("排队状态: 位置 \(queueStatus.position ?? 0), 等待时间 \(queueStatus.estimatedWaitTime ?? 0)秒", category: .api)
                         // 开始排队轮询
                         self?.startQueuePolling()
                     }
                     completion(false)
                 } else if let chat = response.chat, let service = response.service {
                     // 成功分配客服
-                    print("✅ [CustomerServiceViewModel] 成功分配客服: \(service.name) (ID: \(service.id))")
-                    print("✅ [CustomerServiceViewModel] 会话ID: \(chat.chatId)")
+                    Logger.success("成功分配客服: \(service.name) (ID: \(service.id))", category: .api)
+                    Logger.debug("会话ID: \(chat.chatId)", category: .api)
                     self?.chat = chat
                     self?.service = service
                     // 加载消息
@@ -97,7 +118,7 @@ class CustomerServiceViewModel: ObservableObject {
                     self?.startMessagePolling()
                     completion(true)
                 } else {
-                    print("❌ [CustomerServiceViewModel] 响应格式错误: chat=\(response.chat != nil), service=\(response.service != nil)")
+                    Logger.error("响应格式错误: chat=\(response.chat != nil), service=\(response.service != nil)", category: .api)
                     self?.errorMessage = "未知错误"
                     completion(false)
                 }
@@ -112,20 +133,39 @@ class CustomerServiceViewModel: ObservableObject {
             return
         }
         
+        let startTime = Date()
+        let endpoint = "/api/customer-service/messages/\(chatId)"
+        
         isLoading = true
         errorMessage = nil
         
         apiService.getCustomerServiceMessages(chatId: chatId)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载客服消息")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] messages in
                 self?.messages = messages.sorted { msg1, msg2 in
@@ -154,12 +194,31 @@ class CustomerServiceViewModel: ObservableObject {
             return
         }
         
+        let startTime = Date()
+        let endpoint = "/api/customer-service/messages"
+        
         isSending = true
         apiService.sendCustomerServiceMessage(chatId: chatId, content: content)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isSending = false
-                if case .failure = result {
+                if case .failure(let error) = result {
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
                     completion(false)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] message in
                 self?.isSending = false

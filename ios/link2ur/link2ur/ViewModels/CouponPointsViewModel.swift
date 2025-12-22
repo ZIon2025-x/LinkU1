@@ -3,6 +3,8 @@ import Combine
 
 @MainActor
 class CouponPointsViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
+    
     @Published var pointsAccount: PointsAccount?
     @Published var transactions: [PointsTransaction] = []
     @Published var availableCoupons: [Coupon] = []
@@ -21,9 +23,16 @@ class CouponPointsViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     // MARK: - Points
     
     func loadPointsAccount() {
+        let startTime = Date()
+        let endpoint = "/api/users/points/account"
+        
         isLoading = true
         errorMessage = nil
         
@@ -31,15 +40,31 @@ class CouponPointsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
+                    let duration = Date().timeIntervalSince(startTime)
                     self?.isLoading = false
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
+                        // 记录性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "GET",
+                            duration: duration,
+                            error: error
+                        )
                         if let apiError = error as? APIError {
                             self?.errorMessage = apiError.userFriendlyMessage
                         } else {
                             self?.errorMessage = error.localizedDescription
                         }
+                    } else {
+                        // 记录成功请求的性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "GET",
+                            duration: duration,
+                            statusCode: 200
+                        )
                     }
                 },
                 receiveValue: { [weak self] account in

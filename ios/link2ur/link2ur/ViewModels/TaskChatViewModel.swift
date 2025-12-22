@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class TaskChatViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var taskChats: [TaskChatItem] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -15,10 +16,17 @@ class TaskChatViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadTaskChats() {
+        let startTime = Date()
+        let endpoint = "/api/messages/tasks"
+        
         // 防止重复请求
         guard !isRequesting else {
-            print("⚠️ 任务聊天列表请求已在进行中，跳过重复请求")
+            Logger.warning("任务聊天列表请求已在进行中，跳过重复请求", category: .api)
             return
         }
         
@@ -28,15 +36,23 @@ class TaskChatViewModel: ObservableObject {
         
         // 使用与Web端一致的API端点：/api/messages/tasks
         // 后端返回格式：{ tasks: [...] }
-        apiService.request(TaskChatListResponse.self, "/api/messages/tasks?limit=50&offset=0", method: "GET")
+        apiService.request(TaskChatListResponse.self, "\(endpoint)?limit=50&offset=0", method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 self?.isRequesting = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务聊天列表")
-                    print("❌ TaskChatListResponse 解码失败: \(error)")
-                    print("🔍 尝试使用备用解析方法...")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("TaskChatListResponse 解码失败: \(error)", category: .api)
+                    Logger.debug("尝试使用备用解析方法...", category: .api)
                     // 如果包装对象失败，尝试使用备用方法
                     self?.loadTaskChatsWithFallback()
                     if case let apiError as APIError = error {
@@ -44,6 +60,14 @@ class TaskChatViewModel: ObservableObject {
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 // 过滤掉已取消的任务
@@ -68,7 +92,7 @@ class TaskChatViewModel: ObservableObject {
                 self?.taskChats = sortedChats
                 self?.isRequesting = false
                 if response.taskChats.count != filteredChats.count {
-                    print("✅ 任务聊天列表加载成功，共\(sortedChats.count)条（已过滤\(response.taskChats.count - filteredChats.count)条已取消任务）")
+                    Logger.success("任务聊天列表加载成功，共\(sortedChats.count)条（已过滤\(response.taskChats.count - filteredChats.count)条已取消任务）", category: .api)
                 }
             })
             .store(in: &cancellables)
@@ -119,7 +143,7 @@ class TaskChatViewModel: ObservableObject {
                 self?.isRequesting = false
                 if case .failure(let error) = result {
                     self?.errorMessage = error.localizedDescription
-                    print("❌ 备用解析方法也失败: \(error)")
+                    Logger.error("备用解析方法也失败: \(error)", category: .api)
                 }
             }, receiveValue: { [weak self] taskChats in
                 guard let self = self else { return }
@@ -143,7 +167,7 @@ class TaskChatViewModel: ObservableObject {
                 
                 self.taskChats = sortedChats
                 self.isRequesting = false
-                print("✅ 任务聊天列表加载成功（备用方法），共\(sortedChats.count)条")
+                Logger.success("任务聊天列表加载成功（备用方法），共\(sortedChats.count)条", category: .api)
             })
             .store(in: &cancellables)
     }

@@ -77,6 +77,10 @@ class SearchViewModel: ObservableObject {
         !fleaMarketResults.isEmpty || !forumResults.isEmpty
     }
     
+    deinit {
+        // SearchViewModel 使用 async/await，不需要清理 cancellables
+    }
+    
     // 总结果数
     var totalResultCount: Int {
         taskResults.count + expertResults.count + 
@@ -143,7 +147,7 @@ class SearchViewModel: ObservableObject {
             )
             self.taskResults = response.tasks
         } catch {
-            print("搜索任务失败: \(error)")
+            Logger.error("搜索任务失败: \(error)", category: .api)
             self.taskResults = []
         }
     }
@@ -158,7 +162,7 @@ class SearchViewModel: ObservableObject {
             )
             self.expertResults = response.taskExperts
         } catch {
-            print("搜索达人失败: \(error)")
+            Logger.error("搜索达人失败: \(error)", category: .api)
             self.expertResults = []
         }
     }
@@ -173,7 +177,7 @@ class SearchViewModel: ObservableObject {
             )
             self.fleaMarketResults = response.items
         } catch {
-            print("搜索跳蚤市场失败: \(error)")
+            Logger.error("搜索跳蚤市场失败: \(error)", category: .api)
             self.fleaMarketResults = []
         }
     }
@@ -207,7 +211,7 @@ class SearchViewModel: ObservableObject {
                 )
             }
         } catch {
-            print("搜索论坛失败: \(error)")
+            Logger.error("搜索论坛失败: \(error)", category: .api)
             self.forumResults = []
         }
     }

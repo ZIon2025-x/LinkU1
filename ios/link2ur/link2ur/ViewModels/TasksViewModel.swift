@@ -3,6 +3,7 @@ import Combine
 import CoreLocation
 
 class TasksViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var tasks: [Task] = []
     @Published var isLoading = false
     @Published var isLoadingMore = false
@@ -30,6 +31,15 @@ class TasksViewModel: ObservableObject {
     private var lastLocationUpdateTime: Date? // 记录上次位置更新时间，用于防抖
     
     func loadTasks(category: String? = nil, city: String? = nil, status: String? = nil, keyword: String? = nil, sortBy: String? = nil, page: Int = 1, pageSize: Int = 50, forceRefresh: Bool = false) {
+        let startTime = Date()
+        let endpoint = "/api/tasks"
+        
+        // 防止重复请求：如果正在加载且不是加载更多，则跳过
+        if page == 1 && isLoading && !forceRefresh {
+            Logger.warning("请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         // 如果页码为1，说明是重新加载，重置状态
         if page == 1 {
             isLoading = true
@@ -45,7 +55,7 @@ class TasksViewModel: ObservableObject {
             if !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
                 if let cachedTasks = CacheManager.shared.loadTasks(category: category, city: city) {
                     self.tasks = cachedTasks.filter { $0.status == .open }
-                    print("✅ 从缓存加载了 \(self.tasks.count) 个任务")
+                    Logger.success("从缓存加载了 \(self.tasks.count) 个任务", category: .cache)
                     isLoading = false
                     // 继续在后台刷新数据
                 }
@@ -80,12 +90,28 @@ class TasksViewModel: ObservableObject {
         // 使用 APIService 的 getTasks 方法
         apiService.getTasks(page: page, pageSize: pageSize, type: category, location: city, keyword: keyword, sortBy: sortBy, userLatitude: userLat, userLongitude: userLon)
             .sink(receiveCompletion: { [weak self] completion in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 self?.isLoadingMore = false
                 if case .failure(let error) = completion {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务列表")
                     self?.errorMessage = error.userFriendlyMessage
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
@@ -122,7 +148,7 @@ class TasksViewModel: ObservableObject {
                 // 如果是第一页，保存到缓存（仅第一页且无搜索关键词时）
                 if page == 1 && (keyword == nil || keyword?.isEmpty == true) {
                     CacheManager.shared.saveTasks(self.tasks, category: category, city: city)
-                    print("✅ 已缓存 \(self.tasks.count) 个任务")
+                    Logger.success("已缓存 \(self.tasks.count) 个任务", category: .cache)
                 }
                 
                 // 检查是否还有更多数据
@@ -167,7 +193,7 @@ class TasksViewModel: ObservableObject {
                                 }
                             }
                             
-                            print("🔄 [TasksViewModel] 位置已更新，重新加载任务列表")
+                            Logger.info("位置已更新，重新加载任务列表", category: .general)
                             self.lastLocationUpdateTime = now
                             
                             // 重新加载第一页以获取按新位置排序的任务
@@ -203,13 +229,13 @@ class TasksViewModel: ObservableObject {
     
     /// 按距离排序任务（基于城市距离）
     private func sortTasksByDistance() {
-        print("🔍 [TasksViewModel] sortTasksByDistance() 被调用")
-        print("🔍 [TasksViewModel] rawTasks.count = \(rawTasks.count)")
-        print("🔍 [TasksViewModel] locationService.currentLocation = \(locationService.currentLocation != nil ? "有位置" : "无位置")")
-        print("🔍 [TasksViewModel] locationService.authorizationStatus = \(locationService.authorizationStatus.rawValue)")
+        Logger.debug("sortTasksByDistance() 被调用", category: .general)
+        Logger.debug("rawTasks.count = \(rawTasks.count)", category: .general)
+        Logger.debug("locationService.currentLocation = \(locationService.currentLocation != nil ? "有位置" : "无位置")", category: .general)
+        Logger.debug("locationService.authorizationStatus = \(locationService.authorizationStatus.rawValue)", category: .general)
         
         guard !rawTasks.isEmpty else {
-            print("⚠️ [TasksViewModel] 原始任务数据为空，无法排序")
+            Logger.warning("原始任务数据为空，无法排序", category: .general)
             return
         }
         
@@ -222,25 +248,10 @@ class TasksViewModel: ObservableObject {
                 longitude: userLocation.longitude
             )
             
-            print("📍 [TasksViewModel] 开始按城市距离排序任务")
-            print("📍 [TasksViewModel] 用户位置: 纬度 \(String(format: "%.4f", userLocation.latitude)), 经度 \(String(format: "%.4f", userLocation.longitude))")
+            Logger.debug("开始按城市距离排序任务", category: .general)
+            Logger.debug("用户位置: 纬度 \(String(format: "%.4f", userLocation.latitude)), 经度 \(String(format: "%.4f", userLocation.longitude))", category: .general)
             if let cityName = userLocation.cityName {
-                print("📍 [TasksViewModel] 用户城市: \(cityName)")
-            }
-            
-            // 计算每个任务的距离（基于城市）
-            // Task 模型的 location 是 String 类型（非可选），直接使用
-            for task in tasks {
-                let distance = DistanceCalculator.distanceToCity(
-                    from: userCoordinate,
-                    to: task.location
-                )
-                
-                if let dist = distance {
-                    print("  - \(task.title) [\(task.location)]: \(String(format: "%.2f", dist)) km")
-                } else {
-                    print("  - \(task.title) [\(task.location)]: 无法计算距离")
-                }
+                Logger.debug("用户城市: \(cityName)", category: .general)
             }
             
             // 按距离排序（由近到远）
@@ -257,25 +268,22 @@ class TasksViewModel: ObservableObject {
                 return distance1 < distance2
             }
             
-            print("✅ [TasksViewModel] 已按城市距离排序任务（共\(tasks.count)条）")
-            print("📊 [TasksViewModel] 排序结果（前5名）:")
-            for (index, task) in tasks.prefix(5).enumerated() {
-                let dist = DistanceCalculator.distanceToCity(
-                    from: userCoordinate,
-                    to: task.location
-                )
-                let distStr = dist.map { String(format: "%.2f km", $0) } ?? "未知"
-                print("  \(index + 1). \(task.title) [\(task.location)] - \(distStr)")
-            }
+            Logger.success("已按城市距离排序任务（共\(tasks.count)条）", category: .general)
         } else {
-            print("⚠️ [TasksViewModel] 用户位置不可用，保持原始顺序")
-            print("⚠️ [TasksViewModel] 位置服务状态: \(locationService.authorizationStatus.rawValue)")
+            Logger.warning("用户位置不可用，保持原始顺序", category: .general)
+            Logger.warning("位置服务状态: \(locationService.authorizationStatus.rawValue)", category: .general)
         }
         
         // 更新到主线程
         DispatchQueue.main.async { [weak self] in
             self?.tasks = tasks
         }
+    }
+    
+    deinit {
+        // 清理位置更新监听器
+        locationUpdateCancellable?.cancel()
+        locationUpdateCancellable = nil
     }
 }
 

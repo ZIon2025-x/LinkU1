@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class AuthViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var email = ""
     @Published var password = ""
     @Published var isLoading = false
@@ -67,14 +68,14 @@ class AuthViewModel: ObservableObject {
         apiService.getCaptchaSiteKey()
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
-                    print("⚠️ 获取CAPTCHA配置失败: \(error.localizedDescription)")
+                    Logger.warning("获取CAPTCHA配置失败: \(error.localizedDescription)", category: .api)
                 }
             }, receiveValue: { [weak self] config in
                 DispatchQueue.main.async {
                     self?.captchaEnabled = config.enabled
                     self?.captchaSiteKey = config.siteKey
                     self?.captchaType = config.type
-                    print("✅ CAPTCHA配置: enabled=\(config.enabled), type=\(config.type ?? "none"), siteKey=\(config.siteKey?.prefix(10) ?? "none")")
+                    Logger.success("CAPTCHA配置: enabled=\(config.enabled), type=\(config.type ?? "none"), siteKey=\(config.siteKey?.prefix(10) ?? "none")", category: .api)
                 }
             })
             .store(in: &cancellables)
@@ -97,6 +98,9 @@ class AuthViewModel: ObservableObject {
             return
         }
         
+        let startTime = Date()
+        let endpoint = "/api/secure-auth/login"
+        
         isLoading = true
         errorMessage = nil
         
@@ -106,18 +110,34 @@ class AuthViewModel: ObservableObject {
             "password": password
         ]
         
-        apiService.request(LoginResponse.self, "/api/secure-auth/login", method: "POST", body: body)
+        apiService.request(LoginResponse.self, endpoint, method: "POST", body: body)
             .sink(receiveCompletion: { [weak self] completion in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = completion {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "用户登录")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
                     // 同时保留 errorMessage 用于 UI 显示
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { response in
                 // 后端使用 session-based 认证，保存 session_id
@@ -125,9 +145,9 @@ class AuthViewModel: ObservableObject {
                 let sessionId = response.authHeaders?.sessionId ?? response.sessionId
                 if let sessionId = sessionId, !sessionId.isEmpty {
                     KeychainHelper.shared.save(sessionId, service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
-                    print("✅ Session ID 已保存: \(sessionId.prefix(20))...")
+                    Logger.success("Session ID 已保存: \(sessionId.prefix(20))...", category: .auth)
                 } else {
-                    print("⚠️ 警告: 登录响应中未找到 Session ID")
+                    Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
                 }
                 
                 // 将 LoginUser 转换为 User（登录响应只包含部分字段，需要获取完整用户信息）
@@ -157,7 +177,7 @@ class AuthViewModel: ObservableObject {
                     if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
                         APIService.shared.registerDeviceToken(deviceToken) { success in
                             if success {
-                                print("Device token sent after login")
+                                Logger.debug("Device token sent after login", category: .auth)
                             }
                         }
                     }
@@ -171,7 +191,7 @@ class AuthViewModel: ObservableObject {
     /// 处理包含区号的输入（如 +4407700123456）和英国手机号的前导0
     private func cleanAndFormatPhoneNumber(_ input: String) -> (countryCode: String, phoneNumber: String)? {
         // 清理输入（去除空格和特殊字符，但保留+号）
-        var cleaned = input.replacingOccurrences(of: " ", with: "")
+        let cleaned = input.replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: "-", with: "")
             .replacingOccurrences(of: "(", with: "")
             .replacingOccurrences(of: ")", with: "")
@@ -249,27 +269,46 @@ class AuthViewModel: ObservableObject {
         
         print("📱 发送验证码: phone=\(fullPhone), captchaToken=\(captchaToken != nil ? "已设置" : "未设置"), captchaEnabled=\(captchaEnabled)")
         
+        let startTime = Date()
+        let endpoint = "/api/secure-auth/send-phone-code"
+        
         apiService.sendPhoneCode(phone: fullPhone, captchaToken: captchaToken)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isSendingCode = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "发送验证码")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
                     let errorMsg: String
                     if let apiError = error as? APIError {
                         errorMsg = apiError.userFriendlyMessage
                     } else {
                         errorMsg = error.localizedDescription
                     }
-                    print("❌ 发送验证码失败: \(errorMsg)")
+                    Logger.error("发送验证码失败: \(errorMsg)", category: .auth)
                     self?.errorMessage = errorMsg
                     completion(false, errorMsg)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] _ in
                 // 验证码发送成功，开始倒计时
                 // 注意：发送验证码成功后，清除CAPTCHA token（因为token只能使用一次）
                 // 下次发送验证码时需要重新验证
-                print("✅ 验证码发送成功")
+                Logger.success("验证码发送成功", category: .auth)
                 self?.captchaToken = nil
                 self?.startCountdown()
                 completion(true, nil)
@@ -297,19 +336,38 @@ class AuthViewModel: ObservableObject {
         // 组合区号和手机号
         let fullPhone = finalCountryCode + cleanedPhoneNumber
         
+        let startTime = Date()
+        let endpoint = "/api/secure-auth/login-phone"
+        
         // 登录时不需要CAPTCHA（发送验证码时已经验证过了，后端也不要求登录时验证）
         // 清除captchaToken，因为token只能使用一次，且登录时不需要
         apiService.loginWithPhone(phone: fullPhone, code: verificationCode, captchaToken: nil)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "手机验证码登录")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
@@ -318,9 +376,9 @@ class AuthViewModel: ObservableObject {
                 let sessionId = response.authHeaders?.sessionId ?? response.sessionId
                 if let sessionId = sessionId, !sessionId.isEmpty {
                     KeychainHelper.shared.save(sessionId, service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
-                    print("✅ Session ID 已保存: \(sessionId.prefix(20))...")
+                    Logger.success("Session ID 已保存: \(sessionId.prefix(20))...", category: .auth)
                 } else {
-                    print("⚠️ 警告: 登录响应中未找到 Session ID")
+                    Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
                 }
                 
                 // 将 LoginUser 转换为 User
@@ -353,7 +411,7 @@ class AuthViewModel: ObservableObject {
                     if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
                         APIService.shared.registerDeviceToken(deviceToken) { success in
                             if success {
-                                print("Device token sent after login")
+                                Logger.debug("Device token sent after login", category: .auth)
                             }
                         }
                     }

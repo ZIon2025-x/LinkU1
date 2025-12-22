@@ -333,7 +333,7 @@ struct CategoryCard: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "bubble.right.fill")
                                     .font(.system(size: 9, weight: .medium))
-                                Text("\(latestPost.replyCount)")
+                                Text(latestPost.replyCount.formatCount())
                                     .font(AppTypography.caption2)
                             }
                             .foregroundColor(AppColors.textTertiary)

@@ -3,6 +3,7 @@ import Combine
 import UIKit
 
 class CreateTaskViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var title = ""
     @Published var description = ""
     @Published var price: Double?
@@ -24,6 +25,10 @@ class CreateTaskViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     // 后端真实的任务类型列表
@@ -130,14 +135,33 @@ class CreateTaskViewModel: ObservableObject {
                 body["images"] = self.uploadedImageUrls
             }
             
-            self.apiService.request(Task.self, "/api/tasks", method: "POST", body: body)
+            let startTime = Date()
+            let endpoint = "/api/tasks"
+            
+            self.apiService.request(Task.self, endpoint, method: "POST", body: body)
                 .sink(receiveCompletion: { [weak self] result in
+                    let duration = Date().timeIntervalSince(startTime)
                     self?.isLoading = false
                     if case .failure(let error) = result {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "创建任务")
+                        // 记录性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "POST",
+                            duration: duration,
+                            error: error
+                        )
                         self?.errorMessage = error.userFriendlyMessage
                         completion(false)
+                    } else {
+                        // 记录成功请求的性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "POST",
+                            duration: duration,
+                            statusCode: 200
+                        )
                     }
                 }, receiveValue: { [weak self] _ in
                     self?.reset()

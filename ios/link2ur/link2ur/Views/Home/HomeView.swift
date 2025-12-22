@@ -212,7 +212,7 @@ struct RecommendedContentView: View {
 // 附近任务视图
 struct NearbyTasksView: View {
     @StateObject private var viewModel = TasksViewModel()
-    @StateObject private var locationService = LocationService.shared
+    @ObservedObject private var locationService = LocationService.shared
     
     var body: some View {
         ZStack {
@@ -259,36 +259,13 @@ struct NearbyTasksView: View {
             }
         }
         .onAppear {
-            print("🏠 [NearbyTasksView] onAppear - 开始初始化")
-            print("🏠 [NearbyTasksView] 位置服务状态:")
-            print("  - 授权状态: \(locationService.authorizationStatus.rawValue)")
-            print("  - 是否已授权: \(locationService.isAuthorized)")
-            print("  - 当前位置: \(locationService.currentLocation != nil ? "已获取" : "未获取")")
-            
-            // 请求位置权限（用于距离排序）
-            if !locationService.isAuthorized {
-                print("🏠 [NearbyTasksView] 请求位置权限...")
-                locationService.requestAuthorization()
-            } else {
-                print("🏠 [NearbyTasksView] 位置权限已授权，开始更新位置...")
-                locationService.startUpdatingLocation()
-                // 也主动请求一次位置（如果还没有）
-                if locationService.currentLocation == nil {
-                    print("🏠 [NearbyTasksView] 主动请求位置...")
-                    locationService.requestLocation()
-                }
-            }
-            
-            // 如果有位置，立即加载任务；否则等待位置更新
-            if let _ = locationService.currentLocation {
+            initializeLocationService(
+                locationService: locationService,
+                viewName: "NearbyTasksView"
+            ) {
                 if viewModel.tasks.isEmpty {
-                    print("🏠 [NearbyTasksView] 位置已可用，加载任务列表...")
                     viewModel.loadTasks(status: "open", sortBy: "distance")
-                } else {
-                    print("🏠 [NearbyTasksView] 任务列表已存在，共\(viewModel.tasks.count)条")
                 }
-            } else {
-                print("🏠 [NearbyTasksView] 等待位置获取...")
             }
         }
         .onChange(of: locationService.currentLocation) { newLocation in
@@ -419,7 +396,7 @@ struct MenuView: View {
 // 任务达人列表内容视图（不带NavigationView）
 struct TaskExpertListContentView: View {
     @StateObject private var viewModel = TaskExpertViewModel()
-    @StateObject private var locationService = LocationService.shared
+    @ObservedObject private var locationService = LocationService.shared
     @State private var selectedCategory: String? = nil
     @State private var selectedCity: String? = nil
     @State private var showFilter = false
@@ -564,34 +541,18 @@ struct TaskExpertListContentView: View {
             )
         }
         .onAppear {
-            print("🏠 [TaskExpertListContentView] onAppear - 开始初始化")
-            print("🏠 [TaskExpertListContentView] 位置服务状态:")
-            print("  - 授权状态: \(locationService.authorizationStatus.rawValue)")
-            print("  - 是否已授权: \(locationService.isAuthorized)")
-            print("  - 当前位置: \(locationService.currentLocation != nil ? "已获取" : "未获取")")
-            
-            // 请求位置权限（用于距离排序）
-            if !locationService.isAuthorized {
-                print("🏠 [TaskExpertListContentView] 请求位置权限...")
-                locationService.requestAuthorization()
-            } else {
-                print("🏠 [TaskExpertListContentView] 位置权限已授权，开始更新位置...")
-                locationService.startUpdatingLocation()
-                // 也主动请求一次位置（如果还没有）
-                if locationService.currentLocation == nil {
-                    print("🏠 [TaskExpertListContentView] 主动请求位置...")
-                    locationService.requestLocation()
-                }
-            }
-            
-            if viewModel.experts.isEmpty {
-                print("🏠 [TaskExpertListContentView] 加载达人列表...")
-                applyFilters()
-            } else {
-                print("🏠 [TaskExpertListContentView] 达人列表已存在，共\(viewModel.experts.count)条")
-                // 即使已有数据，也尝试重新排序（如果位置已更新）
-                if locationService.currentLocation != nil {
-                    print("🏠 [TaskExpertListContentView] 位置已可用，触发重新排序...")
+            initializeLocationService(
+                locationService: locationService,
+                viewName: "TaskExpertListContentView"
+            ) {
+                if viewModel.experts.isEmpty {
+                    applyFilters()
+                } else {
+                    Logger.debug("🏠 [TaskExpertListContentView] 达人列表已存在，共\(viewModel.experts.count)条", category: .ui)
+                    // 即使已有数据，也尝试重新排序（如果位置已更新）
+                    if locationService.currentLocation != nil {
+                        Logger.debug("🏠 [TaskExpertListContentView] 位置已可用，触发重新排序...", category: .ui)
+                    }
                 }
             }
         }
@@ -634,12 +595,16 @@ struct SearchView: View {
                         .focused($isSearchFocused)
                         .onSubmit {
                             viewModel.search()
+                            // 用户体验优化：搜索后收起键盘
+                            isSearchFocused = false
                         }
                     
                     if !viewModel.searchText.isEmpty {
                         Button(action: {
                             viewModel.searchText = ""
                             viewModel.clearResults()
+                            // 用户体验优化：清空搜索时收起键盘
+                            isSearchFocused = false
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(AppColors.textSecondary)
@@ -1210,14 +1175,14 @@ struct SearchForumCard: View {
                 HStack(spacing: AppSpacing.sm) {
                     HStack(spacing: 2) {
                         Image(systemName: "eye")
-                        Text("\(post.viewCount)")
+                        Text(post.viewCount.formatCount())
                     }
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textTertiary)
                     
                     HStack(spacing: 2) {
                         Image(systemName: "heart")
-                        Text("\(post.likeCount)")
+                        Text(post.likeCount.formatCount())
                     }
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textTertiary)
@@ -1322,7 +1287,9 @@ struct RecommendedTasksSection: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppSpacing.md) {
-                        ForEach(Array(viewModel.tasks.prefix(10))) { task in
+                        // 性能优化：缓存 prefix 结果，避免重复计算，并确保稳定的 id
+                        let displayedTasks = Array(viewModel.tasks.prefix(10))
+                        ForEach(displayedTasks, id: \.id) { task in
                             NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                 TaskCard(task: task)
                                     .frame(width: 200)
@@ -1542,7 +1509,9 @@ struct PopularActivitiesSection: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: AppSpacing.md) {
-                        ForEach(Array(viewModel.activities.prefix(10))) { activity in
+                        // 性能优化：缓存 prefix 结果，避免重复计算，并确保稳定的 id
+                        let displayedActivities = Array(viewModel.activities.prefix(10))
+                        ForEach(displayedActivities, id: \.id) { activity in
                             NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
                                 ActivityCardView(activity: activity, showEndedBadge: false)
                                     .frame(width: 280)
@@ -1707,5 +1676,41 @@ struct ActivityCardPlaceholder: View {
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.large)
         .shadow(color: AppShadow.medium.color, radius: AppShadow.medium.radius, x: AppShadow.medium.x, y: AppShadow.medium.y)
+    }
+}
+
+// MARK: - Location Service Helper
+/// 初始化位置服务（提取重复逻辑）
+fileprivate func initializeLocationService(
+    locationService: LocationService,
+    viewName: String,
+    onLocationReady: @escaping () -> Void
+) {
+    Logger.debug("\(viewName) onAppear - 开始初始化", category: .ui)
+    Logger.debug("\(viewName) 位置服务状态:", category: .ui)
+    Logger.debug("  - 授权状态: \(locationService.authorizationStatus.rawValue)", category: .ui)
+    Logger.debug("  - 是否已授权: \(locationService.isAuthorized)", category: .ui)
+    Logger.debug("  - 当前位置: \(locationService.currentLocation != nil ? "已获取" : "未获取")", category: .ui)
+    
+    // 请求位置权限（用于距离排序）
+    if !locationService.isAuthorized {
+        Logger.debug("\(viewName) 请求位置权限...", category: .ui)
+        locationService.requestAuthorization()
+    } else {
+        Logger.debug("\(viewName) 位置权限已授权，开始更新位置...", category: .ui)
+        locationService.startUpdatingLocation()
+        // 也主动请求一次位置（如果还没有）
+        if locationService.currentLocation == nil {
+            Logger.debug("\(viewName) 主动请求位置...", category: .ui)
+            locationService.requestLocation()
+        }
+    }
+    
+    // 如果有位置，立即执行回调；否则等待位置更新
+    if locationService.currentLocation != nil {
+        Logger.debug("\(viewName) 位置已可用", category: .ui)
+        onLocationReady()
+    } else {
+        Logger.debug("\(viewName) 等待位置获取...", category: .ui)
     }
 }

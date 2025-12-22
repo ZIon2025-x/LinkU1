@@ -85,5 +85,15 @@ extension String {
         guard let url = toImageURL() else { return false }
         return url.scheme != nil && url.host != nil
     }
+    
+    /// 将日期字符串转换为友好显示格式（如：3分钟前，昨天，10月20日）
+    func toDisplayDate() -> String {
+        return DateFormatterHelper.shared.formatTime(self)
+    }
+    
+    /// 将日期字符串转换为完整显示格式（如：2025-10-20 14:30）
+    func toFullDate() -> String {
+        return DateFormatterHelper.shared.formatFullTime(self)
+    }
 }
 

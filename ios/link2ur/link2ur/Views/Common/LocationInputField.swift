@@ -75,11 +75,36 @@ struct LocationInputField: View {
             HStack(spacing: 10) {
                 // Online 切换按钮
                 if showOnlineOption {
-                    Button(action: toggleOnline) {
-                        Image(systemName: isOnline ? "globe" : "mappin.and.ellipse")
-                            .foregroundColor(isOnline ? AppColors.success : AppColors.primary)
-                            .frame(width: 20)
+                    Button(action: {
+                        toggleOnline()
+                        HapticFeedback.medium()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: isOnline ? "globe.americas.fill" : "mappin.and.ellipse")
+                                .font(.system(size: 14, weight: .bold))
+                            
+                            if isOnline {
+                                Text("Online")
+                                    .font(.system(size: 11, weight: .heavy))
+                                    .textCase(.uppercase)
+                            } else {
+                                Text("线上")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(isOnline ? AppColors.success.opacity(0.12) : AppColors.primary.opacity(0.08))
+                        )
+                        .foregroundColor(isOnline ? AppColors.success : AppColors.primary)
+                        .overlay(
+                            Capsule()
+                                .stroke(isOnline ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.15), lineWidth: 1)
+                        )
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 // 文本输入
@@ -188,7 +213,8 @@ struct LocationInputField: View {
     
     private var suggestionsList: some View {
         VStack(spacing: 0) {
-            ForEach(sortedSearchResults.prefix(5), id: \.hashValue) { result in
+            // 性能优化：使用缓存的前5个结果，避免重复计算 prefix
+            ForEach(topSearchResults, id: \.hashValue) { result in
                 Button(action: {
                     selectSuggestion(result)
                 }) {
@@ -228,7 +254,8 @@ struct LocationInputField: View {
                     .padding(.vertical, 12)
                 }
                 
-                if result != sortedSearchResults.prefix(5).last {
+                // 性能优化：使用缓存的结果判断是否是最后一个
+                if result != topSearchResults.last {
                     Divider()
                         .padding(.leading, 52)
                 }
@@ -258,6 +285,11 @@ struct LocationInputField: View {
             if !aIsUK && bIsUK { return false }
             return false
         }
+    }
+    
+    // 性能优化：缓存前5个搜索结果，避免重复计算
+    private var topSearchResults: [MKLocalSearchCompletion] {
+        Array(sortedSearchResults.prefix(5))
     }
     
     /// 常用UK城市

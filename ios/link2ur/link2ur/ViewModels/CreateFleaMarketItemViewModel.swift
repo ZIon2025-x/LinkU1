@@ -3,6 +3,8 @@ import Combine
 import UIKit
 
 class CreateFleaMarketItemViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
+    
     @Published var title = ""
     @Published var description = ""
     @Published var price: Double?
@@ -24,6 +26,10 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     let categories = ["电子产品", "服装配饰", "家具家电", "图书文具", "运动户外", "美妆护肤", "其他"]
@@ -119,16 +125,36 @@ class CreateFleaMarketItemViewModel: ObservableObject {
                 body["images"] = self.uploadedImageUrls
             }
             
-            self.apiService.request(FleaMarketItem.self, "/api/flea-market/items", method: "POST", body: body)
+            let startTime = Date()
+            let endpoint = "/api/flea-market/items"
+            
+            self.apiService.request(CreateFleaMarketItemResponse.self, endpoint, method: "POST", body: body)
                 .sink(receiveCompletion: { [weak self] result in
+                    let duration = Date().timeIntervalSince(startTime)
                     self?.isLoading = false
                     if case .failure(let error) = result {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "创建商品")
+                        // 记录性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "POST",
+                            duration: duration,
+                            error: error
+                        )
                         self?.errorMessage = error.userFriendlyMessage
                         completion(false)
+                    } else {
+                        // 记录成功请求的性能指标
+                        self?.performanceMonitor.recordNetworkRequest(
+                            endpoint: endpoint,
+                            method: "POST",
+                            duration: duration,
+                            statusCode: 200
+                        )
                     }
-                }, receiveValue: { [weak self] _ in
+                }, receiveValue: { [weak self] response in
+                    // 响应成功，可以访问 response.data.id 获取创建的商品 ID
                     self?.reset()
                     completion(true)
                 })

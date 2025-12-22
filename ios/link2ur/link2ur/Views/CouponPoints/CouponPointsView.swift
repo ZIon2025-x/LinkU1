@@ -107,6 +107,7 @@ struct CouponPointsView: View {
                     }
                 }
             }
+            .enableSwipeBack()
             .onAppear {
                 if appState.isAuthenticated {
                     viewModel.loadPointsAccount()

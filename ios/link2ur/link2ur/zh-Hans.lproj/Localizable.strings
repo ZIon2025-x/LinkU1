@@ -152,7 +152,7 @@
 // MARK: - Profile
 "profile.profile" = "个人中心";
 "profile.my_tasks" = "我的任务";
-"profile.my_posts" = "我的帖子";
+"profile.my_posts" = "我的闲置";
 "profile.settings" = "设置";
 "profile.about" = "关于";
 "profile.logout" = "退出登录";
@@ -280,8 +280,8 @@
 "profile.user" = "用户";
 "profile.my_tasks" = "我的任务";
 "profile.my_tasks_subtitle" = "查看我发布和接取的任务";
-"profile.my_posts" = "我的发布";
-"profile.my_posts_subtitle" = "查看我发布的内容";
+"profile.my_posts" = "我的闲置";
+"profile.my_posts_subtitle" = "管理我的闲置物品";
 "profile.my_wallet" = "我的钱包";
 "profile.my_wallet_subtitle" = "查看余额和交易记录";
 "profile.my_applications" = "我的申请";
@@ -499,7 +499,7 @@
 "forum.go_verify" = "去认证";
 "forum.no_posts" = "暂无帖子";
 "forum.official" = "官方";
-"forum.replies" = "回复 (%d)";
+"forum.replies" = "回复 (%@)";
 "forum.load_replies_failed" = "加载回复失败: %@";
 "forum.no_replies" = "暂无回复";
 "forum.reply" = "回复";

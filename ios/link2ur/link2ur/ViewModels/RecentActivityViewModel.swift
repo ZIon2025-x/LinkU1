@@ -42,7 +42,7 @@ struct RecentActivity: Identifiable {
         self.description = fleaMarketItem.description
         self.author = fleaMarketItem.seller
         self.createdAt = fleaMarketItem.createdAt
-        self.icon = "tag.fill"
+        self.icon = "cart.fill"
         self.iconColor = AppColors.gradientWarning
         self.actionText = "发布了新商品"
     }
@@ -88,6 +88,10 @@ class RecentActivityViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     /// 首次加载数据

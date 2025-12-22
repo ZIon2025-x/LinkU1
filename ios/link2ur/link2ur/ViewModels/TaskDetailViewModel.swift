@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class TaskDetailViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var task: Task?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -19,15 +20,38 @@ class TaskDetailViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadTask(taskId: Int) {
+        let startTime = Date()
+        let endpoint = "/api/tasks/\(taskId)"
+        
         isLoading = true
         apiService.getTaskDetail(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务详情")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     self?.errorMessage = error.userFriendlyMessage
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] task in
                 self?.task = task
@@ -36,14 +60,33 @@ class TaskDetailViewModel: ObservableObject {
     }
     
     func loadApplications(taskId: Int, currentUserId: String?) {
+        let startTime = Date()
+        let endpoint = "/api/tasks/\(taskId)/applications"
+        
         isLoadingApplications = true
         apiService.getTaskApplications(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoadingApplications = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务申请列表")
-                    print("加载申请列表失败: \(error.localizedDescription)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("加载申请列表失败: \(error.localizedDescription)", category: .api)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 self?.applications = response.applications
@@ -59,6 +102,9 @@ class TaskDetailViewModel: ObservableObject {
     }
     
     func loadReviews(taskId: Int) {
+        let startTime = Date()
+        let endpoint = "/api/tasks/\(taskId)/reviews"
+        
         isLoadingReviews = true
         apiService.getTaskReviews(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in
@@ -66,7 +112,7 @@ class TaskDetailViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务评价")
-                    print("加载评价失败: \(error.localizedDescription)")
+                    Logger.error("加载评价失败: \(error.localizedDescription)", category: .api)
                 }
             }, receiveValue: { [weak self] reviews in
                 self?.reviews = reviews

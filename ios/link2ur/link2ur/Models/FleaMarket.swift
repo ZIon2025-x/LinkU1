@@ -121,6 +121,17 @@ struct FleaMarketItemListResponse: Decodable {
     }
 }
 
+// 创建商品响应
+struct CreateFleaMarketItemResponse: Decodable {
+    let success: Bool
+    let data: CreateFleaMarketItemData
+    let message: String?
+    
+    struct CreateFleaMarketItemData: Decodable {
+        let id: String
+    }
+}
+
 // 购买申请
 struct PurchaseRequest: Codable, Identifiable {
     let id: Int
@@ -139,4 +150,45 @@ struct PurchaseRequest: Codable, Identifiable {
         case createdAt = "created_at"
     }
 }
+
+// 收藏操作响应
+struct FavoriteToggleResponse: Decodable {
+    let success: Bool
+    let data: FavoriteData
+    let message: String?
+    
+    struct FavoriteData: Decodable {
+        let isFavorited: Bool
+        
+        enum CodingKeys: String, CodingKey {
+            case isFavorited = "is_favorited"
+        }
+    }
+}
+
+// 我的收藏列表响应
+struct MyFavoritesResponse: Decodable {
+    let items: [FavoriteItem]
+    let total: Int
+    let page: Int
+    let pageSize: Int
+    
+    struct FavoriteItem: Decodable {
+        let id: Int
+        let itemId: String
+        let createdAt: String
+        
+        enum CodingKeys: String, CodingKey {
+            case id
+            case itemId = "item_id"
+            case createdAt = "created_at"
+        }
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case items, total, page
+        case pageSize = "page_size"
+    }
+}
+
 

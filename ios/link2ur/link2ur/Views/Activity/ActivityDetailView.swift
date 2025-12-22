@@ -44,7 +44,7 @@ struct ActivityDetailView: View {
                                 .padding(.horizontal, AppSpacing.md)
                             
                             // 6. Poster Info
-                            PosterInfoRow(expertId: activity.expertId)
+                            PosterInfoRow(expertId: activity.expertId, expert: viewModel.expert)
                                 .padding(.horizontal, AppSpacing.md)
                             
                             Spacer(minLength: 120) // Bottom spacing for buttons
@@ -77,20 +77,48 @@ struct ActivityDetailView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { /* Share action */ }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .foregroundColor(AppColors.textPrimary)
+                HStack(spacing: 16) {
+                    // 分享按钮
+                    ShareLink(item: "查看这个活动: \(viewModel.selectedActivity?.title ?? "")") {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(AppColors.textPrimary)
+                    }
+                    
+                    // 达人头像按钮
+                    if let activity = viewModel.selectedActivity {
+                        NavigationLink(destination: TaskExpertDetailView(expertId: activity.expertId)) {
+                            if let expert = viewModel.expert, let avatarUrl = expert.avatar, !avatarUrl.isEmpty {
+                                // 显示真实头像
+                                AvatarView(
+                                    urlString: avatarUrl,
+                                    size: 32,
+                                    placeholder: Image(systemName: "person.fill")
+                                )
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(AppColors.primary.opacity(0.3), lineWidth: 1.5)
+                                )
+                            } else {
+                                // 占位符
+                                Circle()
+                                    .fill(AppColors.primary.opacity(0.15))
+                                    .frame(width: 32, height: 32)
+                                    .overlay(
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(AppColors.primary)
+                                    )
+                            }
+                        }
+                    }
                 }
             }
         }
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             viewModel.loadActivityDetail(activityId: activityId)
-            // 隐藏 TabBar
-            appState.hideTabBar = true
-        }
-        .onDisappear {
-            // 恢复 TabBar
-            appState.hideTabBar = false
         }
         .sheet(isPresented: $showingApplySheet) {
             ActivityApplyView(activityId: activityId, viewModel: viewModel)
@@ -113,20 +141,17 @@ struct ActivityImageCarousel: View {
                 TabView(selection: $currentIndex) {
                     ForEach(0..<images.count, id: \.self) { index in
                         GeometryReader { geo in
-                            AsyncImage(url: images[index].toImageURL()) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: geo.size.width, height: geo.size.height)
-                                        .clipped()
-                                case .failure(_), .empty:
-                                    placeholderBackground
-                                @unknown default:
-                                    placeholderBackground
-                                }
-                            }
+                            // 性能优化：使用 AsyncImageView 优化图片加载和缓存
+                            AsyncImageView(
+                                urlString: images[index],
+                                placeholder: Image(systemName: "photo"),
+                                width: geo.size.width,
+                                height: geo.size.height,
+                                contentMode: .fill,
+                                cornerRadius: 0
+                            )
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
                         }
                         .tag(index)
                     }
@@ -353,33 +378,80 @@ struct InfoRow: View {
 
 struct PosterInfoRow: View {
     let expertId: String
-    // In a real app, you'd load the expert info here or pass it in
+    let expert: TaskExpert?
     
     var body: some View {
-        HStack {
-            Circle()
-                .fill(AppColors.primary.opacity(0.1))
-                .frame(width: 44, height: 44)
-                .overlay(IconStyle.icon("person.fill", size: 20).foregroundColor(AppColors.primary))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("活动发布者")
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textSecondary)
-                Text("查看达人主页")
-                    .font(AppTypography.bodyBold)
-                    .foregroundColor(AppColors.textPrimary)
+        NavigationLink(destination: TaskExpertDetailView(expertId: expertId)) {
+            HStack(spacing: AppSpacing.md) {
+                // 达人头像
+                if let expert = expert, let avatarUrl = expert.avatar, !avatarUrl.isEmpty {
+                    AvatarView(
+                        urlString: avatarUrl,
+                        size: 52,
+                        placeholder: Image(systemName: "person.fill")
+                    )
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: AppColors.gradientPrimary),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
+                    )
+                    .shadow(color: AppColors.primary.opacity(0.2), radius: 4, x: 0, y: 2)
+                } else {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: AppColors.gradientPrimary),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 52, height: 52)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundColor(.white)
+                        )
+                        .shadow(color: AppColors.primary.opacity(0.3), radius: 4, x: 0, y: 2)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("活动发布者")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    if let expert = expert {
+                        Text(expert.name)
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(AppColors.textPrimary)
+                    } else {
+                        Text("查看达人主页")
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(AppColors.textPrimary)
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textQuaternary)
+                    .padding(8)
+                    .background(AppColors.background)
+                    .clipShape(Circle())
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(AppColors.textQuaternary)
+            .padding(AppSpacing.md)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.large)
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
@@ -558,6 +630,7 @@ struct ActivityApplyView: View {
                     Button("取消") { dismiss() }
                 }
             }
+            .enableSwipeBack()
             .onAppear {
                 if hasTimeSlots, let serviceId = activity?.expertServiceId {
                     viewModel.loadTimeSlots(serviceId: serviceId, activityId: activityId)

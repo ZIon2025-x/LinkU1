@@ -77,6 +77,8 @@ enum TaskTab: String, CaseIterable {
 }
 
 class MyTasksViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
+    
     @Published var tasks: [Task] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -93,6 +95,10 @@ class MyTasksViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     // 统计数据

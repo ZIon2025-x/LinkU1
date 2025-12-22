@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class MessageViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var conversations: [Contact] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -12,6 +13,10 @@ class MessageViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadConversations() {
@@ -98,6 +103,10 @@ class ChatViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadMessages() {
         isLoading = true
         apiService.getMessageHistory(userId: partnerId)
@@ -154,6 +163,7 @@ class ChatViewModel: ObservableObject {
 
 // 任务聊天专用的 ViewModel
 class TaskChatDetailViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var messages: [Message] = []
     @Published var isLoading = false
     @Published var isSending = false
@@ -169,38 +179,61 @@ class TaskChatDetailViewModel: ObservableObject {
         self.taskId = taskId
         self.taskChat = taskChat
         // 从 taskChat 中确定对方用户ID
-        // 注意：taskChat 会在 loadMessages 方法中使用，这里先保存
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    // 注意：taskChat 会在 loadMessages 方法中使用，这里先保存
+    
     func loadMessages(currentUserId: String?) {
+        let startTime = Date()
+        let endpoint = "/api/messages/task/\(taskId)"
+        
         isLoading = true
         errorMessage = nil
         
-        print("🔍 开始加载任务聊天消息，任务ID: \(taskId), 当前用户ID: \(currentUserId ?? "nil")")
+        Logger.debug("开始加载任务聊天消息，任务ID: \(taskId), 当前用户ID: \(currentUserId ?? "nil")", category: .api)
         
         // 确定对方用户ID
         if let taskChat = taskChat, let currentUserId = currentUserId {
-            print("📋 任务聊天信息 - posterId: \(taskChat.posterId ?? "nil"), takerId: \(taskChat.takerId ?? "nil")")
+            Logger.debug("任务聊天信息 - posterId: \(taskChat.posterId ?? "nil"), takerId: \(taskChat.takerId ?? "nil")", category: .api)
             if taskChat.posterId == currentUserId {
                 partnerId = taskChat.takerId
-                print("✅ 当前用户是发布者，对方用户ID: \(partnerId ?? "nil")")
+                Logger.debug("当前用户是发布者，对方用户ID: \(partnerId ?? "nil")", category: .api)
             } else if taskChat.takerId == currentUserId {
                 partnerId = taskChat.posterId
-                print("✅ 当前用户是接取者，对方用户ID: \(partnerId ?? "nil")")
+                Logger.debug("当前用户是接取者，对方用户ID: \(partnerId ?? "nil")", category: .api)
             } else {
-                print("⚠️ 当前用户既不是发布者也不是接取者")
+                Logger.warning("当前用户既不是发布者也不是接取者", category: .api)
             }
         }
         
         // 直接使用任务聊天专用端点：/api/messages/task/{taskId}（注意是单数 task）
         // 这个端点返回格式：{ messages: [...], cursor?: string, has_more?: bool }
-        print("📤 请求任务聊天消息，任务ID: \(taskId)")
-        apiService.request(TaskMessagesResponse.self, "/api/messages/task/\(taskId)", method: "GET")
+        Logger.debug("请求任务聊天消息，任务ID: \(taskId)", category: .api)
+        apiService.request(TaskMessagesResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     self?.errorMessage = error.localizedDescription
-                    print("❌ 任务聊天消息加载失败: \(error)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("任务聊天消息加载失败: \(error)", category: .api)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
@@ -234,42 +267,61 @@ class TaskChatDetailViewModel: ObservableObject {
                     let time2 = msg2.createdAt ?? ""
                     return time1 < time2
                 }
-                print("✅ 任务聊天消息加载成功，共\(self.messages.count)条")
+                Logger.success("任务聊天消息加载成功，共\(self.messages.count)条", category: .api)
                 
                 // 加载成功后，标记最新消息为已读（只在有消息ID时调用）
                 if let lastMessage = self.messages.last, let messageId = lastMessage.messageId {
                     self.markAsRead(uptoMessageId: messageId)
                 } else if !self.messages.isEmpty {
-                    print("⚠️ 最新消息没有ID，跳过标记已读")
+                    Logger.warning("最新消息没有ID，跳过标记已读", category: .api)
                 }
             })
             .store(in: &cancellables)
     }
     
     private func loadTaskDetailAndGetPartnerId(currentUserId: String?) {
+        let startTime = Date()
+        let endpoint = "/api/tasks/\(taskId)"
+        
         // 从任务详情获取对方用户ID
-        print("📤 请求任务详情，任务ID: \(taskId)")
-        apiService.request(Task.self, "/api/tasks/\(taskId)", method: "GET")
+        Logger.debug("请求任务详情，任务ID: \(taskId)", category: .api)
+        apiService.request(Task.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     self?.errorMessage = error.localizedDescription
-                    print("❌ 获取任务详情失败: \(error)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("获取任务详情失败: \(error)", category: .api)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] task in
                 guard let self = self, let currentUserId = currentUserId else { return }
                 
-                print("📋 任务详情 - posterId: \(task.posterId ?? "nil"), takerId: \(task.takerId ?? "nil")")
+                Logger.debug("任务详情 - posterId: \(task.posterId ?? "nil"), takerId: \(task.takerId ?? "nil")", category: .api)
                 
                 // 从任务详情中确定对方用户ID
                 if task.posterId == currentUserId {
                     self.partnerId = task.takerId
-                    print("✅ 从任务详情确定：当前用户是发布者，对方用户ID: \(self.partnerId ?? "nil")")
+                    Logger.debug("从任务详情确定：当前用户是发布者，对方用户ID: \(self.partnerId ?? "nil")", category: .api)
                 } else if task.takerId == currentUserId {
                     self.partnerId = task.posterId
-                    print("✅ 从任务详情确定：当前用户是接取者，对方用户ID: \(self.partnerId ?? "nil")")
+                    Logger.debug("从任务详情确定：当前用户是接取者，对方用户ID: \(self.partnerId ?? "nil")", category: .api)
                 } else {
-                    print("⚠️ 当前用户既不是发布者也不是接取者")
+                    Logger.warning("当前用户既不是发布者也不是接取者", category: .api)
                 }
                 
                 // 如果找到了对方用户ID，重新加载消息

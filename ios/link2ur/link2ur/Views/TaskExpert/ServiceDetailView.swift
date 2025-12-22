@@ -7,112 +7,55 @@ struct ServiceDetailView: View {
     @State private var applicationMessage = ""
     @State private var counterPrice: Double?
     @State private var showCounterPrice = false
+    @State private var currentImageIndex = 0
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             AppColors.background
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.service == nil {
-                ProgressView()
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("加载中...")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
             } else if let service = viewModel.service {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                        // 服务图片
-                        if let images = service.images, !images.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: AppSpacing.sm) {
-                                    ForEach(images, id: \.self) { imageUrl in
-                                        AsyncImage(url: imageUrl.toImageURL()) { image in
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        } placeholder: {
-                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                .fill(AppColors.primaryLight)
-                                        }
-                                        .frame(width: 300, height: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
-                                    }
-                                }
-                                .padding(.horizontal, AppSpacing.md)
-                            }
-                        }
+                    VStack(spacing: 0) {
+                        // 1. 沉浸式图片区域
+                        serviceImageGallery(service: service)
                         
-                        // 服务信息
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text(service.serviceName)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.textPrimary)
+                        // 2. 内容区域
+                        VStack(spacing: 24) {
+                            // 价格与标题卡片
+                            priceAndTitleCard(service: service)
+                                .padding(.top, -40)
                             
-                            HStack {
-                                Text("¥ \(String(format: "%.2f", service.basePrice))")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppColors.error)
-                                
-                                Text(service.currency)
-                                    .font(.subheadline)
-                                    .foregroundColor(AppColors.textSecondary)
-                            }
+                            // 服务详情卡片
+                            descriptionCard(service: service)
                             
-                            if let description = service.description {
-                                Text(description)
-                                    .font(.body)
-                                    .foregroundColor(AppColors.textPrimary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            
+                            // 可选时间段
                             if service.hasTimeSlots == true {
-                                Divider()
-                                
-                                Text(LocalizationKey.taskExpertOptionalTimeSlots.localized)
-                                    .font(.headline)
-                                    .foregroundColor(AppColors.textPrimary)
-                                
-                                if viewModel.timeSlots.isEmpty {
-                                    Text(LocalizationKey.taskExpertNoAvailableSlots.localized)
-                                        .font(.subheadline)
-                                        .foregroundColor(AppColors.textSecondary)
-                                } else {
-                                    ForEach(viewModel.timeSlots) { slot in
-                                        TimeSlotCard(slot: slot)
-                                    }
-                                }
+                                timeSlotsCard()
                             }
+                            
+                            // 底部安全区域
+                            Spacer().frame(height: 120)
                         }
-                        .padding(AppSpacing.md)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
-                        
-                        // 申请按钮
-                        Button(action: {
-                            showApplySheet = true
-                        }) {
-                            Text(LocalizationKey.taskExpertApplyService.localized)
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .foregroundColor(.white)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(AppCornerRadius.medium)
-                                .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-                        }
-                        .padding(.horizontal, AppSpacing.md)
                     }
-                    .padding(.vertical, AppSpacing.sm)
                 }
+                .ignoresSafeArea(edges: .top)
+                .scrollIndicators(.hidden)
+                
+                // 3. 固定底部申请栏
+                bottomApplyBar(service: service)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showApplySheet) {
             ApplyServiceSheet(
                 message: $applicationMessage,
@@ -121,6 +64,7 @@ struct ServiceDetailView: View {
                 onApply: {
                     viewModel.applyService(serviceId: serviceId, message: applicationMessage.isEmpty ? nil : applicationMessage, counterPrice: counterPrice) { success in
                         if success {
+                            HapticFeedback.success()
                             showApplySheet = false
                             applicationMessage = ""
                             counterPrice = nil
@@ -135,47 +79,246 @@ struct ServiceDetailView: View {
                 viewModel.loadTimeSlots(serviceId: serviceId)
             }
         }
+        .onChange(of: viewModel.service?.hasTimeSlots) { hasSlots in
+            if hasSlots == true {
+                viewModel.loadTimeSlots(serviceId: serviceId)
+            }
+        }
+    }
+    
+    // MARK: - Sub Components
+    
+    @ViewBuilder
+    private func serviceImageGallery(service: TaskExpertService) -> some View {
+        let screenWidth = UIScreen.main.bounds.width
+        let imageHeight: CGFloat = screenWidth * 0.8
+        
+        if let images = service.images, !images.isEmpty {
+            ZStack(alignment: .bottom) {
+                TabView(selection: $currentImageIndex) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                        AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: screenWidth, height: imageHeight)
+                            .clipped()
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: imageHeight)
+                
+                if images.count > 1 {
+                    HStack(spacing: 6) {
+                        ForEach(0..<images.count, id: \.self) { index in
+                            Circle()
+                                .fill(currentImageIndex == index ? Color.white : Color.white.opacity(0.4))
+                                .frame(width: currentImageIndex == index ? 8 : 6, height: currentImageIndex == index ? 8 : 6)
+                                .animation(.easeInOut(duration: 0.2), value: currentImageIndex)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.black.opacity(0.3)))
+                    .padding(.bottom, 50)
+                }
+            }
+        } else {
+            ZStack {
+                LinearGradient(
+                    colors: [AppColors.primaryLight, AppColors.primaryLight.opacity(0.5)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppColors.primary.opacity(0.3))
+                    Text("暂无图片")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.primary.opacity(0.4))
+                }
+            }
+            .frame(width: screenWidth, height: 240)
+        }
+    }
+    
+    @ViewBuilder
+    private func priceAndTitleCard(service: TaskExpertService) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("£")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                
+                Text(String(format: "%.2f", service.basePrice))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.2))
+                
+                Spacer()
+                
+                Text(service.currency)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            Text(service.serviceName)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
+                .lineSpacing(4)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 8)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func descriptionCard(service: TaskExpertService) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 16)
+                Text("服务详情")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            if let description = service.description, !description.isEmpty {
+                Text(description)
+                    .font(.system(size: 15))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("暂无详细描述")
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textTertiary)
+                    .italic()
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func timeSlotsCard() -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 16)
+                Text(LocalizationKey.taskExpertOptionalTimeSlots.localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            if viewModel.timeSlots.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .foregroundColor(AppColors.textQuaternary)
+                    Text(LocalizationKey.taskExpertNoAvailableSlots.localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(viewModel.timeSlots) { slot in
+                        TimeSlotCard(slot: slot)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func bottomApplyBar(service: TaskExpertService) -> some View {
+        HStack {
+            Button(action: {
+                showApplySheet = true
+                HapticFeedback.selection()
+            }) {
+                Text(LocalizationKey.taskExpertApplyService.localized)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(AppColors.primary)
+                    .cornerRadius(27)
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 24)
+        .background(
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 
-// 时间段卡片
+// MARK: - Time Slot Card
+
 struct TimeSlotCard: View {
     let slot: ServiceTimeSlot
     
     var body: some View {
-        HStack {
+        HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(formatDateTime(slot.slotStartDatetime))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("\(slot.currentParticipants)/\(slot.maxParticipants) 人")
-                    .font(.caption)
-                    .foregroundColor(AppColors.textSecondary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 10))
+                    Text("\(slot.currentParticipants)/\(slot.maxParticipants) 人已约")
+                        .font(.system(size: 11))
+                }
+                .foregroundColor(AppColors.textSecondary)
             }
             
             Spacer()
             
             if slot.isAvailable {
                 Text("可选")
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(AppColors.success)
-                    .cornerRadius(AppCornerRadius.small)
+                    .cornerRadius(8)
             } else {
                 Text(LocalizationKey.taskExpertFull.localized)
-                    .font(.caption)
-                    .foregroundColor(.white)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppColors.textTertiary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(AppColors.textSecondary)
-                    .cornerRadius(AppCornerRadius.small)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
             }
         }
-        .padding(AppSpacing.sm)
-        .background(AppColors.primaryLight)
-        .cornerRadius(AppCornerRadius.small)
+        .padding(12)
+        .background(AppColors.primaryLight.opacity(0.5))
+        .cornerRadius(12)
     }
     
     private func formatDateTime(_ dateString: String) -> String {
@@ -183,7 +326,8 @@ struct TimeSlotCard: View {
     }
 }
 
-// 申请服务弹窗
+// MARK: - Apply Service Sheet
+
 struct ApplyServiceSheet: View {
     @Binding var message: String
     @Binding var counterPrice: Double?
@@ -193,76 +337,91 @@ struct ApplyServiceSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: AppSpacing.lg) {
-                // 申请留言
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("申请留言")
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                    
-                    TextEditor(text: $message)
-                        .frame(height: 100)
-                        .padding(8)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                .stroke(AppColors.primary.opacity(0.2), lineWidth: 1)
-                        )
-                }
-                
-                // 议价选项
-                Toggle("是否议价", isOn: $showCounterPrice)
-                    .toggleStyle(SwitchToggleStyle(tint: AppColors.primary))
-                
-                if showCounterPrice {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("议价金额")
-                            .font(.subheadline)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // 留言
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("申请留言")
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                         
-                        TextField("请输入金额", value: $counterPrice, format: .number)
-                            .keyboardType(.decimalPad)
-                            .padding()
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.medium)
+                        TextEditor(text: $message)
+                            .frame(height: 120)
+                            .padding(12)
+                            .scrollContentBackground(.hidden)
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
                             .overlay(
-                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                    .stroke(AppColors.primary.opacity(0.2), lineWidth: 1)
+                                Group {
+                                    if message.isEmpty {
+                                        Text("简单说明你的需求，方便达人了解...")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.textTertiary)
+                                            .padding(.leading, 16)
+                                            .padding(.top, 20)
+                                            .allowsHitTesting(false)
+                                    }
+                                },
+                                alignment: .topLeading
                             )
                     }
+                    
+                    // 议价
+                    VStack(spacing: 16) {
+                        Toggle(isOn: $showCounterPrice) {
+                            HStack {
+                                Image(systemName: "dollarsign.circle.fill")
+                                    .foregroundColor(.orange)
+                                Text("我想议价")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                        }
+                        .tint(AppColors.primary)
+                        
+                        if showCounterPrice {
+                            HStack {
+                                Text("£")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                TextField("期望价格", value: $counterPrice, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                            }
+                            .padding(16)
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
+                    .padding(16)
+                    .background(Color(UIColor.secondarySystemBackground).opacity(0.3))
+                    .cornerRadius(16)
+                    
+                    Spacer(minLength: 40)
                 }
-                
-                Spacer()
-                
-                // 提交按钮
-                Button(action: onApply) {
-                    Text("提交申请")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .foregroundColor(.white)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(AppCornerRadius.medium)
-                }
+                .padding(24)
             }
-            .padding(AppSpacing.md)
+            .background(Color(UIColor.systemBackground))
             .navigationTitle("申请服务")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
+                    Button("取消") { dismiss() }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: onApply) {
+                        Text("提交")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(AppColors.primary)
+                            .clipShape(Capsule())
                     }
                 }
             }
         }
     }
 }
-

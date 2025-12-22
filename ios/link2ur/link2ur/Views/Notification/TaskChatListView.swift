@@ -272,10 +272,18 @@ struct TaskChatView: View {
     }
     
     // 判断任务是否已完成或取消（不允许发送消息）
+    // 如果 taskChat 为 nil，默认允许发送消息（输入框可见）
     private var isTaskClosed: Bool {
-        guard let status = taskChat?.taskStatus ?? taskChat?.status else {
+        // 如果 taskChat 为 nil，默认不关闭（允许发送消息）
+        guard let taskChat = taskChat else {
             return false
         }
+        
+        // 优先使用 taskStatus，如果没有则使用 status
+        guard let status = taskChat.taskStatus ?? taskChat.status else {
+            return false
+        }
+        
         let closedStatuses = ["completed", "cancelled", "pending_confirmation"]
         return closedStatuses.contains(status.lowercased())
     }
@@ -310,93 +318,97 @@ struct TaskChatView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 消息列表
-                if viewModel.isLoading && viewModel.messages.isEmpty {
-                    // 加载状态
-                    VStack(spacing: AppSpacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(AppColors.primary)
-                        Text("加载消息中...")
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
-                    // 使用统一的错误状态组件
-                    ErrorStateView(
-                        message: errorMessage,
-                        retryAction: {
-                            if let userId = appState.currentUser?.id {
-                                viewModel.loadMessages(currentUserId: String(userId))
-                            }
+                // 消息列表区域 - 使用 Spacer 确保输入框始终可见
+                Group {
+                    if viewModel.isLoading && viewModel.messages.isEmpty {
+                        // 加载状态
+                        VStack(spacing: AppSpacing.md) {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                                .tint(AppColors.primary)
+                            Text("加载消息中...")
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.textSecondary)
                         }
-                    )
-                } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                if viewModel.messages.isEmpty {
-                                    // 空状态
-                                    VStack(spacing: AppSpacing.md) {
-                                        Image(systemName: "message.fill")
-                                            .font(.system(size: 48))
-                                            .foregroundColor(AppColors.textTertiary)
-                                        Text("还没有消息")
-                                            .font(AppTypography.title3)
-                                            .foregroundColor(AppColors.textSecondary)
-                                        Text("开始对话吧！")
-                                            .font(AppTypography.subheadline)
-                                            .foregroundColor(AppColors.textTertiary)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 100)
-                                } else {
-                                    LazyVStack(spacing: AppSpacing.sm) {
-                                        ForEach(viewModel.messages) { message in
-                                            // 判断是否为系统消息
-                                            if isSystemMessage(message) {
-                                                SystemMessageBubble(message: message)
-                                                    .id(message.id)
-                                            } else {
-                                                MessageBubble(
-                                                    message: message,
-                                                    isFromCurrentUser: isMessageFromCurrentUser(message)
-                                                )
-                                                .id(message.id)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, AppSpacing.md)
-                                    .padding(.vertical, AppSpacing.sm)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
+                        // 使用统一的错误状态组件
+                        ErrorStateView(
+                            message: errorMessage,
+                            retryAction: {
+                                if let userId = appState.currentUser?.id {
+                                    viewModel.loadMessages(currentUserId: String(userId))
                                 }
                             }
-                            .padding(.bottom, keyboardPadding)
-                        }
-                        .refreshable {
-                            if let userId = appState.currentUser?.id {
-                                viewModel.loadMessages(currentUserId: String(userId))
+                        )
+                    } else {
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    if viewModel.messages.isEmpty {
+                                        // 空状态
+                                        VStack(spacing: AppSpacing.md) {
+                                            Image(systemName: "message.fill")
+                                                .font(.system(size: 48))
+                                                .foregroundColor(AppColors.textTertiary)
+                                            Text("还没有消息")
+                                                .font(AppTypography.title3)
+                                                .foregroundColor(AppColors.textSecondary)
+                                            Text("开始对话吧！")
+                                                .font(AppTypography.subheadline)
+                                                .foregroundColor(AppColors.textTertiary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.top, 100)
+                                    } else {
+                                        LazyVStack(spacing: AppSpacing.sm) {
+                                            ForEach(viewModel.messages) { message in
+                                                // 判断是否为系统消息
+                                                if isSystemMessage(message) {
+                                                    SystemMessageBubble(message: message)
+                                                        .id(message.id)
+                                                } else {
+                                                    MessageBubble(
+                                                        message: message,
+                                                        isFromCurrentUser: isMessageFromCurrentUser(message)
+                                                    )
+                                                    .id(message.id)
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, AppSpacing.md)
+                                        .padding(.vertical, AppSpacing.sm)
+                                    }
+                                }
+                                .padding(.bottom, keyboardPadding)
                             }
-                        }
-                        .onChange(of: viewModel.messages.count) { newCount in
-                            if newCount > 0 {
-                                scrollToBottom(proxy: proxy, delay: 0.1)
+                            .scrollContentBackground(.hidden) // 隐藏背景，避免手势冲突
+                            .refreshable {
+                                if let userId = appState.currentUser?.id {
+                                    viewModel.loadMessages(currentUserId: String(userId))
+                                }
                             }
-                        }
-                        .onChange(of: isInputFocused) { focused in
-                            if focused && !viewModel.messages.isEmpty {
-                                scrollToBottom(proxy: proxy, delay: 0.3)
+                            .onChange(of: viewModel.messages.count) { newCount in
+                                if newCount > 0 {
+                                    scrollToBottom(proxy: proxy, delay: 0.1)
+                                }
                             }
-                        }
-                        .onChange(of: keyboardObserver.keyboardHeight) { height in
-                            if height > 0 && !viewModel.messages.isEmpty {
-                                scrollToBottom(proxy: proxy, delay: 0.1, animation: keyboardObserver.keyboardAnimation)
+                            .onChange(of: isInputFocused) { focused in
+                                if focused && !viewModel.messages.isEmpty {
+                                    scrollToBottom(proxy: proxy, delay: 0.3)
+                                }
+                            }
+                            .onChange(of: keyboardObserver.keyboardHeight) { height in
+                                if height > 0 && !viewModel.messages.isEmpty {
+                                    scrollToBottom(proxy: proxy, delay: 0.1, animation: keyboardObserver.keyboardAnimation)
+                                }
                             }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // 输入区域 - 更现代的设计
+                // 输入区域 - 始终显示在底部，确保可见
                 VStack(spacing: 0) {
                     Divider()
                         .background(AppColors.separator)
@@ -544,6 +556,9 @@ struct TaskChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        // 确保右滑返回手势正常工作
+        .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {

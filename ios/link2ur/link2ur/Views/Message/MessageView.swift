@@ -6,7 +6,7 @@ struct MessageView: View {
     @EnvironmentObject var appState: AppState
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()
@@ -76,6 +76,7 @@ struct MessageView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .enableSwipeBack()
             .refreshable {
                 viewModel.loadTaskChats()
                 notificationViewModel.loadNotifications()
@@ -90,31 +91,33 @@ struct MessageView: View {
                 // 更新 AppState 中的未读通知数量
                 appState.loadUnreadNotificationCount()
                 
-                // 更新未读消息数量（任务聊天）
-                let totalUnreadMessages = viewModel.taskChats.reduce(0) { $0 + ($1.unreadCount ?? 0) }
+                // 更新未读消息数量（任务聊天）- 使用缓存的计算属性
                 appState.unreadMessageCount = totalUnreadMessages
             }
             .onChange(of: notificationViewModel.notifications.count) { _ in
                 // 当通知列表更新时，更新 AppState
                 // 只计算系统通知的未读数（保持与原有逻辑一致）
-                let unreadCount = notificationViewModel.notifications.filter { $0.isRead == 0 }.count
-                appState.unreadNotificationCount = unreadCount
+                appState.unreadNotificationCount = unreadNotificationCount
             }
             .onChange(of: notificationViewModel.forumNotifications.count) { _ in
                 // 当论坛通知列表更新时，也更新 AppState（如果需要的话）
                 // 这里可以添加论坛通知的未读数计算
             }
             .onChange(of: viewModel.taskChats) { _ in
-                // 当任务聊天列表更新时，更新未读消息数量
-                let totalUnreadMessages = viewModel.taskChats.reduce(0) { $0 + ($1.unreadCount ?? 0) }
+                // 当任务聊天列表更新时，更新未读消息数量 - 使用缓存的计算属性
                 appState.unreadMessageCount = totalUnreadMessages
             }
         }
     }
     
-    // 计算未读通知数量
+    // 计算未读通知数量 - 性能优化：缓存计算结果
     private var unreadNotificationCount: Int {
         notificationViewModel.notifications.filter { $0.isRead == 0 }.count
+    }
+    
+    // 性能优化：缓存未读消息总数计算
+    private var totalUnreadMessages: Int {
+        viewModel.taskChats.reduce(0) { $0 + ($1.unreadCount ?? 0) }
     }
     
     // 计算互动通知数量（论坛相关等）

@@ -348,12 +348,12 @@ extension APIService {
     }
     
     /// 发布商品
-    func createFleaMarketItem(_ item: FleaMarketItemCreateRequest) -> AnyPublisher<FleaMarketItemResponse, APIError> {
+    func createFleaMarketItem(_ item: FleaMarketItemCreateRequest) -> AnyPublisher<CreateFleaMarketItemResponse, APIError> {
         guard let bodyData = try? JSONEncoder().encode(item),
               let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(FleaMarketItemResponse.self, "/api/flea-market/items", method: "POST", body: bodyDict)
+        return request(CreateFleaMarketItemResponse.self, "/api/flea-market/items", method: "POST", body: bodyDict)
     }
     
     /// 购买商品 (直接购买)
@@ -709,10 +709,10 @@ extension APIService {
         return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/favorite", method: "POST")
     }
     
-    /// 获取我的收藏列表
+    /// 获取我的收藏列表（包含完整商品信息）
     func getMyFavorites(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<FleaMarketItemListResponse, APIError> {
-        // 后端路径：/api/flea-market/favorites
-        return request(FleaMarketItemListResponse.self, "/api/flea-market/favorites?page=\(page)&page_size=\(pageSize)")
+        // 后端路径：/api/flea-market/favorites/items
+        return request(FleaMarketItemListResponse.self, "/api/flea-market/favorites/items?page=\(page)&page_size=\(pageSize)")
     }
     
     /// 申请购买/议价

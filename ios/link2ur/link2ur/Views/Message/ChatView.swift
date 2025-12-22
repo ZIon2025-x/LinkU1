@@ -26,6 +26,11 @@ struct ChatView: View {
         return max(keyboardObserver.keyboardHeight - 60, 0)
     }
     
+    // 性能优化：缓存消息文本是否为空的计算结果
+    private var isMessageEmpty: Bool {
+        messageText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+    
     var body: some View {
         ZStack {
             AppColors.background
@@ -150,7 +155,7 @@ struct ChatView: View {
                                     .fill(
                                         LinearGradient(
                                             gradient: Gradient(
-                                                colors: messageText.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isSending
+                                                colors: isMessageEmpty || viewModel.isSending
                                                     ? [AppColors.textTertiary, AppColors.textTertiary]
                                                     : AppColors.gradientPrimary
                                             ),
@@ -160,7 +165,7 @@ struct ChatView: View {
                                     )
                                     .frame(width: 44, height: 44)
                                     .shadow(
-                                        color: messageText.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isSending
+                                        color: isMessageEmpty || viewModel.isSending
                                             ? .clear
                                             : AppColors.primary.opacity(0.3),
                                         radius: 4,
@@ -179,9 +184,9 @@ struct ChatView: View {
                                 }
                             }
                         }
-                        .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isSending)
-                        .scaleEffect(messageText.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isSending ? 0.95 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: messageText.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(isMessageEmpty || viewModel.isSending)
+                        .scaleEffect(isMessageEmpty || viewModel.isSending ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isMessageEmpty)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.isSending)
                     }
                     .padding(.horizontal, AppSpacing.md)
@@ -195,6 +200,8 @@ struct ChatView: View {
         .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
         .navigationTitle(partner?.name ?? partner?.email ?? LocalizationKey.actionsChat.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .enableSwipeBack()
         .sheet(isPresented: $showLogin) {
             LoginView()
         }
@@ -215,6 +222,13 @@ struct ChatView: View {
         .onDisappear {
             // 清理错误状态，避免下次进入时显示旧错误
             viewModel.errorMessage = nil
+            // 用户体验优化：视图消失时自动收起键盘
+            isInputFocused = false
+        }
+        // 用户体验优化：点击空白区域隐藏键盘
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isInputFocused = false
         }
     }
     
@@ -229,6 +243,9 @@ struct ChatView: View {
         
         let content = trimmedText
         messageText = "" // 立即清空输入框，提供即时反馈
+        
+        // 用户体验优化：发送消息后自动收起键盘
+        isInputFocused = false
         
         viewModel.sendMessage(content: content) { success in
             if !success {

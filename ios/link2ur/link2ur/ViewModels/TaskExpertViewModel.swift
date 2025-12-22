@@ -3,6 +3,7 @@ import Combine
 import CoreLocation
 
 class TaskExpertViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var experts: [TaskExpert] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -18,7 +19,19 @@ class TaskExpertViewModel: ObservableObject {
         self.locationService = locationService ?? LocationService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadExperts(category: String? = nil, location: String? = nil, keyword: String? = nil) {
+        let startTime = Date()
+        
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.warning("请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -26,7 +39,7 @@ class TaskExpertViewModel: ObservableObject {
         if category == nil && location == nil && keyword == nil {
             if let cachedExperts = CacheManager.shared.loadTaskExperts(category: nil, location: nil) {
                 self.experts = cachedExperts
-                print("✅ 从缓存加载了 \(self.experts.count) 个任务达人")
+                Logger.success("从缓存加载了 \(self.experts.count) 个任务达人", category: .cache)
                 isLoading = false
                 // 继续在后台刷新数据
             }
@@ -100,29 +113,45 @@ class TaskExpertViewModel: ObservableObject {
         
         apiService.request(TaskExpertListResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] completion in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = completion {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载任务达人")
                     // error 已经是 APIError 类型，无需转换
                     self?.errorMessage = error.userFriendlyMessage
-                    print("❌ 任务达人加载失败: \(error)")
-                    print("请求URL: \(endpoint)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("任务达人加载失败: \(error)", category: .api)
+                    Logger.debug("请求URL: \(endpoint)", category: .api)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 
                 // 保存原始数据
                 self.rawExperts = response.allExperts
-                print("📥 [TaskExpertViewModel] 收到 \(response.allExperts.count) 个任务达人数据")
+                Logger.debug("收到 \(response.allExperts.count) 个任务达人数据", category: .api)
                 
                 // 检查位置服务状态
-                print("📍 [TaskExpertViewModel] 位置服务状态检查:")
-                print("  - 授权状态: \(self.locationService.authorizationStatus.rawValue)")
-                print("  - 当前位置: \(self.locationService.currentLocation != nil ? "已获取" : "未获取")")
+                Logger.debug("位置服务状态检查:", category: .general)
+                Logger.debug("  - 授权状态: \(self.locationService.authorizationStatus.rawValue)", category: .general)
+                Logger.debug("  - 当前位置: \(self.locationService.currentLocation != nil ? "已获取" : "未获取")", category: .general)
                 if let location = self.locationService.currentLocation {
-                    print("  - 位置坐标: \(location.latitude), \(location.longitude)")
-                    print("  - 城市名称: \(location.cityName ?? "未知")")
+                    Logger.debug("  - 位置坐标: \(location.latitude), \(location.longitude)", category: .general)
+                    Logger.debug("  - 城市名称: \(location.cityName ?? "未知")", category: .general)
                 }
                 
                 // 立即尝试排序（如果位置已可用）
@@ -130,8 +159,8 @@ class TaskExpertViewModel: ObservableObject {
                 
                 // 如果位置还没获取到，先显示原始数据，等位置获取后再排序
                 if self.locationService.currentLocation == nil {
-                    print("⏳ [TaskExpertViewModel] 位置尚未获取，先显示原始顺序，位置获取后将自动重新排序")
-                    print("⏳ [TaskExpertViewModel] 正在请求位置...")
+                    Logger.debug("位置尚未获取，先显示原始顺序，位置获取后将自动重新排序", category: .general)
+                    Logger.debug("正在请求位置...", category: .general)
                     // 主动请求一次位置
                     if self.locationService.isAuthorized {
                         self.locationService.requestLocation()
@@ -143,11 +172,11 @@ class TaskExpertViewModel: ObservableObject {
                     }
                 }
                 
-                print("✅ 任务达人加载成功，共\(self.experts.count)条")
+                Logger.success("任务达人加载成功，共\(self.experts.count)条", category: .api)
                 // 保存到缓存（仅在没有筛选条件时）
                 if category == nil && location == nil {
                     CacheManager.shared.saveTaskExperts(self.experts, category: nil, location: nil)
-                    print("✅ 已缓存 \(self.experts.count) 个任务达人")
+                    Logger.success("已缓存 \(self.experts.count) 个任务达人", category: .cache)
                 }
                 
                 // 监听位置更新，当位置可用时重新排序
@@ -261,6 +290,10 @@ class TaskExpertDetailViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadExpert(expertId: String) {
         isLoading = true
         apiService.request(TaskExpert.self, "/api/task-experts/\(expertId)", method: "GET")
@@ -329,6 +362,10 @@ class ServiceDetailViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadService(serviceId: Int) {
         isLoading = true
         apiService.request(TaskExpertService.self, "/api/task-experts/services/\(serviceId)", method: "GET")
@@ -388,6 +425,10 @@ class MyServiceApplicationsViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadApplications() {
         isLoading = true
         // 使用正确的端点：/api/task-experts/me/applications (任务达人获取收到的申请)
@@ -421,6 +462,10 @@ class TaskExpertApplicationViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadMyApplication() {

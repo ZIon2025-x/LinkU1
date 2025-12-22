@@ -264,21 +264,85 @@ async def get_experts_list(
     return items
 
 
-@task_expert_router.get("/{expert_id}", response_model=schemas.TaskExpertOut)
+@task_expert_router.get("/{expert_id}")
 async def get_expert(
     expert_id: str,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人信息"""
+    """获取任务达人信息（优先从 FeaturedTaskExpert 获取，与列表接口保持一致）"""
+    # 优先从 FeaturedTaskExpert 获取数据（与列表接口保持一致）
+    featured_expert = await db.execute(
+        select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert_id)
+    )
+    featured_expert = featured_expert.scalar_one_or_none()
+    
+    # 如果 FeaturedTaskExpert 不存在，从 TaskExpert 获取基础信息
     expert = await db.execute(
         select(models.TaskExpert).where(models.TaskExpert.id == expert_id)
     )
     expert = expert.scalar_one_or_none()
-    if not expert:
+    
+    if not expert and not featured_expert:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
         )
-    return expert
+    
+    # 加载用户信息以获取名称和头像
+    from app import async_crud
+    user = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
+    
+    # 优先使用 FeaturedTaskExpert 的数据（与列表接口保持一致）
+    if featured_expert:
+        import json
+        return {
+            "id": featured_expert.id,
+            "expert_name": featured_expert.name,
+            "name": featured_expert.name,  # 兼容前端
+            "bio": featured_expert.bio,
+            "avatar": featured_expert.avatar or "",
+            "user_level": featured_expert.user_level,
+            "avg_rating": featured_expert.avg_rating or 0.0,
+            "rating": featured_expert.avg_rating or 0.0,  # 兼容前端
+            "completed_tasks": featured_expert.completed_tasks or 0,
+            "total_tasks": featured_expert.total_tasks or 0,
+            "completion_rate": round(featured_expert.completion_rate or 0.0, 1),  # 从数据库读取，保留1位小数
+            "expertise_areas": json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else [],
+            "featured_skills": json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else [],
+            "achievements": json.loads(featured_expert.achievements) if featured_expert.achievements else [],
+            "is_verified": bool(featured_expert.is_verified),
+            "response_time": featured_expert.response_time,
+            "success_rate": featured_expert.success_rate or 0.0,
+            "location": featured_expert.location or "Online",
+            "category": featured_expert.category,
+            "status": expert.status if expert else "active",
+            "total_services": expert.total_services if expert else 0,
+            "created_at": format_iso_utc(featured_expert.created_at) if featured_expert.created_at else None,
+            "updated_at": format_iso_utc(featured_expert.updated_at) if featured_expert.updated_at else None,
+        }
+    
+    # 如果没有 FeaturedTaskExpert，使用 TaskExpert 的基础数据
+    if expert:
+        return {
+            "id": expert.id,
+            "expert_name": expert.expert_name or (user.name if user else ""),
+            "name": expert.expert_name or (user.name if user else ""),  # 兼容前端
+            "bio": expert.bio,
+            "avatar": expert.avatar or (user.avatar if user else "") or "",
+            "status": expert.status,
+            "rating": float(expert.rating) if expert.rating else 0.0,
+            "avg_rating": float(expert.rating) if expert.rating else 0.0,
+            "total_services": expert.total_services,
+            "completed_tasks": expert.completed_tasks or 0,
+            "total_tasks": 0,  # TaskExpert 没有 total_tasks 字段
+            "completion_rate": 0.0,  # TaskExpert 没有 completion_rate 字段
+            "location": user.residence_city if user and hasattr(user, 'residence_city') and user.residence_city else "Online",
+            "created_at": format_iso_utc(expert.created_at),
+            "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
+        }
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
+    )
 
 
 @task_expert_router.put("/me", response_model=schemas.TaskExpertOut)

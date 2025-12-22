@@ -17,149 +17,75 @@ struct LeaderboardItemDetailView: View {
     @State private var selectedImageIndex = 0
     
     var body: some View {
-        ZStack {
-            AppColors.background
+        ZStack(alignment: .bottom) {
+            Color(UIColor.systemBackground)
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.item == nil {
-                LoadingView(message: "加载详情中...")
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("加载中...")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
             } else if let item = viewModel.item {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                        // 1. 图片展示区域
+                    VStack(spacing: 0) {
+                        // 1. 沉浸式图片区域
                         LeaderboardItemImageSection(images: item.images ?? [], selectedIndex: $selectedImageIndex)
                         
-                        VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                            // 2. 核心信息卡片
-                            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                                Text(item.name)
-                                    .font(AppTypography.title)
-                                    .foregroundColor(AppColors.textPrimary)
-                                
-                                if let submitter = item.submitter {
-                                    NavigationLink(destination: UserProfileView(userId: submitter.id)) {
-                                        HStack(spacing: 8) {
-                                            AvatarView(
-                                                urlString: submitter.avatar,
-                                                size: 28,
-                                                placeholder: Image(systemName: "person.circle.fill")
-                                            )
-                                            .clipShape(Circle())
-                                            
-                                            Text("由 \(submitter.name) 提交")
-                                                .font(AppTypography.subheadline)
-                                                .foregroundColor(AppColors.textSecondary)
-                                            
-                                            Spacer()
-                                            
-                                            IconStyle.icon("chevron.right", size: 12)
-                                                .foregroundColor(AppColors.textQuaternary)
-                                        }
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 12)
-                                        .background(AppColors.background.opacity(0.5))
-                                        .cornerRadius(AppCornerRadius.medium)
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                }
-                                
-                                Divider().background(AppColors.divider)
-                                
-                                if let description = item.description, !description.isEmpty {
-                                    Text(description)
-                                        .font(AppTypography.body)
-                                        .foregroundColor(AppColors.textPrimary)
-                                        .lineSpacing(6)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                
-                                // 联系信息
-                                LeaderboardItemContactView(item: item)
-                            }
-                            .padding(AppSpacing.lg)
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.large)
-                            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+                        // 2. 内容区域
+                        VStack(spacing: 24) {
+                            // 核心信息卡片 - 浮动圆角样式
+                            mainInfoCard(item: item)
+                                .padding(.top, -40) // 向上移动覆盖图片更多
                             
-                            // 3. 投票交互区
-                            VStack(spacing: AppSpacing.md) {
-                                HStack(spacing: AppSpacing.md) {
-                                    VoteActionButton(
-                                        title: "支持",
-                                        icon: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsup",
-                                        isSelected: voteType == "upvote",
-                                        color: AppColors.success,
-                                        count: upvotes,
-                                        action: { handleVoteAction(type: "upvote") }
-                                    )
-                                    
-                                    VoteActionButton(
-                                        title: "反对",
-                                        icon: voteType == "downvote" ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                                        isSelected: voteType == "downvote",
-                                        color: AppColors.error,
-                                        count: downvotes,
-                                        action: { handleVoteAction(type: "downvote") }
-                                    )
-                                }
-                                
-                                if netVotes != 0 {
-                                    HStack {
-                                        Spacer()
-                                        Text("当前净投票分: \(netVotes)")
-                                            .font(AppTypography.caption)
-                                            .foregroundColor(AppColors.textSecondary)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 4)
-                                            .background(AppColors.background)
-                                            .cornerRadius(AppCornerRadius.small)
-                                        Spacer()
-                                    }
-                                }
+                            // 详情卡片
+                            descriptionCard(item: item)
+                            
+                            // 联系信息卡片 (如果有)
+                            if hasContactInfo(item: item) {
+                                contactCard(item: item)
                             }
                             
-                            // 4. 留言列表
-                            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                                HStack {
-                                    IconStyle.icon("bubble.left.and.bubble.right.fill", size: 18)
-                                        .foregroundColor(AppColors.primary)
-                                    Text("留言 (\(viewModel.comments.count))")
-                                        .font(AppTypography.title3)
-                                        .foregroundColor(AppColors.textPrimary)
-                                }
-                                .padding(.horizontal, AppSpacing.sm)
-                                
-                                if viewModel.comments.isEmpty {
-                                    VStack(spacing: AppSpacing.md) {
-                                        IconStyle.icon("text.bubble", size: 40)
-                                            .foregroundColor(AppColors.textQuaternary)
-                                        Text("暂无留言，快来发表你的看法吧")
-                                            .font(AppTypography.body)
-                                            .foregroundColor(AppColors.textTertiary)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 40)
-                                    .background(AppColors.cardBackground.opacity(0.5))
-                                    .cornerRadius(AppCornerRadius.large)
-                                } else {
-                                    ForEach(viewModel.comments) { comment in
-                                        LeaderboardCommentCard(comment: comment, viewModel: viewModel)
-                                            .environmentObject(appState)
-                                    }
-                                }
-                            }
+                            // 统计数据展示
+                            statsSection(item: item)
+                            
+                            // 留言列表标题
+                            commentListHeader()
+                            
+                            // 留言列表内容
+                            commentListContent()
+                            
+                            // 底部安全区域
+                            Spacer().frame(height: 140)
                         }
-                        .padding(.horizontal, AppSpacing.md)
                     }
-                    .padding(.bottom, 40)
                 }
-                .refreshable {
-                    viewModel.loadItem(itemId: itemId)
-                    viewModel.loadComments(itemId: itemId)
-                }
+                .ignoresSafeArea(edges: .top)
+                .scrollIndicators(.hidden)
+                
+                // 3. 固定底部操作栏
+                bottomVoteBar(item: item)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                ShareLink(item: "看看这个竞品: \(viewModel.item?.name ?? "")") {
+                    Circle()
+                        .fill(Color.black.opacity(0.3))
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                        )
+                }
+            }
+        }
         .sheet(isPresented: $showLogin) {
             LoginView()
         }
@@ -242,127 +168,334 @@ struct LeaderboardItemDetailView: View {
             HapticFeedback.selection()
         }
     }
+    
+    private func hasContactInfo(item: LeaderboardItem) -> Bool {
+        return (item.address?.isEmpty == false) || (item.phone?.isEmpty == false) || (item.website?.isEmpty == false)
+    }
+    
+    // MARK: - Sub Components
+    
+    @ViewBuilder
+    private func mainInfoCard(item: LeaderboardItem) -> some View {
+        VStack(spacing: 16) {
+            Text(item.name)
+                .font(.system(size: 26, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
+                .multilineTextAlignment(.center)
+            
+            if let submitter = item.submitter {
+                NavigationLink(destination: UserProfileView(userId: submitter.id)) {
+                    HStack(spacing: 8) {
+                        AvatarView(
+                            urlString: submitter.avatar,
+                            size: 24,
+                            placeholder: Image(systemName: "person.circle.fill")
+                        )
+                        .clipShape(Circle())
+                        
+                        Text("由 \(submitter.name) 提交")
+                            .font(.system(size: 13))
+                            .foregroundColor(AppColors.textSecondary)
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundColor(AppColors.textQuaternary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.12), radius: 20, x: 0, y: 8)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func descriptionCard(item: LeaderboardItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 16)
+                Text("竞品详情")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            if let description = item.description, !description.isEmpty {
+                Text(description)
+                    .font(.system(size: 15))
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("暂无描述信息")
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textTertiary)
+                    .italic()
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func contactCard(item: LeaderboardItem) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 16)
+                Text("联系与位置")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            VStack(spacing: 12) {
+                if let address = item.address, !address.isEmpty {
+                    contactRow(icon: "mappin.circle.fill", text: address, color: .red)
+                }
+                if let phone = item.phone, !phone.isEmpty {
+                    contactRow(icon: "phone.circle.fill", text: phone, color: .green)
+                }
+                if let website = item.website, !website.isEmpty {
+                    if let url = URL(string: website) {
+                        Link(destination: url) {
+                            contactRow(icon: "globe", text: website, color: .blue)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private func contactRow(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(AppColors.textSecondary)
+                .lineLimit(2)
+            Spacer()
+        }
+    }
+    
+    @ViewBuilder
+    private func statsSection(item: LeaderboardItem) -> some View {
+        HStack {
+            Spacer()
+            VStack(spacing: 4) {
+                Text("\(netVotes)")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(netVotes >= 0 ? AppColors.success : AppColors.error)
+                Text("当前得分")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            Spacer()
+            Divider().frame(height: 30)
+            Spacer()
+            VStack(spacing: 4) {
+                Text("\(upvotes + downvotes)")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                Text("总投票数")
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 16)
+    }
+    
+    @ViewBuilder
+    private func commentListHeader() -> some View {
+        HStack {
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .foregroundColor(AppColors.primary)
+            Text("精选留言")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
+            
+            Spacer()
+            
+            Text("\(viewModel.comments.count) 条")
+                .font(.system(size: 13))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+    }
+    
+    @ViewBuilder
+    private func commentListContent() -> some View {
+        if viewModel.comments.isEmpty {
+            VStack(spacing: 16) {
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundColor(AppColors.textQuaternary)
+                Text("暂无留言，快来发表你的看法吧")
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 60)
+            .background(Color(UIColor.secondarySystemBackground).opacity(0.5))
+            .cornerRadius(24)
+            .padding(.horizontal, 20)
+        } else {
+            VStack(spacing: 16) {
+                ForEach(viewModel.comments) { comment in
+                    LeaderboardCommentCard(comment: comment, viewModel: viewModel)
+                        .environmentObject(appState)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    @ViewBuilder
+    private func bottomVoteBar(item: LeaderboardItem) -> some View {
+        HStack(spacing: 12) {
+            // 反对按钮
+            Button(action: { handleVoteAction(type: "downvote") }) {
+                HStack(spacing: 8) {
+                    Image(systemName: voteType == "downvote" ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    Text("反对")
+                        .fontWeight(.semibold)
+                    if downvotes > 0 {
+                        Text("\(downvotes)")
+                            .font(.system(size: 12, design: .rounded))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(voteType == "downvote" ? AppColors.error : AppColors.error.opacity(0.1))
+                .foregroundColor(voteType == "downvote" ? .white : AppColors.error)
+                .cornerRadius(25)
+            }
+            
+            // 支持按钮
+            Button(action: { handleVoteAction(type: "upvote") }) {
+                HStack(spacing: 8) {
+                    Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    Text("支持")
+                        .fontWeight(.semibold)
+                    if upvotes > 0 {
+                        Text("\(upvotes)")
+                            .font(.system(size: 12, design: .rounded))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(voteType == "upvote" ? AppColors.success : AppColors.success.opacity(0.1))
+                .foregroundColor(voteType == "upvote" ? .white : AppColors.success)
+                .cornerRadius(25)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 24)
+        .background(
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: -5)
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
 }
 
-// MARK: - Subviews
+// MARK: - Image Section
 
 struct LeaderboardItemImageSection: View {
     let images: [String]
     @Binding var selectedIndex: Int
     
     var body: some View {
+        let screenWidth = UIScreen.main.bounds.width
+        let imageHeight: CGFloat = screenWidth * 0.85
+        
         if !images.isEmpty {
             ZStack(alignment: .bottom) {
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
                         AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: UIScreen.main.bounds.width, height: 280) // 显式限制宽度为屏幕宽度
+                            .frame(width: screenWidth, height: imageHeight)
                             .clipped()
                             .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 280)
+                .frame(height: imageHeight)
                 
+                // 自定义指示器
                 if images.count > 1 {
                     HStack(spacing: 6) {
                         ForEach(0..<images.count, id: \.self) { index in
-                            Capsule()
+                            Circle()
                                 .fill(selectedIndex == index ? Color.white : Color.white.opacity(0.4))
-                                .frame(width: selectedIndex == index ? 16 : 6, height: 6)
+                                .frame(width: selectedIndex == index ? 8 : 6, height: selectedIndex == index ? 8 : 6)
+                                .animation(.easeInOut(duration: 0.2), value: selectedIndex)
                         }
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .padding(.bottom, 12)
+                    .background(Capsule().fill(Color.black.opacity(0.3)))
+                    .padding(.bottom, 50) // 避开卡片覆盖
                 }
             }
         } else {
             ZStack {
-                Rectangle().fill(AppColors.primaryLight)
-                IconStyle.icon("photo.on.rectangle.angled", size: 60).foregroundColor(AppColors.primary.opacity(0.3))
-            }
-            .frame(width: UIScreen.main.bounds.width, height: 200) // 显式限制宽度
-        }
-    }
-}
-
-struct LeaderboardItemContactView: View {
-    let item: LeaderboardItem
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            if let address = item.address, !address.isEmpty {
-                LeaderboardContactRow(icon: "mappin.circle.fill", text: address, color: .red)
-            }
-            if let phone = item.phone, !phone.isEmpty {
-                LeaderboardContactRow(icon: "phone.circle.fill", text: phone, color: .green)
-            }
-            if let website = item.website, !website.isEmpty {
-                if let url = URL(string: website) {
-                    Link(destination: url) {
-                        LeaderboardContactRow(icon: "globe", text: website, color: .blue)
-                    }
+                LinearGradient(
+                    colors: [AppColors.primaryLight, AppColors.primaryLight.opacity(0.5)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 40))
+                        .foregroundColor(AppColors.primary.opacity(0.3))
+                    Text("暂无图片")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.primary.opacity(0.4))
                 }
             }
+            .frame(width: screenWidth, height: 200)
         }
-        .padding(.top, AppSpacing.sm)
     }
 }
 
-struct LeaderboardContactRow: View {
-    let icon: String
-    let text: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 10) {
-            IconStyle.icon(icon, size: 16)
-                .foregroundColor(color)
-            Text(text)
-                .font(AppTypography.subheadline)
-                .foregroundColor(AppColors.textPrimary)
-                .lineLimit(1)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct VoteActionButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let color: Color
-    let count: Int
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                HStack(spacing: 8) {
-                    IconStyle.icon(icon, size: 18)
-                    Text(title)
-                        .fontWeight(.bold)
-                }
-                Text("\(count)")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(isSelected ? color.opacity(0.15) : AppColors.cardBackground)
-            .foregroundColor(isSelected ? color : AppColors.textSecondary)
-            .cornerRadius(AppCornerRadius.medium)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                    .stroke(isSelected ? color.opacity(0.3) : AppColors.separator.opacity(0.5), lineWidth: 1)
-            )
-        }
-        .buttonStyle(ScaleButtonStyle())
-    }
-}
+// MARK: - Comment Card
 
 struct LeaderboardCommentCard: View {
     let comment: LeaderboardItemComment
@@ -371,10 +504,10 @@ struct LeaderboardCommentCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
+            HStack(alignment: .top, spacing: 12) {
                 AvatarView(
                     urlString: comment.isAnonymous == true ? nil : comment.author?.avatar,
-                    size: 36,
+                    size: 40,
                     avatarType: comment.isAnonymous == true ? .anonymous : nil
                 )
                 .clipShape(Circle())
@@ -382,33 +515,32 @@ struct LeaderboardCommentCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(displayName)
-                            .font(AppTypography.bodyBold)
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                         
                         if let voteType = comment.voteType {
-                            IconStyle.icon(voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsdown.fill", size: 10)
-                                .foregroundColor(voteType == "upvote" ? AppColors.success : AppColors.error)
-                        }
-                        
-                        if comment.isAnonymous == true {
-                            Text("匿名")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(AppColors.textTertiary)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(AppColors.background)
-                                .cornerRadius(2)
+                            Label {
+                                Text(voteType == "upvote" ? "支持" : "反对")
+                                    .font(.system(size: 10, weight: .bold))
+                            } icon: {
+                                Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
+                                    .font(.system(size: 10))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background((voteType == "upvote" ? AppColors.success : AppColors.error).opacity(0.1))
+                            .foregroundColor(voteType == "upvote" ? AppColors.success : AppColors.error)
+                            .cornerRadius(4)
                         }
                     }
                     
                     Text(DateFormatterHelper.shared.formatTime(comment.createdAt))
-                        .font(AppTypography.caption2)
+                        .font(.system(size: 11))
                         .foregroundColor(AppColors.textQuaternary)
                 }
                 
                 Spacer()
                 
-                // 点赞评论按钮
                 Button(action: {
                     if appState.isAuthenticated {
                         HapticFeedback.light()
@@ -420,38 +552,39 @@ struct LeaderboardCommentCard: View {
                     }
                 }) {
                     HStack(spacing: 4) {
-                        IconStyle.icon(comment.userLiked == true ? "hand.thumbsup.fill" : "hand.thumbsup", size: 12)
-                        Text("\(comment.likeCount ?? 0)")
+                        Image(systemName: comment.userLiked == true ? "hand.thumbsup.fill" : "hand.thumbsup")
+                            .font(.system(size: 12))
+                        Text((comment.likeCount ?? 0).formatCount())
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                     }
                     .foregroundColor(comment.userLiked == true ? AppColors.primary : AppColors.textTertiary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(comment.userLiked == true ? AppColors.primary.opacity(0.1) : Color.clear)
-                    .cornerRadius(AppCornerRadius.small)
+                    .cornerRadius(8)
                 }
-                .buttonStyle(PlainButtonStyle())
             }
             
             if let content = comment.content, !content.isEmpty {
                 Text(content)
-                    .font(AppTypography.body)
+                    .font(.system(size: 15))
                     .foregroundColor(AppColors.textPrimary)
                     .lineSpacing(4)
-                    .padding(.leading, 44)
+                    .padding(.leading, 52)
             }
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: Color.black.opacity(0.02), radius: 4, x: 0, y: 2)
+        .padding(16)
+        .background(Color(UIColor.secondarySystemBackground).opacity(0.3))
+        .cornerRadius(20)
     }
     
     private var displayName: String {
         if comment.isAnonymous == true { return "匿名用户" }
-        return comment.author?.name ?? "用户 \(comment.userId ?? "未知")"
+        return comment.author?.name ?? "用户"
     }
 }
+
+// MARK: - Vote Modal
 
 struct VoteCommentModal: View {
     let voteType: String
@@ -462,39 +595,56 @@ struct VoteCommentModal: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text(voteType == "upvote" ? "支持理由" : "反对理由")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                        
-                        TextEditor(text: $comment)
-                            .frame(minHeight: 120)
-                            .padding(AppSpacing.xs)
-                            .background(AppColors.background)
-                            .cornerRadius(AppCornerRadius.small)
-                    }
-                    .padding(.vertical, AppSpacing.xs)
-                } header: {
-                    Text("发表看法")
+            VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(voteType == "upvote" ? "支持理由" : "反对理由")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    TextEditor(text: $comment)
+                        .frame(height: 150)
+                        .padding(12)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(12)
+                        .overlay(
+                            Group {
+                                if comment.isEmpty {
+                                    Text("写下你的理由让大家参考吧...")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(AppColors.textTertiary)
+                                        .padding(.leading, 16)
+                                        .padding(.top, 20)
+                                        .allowsHitTesting(false)
+                                }
+                            },
+                            alignment: .topLeading
+                        )
                 }
                 
-                Section {
-                    Toggle("匿名投票", isOn: $isAnonymous)
-                        .font(AppTypography.body)
-                }
-                
-                Section {
-                    Button(action: onConfirm) {
-                        Text("提交投票")
-                            .font(AppTypography.bodyBold)
-                            .frame(maxWidth: .infinity)
+                Toggle(isOn: $isAnonymous) {
+                    HStack {
+                        Image(systemName: isAnonymous ? "eye.slash.fill" : "eye.fill")
+                        Text("匿名投票")
+                            .font(.system(size: 15))
                     }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .listRowInsets(EdgeInsets())
+                }
+                .tint(AppColors.primary)
+                .padding(.horizontal, 4)
+                
+                Spacer()
+                
+                Button(action: onConfirm) {
+                    Text("提交投票")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(voteType == "upvote" ? AppColors.success : AppColors.error)
+                        .cornerRadius(27)
+                        .shadow(color: (voteType == "upvote" ? AppColors.success : AppColors.error).opacity(0.3), radius: 8, x: 0, y: 4)
                 }
             }
+            .padding(24)
             .navigationTitle(voteType == "upvote" ? "支持竞品" : "反对竞品")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

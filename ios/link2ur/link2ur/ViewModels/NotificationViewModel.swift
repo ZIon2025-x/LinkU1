@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class NotificationViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var notifications: [SystemNotification] = []
     @Published var forumNotifications: [ForumNotification] = []
     @Published var unifiedNotifications: [UnifiedNotification] = []
@@ -14,6 +15,10 @@ class NotificationViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadNotifications() {
@@ -66,36 +71,54 @@ class NotificationViewModel: ObservableObject {
     }
     
     func markAsRead(notificationId: Int) {
-        print("🔔 [NotificationViewModel] markAsRead 被调用，notificationId: \(notificationId)")
+        let startTime = Date()
+        let endpoint = "/api/users/notifications/\(notificationId)/read"
+        
+        Logger.debug("markAsRead 被调用，notificationId: \(notificationId)", category: .api)
         
         // 立即更新本地状态（乐观更新）
         if let index = notifications.firstIndex(where: { $0.id == notificationId }) {
-            print("🔔 [NotificationViewModel] 找到通知，索引: \(index)，当前 isRead: \(notifications[index].isRead ?? -1)")
+            Logger.debug("找到通知，索引: \(index)，当前 isRead: \(notifications[index].isRead ?? -1)", category: .api)
             notifications[index] = notifications[index].markingAsRead()
-            print("🔔 [NotificationViewModel] 已更新本地状态，新 isRead: \(notifications[index].isRead ?? -1)")
+            Logger.debug("已更新本地状态，新 isRead: \(notifications[index].isRead ?? -1)", category: .api)
         } else {
-            print("⚠️ [NotificationViewModel] 未找到通知，ID: \(notificationId)")
+            Logger.warning("未找到通知，ID: \(notificationId)", category: .api)
         }
         
         // 发送API请求 - 使用专门的 markNotificationRead 方法
-        print("🔔 [NotificationViewModel] 发送API请求: POST /api/users/notifications/\(notificationId)/read")
+        Logger.debug("发送API请求: POST \(endpoint)", category: .api)
         
         apiService.markNotificationRead(notificationId: notificationId)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 if case .failure(let error) = result {
-                    print("❌ [NotificationViewModel] 标记已读失败: \(error.localizedDescription)")
-                    print("❌ [NotificationViewModel] 错误详情: \(error)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("标记已读失败: \(error.localizedDescription)", category: .api)
+                    Logger.error("错误详情: \(error)", category: .api)
                     // 如果API调用失败，回滚乐观更新，重新加载以确保状态同步
                     self?.loadNotifications()
                 } else {
-                    print("✅ [NotificationViewModel] 标记已读成功")
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
+                    Logger.success("标记已读成功", category: .api)
                 }
             }, receiveValue: { [weak self] updatedNotification in
-                print("✅ [NotificationViewModel] API调用成功，返回的通知 isRead: \(updatedNotification.isRead ?? -1)")
+                Logger.debug("API调用成功，返回的通知 isRead: \(updatedNotification.isRead ?? -1)", category: .api)
                 // 更新本地状态为服务器返回的状态（确保同步）
                 if let index = self?.notifications.firstIndex(where: { $0.id == notificationId }) {
                     self?.notifications[index] = updatedNotification
-                    print("✅ [NotificationViewModel] 已同步服务器状态")
+                    Logger.debug("已同步服务器状态", category: .api)
                 }
             })
             .store(in: &cancellables)
@@ -114,16 +137,18 @@ class NotificationViewModel: ObservableObject {
     
     // 只加载互动相关通知（论坛和排行榜，用于互动信息页面）
     func loadForumNotificationsOnly() {
+        let startTime = Date()
+        
         isLoading = true
         errorMessage = nil
         
-        print("🔍 [NotificationViewModel] 开始加载互动通知（论坛+排行榜）")
+        Logger.debug("开始加载互动通知（论坛+排行榜）", category: .api)
         
         // 并行加载论坛通知和普通通知（筛选出排行榜相关的）
         let forumNotifications = apiService.getForumNotifications(page: 1, pageSize: 50)
             .map { $0.notifications }
             .catch { error -> Just<[ForumNotification]> in
-                print("⚠️ [NotificationViewModel] 加载论坛通知失败: \(error.localizedDescription)")
+                Logger.warning("加载论坛通知失败: \(error.localizedDescription)", category: .api)
                 return Just([ForumNotification]())
             }
         
@@ -137,25 +162,41 @@ class NotificationViewModel: ObservableObject {
                 }
             }
             .catch { error -> Just<[SystemNotification]> in
-                print("⚠️ [NotificationViewModel] 加载系统通知失败: \(error.localizedDescription)")
+                Logger.warning("加载系统通知失败: \(error.localizedDescription)", category: .api)
                 return Just([SystemNotification]())
             }
         
         Publishers.Zip(forumNotifications, systemNotifications)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
-                    print("❌ [NotificationViewModel] 加载互动通知失败: \(error.localizedDescription)")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: "/api/users/notifications (combined)",
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                    Logger.error("加载互动通知失败: \(error.localizedDescription)", category: .api)
                     self?.errorMessage = error.localizedDescription
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: "/api/users/notifications (combined)",
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] (forumNotifs, systemNotifs) in
-                print("✅ [NotificationViewModel] 论坛通知: \(forumNotifs.count) 条")
-                print("✅ [NotificationViewModel] 排行榜通知: \(systemNotifs.count) 条")
+                Logger.success("论坛通知: \(forumNotifs.count) 条", category: .api)
+                Logger.success("排行榜通知: \(systemNotifs.count) 条", category: .api)
                 self?.forumNotifications = forumNotifs
                 self?.notifications = systemNotifs
                 self?.updateUnifiedNotificationsForInteraction()
-                print("✅ [NotificationViewModel] 统一通知总数: \(self?.unifiedNotifications.count ?? 0)")
+                Logger.success("统一通知总数: \(self?.unifiedNotifications.count ?? 0)", category: .api)
             })
             .store(in: &cancellables)
     }

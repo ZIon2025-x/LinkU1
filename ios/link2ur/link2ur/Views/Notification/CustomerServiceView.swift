@@ -291,30 +291,35 @@ struct CustomerServiceView: View {
                     }
                 }
             }
+            .enableSwipeBack()
             .sheet(isPresented: $showChatHistory) {
                 ChatHistoryView(viewModel: viewModel)
             }
             .sheet(isPresented: $viewModel.showRatingSheet) {
                 RatingSheetView(viewModel: viewModel)
             }
+            // 用户体验优化：点击空白区域隐藏键盘（使用 contentShape 确保点击区域覆盖整个视图）
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if isInputFocused {
+                    isInputFocused = false
+                }
+            }
         }
         .onAppear {
-            // 检查登录状态和 Session ID
-            let isLoggedIn = appState.currentUser != nil
+            // 检查用户是否已登录（需要验证用户会话）
             let hasSessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) != nil
             
-            if !isLoggedIn || !hasSessionId {
+            if !hasSessionId {
                 viewModel.errorMessage = "请先登录后再使用客服功能"
                 return
             }
             
-            // 加载对话历史（只有在有 Session ID 时才加载）
-            if hasSessionId {
-                viewModel.loadChats()
-            }
+            // 加载对话历史（已登录用户）
+            viewModel.loadChats()
             
             // 不自动连接客服，让用户手动选择
-            // 如果已有活动对话，则加载消息
+            // 如果已有活动对话，则加载消息（不需要验证客服会话ID）
             if viewModel.chat != nil {
                 // 只在消息为空时加载，避免重复加载
                 if viewModel.messages.isEmpty, let chatId = viewModel.chat?.chatId {
@@ -324,6 +329,8 @@ struct CustomerServiceView: View {
             }
         }
         .onDisappear {
+            // 用户体验优化：视图消失时自动收起键盘
+            isInputFocused = false
             // 清理错误状态
             viewModel.errorMessage = nil
             // 停止轮询
@@ -341,6 +348,9 @@ struct CustomerServiceView: View {
         
         let content = trimmedText
         messageText = "" // 立即清空输入框
+        
+        // 用户体验优化：发送消息后自动收起键盘
+        isInputFocused = false
         
         viewModel.sendMessage(content: content) { success in
             if !success {

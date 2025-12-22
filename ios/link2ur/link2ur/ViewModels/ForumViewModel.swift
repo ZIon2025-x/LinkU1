@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 class ForumViewModel: ObservableObject {
+    private let performanceMonitor = PerformanceMonitor.shared
     @Published var categories: [ForumCategory] = []
     @Published var posts: [ForumPost] = []
     @Published var selectedCategory: ForumCategory?
@@ -18,10 +19,17 @@ class ForumViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
     }
     
+    deinit {
+        cancellables.removeAll()
+    }
+    
     func loadCategories(universityId: Int? = nil) {
+        let startTime = Date()
+        let endpoint = "/api/forum/forums/visible"
+        
         // 防止重复请求
         guard !isRequestingCategories else {
-            print("⚠️ 论坛分类请求已在进行中，跳过重复请求")
+            Logger.warning("论坛分类请求已在进行中，跳过重复请求", category: .api)
             return
         }
         
@@ -32,28 +40,46 @@ class ForumViewModel: ObservableObject {
         // 如果提供了 universityId，可以用于额外筛选（如果需要）
         apiService.getForumCategories(includeAll: false, viewAs: nil, includeLatestPost: true)
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 self?.isRequestingCategories = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载论坛分类")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 // 后端应该已经根据用户认证信息返回对应学校的板块
                 // 如果还需要前端筛选，可以在这里添加
                 self?.categories = response.categories
                 self?.isRequestingCategories = false
-                print("✅ 加载了 \(response.categories.count) 个论坛板块")
+                Logger.success("加载了 \(response.categories.count) 个论坛板块", category: .api)
             })
             .store(in: &cancellables)
     }
     
     func loadPosts(categoryId: Int? = nil, page: Int = 1, forceRefresh: Bool = false) {
+        let startTime = Date()
+        
         isLoading = true
         
         // 强制刷新时清除缓存
@@ -65,7 +91,7 @@ class ForumViewModel: ObservableObject {
         if page == 1 && !forceRefresh {
             if let cachedPosts = CacheManager.shared.loadForumPosts(categoryId: categoryId) {
                 self.posts = cachedPosts
-                print("✅ 从缓存加载了 \(self.posts.count) 个帖子")
+                Logger.success("从缓存加载了 \(self.posts.count) 个帖子", category: .cache)
                 isLoading = false
                 // 继续在后台刷新数据
             }
@@ -78,22 +104,38 @@ class ForumViewModel: ObservableObject {
         
         apiService.request(ForumPostListResponse.self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "加载论坛帖子")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
                     if let apiError = error as? APIError {
                         self?.errorMessage = apiError.userFriendlyMessage
                     } else {
                         self?.errorMessage = error.localizedDescription
                     }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
                 }
             }, receiveValue: { [weak self] response in
                 if page == 1 {
                     self?.posts = response.posts
                     // 保存到缓存（仅第一页）
                     CacheManager.shared.saveForumPosts(response.posts, categoryId: categoryId)
-                    print("✅ 已缓存 \(response.posts.count) 个帖子")
+                    Logger.success("已缓存 \(response.posts.count) 个帖子", category: .cache)
                 } else {
                     self?.posts.append(contentsOf: response.posts)
                 }
@@ -115,6 +157,10 @@ class ForumPostDetailViewModel: ObservableObject {
     init(apiService: APIService? = nil) {
         // 使用依赖注入或回退到默认实现
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func loadPost(postId: Int) {

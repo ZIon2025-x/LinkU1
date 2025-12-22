@@ -1964,6 +1964,84 @@ async def get_my_favorites(
         )
 
 
+@flea_market_router.get("/favorites/items", response_model=schemas.FleaMarketItemListResponse)
+async def get_my_favorite_items(
+    page: int = Query(1, ge=1),
+    pageSize: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的收藏商品列表（包含完整商品信息）"""
+    try:
+        # 查询收藏的商品，关联商品表获取完整信息
+        query = (
+            select(models.FleaMarketItem)
+            .join(
+                models.FleaMarketFavorite,
+                models.FleaMarketItem.id == models.FleaMarketFavorite.item_id
+            )
+            .where(models.FleaMarketFavorite.user_id == current_user.id)
+            .where(models.FleaMarketItem.status != "deleted")  # 排除已删除的商品
+            .order_by(models.FleaMarketFavorite.created_at.desc())
+        )
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 分页
+        skip = (page - 1) * pageSize
+        query = query.offset(skip).limit(pageSize)
+        
+        result = await db.execute(query)
+        items = result.scalars().all()
+        
+        # 格式化响应
+        formatted_items = []
+        for item in items:
+            # 解析images JSON
+            images = []
+            if item.images:
+                try:
+                    images = json.loads(item.images)
+                except:
+                    images = []
+            
+            formatted_items.append(schemas.FleaMarketItemResponse(
+                id=format_flea_market_id(item.id),
+                title=item.title,
+                description=item.description,
+                price=item.price,
+                currency=item.currency or "GBP",
+                images=images,
+                location=item.location,
+                latitude=float(item.latitude) if item.latitude else None,
+                longitude=float(item.longitude) if item.longitude else None,
+                category=item.category,
+                status=item.status,
+                seller_id=item.seller_id,
+                view_count=item.view_count or 0,
+                refreshed_at=format_iso_utc(item.refreshed_at),
+                created_at=format_iso_utc(item.created_at),
+                updated_at=format_iso_utc(item.updated_at),
+            ))
+        
+        return schemas.FleaMarketItemListResponse(
+            items=formatted_items,
+            page=page,
+            pageSize=pageSize,
+            total=total,
+            hasMore=skip + len(formatted_items) < total,
+        )
+    except Exception as e:
+        logger.error(f"获取收藏商品列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取收藏商品列表失败"
+        )
+
+
 # ==================== 商品举报API ====================
 
 @flea_market_router.post("/items/{item_id}/report", response_model=dict)

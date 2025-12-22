@@ -42,13 +42,18 @@ public final class ImageCache: ObservableObject {
         }
         
         // 从网络加载
-        guard let imageURL = URL(string: url) else {
+        guard let imageURL = url.toImageURL() else {
             return Just(nil)
                 .eraseToAnyPublisher()
         }
         
         return URLSession.shared.dataTaskPublisher(for: imageURL)
-            .map { data, _ in UIImage(data: data) }
+            .map { data, _ -> UIImage? in
+                // 优化：在后台线程解码图片
+                guard let image = UIImage(data: data) else { return nil }
+                // 优化图片大小（减少内存占用）- 限制最大尺寸为 2048x2048
+                return self.optimizeImageSize(image, maxSize: CGSize(width: 2048, height: 2048))
+            }
             .catch { _ in Just(nil) }
             .handleEvents(receiveOutput: { [weak self] image in
                 if let image = image {
@@ -104,6 +109,33 @@ public final class ImageCache: ObservableObject {
                 try? fileManager.removeItem(at: file)
             }
         }
+    }
+    
+    // MARK: - 图片优化
+    
+    /// 优化图片尺寸（减少内存占用）
+    private func optimizeImageSize(_ image: UIImage, maxSize: CGSize) -> UIImage {
+        let size = image.size
+        
+        // 如果图片尺寸小于最大尺寸，直接返回
+        guard size.width > maxSize.width || size.height > maxSize.height else {
+            return image
+        }
+        
+        // 计算缩放比例
+        let widthRatio = maxSize.width / size.width
+        let heightRatio = maxSize.height / size.height
+        let ratio = min(widthRatio, heightRatio)
+        
+        // 计算新尺寸
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+        
+        // 在后台线程进行图片缩放
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        defer { UIGraphicsEndImageContext() }
+        
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
     }
 }
 

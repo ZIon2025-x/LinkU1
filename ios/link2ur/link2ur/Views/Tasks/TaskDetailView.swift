@@ -145,6 +145,7 @@ struct TaskDetailView: View {
                     .menuIndicator(.hidden)
                 }
             }
+            .enableSwipeBack()
             .fullScreenCover(isPresented: $showFullScreenImage) {
                 fullScreenImageView
             }

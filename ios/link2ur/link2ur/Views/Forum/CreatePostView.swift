@@ -117,6 +117,16 @@ struct CreatePostView: View {
                     }
                 }
             }
+            .onDisappear {
+                // 用户体验优化：视图消失时自动收起键盘
+                // 使用系统方法隐藏键盘
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil,
+                    from: nil,
+                    for: nil
+                )
+            }
             .onAppear {
                 // 如果未登录，立即显示登录页面
                 if !appState.isAuthenticated {

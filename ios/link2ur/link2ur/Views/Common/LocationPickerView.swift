@@ -104,9 +104,13 @@ struct LocationPickerView: View {
                 }
             }
             .onTapGesture {
-                // 点击空白区域隐藏键盘
+                // 用户体验优化：点击空白区域隐藏键盘和搜索结果
                 isSearchFocused = false
                 showSearchResults = false
+            }
+            .onDisappear {
+                // 用户体验优化：视图消失时自动收起键盘
+                isSearchFocused = false
             }
     }
     
