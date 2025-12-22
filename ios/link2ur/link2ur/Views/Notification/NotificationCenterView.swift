@@ -265,17 +265,23 @@ struct SystemMessageView: View {
     
     /// 从通知中提取任务ID
     private func extractTaskId(from notification: SystemNotification) -> Int? {
+        // 优先使用 taskId 字段（后端已添加）
+        if let taskId = notification.taskId {
+            return taskId
+        }
+        
         guard let type = notification.type else { return notification.relatedId }
         
         let lowercasedType = type.lowercased()
         
-        // 对于 task_application 类型，related_id 可能是 application_id 或 task_id
-        // 但根据后端代码，如果没有 application_id，会使用 task.id
-        // 对于其他任务通知类型，related_id 就是 task_id
+        // 对于 negotiation_offer 和 application_message 类型，related_id 是 application_id，不是 task_id
+        // 这些通知应该使用 taskId 字段（后端已添加）
+        if lowercasedType == "negotiation_offer" || lowercasedType == "application_message" {
+            return nil  // 如果没有 taskId，不跳转
+        }
+        
+        // 对于 task_application 类型，related_id 是 task_id（后端已修复）
         if lowercasedType == "task_application" {
-            // task_application 的 related_id 可能是 application_id，需要特殊处理
-            // 但为了简化，我们假设如果有 related_id，就尝试跳转
-            // 如果后端返回的是 application_id，可能需要额外处理
             return notification.relatedId
         } else if lowercasedType.contains("task") {
             // 其他任务相关通知，related_id 就是 task_id

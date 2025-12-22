@@ -2300,7 +2300,7 @@ async def send_application_message(
             and_(
                 models.Notification.user_id == application.applicant_id,
                 models.Notification.type == notification_type,
-                models.Notification.related_id == application_id
+                models.Notification.related_id == application_id  # 保持为 application_id 以符合唯一约束
             )
         )
         existing_notification_result = await db.execute(existing_notification_query)
@@ -2317,12 +2317,14 @@ async def send_application_message(
             await db.flush()
         else:
             # 创建新通知
+            # related_id 保持为 application_id 以符合唯一约束 (user_id, type, related_id)
+            # task_id 通过 token 响应或通知内容获取
             new_notification = models.Notification(
                 user_id=application.applicant_id,
                 type=notification_type,
                 title="新的留言" if notification_type == "application_message" else "新的议价提议",
                 content=content,
-                related_id=application_id,
+                related_id=application_id,  # 保持为 application_id
                 created_at=current_time
             )
             db.add(new_notification)

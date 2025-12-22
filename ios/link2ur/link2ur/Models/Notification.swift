@@ -11,6 +11,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
     let createdAt: String
     let relatedId: Int?  // 后端返回 related_id
     let link: String?  // iOS 扩展字段，可能为空
+    let taskId: Int?  // 对于 application_message 和 negotiation_offer 类型，存储 task_id
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -20,6 +21,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         case createdAt = "created_at"
         case relatedId = "related_id"
         case link  // 可选字段，如果后端不返回则为 nil
+        case taskId = "task_id"  // 可选字段，后端可能返回
     }
     
     // 创建一个标记为已读的新实例
@@ -33,7 +35,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
             isRead: 1,
             createdAt: self.createdAt,
             relatedId: self.relatedId,
-            link: self.link
+            link: self.link,
+            taskId: self.taskId
         )
     }
 }

@@ -1511,6 +1511,7 @@ struct ApplicationItemCard: View {
     let taskTitle: String
     let onApprove: () -> Void
     let onReject: () -> Void
+    @State private var showMessageSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -1583,8 +1584,10 @@ struct ApplicationItemCard: View {
                     }
                     .buttonStyle(ScaleButtonStyle())
                     
-                    NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: taskTitle)) {
-                        Text(LocalizationKey.actionsPrivateMessage.localized)
+                    Button(action: {
+                        showMessageSheet = true
+                    }) {
+                        Text("留言")
                             .font(AppTypography.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -1601,6 +1604,13 @@ struct ApplicationItemCard: View {
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
         .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        .sheet(isPresented: $showMessageSheet) {
+            ApplicationMessageSheet(
+                application: application,
+                taskId: taskId,
+                taskTitle: taskTitle
+            )
+        }
     }
     
     private var statusColor: Color {
@@ -1617,6 +1627,177 @@ struct ApplicationItemCard: View {
         case "pending": return LocalizationKey.taskDetailPendingReview.localized
         case "approved": return LocalizationKey.taskDetailApproved.localized
         case "rejected": return LocalizationKey.taskDetailRejected.localized
+        default: return ""
+        }
+    }
+}
+
+// 申请留言弹窗
+struct ApplicationMessageSheet: View {
+    let application: TaskApplication
+    let taskId: Int
+    let taskTitle: String
+    @Environment(\.dismiss) var dismiss
+    @State private var message = ""
+    @State private var showNegotiatePrice = false
+    @State private var negotiatedPrice: Double?
+    @State private var isSending = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @StateObject private var viewModel = TaskDetailViewModel()
+    @State private var cancellables = Set<AnyCancellable>()
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 留言输入
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            SectionHeader(title: "留言内容", icon: "message.fill")
+                            
+                            TextEditor(text: $message)
+                                .font(AppTypography.body)
+                                .frame(minHeight: 120)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.cardBackground)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    Group {
+                                        if message.isEmpty {
+                                            Text("给申请者留言...")
+                                                .font(AppTypography.body)
+                                                .foregroundColor(AppColors.textTertiary)
+                                                .padding(.leading, 16)
+                                                .padding(.top, 20)
+                                                .allowsHitTesting(false)
+                                        }
+                                    },
+                                    alignment: .topLeading
+                                )
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        
+                        // 议价选项
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            Toggle(isOn: $showNegotiatePrice) {
+                                HStack {
+                                    IconStyle.icon("poundsign.circle.fill", size: 18)
+                                        .foregroundColor(AppColors.primary)
+                                    Text("是否议价")
+                                        .font(AppTypography.bodyBold)
+                                        .foregroundColor(AppColors.textPrimary)
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: AppColors.primary))
+                            
+                            if showNegotiatePrice {
+                                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                    Text("议价金额")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    HStack {
+                                        Text("£")
+                                            .font(AppTypography.bodyBold)
+                                            .foregroundColor(AppColors.textPrimary)
+                                        
+                                        TextField("0.00", value: $negotiatedPrice, format: .number)
+                                            .keyboardType(.decimalPad)
+                                            .font(AppTypography.bodyBold)
+                                            .foregroundColor(AppColors.textPrimary)
+                                    }
+                                    .padding(AppSpacing.sm)
+                                    .background(AppColors.background)
+                                    .cornerRadius(AppCornerRadius.small)
+                                }
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        
+                        // 发送按钮
+                        Button(action: sendMessage) {
+                            if isSending {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("发送留言")
+                                    .font(AppTypography.bodyBold)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppSpacing.md)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: AppColors.gradientPrimary),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(AppCornerRadius.medium)
+                        .disabled(isSending || message.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .opacity(isSending || message.trimmingCharacters(in: .whitespaces).isEmpty ? 0.6 : 1.0)
+                    }
+                    .padding(AppSpacing.md)
+                }
+            }
+            .navigationTitle("给申请者留言")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("发送失败", isPresented: $showError) {
+                Button("确定", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+            .onAppear {
+                // 加载任务信息以获取基础价格
+                viewModel.loadTask(taskId: taskId)
+            }
+        }
+    }
+    
+    private func sendMessage() {
+        guard !message.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        
+        isSending = true
+        
+        let price = showNegotiatePrice ? negotiatedPrice : nil
+        
+        APIService.shared.sendApplicationMessage(
+            taskId: taskId,
+            applicationId: application.id,
+            message: message.trimmingCharacters(in: .whitespaces),
+            price: price
+        )
+        .sink(
+            receiveCompletion: { [self] result in
+                isSending = false
+                if case .failure(let error) = result {
+                    errorMessage = error.userFriendlyMessage
+                    showError = true
+                } else {
+                    dismiss()
+                }
+            },
+            receiveValue: { _ in }
+        )
+        .store(in: &cancellables)
+    }
+}
         default: return LocalizationKey.taskDetailUnknown.localized
         }
     }

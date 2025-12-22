@@ -601,6 +601,7 @@ class NotificationOut(NotificationBase):
     user_id: str  # 现在ID是字符串类型
     is_read: int
     created_at: datetime.datetime
+    task_id: Optional[int] = None  # 对于 application_message 和 negotiation_offer 类型，存储 task_id
 
     class Config:
         from_attributes = True

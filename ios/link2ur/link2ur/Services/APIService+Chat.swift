@@ -207,10 +207,14 @@ struct ReplyApplicationMessageRequest: Encodable {
 struct TokenResponse: Decodable {
     let tokenAccept: String?
     let tokenReject: String?
+    let taskId: Int?
+    let applicationId: Int?
     
     enum CodingKeys: String, CodingKey {
         case tokenAccept = "token_accept"
         case tokenReject = "token_reject"
+        case taskId = "task_id"
+        case applicationId = "application_id"
     }
 }
 
@@ -311,7 +315,7 @@ extension APIService {
     
     /// 获取议价Token (通过通知ID)
     func getNegotiationTokens(notificationId: Int) -> AnyPublisher<TokenResponse, APIError> {
-        return request(TokenResponse.self, "/api/notifications/\(notificationId)/negotiation-tokens")
+        return request(TokenResponse.self, "/api/notifications/\(notificationId)/negotiation-tokens", method: "GET")
     }
     
     /// 处理再次议价 (同意/拒绝)

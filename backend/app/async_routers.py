@@ -945,7 +945,30 @@ async def get_notifications(
     notifications = await async_crud.async_notification_crud.get_user_notifications(
         db, current_user.id, skip=skip, limit=limit, unread_only=unread_only
     )
-    return notifications
+    
+    # 对于 application_message 和 negotiation_offer 类型，通过 related_id (application_id) 查询 task_id
+    result = []
+    for notification in notifications:
+        notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
+        
+        # 如果是 application_message 或 negotiation_offer 类型，related_id 是 application_id
+        if notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
+            try:
+                # 通过 application_id 查询 task_id
+                application_query = select(models.TaskApplication).where(
+                    models.TaskApplication.id == notification.related_id
+                )
+                application_result = await db.execute(application_query)
+                application = application_result.scalar_one_or_none()
+                
+                if application:
+                    notification_dict["task_id"] = application.task_id
+            except Exception as e:
+                logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
+        
+        result.append(schemas.NotificationOut(**notification_dict))
+    
+    return result
 
 
 @async_router.put(
