@@ -180,13 +180,15 @@ extension APIService {
     }
     
     /// 邮箱验证码登录
-    func loginWithCode(email: String, code: String) -> AnyPublisher<LoginResponse, APIError> {
-        let body = CodeLoginRequest(email: email, verificationCode: code)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
-            return Fail(error: APIError.unknown).eraseToAnyPublisher()
+    func loginWithCode(email: String, code: String, captchaToken: String? = nil) -> AnyPublisher<LoginResponse, APIError> {
+        var body: [String: Any] = [
+            "email": email,
+            "verification_code": code
+        ]
+        if let captchaToken = captchaToken {
+            body["captcha_token"] = captchaToken
         }
-        return request(LoginResponse.self, "/api/secure-auth/login-with-code", method: "POST", body: bodyDict)
+        return request(LoginResponse.self, "/api/secure-auth/login-with-code", method: "POST", body: body)
     }
     
     /// 手机验证码登录
@@ -200,8 +202,11 @@ extension APIService {
     }
     
     /// 发送邮箱验证码
-    func sendEmailCode(email: String) -> AnyPublisher<EmptyResponse, APIError> {
-        let body = ["email": email]
+    func sendEmailCode(email: String, captchaToken: String? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+        var body: [String: Any] = ["email": email]
+        if let captchaToken = captchaToken {
+            body["captcha_token"] = captchaToken
+        }
         return request(EmptyResponse.self, "/api/secure-auth/send-verification-code", method: "POST", body: body)
     }
     

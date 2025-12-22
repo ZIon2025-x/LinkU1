@@ -8,8 +8,14 @@ class AuthViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // 登录方式：true为手机验证码登录，false为邮箱密码登录
-    @Published var isPhoneLogin = false
+    // 登录方式：password=邮箱密码登录, emailCode=邮箱验证码登录, phone=手机验证码登录
+    @Published var loginMethod: LoginMethod = .phone
+    
+    enum LoginMethod: String {
+        case password = "password"
+        case emailCode = "emailCode"
+        case phone = "phone"
+    }
     
     // 手机验证码登录相关
     @Published var countryCode = "+44"  // 默认英国区号
@@ -27,7 +33,7 @@ class AuthViewModel: ObservableObject {
     
     // 支持的区号列表（目前只支持英国）
     let supportedCountryCodes = [
-        ("🇬🇧", "+44", "UK")
+        ("🇬🇧", "+44", "United Kingdom")
     ]
     
     /// 获取完整的手机号（区号+号码）
@@ -82,19 +88,14 @@ class AuthViewModel: ObservableObject {
     }
     
     func login(completion: @escaping (Bool) -> Void) {
-        // 使用 ValidationHelper 验证邮箱
+        // 支持邮箱或ID登录
         guard !email.isEmpty else {
-            errorMessage = "请输入邮箱"
-            return
-        }
-        
-        guard ValidationHelper.isValidEmail(email) else {
-            errorMessage = "请输入有效的邮箱地址"
+            errorMessage = LocalizationKey.authEnterEmailOrId.localized
             return
         }
         
         guard !password.isEmpty else {
-            errorMessage = "请输入密码"
+            errorMessage = LocalizationKey.authEnterPassword.localized
             return
         }
         
@@ -312,6 +313,178 @@ class AuthViewModel: ObservableObject {
                 self?.captchaToken = nil
                 self?.startCountdown()
                 completion(true, nil)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 发送邮箱验证码
+    func sendEmailCode(completion: @escaping (Bool, String?) -> Void) {
+        guard !email.isEmpty else {
+            errorMessage = "请输入邮箱"
+            completion(false, errorMessage)
+            return
+        }
+        
+        guard ValidationHelper.isValidEmail(email) else {
+            errorMessage = "请输入有效的邮箱地址"
+            completion(false, errorMessage)
+            return
+        }
+        
+        isSendingCode = true
+        errorMessage = nil
+        
+        // 检查CAPTCHA要求
+        if captchaEnabled && captchaToken == nil {
+            errorMessage = "请先完成人机验证"
+            isSendingCode = false
+            completion(false, "请先完成人机验证")
+            return
+        }
+        
+        print("📧 发送邮箱验证码: email=\(email), captchaToken=\(captchaToken != nil ? "已设置" : "未设置"), captchaEnabled=\(captchaEnabled)")
+        
+        let startTime = Date()
+        let endpoint = "/api/secure-auth/send-verification-code"
+        
+        apiService.sendEmailCode(email: email, captchaToken: captchaToken)
+            .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
+                self?.isSendingCode = false
+                if case .failure(let error) = result {
+                    // 使用 ErrorHandler 统一处理错误
+                    ErrorHandler.shared.handle(error, context: "发送邮箱验证码")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
+                    let errorMsg: String
+                    if let apiError = error as? APIError {
+                        errorMsg = apiError.userFriendlyMessage
+                    } else {
+                        errorMsg = error.localizedDescription
+                    }
+                    Logger.error("发送邮箱验证码失败: \(errorMsg)", category: .auth)
+                    self?.errorMessage = errorMsg
+                    completion(false, errorMsg)
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
+                }
+            }, receiveValue: { [weak self] _ in
+                // 验证码发送成功，开始倒计时
+                // 注意：发送验证码成功后，清除CAPTCHA token（因为token只能使用一次）
+                // 下次发送验证码时需要重新验证
+                Logger.success("邮箱验证码发送成功", category: .auth)
+                self?.captchaToken = nil
+                self?.startCountdown()
+                completion(true, nil)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 邮箱验证码登录
+    func loginWithEmailCode(completion: @escaping (Bool) -> Void) {
+        guard !email.isEmpty, !verificationCode.isEmpty else {
+            errorMessage = "请输入邮箱和验证码"
+            return
+        }
+        
+        guard ValidationHelper.isValidEmail(email) else {
+            errorMessage = "请输入有效的邮箱地址"
+            isLoading = false
+            return
+        }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        let startTime = Date()
+        let endpoint = "/api/secure-auth/login-with-code"
+        
+        // 登录时不需要CAPTCHA（发送验证码时已经验证过了，后端也不要求登录时验证）
+        // 清除captchaToken，因为token只能使用一次，且登录时不需要
+        apiService.loginWithCode(email: email, code: verificationCode, captchaToken: nil)
+            .sink(receiveCompletion: { [weak self] result in
+                let duration = Date().timeIntervalSince(startTime)
+                self?.isLoading = false
+                if case .failure(let error) = result {
+                    // 使用 ErrorHandler 统一处理错误
+                    ErrorHandler.shared.handle(error, context: "邮箱验证码登录")
+                    // 记录性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        error: error
+                    )
+                    if let apiError = error as? APIError {
+                        self?.errorMessage = apiError.userFriendlyMessage
+                    } else {
+                        self?.errorMessage = error.localizedDescription
+                    }
+                } else {
+                    // 记录成功请求的性能指标
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "POST",
+                        duration: duration,
+                        statusCode: 200
+                    )
+                }
+            }, receiveValue: { [weak self] response in
+                guard let self = self else { return }
+                
+                // 后端使用 session-based 认证，保存 session_id
+                let sessionId = response.authHeaders?.sessionId ?? response.sessionId
+                if let sessionId = sessionId, !sessionId.isEmpty {
+                    KeychainHelper.shared.save(sessionId, service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
+                    Logger.success("Session ID 已保存: \(sessionId.prefix(20))...", category: .auth)
+                } else {
+                    Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
+                }
+                
+                // 将 LoginUser 转换为 User
+                let loginUser = response.user
+                let user = User(
+                    id: loginUser.id,
+                    name: loginUser.name,
+                    email: loginUser.email,
+                    phone: nil,
+                    isVerified: loginUser.isVerified,
+                    userLevel: loginUser.userLevel,
+                    avatar: nil,
+                    createdAt: nil,
+                    userType: nil,
+                    taskCount: nil,
+                    completedTaskCount: nil,
+                    avgRating: nil,
+                    residenceCity: nil,
+                    languagePreference: nil
+                )
+                
+                // 保存用户信息到 AppState
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .userDidLogin, object: user)
+                    
+                    // 登录成功后，发送设备Token到后端（如果存在）
+                    if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
+                        APIService.shared.registerDeviceToken(deviceToken) { success in
+                            if success {
+                                Logger.debug("Device token sent after login", category: .auth)
+                            }
+                        }
+                    }
+                }
+                completion(true)
             })
             .store(in: &cancellables)
     }

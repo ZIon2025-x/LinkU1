@@ -981,9 +981,61 @@ def update_timezone(
 
 
 @router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
-def get_task_detail(task_id: int, db: Session = Depends(get_db)):
+def get_task_detail(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+):
     """获取任务详情 - 使用服务层缓存（避免装饰器重复创建）"""
     from app.services.task_service import TaskService
+    from app.models import TaskApplication, TaskParticipant
+    from sqlalchemy import and_
+    
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # 权限检查：除了 open 状态的任务，其他状态的任务只有任务相关人才能看到
+    if task.status != "open":
+        if not current_user:
+            raise HTTPException(status_code=403, detail="需要登录才能查看此任务")
+        
+        # 检查是否是任务相关人
+        is_poster = task.poster_id == current_user.id
+        is_taker = task.taker_id == current_user.id
+        is_participant = False
+        is_applicant = False
+        
+        # 如果是多人任务，检查是否是参与者
+        if task.is_multi_participant:
+            # 检查是否是任务达人（创建者）
+            if task.created_by_expert and task.expert_creator_id == current_user.id:
+                is_participant = True
+            else:
+                # 检查是否是TaskParticipant
+                participant = db.query(TaskParticipant).filter(
+                    and_(
+                        TaskParticipant.task_id == task_id,
+                        TaskParticipant.user_id == current_user.id,
+                        TaskParticipant.status.in_(["accepted", "in_progress"])
+                    )
+                ).first()
+                is_participant = participant is not None
+        
+        # 检查是否是申请者
+        if not is_poster and not is_taker and not is_participant:
+            application = db.query(TaskApplication).filter(
+                and_(
+                    TaskApplication.task_id == task_id,
+                    TaskApplication.applicant_id == current_user.id
+                )
+            ).first()
+            is_applicant = application is not None
+        
+        # 如果都不是，拒绝访问
+        if not is_poster and not is_taker and not is_participant and not is_applicant:
+            raise HTTPException(status_code=403, detail="无权限查看此任务")
+    
     return TaskService.get_task_cached(task_id=task_id, db=db)
 
 

@@ -11,7 +11,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1491C6952EDF90BC0054DEAA /* link2ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = link2ur.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Link²Ur.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +45,7 @@
 		1491C6962EDF90BC0054DEAA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1491C6952EDF90BC0054DEAA /* link2ur.app */,
+				1491C6952EDF90BC0054DEAA /* Link²Ur.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -53,9 +53,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1491C6942EDF90BC0054DEAA /* link2ur */ = {
+		1491C6942EDF90BC0054DEAA /* Link²Ur */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1491C6A02EDF90BE0054DEAA /* Build configuration list for PBXNativeTarget "link2ur" */;
+			buildConfigurationList = 1491C6A02EDF90BE0054DEAA /* Build configuration list for PBXNativeTarget "Link²Ur" */;
 			buildPhases = (
 				1491C6912EDF90BC0054DEAA /* Sources */,
 				1491C6922EDF90BC0054DEAA /* Frameworks */,
@@ -68,12 +68,12 @@
 			fileSystemSynchronizedGroups = (
 				1491C6972EDF90BC0054DEAA /* link2ur */,
 			);
-			name = link2ur;
+			name = "Link²Ur";
 			packageProductDependencies = (
 				1491C6B52EDF931E0054DEAA /* LinkU */,
 			);
 			productName = link2ur;
-			productReference = 1491C6952EDF90BC0054DEAA /* link2ur.app */;
+			productReference = 1491C6952EDF90BC0054DEAA /* Link²Ur.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -109,7 +109,7 @@
 			projectDirPath = link2ur;
 			projectRoot = "";
 			targets = (
-				1491C6942EDF90BC0054DEAA /* link2ur */,
+				1491C6942EDF90BC0054DEAA /* Link²Ur */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +264,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -276,7 +277,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Link²Ur";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -297,6 +298,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -309,7 +311,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Link²Ur";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -332,7 +334,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1491C6A02EDF90BE0054DEAA /* Build configuration list for PBXNativeTarget "link2ur" */ = {
+		1491C6A02EDF90BE0054DEAA /* Build configuration list for PBXNativeTarget "Link²Ur" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1491C6A12EDF90BE0054DEAA /* Debug */,

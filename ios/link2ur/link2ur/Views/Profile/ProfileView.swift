@@ -49,9 +49,15 @@ struct ProfileView: View {
                                         .font(AppTypography.title2)
                                         .foregroundColor(AppColors.textPrimary)
                                     
-                                    Text(appState.currentUser?.email ?? "")
-                                        .font(AppTypography.subheadline)
-                                        .foregroundColor(AppColors.textSecondary)
+                                    if let email = appState.currentUser?.email, !email.isEmpty {
+                                        Text(email)
+                                            .font(AppTypography.subheadline)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    } else if let phone = appState.currentUser?.phone, !phone.isEmpty {
+                                        Text(phone)
+                                            .font(AppTypography.subheadline)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
                                     
                                     // 用户等级标签 - 渐变设计
                                     if let userLevel = appState.currentUser?.userLevel {
@@ -270,6 +276,16 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                if appState.isAuthenticated {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        NavigationLink(destination: EditProfileView()) {
+                            Image(systemName: "pencil")
+                                .foregroundColor(AppColors.primary)
+                        }
+                    }
+                }
+            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }

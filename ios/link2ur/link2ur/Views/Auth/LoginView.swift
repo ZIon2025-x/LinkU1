@@ -7,6 +7,9 @@ public struct LoginView: View {
     @State private var showPassword = false
     @State private var showCaptcha = false  // 显示 CAPTCHA 验证界面
     @FocusState private var focusedField: Field?
+    @State private var logoScale: CGFloat = 0.8
+    @State private var logoOpacity: Double = 0
+    @State private var backgroundOffset: CGFloat = 0
     
     enum Field {
         case email
@@ -17,28 +20,73 @@ public struct LoginView: View {
     
     public var body: some View {
         ZStack {
-            // 现代渐变背景（更柔和的渐变）
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    AppColors.primary.opacity(0.08),
-                    AppColors.primary.opacity(0.03),
-                    AppColors.background
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            // 装饰性圆形背景
-            Circle()
-                .fill(AppColors.primary.opacity(0.05))
-                .frame(width: 300, height: 300)
-                .offset(x: -150, y: -300)
-            
-            Circle()
-                .fill(AppColors.primary.opacity(0.03))
-                .frame(width: 200, height: 200)
-                .offset(x: 200, y: 400)
+            // 现代渐变背景（更丰富的多层渐变）
+            ZStack {
+                // 主渐变背景
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        AppColors.primary.opacity(0.12),
+                        AppColors.primary.opacity(0.06),
+                        AppColors.primary.opacity(0.02),
+                        AppColors.background
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                // 动态装饰性圆形背景（添加轻微动画）
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                AppColors.primary.opacity(0.08),
+                                AppColors.primary.opacity(0.02),
+                                Color.clear
+                            ]),
+                            center: .center,
+                            startRadius: 50,
+                            endRadius: 200
+                        )
+                    )
+                    .frame(width: 400, height: 400)
+                    .offset(x: -180, y: -350)
+                    .blur(radius: 20)
+                
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                AppColors.primary.opacity(0.06),
+                                AppColors.primary.opacity(0.01),
+                                Color.clear
+                            ]),
+                            center: .center,
+                            startRadius: 40,
+                            endRadius: 150
+                        )
+                    )
+                    .frame(width: 300, height: 300)
+                    .offset(x: 220, y: 450)
+                    .blur(radius: 15)
+                
+                // 添加第三个装饰圆形
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                AppColors.primary.opacity(0.04),
+                                Color.clear
+                            ]),
+                            center: .center,
+                            startRadius: 30,
+                            endRadius: 100
+                        )
+                    )
+                    .frame(width: 200, height: 200)
+                    .offset(x: 0, y: -100)
+                    .blur(radius: 10)
+            }
             
             ZStack {
                 KeyboardAvoidingScrollView(showsIndicators: false, extraPadding: 20) {
@@ -46,10 +94,27 @@ public struct LoginView: View {
                     Spacer()
                         .frame(height: 60)
                     
-                    // Logo 区域 - 现代简洁设计
+                    // Logo 区域 - 精美设计，带动画效果
                     VStack(spacing: AppSpacing.lg) {
                         ZStack {
-                            // 渐变背景圆圈（更柔和）
+                            // 外圈光晕效果
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        gradient: Gradient(colors: [
+                                            AppColors.primary.opacity(0.15),
+                                            AppColors.primary.opacity(0.05),
+                                            Color.clear
+                                        ]),
+                                        center: .center,
+                                        startRadius: 40,
+                                        endRadius: 70
+                                    )
+                                )
+                                .frame(width: 140, height: 140)
+                                .blur(radius: 8)
+                            
+                            // 渐变背景圆圈（更精致）
                             Circle()
                                 .fill(
                                     LinearGradient(
@@ -58,53 +123,89 @@ public struct LoginView: View {
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .frame(width: 100, height: 100)
-                                .shadow(color: AppColors.primary.opacity(0.2), radius: 16, x: 0, y: 8)
+                                .frame(width: 110, height: 110)
+                                .shadow(color: AppColors.primary.opacity(0.3), radius: 20, x: 0, y: 10)
+                                .overlay(
+                                    Circle()
+                                        .stroke(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.white.opacity(0.3),
+                                                    Color.clear
+                                                ]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 2
+                                        )
+                                )
                             
                             Image("Logo")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 70, height: 70)
+                                .frame(width: 75, height: 75)
                                 .clipShape(Circle())
+                                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
+                        .scaleEffect(logoScale)
+                        .opacity(logoOpacity)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: logoScale)
+                        .animation(.easeOut(duration: 0.8), value: logoOpacity)
                         
                         VStack(spacing: AppSpacing.xs) {
                             Text(LocalizationKey.appName.localized)
                                 .font(AppTypography.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(AppColors.textPrimary)
+                                .opacity(logoOpacity)
+                                .offset(y: logoOpacity == 0 ? 10 : 0)
+                                .animation(.easeOut(duration: 0.8).delay(0.2), value: logoOpacity)
                             
                             Text(LocalizationKey.appTagline.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
+                                .opacity(logoOpacity)
+                                .offset(y: logoOpacity == 0 ? 10 : 0)
+                                .animation(.easeOut(duration: 0.8).delay(0.3), value: logoOpacity)
                         }
                     }
                     .padding(.bottom, AppSpacing.lg)
                     
-                    // 登录方式切换
-                    Picker(LocalizationKey.authLoginMethod.localized, selection: $viewModel.isPhoneLogin) {
-                        Text(LocalizationKey.authEmailPassword.localized).tag(false)
-                        Text(LocalizationKey.authPhoneCode.localized).tag(true)
+                    // 登录方式切换 - 美化设计
+                    Picker(LocalizationKey.authLoginMethod.localized, selection: $viewModel.loginMethod) {
+                        Text(LocalizationKey.authEmailPassword.localized).tag(AuthViewModel.LoginMethod.password)
+                        Text(LocalizationKey.authEmailCode.localized).tag(AuthViewModel.LoginMethod.emailCode)
+                        Text(LocalizationKey.authPhoneCode.localized).tag(AuthViewModel.LoginMethod.phone)
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.bottom, AppSpacing.sm)
-                    .onChange(of: viewModel.isPhoneLogin) { _ in
+                    .opacity(logoOpacity)
+                    .offset(y: logoOpacity == 0 ? 10 : 0)
+                    .animation(.easeOut(duration: 0.6).delay(0.4), value: logoOpacity)
+                    .onChange(of: viewModel.loginMethod) { newMethod in
                         // 切换登录方式时清空错误消息和输入框
-                        viewModel.errorMessage = nil
-                        if viewModel.isPhoneLogin {
-                            viewModel.email = ""
-                            viewModel.password = ""
-                        } else {
-                            viewModel.phone = ""
-                            viewModel.verificationCode = ""
-                            viewModel.countryCode = "+44"  // 重置为默认区号
+                        withAnimation(.spring(response: 0.3)) {
+                            viewModel.errorMessage = nil
+                            switch newMethod {
+                            case .password:
+                                viewModel.phone = ""
+                                viewModel.verificationCode = ""
+                                viewModel.countryCode = "+44"
+                            case .emailCode:
+                                viewModel.password = ""
+                                viewModel.phone = ""
+                                viewModel.countryCode = "+44"
+                            case .phone:
+                                viewModel.email = ""
+                                viewModel.password = ""
+                            }
                         }
                     }
                     
                     // 登录表单 - 符合 HIG
                     VStack(spacing: AppSpacing.lg) {
-                        if viewModel.isPhoneLogin {
+                        if viewModel.loginMethod == .phone {
                             // 手机验证码登录
                             // 区号和手机号输入
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -116,21 +217,26 @@ public struct LoginView: View {
                                     // 区号选择器
                                     Menu {
                                         ForEach(viewModel.supportedCountryCodes, id: \.1) { emoji, code, name in
-                                            Button(action: {
+                                            Button {
                                                 withAnimation {
                                                     viewModel.countryCode = code
                                                 }
-                                            }) {
-                                                HStack {
+                                            } label: {
+                                                HStack(spacing: 12) {
                                                     Text(emoji)
-                                                        .font(.system(size: 20))
-                                                    Text(code)
-                                                        .font(AppTypography.body)
+                                                        .font(.system(size: 24))
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(name)
+                                                            .font(AppTypography.body)
+                                                            .fontWeight(.medium)
+                                                            .foregroundColor(AppColors.textPrimary)
+                                                        Text(code)
+                                                            .font(AppTypography.caption)
+                                                            .foregroundColor(AppColors.textSecondary)
+                                                    }
                                                     Spacer()
-                                                    Text(name)
-                                                        .font(AppTypography.caption)
-                                                        .foregroundColor(AppColors.textSecondary)
                                                 }
+                                                .frame(minWidth: 200)
                                             }
                                         }
                                     } label: {
@@ -151,8 +257,19 @@ public struct LoginView: View {
                                         .cornerRadius(AppCornerRadius.medium)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                                .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                                                .stroke(
+                                                    LinearGradient(
+                                                        gradient: Gradient(colors: [
+                                                            AppColors.separator.opacity(0.4),
+                                                            AppColors.separator.opacity(0.2)
+                                                        ]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ),
+                                                    lineWidth: 1
+                                                )
                                         )
+                                        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
                                     }
                                     
                                     // 手机号输入
@@ -207,7 +324,7 @@ public struct LoginView: View {
                                     }
                                 }
                                 
-                                // 发送验证码按钮
+                                // 发送验证码按钮 - 美化设计
                                 Button(action: {
                                     hideKeyboard()
                                     // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
@@ -237,7 +354,7 @@ public struct LoginView: View {
                                     } else {
                                         Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)秒")
                                             .font(AppTypography.caption)
-                                            .fontWeight(.medium)
+                                            .fontWeight(.semibold)
                                     }
                                 }
                                 .frame(width: 100)
@@ -245,12 +362,20 @@ public struct LoginView: View {
                                 .foregroundColor(viewModel.canResendCode ? AppColors.primary : AppColors.textSecondary)
                                 .background(
                                     RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                        .fill(viewModel.canResendCode ? AppColors.primary.opacity(0.1) : AppColors.cardBackground)
+                                        .fill(viewModel.canResendCode ? AppColors.primary.opacity(0.12) : AppColors.cardBackground)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                .stroke(
+                                                    viewModel.canResendCode ? AppColors.primary.opacity(0.3) : AppColors.separator.opacity(0.2),
+                                                    lineWidth: 1
+                                                )
+                                        )
                                 )
+                                .shadow(color: viewModel.canResendCode ? AppColors.primary.opacity(0.1) : Color.clear, radius: 4, x: 0, y: 2)
                                 .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.phone.isEmpty)
                             }
                             
-                            // 登录按钮
+                            // 登录按钮 - 精美设计
                             Button(action: {
                                 hideKeyboard()
                                 viewModel.loginWithPhone { success in
@@ -275,24 +400,38 @@ public struct LoginView: View {
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 52)
+                                .frame(height: 56)
                                 .foregroundColor(.white)
                                 .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
+                                    ZStack {
+                                        // 主渐变
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        
+                                        // 高光效果
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                Color.white.opacity(0.2),
+                                                Color.clear
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    }
                                 )
                                 .cornerRadius(AppCornerRadius.medium)
-                                .shadow(color: AppColors.primary.opacity(0.25), radius: 10, x: 0, y: 5)
+                                .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+                                .shadow(color: AppColors.primary.opacity(0.1), radius: 20, x: 0, y: 10)
                             }
-                            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 52))
+                            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 56))
                             .disabled(viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty)
                             .opacity((viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty) ? 0.5 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty)
-                        } else {
-                            // 邮箱密码登录
+                        } else if viewModel.loginMethod == .emailCode {
+                            // 邮箱验证码登录
                             // 邮箱输入
                             EnhancedTextField(
                                 title: LocalizationKey.authEmail.localized,
@@ -301,6 +440,164 @@ public struct LoginView: View {
                                 icon: "envelope.fill",
                                 keyboardType: .emailAddress,
                                 textContentType: .emailAddress,
+                                autocapitalization: .never,
+                                errorMessage: viewModel.errorMessage,
+                                onSubmit: {
+                                    focusedField = .verificationCode
+                                }
+                            )
+                            .id("emailField")
+                            
+                            // 验证码输入和发送按钮
+                            HStack(spacing: AppSpacing.sm) {
+                                EnhancedTextField(
+                                    title: LocalizationKey.authVerificationCode.localized,
+                                    placeholder: LocalizationKey.authEnterCode.localized,
+                                    text: $viewModel.verificationCode,
+                                    icon: "key.fill",
+                                    keyboardType: .numberPad,
+                                    textContentType: .oneTimeCode,
+                                    autocapitalization: .never,
+                                    errorMessage: nil,
+                                    onSubmit: {
+                                        if !viewModel.email.isEmpty && !viewModel.verificationCode.isEmpty {
+                                            hideKeyboard()
+                                            viewModel.loginWithEmailCode { success in
+                                                if success {
+                                                    withAnimation(.spring(response: 0.5)) {
+                                                        appState.isAuthenticated = true
+                                                        dismiss()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                                .id("verificationCodeField")
+                                .onChange(of: viewModel.verificationCode) { newValue in
+                                    // 只允许数字，过滤掉所有非数字字符
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    if filtered != newValue {
+                                        viewModel.verificationCode = filtered
+                                    }
+                                }
+                                
+                                // 发送验证码按钮 - 美化设计
+                                Button(action: {
+                                    hideKeyboard()
+                                    // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
+                                    if viewModel.captchaEnabled && viewModel.captchaToken == nil {
+                                        if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                            showCaptcha = true
+                                        } else {
+                                            // 如果还没有获取到 site key，先获取配置
+                                            viewModel.checkCaptchaConfig()
+                                            // 等待一下再显示（实际应该用更好的方式处理）
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                                    showCaptcha = true
+                                                } else {
+                                                    viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // CAPTCHA 未启用或已有 token，直接发送验证码
+                                        sendEmailCode()
+                                    }
+                                }) {
+                                    if viewModel.isSendingCode {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
+                                    } else {
+                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)秒")
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                                .frame(width: 100)
+                                .frame(height: 52)
+                                .foregroundColor(viewModel.canResendCode ? AppColors.primary : AppColors.textSecondary)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .fill(viewModel.canResendCode ? AppColors.primary.opacity(0.12) : AppColors.cardBackground)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                .stroke(
+                                                    viewModel.canResendCode ? AppColors.primary.opacity(0.3) : AppColors.separator.opacity(0.2),
+                                                    lineWidth: 1
+                                                )
+                                        )
+                                )
+                                .shadow(color: viewModel.canResendCode ? AppColors.primary.opacity(0.1) : Color.clear, radius: 4, x: 0, y: 2)
+                                .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.email.isEmpty)
+                            }
+                            
+                            // 登录按钮 - 精美设计
+                            Button(action: {
+                                hideKeyboard()
+                                viewModel.loginWithEmailCode { success in
+                                    if success {
+                                        withAnimation(.spring(response: 0.5)) {
+                                            appState.isAuthenticated = true
+                                            dismiss()
+                                        }
+                                    }
+                                }
+                            }) {
+                                HStack(spacing: AppSpacing.sm) {
+                                    if viewModel.isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Text(LocalizationKey.authLogin.localized)
+                                            .font(AppTypography.bodyBold)
+                                        
+                                        Image(systemName: "arrow.right")
+                                            .font(.system(size: 16, weight: .semibold))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .foregroundColor(.white)
+                                .background(
+                                    ZStack {
+                                        // 主渐变
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        
+                                        // 高光效果
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                Color.white.opacity(0.2),
+                                                Color.clear
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    }
+                                )
+                                .cornerRadius(AppCornerRadius.medium)
+                                .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+                                .shadow(color: AppColors.primary.opacity(0.1), radius: 20, x: 0, y: 10)
+                            }
+                            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 56))
+                            .disabled(viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty)
+                            .opacity((viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty) ? 0.5 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty)
+                        } else {
+                            // 邮箱/ID密码登录
+                            // 邮箱或ID输入
+                            EnhancedTextField(
+                                title: LocalizationKey.authEmailOrId.localized,
+                                placeholder: LocalizationKey.authEnterEmailOrId.localized,
+                                text: $viewModel.email,
+                                icon: "person.fill",
+                                keyboardType: .default,
+                                textContentType: .username,
                                 autocapitalization: .never,
                                 errorMessage: viewModel.errorMessage,
                                 onSubmit: {
@@ -334,7 +631,7 @@ public struct LoginView: View {
                             )
                             .id("passwordField")
                             
-                            // 登录按钮
+                            // 登录按钮 - 精美设计
                             Button(action: {
                                 hideKeyboard()
                                 viewModel.login { success in
@@ -359,42 +656,78 @@ public struct LoginView: View {
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 52)
+                                .frame(height: 56)
                                 .foregroundColor(.white)
                                 .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
+                                    ZStack {
+                                        // 主渐变
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        
+                                        // 高光效果
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                Color.white.opacity(0.2),
+                                                Color.clear
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    }
                                 )
                                 .cornerRadius(AppCornerRadius.medium)
-                                .shadow(color: AppColors.primary.opacity(0.25), radius: 10, x: 0, y: 5)
+                                .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+                                .shadow(color: AppColors.primary.opacity(0.1), radius: 20, x: 0, y: 10)
                             }
-                            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 52))
+                            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 56))
                             .disabled(viewModel.isLoading || viewModel.email.isEmpty || viewModel.password.isEmpty)
                             .opacity((viewModel.isLoading || viewModel.email.isEmpty || viewModel.password.isEmpty) ? 0.5 : 1.0)
                             .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.email.isEmpty || viewModel.password.isEmpty)
                         }
                         
-                        // 注册链接 - 符合 HIG
-                        HStack {
+                        // 提示文本 - 符合 HIG，美化设计
+                        HStack(spacing: AppSpacing.xs) {
                             Text(LocalizationKey.authNoAccount.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.textSecondary)
                             
-                            NavigationLink(destination: RegisterView()) {
-                                Text(LocalizationKey.authRegisterNow.localized)
-                                    .font(AppTypography.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(AppColors.primary)
-                            }
+                            Text(LocalizationKey.authNoAccountUseCode.localized)
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColors.primary)
                         }
+                        .padding(.top, AppSpacing.sm)
                     }
                     .padding(.horizontal, AppSpacing.lg)
                     .padding(.vertical, AppSpacing.xl)
-                    .cardStyle(cornerRadius: AppCornerRadius.large, shadow: AppShadow.small)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                            .fill(.ultraThinMaterial)
+                            .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+                            .shadow(color: AppColors.primary.opacity(0.05), radius: 30, x: 0, y: 15)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.white.opacity(0.3),
+                                        Color.white.opacity(0.1),
+                                        Color.clear
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
                     .padding(.horizontal, AppSpacing.md)
+                    .opacity(logoOpacity)
+                    .offset(y: logoOpacity == 0 ? 20 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: logoOpacity)
                     
                     Spacer()
                         .frame(height: 20)
@@ -407,6 +740,13 @@ public struct LoginView: View {
         }
         .navigationBarHidden(true)
         .scrollDismissesKeyboard(.interactively)
+        .onAppear {
+            // 启动动画
+            withAnimation {
+                logoScale = 1.0
+                logoOpacity = 1.0
+            }
+        }
     }
     
     private func hideKeyboard() {
@@ -416,6 +756,15 @@ public struct LoginView: View {
     /// 发送手机验证码（在 CAPTCHA 验证成功后调用）
     private func sendPhoneCode() {
         viewModel.sendPhoneCode { success, message in
+            if success {
+                // 验证码发送成功
+            }
+        }
+    }
+    
+    /// 发送邮箱验证码（在 CAPTCHA 验证成功后调用）
+    private func sendEmailCode() {
+        viewModel.sendEmailCode { success, message in
             if success {
                 // 验证码发送成功
             }
@@ -446,7 +795,11 @@ public struct LoginView: View {
                                 showCaptcha = false
                                 // 延迟一下再发送，确保token已保存
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    sendPhoneCode()
+                                    if viewModel.loginMethod == .phone {
+                                        sendPhoneCode()
+                                    } else if viewModel.loginMethod == .emailCode {
+                                        sendEmailCode()
+                                    }
                                 }
                             },
                             onError: { error in

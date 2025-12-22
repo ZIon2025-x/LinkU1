@@ -68,22 +68,28 @@ def secure_login(
         # 调试信息
         logger.info(f"安全登录请求: email={user_credentials.email}, password_length={len(user_credentials.password)}")
         
-        # 查找用户
-        username = user_credentials.email.strip().lower()  # 转小写以匹配数据库存储格式
+        # 查找用户 - 根据输入类型判断是ID还是邮箱
+        username = user_credentials.email.strip()
         user = None
         
-        # 首先尝试作为ID查找（8位数字）
+        # 判断输入类型：8位纯数字为ID，否则为邮箱
         if username.isdigit() and len(username) == 8:
+            # ID登录：使用ID查找用户
+            logger.info(f"ID登录：查找用户 id={username}")
             user = crud.get_user_by_id(db, username)
-        
-        # 如果ID查找失败，尝试作为邮箱查找
-        if not user:
-            logger.info(f"尝试通过邮箱查找用户: {username}")
-            user = crud.get_user_by_email(db, username)
             if user:
-                logger.info(f"通过邮箱找到用户: {user.id}, {user.name}")
+                logger.info(f"通过ID找到用户: id={user.id}, name={user.name}")
             else:
-                logger.warning(f"通过邮箱未找到用户: {username}")
+                logger.warning(f"通过ID未找到用户: {username}")
+        else:
+            # 邮箱登录：使用邮箱查找用户（转小写以匹配数据库存储格式）
+            username_lower = username.lower()
+            logger.info(f"邮箱登录：查找用户 email={username_lower}")
+            user = crud.get_user_by_email(db, username_lower)
+            if user:
+                logger.info(f"通过邮箱找到用户: id={user.id}, name={user.name}, email={user.email}")
+            else:
+                logger.warning(f"通过邮箱未找到用户: {username_lower}")
         
         # 验证用户和密码
         if not user:
@@ -1296,15 +1302,12 @@ def login_with_phone_verification_code(
                         break
                 username = f"user{user_id}"
             
-            # 创建新用户（手机号登录时，生成虚拟邮箱）
-            # 使用格式：phone_{手机号}@link2ur.com 作为虚拟邮箱
-            # 这样可以满足数据库 NOT NULL 约束，同时可以通过邮箱格式识别是手机号用户
-            virtual_email = f"phone_{phone_digits.replace('+', '').replace('-', '').replace(' ', '')}@link2ur.com"
+            # 创建新用户（手机号登录时，邮箱为空，等待用户后续设置）
             try:
                 db_user = models.User(
                     id=user_id,
                     name=username,
-                    email=virtual_email.lower(),  # 手机号登录时，使用虚拟邮箱
+                    email=None,  # 手机号登录时，邮箱为空，用户后续可以设置
                     hashed_password=hashed_password,
                     phone=phone_digits,
                     avatar="",

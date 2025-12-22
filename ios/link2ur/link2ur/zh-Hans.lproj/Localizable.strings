@@ -35,6 +35,7 @@
 "auth.register" = "注册";
 "auth.logout" = "退出登录";
 "auth.email" = "邮箱";
+"auth.email_or_id" = "邮箱/ID";
 "auth.password" = "密码";
 "auth.phone" = "手机号";
 "auth.verification_code" = "验证码";
@@ -47,9 +48,11 @@
 "auth.send_code" = "发送验证码";
 "auth.resend_code" = "重新发送";
 "auth.login_method" = "登录方式";
-"auth.email_password" = "邮箱密码";
+"auth.email_password" = "邮箱/ID密码";
+"auth.email_code" = "邮箱验证码";
 "auth.phone_code" = "手机验证码";
 "auth.enter_email" = "请输入邮箱";
+"auth.enter_email_or_id" = "请输入邮箱或ID";
 "auth.enter_password" = "请输入密码";
 "auth.enter_phone" = "请输入手机号";
 "auth.enter_code" = "请输入验证码";
@@ -57,6 +60,7 @@
 "auth.has_account" = "已有账户？";
 "auth.register_now" = "立即注册";
 "auth.login_now" = "立即登录";
+"auth.no_account_use_code" = "验证码登录即可";
 "auth.register_success" = "注册成功";
 "auth.captcha_title" = "人机验证";
 "auth.captcha_message" = "请完成人机验证";
