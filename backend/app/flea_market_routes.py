@@ -752,7 +752,7 @@ async def create_flea_market_item(
 
 # ==================== 商品编辑/删除API ====================
 
-@flea_market_router.put("/items/{item_id}", response_model=dict)
+@flea_market_router.put("/items/{item_id}", response_model=schemas.FleaMarketItemResponse)
 async def update_flea_market_item(
     item_id: str,
     item_data: schemas.FleaMarketItemUpdate,
@@ -918,11 +918,56 @@ async def update_flea_market_item(
         
         await db.commit()
         
-        message = "商品删除成功" if is_delete else "商品编辑成功"
-        return {
-            "success": True,
-            "message": message
-        }
+        # 重新查询更新后的商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        updated_item = result.scalar_one()
+        
+        # 解析images JSON
+        images = []
+        if updated_item.images:
+            try:
+                images = json.loads(updated_item.images)
+            except:
+                images = []
+        
+        # 计算距离自动下架还有多少天
+        days_until_auto_delist = None
+        if updated_item.refreshed_at:
+            expiry_date = updated_item.refreshed_at + timedelta(days=AUTO_DELETE_DAYS)
+            now = get_utc_time()
+            days_remaining = (expiry_date - now).days
+            days_until_auto_delist = max(0, days_remaining) if days_remaining > 0 else None
+        
+        # 计算收藏数量
+        favorite_count_result = await db.execute(
+            select(func.count(models.FleaMarketFavorite.id))
+            .where(models.FleaMarketFavorite.item_id == updated_item.id)
+        )
+        favorite_count = favorite_count_result.scalar() or 0
+        
+        # 返回更新后的商品对象
+        return schemas.FleaMarketItemResponse(
+            id=format_flea_market_id(updated_item.id),
+            title=updated_item.title,
+            description=updated_item.description,
+            price=updated_item.price,
+            currency=updated_item.currency or "GBP",
+            images=images,
+            location=updated_item.location,
+            latitude=updated_item.latitude,
+            longitude=updated_item.longitude,
+            category=updated_item.category,
+            status=updated_item.status,
+            seller_id=updated_item.seller_id,
+            view_count=updated_item.view_count or 0,
+            favorite_count=favorite_count,
+            refreshed_at=format_iso_utc(updated_item.refreshed_at),
+            created_at=format_iso_utc(updated_item.created_at),
+            updated_at=format_iso_utc(updated_item.updated_at),
+            days_until_auto_delist=days_until_auto_delist,
+        )
     except HTTPException:
         raise
     except Exception as e:
