@@ -6,6 +6,8 @@ public struct LoginView: View {
     @Environment(\.dismiss) var dismiss
     @State private var showPassword = false
     @State private var showCaptcha = false  // 显示 CAPTCHA 验证界面
+    @State private var showTerms = false  // 显示用户协议
+    @State private var showPrivacy = false  // 显示隐私政策
     @FocusState private var focusedField: Field?
     @State private var logoScale: CGFloat = 0.8
     @State private var logoOpacity: Double = 0
@@ -171,6 +173,68 @@ public struct LoginView: View {
                     }
                     .padding(.bottom, AppSpacing.lg)
                     
+                    // Face ID 登录按钮（如果支持且已保存凭据）
+                    if viewModel.canUseBiometric && BiometricAuth.shared.isBiometricLoginEnabled() {
+                        Button(action: {
+                            viewModel.loginWithBiometric { success in
+                                if success {
+                                    withAnimation(.spring(response: 0.5)) {
+                                        appState.isAuthenticated = true
+                                        dismiss()
+                                    }
+                                }
+                            }
+                        }) {
+                            HStack(spacing: AppSpacing.sm) {
+                                Image(systemName: viewModel.biometricType == .faceID ? "faceid" : "touchid")
+                                    .font(.system(size: 20, weight: .medium))
+                                
+                                Text("使用 \(viewModel.biometricType.displayName) 登录")
+                                    .font(AppTypography.body)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: AppColors.gradientPrimary),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(AppCornerRadius.medium)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.bottom, AppSpacing.md)
+                        .opacity(logoOpacity)
+                        .offset(y: logoOpacity == 0 ? 10 : 0)
+                        .animation(.easeOut(duration: 0.6).delay(0.4), value: logoOpacity)
+                        
+                        // 分隔线
+                        HStack {
+                            Rectangle()
+                                .fill(AppColors.separator.opacity(0.3))
+                                .frame(height: 1)
+                            
+                            Text("或")
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                                .padding(.horizontal, AppSpacing.sm)
+                            
+                            Rectangle()
+                                .fill(AppColors.separator.opacity(0.3))
+                                .frame(height: 1)
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.bottom, AppSpacing.sm)
+                        .opacity(logoOpacity)
+                        .offset(y: logoOpacity == 0 ? 10 : 0)
+                        .animation(.easeOut(duration: 0.6).delay(0.45), value: logoOpacity)
+                    }
+                    
                     // 登录方式切换 - 美化设计
                     Picker(LocalizationKey.authLoginMethod.localized, selection: $viewModel.loginMethod) {
                         Text(LocalizationKey.authEmailPassword.localized).tag(AuthViewModel.LoginMethod.password)
@@ -187,6 +251,10 @@ public struct LoginView: View {
                         // 切换登录方式时清空错误消息和输入框
                         withAnimation(.spring(response: 0.3)) {
                             viewModel.errorMessage = nil
+                            // 切换登录方式时重置协议同意状态（验证码登录需要，密码登录不需要）
+                            if newMethod == .password {
+                                viewModel.agreedToTerms = false
+                            }
                             switch newMethod {
                             case .password:
                                 viewModel.phone = ""
@@ -375,6 +443,56 @@ public struct LoginView: View {
                                 .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.phone.isEmpty)
                             }
                             
+                            // 用户协议同意复选框 - 验证码登录需要
+                            HStack(spacing: AppSpacing.sm) {
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        viewModel.agreedToTerms.toggle()
+                                    }
+                                }) {
+                                    Image(systemName: viewModel.agreedToTerms ? "checkmark.square.fill" : "square")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(viewModel.agreedToTerms ? AppColors.primary : AppColors.textSecondary)
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text(LocalizationKey.authAgreeToTerms.localized)
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    // 用户协议链接
+                                    Button(action: {
+                                        // 在应用内打开用户协议
+                                        showTerms = true
+                                    }) {
+                                        Text(LocalizationKey.authTermsOfService.localized)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(AppColors.primary)
+                                            .underline()
+                                    }
+                                    
+                                    Text("、")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    // 隐私政策链接
+                                    Button(action: {
+                                        // 在应用内打开隐私政策
+                                        showPrivacy = true
+                                    }) {
+                                        Text(LocalizationKey.authPrivacyPolicy.localized)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(AppColors.primary)
+                                            .underline()
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.top, AppSpacing.sm)
+                            
                             // 登录按钮 - 精美设计
                             Button(action: {
                                 hideKeyboard()
@@ -427,9 +545,9 @@ public struct LoginView: View {
                                 .shadow(color: AppColors.primary.opacity(0.1), radius: 20, x: 0, y: 10)
                             }
                             .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 56))
-                            .disabled(viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty)
-                            .opacity((viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty) ? 0.5 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty)
+                            .disabled(viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms)
+                            .opacity((viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms) ? 0.5 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.phone.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms)
                         } else if viewModel.loginMethod == .emailCode {
                             // 邮箱验证码登录
                             // 邮箱输入
@@ -533,6 +651,56 @@ public struct LoginView: View {
                                 .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.email.isEmpty)
                             }
                             
+                            // 用户协议同意复选框 - 验证码登录需要
+                            HStack(spacing: AppSpacing.sm) {
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        viewModel.agreedToTerms.toggle()
+                                    }
+                                }) {
+                                    Image(systemName: viewModel.agreedToTerms ? "checkmark.square.fill" : "square")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(viewModel.agreedToTerms ? AppColors.primary : AppColors.textSecondary)
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text(LocalizationKey.authAgreeToTerms.localized)
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    // 用户协议链接
+                                    Button(action: {
+                                        // 在应用内打开用户协议
+                                        showTerms = true
+                                    }) {
+                                        Text(LocalizationKey.authTermsOfService.localized)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(AppColors.primary)
+                                            .underline()
+                                    }
+                                    
+                                    Text("、")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    // 隐私政策链接
+                                    Button(action: {
+                                        // 在应用内打开隐私政策
+                                        showPrivacy = true
+                                    }) {
+                                        Text(LocalizationKey.authPrivacyPolicy.localized)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(AppColors.primary)
+                                            .underline()
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.top, AppSpacing.sm)
+                            
                             // 登录按钮 - 精美设计
                             Button(action: {
                                 hideKeyboard()
@@ -585,9 +753,9 @@ public struct LoginView: View {
                                 .shadow(color: AppColors.primary.opacity(0.1), radius: 20, x: 0, y: 10)
                             }
                             .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.medium, useGradient: true, height: 56))
-                            .disabled(viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty)
-                            .opacity((viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty) ? 0.5 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty)
+                            .disabled(viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms)
+                            .opacity((viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms) ? 0.5 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading || viewModel.email.isEmpty || viewModel.verificationCode.isEmpty || !viewModel.agreedToTerms)
                         } else {
                             // 邮箱/ID密码登录
                             // 邮箱或ID输入
@@ -736,6 +904,12 @@ public struct LoginView: View {
             }
             .fullScreenCover(isPresented: $showCaptcha) {
                 captchaView
+            }
+            .sheet(isPresented: $showTerms) {
+                TermsWebView()
+            }
+            .sheet(isPresented: $showPrivacy) {
+                PrivacyWebView()
             }
         }
         .navigationBarHidden(true)

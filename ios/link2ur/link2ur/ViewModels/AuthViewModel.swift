@@ -31,6 +31,13 @@ class AuthViewModel: ObservableObject {
     @Published var captchaSiteKey: String? = nil
     @Published var captchaType: String? = nil  // "recaptcha" 或 "hcaptcha"
     
+    // 用户协议同意状态（验证码登录需要）
+    @Published var agreedToTerms = false
+    
+    // Face ID 相关
+    @Published var canUseBiometric = false
+    @Published var biometricType: BiometricAuth.BiometricType = .none
+    
     // 支持的区号列表（目前只支持英国）
     let supportedCountryCodes = [
         ("🇬🇧", "+44", "United Kingdom")
@@ -67,6 +74,15 @@ class AuthViewModel: ObservableObject {
         }
         // 检查CAPTCHA配置
         checkCaptchaConfig()
+        
+        // 检查生物识别支持
+        checkBiometricSupport()
+    }
+    
+    /// 检查生物识别支持
+    private func checkBiometricSupport() {
+        canUseBiometric = BiometricAuth.shared.canUseBiometric()
+        biometricType = BiometricAuth.shared.availableBiometricType()
     }
     
     /// 检查CAPTCHA配置
@@ -169,6 +185,9 @@ class AuthViewModel: ObservableObject {
                 // 保存用户信息到 AppState
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .userDidLogin, object: user)
+                    
+                    // 登录成功后，保存凭据用于 Face ID 登录
+                    self.saveCredentialsForBiometric()
                     
                     // 登录成功后，发送设备Token到后端（如果存在）
                     if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
@@ -467,6 +486,9 @@ class AuthViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .userDidLogin, object: user)
                     
+                    // 登录成功后，保存凭据用于 Face ID 登录
+                    self.saveCredentialsForBiometric()
+                    
                     // 登录成功后，发送设备Token到后端（如果存在）
                     if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
                         APIService.shared.registerDeviceToken(deviceToken) { success in
@@ -568,6 +590,9 @@ class AuthViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .userDidLogin, object: user)
                     
+                    // 登录成功后，保存凭据用于 Face ID 登录
+                    self.saveCredentialsForBiometric()
+                    
                     // 登录成功后，发送设备Token到后端（如果存在）
                     if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
                         APIService.shared.registerDeviceToken(deviceToken) { success in
@@ -608,6 +633,90 @@ class AuthViewModel: ObservableObject {
     
     deinit {
         countdownTimer?.invalidate()
+    }
+    
+    /// 使用 Face ID/Touch ID 登录
+    func loginWithBiometric(completion: @escaping (Bool) -> Void) {
+        guard canUseBiometric else {
+            errorMessage = "设备不支持生物识别"
+            completion(false)
+            return
+        }
+        
+        guard BiometricAuth.shared.isBiometricLoginEnabled() else {
+            errorMessage = "未启用生物识别登录"
+            completion(false)
+            return
+        }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        // 从 Keychain 读取保存的凭据
+        // 注意：loadCredentials() 会触发生物识别验证（因为 Keychain 设置了访问控制）
+        guard let credentials = BiometricAuth.shared.loadCredentials() else {
+            isLoading = false
+            errorMessage = "未找到保存的登录信息，请先使用常规方式登录"
+            completion(false)
+            return
+        }
+        
+        // 生物识别验证已通过（loadCredentials 成功返回说明验证通过）
+        // 使用保存的凭据登录
+        if let phone = credentials.phone, !phone.isEmpty {
+            // 手机号登录：需要先发送验证码，这里提示用户使用常规方式
+            isLoading = false
+            errorMessage = "手机号登录需要验证码，请使用常规方式登录"
+            completion(false)
+        } else if let username = credentials.username, !username.isEmpty {
+            // 使用邮箱/ID 和密码登录
+            self.email = username
+            self.password = credentials.password ?? ""
+            
+            // 如果密码为空，说明是验证码登录，提示用户使用常规方式
+            if password.isEmpty {
+                isLoading = false
+                errorMessage = "请使用验证码登录"
+                completion(false)
+                return
+            }
+            
+            // 使用保存的凭据进行登录
+            self.login { [weak self] success in
+                self?.isLoading = false
+                completion(success)
+            }
+        } else {
+            isLoading = false
+            errorMessage = "未找到有效的登录凭据"
+            completion(false)
+        }
+    }
+    
+    /// 保存登录凭据（用于 Face ID 登录）
+    private func saveCredentialsForBiometric() {
+        // 根据登录方式保存不同的凭据
+        switch loginMethod {
+        case .phone:
+            if !phone.isEmpty {
+                let fullPhone = fullPhoneNumber
+                BiometricAuth.shared.saveCredentials(phone: fullPhone)
+                BiometricAuth.shared.setBiometricLoginEnabled(true)
+                Logger.debug("已保存手机号用于生物识别登录", category: .auth)
+            }
+        case .emailCode:
+            if !email.isEmpty {
+                BiometricAuth.shared.saveCredentials(username: email)
+                BiometricAuth.shared.setBiometricLoginEnabled(true)
+                Logger.debug("已保存邮箱用于生物识别登录", category: .auth)
+            }
+        case .password:
+            if !email.isEmpty && !password.isEmpty {
+                BiometricAuth.shared.saveCredentials(username: email, password: password)
+                BiometricAuth.shared.setBiometricLoginEnabled(true)
+                Logger.debug("已保存邮箱和密码用于生物识别登录", category: .auth)
+            }
+        }
     }
     
     func register(completion: @escaping (Bool, String?) -> Void) {

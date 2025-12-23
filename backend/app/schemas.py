@@ -19,6 +19,7 @@ class UserCreate(UserBase):
     agreed_to_terms: Optional[bool] = False
     terms_agreed_at: Optional[str] = None
     invitation_code: Optional[str] = None  # 邀请码（注册时使用）
+    phone_verification_code: Optional[str] = None  # 手机验证码（如果提供了手机号，则必填）
 
 
 class UserUpdate(BaseModel):

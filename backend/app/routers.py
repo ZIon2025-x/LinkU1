@@ -160,6 +160,10 @@ async def register(
         # 确保邀请码字段被保留（即使验证器可能没有包含它）
         if hasattr(user, 'invitation_code') and user.invitation_code:
             validated_data['invitation_code'] = user.invitation_code
+        # 保存手机验证码（用于后续验证，但不存储到数据库）
+        phone_verification_code = validated_data.pop('phone_verification_code', None)
+        if phone_verification_code:
+            validated_data['_phone_verification_code'] = phone_verification_code
     except HTTPException as e:
         raise e
     
@@ -169,6 +173,62 @@ async def register(
             status_code=400,
             detail="注册需要提供邮箱地址"
         )
+    
+    # 如果提供了手机号，必须提供手机验证码
+    phone = validated_data.get('phone')
+    phone_verification_code = validated_data.pop('_phone_verification_code', None)
+    
+    if phone:
+        if not phone_verification_code:
+            raise HTTPException(
+                status_code=400,
+                detail="如果提供了手机号，必须提供手机验证码进行验证"
+            )
+        
+        # 验证手机号格式
+        import re
+        if not phone.startswith('+'):
+            raise HTTPException(
+                status_code=400,
+                detail="手机号格式不正确，必须以国家代码开头（如 +44）"
+            )
+        if not re.match(r'^\+\d{10,15}$', phone):
+            raise HTTPException(
+                status_code=400,
+                detail="手机号格式不正确，请检查国家代码和手机号"
+            )
+        
+        # 验证手机验证码
+        phone_verified = False
+        try:
+            from app.phone_verification_code_manager import verify_and_delete_code
+            from app.twilio_sms import twilio_sms
+            
+            # 如果使用 Twilio Verify API，使用其验证方法
+            if twilio_sms.use_verify_api and twilio_sms.verify_client:
+                phone_verified = twilio_sms.verify_code(phone, phone_verification_code)
+            else:
+                # 否则使用自定义验证码（存储在 Redis 中）
+                phone_verified = verify_and_delete_code(phone, phone_verification_code)
+        except Exception as e:
+            logger.error(f"验证手机验证码过程出错: {e}")
+            phone_verified = False
+        
+        if not phone_verified:
+            raise HTTPException(
+                status_code=400,
+                detail="手机验证码错误或已过期，请重新获取验证码"
+            )
+        
+        logger.info(f"手机号验证成功: phone={phone}")
+        
+        # 检查手机号是否已被注册
+        db_phone_user = await async_user_crud.get_user_by_phone(db, phone)
+        if db_phone_user:
+            raise HTTPException(
+                status_code=400,
+                detail="该手机号已被注册，请使用其他手机号或直接登录"
+            )
     
     # 调试信息
     # 注册请求处理中（已移除敏感信息日志）
@@ -410,17 +470,22 @@ def verify_email(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
+        # 检测是否为 iOS 应用
+        from app.secure_auth import is_ios_app_request
+        is_ios_app = is_ios_app_request(request)
+        
         # 生成刷新令牌
         from app.secure_auth import create_user_refresh_token
         refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
         
-        # 创建会话
+        # 创建会话（iOS 应用会话将长期有效）
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,
             ip_address=client_ip,
             user_agent=user_agent,
-            refresh_token=refresh_token
+            refresh_token=refresh_token,
+            is_ios_app=is_ios_app
         )
         
         # 设置安全Cookie

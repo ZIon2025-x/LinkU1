@@ -74,6 +74,42 @@ class AsyncUserCRUD:
             return None
 
     @staticmethod
+    async def get_user_by_phone(db: AsyncSession, phone: str) -> Optional[models.User]:
+        """根据手机号获取用户"""
+        try:
+            # 先尝试直接匹配（完整格式）
+            result = await db.execute(
+                select(models.User).where(models.User.phone == phone)
+            )
+            user = result.scalar_one_or_none()
+            if user:
+                return user
+            
+            # 如果直接匹配失败，尝试格式化后匹配
+            import re
+            digits = re.sub(r'\D', '', phone)
+            
+            # 如果是11位数字以07开头（英国号码），转换为 +44 格式
+            if len(digits) == 11 and digits.startswith('07'):
+                uk_number = digits[1:]  # 去掉开头的0
+                formatted_phone = f"+44{uk_number}"
+                result = await db.execute(
+                    select(models.User).where(models.User.phone == formatted_phone)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    return user
+            
+            # 尝试清理格式后匹配（向后兼容）
+            result = await db.execute(
+                select(models.User).where(models.User.phone == digits)
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Error getting user by phone {phone}: {e}")
+            return None
+
+    @staticmethod
     async def get_user_by_name(db: AsyncSession, name: str) -> Optional[models.User]:
         """根据用户名获取用户"""
         try:

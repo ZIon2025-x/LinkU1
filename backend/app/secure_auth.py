@@ -75,6 +75,7 @@ class SessionInfo:
     user_agent: str
     refresh_token: str = ""
     is_active: bool = True
+    is_ios_app: bool = False  # 是否为 iOS 应用会话
 
 class SecureAuthManager:
     """安全认证管理器"""
@@ -188,8 +189,15 @@ class SecureAuthManager:
     def _store_session(session: SessionInfo) -> None:
         """存储会话到Redis"""
         if USE_REDIS and redis_client:
+            # iOS 应用会话使用更长的过期时间（1年），其他会话使用默认过期时间
+            if session.is_ios_app:
+                expire_hours = 365 * 24  # 1年
+                logger.info(f"[SECURE_AUTH] iOS 应用会话，设置长期过期时间: {expire_hours}小时")
+            else:
+                expire_hours = SESSION_EXPIRE_HOURS
+            
             # 计算过期时间
-            expire_time = session.last_activity + timedelta(hours=SESSION_EXPIRE_HOURS)
+            expire_time = session.last_activity + timedelta(hours=expire_hours)
             
             session_data = {
                 "user_id": session.user_id,
@@ -201,19 +209,20 @@ class SecureAuthManager:
                 "ip_address": session.ip_address,
                 "user_agent": session.user_agent,
                 "refresh_token": session.refresh_token,
-                "is_active": session.is_active
+                "is_active": session.is_active,
+                "is_ios_app": session.is_ios_app  # 保存是否为 iOS 应用会话
             }
             
             # 存储会话数据
             redis_client.setex(
                 f"session:{session.session_id}",
-                SESSION_EXPIRE_HOURS * 3600,  # 24小时TTL
+                expire_hours * 3600,  # 根据设备类型设置TTL
                 json.dumps(session_data)
             )
             
             # 添加到用户会话集合
             redis_client.sadd(f"user_sessions:{session.user_id}", session.session_id)
-            redis_client.expire(f"user_sessions:{session.user_id}", SESSION_EXPIRE_HOURS * 3600)
+            redis_client.expire(f"user_sessions:{session.user_id}", expire_hours * 3600)
     
     @staticmethod
     def create_session(
@@ -221,15 +230,17 @@ class SecureAuthManager:
         device_fingerprint: str,
         ip_address: str,
         user_agent: str,
-        refresh_token: str = ""
+        refresh_token: str = "",
+        is_ios_app: bool = False,
+        single_sign_on: bool = True  # 默认启用单点登录
     ) -> SessionInfo:
-        """创建新会话（优化版：支持会话复用和数量限制）"""
+        """创建新会话（单点登录：新登录会挤掉所有旧会话）"""
         now = get_utc_time()
         
         # 1. 检查现有活跃会话
         existing_sessions = SecureAuthManager._get_active_sessions(user_id)
         
-        # 2. 如果存在活跃会话，优先复用（相同设备指纹）
+        # 2. 如果存在活跃会话，优先复用（相同设备指纹和IP）
         for session in existing_sessions:
             if (session.device_fingerprint == device_fingerprint and 
                 session.ip_address == ip_address and
@@ -240,12 +251,10 @@ class SecureAuthManager:
                 logger.info(f"[SECURE_AUTH] 复用现有用户会话: {user_id}, session_id: {session.session_id[:8]}...")
                 return session
         
-        # 3. 检查会话数量限制（最多3个活跃会话）
-        if len(existing_sessions) >= 3:
-            # 清理最旧的会话
-            oldest_session = min(existing_sessions, key=lambda s: s.created_at)
-            SecureAuthManager._revoke_session(oldest_session.session_id)
-            logger.info(f"[SECURE_AUTH] 清理最旧用户会话: {oldest_session.session_id[:8]}...")
+        # 3. 单点登录：撤销所有旧会话（新登录会挤掉所有旧设备）
+        if single_sign_on and existing_sessions:
+            revoked_count = SecureAuthManager.revoke_user_sessions(user_id)
+            logger.info(f"[SECURE_AUTH] 单点登录：撤销用户 {user_id} 的所有旧会话，共 {revoked_count} 个")
         
         # 4. 创建新会话
         session_id = SecureAuthManager.generate_session_id()
@@ -257,7 +266,8 @@ class SecureAuthManager:
             last_activity=now,
             ip_address=ip_address,
             user_agent=user_agent,
-            refresh_token=refresh_token
+            refresh_token=refresh_token,
+            is_ios_app=is_ios_app
         )
         
         # 存储会话
@@ -283,18 +293,25 @@ class SecureAuthManager:
                 ip_address=data["ip_address"],
                 user_agent=data["user_agent"],
                 refresh_token=data.get("refresh_token", ""),
-                is_active=data["is_active"]
+                is_active=data["is_active"],
+                is_ios_app=data.get("is_ios_app", False)  # 兼容旧数据，默认为False
             )
             
             if not session.is_active:
                 return None
             
-            # 检查会话是否过期
-            if get_utc_time() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
-                # 删除过期会话
-                redis_client.delete(f"session:{session_id}")
-                redis_client.srem(f"user_sessions:{session.user_id}", session_id)
-                return None
+            # iOS 应用会话不过期（或使用很长的过期时间），其他会话按正常逻辑检查
+            if session.is_ios_app:
+                # iOS 应用会话：只要会话存在就不过期（除非被手动撤销）
+                # 不检查过期时间，让会话长期有效
+                logger.debug(f"[SECURE_AUTH] iOS 应用会话不过期检查: {session_id[:8]}...")
+            else:
+                # 检查会话是否过期
+                if get_utc_time() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+                    # 删除过期会话
+                    redis_client.delete(f"session:{session_id}")
+                    redis_client.srem(f"user_sessions:{session.user_id}", session_id)
+                    return None
             
             # 只有在需要更新活动时间时才更新（避免频繁更新导致token刷新）
             if update_activity:
@@ -303,9 +320,11 @@ class SecureAuthManager:
                 if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
                     session.last_activity = get_utc_time()
                     data["last_activity"] = format_iso_utc(session.last_activity)
+                    # iOS 应用会话使用更长的过期时间
+                    expire_hours = 365 * 24 if session.is_ios_app else SESSION_EXPIRE_HOURS
                     redis_client.setex(
                         f"session:{session_id}",
-                        SESSION_EXPIRE_HOURS * 3600,
+                        expire_hours * 3600,
                         json.dumps(data)
                     )
             
@@ -401,7 +420,15 @@ class SecureAuthManager:
             
             # 清空用户会话列表
             redis_client.delete(user_sessions_key)
-            logger.info(f"用户所有会话已撤销并删除: {user_id}, 删除数量: {count}")
+            
+            # 删除用户的所有 refresh token
+            pattern = f"user_refresh_token:{user_id}:*"
+            refresh_keys = redis_client.keys(pattern)
+            for key in refresh_keys:
+                key_str = key.decode() if isinstance(key, bytes) else key
+                redis_client.delete(key_str)
+            
+            logger.info(f"[SECURE_AUTH] 用户所有会话和refresh token已撤销: {user_id}, 删除会话数: {count}, 删除refresh token数: {len(refresh_keys)}")
             return count
         else:
             # 从内存删除用户的所有会话
@@ -573,6 +600,43 @@ def is_mobile_request(request: Request) -> bool:
     
     # 验证失败
     logger.debug(f"移动端请求验证失败: {platform}")
+    return False
+
+def is_ios_app_request(request: Request) -> bool:
+    """
+    检测是否为 iOS 原生应用请求（排除Safari浏览器）
+    
+    检查条件（必须同时满足）：
+    1. X-Platform 头为 "ios"
+    2. User-Agent 包含 "Link2Ur-iOS" 或 "link2ur-ios"（应用特定标识）
+    3. User-Agent 不包含 "Safari" 或 "Version/"（排除浏览器）
+    
+    注意：iPhone/iPad 上的 Safari 浏览器不应该被识别为 iOS 应用
+    """
+    # 1. 必须要有 X-Platform 头
+    platform = request.headers.get("X-Platform", "").lower()
+    if platform != "ios":
+        return False
+    
+    # 2. 检查 User-Agent
+    user_agent = request.headers.get("user-agent", "").lower()
+    
+    # 排除 Safari 浏览器（Safari 的 User-Agent 通常包含 "Safari" 和 "Version/"）
+    if "safari" in user_agent and "version/" in user_agent:
+        # 这是 Safari 浏览器，不是 iOS 应用
+        logger.debug(f"检测到 Safari 浏览器，不是 iOS 应用: UA={user_agent[:80]}")
+        return False
+    
+    # 3. 检查是否包含 iOS 应用特定标识
+    # iOS 应用的 User-Agent 应该包含 "Link2Ur-iOS" 或 "link2ur-ios"
+    # 不应该仅仅因为包含 "link2ur" 就认为是应用（可能是网页）
+    if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
+        logger.info(f"检测到 iOS 原生应用请求: platform={platform}, UA={user_agent[:80]}")
+        return True
+    
+    # 如果只有 X-Platform 头但没有应用标识，也不认为是应用
+    # 这可能是网页请求但设置了错误的头
+    logger.debug(f"X-Platform=ios 但缺少应用标识，不是 iOS 应用: UA={user_agent[:80]}")
     return False
 
 def validate_session(request: Request) -> Optional[SessionInfo]:
