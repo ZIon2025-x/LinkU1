@@ -44,6 +44,16 @@ struct ForumPostDetailView: View {
                 
                 // 5. 固定底部回复栏
                 bottomReplyBar(post: post)
+            } else {
+                // 如果 post 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppColors.textTertiary)
+                    Text("帖子信息加载失败")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)

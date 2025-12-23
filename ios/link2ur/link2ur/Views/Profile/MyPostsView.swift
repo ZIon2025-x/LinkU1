@@ -57,9 +57,16 @@ struct MyPostsView: View {
                 viewModel.loadAllCategories(userId: String(userId))
             }
         }
-        .onAppear {
+        .task {
+            // 使用 .task 而不是 .onAppear，避免从详情页返回时重复加载
             if let userId = appState.currentUser?.id {
-                viewModel.loadAllCategories(userId: String(userId))
+                // 只在数据为空时才加载，避免重复加载
+                if viewModel.sellingItems.isEmpty && 
+                   viewModel.purchasedItems.isEmpty && 
+                   viewModel.favoriteItems.isEmpty && 
+                   viewModel.soldItems.isEmpty {
+                    viewModel.loadAllCategories(userId: String(userId))
+                }
             }
         }
     }

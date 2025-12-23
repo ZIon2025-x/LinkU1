@@ -21,6 +21,7 @@ class EditProfileViewModel: ObservableObject {
     @Published var phoneCountdown = 0
     @Published var showEmailCodeField = false
     @Published var showPhoneCodeField = false
+    @Published var showAvatarPicker = false
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -101,10 +102,12 @@ class EditProfileViewModel: ObservableObject {
                 timer.invalidate()
                 return
             }
-            if self.emailCountdown > 0 {
-                self.emailCountdown -= 1
-            } else {
-                timer.invalidate()
+            DispatchQueue.main.async {
+                if self.emailCountdown > 0 {
+                    self.emailCountdown -= 1
+                } else {
+                    timer.invalidate()
+                }
             }
         }
     }
@@ -117,10 +120,12 @@ class EditProfileViewModel: ObservableObject {
                 timer.invalidate()
                 return
             }
-            if self.phoneCountdown > 0 {
-                self.phoneCountdown -= 1
-            } else {
-                timer.invalidate()
+            DispatchQueue.main.async {
+                if self.phoneCountdown > 0 {
+                    self.phoneCountdown -= 1
+                } else {
+                    timer.invalidate()
+                }
             }
         }
     }
@@ -158,17 +163,19 @@ class EditProfileViewModel: ObservableObject {
             }
         }
         
+        // 如果头像有变化，先更新头像
+        if avatar != (currentUser?.avatar ?? "") {
+            updateAvatarAndThenSaveProfile(body: body, completion: completion)
+            return
+        }
+        
         apiService.request(User.self, "/api/users/profile", method: "PATCH", body: body)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] result in
                     self?.isLoading = false
                     if case .failure(let error) = result {
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                         completion(nil)
                     }
                 },
@@ -176,6 +183,51 @@ class EditProfileViewModel: ObservableObject {
                     self?.isLoading = false
                     self?.showSuccessAlert = true
                     completion(updatedUser)
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    private func updateAvatarAndThenSaveProfile(body: [String: Any], completion: @escaping (User?) -> Void) {
+        apiService.updateAvatar(avatar: avatar)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] result in
+                    if case .failure(let error) = result {
+                        self?.isLoading = false
+                        self?.errorMessage = error.userFriendlyMessage
+                        completion(nil)
+                    }
+                },
+                receiveValue: { [weak self] updatedUser in
+                    guard let self = self else {
+                        completion(nil)
+                        return
+                    }
+                    // 头像更新成功后，继续更新其他信息
+                    if !body.isEmpty {
+                        self.apiService.request(User.self, "/api/users/profile", method: "PATCH", body: body)
+                            .receive(on: DispatchQueue.main)
+                            .sink(
+                                receiveCompletion: { [weak self] result in
+                                    self?.isLoading = false
+                                    if case .failure(let error) = result {
+                                        self?.errorMessage = error.userFriendlyMessage
+                                        completion(nil)
+                                    }
+                                },
+                                receiveValue: { [weak self] finalUser in
+                                    self?.isLoading = false
+                                    self?.showSuccessAlert = true
+                                    completion(finalUser)
+                                }
+                            )
+                            .store(in: &self.cancellables)
+                    } else {
+                        self.isLoading = false
+                        self.showSuccessAlert = true
+                        completion(updatedUser)
+                    }
                 }
             )
             .store(in: &cancellables)

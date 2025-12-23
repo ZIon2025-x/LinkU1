@@ -71,6 +71,7 @@ struct FleaMarketItem: Codable, Identifiable {
         refreshedAt = try container.decodeIfPresent(String.self, forKey: .refreshedAt)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        daysUntilAutoDelist = try container.decodeIfPresent(Int.self, forKey: .daysUntilAutoDelist)
     }
     
     // 自定义编码
@@ -94,6 +95,7 @@ struct FleaMarketItem: Codable, Identifiable {
         try container.encodeIfPresent(refreshedAt, forKey: .refreshedAt)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(daysUntilAutoDelist, forKey: .daysUntilAutoDelist)
     }
 }
 

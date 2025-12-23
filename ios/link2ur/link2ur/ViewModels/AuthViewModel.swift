@@ -126,11 +126,7 @@ class AuthViewModel: ObservableObject {
                         error: error
                     )
                     // 同时保留 errorMessage 用于 UI 显示
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -426,11 +422,7 @@ class AuthViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -441,7 +433,7 @@ class AuthViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                guard let self = self else { return }
+                guard self != nil else { return }
                 
                 // 后端使用 session-based 认证，保存 session_id
                 let sessionId = response.authHeaders?.sessionId ?? response.sessionId
@@ -528,11 +520,7 @@ class AuthViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(

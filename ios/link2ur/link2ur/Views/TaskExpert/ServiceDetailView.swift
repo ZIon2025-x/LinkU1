@@ -52,6 +52,16 @@ struct ServiceDetailView: View {
                 
                 // 3. 固定底部申请栏
                 bottomApplyBar(service: service)
+            } else {
+                // 如果 service 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppColors.textTertiary)
+                    Text("服务信息加载失败")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)

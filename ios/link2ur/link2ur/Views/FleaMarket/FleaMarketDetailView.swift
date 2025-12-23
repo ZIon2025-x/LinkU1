@@ -10,6 +10,8 @@ struct FleaMarketDetailView: View {
     @State private var purchaseMessage = ""
     @State private var showLogin = false
     @State private var currentImageIndex = 0
+    @State private var isRefreshing = false
+    @State private var showRefreshSuccess = false
     
     enum PurchaseType {
         case direct
@@ -31,6 +33,7 @@ struct FleaMarketDetailView: View {
                         .foregroundColor(AppColors.textTertiary)
                 }
             } else if let item = viewModel.item {
+                // 显示商品内容
                 ScrollView {
                     VStack(spacing: 0) {
                         // 图片区域
@@ -63,6 +66,16 @@ struct FleaMarketDetailView: View {
                 
                 // 底部操作栏
                 bottomBar(item: item)
+            } else {
+                // 如果 item 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppColors.textTertiary)
+                    Text("商品信息加载失败")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -139,10 +152,60 @@ struct FleaMarketDetailView: View {
             )
             }
         }
-        .onAppear {
+        .alert("刷新成功", isPresented: $showRefreshSuccess) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text("商品已刷新，自动下架计时器已重置")
+        }
+        .task {
+            // 使用 .task 而不是 .onAppear，并添加延迟，避免与导航冲突
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
             viewModel.loadItem(itemId: itemId)
         }
     }
+    
+    // MARK: - 距离自动下架天数视图
+    
+    @ViewBuilder
+    private func daysUntilExpiryView(daysRemaining: Int?) -> some View {
+        if let daysRemaining = daysRemaining {
+            let (backgroundColor, textColor, borderColor): (Color, Color, Color) = {
+                if daysRemaining <= 3 {
+                    return (Color.red.opacity(0.1), Color.red, Color.red.opacity(0.3))
+                } else if daysRemaining <= 7 {
+                    return (Color.orange.opacity(0.1), Color.orange, Color.orange.opacity(0.3))
+                } else {
+                    return (Color.blue.opacity(0.1), Color.blue, Color.blue.opacity(0.3))
+                }
+            }()
+            
+            HStack(spacing: 8) {
+                Image(systemName: daysRemaining <= 3 ? "exclamationmark.triangle.fill" : "clock.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(textColor)
+                
+                if daysRemaining > 0 {
+                    Text("距离自动下架还有 \(daysRemaining) 天")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(textColor)
+                } else {
+                    Text("商品即将自动下架")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(textColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(backgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .cornerRadius(8)
+            .padding(.top, 8)
+        }
+    }
+    
     
     // MARK: - 图片画廊
     
@@ -293,6 +356,11 @@ struct FleaMarketDetailView: View {
                     .font(.system(size: 12))
                     .foregroundColor(AppColors.textTertiary)
             }
+            
+            // 卖家视角：显示距离自动下架还有多少天（从后端获取）
+            if isSeller {
+                daysUntilExpiryView(daysRemaining: item.daysUntilAutoDelist)
+            }
         }
         .padding(20)
         .background(Color(UIColor.systemBackground))
@@ -429,91 +497,166 @@ struct FleaMarketDetailView: View {
     
     // MARK: - 底部操作栏
     
+    private var isSeller: Bool {
+        guard let item = viewModel.item,
+              let currentUserId = appState.currentUser?.id else {
+            return false
+        }
+        return item.sellerId == currentUserId
+    }
+    
     @ViewBuilder
     private func bottomBar(item: FleaMarketItem) -> some View {
         if item.status == "active" {
             HStack(spacing: 12) {
-                // 收藏按钮
-                Button(action: {
-                    if appState.isAuthenticated {
-                        viewModel.toggleFavorite(itemId: itemId) { success in
-                            if success { HapticFeedback.success() }
-                        }
-                    } else {
-                        showLogin = true
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        ZStack {
-                            if viewModel.isTogglingFavorite {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                            } else {
-                                Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(viewModel.isFavorited ? .red : AppColors.textSecondary)
-                                    .scaleEffect(viewModel.isFavorited ? 1.1 : 1.0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.isFavorited)
+                // 如果是卖家，显示编辑和刷新按钮
+                if isSeller {
+                    // 刷新按钮 - 使用更紧凑的布局
+                    Button(action: {
+                        isRefreshing = true
+                        viewModel.refreshItem(itemId: itemId) { success in
+                            DispatchQueue.main.async {
+                                isRefreshing = false
+                                if success {
+                                    showRefreshSuccess = true
+                                    HapticFeedback.success()
+                                }
                             }
                         }
-                        .frame(height: 24)
-                        
-                        Text("收藏")
-                            .font(.system(size: 10))
-                            .foregroundColor(viewModel.isFavorited ? .red : AppColors.textTertiary)
-                    }
-                    .frame(width: 50)
-                }
-                .disabled(viewModel.isTogglingFavorite)
-                
-                // 议价按钮
-                Button(action: {
-                    if appState.isAuthenticated {
-                        purchaseType = .negotiate
-                        showPurchaseSheet = true
-                    } else {
-                        showLogin = true
-                    }
-                }) {
-                    Text("议价")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(AppColors.primary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: 25)
-                                .stroke(AppColors.primary, lineWidth: 1.5)
-                        )
-                }
-                
-                // 立即购买按钮
-                Button(action: {
-                    if appState.isAuthenticated {
-                        purchaseType = .direct
-                        showPurchaseSheet = true
-                    } else {
-                        showLogin = true
-                    }
-                }) {
-                    Text("立即购买")
-                        .font(.system(size: 16, weight: .semibold))
+                    }) {
+                        HStack(spacing: 6) {
+                            if isRefreshing {
+                                ProgressView()
+                                    .tint(.white)
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            Text(isRefreshing ? "延时中" : "延时")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
+                        .frame(minWidth: 100)
                         .frame(height: 50)
+                        .padding(.horizontal, 16)
                         .background(
                             LinearGradient(
-                                colors: [
-                                    Color(red: 0.9, green: 0.3, blue: 0.2),
-                                    Color(red: 0.95, green: 0.4, blue: 0.3)
-                                ],
+                                colors: [Color.orange, Color.orange.opacity(0.8)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 25))
-                        .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
+                        .shadow(color: Color.orange.opacity(0.4), radius: 8, x: 0, y: 4)
+                    }
+                    .disabled(isRefreshing)
+                    
+                    // 编辑按钮
+                    NavigationLink(destination: EditFleaMarketItemView(itemId: itemId, item: item)) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("编辑商品")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            LinearGradient(
+                                colors: [AppColors.primary, AppColors.primary.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 25))
+                        .shadow(color: AppColors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+                    }
+                } else {
+                    // 如果不是卖家，显示购买相关按钮
+                    // 收藏按钮
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            viewModel.toggleFavorite(itemId: itemId) { success in
+                                if success { HapticFeedback.success() }
+                            }
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        VStack(spacing: 4) {
+                            ZStack {
+                                if viewModel.isTogglingFavorite {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                } else {
+                                    Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(viewModel.isFavorited ? .red : AppColors.textSecondary)
+                                        .scaleEffect(viewModel.isFavorited ? 1.1 : 1.0)
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.isFavorited)
+                                }
+                            }
+                            .frame(height: 24)
+                            
+                            Text("收藏")
+                                .font(.system(size: 10))
+                                .foregroundColor(viewModel.isFavorited ? .red : AppColors.textTertiary)
+                        }
+                        .frame(width: 50)
+                    }
+                    .disabled(viewModel.isTogglingFavorite)
+                    
+                    // 议价按钮
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            purchaseType = .negotiate
+                            showPurchaseSheet = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        Text("议价")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(AppColors.primary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(AppColors.primary, lineWidth: 1.5)
+                            )
+                    }
+                    
+                    // 立即购买按钮
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            purchaseType = .direct
+                            showPurchaseSheet = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        Text("立即购买")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.9, green: 0.3, blue: 0.2),
+                                        Color(red: 0.95, green: 0.4, blue: 0.3)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 25))
+                            .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
+                    }
+                    .layoutPriority(1)
                 }
-                .layoutPriority(1)
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)

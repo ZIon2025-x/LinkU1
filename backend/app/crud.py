@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
+from app.flea_market_constants import AUTO_DELETE_DAYS
 
 # 密码加密上下文已移至 app.security 模块
 # 请使用: from app.security import pwd_context
@@ -2455,7 +2456,7 @@ def auto_generate_future_time_slots(db: Session) -> int:
 
 
 def cleanup_expired_flea_market_items(db: Session):
-    """清理超过10天未刷新的跳蚤市场商品（自动删除）"""
+    """清理超过 AUTO_DELETE_DAYS 天未刷新的跳蚤市场商品（自动删除，当前为10天）"""
     from app.models import FleaMarketItem
     from datetime import timedelta
     import logging
@@ -2467,11 +2468,11 @@ def cleanup_expired_flea_market_items(db: Session):
     
     logger = logging.getLogger(__name__)
     
-    # 计算10天前的时间
+    # 计算 AUTO_DELETE_DAYS 天前的时间（使用常量，当前为10天）
     now_utc = get_utc_time()
-    ten_days_ago = now_utc - timedelta(days=10)
+    ten_days_ago = now_utc - timedelta(days=AUTO_DELETE_DAYS)
     
-    # 查找超过10天未刷新且状态为active的商品
+    # 查找超过 AUTO_DELETE_DAYS 天未刷新且状态为active的商品
     expired_items = (
         db.query(FleaMarketItem)
         .filter(
@@ -2481,7 +2482,7 @@ def cleanup_expired_flea_market_items(db: Session):
         .all()
     )
     
-    logger.info(f"找到 {len(expired_items)} 个超过10天未刷新的商品，开始清理")
+    logger.info(f"找到 {len(expired_items)} 个超过{AUTO_DELETE_DAYS}天未刷新的商品，开始清理")
     
     # 检测部署环境
     RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

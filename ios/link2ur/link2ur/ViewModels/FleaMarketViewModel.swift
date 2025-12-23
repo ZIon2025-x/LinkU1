@@ -75,11 +75,7 @@ class FleaMarketViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -119,8 +115,11 @@ class FleaMarketDetailViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadItem(itemId: String) {
-        isLoading = true
+    func loadItem(itemId: String, preserveItem: Bool = false) {
+        // 如果 preserveItem 为 true，在加载时保持现有 item，避免视图消失
+        if !preserveItem {
+            isLoading = true
+        }
         apiService.request(FleaMarketItem.self, "/api/flea-market/items/\(itemId)", method: "GET")
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
@@ -200,6 +199,25 @@ class FleaMarketDetailViewModel: ObservableObject {
                     completion(false)
                 }
             }, receiveValue: { _ in
+                completion(true)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 刷新商品（重置自动删除计时器）
+    func refreshItem(itemId: String, completion: @escaping (Bool) -> Void) {
+        apiService.refreshFleaMarketItem(itemId: itemId)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.error("刷新商品失败: \(error.localizedDescription)", category: .network)
+                    completion(false)
+                }
+            }, receiveValue: { [weak self] _ in
+                // 刷新成功后，延迟重新加载商品信息以更新refreshed_at
+                // 使用 preserveItem: true 避免视图消失
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self?.loadItem(itemId: itemId, preserveItem: true)
+                }
                 completion(true)
             })
             .store(in: &cancellables)

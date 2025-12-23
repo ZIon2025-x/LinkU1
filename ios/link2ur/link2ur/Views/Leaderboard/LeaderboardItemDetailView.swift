@@ -68,6 +68,16 @@ struct LeaderboardItemDetailView: View {
                 
                 // 3. 固定底部操作栏
                 bottomVoteBar(item: item)
+            } else {
+                // 如果 item 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppColors.textTertiary)
+                    Text("竞品信息加载失败")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -107,7 +117,7 @@ struct LeaderboardItemDetailView: View {
                             self.showVoteModal = false
                             self.voteComment = ""
                             self.isAnonymous = false
-                            viewModel.loadItem(itemId: itemId)
+                            viewModel.loadItem(itemId: itemId, preserveItem: true)
                             viewModel.loadComments(itemId: itemId)
                         }
                     }
@@ -155,7 +165,7 @@ struct LeaderboardItemDetailView: View {
                     upvotes = up
                     downvotes = down
                     netVotes = net
-                    viewModel.loadItem(itemId: itemId)
+                    viewModel.loadItem(itemId: itemId, preserveItem: true)
                     viewModel.loadComments(itemId: itemId)
                 }
             }

@@ -70,7 +70,7 @@ async def get_current_admin_async(
 from app.id_generator import format_flea_market_id, parse_flea_market_id
 from app.utils.time_utils import get_utc_time, format_iso_utc, file_timestamp_to_utc
 from app.config import Config
-from app.flea_market_constants import FLEA_MARKET_CATEGORIES
+from app.flea_market_constants import FLEA_MARKET_CATEGORIES, AUTO_DELETE_DAYS
 from app.flea_market_extensions import (
     contains_sensitive_words,
     filter_sensitive_words,
@@ -360,6 +360,14 @@ async def get_flea_market_items(
                 except:
                     images = []
             
+            # 计算距离自动下架还有多少天（使用常量 AUTO_DELETE_DAYS）
+            days_until_auto_delist = None
+            if item.refreshed_at:
+                expiry_date = item.refreshed_at + timedelta(days=AUTO_DELETE_DAYS)
+                now = get_utc_time()
+                days_remaining = (expiry_date - now).days
+                days_until_auto_delist = max(0, days_remaining)
+            
             processed_items.append(schemas.FleaMarketItemResponse(
                 id=format_flea_market_id(item.id),
                 title=item.title,
@@ -375,6 +383,7 @@ async def get_flea_market_items(
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),
                 updated_at=format_iso_utc(item.updated_at),
+                days_until_auto_delist=days_until_auto_delist,
             ))
         
         response = schemas.FleaMarketItemListResponse(
@@ -447,6 +456,14 @@ async def get_flea_market_item(
             except:
                 images = []
         
+        # 计算距离自动下架还有多少天（使用常量 AUTO_DELETE_DAYS）
+        days_until_auto_delist = None
+        if item.refreshed_at:
+            expiry_date = item.refreshed_at + timedelta(days=AUTO_DELETE_DAYS)
+            now = get_utc_time()
+            days_remaining = (expiry_date - now).days
+            days_until_auto_delist = max(0, days_remaining)
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -462,6 +479,7 @@ async def get_flea_market_item(
             refreshed_at=format_iso_utc(item.refreshed_at),
             created_at=format_iso_utc(item.created_at),
             updated_at=format_iso_utc(item.updated_at),
+            days_until_auto_delist=days_until_auto_delist,
         )
     except HTTPException:
         raise

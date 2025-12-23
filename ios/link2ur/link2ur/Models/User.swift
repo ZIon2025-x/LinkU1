@@ -213,3 +213,29 @@ struct UserProfileReview: Codable, Identifiable {
     }
 }
 
+// MARK: - User Preferences (用户任务偏好)
+
+struct UserPreferences: Codable {
+    let taskTypes: [String]
+    let locations: [String]
+    let taskLevels: [String]
+    let keywords: [String]
+    let minDeadlineDays: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case taskTypes = "task_types"
+        case locations
+        case taskLevels = "task_levels"
+        case keywords
+        case minDeadlineDays = "min_deadline_days"
+    }
+    
+    init(taskTypes: [String] = [], locations: [String] = [], taskLevels: [String] = [], keywords: [String] = [], minDeadlineDays: Int = 1) {
+        self.taskTypes = taskTypes
+        self.locations = locations
+        self.taskLevels = taskLevels
+        self.keywords = keywords
+        self.minDeadlineDays = minDeadlineDays
+    }
+}
+

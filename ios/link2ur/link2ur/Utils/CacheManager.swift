@@ -172,7 +172,9 @@ public class CacheManager {
     public func save<T: Codable>(_ data: T, forKey key: String) {
         // 对于值类型（struct），只能存储到磁盘
         // 对于引用类型（class），可以同时存储到内存和磁盘
-        if data is AnyObject {
+        // 使用 Mirror 来检查是否为类类型（引用类型）
+        let isReferenceType = Mirror(reflecting: data).displayStyle == .class
+        if isReferenceType {
             // 引用类型：使用企业级方法
             do {
                 let expiration = cacheExpirationTime(forKey: key)

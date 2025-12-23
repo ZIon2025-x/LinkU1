@@ -186,6 +186,17 @@ struct ProfileView: View {
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     .cardStyle()
+                                    
+                                    NavigationLink(destination: TaskPreferencesView()) {
+                                        ProfileRow(
+                                            icon: "target",
+                                            title: "任务偏好",
+                                            subtitle: "设置您感兴趣的任务类型和地点",
+                                            color: Color.blue
+                                        )
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                    .cardStyle()
                                 }
                             }
                             .padding(.horizontal, AppSpacing.md)

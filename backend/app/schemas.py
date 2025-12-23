@@ -1925,6 +1925,7 @@ class FleaMarketItemResponse(BaseModel):
     refreshed_at: str
     created_at: str
     updated_at: str
+    days_until_auto_delist: Optional[int] = None  # 距离自动下架还有多少天
 
     class Config:
         from_attributes = True

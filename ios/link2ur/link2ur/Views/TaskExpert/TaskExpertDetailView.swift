@@ -72,6 +72,16 @@ struct TaskExpertDetailView: View {
                 }
                 .ignoresSafeArea(edges: .top)
                 .scrollIndicators(.hidden)
+            } else {
+                // 如果 expert 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppColors.textTertiary)
+                    Text("专家信息加载失败")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)

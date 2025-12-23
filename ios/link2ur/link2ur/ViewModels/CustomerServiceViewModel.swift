@@ -153,11 +153,7 @@ class CustomerServiceViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -285,11 +281,7 @@ class CustomerServiceViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "获取排队状态")
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] status in
                 self?.queueStatus = status
@@ -313,11 +305,7 @@ class CustomerServiceViewModel: ObservableObject {
                 self?.isLoadingChats = false
                 if case .failure(let error) = result {
                     ErrorHandler.shared.handle(error, context: "加载对话历史")
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] chats in
                 // 按创建时间倒序排序（最新的在前）
@@ -359,7 +347,7 @@ class CustomerServiceViewModel: ObservableObject {
     func startMessagePolling() {
         stopPolling() // 先停止现有的轮询
         
-        guard let chatId = chat?.chatId else { return }
+        guard chat?.chatId != nil else { return }
         
         messagePollingTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             guard let self = self, let chatId = self.chat?.chatId else { return }

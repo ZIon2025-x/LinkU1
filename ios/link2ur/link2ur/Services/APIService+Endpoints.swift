@@ -366,6 +366,16 @@ extension APIService {
         return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/direct-purchase", method: "POST")
     }
     
+    /// 更新商品
+    func updateFleaMarketItem(itemId: String, item: [String: Any]) -> AnyPublisher<FleaMarketItem, APIError> {
+        return request(FleaMarketItem.self, "/api/flea-market/items/\(itemId)", method: "PUT", body: item)
+    }
+    
+    /// 刷新商品（重置自动删除计时器）
+    func refreshFleaMarketItem(itemId: String) -> AnyPublisher<EmptyResponse, APIError> {
+        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/refresh", method: "POST")
+    }
+    
     /// 获取我的购买记录
     func getMyPurchases(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<MyPurchasesListResponse, APIError> {
         return request(MyPurchasesListResponse.self, "/api/flea-market/my-purchases?page=\(page)&page_size=\(pageSize)")
@@ -690,6 +700,25 @@ extension APIService {
         let body = ["new_phone": newPhone]
         // 后端在 routers.py 中，router 注册在 /api/users 前缀下
         return request(EmptyResponse.self, "/api/users/profile/send-phone-update-code", method: "POST", body: body)
+    }
+    
+    // MARK: - User Preferences (用户偏好)
+    
+    /// 获取用户任务偏好
+    func getUserPreferences() -> AnyPublisher<UserPreferences, APIError> {
+        return request(UserPreferences.self, "/api/user-preferences", method: "GET")
+    }
+    
+    /// 更新用户任务偏好
+    func updateUserPreferences(preferences: UserPreferences) -> AnyPublisher<EmptyResponse, APIError> {
+        let body: [String: Any] = [
+            "task_types": preferences.taskTypes,
+            "locations": preferences.locations,
+            "task_levels": preferences.taskLevels,
+            "keywords": preferences.keywords,
+            "min_deadline_days": preferences.minDeadlineDays
+        ]
+        return request(EmptyResponse.self, "/api/user-preferences", method: "PUT", body: body)
     }
     
     // MARK: - Tasks Extensions (任务扩展)

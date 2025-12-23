@@ -39,7 +39,7 @@ struct EditProfileView: View {
                                 
                                 // 编辑按钮
                                 Button {
-                                    // TODO: 实现头像选择功能
+                                    viewModel.showAvatarPicker = true
                                 } label: {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 16, weight: .semibold))
@@ -57,6 +57,9 @@ struct EditProfileView: View {
                                 .foregroundColor(AppColors.textSecondary)
                         }
                         .padding(.top, AppSpacing.xl)
+                        .sheet(isPresented: $viewModel.showAvatarPicker) {
+                            AvatarPickerView(selectedAvatar: $viewModel.avatar, currentAvatar: viewModel.avatar)
+                        }
                         
                         // 表单
                         VStack(spacing: AppSpacing.lg) {

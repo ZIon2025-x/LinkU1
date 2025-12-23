@@ -122,11 +122,7 @@ class MyPostsViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    if let apiError = error as? APIError {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     self?.performanceMonitor.recordNetworkRequest(
                         endpoint: endpoint,

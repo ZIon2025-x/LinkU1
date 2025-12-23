@@ -244,8 +244,11 @@ class LeaderboardDetailViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadLeaderboard(leaderboardId: Int) {
-        isLoading = true
+    func loadLeaderboard(leaderboardId: Int, preserveLeaderboard: Bool = false) {
+        // 如果 preserveLeaderboard 为 true，在加载时保持现有 leaderboard，避免视图消失
+        if !preserveLeaderboard {
+            isLoading = true
+        }
         apiService.request(CustomLeaderboard.self, "/api/custom-leaderboards/\(leaderboardId)", method: "GET")
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
@@ -432,8 +435,11 @@ class LeaderboardItemDetailViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadItem(itemId: Int) {
-        isLoading = true
+    func loadItem(itemId: Int, preserveItem: Bool = false) {
+        // 如果 preserveItem 为 true，在加载时保持现有 item，避免视图消失
+        if !preserveItem {
+            isLoading = true
+        }
         Logger.debug("开始加载竞品详情，itemId: \(itemId)", category: .api)
         apiService.request(LeaderboardItem.self, "/api/custom-leaderboards/items/\(itemId)", method: "GET")
             .sink(receiveCompletion: { [weak self] result in
