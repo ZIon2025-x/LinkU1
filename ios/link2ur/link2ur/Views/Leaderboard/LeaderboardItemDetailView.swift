@@ -157,18 +157,22 @@ struct LeaderboardItemDetailView: View {
         }
         
         if voteType == type {
-            // 取消投票
-            HapticFeedback.light()
-            viewModel.voteItem(itemId: itemId, voteType: "remove", comment: nil, isAnonymous: false) { success, up, down, net in
-                if success {
-                    voteType = nil
-                    upvotes = up
-                    downvotes = down
-                    netVotes = net
-                    viewModel.loadItem(itemId: itemId, preserveItem: true)
-                    viewModel.loadComments(itemId: itemId)
-                }
+            // 已经投过相同的票，打开留言弹窗允许添加或修改留言
+            currentVoteType = type
+            // 如果已有留言，预填充
+            if let item = viewModel.item, let existingComment = item.userVoteComment {
+                voteComment = existingComment
+            } else {
+                voteComment = ""
             }
+            // 如果已有匿名设置，预填充
+            if let item = viewModel.item, let existingIsAnonymous = item.userVoteIsAnonymous {
+                isAnonymous = existingIsAnonymous
+            } else {
+                isAnonymous = false
+            }
+            showVoteModal = true
+            HapticFeedback.selection()
         } else {
             // 弹出留言弹窗
             currentVoteType = type

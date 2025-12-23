@@ -1596,38 +1596,39 @@ async def vote_item(
     
     if existing:
         if existing.vote_type == vote_type:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="您已经投过相同的票"
-            )
-        
-        # 修改投票：先减少旧投票类型，再增加新投票类型（使用原子更新）
-        if existing.vote_type == "upvote":
-            # 从点赞改为点踩
-            await db.execute(
-                update(models.LeaderboardItem)
-                .where(models.LeaderboardItem.id == item_id)
-                .values(
-                    upvotes=func.greatest(0, models.LeaderboardItem.upvotes - 1),
-                    downvotes=models.LeaderboardItem.downvotes + 1
-                )
-            )
+            # 用户已经投过相同的票，允许更新留言和匿名状态（不改变投票数）
+            existing.comment = comment
+            existing.is_anonymous = is_anonymous
+            existing.updated_at = get_utc_time()
+            # 不更新投票数，因为投票类型没有改变
         else:
-            # 从点踩改为点赞
-            await db.execute(
-                update(models.LeaderboardItem)
-                .where(models.LeaderboardItem.id == item_id)
-                .values(
-                    upvotes=models.LeaderboardItem.upvotes + 1,
-                    downvotes=func.greatest(0, models.LeaderboardItem.downvotes - 1)
+            # 修改投票：先减少旧投票类型，再增加新投票类型（使用原子更新）
+            if existing.vote_type == "upvote":
+                # 从点赞改为点踩
+                await db.execute(
+                    update(models.LeaderboardItem)
+                    .where(models.LeaderboardItem.id == item_id)
+                    .values(
+                        upvotes=func.greatest(0, models.LeaderboardItem.upvotes - 1),
+                        downvotes=models.LeaderboardItem.downvotes + 1
+                    )
                 )
-            )
-        
-        # 更新投票记录
-        existing.vote_type = vote_type
-        existing.comment = comment
-        existing.is_anonymous = is_anonymous
-        existing.updated_at = get_utc_time()
+            else:
+                # 从点踩改为点赞
+                await db.execute(
+                    update(models.LeaderboardItem)
+                    .where(models.LeaderboardItem.id == item_id)
+                    .values(
+                        upvotes=models.LeaderboardItem.upvotes + 1,
+                        downvotes=func.greatest(0, models.LeaderboardItem.downvotes - 1)
+                    )
+                )
+            
+            # 更新投票记录
+            existing.vote_type = vote_type
+            existing.comment = comment
+            existing.is_anonymous = is_anonymous
+            existing.updated_at = get_utc_time()
     else:
         # 新投票：使用原子更新
         new_vote = models.LeaderboardVote(
