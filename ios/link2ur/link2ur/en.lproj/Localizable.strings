@@ -40,6 +40,7 @@
 "auth.password" = "Password";
 "auth.phone" = "Phone";
 "auth.verification_code" = "Verification Code";
+"auth.login_later" = "Login Later";
 
 // MARK: - Login Required
 "login.required" = "Login Required";

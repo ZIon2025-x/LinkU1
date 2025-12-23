@@ -126,6 +126,7 @@ public enum LocalizationKey: String {
     case authAgreeToTerms = "auth.agree_to_terms"
     case authTermsOfService = "auth.terms_of_service"
     case authPrivacyPolicy = "auth.privacy_policy"
+    case authLoginLater = "auth.login_later"
     
     // MARK: - Home
     case homeExperts = "home.experts"

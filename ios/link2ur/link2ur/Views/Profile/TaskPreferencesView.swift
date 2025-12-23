@@ -34,7 +34,7 @@ struct TaskPreferencesView: View {
     private let taskLevels = ["Normal", "VIP", "Super"]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()

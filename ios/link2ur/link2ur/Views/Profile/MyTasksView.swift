@@ -77,6 +77,9 @@ struct MyTasksView: View {
                                     EnhancedTaskCard(task: task, currentUserId: viewModel.currentUserId)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .onAppear {
+                                    print("🔍 [MyTasksView] 任务卡片出现: \(task.id), 标题: \(task.title)")
+                                }
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)

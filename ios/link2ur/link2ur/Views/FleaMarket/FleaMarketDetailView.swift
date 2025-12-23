@@ -158,18 +158,41 @@ struct FleaMarketDetailView: View {
             Text("商品已刷新，自动下架计时器已重置")
         }
         .task(id: itemId) {
+            print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
             // 使用 .task(id:) 确保只在 itemId 变化时重新加载
             // 添加延迟，避免与导航动画冲突
             // 使用 _Concurrency.Task 明确指定 Swift 并发框架的 Task（因为项目中存在 Task 模型）
             try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
             // 只有在 item 为空或 itemId 变化时才加载
             if viewModel.item == nil || viewModel.item?.id != itemId {
+                print("🔍 [FleaMarketDetailView] 开始加载商品: \(itemId)")
                 viewModel.loadItem(itemId: itemId)
+            } else {
+                print("🔍 [FleaMarketDetailView] 商品已存在，跳过加载: \(itemId)")
             }
         }
+        .onAppear {
+            print("🔍 [FleaMarketDetailView] onAppear - itemId: \(itemId), 时间: \(Date())")
+            print("🔍 [FleaMarketDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
+            print("🔍 [FleaMarketDetailView] viewModel.item: \(viewModel.item?.id ?? "nil")")
+        }
         .onDisappear {
+            print("🔍 [FleaMarketDetailView] onDisappear - itemId: \(itemId), 时间: \(Date())")
+            print("🔍 [FleaMarketDetailView] 视图消失原因追踪")
             // 视图消失时清理，释放内存
             // 注意：不要清空 item，因为返回时可能需要显示
+        }
+        .onChange(of: appState.shouldResetHomeView) { shouldReset in
+            print("🔍 [FleaMarketDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
+        }
+        .onChange(of: appState.isAuthenticated) { isAuthenticated in
+            print("🔍 [FleaMarketDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
+        }
+        .onChange(of: appState.currentUser?.id) { userId in
+            print("🔍 [FleaMarketDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
+        }
+        .onChange(of: viewModel.item?.id) { itemId in
+            print("🔍 [FleaMarketDetailView] viewModel.item?.id 变化: \(itemId ?? "nil"), 时间: \(Date())")
         }
     }
     

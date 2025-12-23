@@ -45,13 +45,24 @@ class ActivityViewModel: ObservableObject {
             CacheManager.shared.invalidateActivitiesCache()
         }
         
-        // 尝试从缓存加载数据（仅在没有筛选条件时，且非强制刷新）
-        if !forceRefresh && expertId == nil && status == nil && !includeEnded {
+        // 尝试从缓存加载数据（仅在没有 expertId 筛选时，且非强制刷新）
+        if !forceRefresh && expertId == nil {
             if let cachedActivities = CacheManager.shared.loadActivities() {
-                self.activities = cachedActivities
-                Logger.success("从缓存加载了 \(self.activities.count) 个活动", category: .cache)
-                isLoading = false
-                // 继续在后台刷新数据
+                // 根据 status 和 includeEnded 过滤缓存数据
+                var filteredActivities = cachedActivities
+                if let status = status {
+                    filteredActivities = filteredActivities.filter { $0.status == status }
+                } else if !includeEnded {
+                    // 如果没有指定 status 且不包含已结束的，只显示开放中的
+                    filteredActivities = filteredActivities.filter { $0.status == "open" }
+                }
+                
+                if !filteredActivities.isEmpty {
+                    self.activities = filteredActivities
+                    Logger.success("从缓存加载了 \(self.activities.count) 个活动（过滤后）", category: .cache)
+                    isLoading = false
+                    // 继续在后台刷新数据
+                }
             }
         }
         

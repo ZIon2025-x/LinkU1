@@ -6,7 +6,7 @@ struct ProfileView: View {
     @State private var showLogin = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()

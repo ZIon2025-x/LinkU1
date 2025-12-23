@@ -640,7 +640,7 @@ def is_ios_app_request(request: Request) -> bool:
     return False
 
 def validate_session(request: Request) -> Optional[SessionInfo]:
-    """验证会话"""
+    """验证会话 - 严格绑定IP、设备指纹和地址，一个会话只能在一个IP、一个设备上使用"""
     # 会话验证中（已移除DEBUG日志以提升性能）
     
     # 1. 尝试主要Cookie名称
@@ -661,43 +661,96 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     if not session_id:
         return None
     
+    # 获取当前请求的IP地址
+    current_ip = get_client_ip(request)
     
     session = SecureAuthManager.get_session(session_id, update_activity=True)  # 更新活动时间（内部有5分钟防抖机制）
     if not session:
         return None
     
+    # ========== 严格验证：IP地址必须完全匹配 ==========
+    # 如果会话绑定了IP地址，则必须匹配；如果当前IP未知，也拒绝访问
+    if session.ip_address:
+        if not current_ip or current_ip == "unknown":
+            logger.error(f"[SECURE_AUTH] 无法获取当前IP地址，拒绝访问")
+            logger.error(f"  会话ID: {session_id[:8]}...")
+            logger.error(f"  用户ID: {session.user_id}")
+            logger.error(f"  会话IP: {session.ip_address}")
+            SecureAuthManager.revoke_session(session_id)
+            return None
+        if session.ip_address != current_ip:
+            logger.error(f"[SECURE_AUTH] 会话IP地址不匹配，拒绝访问并撤销会话")
+            logger.error(f"  会话ID: {session_id[:8]}...")
+            logger.error(f"  用户ID: {session.user_id}")
+            logger.error(f"  会话IP: {session.ip_address}")
+            logger.error(f"  当前IP: {current_ip}")
+            # IP地址不匹配，立即撤销会话（安全策略：一个会话只能在一个IP使用）
+            SecureAuthManager.revoke_session(session_id)
+            return None
+    elif not current_ip or current_ip == "unknown":
+        # 如果会话没有绑定IP，但当前也无法获取IP，拒绝访问（安全策略）
+        logger.error(f"[SECURE_AUTH] 会话和当前请求都缺少IP地址，拒绝访问")
+        logger.error(f"  会话ID: {session_id[:8]}...")
+        logger.error(f"  用户ID: {session.user_id}")
+        SecureAuthManager.revoke_session(session_id)
+        return None
+    
     # 检测是否为移动端请求
     is_mobile = is_mobile_request(request)
     
-    # 验证设备指纹（用于检测会话劫持）
+    # ========== 严格验证：设备指纹必须匹配 ==========
+    # 如果会话绑定了设备指纹，则必须匹配
+    if not session.device_fingerprint:
+        logger.error(f"[SECURE_AUTH] 会话缺少设备指纹，拒绝访问并撤销会话")
+        logger.error(f"  会话ID: {session_id[:8]}...")
+        logger.error(f"  用户ID: {session.user_id}")
+        SecureAuthManager.revoke_session(session_id)
+        return None
+    
     current_fingerprint = get_device_fingerprint(request)
+    if not current_fingerprint:
+        logger.error(f"[SECURE_AUTH] 无法获取当前设备指纹，拒绝访问")
+        logger.error(f"  会话ID: {session_id[:8]}...")
+        logger.error(f"  用户ID: {session.user_id}")
+        SecureAuthManager.revoke_session(session_id)
+        return None
+    
     if session.device_fingerprint != current_fingerprint:
-        logger.warning(f"设备指纹不匹配 - session: {session_id[:8]}... (移动端: {is_mobile})")
-        logger.warning(f"原始指纹: {session.device_fingerprint}")
-        logger.warning(f"当前指纹: {current_fingerprint}")
+        logger.warning(f"[SECURE_AUTH] 设备指纹不匹配 - session: {session_id[:8]}... (移动端: {is_mobile})")
+        logger.warning(f"  用户ID: {session.user_id}")
+        logger.warning(f"  原始指纹: {session.device_fingerprint}")
+        logger.warning(f"  当前指纹: {current_fingerprint}")
         
         # 移动端使用更宽松的阈值 (0.4)，Web端使用标准阈值 (0.7)
         threshold = 0.4 if is_mobile else 0.7
         
         # 检查指纹差异是否在可接受范围内（允许部分变化）
         if is_fingerprint_similar(session.device_fingerprint, current_fingerprint, threshold):
-            logger.info(f"设备指纹相似 (阈值: {threshold})，允许访问并更新指纹")
+            logger.info(f"[SECURE_AUTH] 设备指纹相似 (阈值: {threshold})，允许访问并更新指纹")
             # 更新会话的设备指纹为新的指纹
             session.device_fingerprint = current_fingerprint
             SecureAuthManager.update_session(session_id, session)
         else:
-            # 移动端：指纹不匹配时不撤销会话，只更新指纹并记录警告
-            # 这是因为移动端的 Accept-Language 等可能因系统设置变化
-            if is_mobile:
-                logger.warning(f"移动端设备指纹差异较大，但不撤销会话，更新为新指纹")
-                session.device_fingerprint = current_fingerprint
-                SecureAuthManager.update_session(session_id, session)
-            else:
-                logger.error("设备指纹差异过大，可能存在会话劫持，拒绝访问")
-                # 撤销可疑会话（仅限 Web 端）
-                SecureAuthManager.revoke_session(session_id)
-                return None
+            # 设备指纹差异过大，拒绝访问并撤销会话（安全策略：一个会话只能在一个设备使用）
+            logger.error(f"[SECURE_AUTH] 设备指纹差异过大，可能存在会话劫持或多地使用，拒绝访问并撤销会话")
+            logger.error(f"  用户ID: {session.user_id}")
+            logger.error(f"  会话ID: {session_id[:8]}...")
+            # 撤销可疑会话
+            SecureAuthManager.revoke_session(session_id)
+            return None
     
+    # ========== 验证User-Agent（作为额外的安全检查）==========
+    current_user_agent = request.headers.get("user-agent", "")
+    if session.user_agent and current_user_agent and session.user_agent != current_user_agent:
+        # User-Agent不匹配，记录警告但不强制拒绝（因为某些浏览器可能会更新User-Agent）
+        logger.warning(f"[SECURE_AUTH] User-Agent不匹配 - session: {session_id[:8]}...")
+        logger.warning(f"  会话User-Agent: {session.user_agent[:100]}")
+        logger.warning(f"  当前User-Agent: {current_user_agent[:100]}")
+        # 更新User-Agent（允许浏览器更新）
+        session.user_agent = current_user_agent
+        SecureAuthManager.update_session(session_id, session)
+    
+    logger.debug(f"[SECURE_AUTH] 会话验证通过 - session: {session_id[:8]}..., user: {session.user_id}, IP: {current_ip}")
     return session
 
 def create_user_session_cookie(response: Response, session_id: str) -> Response:
@@ -778,7 +831,7 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
 
 
 def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
-    """验证用户refresh token，检查IP和设备指纹绑定"""
+    """验证用户refresh token，严格检查IP和设备指纹绑定（一个token只能在一个IP、一个设备使用）"""
     if not refresh_token:
         return None
     
@@ -793,9 +846,12 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         return None
     
     # 获取token数据
-    data = safe_redis_get(keys[0])
+    key_str = keys[0].decode() if isinstance(keys[0], bytes) else keys[0]
+    data = safe_redis_get(key_str)
     if not data:
         return None
+    
+    user_id = data.get('user_id')
     
     # 检查是否过期
     expires_at_str = data.get('expires_at')
@@ -803,19 +859,30 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         expires_at = parse_iso_utc(expires_at_str)
         if get_utc_time() > expires_at:
             # 过期了，删除
-            redis_client.delete(keys[0])
+            logger.info(f"[SECURE_AUTH] refresh token已过期，删除: {refresh_token[:8]}...")
+            redis_client.delete(key_str)
             return None
     
-    # 检查IP绑定
+    # ========== 严格验证：IP地址必须完全匹配 ==========
     stored_ip = data.get('ip_address', '')
     if stored_ip and ip_address and stored_ip != ip_address:
-        logger.warning(f"[SECURE_AUTH] refresh token IP不匹配: 存储={stored_ip}, 当前={ip_address}")
+        logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
+        logger.error(f"  用户ID: {user_id}")
+        logger.error(f"  存储IP: {stored_ip}")
+        logger.error(f"  当前IP: {ip_address}")
+        # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
+        redis_client.delete(key_str)
         return None
     
-    # 检查设备指纹绑定
+    # ========== 严格验证：设备指纹必须匹配 ==========
     stored_device = data.get('device_fingerprint', '')
     if stored_device and device_fingerprint and stored_device != device_fingerprint:
-        logger.warning(f"[SECURE_AUTH] refresh token 设备指纹不匹配: 存储={stored_device}, 当前={device_fingerprint}")
+        logger.error(f"[SECURE_AUTH] refresh token 设备指纹不匹配，拒绝访问并撤销token")
+        logger.error(f"  用户ID: {user_id}")
+        logger.error(f"  存储设备: {stored_device}")
+        logger.error(f"  当前设备: {device_fingerprint}")
+        # 设备指纹不匹配，立即撤销token（安全策略：一个token只能在一个设备使用）
+        redis_client.delete(key_str)
         return None
     
     # 检查频率限制（20分钟内最多使用一次）
@@ -823,15 +890,16 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     if last_used_str:
         last_used = parse_iso_utc(last_used_str)
         if get_utc_time() - last_used < timedelta(minutes=20):
-            logger.warning(f"[SECURE_AUTH] refresh token 使用过于频繁: {refresh_token}")
+            logger.warning(f"[SECURE_AUTH] refresh token 使用过于频繁: {refresh_token[:8]}..., 用户: {user_id}")
             return None
     
     # 更新最后使用时间
     current_time = get_utc_time()
     data['last_used'] = format_iso_utc(current_time)
-    redis_client.setex(keys[0], int(12 * 3600), json.dumps(data))
+    redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
     
-    return data.get('user_id')
+    logger.debug(f"[SECURE_AUTH] refresh token验证通过 - 用户: {user_id}, IP: {ip_address}")
+    return user_id
 
 
 def revoke_user_refresh_token(refresh_token: str) -> bool:

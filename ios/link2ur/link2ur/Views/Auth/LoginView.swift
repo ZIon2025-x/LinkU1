@@ -21,7 +21,8 @@ public struct LoginView: View {
     }
     
     public var body: some View {
-        ZStack {
+        NavigationView {
+            ZStack {
             // 现代渐变背景（更丰富的多层渐变）
             ZStack {
                 // 主渐变背景
@@ -173,68 +174,6 @@ public struct LoginView: View {
                     }
                     .padding(.bottom, AppSpacing.lg)
                     
-                    // Face ID 登录按钮（如果支持且已保存凭据）
-                    if viewModel.canUseBiometric && BiometricAuth.shared.isBiometricLoginEnabled() {
-                        Button(action: {
-                            viewModel.loginWithBiometric { success in
-                                if success {
-                                    withAnimation(.spring(response: 0.5)) {
-                                        appState.isAuthenticated = true
-                                        dismiss()
-                                    }
-                                }
-                            }
-                        }) {
-                            HStack(spacing: AppSpacing.sm) {
-                                Image(systemName: viewModel.biometricType == .faceID ? "faceid" : "touchid")
-                                    .font(.system(size: 20, weight: .medium))
-                                
-                                Text("使用 \(viewModel.biometricType.displayName) 登录")
-                                    .font(AppTypography.body)
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: AppColors.gradientPrimary),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(AppCornerRadius.medium)
-                            .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.bottom, AppSpacing.md)
-                        .opacity(logoOpacity)
-                        .offset(y: logoOpacity == 0 ? 10 : 0)
-                        .animation(.easeOut(duration: 0.6).delay(0.4), value: logoOpacity)
-                        
-                        // 分隔线
-                        HStack {
-                            Rectangle()
-                                .fill(AppColors.separator.opacity(0.3))
-                                .frame(height: 1)
-                            
-                            Text("或")
-                                .font(AppTypography.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                                .padding(.horizontal, AppSpacing.sm)
-                            
-                            Rectangle()
-                                .fill(AppColors.separator.opacity(0.3))
-                                .frame(height: 1)
-                        }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.bottom, AppSpacing.sm)
-                        .opacity(logoOpacity)
-                        .offset(y: logoOpacity == 0 ? 10 : 0)
-                        .animation(.easeOut(duration: 0.6).delay(0.45), value: logoOpacity)
-                    }
-                    
                     // 登录方式切换 - 美化设计
                     Picker(LocalizationKey.authLoginMethod.localized, selection: $viewModel.loginMethod) {
                         Text(LocalizationKey.authEmailPassword.localized).tag(AuthViewModel.LoginMethod.password)
@@ -359,63 +298,68 @@ public struct LoginView: View {
                             .id("phoneField")
                             
                             // 验证码输入和发送按钮
-                            HStack(spacing: AppSpacing.sm) {
-                                EnhancedTextField(
-                                    title: LocalizationKey.authVerificationCode.localized,
-                                    placeholder: LocalizationKey.authEnterCode.localized,
-                                    text: $viewModel.verificationCode,
-                                    icon: "key.fill",
-                                    keyboardType: .numberPad,
-                                    textContentType: .oneTimeCode,
-                                    autocapitalization: .never,
-                                    errorMessage: nil,
-                                    onSubmit: {
-                                        if !viewModel.phone.isEmpty && !viewModel.verificationCode.isEmpty {
-                                            hideKeyboard()
-                                            viewModel.loginWithPhone { success in
-                                                if success {
-                                                    withAnimation(.spring(response: 0.5)) {
-                                                        appState.isAuthenticated = true
-                                                        dismiss()
+                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                Text(LocalizationKey.authVerificationCode.localized)
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                HStack(spacing: AppSpacing.sm) {
+                                    EnhancedTextField(
+                                        title: nil,
+                                        placeholder: LocalizationKey.authEnterCode.localized,
+                                        text: $viewModel.verificationCode,
+                                        icon: "key.fill",
+                                        keyboardType: .numberPad,
+                                        textContentType: .oneTimeCode,
+                                        autocapitalization: .never,
+                                        errorMessage: nil,
+                                        onSubmit: {
+                                            if !viewModel.phone.isEmpty && !viewModel.verificationCode.isEmpty {
+                                                hideKeyboard()
+                                                viewModel.loginWithPhone { success in
+                                                    if success {
+                                                        withAnimation(.spring(response: 0.5)) {
+                                                            appState.isAuthenticated = true
+                                                            dismiss()
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
+                                    )
+                                    .id("verificationCodeField")
+                                    .onChange(of: viewModel.verificationCode) { newValue in
+                                        // 只允许数字，过滤掉所有非数字字符
+                                        let filtered = newValue.filter { $0.isNumber }
+                                        if filtered != newValue {
+                                            viewModel.verificationCode = filtered
+                                        }
                                     }
-                                )
-                                .id("verificationCodeField")
-                                .onChange(of: viewModel.verificationCode) { newValue in
-                                    // 只允许数字，过滤掉所有非数字字符
-                                    let filtered = newValue.filter { $0.isNumber }
-                                    if filtered != newValue {
-                                        viewModel.verificationCode = filtered
-                                    }
-                                }
-                                
-                                // 发送验证码按钮 - 美化设计
-                                Button(action: {
-                                    hideKeyboard()
-                                    // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
-                                    if viewModel.captchaEnabled && viewModel.captchaToken == nil {
-                                        if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
-                                            showCaptcha = true
-                                        } else {
-                                            // 如果还没有获取到 site key，先获取配置
-                                            viewModel.checkCaptchaConfig()
-                                            // 等待一下再显示（实际应该用更好的方式处理）
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                                if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
-                                                    showCaptcha = true
-                                                } else {
-                                                    viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
+                                    
+                                    // 发送验证码按钮 - 美化设计
+                                    Button(action: {
+                                        hideKeyboard()
+                                        // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
+                                        if viewModel.captchaEnabled && viewModel.captchaToken == nil {
+                                            if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                                showCaptcha = true
+                                            } else {
+                                                // 如果还没有获取到 site key，先获取配置
+                                                viewModel.checkCaptchaConfig()
+                                                // 等待一下再显示（实际应该用更好的方式处理）
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                    if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                                        showCaptcha = true
+                                                    } else {
+                                                        viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
+                                                    }
                                                 }
                                             }
+                                        } else {
+                                            // CAPTCHA 未启用或已有 token，直接发送验证码
+                                            sendPhoneCode()
                                         }
-                                    } else {
-                                        // CAPTCHA 未启用或已有 token，直接发送验证码
-                                        sendPhoneCode()
-                                    }
-                                }) {
+                                    }) {
                                     if viewModel.isSendingCode {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
@@ -441,6 +385,7 @@ public struct LoginView: View {
                                 )
                                 .shadow(color: viewModel.canResendCode ? AppColors.primary.opacity(0.1) : Color.clear, radius: 4, x: 0, y: 2)
                                 .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.phone.isEmpty)
+                                }
                             }
                             
                             // 用户协议同意复选框 - 验证码登录需要
@@ -567,63 +512,68 @@ public struct LoginView: View {
                             .id("emailField")
                             
                             // 验证码输入和发送按钮
-                            HStack(spacing: AppSpacing.sm) {
-                                EnhancedTextField(
-                                    title: LocalizationKey.authVerificationCode.localized,
-                                    placeholder: LocalizationKey.authEnterCode.localized,
-                                    text: $viewModel.verificationCode,
-                                    icon: "key.fill",
-                                    keyboardType: .numberPad,
-                                    textContentType: .oneTimeCode,
-                                    autocapitalization: .never,
-                                    errorMessage: nil,
-                                    onSubmit: {
-                                        if !viewModel.email.isEmpty && !viewModel.verificationCode.isEmpty {
-                                            hideKeyboard()
-                                            viewModel.loginWithEmailCode { success in
-                                                if success {
-                                                    withAnimation(.spring(response: 0.5)) {
-                                                        appState.isAuthenticated = true
-                                                        dismiss()
+                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                Text(LocalizationKey.authVerificationCode.localized)
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                HStack(spacing: AppSpacing.sm) {
+                                    EnhancedTextField(
+                                        title: nil,
+                                        placeholder: LocalizationKey.authEnterCode.localized,
+                                        text: $viewModel.verificationCode,
+                                        icon: "key.fill",
+                                        keyboardType: .numberPad,
+                                        textContentType: .oneTimeCode,
+                                        autocapitalization: .never,
+                                        errorMessage: nil,
+                                        onSubmit: {
+                                            if !viewModel.email.isEmpty && !viewModel.verificationCode.isEmpty {
+                                                hideKeyboard()
+                                                viewModel.loginWithEmailCode { success in
+                                                    if success {
+                                                        withAnimation(.spring(response: 0.5)) {
+                                                            appState.isAuthenticated = true
+                                                            dismiss()
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
+                                    )
+                                    .id("verificationCodeField")
+                                    .onChange(of: viewModel.verificationCode) { newValue in
+                                        // 只允许数字，过滤掉所有非数字字符
+                                        let filtered = newValue.filter { $0.isNumber }
+                                        if filtered != newValue {
+                                            viewModel.verificationCode = filtered
+                                        }
                                     }
-                                )
-                                .id("verificationCodeField")
-                                .onChange(of: viewModel.verificationCode) { newValue in
-                                    // 只允许数字，过滤掉所有非数字字符
-                                    let filtered = newValue.filter { $0.isNumber }
-                                    if filtered != newValue {
-                                        viewModel.verificationCode = filtered
-                                    }
-                                }
-                                
-                                // 发送验证码按钮 - 美化设计
-                                Button(action: {
-                                    hideKeyboard()
-                                    // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
-                                    if viewModel.captchaEnabled && viewModel.captchaToken == nil {
-                                        if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
-                                            showCaptcha = true
-                                        } else {
-                                            // 如果还没有获取到 site key，先获取配置
-                                            viewModel.checkCaptchaConfig()
-                                            // 等待一下再显示（实际应该用更好的方式处理）
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                                if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
-                                                    showCaptcha = true
-                                                } else {
-                                                    viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
+                                    
+                                    // 发送验证码按钮 - 美化设计
+                                    Button(action: {
+                                        hideKeyboard()
+                                        // 如果 CAPTCHA 启用且还没有 token，先显示验证界面
+                                        if viewModel.captchaEnabled && viewModel.captchaToken == nil {
+                                            if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                                showCaptcha = true
+                                            } else {
+                                                // 如果还没有获取到 site key，先获取配置
+                                                viewModel.checkCaptchaConfig()
+                                                // 等待一下再显示（实际应该用更好的方式处理）
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                    if viewModel.captchaSiteKey != nil && viewModel.captchaType != nil {
+                                                        showCaptcha = true
+                                                    } else {
+                                                        viewModel.errorMessage = LocalizationKey.authCaptchaError.localized
+                                                    }
                                                 }
                                             }
+                                        } else {
+                                            // CAPTCHA 未启用或已有 token，直接发送验证码
+                                            sendEmailCode()
                                         }
-                                    } else {
-                                        // CAPTCHA 未启用或已有 token，直接发送验证码
-                                        sendEmailCode()
-                                    }
-                                }) {
+                                    }) {
                                     if viewModel.isSendingCode {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
@@ -649,6 +599,7 @@ public struct LoginView: View {
                                 )
                                 .shadow(color: viewModel.canResendCode ? AppColors.primary.opacity(0.1) : Color.clear, radius: 4, x: 0, y: 2)
                                 .disabled(!viewModel.canResendCode || viewModel.isSendingCode || viewModel.email.isEmpty)
+                                }
                             }
                             
                             // 用户协议同意复选框 - 验证码登录需要
@@ -902,6 +853,7 @@ public struct LoginView: View {
                 }
             }
             }
+            }
             .fullScreenCover(isPresented: $showCaptcha) {
                 captchaView
             }
@@ -911,14 +863,30 @@ public struct LoginView: View {
             .sheet(isPresented: $showPrivacy) {
                 PrivacyWebView()
             }
-        }
-        .navigationBarHidden(true)
-        .scrollDismissesKeyboard(.interactively)
-        .onAppear {
-            // 启动动画
-            withAnimation {
-                logoScale = 1.0
-                logoOpacity = 1.0
+            .navigationBarHidden(false)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        // 稍后登录，允许用户以游客模式进入应用
+                        // 设置一个标记，表示用户选择稍后登录
+                        UserDefaults.standard.set(true, forKey: "user_skipped_login")
+                        appState.userSkippedLogin = true
+                        dismiss()
+                    }) {
+                        Text(LocalizationKey.authLoginLater.localized)
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColors.primary)
+                    }
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                // 启动动画
+                withAnimation {
+                    logoScale = 1.0
+                    logoOpacity = 1.0
+                }
             }
         }
     }

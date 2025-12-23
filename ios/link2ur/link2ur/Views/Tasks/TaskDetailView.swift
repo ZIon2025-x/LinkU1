@@ -188,9 +188,16 @@ struct TaskDetailView: View {
                 LoginView()
             }
             .onAppear {
+                print("🔍 [TaskDetailView] onAppear - taskId: \(taskId), 时间: \(Date())")
+                print("🔍 [TaskDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
                 viewModel.loadTask(taskId: taskId)
             }
+            .onDisappear {
+                print("🔍 [TaskDetailView] onDisappear - taskId: \(taskId), 时间: \(Date())")
+                print("🔍 [TaskDetailView] 视图消失原因追踪")
+            }
             .onChange(of: viewModel.task?.id) { newTaskId in
+                print("🔍 [TaskDetailView] task.id 变化: \(newTaskId?.description ?? "nil"), 时间: \(Date())")
                 // 当任务加载完成或任务ID变化时，加载申请列表和评价
                 if newTaskId != nil {
                     handleTaskChange()
@@ -198,9 +205,19 @@ struct TaskDetailView: View {
                     loadShareImage()
                 }
             }
-            .onChange(of: viewModel.task?.status) { _ in
+            .onChange(of: viewModel.task?.status) { newStatus in
+                print("🔍 [TaskDetailView] task.status 变化: \(newStatus?.rawValue ?? "nil"), 时间: \(Date())")
                 // 当任务状态变化时，重新加载申请列表（例如从 open 变为 inProgress）
                 handleTaskChange()
+            }
+            .onChange(of: appState.shouldResetHomeView) { shouldReset in
+                print("🔍 [TaskDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
+            }
+            .onChange(of: appState.isAuthenticated) { isAuthenticated in
+                print("🔍 [TaskDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
+            }
+            .onChange(of: appState.currentUser?.id) { userId in
+                print("🔍 [TaskDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
             }
     }
     

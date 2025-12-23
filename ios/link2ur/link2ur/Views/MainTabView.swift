@@ -16,12 +16,16 @@ public struct MainTabView: View {
                 set: { newValue in
                     // 如果点击的是首页 tab
                     if newValue == 0 {
+                        print("🔍 [MainTabView] 切换到首页 tab, 当前 selection: \(selection)")
                         // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
                         // 如果已经在首页，什么都不做，保持导航栈状态
                         if selection != 0 {
+                            print("🔍 [MainTabView] ⚠️ 从其他 tab 切换到首页，触发重置")
                             // 只触发 selectedTab 重置，不清空导航路径
                             appState.shouldResetHomeView = true
                             NotificationCenter.default.post(name: .resetHomeView, object: nil)
+                        } else {
+                            print("🔍 [MainTabView] 已在首页，不触发重置")
                         }
                         // 更新 previousSelection 为 0，确保中间占位视图显示首页
                         previousSelection = 0
@@ -117,17 +121,22 @@ public struct MainTabView: View {
                         selection = previousSelection
                     }
                 } else if newValue == 0 {
+                    print("🔍 [MainTabView] onChange - 切换到首页, oldSelection: \(previousSelection)")
                     // 切换到首页时，更新 previousSelection
                     let oldSelection = previousSelection
                     previousSelection = newValue
                     handleSelectionChange(newValue, oldSelection: oldSelection)
                     // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
                     if oldSelection != 0 {
+                        print("🔍 [MainTabView] ⚠️ 延迟触发首页重置")
                         // 延迟一点触发重置通知，只重置 selectedTab
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            print("🔍 [MainTabView] 执行延迟的首页重置")
                             appState.shouldResetHomeView = true
                             NotificationCenter.default.post(name: .resetHomeView, object: nil)
                         }
+                    } else {
+                        print("🔍 [MainTabView] 已在首页，不触发重置")
                     }
                 } else {
                     // 正常切换 tab（社区、我的等）

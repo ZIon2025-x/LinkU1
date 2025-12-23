@@ -5,10 +5,19 @@ import UIKit
 public class AppState: ObservableObject {
     @Published public var isAuthenticated: Bool = false
     @Published public var currentUser: User?
-    @Published public var shouldResetHomeView: Bool = false // 用于触发首页重置
+    @Published public var shouldResetHomeView: Bool = false { // 用于触发首页重置
+        didSet {
+            print("🔍 [AppState] shouldResetHomeView 变化: \(oldValue) -> \(shouldResetHomeView), 时间: \(Date())")
+            if shouldResetHomeView {
+                print("🔍 [AppState] ⚠️ 触发首页重置！这可能导致详情页返回")
+            }
+        }
+    }
     @Published public var unreadNotificationCount: Int = 0 // 未读通知数量
     @Published public var unreadMessageCount: Int = 0 // 未读消息数量（任务聊天）
     @Published public var hideTabBar: Bool = false // 控制是否隐藏底部 TabBar
+    @Published public var isCheckingLoginStatus: Bool = true // 是否正在检查登录状态
+    @Published public var userSkippedLogin: Bool = false // 用户是否选择跳过登录
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -210,32 +219,92 @@ public class AppState: ObservableObject {
     }
     
     public func checkLoginStatus() {
+        isCheckingLoginStatus = true
+        let startTime = Date()
+        let minimumDisplayTime: TimeInterval = 3.0 // 至少显示3秒
+        
+        // 在加载界面显示期间，提前预加载首页数据
+        preloadHomeData()
+        
         if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty {
             // 验证Token有效性并加载用户信息
             apiService.request(User.self, "/api/users/profile/me", method: "GET")
                 .sink(receiveCompletion: { [weak self] result in
-                    if case .failure = result {
-                        // Token无效，清除并登出
-                        self?.logout()
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    let remainingTime = max(0, minimumDisplayTime - elapsed)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                        self?.isCheckingLoginStatus = false
+                        if case .failure = result {
+                            // Token无效，清除并登出
+                            self?.logout()
+                        }
                     }
                 }, receiveValue: { [weak self] user in
-                    self?.currentUser = user
-                    self?.isAuthenticated = true
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    let remainingTime = max(0, minimumDisplayTime - elapsed)
                     
-                    // 建立WebSocket连接
-                    if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                        WebSocketService.shared.connect(token: token, userId: user.id)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                        self?.currentUser = user
+                        self?.isAuthenticated = true
+                        self?.isCheckingLoginStatus = false
+                        
+                        // 建立WebSocket连接
+                        if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+                            WebSocketService.shared.connect(token: token, userId: user.id)
+                        }
+                        
+                        // 开始定期刷新未读数量（会立即加载一次）
+                        self?.startPeriodicRefresh()
+                        
+                        // 检查登录状态后，请求位置权限并获取位置
+                        self?.requestLocationAfterLogin()
                     }
-                    
-                    // 开始定期刷新未读数量（会立即加载一次）
-                    self?.startPeriodicRefresh()
-                    
-                    // 检查登录状态后，请求位置权限并获取位置
-                    self?.requestLocationAfterLogin()
                 })
                 .store(in: &cancellables)
         } else {
-            isAuthenticated = false
+            // 没有 token，检查用户是否之前选择跳过登录
+            let skippedLogin = UserDefaults.standard.bool(forKey: "user_skipped_login")
+            // 确保加载界面至少显示3秒，提供更好的用户体验
+            DispatchQueue.main.asyncAfter(deadline: .now() + minimumDisplayTime) {
+                self.isAuthenticated = false
+                self.isCheckingLoginStatus = false
+                self.userSkippedLogin = skippedLogin
+            }
+        }
+    }
+    
+    /// 预加载首页数据，在加载界面显示期间提前加载
+    private func preloadHomeData() {
+        // 预加载推荐任务（首页最重要的数据）
+        apiService.getTasks(page: 1, pageSize: 20, type: nil, location: nil, keyword: nil, sortBy: nil, userLatitude: nil, userLongitude: nil)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.warning("预加载推荐任务失败: \(error.localizedDescription)", category: .api)
+                } else {
+                    Logger.success("预加载推荐任务成功", category: .api)
+                }
+            }, receiveValue: { response in
+                // 将数据保存到缓存，这样首页加载时可以直接使用
+                let openTasks = response.tasks.filter { $0.status == .open }
+                CacheManager.shared.saveTasks(openTasks, category: nil, city: nil)
+                Logger.success("已预加载并缓存 \(openTasks.count) 个任务", category: .cache)
+            })
+            .store(in: &cancellables)
+        
+        // 预加载热门活动（延迟一点，避免同时发起太多请求）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.apiService.request([Activity].self, "/api/activities?status=active&limit=10", method: "GET")
+                .sink(receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        Logger.warning("预加载热门活动失败: \(error.localizedDescription)", category: .api)
+                    } else {
+                        Logger.success("预加载热门活动成功", category: .api)
+                    }
+                }, receiveValue: { activities in
+                    Logger.success("已预加载 \(activities.count) 个活动", category: .cache)
+                })
+                .store(in: &self.cancellables)
         }
     }
     

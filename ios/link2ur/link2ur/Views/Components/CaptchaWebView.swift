@@ -13,6 +13,15 @@ struct CaptchaWebView: UIViewRepresentable {
         let configuration = WKWebViewConfiguration()
         let coordinator = context.coordinator
         
+        // 配置 WebView 以允许加载外部资源
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        // 使用共享的进程池，避免创建过多进程
+        if configuration.processPool == nil {
+            configuration.processPool = WKProcessPool()
+        }
+        
         // 添加消息处理器
         let messageHandler = CaptchaMessageHandler(
             onVerify: coordinator.onVerify,
@@ -20,12 +29,18 @@ struct CaptchaWebView: UIViewRepresentable {
         )
         configuration.userContentController.add(messageHandler, name: "captchaCallback")
         
+        // 允许加载外部脚本和资源
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
+        
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = coordinator
         
         // 配置 WebView
-        webView.backgroundColor = .clear
+        webView.backgroundColor = .white
         webView.isOpaque = false
+        webView.scrollView.backgroundColor = .white
         
         // 保存 messageHandler 引用
         coordinator.messageHandler = messageHandler
@@ -44,7 +59,8 @@ struct CaptchaWebView: UIViewRepresentable {
     
     func updateUIView(_ webView: WKWebView, context: Context) {
         // 如果 siteKey 或 type 改变，重新加载
-        // 这里可以添加重新加载逻辑
+        // 注意：由于 WebView 是单例，这里不需要重新加载
+        // 如果需要重新加载，可以在这里实现
     }
     
     func makeCoordinator() -> Coordinator {
@@ -58,38 +74,84 @@ struct CaptchaWebView: UIViewRepresentable {
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
-                    body {
+                    * {
+                        box-sizing: border-box;
+                    }
+                    html, body {
                         margin: 0;
-                        padding: 20px;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
                         background-color: #f5f5f5;
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        min-height: 100vh;
+                        overflow: hidden;
                     }
                     .captcha-container {
                         background: white;
                         padding: 20px;
                         border-radius: 8px;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        width: 100%;
+                        max-width: 400px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .loading {
+                        text-align: center;
+                        color: #666;
+                        padding: 20px;
                     }
                 </style>
-                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
             </head>
             <body>
                 <div class="captcha-container">
-                    <div class="g-recaptcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired"></div>
+                    <div id="loading" class="loading">正在加载验证码...</div>
+                    <div id="recaptcha" class="g-recaptcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired" style="display: none;"></div>
                 </div>
+                <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
                 <script>
+                    function onRecaptchaLoad() {
+                        console.log('reCAPTCHA 脚本加载完成');
+                        var loading = document.getElementById('loading');
+                        var recaptcha = document.getElementById('recaptcha');
+                        if (loading) loading.style.display = 'none';
+                        if (recaptcha) recaptcha.style.display = 'block';
+                        
+                        // 手动渲染 reCAPTCHA
+                        if (typeof grecaptcha !== 'undefined') {
+                            grecaptcha.render('recaptcha', {
+                                'sitekey': '\(siteKey)',
+                                'callback': onCaptchaSuccess,
+                                'expired-callback': onCaptchaExpired
+                            });
+                        }
+                    }
+                    
                     function onCaptchaSuccess(token) {
-                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                        console.log('reCAPTCHA 验证成功');
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.captchaCallback) {
+                            window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                        }
                     }
+                    
                     function onCaptchaExpired() {
-                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                        console.log('reCAPTCHA 验证已过期');
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.captchaCallback) {
+                            window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                        }
                     }
+                    
+                    // 错误处理
+                    window.addEventListener('error', function(e) {
+                        console.error('页面错误:', e.message);
+                    });
                 </script>
             </body>
             </html>
@@ -99,38 +161,75 @@ struct CaptchaWebView: UIViewRepresentable {
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <style>
-                    body {
+                    * {
+                        box-sizing: border-box;
+                    }
+                    html, body {
                         margin: 0;
-                        padding: 20px;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
                         background-color: #f5f5f5;
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        min-height: 100vh;
+                        overflow: hidden;
                     }
                     .captcha-container {
                         background: white;
                         padding: 20px;
                         border-radius: 8px;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        width: 100%;
+                        max-width: 400px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .loading {
+                        text-align: center;
+                        color: #666;
+                        padding: 20px;
                     }
                 </style>
-                <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+                <script src="https://js.hcaptcha.com/1/api.js" async defer onload="onHcaptchaLoad()"></script>
             </head>
             <body>
                 <div class="captcha-container">
-                    <div class="h-captcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired"></div>
+                    <div id="loading" class="loading">正在加载验证码...</div>
+                    <div id="hcaptcha" class="h-captcha" data-sitekey="\(siteKey)" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired" style="display: none;"></div>
                 </div>
                 <script>
+                    function onHcaptchaLoad() {
+                        console.log('hCaptcha 脚本加载完成');
+                        var loading = document.getElementById('loading');
+                        var hcaptcha = document.getElementById('hcaptcha');
+                        if (loading) loading.style.display = 'none';
+                        if (hcaptcha) hcaptcha.style.display = 'block';
+                    }
+                    
                     function onCaptchaSuccess(token) {
-                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                        console.log('hCaptcha 验证成功');
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.captchaCallback) {
+                            window.webkit.messageHandlers.captchaCallback.postMessage({type: 'success', token: token});
+                        }
                     }
+                    
                     function onCaptchaExpired() {
-                        window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                        console.log('hCaptcha 验证已过期');
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.captchaCallback) {
+                            window.webkit.messageHandlers.captchaCallback.postMessage({type: 'expired'});
+                        }
                     }
+                    
+                    // 错误处理
+                    window.addEventListener('error', function(e) {
+                        console.error('页面错误:', e.message);
+                    });
                 </script>
             </body>
             </html>
@@ -157,9 +256,33 @@ struct CaptchaWebView: UIViewRepresentable {
             self.onError = onError
         }
         
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            // WebView 开始加载
+            print("🔍 CAPTCHA WebView 开始加载")
+        }
+        
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // WebView 加载完成
+            print("✅ CAPTCHA WebView 加载完成")
             // 消息处理器已经在 makeUIView 中设置
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            // WebView 加载失败
+            print("❌ CAPTCHA WebView 加载失败: \(error.localizedDescription)")
+            onError?("加载失败: \(error.localizedDescription)")
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            // WebView 初始加载失败
+            print("❌ CAPTCHA WebView 初始加载失败: \(error.localizedDescription)")
+            onError?("加载失败: \(error.localizedDescription)")
+        }
+        
+        // 允许导航到外部链接（reCAPTCHA 需要加载 Google 的资源）
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            // 允许所有导航，包括外部资源
+            decisionHandler(.allow)
         }
         
         deinit {

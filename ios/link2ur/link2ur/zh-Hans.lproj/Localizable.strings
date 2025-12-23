@@ -40,6 +40,7 @@
 "auth.password" = "密码";
 "auth.phone" = "手机号";
 "auth.verification_code" = "验证码";
+"auth.login_later" = "稍后登录";
 
 // MARK: - Login Required
 "login.required" = "需要登录";

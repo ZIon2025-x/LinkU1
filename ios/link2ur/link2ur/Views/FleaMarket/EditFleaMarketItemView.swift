@@ -249,13 +249,6 @@ struct EditFleaMarketItemView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("编辑商品")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }

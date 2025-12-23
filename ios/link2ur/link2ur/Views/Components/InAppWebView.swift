@@ -9,6 +9,16 @@ struct InAppWebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        
+        // 配置 WebView 以优化性能和减少警告
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        // 使用共享的进程池，避免创建过多进程
+        if configuration.processPool == nil {
+            configuration.processPool = WKProcessPool()
+        }
+        
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true

@@ -6,7 +6,7 @@ struct EditProfileView: View {
     @ObservedObject var viewModel: EditProfileViewModel
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()

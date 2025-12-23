@@ -7,3 +7,5 @@
 
 "NSLocationWhenInUseUsageDescription" = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
 
+"NSFaceIDUsageDescription" = "We use Face ID to securely authenticate and log you into your account. This provides a quick and secure way to access your account without entering your password.";
+

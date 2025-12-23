@@ -513,19 +513,24 @@ class LeaderboardItemDetailViewModel: ObservableObject {
     }
     
     func voteItem(itemId: Int, voteType: String, comment: String? = nil, isAnonymous: Bool = false, completion: @escaping (Bool, Int, Int, Int) -> Void) {
-        // 参考前端实现：使用 POST 请求，参数通过 query 和 body 传递
-        let endpoint = "/api/custom-leaderboards/items/\(itemId)/vote?vote_type=\(voteType)"
+        // 后端期望 comment 和 is_anonymous 作为 Query 参数，而不是 body
+        var queryParams: [String] = ["vote_type=\(voteType)"]
         
-        var body: [String: Any] = [:]
         if let comment = comment, !comment.isEmpty {
-            body["comment"] = comment
+            // URL 编码留言内容
+            if let encodedComment = comment.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryParams.append("comment=\(encodedComment)")
+            }
         }
+        
         if isAnonymous {
-            body["is_anonymous"] = true
+            queryParams.append("is_anonymous=true")
         }
+        
+        let endpoint = "/api/custom-leaderboards/items/\(itemId)/vote?\(queryParams.joined(separator: "&"))"
         
         // 后端返回的是更新后的 LeaderboardItem，而不是 VoteResponse
-        apiService.request(LeaderboardItem.self, endpoint, method: "POST", body: body)
+        apiService.request(LeaderboardItem.self, endpoint, method: "POST", body: nil)
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
                     Logger.error("投票失败: \(error.localizedDescription)", category: .api)

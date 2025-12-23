@@ -112,16 +112,23 @@ struct HomeView: View {
                 }
             }
             .onChange(of: appState.shouldResetHomeView) { shouldReset in
+                print("🔍 [HomeView] shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
+                print("🔍 [HomeView] 当前 navigationPath.count: \(navigationPath.count)")
                 if shouldReset {
+                    print("🔍 [HomeView] ⚠️ 执行首页重置 - selectedTab: \(selectedTab) -> 1")
                     // 只重置到默认状态（推荐页面），不清空导航路径
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedTab = 1
                     }
                     // 重置标志
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("🔍 [HomeView] 重置 shouldResetHomeView 标志为 false")
                         appState.shouldResetHomeView = false
                     }
                 }
+            }
+            .onChange(of: navigationPath.count) { count in
+                print("🔍 [HomeView] navigationPath.count 变化: \(count), 时间: \(Date())")
             }
         }
     }
@@ -201,15 +208,10 @@ struct RecommendedContentView: View {
                 // 推荐任务（优先加载）
                 RecommendedTasksSection()
                 
-                // 热门活动（延迟加载，优化首次加载性能）
-                if hasAppeared {
-                    PopularActivitiesSection()
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                } else {
-                    // 占位符，保持布局稳定
-                    Color.clear
-                        .frame(height: 200)
-                }
+                // 热门活动（立即加载，数据已预加载）
+                PopularActivitiesSection()
+                    .opacity(hasAppeared ? 1.0 : 0.0)
+                    .animation(.easeInOut(duration: 0.3), value: hasAppeared)
                 
                 // 最新动态（延迟加载，优化首次加载性能）
                 if hasAppeared {
@@ -226,12 +228,14 @@ struct RecommendedContentView: View {
             }
         }
         .onAppear {
-            // 延迟加载非关键内容，优化首次加载性能
-            // 先加载关键内容（广告和推荐任务），然后延迟加载其他内容
+            // 立即显示所有内容，数据已预加载
+            // 使用平滑的淡入动画，避免闪烁
             if !hasAppeared {
-                // 延迟500ms加载非关键内容，让关键内容先显示，减少启动时的请求压力
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    hasAppeared = true
+                // 短暂延迟后显示，确保数据已加载
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        hasAppeared = true
+                    }
                 }
             }
         }
@@ -1333,21 +1337,19 @@ struct RecommendedTasksSection: View {
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .drawingGroup() // 优化复杂视图的渲染性能
+                            .id(task.id) // 确保稳定的视图标识
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
                 }
+                .animation(.easeInOut(duration: 0.2), value: viewModel.tasks.count) // 平滑过渡，减少闪烁
             }
         }
-        .task {
-            // 使用 task 替代 onAppear，避免重复加载
-            // 延迟加载，避免启动时阻塞主线程
+        .onAppear {
+            // 立即加载，优先从缓存读取（预加载的数据已经在缓存中）
+            // loadTasks 方法会自动从缓存加载，然后后台刷新
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                // 延迟200ms加载，让关键内容先显示
-                try? await _Concurrency.Task.sleep(nanoseconds: 200_000_000)
-                if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                    viewModel.loadTasks(status: "open")
-                }
+                viewModel.loadTasks(status: "open")
             }
         }
     }
@@ -1567,22 +1569,20 @@ struct PopularActivitiesSection: View {
                                     .frame(width: 280)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .id(activity.id) // 确保稳定的视图标识
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
                 }
+                .animation(.easeInOut(duration: 0.2), value: viewModel.activities.count) // 平滑过渡，减少闪烁
             }
         }
-        .task {
-            // 使用 task 替代 onAppear，避免重复加载
-            // 延迟加载，避免启动时阻塞主线程
-            // 只加载状态为 "open" 的活动（开放中的活动）
+        .onAppear {
+            // 立即加载，优先从缓存读取（预加载的数据已经在缓存中）
+            // 注意：由于 loadActivities 传入 status: "open"，不会从缓存加载
+            // 但预加载的数据已经保存到缓存，这里立即加载可以快速显示
             if viewModel.activities.isEmpty && !viewModel.isLoading {
-                // 延迟800ms加载，让关键内容先显示
-                try? await _Concurrency.Task.sleep(nanoseconds: 800_000_000)
-                if viewModel.activities.isEmpty && !viewModel.isLoading {
-                    viewModel.loadActivities(status: "open", includeEnded: false)
-                }
+                viewModel.loadActivities(status: "open", includeEnded: false)
             }
         }
     }

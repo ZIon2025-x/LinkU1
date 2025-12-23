@@ -10,7 +10,7 @@ struct AvatarPickerView: View {
     private let avatars = ["avatar1", "avatar2", "avatar3", "avatar4"]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()

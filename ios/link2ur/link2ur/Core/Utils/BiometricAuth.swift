@@ -1,5 +1,11 @@
 import Foundation
 import LocalAuthentication
+import Security
+
+// 导入 Logger（如果存在）
+#if canImport(Logger)
+import Logger
+#endif
 
 /// 生物识别认证管理器（Face ID / Touch ID）
 public class BiometricAuth {
@@ -162,54 +168,111 @@ public class BiometricAuth {
             return false
         }
         
+        // 先删除旧数据（使用简单的查询，不包含访问控制）
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        // 检查设备是否支持生物识别
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            // 不支持生物识别，使用普通 Keychain 存储
+            return KeychainHelper.shared.save(data, service: service, account: account)
+        }
+        
         // 使用 Keychain 的访问控制，要求生物识别
+        // 使用 .biometryAny 支持 Face ID、Touch ID 或 Optic ID
+        guard let accessControl = SecAccessControlCreateWithFlags(
+            kCFAllocatorDefault,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .biometryAny,
+            nil
+        ) else {
+            // 如果创建访问控制失败，回退到普通存储
+            print("⚠️ 无法创建生物识别访问控制，使用普通 Keychain 存储")
+            return KeychainHelper.shared.save(data, service: service, account: account)
+        }
+        
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecValueData as String: data,
-            kSecAttrAccessControl as String: SecAccessControlCreateWithFlags(
-                kCFAllocatorDefault,
-                kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-                .biometryAny,
-                nil
-            ) as Any
+            kSecAttrAccessControl as String: accessControl,
+            kSecUseAuthenticationContext as String: context  // 使用上下文
         ]
-        
-        // 删除旧数据
-        SecItemDelete(query as CFDictionary)
         
         // 添加新数据
         let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        
+        if status != errSecSuccess {
+            print("⚠️ Keychain 保存失败，状态码: \(status)")
+            // 如果保存失败，尝试使用普通方式保存
+            return KeychainHelper.shared.save(data, service: service, account: account)
+        }
+        
+        return true
     }
     
     /// 从 Keychain 读取用户凭据（需要生物识别验证）
     /// 注意：由于 Keychain 项设置了 kSecAttrAccessControl 并要求生物识别，
     /// 读取时会自动触发生物识别验证弹窗
+    /// 必须在主线程调用此方法
     public func loadCredentials() -> (username: String?, password: String?, phone: String?)? {
+        // 确保在主线程执行
+        guard Thread.isMainThread else {
+            print("⚠️ loadCredentials 必须在主线程调用")
+            return nil
+        }
+        
         let service = Constants.Keychain.service
         let account = "biometric_credentials"
+        
+        // 创建 LAContext 用于生物识别验证
+        let context = LAContext()
+        context.localizedFallbackTitle = ""  // 禁用备用选项
         
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationContext as String: context  // 使用上下文
         ]
         
         var result: AnyObject?
+        var error: Unmanaged<CFError>?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
         // 状态码说明：
-        // errSecSuccess: 生物识别验证成功，数据已返回
-        // errSecUserCancel: 用户取消了生物识别验证
-        // errSecAuthFailed: 生物识别验证失败
-        // errSecItemNotFound: Keychain 中不存在该项
-        guard status == errSecSuccess,
-              let data = result as? Data,
+        // errSecSuccess (0): 生物识别验证成功，数据已返回
+        // errSecUserCancel (-128): 用户取消了生物识别验证
+        // errSecAuthFailed (-25293): 生物识别验证失败
+        // errSecItemNotFound (-25300): Keychain 中不存在该项
+        // errSecInteractionNotAllowed (-25308): 需要用户交互但当前不允许
+        guard status == errSecSuccess else {
+            if status == -128 {  // errSecUserCancel
+                print("⚠️ 用户取消了生物识别验证")
+            } else if status == -25293 {  // errSecAuthFailed
+                print("⚠️ 生物识别验证失败")
+            } else if status == -25300 {  // errSecItemNotFound
+                print("⚠️ Keychain 中未找到凭据")
+            } else if status == -25308 {  // errSecInteractionNotAllowed
+                print("⚠️ 需要用户交互但当前不允许")
+            } else {
+                print("⚠️ Keychain 读取失败，状态码: \(status)")
+            }
+            return nil
+        }
+        
+        guard let data = result as? Data,
               let credentials = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("⚠️ 无法解析 Keychain 数据")
             return nil
         }
         
