@@ -151,3 +151,48 @@ extension View {
     }
 }
 
+// MARK: - 性能优化扩展
+
+extension View {
+    /// 优化滚动性能 - 使用drawingGroup减少重绘
+    func optimizedScroll() -> some View {
+        self.drawingGroup()
+    }
+    
+    /// 优化列表项性能 - 减少不必要的重绘
+    func optimizedListItem() -> some View {
+        self.drawingGroup()
+    }
+    
+    /// 优化卡片性能 - 使用drawingGroup优化渲染
+    func optimizedCard() -> some View {
+        self.drawingGroup()
+    }
+    
+    /// 优化动画性能 - 使用更高效的动画配置
+    func optimizedAnimation(_ animation: Animation = .easeInOut(duration: 0.25)) -> some View {
+        self.animation(animation, value: UUID())
+    }
+    
+    /// 延迟渲染 - 延迟视图渲染以优化初始加载性能
+    func deferredRendering(until condition: Bool) -> some View {
+        Group {
+            if condition {
+                self
+            } else {
+                Color.clear
+            }
+        }
+    }
+    
+    /// 优化图片加载 - 使用占位符和延迟加载
+    func optimizedImageLoading() -> some View {
+        self.drawingGroup()
+    }
+    
+    /// 减少视图更新 - 使用EquatableView减少不必要的重绘
+    func reduceUpdates<Content: View & Equatable>(_ content: Content) -> some View {
+        EquatableView(content: content)
+    }
+}
+

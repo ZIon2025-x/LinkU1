@@ -124,6 +124,13 @@ public struct MainTabView: View {
                     let oldSelection = previousSelection
                     previousSelection = newValue
                     handleSelectionChange(newValue, oldSelection: oldSelection)
+                    // 强制重置 HomeView，确保导航栈正确
+                    homeViewResetTrigger = UUID()
+                    // 延迟一点触发重置通知，确保导航栈完全清理
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        appState.shouldResetHomeView = true
+                        NotificationCenter.default.post(name: .resetHomeView, object: nil)
+                    }
                 } else {
                     // 正常切换 tab（社区、我的等）
                     // 先更新 previousSelection，避免在 handleSelectionChange 中判断错误

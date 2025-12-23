@@ -6,7 +6,7 @@ struct FAQView: View {
     @State private var expandedItems: Set<String> = []
     
     private var isChinese: Bool {
-        locale.languageCode == "zh"
+        locale.language.languageCode?.identifier == "zh"
     }
     
     private var faqSections: [FAQSection] {

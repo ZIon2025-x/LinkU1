@@ -125,6 +125,7 @@ struct TasksView: View {
                                         TaskCard(task: task)
                                     }
                                     .buttonStyle(ScaleButtonStyle())
+                                    .id(task.id) // 确保稳定的id，优化视图复用
                                     .onAppear {
                                         // 性能优化：只在接近最后一个任务时加载更多（提前3个）
                                         let threshold = max(0, viewModel.tasks.count - 3)
@@ -149,6 +150,7 @@ struct TasksView: View {
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.md)
                         }
+                        // 注意：不能在 ScrollView 上使用 drawingGroup，会阻止点击事件
                     }
                 }
             }

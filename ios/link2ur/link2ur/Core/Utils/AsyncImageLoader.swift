@@ -22,15 +22,17 @@ public class AsyncImageLoader: ObservableObject {
         cancellable = cache.loadImage(from: url)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { [weak self] completion in
+                receiveCompletion: { [weak self] _ in
+                    // ImageCache 返回的 Publisher 不会产生错误（Never 类型）
                     self?.isLoading = false
-                    if case .failure(let error) = completion {
-                        self?.error = error
-                    }
                 },
                 receiveValue: { [weak self] image in
                     self?.image = image
                     self?.isLoading = false
+                    // 如果图片为 nil，可能是加载失败
+                    if image == nil {
+                        self?.error = NSError(domain: "ImageLoader", code: -1, userInfo: [NSLocalizedDescriptionKey: "图片加载失败"])
+                    }
                 }
             )
     }

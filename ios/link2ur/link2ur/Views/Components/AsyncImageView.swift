@@ -1,9 +1,10 @@
 import SwiftUI
 import Foundation
+import Combine
 
 // MARK: - 优化的异步图片组件
 
-/// 优化的异步图片视图，带错误处理和占位符
+/// 高性能异步图片视图，使用ImageCache优化加载和缓存性能
 struct AsyncImageView: View {
     let urlString: String?
     let placeholder: Image
@@ -11,6 +12,9 @@ struct AsyncImageView: View {
     let height: CGFloat?
     let contentMode: ContentMode
     let cornerRadius: CGFloat
+    
+    @StateObject private var imageLoader = AsyncImageLoader()
+    @State private var isLoading = false
     
     init(
         urlString: String?,
@@ -30,58 +34,17 @@ struct AsyncImageView: View {
     
     var body: some View {
         Group {
-            if let urlString = urlString, !urlString.isEmpty {
-                if let url = urlString.toImageURL() {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            // 加载中 - 简化 ProgressView，避免渲染错误
-                            ZStack {
-                                placeholder
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .foregroundColor(AppColors.textTertiary)
-                                    .frame(width: width, height: height)
-                                    .background(AppColors.cardBackground)
-                                    .cornerRadius(cornerRadius)
-                                
-                                // 使用简化的加载指示器，避免 CircularUIKitProgressView 渲染错误
-                                ProgressView()
-                                    .tint(AppColors.primary)
-                                    .scaleEffect(0.8)
-                            }
-                        case .success(let image):
-                            // 加载成功（性能优化：使用 drawingGroup 优化渲染）
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: contentMode)
-                                .frame(width: width, height: height)
-                                .cornerRadius(cornerRadius)
-                                .drawingGroup() // 优化复杂视图的渲染性能
-                        case .failure(let error):
-                            // 加载失败
-                            placeholder
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .foregroundColor(AppColors.textTertiary)
-                                .frame(width: width, height: height)
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(cornerRadius)
-                                .onAppear {
-                                    Logger.debug("图片加载失败: \(url.absoluteString), 错误: \(error.localizedDescription)", category: .ui)
-                                }
-                        @unknown default:
-                            placeholder
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .foregroundColor(AppColors.textTertiary)
-                                .frame(width: width, height: height)
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(cornerRadius)
-                        }
-                    }
-                } else {
-                    // URL 转换失败
+            if let image = imageLoader.image {
+                // 图片加载成功 - 使用drawingGroup优化渲染性能
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: contentMode)
+                    .frame(width: width, height: height)
+                    .cornerRadius(cornerRadius)
+                    .drawingGroup() // 优化复杂视图的渲染性能，减少重绘
+            } else {
+                // 加载中或失败 - 显示占位符
+                ZStack {
                     placeholder
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -89,20 +52,32 @@ struct AsyncImageView: View {
                         .frame(width: width, height: height)
                         .background(AppColors.cardBackground)
                         .cornerRadius(cornerRadius)
-                        .onAppear {
-                            Logger.debug("URL 转换失败: \(urlString)", category: .ui)
-                        }
+                    
+                    if imageLoader.isLoading {
+                        ProgressView()
+                            .tint(AppColors.primary)
+                            .scaleEffect(0.8)
+                    }
                 }
-            } else {
-                // URL 为空或无效
-                placeholder
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .foregroundColor(AppColors.textTertiary)
-                    .frame(width: width, height: height)
-                    .background(AppColors.cardBackground)
-                    .cornerRadius(cornerRadius)
             }
+        }
+        .onAppear {
+            // 只在视图出现时加载图片，避免重复加载
+            if let urlString = urlString, !urlString.isEmpty, imageLoader.image == nil {
+                imageLoader.load(from: urlString)
+            }
+        }
+        .onChange(of: urlString) { newValue in
+            // URL变化时重新加载
+            if let newValue = newValue, !newValue.isEmpty {
+                imageLoader.load(from: newValue)
+            } else {
+                imageLoader.cancel()
+            }
+        }
+        .onDisappear {
+            // 视图消失时取消加载，节省资源
+            imageLoader.cancel()
         }
     }
 }

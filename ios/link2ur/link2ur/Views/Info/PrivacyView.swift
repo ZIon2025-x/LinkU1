@@ -3,11 +3,7 @@ import SwiftUI
 struct PrivacyView: View {
     @Environment(\.locale) var locale
     private var isChinese: Bool {
-        if #available(iOS 16, *) {
-            return locale.language.languageCode?.identifier == "zh"
-        } else {
-            return locale.languageCode == "zh"
-        }
+        locale.language.languageCode?.identifier == "zh"
     }
     
     var body: some View {

@@ -110,16 +110,31 @@ class FleaMarketDetailViewModel: ObservableObject {
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
+    private var currentItemId: String? // 跟踪当前加载的 itemId
     
     deinit {
         cancellables.removeAll()
     }
     
     func loadItem(itemId: String, preserveItem: Bool = false) {
+        // 如果 itemId 相同且已有数据，且 preserveItem 为 true，则跳过加载
+        if preserveItem, let existingItem = item, existingItem.id == itemId {
+            // 已有数据且ID匹配，不需要重新加载
+            return
+        }
+        
+        // 如果正在加载相同的 itemId，跳过
+        if currentItemId == itemId && isLoading {
+            return
+        }
+        
+        currentItemId = itemId
+        
         // 如果 preserveItem 为 true，在加载时保持现有 item，避免视图消失
         if !preserveItem {
             isLoading = true
         }
+        
         apiService.request(FleaMarketItem.self, "/api/flea-market/items/\(itemId)", method: "GET")
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false

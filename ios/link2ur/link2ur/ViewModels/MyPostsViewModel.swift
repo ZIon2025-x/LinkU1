@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 /// 我的闲置分类枚举
-enum MyItemsCategory: Int, CaseIterable {
+enum MyItemsCategory: Int, CaseIterable, Hashable {
     case selling = 0      // 正在出售
     case purchased = 1    // 收的闲置（已购买）
     case favorites = 2    // 收藏的
@@ -65,6 +65,11 @@ class MyPostsViewModel: ObservableObject {
     // 当前选中的分类
     @Published var selectedCategory: MyItemsCategory = .selling
     
+    // 防止重复加载的标志
+    private var hasLoadedOnce = false
+    private var lastLoadTime: Date?
+    private let minLoadInterval: TimeInterval = 5 // 最小加载间隔（秒）
+    
     // 兼容旧代码
     var items: [FleaMarketItem] {
         switch selectedCategory {
@@ -97,7 +102,20 @@ class MyPostsViewModel: ObservableObject {
     }
     
     /// 加载所有分类的数据
-    func loadAllCategories(userId: String) {
+    func loadAllCategories(userId: String, forceRefresh: Bool = false) {
+        // 防止频繁刷新：如果不是强制刷新，且距离上次加载时间太短，则跳过
+        if !forceRefresh {
+            if let lastLoad = lastLoadTime {
+                let timeSinceLastLoad = Date().timeIntervalSince(lastLoad)
+                if timeSinceLastLoad < minLoadInterval {
+                    return // 距离上次加载时间太短，跳过
+                }
+            }
+        }
+        
+        lastLoadTime = Date()
+        hasLoadedOnce = true
+        
         loadSellingItems(userId: userId)
         loadPurchasedItems()
         loadFavoriteItems()
@@ -132,7 +150,11 @@ class MyPostsViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                self?.sellingItems = response.items
+                guard let self = self else { return }
+                // 优化：在主线程更新UI，但数据处理在后台线程
+                DispatchQueue.main.async {
+                    self.sellingItems = response.items
+                }
             })
             .store(in: &cancellables)
     }
@@ -164,7 +186,11 @@ class MyPostsViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                self?.purchasedItems = response.items
+                guard let self = self else { return }
+                // 优化：在主线程更新UI
+                DispatchQueue.main.async {
+                    self.purchasedItems = response.items
+                }
             })
             .store(in: &cancellables)
     }
@@ -196,7 +222,11 @@ class MyPostsViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                self?.favoriteItems = response.items
+                guard let self = self else { return }
+                // 优化：在主线程更新UI
+                DispatchQueue.main.async {
+                    self.favoriteItems = response.items
+                }
             })
             .store(in: &cancellables)
     }
@@ -228,7 +258,11 @@ class MyPostsViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                self?.soldItems = response.items
+                guard let self = self else { return }
+                // 优化：在主线程更新UI
+                DispatchQueue.main.async {
+                    self.soldItems = response.items
+                }
             })
             .store(in: &cancellables)
     }

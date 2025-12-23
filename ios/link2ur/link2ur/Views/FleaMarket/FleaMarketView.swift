@@ -6,82 +6,84 @@ struct FleaMarketView: View {
     @State private var selectedCategory: String?
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
-                
-                if viewModel.isLoading && viewModel.items.isEmpty {
-                    ProgressView()
-                } else if viewModel.items.isEmpty {
-                EmptyStateView(
-                    icon: "cart.fill",
-                    title: LocalizationKey.fleaMarketNoItems.localized,
-                    message: LocalizationKey.fleaMarketNoItemsMessage.localized
-                )
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: AppSpacing.sm),
-                            GridItem(.flexible(), spacing: AppSpacing.sm)
-                        ], spacing: AppSpacing.md) {
-                            ForEach(viewModel.items) { item in
-                                NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
-                                    ItemCard(item: item)
-                                }
-                                .buttonStyle(ScaleButtonStyle())
+        // 注意：不要使用 NavigationView，因为此视图可能已经被包含在 NavigationStack 中
+        // 使用 NavigationView 会导致嵌套导航栏，引发崩溃
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            if viewModel.isLoading && viewModel.items.isEmpty {
+                ProgressView()
+            } else if viewModel.items.isEmpty {
+            EmptyStateView(
+                icon: "cart.fill",
+                title: LocalizationKey.fleaMarketNoItems.localized,
+                message: LocalizationKey.fleaMarketNoItemsMessage.localized
+            )
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: AppSpacing.sm),
+                        GridItem(.flexible(), spacing: AppSpacing.sm)
+                    ], spacing: AppSpacing.md) {
+                        ForEach(viewModel.items, id: \.id) { item in
+                            NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
+                                ItemCard(item: item)
                             }
+                            .buttonStyle(ScaleButtonStyle())
+                            .id(item.id) // 确保稳定的id，优化视图复用
                         }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
                     }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
                 }
+                // 注意：不能在 ScrollView 上使用 drawingGroup，会阻止点击事件
             }
-            .navigationTitle(LocalizationKey.fleaMarketFleaMarket.localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(AppColors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .enableSwipeBack()
-            .searchable(text: $searchText, prompt: LocalizationKey.fleaMarketSearchItems.localized)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(LocalizationKey.postAll.localized) {
-                            selectedCategory = nil
-                            viewModel.loadItems()
+        }
+        .navigationTitle(LocalizationKey.fleaMarketFleaMarket.localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(AppColors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .enableSwipeBack()
+        .searchable(text: $searchText, prompt: LocalizationKey.fleaMarketSearchItems.localized)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button(LocalizationKey.postAll.localized) {
+                        selectedCategory = nil
+                        viewModel.loadItems()
+                    }
+                    ForEach(viewModel.categories, id: \.id) { category in
+                        Button(category.name) {
+                            selectedCategory = category.id
+                            viewModel.loadItems(category: category.id)
                         }
-                        ForEach(viewModel.categories, id: \.id) { category in
-                            Button(category.name) {
-                                selectedCategory = category.id
-                                viewModel.loadItems(category: category.id)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(AppColors.primary)
                     }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: CreateFleaMarketItemView()) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(AppColors.primary)
-                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(AppColors.primary)
                 }
             }
-            .refreshable {
-                viewModel.loadItems(category: selectedCategory, keyword: searchText.isEmpty ? nil : searchText, forceRefresh: true)
-            }
-            .onAppear {
-                viewModel.loadCategories()
-                if viewModel.items.isEmpty {
-                    viewModel.loadItems()
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: CreateFleaMarketItemView()) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(AppColors.primary)
                 }
             }
-            .onChange(of: searchText) { newValue in
-                if !newValue.isEmpty {
-                    viewModel.loadItems(category: selectedCategory, keyword: newValue)
-                }
+        }
+        .refreshable {
+            viewModel.loadItems(category: selectedCategory, keyword: searchText.isEmpty ? nil : searchText, forceRefresh: true)
+        }
+        .onAppear {
+            viewModel.loadCategories()
+            if viewModel.items.isEmpty {
+                viewModel.loadItems()
+            }
+        }
+        .onChange(of: searchText) { newValue in
+            if !newValue.isEmpty {
+                viewModel.loadItems(category: selectedCategory, keyword: newValue)
             }
         }
     }

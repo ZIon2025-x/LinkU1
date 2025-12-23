@@ -5,20 +5,12 @@ public struct LocalizationHelper {
     
     /// 当前语言代码
     public static var currentLanguage: String {
-        if #available(iOS 16, *) {
-            return Locale.current.language.languageCode?.identifier ?? "en"
-        } else {
-            return Locale.current.languageCode ?? "en"
-        }
+        Locale.current.language.languageCode?.identifier ?? "en"
     }
     
     /// 当前区域代码
     public static var currentRegion: String {
-        if #available(iOS 16, *) {
-            return Locale.current.region?.identifier ?? "US"
-        } else {
-            return Locale.current.regionCode ?? "US"
-        }
+        Locale.current.region?.identifier ?? "US"
     }
     
     /// 当前语言标识符

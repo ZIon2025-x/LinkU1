@@ -31,6 +31,7 @@ struct FleaMarketItem: Codable, Identifiable {
     let refreshedAt: String? // 后端返回的字段
     let createdAt: String
     let updatedAt: String?
+    let daysUntilAutoDelist: Int? // 距离自动下架还有多少天
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
@@ -40,6 +41,7 @@ struct FleaMarketItem: Codable, Identifiable {
         case refreshedAt = "refreshed_at"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case daysUntilAutoDelist = "days_until_auto_delist"
     }
     
     // 自定义解码，处理 price 可能是字符串的情况

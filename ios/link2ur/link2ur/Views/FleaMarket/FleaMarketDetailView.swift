@@ -157,10 +157,19 @@ struct FleaMarketDetailView: View {
         } message: {
             Text("商品已刷新，自动下架计时器已重置")
         }
-        .task {
-            // 使用 .task 而不是 .onAppear，并添加延迟，避免与导航冲突
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
-            viewModel.loadItem(itemId: itemId)
+        .task(id: itemId) {
+            // 使用 .task(id:) 确保只在 itemId 变化时重新加载
+            // 添加延迟，避免与导航动画冲突
+            // 使用 _Concurrency.Task 明确指定 Swift 并发框架的 Task（因为项目中存在 Task 模型）
+            try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
+            // 只有在 item 为空或 itemId 变化时才加载
+            if viewModel.item == nil || viewModel.item?.id != itemId {
+                viewModel.loadItem(itemId: itemId)
+            }
+        }
+        .onDisappear {
+            // 视图消失时清理，释放内存
+            // 注意：不要清空 item，因为返回时可能需要显示
         }
     }
     

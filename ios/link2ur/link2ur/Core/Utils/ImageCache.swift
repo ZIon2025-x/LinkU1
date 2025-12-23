@@ -48,6 +48,7 @@ public final class ImageCache: ObservableObject {
         }
         
         return URLSession.shared.dataTaskPublisher(for: imageURL)
+            .subscribe(on: DispatchQueue.global(qos: .userInitiated)) // 在后台线程处理网络请求
             .map { data, _ -> UIImage? in
                 // 优化：在后台线程解码图片
                 guard let image = UIImage(data: data) else { return nil }
@@ -56,11 +57,14 @@ public final class ImageCache: ObservableObject {
             }
             .catch { _ in Just(nil) }
             .handleEvents(receiveOutput: { [weak self] image in
+                // 在后台线程保存缓存
                 if let image = image {
-                    self?.saveToCache(image: image, url: url)
+                    DispatchQueue.global(qos: .utility).async {
+                        self?.saveToCache(image: image, url: url)
+                    }
                 }
             })
-            .receive(on: DispatchQueue.main)
+            .receive(on: DispatchQueue.main) // 只在最后更新UI时回到主线程
             .eraseToAnyPublisher()
     }
     
@@ -113,7 +117,7 @@ public final class ImageCache: ObservableObject {
     
     // MARK: - 图片优化
     
-    /// 优化图片尺寸（减少内存占用）
+    /// 优化图片尺寸（减少内存占用）- 在后台线程执行
     private func optimizeImageSize(_ image: UIImage, maxSize: CGSize) -> UIImage {
         let size = image.size
         
@@ -130,12 +134,11 @@ public final class ImageCache: ObservableObject {
         // 计算新尺寸
         let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
         
-        // 在后台线程进行图片缩放
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
-        defer { UIGraphicsEndImageContext() }
-        
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        return UIGraphicsGetImageFromCurrentImageContext() ?? image
+        // 使用更高效的图片缩放方法
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }
 

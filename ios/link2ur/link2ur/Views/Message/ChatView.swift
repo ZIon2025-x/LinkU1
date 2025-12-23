@@ -107,6 +107,7 @@ struct ChatView: View {
                                                 message: message,
                                                 isFromCurrentUser: isMessageFromCurrentUser(message)
                                             )
+                                            .id(message.id) // 确保稳定的id，优化视图复用
                                         }
                                     }
                                     .padding(.horizontal, AppSpacing.md)

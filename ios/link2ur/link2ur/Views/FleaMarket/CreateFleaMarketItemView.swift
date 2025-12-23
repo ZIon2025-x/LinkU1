@@ -19,8 +19,9 @@ struct CreateFleaMarketItemView: View {
     @FocusState private var isLocationFocused: Bool
     
     var body: some View {
-        NavigationView {
-            KeyboardAvoidingScrollView(extraPadding: 20) {
+        // 注意：不要使用 NavigationView，因为此视图可能已经被包含在 NavigationStack 中
+        // 使用 NavigationView 会导致嵌套导航栏，引发崩溃
+        KeyboardAvoidingScrollView(extraPadding: 20) {
                 VStack(spacing: AppSpacing.xl) {
                     // 1. 基本信息
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -245,7 +246,6 @@ struct CreateFleaMarketItemView: View {
                     showLogin = true
                 }
             }
-        }
     }
     
     // MARK: - 位置输入区域（带搜索建议）
