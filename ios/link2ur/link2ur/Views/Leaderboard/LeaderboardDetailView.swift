@@ -112,6 +112,7 @@ struct LeaderboardDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {

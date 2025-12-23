@@ -218,15 +218,93 @@ def refresh_session(
     response: Response,
     db: Session = Depends(get_sync_db),
 ):
-    """刷新会话 - 延长会话有效期"""
+    """刷新会话 - 延长会话有效期，如果session过期则尝试使用refresh_token恢复"""
     try:
         # 获取当前会话
         session = validate_session(request)
+        
+        # 如果session无效或已过期，尝试使用refresh_token恢复
         if not session:
+            logger.info("[SECURE_AUTH] Session已过期，尝试使用refresh_token恢复")
+            # 从Cookie中获取refresh_token
+            refresh_token = request.cookies.get("refresh_token")
+            if not refresh_token:
+                # 也尝试从header获取（iOS应用可能使用header）
+                refresh_token = request.headers.get("X-Refresh-Token")
+            
+            if refresh_token:
+                # 使用refresh_token恢复session
+                device_fingerprint = get_device_fingerprint(request)
+                client_ip = get_client_ip(request)
+                
+                # 验证refresh_token
+                from app.secure_auth import verify_user_refresh_token
+                user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint)
+                if user_id:
+                    # refresh_token有效，创建新session
+                    user = crud.get_user_by_id(db, user_id)
+                    if not user:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+                        )
+                    
+                    # 检查用户状态
+                    if user.is_suspended or user.is_banned:
+                        from app.secure_auth import revoke_all_user_refresh_tokens
+                        revoke_all_user_refresh_tokens(user.id)
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停或封禁"
+                        )
+                    
+                    # 检测是否为 iOS 应用
+                    from app.secure_auth import is_ios_app_request
+                    is_ios_app = is_ios_app_request(request)
+                    
+                    # 撤销旧的refresh_token，生成新的
+                    from app.secure_auth import create_user_refresh_token, revoke_user_refresh_token
+                    revoke_user_refresh_token(refresh_token)
+                    new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+                    
+                    # 创建新会话
+                    user_agent = request.headers.get("user-agent", "")
+                    session = SecureAuthManager.create_session(
+                        user_id=user.id,
+                        device_fingerprint=device_fingerprint,
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                        refresh_token=new_refresh_token,
+                        is_ios_app=is_ios_app
+                    )
+                    
+                    # 设置新的安全Cookie
+                    CookieManager.set_session_cookies(
+                        response=response,
+                        session_id=session.session_id,
+                        refresh_token=new_refresh_token,
+                        user_id=user.id,
+                        user_agent=user_agent
+                    )
+                    
+                    # 生成并设置CSRF token
+                    from app.csrf import CSRFProtection
+                    csrf_token = CSRFProtection.generate_csrf_token()
+                    CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+                    
+                    logger.info(f"通过refresh_token恢复会话成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
+                    
+                    return {
+                        "message": "会话恢复成功",
+                        "session_id": session.session_id,
+                        "expires_in": 300,
+                        "recovered": True
+                    }
+            
+            # 如果refresh_token也不存在或无效，返回401
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效或已过期"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效或已过期，且refresh_token无效"
             )
         
+        # Session有效，正常刷新
         # 获取用户信息
         user = crud.get_user_by_id(db, session.user_id)
         if not user:

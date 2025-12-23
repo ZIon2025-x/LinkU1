@@ -109,6 +109,7 @@ struct TaskExpertListView: View {
             }
             .navigationTitle("任务达人")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
@@ -225,6 +226,7 @@ struct TaskExpertFilterView: View {
             }
             .navigationTitle("筛选")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {

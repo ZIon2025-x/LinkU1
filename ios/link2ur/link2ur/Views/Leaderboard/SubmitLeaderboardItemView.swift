@@ -216,6 +216,7 @@ struct SubmitLeaderboardItemView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("提交竞品")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {

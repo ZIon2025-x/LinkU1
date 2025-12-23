@@ -172,6 +172,7 @@ struct ApplyLeaderboardView: View {
             }
             .navigationTitle("申请新榜单")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {

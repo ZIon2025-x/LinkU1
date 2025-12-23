@@ -65,6 +65,7 @@ struct ServiceDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showApplySheet) {
             ApplyServiceSheet(
@@ -415,6 +416,7 @@ struct ApplyServiceSheet: View {
             .background(Color(UIColor.systemBackground))
             .navigationTitle("申请服务")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") { dismiss() }

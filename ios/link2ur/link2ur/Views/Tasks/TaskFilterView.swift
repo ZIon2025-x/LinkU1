@@ -46,6 +46,7 @@ struct TaskFilterView: View {
             }
             .navigationTitle("筛选")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("完成") {

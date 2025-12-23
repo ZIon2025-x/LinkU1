@@ -85,6 +85,7 @@ struct TaskExpertDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $showLogin) {
             LoginView()

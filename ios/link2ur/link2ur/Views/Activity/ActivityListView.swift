@@ -75,6 +75,7 @@ struct ActivityListView: View {
         }
         .navigationTitle("活动")
         .navigationBarTitleDisplayMode(.large)
+        .enableSwipeBack()
         .refreshable {
             viewModel.loadActivities(
                 expertId: selectedExpertId,

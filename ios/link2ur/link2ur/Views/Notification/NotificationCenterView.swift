@@ -238,6 +238,7 @@ struct SystemMessageView: View {
         }
         .navigationTitle("系统消息")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .refreshable {
             viewModel.loadNotifications()
         }

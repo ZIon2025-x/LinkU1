@@ -10,60 +10,21 @@ public struct ContentView: View {
     public var body: some View {
         Group {
             if appState.isCheckingLoginStatus {
-                // 正在检查登录状态，显示加载界面
+                // 正在检查登录状态，显示视频加载界面
                 ZStack {
-                    // 现代渐变背景（与登录页面一致）
-                    ZStack {
-                        // 主渐变背景
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                AppColors.primary.opacity(0.12),
-                                AppColors.primary.opacity(0.06),
-                                AppColors.primary.opacity(0.02),
-                                AppColors.background
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .ignoresSafeArea()
-                        
-                        // 动态装饰性圆形背景
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    gradient: Gradient(colors: [
-                                        AppColors.primary.opacity(0.08),
-                                        AppColors.primary.opacity(0.02),
-                                        Color.clear
-                                    ]),
-                                    center: .center,
-                                    startRadius: 50,
-                                    endRadius: 200
-                                )
-                            )
-                            .frame(width: 400, height: 400)
-                            .offset(x: -180, y: -350)
-                            .blur(radius: 20)
-                        
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    gradient: Gradient(colors: [
-                                        AppColors.primary.opacity(0.06),
-                                        AppColors.primary.opacity(0.01),
-                                        Color.clear
-                                    ]),
-                                    center: .center,
-                                    startRadius: 40,
-                                    endRadius: 150
-                                )
-                            )
-                            .frame(width: 300, height: 300)
-                            .offset(x: 220, y: 450)
-                            .blur(radius: 15)
-                    }
+                    // 视频背景（全屏循环播放，从多个视频中随机选择）
+                    VideoLoadingView(
+                        videoName: "linker",  // 默认视频名（如果 videoNames 为空时使用）
+                        videoExtension: "mp4",
+                        videoNames: ["linker1", "linker2", "linker3", "linker4"],  // 4个视频文件名（不含扩展名）
+                        showOverlay: false
+                    )
                     
-                    // 右上角倒计时圆圈
+                    // 可选的半透明遮罩（如果需要降低视频亮度）
+                    Color.black.opacity(0.05)
+                        .ignoresSafeArea()
+                    
+                    // 右上角倒计时圆圈（可选，如果需要显示加载进度）
                     VStack {
                         HStack {
                             Spacer()
@@ -121,77 +82,45 @@ public struct ContentView: View {
                         Spacer()
                     }
                     
-                    // Logo 和加载指示器
-                    VStack(spacing: AppSpacing.lg) {
-                        ZStack {
-                            // 外圈光晕效果
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        gradient: Gradient(colors: [
-                                            AppColors.primary.opacity(0.15),
-                                            AppColors.primary.opacity(0.05),
-                                            Color.clear
-                                        ]),
-                                        center: .center,
-                                        startRadius: 40,
-                                        endRadius: 70
-                                    )
-                                )
-                                .frame(width: 140, height: 140)
-                                .blur(radius: 8)
+                    // 中间文本：Link to your world（蓝色字体，world 是蓝底白字）
+                    VStack {
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Text("Link to your ")
+                                .font(AppTypography.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(AppColors.primary)
                             
-                            // 渐变背景圆圈
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 110, height: 110)
-                                .shadow(color: AppColors.primary.opacity(0.3), radius: 20, x: 0, y: 10)
-                                .overlay(
-                                    Circle()
-                                        .stroke(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [
-                                                    Color.white.opacity(0.3),
-                                                    Color.clear
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 2
-                                        )
-                                )
-                            
+                            Text("world")
+                                .font(AppTypography.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(AppColors.primary)
+                                .cornerRadius(8)
+                        }
+                        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .padding(.top, 100)  // 往下移动（增加顶部间距）
+                        Spacer()
+                    }
+                    
+                    // 左下角 Logo
+                    VStack {
+                        Spacer()
+                        HStack {
                             Image("Logo")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 75, height: 75)
-                                .clipShape(Circle())
-                                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                .frame(width: 80, height: 80)
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            Spacer()
                         }
-                        
-                        VStack(spacing: AppSpacing.xs) {
-                            Text(LocalizationKey.appName.localized)
-                                .font(AppTypography.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text(LocalizationKey.appTagline.localized)
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        
-                        // 加载指示器
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
-                            .padding(.top, AppSpacing.md)
+                        .frame(maxWidth: .infinity, alignment: .leading)  // 确保左对齐
+                        .padding(.leading, AppSpacing.lg)
+                        .padding(.bottom, AppSpacing.lg)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)  // 确保在左下角
                 }
             } else if appState.isAuthenticated || appState.userSkippedLogin {
                 // 已登录或用户选择跳过登录，都显示主界面

@@ -73,6 +73,7 @@ struct ActivityDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -625,6 +626,7 @@ struct ActivityApplyView: View {
             .background(AppColors.background)
             .navigationTitle("申请参加活动")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") { dismiss() }

@@ -81,6 +81,7 @@ struct LeaderboardItemDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -661,6 +662,7 @@ struct VoteCommentModal: View {
             .padding(24)
             .navigationTitle(voteType == "upvote" ? "支持竞品" : "反对竞品")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消", action: onCancel)

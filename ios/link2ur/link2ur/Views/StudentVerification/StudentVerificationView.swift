@@ -180,6 +180,7 @@ struct StudentVerificationView: View {
             }
             .navigationTitle("学生认证")
             .navigationBarTitleDisplayMode(.large)
+            .enableSwipeBack()
             .refreshable {
                 viewModel.loadStatus()
             }
@@ -404,6 +405,7 @@ struct SubmitVerificationView: View {
             }
             .navigationTitle("提交认证")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {
@@ -520,6 +522,7 @@ struct RenewVerificationView: View {
             }
             .navigationTitle("续期认证")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {
@@ -636,6 +639,7 @@ struct ChangeEmailView: View {
             }
             .navigationTitle("更换邮箱")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {

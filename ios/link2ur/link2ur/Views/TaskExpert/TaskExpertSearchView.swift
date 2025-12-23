@@ -182,6 +182,7 @@ struct TaskExpertSearchView: View {
         }
         .navigationTitle("搜索达人")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {

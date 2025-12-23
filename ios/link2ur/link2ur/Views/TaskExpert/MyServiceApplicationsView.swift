@@ -31,6 +31,7 @@ struct MyServiceApplicationsView: View {
             }
             .navigationTitle("我的申请")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .refreshable {

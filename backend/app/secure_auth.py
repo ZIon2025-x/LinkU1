@@ -354,6 +354,12 @@ class SecureAuthManager:
         """更新会话信息"""
         try:
             if USE_REDIS and redis_client:
+                # iOS 应用会话使用更长的过期时间（1年），其他会话使用默认过期时间
+                if session.is_ios_app:
+                    expire_hours = 365 * 24  # 1年
+                else:
+                    expire_hours = SESSION_EXPIRE_HOURS
+                
                 # 更新 Redis 中的会话
                 session_data = {
                     "user_id": session.user_id,
@@ -363,14 +369,16 @@ class SecureAuthManager:
                     "last_activity": format_iso_utc(session.last_activity),
                     "ip_address": session.ip_address,
                     "user_agent": session.user_agent,
-                    "is_active": session.is_active
+                    "refresh_token": session.refresh_token,
+                    "is_active": session.is_active,
+                    "is_ios_app": session.is_ios_app  # 保存是否为 iOS 应用会话
                 }
                 redis_client.setex(
                     f"session:{session_id}",
-                    SESSION_EXPIRE_HOURS * 3600,
+                    expire_hours * 3600,  # 根据设备类型设置TTL
                     json.dumps(session_data)
                 )
-                logger.info(f"会话已更新: {session_id[:8]}...")
+                logger.info(f"会话已更新: {session_id[:8]}... (iOS: {session.is_ios_app}, TTL: {expire_hours}小时)")
                 return True
             else:
                 # 更新内存中的会话
@@ -668,32 +676,48 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     if not session:
         return None
     
-    # ========== 严格验证：IP地址必须完全匹配 ==========
-    # 如果会话绑定了IP地址，则必须匹配；如果当前IP未知，也拒绝访问
+    # ========== IP地址验证：iOS应用使用更宽松的策略 ==========
+    # iOS应用允许IP地址变化（用户可能切换WiFi/移动网络），其他会话严格验证
+    is_ios_app = session.is_ios_app if hasattr(session, 'is_ios_app') else False
+    
     if session.ip_address:
         if not current_ip or current_ip == "unknown":
-            logger.error(f"[SECURE_AUTH] 无法获取当前IP地址，拒绝访问")
-            logger.error(f"  会话ID: {session_id[:8]}...")
-            logger.error(f"  用户ID: {session.user_id}")
-            logger.error(f"  会话IP: {session.ip_address}")
-            SecureAuthManager.revoke_session(session_id)
-            return None
-        if session.ip_address != current_ip:
-            logger.error(f"[SECURE_AUTH] 会话IP地址不匹配，拒绝访问并撤销会话")
-            logger.error(f"  会话ID: {session_id[:8]}...")
-            logger.error(f"  用户ID: {session.user_id}")
-            logger.error(f"  会话IP: {session.ip_address}")
-            logger.error(f"  当前IP: {current_ip}")
-            # IP地址不匹配，立即撤销会话（安全策略：一个会话只能在一个IP使用）
-            SecureAuthManager.revoke_session(session_id)
-            return None
+            # iOS应用允许IP未知的情况（某些网络环境可能无法获取IP）
+            if not is_ios_app:
+                logger.error(f"[SECURE_AUTH] 无法获取当前IP地址，拒绝访问")
+                logger.error(f"  会话ID: {session_id[:8]}...")
+                logger.error(f"  用户ID: {session.user_id}")
+                logger.error(f"  会话IP: {session.ip_address}")
+                SecureAuthManager.revoke_session(session_id)
+                return None
+            else:
+                logger.debug(f"[SECURE_AUTH] iOS应用IP未知，允许访问（宽松策略）")
+        elif session.ip_address != current_ip:
+            # iOS应用允许IP变化，其他会话严格验证
+            if is_ios_app:
+                logger.info(f"[SECURE_AUTH] iOS应用IP地址变化（允许）- 会话IP: {session.ip_address}, 当前IP: {current_ip}")
+                # 更新会话的IP地址为当前IP
+                session.ip_address = current_ip
+                SecureAuthManager.update_session(session_id, session)
+            else:
+                logger.error(f"[SECURE_AUTH] 会话IP地址不匹配，拒绝访问并撤销会话")
+                logger.error(f"  会话ID: {session_id[:8]}...")
+                logger.error(f"  用户ID: {session.user_id}")
+                logger.error(f"  会话IP: {session.ip_address}")
+                logger.error(f"  当前IP: {current_ip}")
+                # IP地址不匹配，立即撤销会话（安全策略：一个会话只能在一个IP使用）
+                SecureAuthManager.revoke_session(session_id)
+                return None
     elif not current_ip or current_ip == "unknown":
-        # 如果会话没有绑定IP，但当前也无法获取IP，拒绝访问（安全策略）
-        logger.error(f"[SECURE_AUTH] 会话和当前请求都缺少IP地址，拒绝访问")
-        logger.error(f"  会话ID: {session_id[:8]}...")
-        logger.error(f"  用户ID: {session.user_id}")
-        SecureAuthManager.revoke_session(session_id)
-        return None
+        # iOS应用允许IP未知，其他会话拒绝访问
+        if not is_ios_app:
+            logger.error(f"[SECURE_AUTH] 会话和当前请求都缺少IP地址，拒绝访问")
+            logger.error(f"  会话ID: {session_id[:8]}...")
+            logger.error(f"  用户ID: {session.user_id}")
+            SecureAuthManager.revoke_session(session_id)
+            return None
+        else:
+            logger.debug(f"[SECURE_AUTH] iOS应用IP未知，允许访问（宽松策略）")
     
     # 检测是否为移动端请求
     is_mobile = is_mobile_request(request)

@@ -98,6 +98,7 @@ struct CouponPointsView: View {
             }
             .navigationTitle("积分与优惠券")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .onAppear {
                 if appState.isAuthenticated {
                     viewModel.loadPointsAccount()

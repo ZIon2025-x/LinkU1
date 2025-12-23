@@ -366,6 +366,7 @@ struct InteractionMessageView: View {
         }
         .navigationTitle(LocalizationKey.messagesInteractionInfo.localized)
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .refreshable {
             viewModel.loadForumNotificationsOnly()
         }

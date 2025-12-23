@@ -146,6 +146,7 @@ struct TaskExpertsIntroView: View {
         }
         .navigationTitle("任务达人")
         .navigationBarTitleDisplayMode(.large)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .sheet(isPresented: $showApply) {
@@ -306,6 +307,7 @@ struct TaskExpertApplyView: View {
             }
             .navigationTitle("申请成为达人")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {
