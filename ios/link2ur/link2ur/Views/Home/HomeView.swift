@@ -7,12 +7,13 @@ struct HomeView: View {
     @State private var selectedTab = 1 // 0: 达人, 1: 推荐, 2: 附近
     @State private var showMenu = false
     @State private var showSearch = false
+    @State private var navigationPath = NavigationPath() // 使用 NavigationPath 管理导航状态
     
     // 监听重置通知
     private let resetNotification = NotificationCenter.default.publisher(for: .resetHomeView)
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 AppColors.background
                     .ignoresSafeArea()
@@ -104,14 +105,15 @@ struct HomeView: View {
                 SearchView()
             }
             .onReceive(resetNotification) { _ in
-                // 重置到默认状态（推荐页面）
+                // 只重置到默认状态（推荐页面），不清空导航路径
+                // 这样用户可以从子页面返回到首页，导航栈保持可用
                 withAnimation(.easeInOut(duration: 0.2)) {
                     selectedTab = 1
                 }
             }
             .onChange(of: appState.shouldResetHomeView) { shouldReset in
                 if shouldReset {
-                    // 重置到默认状态（推荐页面）
+                    // 只重置到默认状态（推荐页面），不清空导航路径
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedTab = 1
                     }

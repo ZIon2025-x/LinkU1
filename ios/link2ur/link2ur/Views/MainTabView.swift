@@ -16,16 +16,13 @@ public struct MainTabView: View {
                 set: { newValue in
                     // 如果点击的是首页 tab
                     if newValue == 0 {
-                        // 无论是否已经在首页，都触发重置
-                        // 这样可以确保从任务大厅等子页面返回到首页
-                        if selection == 0 {
-                            // 如果已经在首页，重置 homeViewResetTrigger 以强制重新创建 HomeView
-                            // 这会将 NavigationView 的导航栈重置，从任务大厅返回到首页
-                            homeViewResetTrigger = UUID()
+                        // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
+                        // 如果已经在首页，什么都不做，保持导航栈状态
+                        if selection != 0 {
+                            // 只触发 selectedTab 重置，不清空导航路径
+                            appState.shouldResetHomeView = true
+                            NotificationCenter.default.post(name: .resetHomeView, object: nil)
                         }
-                        // 触发首页重置
-                        appState.shouldResetHomeView = true
-                        NotificationCenter.default.post(name: .resetHomeView, object: nil)
                         // 更新 previousSelection 为 0，确保中间占位视图显示首页
                         previousSelection = 0
                     }
@@ -40,7 +37,7 @@ public struct MainTabView: View {
                 }
             )) {
                 HomeView()
-                    .id(homeViewResetTrigger) // 使用 id 来强制重置
+                    // 移除 id，避免重新创建 HomeView，保持 NavigationStack 状态
                     .tabItem {
                         Label(LocalizationKey.tabsHome.localized, systemImage: "house.fill")
                     }
@@ -59,7 +56,7 @@ public struct MainTabView: View {
                     switch previousSelection {
                     case 0:
                         HomeView()
-                            .id(homeViewResetTrigger)
+                            // 移除 id，避免重新创建，保持导航栈状态
                     case 1:
                         // 社区页面 - 显示一个占位视图，确保 tab 可见
                         Color.clear
@@ -70,7 +67,7 @@ public struct MainTabView: View {
                         ProfileView()
                     default:
                         HomeView()
-                            .id(homeViewResetTrigger)
+                            // 移除 id，避免重新创建，保持导航栈状态
                     }
                 }
                 .tabItem {
@@ -124,12 +121,13 @@ public struct MainTabView: View {
                     let oldSelection = previousSelection
                     previousSelection = newValue
                     handleSelectionChange(newValue, oldSelection: oldSelection)
-                    // 强制重置 HomeView，确保导航栈正确
-                    homeViewResetTrigger = UUID()
-                    // 延迟一点触发重置通知，确保导航栈完全清理
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        appState.shouldResetHomeView = true
-                        NotificationCenter.default.post(name: .resetHomeView, object: nil)
+                    // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
+                    if oldSelection != 0 {
+                        // 延迟一点触发重置通知，只重置 selectedTab
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            appState.shouldResetHomeView = true
+                            NotificationCenter.default.post(name: .resetHomeView, object: nil)
+                        }
                     }
                 } else {
                     // 正常切换 tab（社区、我的等）
