@@ -3,6 +3,8 @@ import Foundation
 public struct Message: Codable, Identifiable {
     let messageId: Int? // 后端返回的 id（可选）
     let senderId: String?
+    let senderName: String? // 发送者名称
+    let senderAvatar: String? // 发送者头像
     let receiverId: String?
     let content: String? // 改为可选，某些 WebSocket 消息可能没有 content
     let msgType: MessageType?
@@ -35,6 +37,8 @@ public struct Message: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case messageId = "id"
         case senderId = "sender_id"
+        case senderName = "sender_name"
+        case senderAvatar = "sender_avatar"
         case receiverId = "receiver_id"
         case content
         case msgType = "message_type" // 后端返回的是 message_type，不是 type
@@ -50,6 +54,8 @@ public struct Message: Codable, Identifiable {
         // 所有字段都改为可选，以支持不同类型的 WebSocket 消息
         messageId = try container.decodeIfPresent(Int.self, forKey: .messageId)
         senderId = try container.decodeIfPresent(String.self, forKey: .senderId)
+        senderName = try container.decodeIfPresent(String.self, forKey: .senderName)
+        senderAvatar = try container.decodeIfPresent(String.self, forKey: .senderAvatar)
         receiverId = try container.decodeIfPresent(String.self, forKey: .receiverId)
         content = try container.decodeIfPresent(String.self, forKey: .content)
         msgType = try container.decodeIfPresent(MessageType.self, forKey: .msgType)
@@ -64,6 +70,8 @@ public struct Message: Codable, Identifiable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(messageId, forKey: .messageId)
         try container.encodeIfPresent(senderId, forKey: .senderId)
+        try container.encodeIfPresent(senderName, forKey: .senderName)
+        try container.encodeIfPresent(senderAvatar, forKey: .senderAvatar)
         try container.encodeIfPresent(receiverId, forKey: .receiverId)
         try container.encodeIfPresent(content, forKey: .content)
         try container.encodeIfPresent(msgType, forKey: .msgType)

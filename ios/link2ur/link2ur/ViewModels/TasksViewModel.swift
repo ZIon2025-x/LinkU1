@@ -116,47 +116,53 @@ class TasksViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 
-                // 如果指定了状态，过滤任务；否则默认只显示开放中的任务
-                var filteredTasks = response.tasks
-                
-                if let status = status {
-                    filteredTasks = filteredTasks.filter { $0.status.rawValue == status }
-                } else {
-                    // 默认只显示开放中的任务（未到进行中的任务）
-                    filteredTasks = filteredTasks.filter { $0.status == .open }
+                // 优化：将数据处理移到后台线程，避免阻塞主线程
+                DispatchQueue.global(qos: .userInitiated).async {
+                    // 如果指定了状态，过滤任务；否则默认只显示开放中的任务
+                    var filteredTasks = response.tasks
+                    
+                    if let status = status {
+                        filteredTasks = filteredTasks.filter { $0.status.rawValue == status }
+                    } else {
+                        // 默认只显示开放中的任务（未到进行中的任务）
+                        filteredTasks = filteredTasks.filter { $0.status == .open }
+                    }
+                    
+                    // 额外确保：排除进行中、已完成、已取消的任务
+                    filteredTasks = filteredTasks.filter { task in
+                        task.status == .open
+                    }
+                    
+                    // 如果是第一页，保存到缓存（仅第一页且无搜索关键词时）
+                    if page == 1 && (keyword == nil || keyword?.isEmpty == true) {
+                        CacheManager.shared.saveTasks(filteredTasks, category: category, city: city)
+                        Logger.success("已缓存 \(filteredTasks.count) 个任务", category: .cache)
+                    }
+                    
+                    // 回到主线程更新UI
+                    DispatchQueue.main.async {
+                        // 保存原始数据
+                        if page == 1 {
+                            self.rawTasks = filteredTasks
+                        } else {
+                            self.rawTasks.append(contentsOf: filteredTasks)
+                        }
+                        
+                        // 直接使用后端返回的数据（后端已经按距离排序并过滤了Online任务）
+                        if page == 1 {
+                            self.tasks = filteredTasks
+                        } else {
+                            self.tasks.append(contentsOf: filteredTasks)
+                        }
+                        
+                        // 检查是否还有更多数据
+                        self.hasMore = filteredTasks.count == pageSize
+                        self.currentPage = page
+                        
+                        self.isLoading = false
+                        self.isLoadingMore = false
+                    }
                 }
-                
-                // 额外确保：排除进行中、已完成、已取消的任务
-                filteredTasks = filteredTasks.filter { task in
-                    task.status == .open
-                }
-                
-                // 保存原始数据
-                if page == 1 {
-                    self.rawTasks = filteredTasks
-                } else {
-                    self.rawTasks.append(contentsOf: filteredTasks)
-                }
-                
-                // 直接使用后端返回的数据（后端已经按距离排序并过滤了Online任务）
-                if page == 1 {
-                    self.tasks = filteredTasks
-                } else {
-                    self.tasks.append(contentsOf: filteredTasks)
-                }
-                
-                // 如果是第一页，保存到缓存（仅第一页且无搜索关键词时）
-                if page == 1 && (keyword == nil || keyword?.isEmpty == true) {
-                    CacheManager.shared.saveTasks(self.tasks, category: category, city: city)
-                    Logger.success("已缓存 \(self.tasks.count) 个任务", category: .cache)
-                }
-                
-                // 检查是否还有更多数据
-                self.hasMore = filteredTasks.count == pageSize
-                self.currentPage = page
-                
-                self.isLoading = false
-                self.isLoadingMore = false
                 
                 // 监听位置更新，当位置可用时重新加载任务（仅附近视图）
                 // 取消之前的监听器，避免重复触发

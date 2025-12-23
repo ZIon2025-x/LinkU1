@@ -227,8 +227,8 @@ struct RecommendedContentView: View {
             // 延迟加载非关键内容，优化首次加载性能
             // 先加载关键内容（广告和推荐任务），然后延迟加载其他内容
             if !hasAppeared {
-                // 延迟300ms加载非关键内容，让关键内容先显示
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // 延迟500ms加载非关键内容，让关键内容先显示，减少启动时的请求压力
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     hasAppeared = true
                 }
             }
@@ -1346,8 +1346,13 @@ struct RecommendedTasksSection: View {
         }
         .task {
             // 使用 task 替代 onAppear，避免重复加载
+            // 延迟加载，避免启动时阻塞主线程
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                viewModel.loadTasks(status: "open")
+                // 延迟200ms加载，让关键内容先显示
+                try? await _Concurrency.Task.sleep(nanoseconds: 200_000_000)
+                if viewModel.tasks.isEmpty && !viewModel.isLoading {
+                    viewModel.loadTasks(status: "open")
+                }
             }
         }
     }
@@ -1414,8 +1419,13 @@ struct RecentActivitiesSection: View {
         }
         .task {
             // 使用 task 替代 onAppear，避免重复加载
+            // 延迟加载，避免启动时阻塞主线程
             if viewModel.activities.isEmpty && !viewModel.isLoading {
-                viewModel.loadRecentActivities()
+                // 延迟1秒加载，让关键内容先显示
+                try? await _Concurrency.Task.sleep(nanoseconds: 1_000_000_000)
+                if viewModel.activities.isEmpty && !viewModel.isLoading {
+                    viewModel.loadRecentActivities()
+                }
             }
         }
     }
@@ -1571,9 +1581,14 @@ struct PopularActivitiesSection: View {
         }
         .task {
             // 使用 task 替代 onAppear，避免重复加载
+            // 延迟加载，避免启动时阻塞主线程
             // 只加载状态为 "open" 的活动（开放中的活动）
             if viewModel.activities.isEmpty && !viewModel.isLoading {
-                viewModel.loadActivities(status: "open", includeEnded: false)
+                // 延迟800ms加载，让关键内容先显示
+                try? await _Concurrency.Task.sleep(nanoseconds: 800_000_000)
+                if viewModel.activities.isEmpty && !viewModel.isLoading {
+                    viewModel.loadActivities(status: "open", includeEnded: false)
+                }
             }
         }
     }

@@ -35,18 +35,21 @@ struct AsyncImageView: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .empty:
-                            // 加载中
-                            placeholder
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .foregroundColor(AppColors.textTertiary)
-                                .frame(width: width, height: height)
-                                .background(AppColors.cardBackground)
-                                .cornerRadius(cornerRadius)
-                                .overlay(
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
-                                )
+                            // 加载中 - 简化 ProgressView，避免渲染错误
+                            ZStack {
+                                placeholder
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .foregroundColor(AppColors.textTertiary)
+                                    .frame(width: width, height: height)
+                                    .background(AppColors.cardBackground)
+                                    .cornerRadius(cornerRadius)
+                                
+                                // 使用简化的加载指示器，避免 CircularUIKitProgressView 渲染错误
+                                ProgressView()
+                                    .tint(AppColors.primary)
+                                    .scaleEffect(0.8)
+                            }
                         case .success(let image):
                             // 加载成功（性能优化：使用 drawingGroup 优化渲染）
                             image

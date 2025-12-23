@@ -358,14 +358,48 @@ struct MessageBubble: View {
     @State private var showFullImage = false
     @State private var selectedImageUrl: String?
     @State private var selectedImageIndex: Int = 0
+    @State private var showUserProfile = false
     
     var body: some View {
-        HStack(alignment: .bottom, spacing: AppSpacing.sm) {
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
             if isFromCurrentUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 50)
+            } else {
+                // 显示发送人头像（非当前用户的消息）- 左上角对齐
+                Button(action: {
+                    if message.senderId != nil {
+                        showUserProfile = true
+                    }
+                }) {
+                    AvatarView(
+                        urlString: message.senderAvatar,
+                        size: 36,
+                        placeholder: Image(systemName: "person.circle.fill")
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(AppColors.separator.opacity(0.2), lineWidth: 1)
+                    )
+                    .onAppear {
+                        Logger.debug("显示发送者头像: \(message.senderAvatar ?? "nil"), 消息ID: \(message.id), isFromCurrentUser: \(isFromCurrentUser)", category: .ui)
+                    }
+                }
+                .buttonStyle(ScaleButtonStyle())
             }
             
-            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 6) {
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
+                // 发送人名字（仅非当前用户的消息显示）
+                if !isFromCurrentUser, let senderName = message.senderName, !senderName.isEmpty {
+                    Text(senderName)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                        .padding(.horizontal, AppSpacing.xs)
+                        .padding(.bottom, 2)
+                        .onAppear {
+                            Logger.debug("显示发送者名字: \(senderName), 消息ID: \(message.id)", category: .ui)
+                        }
+                }
+                
                 // 图片附件（如果有）
                 if message.hasImageAttachment, let imageUrl = message.firstImageUrl {
                     Button(action: {
@@ -416,20 +450,38 @@ struct MessageBubble: View {
                                y: isFromCurrentUser ? 4 : AppShadow.small.y)
                 }
                 
-                // 时间戳
+                // 时间戳（在消息气泡下方）
                 if let createdAt = message.createdAt {
                     Text(formatTime(createdAt))
                         .font(AppTypography.caption2)
                         .foregroundColor(AppColors.textTertiary)
                         .padding(.horizontal, AppSpacing.xs)
+                        .padding(.top, 2)
                 }
             }
+            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: isFromCurrentUser ? .trailing : .leading)
             
             if !isFromCurrentUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 50)
             }
         }
-        .padding(.horizontal, AppSpacing.sm)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.xs)
+        .sheet(isPresented: $showUserProfile) {
+            if let senderId = message.senderId, !senderId.isEmpty {
+                NavigationStack {
+                    UserProfileView(userId: senderId)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button(LocalizationKey.commonDone.localized) {
+                                    showUserProfile = false
+                                }
+                            }
+                        }
+                }
+            }
+        }
         .fullScreenCover(isPresented: $showFullImage) {
             if let imageUrl = selectedImageUrl {
                 FullScreenImageView(images: [imageUrl], selectedIndex: $selectedImageIndex, isPresented: $showFullImage)

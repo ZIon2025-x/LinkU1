@@ -363,25 +363,60 @@ class TaskChatDetailViewModel: ObservableObject {
                 
                 let allTaskMessages = response.messages
                 
+                Logger.debug("收到 \(allTaskMessages.count) 条任务消息", category: .api)
+                
                 // 将 TaskMessage 转换为 Message 类型（用于 MessageBubble）
-                // 由于 Message 使用自定义解码，我们需要手动创建字典然后解码
+                // 使用 JSON 序列化/反序列化来确保所有字段正确传递
                 let convertedMessages = allTaskMessages.compactMap { taskMsg -> Message? in
-                    // 创建字典表示（senderId 可能为 nil，系统消息时）
-                    let messageDict: [String: Any] = [
-                        "id": taskMsg.id,
-                        "sender_id": taskMsg.senderId as Any, // 可能为 nil
-                        "content": taskMsg.content,
-                        "message_type": taskMsg.messageType,
-                        "created_at": taskMsg.createdAt as Any,
-                        "is_read": taskMsg.isRead
-                    ]
+                    // 调试：检查原始 TaskMessage 数据
+                    Logger.debug("原始 TaskMessage ID: \(taskMsg.id), senderId: \(taskMsg.senderId ?? "nil"), senderName: \(taskMsg.senderName ?? "nil"), senderAvatar: \(taskMsg.senderAvatar ?? "nil")", category: .api)
+                    
+                    // 构建完整的消息字典，确保所有字段都包含（包括 nil 值）
+                    var messageDict: [String: Any] = [:]
+                    
+                    // 必需字段
+                    messageDict["id"] = taskMsg.id
+                    messageDict["content"] = taskMsg.content
+                    messageDict["message_type"] = taskMsg.messageType
+                    messageDict["is_read"] = taskMsg.isRead
+                    
+                    // 可选字段（使用 NSNull 表示 nil，确保 JSON 序列化时保留字段）
+                    messageDict["sender_id"] = taskMsg.senderId ?? NSNull()
+                    messageDict["sender_name"] = taskMsg.senderName ?? NSNull()
+                    messageDict["sender_avatar"] = taskMsg.senderAvatar ?? NSNull()
+                    messageDict["created_at"] = taskMsg.createdAt ?? NSNull()
+                    
+                    // 添加附件信息
+                    if !taskMsg.attachments.isEmpty {
+                        let attachmentsData = try? JSONEncoder().encode(taskMsg.attachments)
+                        if let attachmentsData = attachmentsData,
+                           let attachmentsArray = try? JSONSerialization.jsonObject(with: attachmentsData) as? [[String: Any]] {
+                            messageDict["attachments"] = attachmentsArray
+                        }
+                    } else {
+                        messageDict["attachments"] = []
+                    }
                     
                     // 使用 JSONEncoder/Decoder 转换
-                    guard let jsonData = try? JSONSerialization.data(withJSONObject: messageDict),
-                          let message = try? JSONDecoder().decode(Message.self, from: jsonData) else {
+                    do {
+                        let jsonData = try JSONSerialization.data(withJSONObject: messageDict, options: [])
+                        
+                        // 调试：打印 JSON 字符串
+                        if let jsonString = String(data: jsonData, encoding: .utf8) {
+                            Logger.debug("消息 JSON: \(jsonString)", category: .api)
+                        }
+                        
+                        let message = try JSONDecoder().decode(Message.self, from: jsonData)
+                        
+                        // 调试日志：检查转换后的消息是否包含发送者信息
+                        Logger.debug("✅ 转换成功 - 消息 ID: \(taskMsg.id), senderName: \(message.senderName ?? "nil"), senderAvatar: \(message.senderAvatar ?? "nil")", category: .api)
+                        
+                        return message
+                    } catch {
+                        Logger.error("❌ 无法转换 TaskMessage 到 Message: \(taskMsg.id), 错误: \(error.localizedDescription)", category: .api)
+                        Logger.debug("原始数据: senderName=\(taskMsg.senderName ?? "nil"), senderAvatar=\(taskMsg.senderAvatar ?? "nil")", category: .api)
                         return nil
                     }
-                    return message
                 }
                 
                 // 任务聊天消息已经通过任务ID过滤，直接显示所有消息

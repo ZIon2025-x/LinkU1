@@ -21,6 +21,7 @@
 "common.back" = "Back";
 "common.next" = "Next";
 "common.finish" = "Finish";
+"common.done" = "Done";
 "common.share" = "Share";
 "common.more" = "More";
 "common.view_all" = "View All";
@@ -321,6 +322,7 @@
 "task_detail.your_task" = "This is your task";
 "task_detail.manage_task" = "You can view applicants and manage the task below";
 "task_detail.reviews" = "Reviews (%d)";
+"task_detail.my_reviews" = "My Reviews";
 "task_detail.anonymous_user" = "Anonymous User";
 "task_detail.unknown_user" = "Unknown User";
 "task_detail.apply_info" = "Application Info";
@@ -335,7 +337,8 @@
 "task_detail.application_approved" = "Application Approved";
 "task_detail.application_rejected" = "Application Rejected";
 "task_detail.unknown_status" = "Unknown Status";
-"task_detail.application_success" = "You have successfully applied for this task. Please wait for the publisher to review.";
+"task_detail.application_success" = "Application Successful";
+"task_detail.application_success_message" = "You have successfully applied for this task. Please wait for the publisher to review.";
 "task_detail.task_completed_message" = "Congratulations! You have completed the task. Please wait for the publisher to confirm.";
 "task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
 "task_detail.application_rejected_message" = "Sorry, your application was not approved.";

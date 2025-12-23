@@ -201,6 +201,25 @@ struct LocationInputField: View {
     
     private var suggestionsList: some View {
         VStack(spacing: 0) {
+            // 关闭按钮
+            HStack {
+                Spacer()
+                Button(action: {
+                    showSuggestions = false
+                    isFocused = false
+                    HapticFeedback.light()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .background(AppColors.cardBackground)
+            
+            Divider()
+            
             // 性能优化：使用缓存的前5个结果，避免重复计算 prefix
             ForEach(topSearchResults, id: \.hashValue) { result in
                 Button(action: {

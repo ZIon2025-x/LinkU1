@@ -36,6 +36,7 @@ class ActivityViewModel: ObservableObject {
             return
         }
         
+        // 优化：将数据处理移到后台线程，避免阻塞主线程
         isLoading = true
         errorMessage = nil
         
@@ -94,11 +95,8 @@ class ActivityViewModel: ObservableObject {
                                 duration: duration,
                                 error: error
                             )
-                            if let apiError = error as? APIError {
-                                self?.errorMessage = apiError.userFriendlyMessage
-                            } else {
-                                self?.errorMessage = error.localizedDescription
-                            }
+                            // 错误处理：error 已经是 APIError 类型，直接使用
+                            self?.errorMessage = error.userFriendlyMessage
                         } else {
                             // 记录成功请求的性能指标
                             self?.performanceMonitor.recordNetworkRequest(
@@ -110,12 +108,20 @@ class ActivityViewModel: ObservableObject {
                         }
                     },
                     receiveValue: { [weak self] activities in
-                        self?.activities = activities
-                        self?.isLoading = false
-                        // 保存到缓存（仅在没有筛选条件时）
-                        if expertId == nil && status == nil && !includeEnded {
-                            CacheManager.shared.saveActivities(activities)
-                            Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
+                        guard let self = self else { return }
+                        // 优化：将数据处理移到后台线程
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            // 保存到缓存（仅在没有筛选条件时）
+                            if expertId == nil && status == nil && !includeEnded {
+                                CacheManager.shared.saveActivities(activities)
+                                Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
+                            }
+                            
+                            // 回到主线程更新UI
+                            DispatchQueue.main.async {
+                                self.activities = activities
+                                self.isLoading = false
+                            }
                         }
                     }
                 )
@@ -138,11 +144,8 @@ class ActivityViewModel: ObservableObject {
                                 duration: duration,
                                 error: error
                             )
-                            if let apiError = error as? APIError {
-                                self?.errorMessage = apiError.userFriendlyMessage
-                            } else {
-                                self?.errorMessage = error.localizedDescription
-                            }
+                            // 错误处理：error 已经是 APIError 类型，直接使用
+                            self?.errorMessage = error.userFriendlyMessage
                         } else {
                             // 记录成功请求的性能指标
                             self?.performanceMonitor.recordNetworkRequest(
@@ -154,12 +157,20 @@ class ActivityViewModel: ObservableObject {
                         }
                     },
                     receiveValue: { [weak self] activities in
-                        self?.activities = activities
-                        self?.isLoading = false
-                        // 保存到缓存（仅在没有筛选条件时）
-                        if expertId == nil && status == nil && !includeEnded {
-                            CacheManager.shared.saveActivities(activities)
-                            Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
+                        guard let self = self else { return }
+                        // 优化：将数据处理移到后台线程
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            // 保存到缓存（仅在没有筛选条件时）
+                            if expertId == nil && status == nil && !includeEnded {
+                                CacheManager.shared.saveActivities(activities)
+                                Logger.success("已缓存 \(activities.count) 个活动", category: .cache)
+                            }
+                            
+                            // 回到主线程更新UI
+                            DispatchQueue.main.async {
+                                self.activities = activities
+                                self.isLoading = false
+                            }
                         }
                     }
                 )
@@ -182,11 +193,8 @@ class ActivityViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载活动详情")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        // 错误处理：error 已经是 APIError 类型，直接使用
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] activity in

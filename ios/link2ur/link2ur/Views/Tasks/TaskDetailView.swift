@@ -24,6 +24,7 @@ struct TaskDetailView: View {
     @State private var showLogin = false
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
+    @State private var showApplySuccessAlert = false
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -176,6 +177,13 @@ struct TaskDetailView: View {
             } message: {
                 Text(LocalizationKey.taskDetailCancelTaskConfirm.localized)
             }
+            .alert(LocalizationKey.taskDetailApplicationSuccess.localized, isPresented: $showApplySuccessAlert) {
+                Button(LocalizationKey.commonOk.localized) {
+                    showApplySuccessAlert = false
+                }
+            } message: {
+                Text(LocalizationKey.taskDetailApplicationSuccessMessage.localized)
+            }
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -226,7 +234,12 @@ struct TaskDetailView: View {
                             applyMessage = ""
                             negotiatedPrice = nil
                             showNegotiatePrice = false
+                            // 重新加载任务和申请列表
                             viewModel.loadTask(taskId: taskId)
+                            viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                            // 显示成功提示
+                            showApplySuccessAlert = true
+                            HapticFeedback.success()
                         }
                     }
                 }
@@ -256,8 +269,9 @@ struct TaskDetailView: View {
                         reviewComment = ""
                         isAnonymousReview = false
                         selectedReviewTags = []
-                        viewModel.loadTask(taskId: taskId)
+                        // 重新加载评价列表，以更新 hasReviewed 状态并隐藏评价按钮
                         viewModel.loadReviews(taskId: taskId)
+                        HapticFeedback.success()
                     }
                 }
             }
@@ -584,12 +598,6 @@ struct TaskDetailContentView: View {
                     // 任务详情卡片
                     TaskInfoCard(task: task)
                     
-                    // 申请状态显示
-                    if !isPoster && hasApplied, let userApp = viewModel.userApplication {
-                        ApplicationStatusCard(application: userApp, task: task)
-                            .padding(.horizontal, AppSpacing.md)
-                    }
-                    
                     // 发布者查看自己任务时的提示信息
                     if isPoster && task.status == .open {
                         PosterInfoCard()
@@ -644,9 +652,13 @@ struct TaskDetailContentView: View {
                     )
                     .padding(.horizontal, AppSpacing.md)
                     
-                    // 评价列表
-                    if !viewModel.reviews.isEmpty {
-                        TaskReviewsSection(reviews: viewModel.reviews)
+                    // 评价列表（只显示当前用户自己的评价）
+                    let userReviews = viewModel.reviews.filter { review in
+                        guard let currentUserId = appState.currentUser?.id else { return false }
+                        return String(review.reviewerId) == currentUserId
+                    }
+                    if !userReviews.isEmpty {
+                        TaskReviewsSection(reviews: userReviews)
                             .padding(.horizontal, AppSpacing.md)
                     }
                 }
@@ -1065,18 +1077,25 @@ struct TaskActionButtonsView: View {
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
-            // 申请按钮
-            if task.status == .open && !isPoster {
-                Button(action: {
-                    if appState.isAuthenticated {
-                        showApplySheet = true
-                    } else {
-                        showLogin = true
-                    }
-                }) {
-                    Label(LocalizationKey.actionsApplyForTask.localized, systemImage: "hand.raised.fill")
+            // 申请按钮或状态显示
+            if !isPoster {
+                // 如果用户已申请，无论任务状态如何，都显示申请状态卡片
+                if let userApp = viewModel.userApplication {
+                    ApplicationStatusCard(application: userApp, task: task)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                // 如果用户未申请，且任务状态为 open 且没有接受者，显示申请按钮
+                else if task.status == .open && task.takerId == nil {
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            showApplySheet = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        Label(LocalizationKey.actionsApplyForTask.localized, systemImage: "hand.raised.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
             }
             
             // 其他操作按钮
@@ -1180,7 +1199,7 @@ struct TaskReviewsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text(LocalizationKey.taskDetailReviews.localized(argument: reviews.count))
+            Text(LocalizationKey.taskDetailMyReviews.localized)
                 .font(AppTypography.title3)
                 .foregroundColor(AppColors.textPrimary)
             

@@ -636,17 +636,33 @@ struct TaskChatView: View {
                 .menuIndicator(.hidden)
             }
         }
-        .background {
-            // 使用隐藏的 NavigationLink 实现导航
-            NavigationLink(destination: CustomerServiceView().environmentObject(appState), isActive: $showCustomerService) {
-                EmptyView()
+        .sheet(isPresented: $showCustomerService) {
+            NavigationStack {
+                CustomerServiceView()
+                    .environmentObject(appState)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(LocalizationKey.commonDone.localized) {
+                                showCustomerService = false
+                            }
+                        }
+                    }
             }
-            .hidden()
-            
-            NavigationLink(destination: TaskDetailView(taskId: taskId).environmentObject(appState), isActive: $showTaskDetail) {
-                EmptyView()
+        }
+        .sheet(isPresented: $showTaskDetail) {
+            NavigationStack {
+                TaskDetailView(taskId: taskId)
+                    .environmentObject(appState)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(LocalizationKey.commonDone.localized) {
+                                showTaskDetail = false
+                            }
+                        }
+                    }
             }
-            .hidden()
         }
         .sheet(isPresented: $showLogin) {
             LoginView()

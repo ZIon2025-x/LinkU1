@@ -1821,7 +1821,30 @@ def user_profile(
 
     days_since_joined = (get_utc_time() - user.created_at).days
 
-    # 获取用户的任务统计（限制数量以提高性能）
+    # 获取用户的任务统计（真实数据：计算所有任务，不限制状态和公开性）
+    from app.models import Task
+    
+    # 计算发布的任务数（所有状态）
+    posted_tasks_count = db.query(Task).filter(Task.poster_id == user_id).count()
+    
+    # 计算接取的任务数（所有状态）
+    taken_tasks_count = db.query(Task).filter(Task.taker_id == user_id).count()
+    
+    # 计算完成的任务数（接取的任务中已完成的数量）
+    completed_tasks_count = db.query(Task).filter(
+        Task.taker_id == user_id,
+        Task.status == "completed"
+    ).count()
+    
+    # 计算总任务数 = 发布任务数 + 接受任务数
+    total_tasks = posted_tasks_count + taken_tasks_count
+
+    # 计算完成率 = 完成的任务数 / 接受过的任务数（包括中途被取消的任务）
+    completion_rate = 0.0
+    if taken_tasks_count > 0:
+        completion_rate = (completed_tasks_count / taken_tasks_count) * 100
+    
+    # 获取已完成且公开的任务用于显示（限制数量以提高性能）
     tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
     # 所有用户看到的任务列表都是一样的，只显示已完成且公开的任务，避免信息泄露
     posted_tasks = [
@@ -1834,17 +1857,6 @@ def user_profile(
         for t in tasks
         if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
     ]
-
-    # 计算用户接受的任务中完成的数量
-    completed_taken_tasks = [t for t in taken_tasks if t.status == "completed"]
-
-    # 计算总任务数 = 发布任务数 + 接受任务数
-    total_tasks = len(posted_tasks) + len(taken_tasks)
-
-    # 计算完成率 = 完成的任务数 / 接受过的任务数（包括中途被取消的任务）
-    completion_rate = 0.0
-    if len(taken_tasks) > 0:
-        completion_rate = (len(completed_taken_tasks) / len(taken_tasks)) * 100
 
     # 获取用户收到的评价
     reviews = crud.get_reviews_received_by_user(
@@ -1880,9 +1892,9 @@ def user_profile(
         "user": user_data,
         "stats": {
             "total_tasks": total_tasks,
-            "posted_tasks": len(posted_tasks),
-            "taken_tasks": len(taken_tasks),
-            "completed_tasks": len(completed_taken_tasks),
+            "posted_tasks": posted_tasks_count,  # 真实数据：所有发布的任务
+            "taken_tasks": taken_tasks_count,  # 真实数据：所有接取的任务
+            "completed_tasks": completed_tasks_count,  # 真实数据：所有完成的任务
             "completion_rate": round(completion_rate, 1),
             "total_reviews": len(reviews),
         },

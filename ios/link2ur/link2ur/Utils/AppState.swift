@@ -18,7 +18,7 @@ public class AppState: ObservableObject {
     private var isLoadingMessageCount = false // 防止重复请求
     private var lastNotificationRefreshTime: Date? // 记录上次刷新时间
     private var lastMessageRefreshTime: Date? // 记录上次刷新时间
-    private let minRefreshInterval: TimeInterval = 5 // 最小刷新间隔（秒）
+    private let minRefreshInterval: TimeInterval = 10 // 最小刷新间隔（秒）- 增加到10秒，减少请求频率
     
     public init() {
         setupNotifications()
@@ -182,9 +182,15 @@ public class AppState: ObservableObject {
         
         guard isAuthenticated else { return }
         
-        // 立即加载一次
-        loadUnreadNotificationCount()
-        loadUnreadMessageCount()
+        // 延迟加载未读数量，避免启动时阻塞主线程
+        // 先延迟500ms加载通知数量，再延迟800ms加载消息数量，避免同时发起请求
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.loadUnreadNotificationCount()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            self?.loadUnreadMessageCount()
+        }
         
         // 创建定时器，定期刷新
         refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
@@ -264,8 +270,8 @@ public class AppState: ObservableObject {
         // 断开WebSocket连接
         WebSocketService.shared.disconnect()
         
-        KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
-        KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
+        _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
+        _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
         isAuthenticated = false
         currentUser = nil
         unreadNotificationCount = 0

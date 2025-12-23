@@ -158,63 +158,76 @@ class RecentActivityViewModel: ObservableObject {
                 self?.errorMessage = error.userFriendlyMessage
                 completion()
             }
-        }, receiveValue: { [weak self] (categoriesResponse, otherData) in
-            guard let self = self else { 
-                completion()
-                return 
-            }
-            
-            let (postsResponse, itemsResponse, leaderboardsResponse) = otherData
-            
-            // 检查是否还有更多数据
-            let hasMoreForum = postsResponse.posts.count >= self.fetchSize
-            let hasMoreFlea = itemsResponse.items.count >= self.fetchSize
-            let hasMoreLeaderboard = leaderboardsResponse.items.count >= self.fetchSize
-            self.hasMoreFromServer = hasMoreForum || hasMoreFlea || hasMoreLeaderboard
-            
-            // 增加页码
-            self.forumPage += 1
-            self.fleaMarketPage += 1
-            self.leaderboardPage += 1
-            
-            // 保存可见板块
-            self.visibleCategoryIds = Set(categoriesResponse.categories.map { $0.id })
-            let hasVisibleCategories = !self.visibleCategoryIds.isEmpty
-            
-            var newActivities: [RecentActivity] = []
-            
-            // 处理论坛帖子
-            for post in postsResponse.posts {
-                if hasVisibleCategories {
-                    if let category = post.category, self.visibleCategoryIds.contains(category.id) {
-                        newActivities.append(RecentActivity(forumPost: post))
-                    }
-                } else {
-                    newActivities.append(RecentActivity(forumPost: post))
+            }, receiveValue: { [weak self] (categoriesResponse, otherData) in
+                guard let self = self else { 
+                    completion()
+                    return 
                 }
-            }
-            
-            // 处理跳蚤市场
-            for item in itemsResponse.items where item.status == "active" {
-                newActivities.append(RecentActivity(fleaMarketItem: item))
-            }
-            
-            // 处理排行榜
-            for leaderboard in leaderboardsResponse.items where leaderboard.status == "active" {
-                newActivities.append(RecentActivity(leaderboard: leaderboard))
-            }
-            
-            // 去重并添加到缓存
-            let existingIds = Set(self.allLoadedActivities.map { $0.id })
-            let uniqueNew = newActivities.filter { !existingIds.contains($0.id) }
-            self.allLoadedActivities.append(contentsOf: uniqueNew)
-            
-            // 按时间排序
-            self.allLoadedActivities.sort { $0.createdAt > $1.createdAt }
-            
-            // 数据处理完成后调用 completion
-            completion()
-        })
+                
+                let (postsResponse, itemsResponse, leaderboardsResponse) = otherData
+                
+                // 优化：将数据处理移到后台线程，避免阻塞主线程
+                DispatchQueue.global(qos: .userInitiated).async {
+                    // 检查是否还有更多数据
+                    let hasMoreForum = postsResponse.posts.count >= self.fetchSize
+                    let hasMoreFlea = itemsResponse.items.count >= self.fetchSize
+                    let hasMoreLeaderboard = leaderboardsResponse.items.count >= self.fetchSize
+                    
+                    // 保存可见板块
+                    let visibleCategoryIds = Set(categoriesResponse.categories.map { $0.id })
+                    let hasVisibleCategories = !visibleCategoryIds.isEmpty
+                    
+                    var newActivities: [RecentActivity] = []
+                    
+                    // 处理论坛帖子
+                    for post in postsResponse.posts {
+                        if hasVisibleCategories {
+                            if let category = post.category, visibleCategoryIds.contains(category.id) {
+                                newActivities.append(RecentActivity(forumPost: post))
+                            }
+                        } else {
+                            newActivities.append(RecentActivity(forumPost: post))
+                        }
+                    }
+                    
+                    // 处理跳蚤市场
+                    for item in itemsResponse.items where item.status == "active" {
+                        newActivities.append(RecentActivity(fleaMarketItem: item))
+                    }
+                    
+                    // 处理排行榜
+                    for leaderboard in leaderboardsResponse.items where leaderboard.status == "active" {
+                        newActivities.append(RecentActivity(leaderboard: leaderboard))
+                    }
+                    
+                    // 去重并添加到缓存
+                    let existingIds = Set(self.allLoadedActivities.map { $0.id })
+                    let uniqueNew = newActivities.filter { !existingIds.contains($0.id) }
+                    let updatedActivities = self.allLoadedActivities + uniqueNew
+                    
+                    // 按时间排序
+                    let sortedActivities = updatedActivities.sorted { $0.createdAt > $1.createdAt }
+                    
+                    // 回到主线程更新UI
+                    DispatchQueue.main.async {
+                        self.hasMoreFromServer = hasMoreForum || hasMoreFlea || hasMoreLeaderboard
+                        
+                        // 增加页码
+                        self.forumPage += 1
+                        self.fleaMarketPage += 1
+                        self.leaderboardPage += 1
+                        
+                        // 保存可见板块
+                        self.visibleCategoryIds = visibleCategoryIds
+                        
+                        // 更新活动列表
+                        self.allLoadedActivities = sortedActivities
+                        
+                        // 数据处理完成后调用 completion
+                        completion()
+                    }
+                }
+            })
         .store(in: &cancellables)
     }
     

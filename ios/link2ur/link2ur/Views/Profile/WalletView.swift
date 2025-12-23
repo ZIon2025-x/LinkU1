@@ -138,11 +138,8 @@ class WalletViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        // 错误处理：error 已经是 APIError 类型，直接使用
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] account in
@@ -157,7 +154,7 @@ class WalletViewModel: ObservableObject {
         apiService.getPointsTransactions(page: 1, limit: 5)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { [weak self] completion in
+                receiveCompletion: { completion in
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载交易记录")

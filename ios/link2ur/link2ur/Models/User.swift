@@ -198,9 +198,10 @@ struct UserProfileReview: Codable, Identifiable {
     let rating: Double
     let comment: String?
     let createdAt: String
-    let taskId: String
+    let taskId: Int  // 改为 Int，因为后端返回的是数字
     let isAnonymous: Bool
     let reviewerName: String?
+    let reviewerAvatar: String?
     
     enum CodingKeys: String, CodingKey {
         case id, rating, comment
@@ -208,6 +209,7 @@ struct UserProfileReview: Codable, Identifiable {
         case taskId = "task_id"
         case isAnonymous = "is_anonymous"
         case reviewerName = "reviewer_name"
+        case reviewerAvatar = "reviewer_avatar"
     }
 }
 
