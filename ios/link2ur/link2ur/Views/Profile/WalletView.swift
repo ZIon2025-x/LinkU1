@@ -101,6 +101,7 @@ struct WalletView: View {
         }
         .navigationTitle("我的钱包")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {

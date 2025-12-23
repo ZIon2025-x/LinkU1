@@ -34,6 +34,7 @@ struct MyPostsView: View {
         }
         .navigationTitle("我的闲置")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {

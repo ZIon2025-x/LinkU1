@@ -57,6 +57,7 @@ struct ForumPostDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -563,6 +564,13 @@ struct ReplySheet: View {
             .background(Color(UIColor.systemBackground))
             .navigationTitle("回复")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
+            .scrollDismissesKeyboard(.interactively)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isInputFocused = false
+                hideKeyboard()
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") {
@@ -587,5 +595,14 @@ struct ReplySheet: View {
                 isInputFocused = true
             }
         }
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 }

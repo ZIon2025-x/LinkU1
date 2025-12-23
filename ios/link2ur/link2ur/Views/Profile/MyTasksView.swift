@@ -93,6 +93,7 @@ struct MyTasksView: View {
         }
         .navigationTitle("我的任务")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .task {

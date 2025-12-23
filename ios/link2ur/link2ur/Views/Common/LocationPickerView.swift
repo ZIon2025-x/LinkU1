@@ -63,6 +63,7 @@ struct LocationPickerView: View {
         }
         .navigationTitle("选择位置")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("取消") {

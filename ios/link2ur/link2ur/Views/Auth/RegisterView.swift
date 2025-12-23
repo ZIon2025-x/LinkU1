@@ -200,6 +200,12 @@ struct RegisterView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
+        .scrollDismissesKeyboard(.interactively)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            hideKeyboard()
+        }
         .alert(LocalizationKey.authRegisterSuccess.localized, isPresented: $showSuccessAlert) {
             Button(LocalizationKey.commonOk.localized) {
                 if successMessage.contains("验证") {

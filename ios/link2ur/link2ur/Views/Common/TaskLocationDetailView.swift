@@ -77,6 +77,7 @@ struct TaskLocationDetailView: View {
         }
         .navigationTitle("详细地址")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("完成") {

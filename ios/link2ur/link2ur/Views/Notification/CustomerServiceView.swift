@@ -303,8 +303,10 @@ struct CustomerServiceView: View {
             .onTapGesture {
                 if isInputFocused {
                     isInputFocused = false
+                    hideKeyboard()
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             // 检查用户是否已登录（需要验证用户会话）
@@ -336,6 +338,15 @@ struct CustomerServiceView: View {
             // 停止轮询
             viewModel.stopPolling()
         }
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
     
     private func sendMessage() {

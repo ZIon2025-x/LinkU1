@@ -249,6 +249,13 @@ struct EditFleaMarketItemView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("编辑商品")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isLocationFocused = false
+                hideKeyboard()
+            }
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showLogin) {
                 LoginView()
             }
@@ -424,6 +431,26 @@ struct EditFleaMarketItemView: View {
     
     private var locationSuggestionsList: some View {
         VStack(spacing: 0) {
+            // 关闭按钮
+            HStack {
+                Spacer()
+                Button(action: {
+                    showLocationSuggestions = false
+                    isLocationFocused = false
+                    hideKeyboard()
+                    HapticFeedback.light()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .background(AppColors.cardBackground)
+            
+            Divider()
+            
             ForEach(Array(locationSearchCompleter.searchResults.prefix(5).enumerated()), id: \.element) { index, result in
                 Button(action: {
                     selectLocationSuggestion(result)
@@ -508,6 +535,15 @@ struct EditFleaMarketItemView: View {
                 }
             }
         }
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
     
     private func geocodeAddressIfNeeded() {

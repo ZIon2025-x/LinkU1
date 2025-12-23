@@ -269,7 +269,9 @@ struct ChatView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             isInputFocused = false
+            hideKeyboard()
         }
+        .scrollDismissesKeyboard(.interactively)
     }
     
     private func sendMessage() {
@@ -295,6 +297,15 @@ struct ChatView: View {
                 }
             }
         }
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
     
     private func getCurrentUserId() -> String? {

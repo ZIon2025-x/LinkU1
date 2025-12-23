@@ -69,6 +69,7 @@ struct AvatarPickerView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("完成") {

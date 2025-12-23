@@ -174,6 +174,7 @@ struct TermsView: View {
         }
         .navigationTitle(isChinese ? "服务条款" : "Terms of Service")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }

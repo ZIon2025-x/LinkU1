@@ -108,6 +108,7 @@ struct VIPView: View {
         }
         .navigationTitle("VIP 会员")
         .navigationBarTitleDisplayMode(.large)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }

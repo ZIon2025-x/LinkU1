@@ -217,6 +217,7 @@ struct FAQView: View {
         }
         .navigationTitle(isChinese ? "常见问题" : "FAQ")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }

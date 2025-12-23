@@ -865,6 +865,7 @@ public struct LoginView: View {
             }
             .navigationBarHidden(false)
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -881,6 +882,10 @@ public struct LoginView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                hideKeyboard()
+            }
             .onAppear {
                 // 启动动画
                 withAnimation {

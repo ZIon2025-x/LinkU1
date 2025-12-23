@@ -123,6 +123,7 @@ struct PrivacyView: View {
         }
         .navigationTitle(isChinese ? "隐私政策" : "Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
     }

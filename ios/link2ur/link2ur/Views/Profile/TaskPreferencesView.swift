@@ -158,6 +158,7 @@ struct TaskPreferencesView: View {
             }
             .navigationTitle("任务偏好")
             .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("完成") {

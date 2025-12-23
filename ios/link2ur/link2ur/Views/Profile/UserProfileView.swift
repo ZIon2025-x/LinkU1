@@ -88,6 +88,7 @@ struct UserProfileView: View {
         }
         .navigationTitle("用户资料")
         .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {
