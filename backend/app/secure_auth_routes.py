@@ -967,8 +967,29 @@ def send_email_verification_code(
         language = get_user_language(user) if user else 'en'  # 默认英文
         subject, body = get_login_verification_code_email(language, verification_code)
         
-        # 异步发送邮件
-        background_tasks.add_task(send_email, email, subject, body)
+        # 检查是否为临时邮箱
+        from app.email_utils import is_temp_email, notify_user_to_update_email
+        if user and is_temp_email(email):
+            # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+            temp_db = SessionLocal()
+            try:
+                notify_user_to_update_email(temp_db, user.id, language)
+                logger.info(f"检测到用户使用临时邮箱，已创建邮箱更新提醒通知: user_id={user.id}")
+            finally:
+                temp_db.close()
+            # 返回错误提示
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="您当前使用的是临时邮箱，无法接收邮件验证码。请在个人设置中更新您的真实邮箱地址。"
+            )
+        
+        # 异步发送邮件（传递数据库会话和用户ID以便创建通知）
+        user_id = user.id if user else None
+        temp_db_for_task = SessionLocal()
+        try:
+            background_tasks.add_task(send_email, email, subject, body, temp_db_for_task, user_id)
+        except:
+            temp_db_for_task.close()
         
         logger.info(f"验证码已发送: email={email}")
         

@@ -311,8 +311,8 @@ async def register(
         finally:
             sync_db.close()
         
-        # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录）
-        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en')
+        # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录，user_id为None）
+        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en', db=None, user_id=None)
         
         return {
             "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
@@ -794,6 +794,20 @@ def forgot_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # 检查是否为临时邮箱
+    from app.email_utils import is_temp_email, notify_user_to_update_email
+    from app.email_templates import get_user_language
+    language = get_user_language(user) if user else 'en'
+    
+    if is_temp_email(validated_email):
+        # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        notify_user_to_update_email(db, user.id, language)
+        logger.info(f"检测到用户使用临时邮箱，已创建邮箱更新提醒通知: user_id={user.id}")
+        raise HTTPException(
+            status_code=400,
+            detail="您当前使用的是临时邮箱，无法接收密码重置邮件。请在个人设置中更新您的真实邮箱地址，或使用手机号登录。"
+        )
+    
     # 生成token
     token = generate_reset_token(validated_email)
     
@@ -823,10 +837,6 @@ def forgot_password(
             status_code=503,
             detail="Service temporarily unavailable. Please try again later."
         )
-    
-    # 尝试获取用户语言偏好
-    from app.email_templates import get_user_language
-    language = get_user_language(user) if user else 'en'
     
     send_reset_email(background_tasks, validated_email, token, language)
     return {"message": "Password reset email sent."}
@@ -1973,14 +1983,29 @@ def send_email_update_code(
                 detail="发送验证码失败，请稍后重试"
             )
         
+        # 检查新邮箱是否为临时邮箱
+        from app.email_utils import is_temp_email, notify_user_to_update_email
+        if is_temp_email(new_email):
+            raise HTTPException(
+                status_code=400,
+                detail="不能使用临时邮箱地址。请使用您的真实邮箱地址。"
+            )
+        
         # 根据用户语言偏好获取邮件模板
         from app.email_templates import get_user_language, get_email_update_verification_code_email
         
         language = get_user_language(current_user)
         subject, body = get_email_update_verification_code_email(language, new_email, verification_code)
         
-        # 异步发送邮件
-        background_tasks.add_task(send_email, new_email, subject, body)
+        # 异步发送邮件（传递数据库会话和用户ID以便创建通知）
+        from app.database import SessionLocal
+        temp_db = SessionLocal()
+        try:
+            background_tasks.add_task(send_email, new_email, subject, body, temp_db, current_user.id)
+        finally:
+            # 注意：这里不能关闭数据库，因为后台任务可能还需要使用
+            # 后台任务会在完成后自动处理数据库会话
+            pass
         
         logger.info(f"邮箱修改验证码已发送: user_id={current_user.id}, new_email={new_email}")
         

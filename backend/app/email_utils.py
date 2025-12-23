@@ -11,6 +11,7 @@ load_dotenv()
 # 使用统一配置
 from app.config import Config
 import logging
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -141,8 +142,73 @@ def send_email_smtp(to_email, subject, body):
         print("在开发环境中，这是正常的。请检查SMTP配置或设置SKIP_EMAIL_VERIFICATION=true")
         return False
 
-def send_email(to_email, subject, body):
-    """智能邮件发送 - 优先使用Resend，然后SendGrid，最后SMTP"""
+def is_temp_email(email: str) -> bool:
+    """检查是否为临时邮箱（手机号登录生成的临时邮箱）"""
+    if not email:
+        return False
+    return email.startswith("phone_") and email.endswith("@link2ur.com")
+
+
+def notify_user_to_update_email(db: Session, user_id: str, language: str = 'en'):
+    """创建通知提醒用户更新邮箱"""
+    try:
+        from app import crud
+        
+        if language == 'zh':
+            title = "请更新您的邮箱地址"
+            content = "您当前使用的是临时邮箱，无法接收邮件通知。请在个人设置中更新您的真实邮箱地址，以便接收重要通知。"
+        else:
+            title = "Please Update Your Email Address"
+            content = "You are currently using a temporary email address and cannot receive email notifications. Please update your real email address in your profile settings to receive important notifications."
+        
+        crud.create_notification(
+            db=db,
+            user_id=user_id,
+            type="email_update_reminder",
+            title=title,
+            content=content,
+            related_id=None
+        )
+        logger.info(f"已创建邮箱更新提醒通知: user_id={user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"创建邮箱更新提醒通知失败: user_id={user_id}, error={e}")
+        return False
+
+
+def send_email(to_email, subject, body, db: Session = None, user_id: str = None):
+    """
+    智能邮件发送 - 优先使用Resend，然后SendGrid，最后SMTP
+    
+    Args:
+        to_email: 收件人邮箱
+        subject: 邮件主题
+        body: 邮件内容
+        db: 数据库会话（可选，用于创建通知）
+        user_id: 用户ID（可选，用于创建通知）
+    """
+    # 检查邮箱是否为空或无效
+    if not to_email or not to_email.strip():
+        logger.warning(f"警告：尝试发送邮件到空邮箱，跳过发送。subject={subject}")
+        return False
+    
+    # 检查是否为临时邮箱（手机号登录生成的临时邮箱无法接收邮件）
+    if is_temp_email(to_email):
+        logger.info(f"信息：跳过发送邮件到临时邮箱 {to_email}（手机号登录用户），subject={subject}")
+        
+        # 如果提供了数据库会话和用户ID，创建通知提醒用户更新邮箱
+        if db and user_id:
+            try:
+                from app.email_templates import get_user_language
+                from app import models
+                user = db.query(models.User).filter(models.User.id == user_id).first()
+                language = get_user_language(user) if user else 'en'
+                notify_user_to_update_email(db, user_id, language)
+            except Exception as e:
+                logger.error(f"创建邮箱更新提醒通知失败: {e}")
+        
+        return False
+    
     print(f"send_email called: to={to_email}, subject={subject}")
     
     # 检查是否使用Resend

@@ -82,19 +82,27 @@ def send_task_application_notification(
         # 获取发布者信息
         poster = crud.get_user_by_id(db, task.poster_id)
         if poster and poster.email:
-            # 根据用户语言偏好获取邮件模板
-            language = get_user_language(poster)
-            email_subject, email_body = get_task_application_email(
-                language=language,
-                task_title=task.title,
-                task_description=task.description,
-                reward=get_display_reward(task),
-                applicant_name=applicant.name or f"用户{applicant.id}",
-                application_message=application_message,
-                negotiated_price=negotiated_price,
-                currency=currency
-            )
-            background_tasks.add_task(send_email, poster.email, email_subject, email_body)
+            # 检查是否为临时邮箱
+            from app.email_utils import is_temp_email, notify_user_to_update_email
+            if is_temp_email(poster.email):
+                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                language = get_user_language(poster)
+                notify_user_to_update_email(db, poster.id, language)
+                logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
+            else:
+                # 根据用户语言偏好获取邮件模板
+                language = get_user_language(poster)
+                email_subject, email_body = get_task_application_email(
+                    language=language,
+                    task_title=task.title,
+                    task_description=task.description,
+                    reward=get_display_reward(task),
+                    applicant_name=applicant.name or f"用户{applicant.id}",
+                    application_message=application_message,
+                    negotiated_price=negotiated_price,
+                    currency=currency
+                )
+                background_tasks.add_task(send_email, poster.email, email_subject, email_body)
         logger.info(f"任务申请通知已发送给发布者 {task.poster_id}")
         
     except Exception as e:
@@ -131,7 +139,14 @@ def send_task_approval_notification(
         )
         
         if applicant.email:
-            background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
+            # 检查是否为临时邮箱
+            from app.email_utils import is_temp_email, notify_user_to_update_email
+            if is_temp_email(applicant.email):
+                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                notify_user_to_update_email(db, applicant.id, language)
+                logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
+            else:
+                background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
         logger.info(f"任务同意通知已发送给接收者 {applicant.id}")
         
     except Exception as e:
@@ -161,16 +176,24 @@ def send_task_completion_notification(
         # 获取发布者信息
         poster = crud.get_user_by_id(db, task.poster_id)
         if poster and poster.email:
-            # 根据用户语言偏好获取邮件模板
-            language = get_user_language(poster)
-            email_subject, email_body = get_task_completion_email(
-                language=language,
-                task_title=task.title,
-                task_description=task.description,
-                reward=get_display_reward(task),
-                taker_name=taker.name or f"用户{taker.id}"
-            )
-            background_tasks.add_task(send_email, poster.email, email_subject, email_body)
+            # 检查是否为临时邮箱
+            from app.email_utils import is_temp_email, notify_user_to_update_email
+            if is_temp_email(poster.email):
+                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                language = get_user_language(poster)
+                notify_user_to_update_email(db, poster.id, language)
+                logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
+            else:
+                # 根据用户语言偏好获取邮件模板
+                language = get_user_language(poster)
+                email_subject, email_body = get_task_completion_email(
+                    language=language,
+                    task_title=task.title,
+                    task_description=task.description,
+                    reward=get_display_reward(task),
+                    taker_name=taker.name or f"用户{taker.id}"
+                )
+                background_tasks.add_task(send_email, poster.email, email_subject, email_body)
         logger.info(f"任务完成通知已发送给发布者 {task.poster_id}")
         
     except Exception as e:
@@ -207,7 +230,14 @@ def send_task_confirmation_notification(
         )
         
         if taker.email:
-            background_tasks.add_task(send_email, taker.email, email_subject, email_body)
+            # 检查是否为临时邮箱
+            from app.email_utils import is_temp_email, notify_user_to_update_email
+            if is_temp_email(taker.email):
+                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                notify_user_to_update_email(db, taker.id, language)
+                logger.info(f"检测到接收者使用临时邮箱，已创建邮箱更新提醒通知: user_id={taker.id}")
+            else:
+                background_tasks.add_task(send_email, taker.email, email_subject, email_body)
         logger.info(f"任务确认通知已发送给接收者 {taker.id}")
         
     except Exception as e:
@@ -244,7 +274,14 @@ def send_task_rejection_notification(
         )
         
         if applicant.email:
-            background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
+            # 检查是否为临时邮箱
+            from app.email_utils import is_temp_email, notify_user_to_update_email
+            if is_temp_email(applicant.email):
+                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                notify_user_to_update_email(db, applicant.id, language)
+                logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
+            else:
+                background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
         logger.info(f"任务拒绝通知已发送给申请者 {applicant.id}")
         
     except Exception as e:
@@ -480,17 +517,31 @@ async def send_service_application_notification(
                     service_id=service_id
                 )
                 
-                # 异步发送邮件（使用 asyncio 在后台任务中执行）
-                async def send_email_task():
+                # 检查是否为临时邮箱
+                from app.email_utils import is_temp_email, notify_user_to_update_email
+                if is_temp_email(expert.email):
+                    # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+                    # 注意：这里需要同步数据库操作，但我们在异步函数中
+                    # 使用同步数据库会话
+                    from app.database import SessionLocal
+                    sync_db = SessionLocal()
                     try:
-                        from fastapi import BackgroundTasks
-                        from app.email_utils import send_email
-                        # 由于 send_email 是同步函数，我们需要在线程池中执行
-                        loop = asyncio.get_event_loop()
-                        await loop.run_in_executor(
-                            None,
-                            lambda: send_email(expert.email, email_subject, email_body)
-                        )
+                        notify_user_to_update_email(sync_db, expert.id, language)
+                        logger.info(f"检测到任务达人使用临时邮箱，已创建邮箱更新提醒通知: user_id={expert.id}")
+                    finally:
+                        sync_db.close()
+                else:
+                    # 异步发送邮件（使用 asyncio 在后台任务中执行）
+                    async def send_email_task():
+                        try:
+                            from fastapi import BackgroundTasks
+                            from app.email_utils import send_email
+                            # 由于 send_email 是同步函数，我们需要在线程池中执行
+                            loop = asyncio.get_event_loop()
+                            await loop.run_in_executor(
+                                None,
+                                lambda: send_email(expert.email, email_subject, email_body)
+                            )
                         logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
                     except Exception as e:
                         logger.error(f"发送服务申请邮件失败: {e}")

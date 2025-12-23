@@ -452,8 +452,8 @@ class EmailVerificationManager:
         
         db.commit()
         
-        # 发送验证邮件
-        send_verification_email_with_token(background_tasks, email, new_token)
+        # 发送验证邮件（传递数据库会话，user_id为None因为这是待验证用户）
+        send_verification_email_with_token(background_tasks, email, new_token, language='en', db=db, user_id=None)
         
         logger.info(f"重新发送验证邮件: {email}")
         return True
@@ -488,16 +488,31 @@ def send_verification_email_with_token(
     background_tasks,
     email: str, 
     token: str,
-    language: str = 'en'  # 默认英文，可以从用户偏好获取
+    language: str = 'en',  # 默认英文，可以从用户偏好获取
+    db: Session = None,
+    user_id: str = None
 ) -> None:
     """发送包含验证链接的邮件"""
     from app.config import Config
     from app.email_templates import get_email_verification_email
+    from app.email_utils import send_email, is_temp_email, notify_user_to_update_email
+    
+    # 检查是否为临时邮箱
+    if is_temp_email(email):
+        # 如果提供了数据库会话和用户ID，创建通知提醒用户更新邮箱
+        if db and user_id:
+            try:
+                notify_user_to_update_email(db, user_id, language)
+                logger.info(f"检测到用户使用临时邮箱，已创建邮箱更新提醒通知: user_id={user_id}")
+            except Exception as e:
+                logger.error(f"创建邮箱更新提醒通知失败: {e}")
+        # 临时邮箱无法接收邮件，直接返回
+        logger.warning(f"尝试发送验证邮件到临时邮箱: {email}")
+        return
     
     # 构建验证链接 - 使用verify-email端点，会自动重定向到前端页面
     verification_url = f"{Config.BASE_URL}/api/users/verify-email/{token}"
     
     subject, body = get_email_verification_email(language, verification_url)
     
-    from app.email_utils import send_email
-    background_tasks.add_task(send_email, email, subject, body)
+    background_tasks.add_task(send_email, email, subject, body, db, user_id)
