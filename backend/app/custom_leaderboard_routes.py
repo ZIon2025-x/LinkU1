@@ -1573,6 +1573,9 @@ async def vote_item(
         
         await db.delete(existing)
         
+        # 减少榜单投票计数（删除投票时应该减少）
+        leaderboard.vote_count = max(0, leaderboard.vote_count - 1)
+        
         # 重新查询获取最新值（在提交前刷新，确保看到原子更新的结果）
         await db.refresh(item)
         
