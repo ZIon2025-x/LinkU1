@@ -187,6 +187,16 @@ struct ItemCard: View {
                     
                     Spacer()
                     
+                    // 收藏数
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10))
+                        Text("\(item.favoriteCount)")
+                            .font(.system(size: 10, design: .rounded))
+                    }
+                    .foregroundColor(AppColors.textQuaternary)
+                    
+                    // 浏览量
                     HStack(spacing: 3) {
                         Image(systemName: "eye")
                             .font(.system(size: 10))

@@ -1922,6 +1922,7 @@ class FleaMarketItemResponse(BaseModel):
     status: Literal["active", "sold", "deleted"]
     seller_id: str
     view_count: int
+    favorite_count: int = 0  # 收藏数量
     refreshed_at: str
     created_at: str
     updated_at: str

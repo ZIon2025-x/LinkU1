@@ -368,6 +368,13 @@ async def get_flea_market_items(
                 days_remaining = (expiry_date - now).days
                 days_until_auto_delist = max(0, days_remaining)
             
+            # 计算收藏数量
+            favorite_count_result = await db.execute(
+                select(func.count(models.FleaMarketFavorite.id))
+                .where(models.FleaMarketFavorite.item_id == item.id)
+            )
+            favorite_count = favorite_count_result.scalar() or 0
+            
             processed_items.append(schemas.FleaMarketItemResponse(
                 id=format_flea_market_id(item.id),
                 title=item.title,
@@ -380,6 +387,7 @@ async def get_flea_market_items(
                 status=item.status,
                 seller_id=item.seller_id,
                 view_count=item.view_count or 0,
+                favorite_count=favorite_count,
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),
                 updated_at=format_iso_utc(item.updated_at),
@@ -464,6 +472,13 @@ async def get_flea_market_item(
             days_remaining = (expiry_date - now).days
             days_until_auto_delist = max(0, days_remaining)
         
+        # 计算收藏数量
+        favorite_count_result = await db.execute(
+            select(func.count(models.FleaMarketFavorite.id))
+            .where(models.FleaMarketFavorite.item_id == item.id)
+        )
+        favorite_count = favorite_count_result.scalar() or 0
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -476,6 +491,7 @@ async def get_flea_market_item(
             status=item.status,
             seller_id=item.seller_id,
             view_count=item.view_count or 0,
+            favorite_count=favorite_count,
             refreshed_at=format_iso_utc(item.refreshed_at),
             created_at=format_iso_utc(item.created_at),
             updated_at=format_iso_utc(item.updated_at),
@@ -2026,6 +2042,13 @@ async def get_my_favorite_items(
                 except:
                     images = []
             
+            # 计算收藏数量
+            favorite_count_result = await db.execute(
+                select(func.count(models.FleaMarketFavorite.id))
+                .where(models.FleaMarketFavorite.item_id == item.id)
+            )
+            favorite_count = favorite_count_result.scalar() or 0
+            
             formatted_items.append(schemas.FleaMarketItemResponse(
                 id=format_flea_market_id(item.id),
                 title=item.title,
@@ -2040,6 +2063,7 @@ async def get_my_favorite_items(
                 status=item.status,
                 seller_id=item.seller_id,
                 view_count=item.view_count or 0,
+                favorite_count=favorite_count,
                 refreshed_at=format_iso_utc(item.refreshed_at),
                 created_at=format_iso_utc(item.created_at),
                 updated_at=format_iso_utc(item.updated_at),

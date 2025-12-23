@@ -344,6 +344,11 @@ struct FleaMarketDetailView: View {
                     .background(AppColors.primaryLight)
                     .clipShape(Capsule())
                 
+                // 收藏数
+                Label("\(item.favoriteCount)", systemImage: "heart.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textSecondary)
+                
                 // 浏览量
                 Label(item.viewCount.formatCount(), systemImage: "eye")
                     .font(.system(size: 12, weight: .medium))

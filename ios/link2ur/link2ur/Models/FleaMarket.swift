@@ -27,6 +27,7 @@ struct FleaMarketItem: Codable, Identifiable {
     let seller: User?
     let status: String
     let viewCount: Int
+    let favoriteCount: Int // 收藏数量
     let refreshedAt: String? // 后端返回的字段
     let createdAt: String
     let updatedAt: String?
@@ -35,6 +36,7 @@ struct FleaMarketItem: Codable, Identifiable {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
         case sellerId = "seller_id"
         case viewCount = "view_count"
+        case favoriteCount = "favorite_count"
         case refreshedAt = "refreshed_at"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -68,6 +70,7 @@ struct FleaMarketItem: Codable, Identifiable {
         seller = try container.decodeIfPresent(User.self, forKey: .seller)
         status = try container.decode(String.self, forKey: .status)
         viewCount = try container.decode(Int.self, forKey: .viewCount)
+        favoriteCount = try container.decodeIfPresent(Int.self, forKey: .favoriteCount) ?? 0
         refreshedAt = try container.decodeIfPresent(String.self, forKey: .refreshedAt)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
@@ -92,6 +95,7 @@ struct FleaMarketItem: Codable, Identifiable {
         try container.encodeIfPresent(seller, forKey: .seller)
         try container.encode(status, forKey: .status)
         try container.encode(viewCount, forKey: .viewCount)
+        try container.encode(favoriteCount, forKey: .favoriteCount)
         try container.encodeIfPresent(refreshedAt, forKey: .refreshedAt)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
