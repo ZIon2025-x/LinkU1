@@ -375,10 +375,12 @@ struct TaskCard: View {
             }
             .padding(AppSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColors.cardBackground)
         }
-        .background(AppColors.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                .fill(AppColors.cardBackground)
+        )
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
         .overlay(alignment: .topTrailing) {
             // 任务等级标签（VIP/Super）- 右上角

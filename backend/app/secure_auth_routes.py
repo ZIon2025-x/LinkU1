@@ -1302,12 +1302,23 @@ def login_with_phone_verification_code(
                         break
                 username = f"user{user_id}"
             
-            # 创建新用户（手机号登录时，邮箱为空，等待用户后续设置）
+            # 创建新用户（手机号登录时，生成临时邮箱以满足数据库约束）
+            # 生成基于手机号的临时邮箱，格式：phone_<手机号>@link2ur.com
+            # 去掉手机号中的+号和其他特殊字符，只保留数字
+            phone_for_email = phone_digits.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            temp_email = f"phone_{phone_for_email}@link2ur.com"
+            
+            # 检查临时邮箱是否已存在（理论上不应该，但为了安全）
+            existing_email_user = crud.get_user_by_email(db, temp_email)
+            if existing_email_user:
+                # 如果临时邮箱已存在，添加用户ID后缀确保唯一性
+                temp_email = f"phone_{phone_for_email}_{user_id}@link2ur.com"
+            
             try:
                 db_user = models.User(
                     id=user_id,
                     name=username,
-                    email=None,  # 手机号登录时，邮箱为空，用户后续可以设置
+                    email=temp_email,  # 使用临时邮箱以满足数据库NOT NULL约束
                     hashed_password=hashed_password,
                     phone=phone_digits,
                     avatar="",
@@ -1321,7 +1332,7 @@ def login_with_phone_verification_code(
                 db.refresh(db_user)
                 
                 user = db_user
-                logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email=None, is_verified=1")
+                logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email={temp_email}, is_verified=1")
             except Exception as e:
                 db.rollback()
                 logger.error(f"创建新用户失败: {e}")

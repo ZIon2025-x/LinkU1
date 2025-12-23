@@ -483,8 +483,7 @@ struct TaskExpertListContentView: View {
                         .foregroundColor(AppColors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
+                        .cardBackground(cornerRadius: AppCornerRadius.medium)
                     }
                     
                     // 筛选按钮
@@ -494,8 +493,7 @@ struct TaskExpertListContentView: View {
                         IconStyle.icon("line.3.horizontal.decrease.circle", size: 20)
                             .foregroundColor(selectedCategory != nil || selectedCity != nil ? AppColors.primary : AppColors.textSecondary)
                             .padding(AppSpacing.sm)
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.medium)
+                        .cardBackground(cornerRadius: AppCornerRadius.medium)
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)
@@ -856,8 +854,7 @@ struct SearchKeywordTag: View {
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, AppSpacing.xs)
-            .background(AppColors.cardBackground)
-            .cornerRadius(AppCornerRadius.pill)
+            .cardBackground(cornerRadius: AppCornerRadius.pill)
         }
     }
 }
@@ -1067,8 +1064,7 @@ struct SearchTaskCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cardBackground(cornerRadius: AppCornerRadius.medium)
     }
 }
 
@@ -1133,8 +1129,7 @@ struct SearchExpertCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cardBackground(cornerRadius: AppCornerRadius.medium)
     }
 }
 
@@ -1190,8 +1185,7 @@ struct SearchFleaMarketCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cardBackground(cornerRadius: AppCornerRadius.medium)
     }
 }
 
@@ -1240,8 +1234,7 @@ struct SearchForumCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
+        .cardBackground(cornerRadius: AppCornerRadius.medium)
     }
 }
 
@@ -1518,8 +1511,7 @@ struct ActivityRow: View {
             }
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.large)
+        .cardBackground(cornerRadius: AppCornerRadius.large)
         .padding(.horizontal, AppSpacing.md)
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }

@@ -132,6 +132,7 @@ struct CardStyle: ViewModifier {
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .compositingGroup() // 组合渲染，确保圆角边缘干净
             .shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
     }
 }
@@ -139,6 +140,15 @@ struct CardStyle: ViewModifier {
 extension View {
     func cardStyle(cornerRadius: CGFloat = AppCornerRadius.medium, shadow: Shadow = AppShadow.small, useMaterial: Bool = false, padding: CGFloat = 0, backgroundColor: Color? = nil) -> some View {
         modifier(CardStyle(cornerRadius: cornerRadius, shadow: shadow, useMaterial: useMaterial, padding: padding, backgroundColor: backgroundColor))
+    }
+    
+    /// 优化的卡片背景 - 确保圆角边缘干净，无灰色泄露
+    func cardBackground(cornerRadius: CGFloat = AppCornerRadius.medium, style: RoundedCornerStyle = .continuous) -> some View {
+        self.background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: style)
+                .fill(AppColors.cardBackground)
+        )
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
     }
     
     // 玻璃态效果

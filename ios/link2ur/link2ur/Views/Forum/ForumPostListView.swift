@@ -35,6 +35,7 @@ struct ForumPostListView: View {
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.sm)
                 }
+                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle(category?.name ?? LocalizationKey.forumAllPosts.localized)
@@ -42,7 +43,7 @@ struct ForumPostListView: View {
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .enableSwipeBack()
-        .searchable(text: $searchText, prompt: LocalizationKey.forumSearchPosts.localized)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: LocalizationKey.forumSearchPosts.localized)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {

@@ -330,8 +330,11 @@ struct ExpertCard: View {
                 .foregroundColor(AppColors.textQuaternary)
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.large)
+        .background(
+            RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
+                .fill(AppColors.cardBackground)
+        )
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
     }
 }
