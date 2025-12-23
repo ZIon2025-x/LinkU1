@@ -1491,7 +1491,7 @@ async def get_item_votes(
 
 # ==================== 投票 ====================
 
-@router.post("/items/{item_id}/vote")
+@router.post("/items/{item_id}/vote", response_model=schemas.LeaderboardItemOut)
 @rate_limit("api_write", limit=30, window=60)  # 30次/分钟
 async def vote_item(
     item_id: int,
@@ -1661,13 +1661,60 @@ async def vote_item(
     
     await db.commit()
     
-    return {
-        "message": "投票成功",
+    # 重新查询当前用户的投票记录（投票后可能已更新）
+    user_vote = None
+    user_vote_comment = None
+    user_vote_is_anonymous = None
+    vote_result = await db.execute(
+        select(models.LeaderboardVote).where(
+            and_(
+                models.LeaderboardVote.item_id == item_id,
+                models.LeaderboardVote.user_id == current_user.id
+            )
+        )
+    )
+    vote = vote_result.scalar_one_or_none()
+    if vote:
+        user_vote = vote.vote_type
+        user_vote_comment = vote.comment
+        user_vote_is_anonymous = vote.is_anonymous
+    
+    # 解析images字段
+    images_list = None
+    if item.images:
+        try:
+            images_list = json.loads(item.images)
+        except Exception:
+            images_list = None
+    
+    # 确保 created_at 和 updated_at 不为 None
+    created_at = item.created_at if item.created_at is not None else get_utc_time()
+    updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
+    
+    # 返回完整的 LeaderboardItemOut 格式（与 get_item_detail 保持一致）
+    item_dict = {
+        "id": item.id,
+        "leaderboard_id": item.leaderboard_id,
+        "name": item.name,
+        "description": item.description,
+        "address": item.address,
+        "phone": item.phone,
+        "website": item.website,
+        "images": images_list,
+        "submitted_by": item.submitted_by,
+        "status": item.status,
         "upvotes": item.upvotes,
         "downvotes": item.downvotes,
         "net_votes": item.net_votes,
-        "vote_score": item.vote_score
+        "vote_score": item.vote_score,
+        "user_vote": user_vote,
+        "user_vote_comment": user_vote_comment,
+        "user_vote_is_anonymous": user_vote_is_anonymous,
+        "created_at": created_at,
+        "updated_at": updated_at
     }
+    
+    return item_dict
 
 
 # ==================== 留言点赞 ====================
