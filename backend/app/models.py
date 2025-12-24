@@ -1856,7 +1856,7 @@ class ActivityFavorite(Base):
     
     # 关系
     user = relationship("User", backref="activity_favorites")
-    activity = relationship("Activity", backref="favorites")
+    activity = relationship("Activity", back_populates="favorites")
     
     # 索引和约束
     __table_args__ = (
