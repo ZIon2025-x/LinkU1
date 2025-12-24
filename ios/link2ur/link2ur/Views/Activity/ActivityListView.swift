@@ -62,7 +62,11 @@ struct ActivityListView: View {
                         LazyVStack(spacing: AppSpacing.md) {
                             ForEach(viewModel.activities) { activity in
                                 NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
-                                    ActivityCardView(activity: activity, showEndedBadge: filterOption == .all)
+                                    ActivityCardView(
+                                        activity: activity,
+                                        showEndedBadge: filterOption == .all,
+                                        isFavorited: viewModel.favoritedActivityIds.contains(activity.id)
+                                    )
                                 }
                                 .buttonStyle(ScaleButtonStyle())
                             }
@@ -92,6 +96,8 @@ struct ActivityListView: View {
                     includeEnded: filterOption == .all
                 )
             }
+            // 加载收藏列表
+            viewModel.loadFavoriteActivityIds()
         }
         .alert("错误", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("确定", role: .cancel) {
@@ -108,6 +114,7 @@ struct ActivityListView: View {
 struct ActivityCardView: View {
     let activity: Activity
     var showEndedBadge: Bool = false
+    var isFavorited: Bool = false // 是否已收藏
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -126,26 +133,40 @@ struct ActivityCardView: View {
                     placeholderBackground()
                 }
                 
-                // 状态标签
-                if showEndedBadge && activity.isEnded {
-                    Text("已结束")
-                        .font(.system(size: 10, weight: .bold))
+                // 右上角收藏红心图标
+                if isFavorited {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.6))
-                        .clipShape(Capsule())
-                        .padding(AppSpacing.sm)
-                } else if activity.isFull {
-                    Text("已满员")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(AppColors.error)
-                        .clipShape(Capsule())
-                        .padding(AppSpacing.sm)
+                        .padding(6)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.3), radius: 3, x: 0, y: 2)
+                        .padding(8)
                 }
+                
+                // 状态标签（如果已收藏，放在左上角；否则放在右上角）
+                VStack(alignment: isFavorited ? .leading : .trailing, spacing: 4) {
+                    if showEndedBadge && activity.isEnded {
+                        Text("已结束")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Capsule())
+                    } else if activity.isFull {
+                        Text("已满员")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppColors.error)
+                            .clipShape(Capsule())
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isFavorited ? .topLeading : .topTrailing)
+                .padding(AppSpacing.sm)
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.sm) {

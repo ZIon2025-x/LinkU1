@@ -1566,8 +1566,12 @@ struct PopularActivitiesSection: View {
                         let displayedActivities = Array(viewModel.activities.prefix(10))
                         ForEach(displayedActivities, id: \.id) { activity in
                             NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
-                                ActivityCardView(activity: activity, showEndedBadge: false)
-                                    .frame(width: 280)
+                                ActivityCardView(
+                                    activity: activity,
+                                    showEndedBadge: false,
+                                    isFavorited: viewModel.favoritedActivityIds.contains(activity.id)
+                                )
+                                .frame(width: 280)
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .id(activity.id) // 确保稳定的视图标识

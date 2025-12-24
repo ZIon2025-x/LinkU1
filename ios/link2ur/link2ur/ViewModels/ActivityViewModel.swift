@@ -11,8 +11,9 @@ class ActivityViewModel: ObservableObject {
     @Published var timeSlots: [ServiceTimeSlot] = []
     @Published var isLoadingTimeSlots = false
     @Published var expert: TaskExpert? // 活动发布者的达人信息
-    @Published var isFavorited = false // 是否已收藏
+    @Published var isFavorited = false // 是否已收藏（用于详情页）
     @Published var isTogglingFavorite = false // 是否正在切换收藏状态
+    @Published var favoritedActivityIds: Set<Int> = [] // 收藏的活动ID集合（用于列表页）
     
     private var cancellables = Set<AnyCancellable>()
     // 使用依赖注入获取服务
@@ -134,6 +135,8 @@ class ActivityViewModel: ObservableObject {
                             DispatchQueue.main.async {
                                 self.activities = activities
                                 self.isLoading = false
+                                // 加载收藏列表
+                                self.loadFavoriteActivityIds()
                             }
                         }
                     }
@@ -183,12 +186,34 @@ class ActivityViewModel: ObservableObject {
                             DispatchQueue.main.async {
                                 self.activities = activities
                                 self.isLoading = false
+                                // 加载收藏列表
+                                self.loadFavoriteActivityIds()
                             }
                         }
                     }
                 )
                 .store(in: &cancellables)
         }
+    }
+    
+    /// 加载收藏的活动ID列表
+    func loadFavoriteActivityIds() {
+        apiService.request([String: Any].self, "/api/my/activities?type=favorited&limit=100&offset=0", method: "GET")
+            .sink(receiveCompletion: { _ in
+                // 静默处理错误，不影响主列表显示
+            }, receiveValue: { [weak self] response in
+                if let data = response["data"] as? [String: Any],
+                   let activitiesArray = data["activities"] as? [[String: Any]] {
+                    let favoriteIds = activitiesArray.compactMap { activity -> Int? in
+                        if let id = activity["id"] as? Int {
+                            return id
+                        }
+                        return nil
+                    }
+                    self?.favoritedActivityIds = Set(favoriteIds)
+                }
+            })
+            .store(in: &cancellables)
     }
     
     // MARK: - Load Activity Detail

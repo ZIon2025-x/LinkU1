@@ -7,6 +7,7 @@ class FleaMarketViewModel: ObservableObject {
     @Published var categories: [FleaMarketCategory] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var favoritedItemIds: Set<String> = [] // 收藏的商品ID集合
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -96,6 +97,19 @@ class FleaMarketViewModel: ObservableObject {
                 } else {
                     self?.items.append(contentsOf: response.items)
                 }
+                // 加载收藏列表（如果用户已登录）
+                self?.loadFavoriteIds()
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 加载收藏的商品ID列表
+    func loadFavoriteIds() {
+        apiService.request(MyFavoritesResponse.self, "/api/flea-market/favorites?page=1&page_size=100", method: "GET")
+            .sink(receiveCompletion: { _ in
+                // 静默处理错误，不影响主列表显示
+            }, receiveValue: { [weak self] response in
+                self?.favoritedItemIds = Set(response.items.map { $0.itemId })
             })
             .store(in: &cancellables)
     }

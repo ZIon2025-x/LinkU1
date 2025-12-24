@@ -28,7 +28,7 @@ struct FleaMarketView: View {
                     ], spacing: AppSpacing.md) {
                         ForEach(viewModel.items, id: \.id) { item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
-                                ItemCard(item: item)
+                                ItemCard(item: item, isFavorited: viewModel.favoritedItemIds.contains(item.id))
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .id(item.id) // 确保稳定的id，优化视图复用
@@ -80,6 +80,8 @@ struct FleaMarketView: View {
             if viewModel.items.isEmpty {
                 viewModel.loadItems()
             }
+            // 加载收藏列表
+            viewModel.loadFavoriteIds()
         }
         .onChange(of: searchText) { newValue in
             if !newValue.isEmpty {
@@ -92,6 +94,7 @@ struct FleaMarketView: View {
 // 商品卡片 - 现代卡片风格 (Xiaohongshu/Instagram 风格)
 struct ItemCard: View {
     let item: FleaMarketItem
+    var isFavorited: Bool = false // 是否已收藏
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -126,15 +129,30 @@ struct ItemCard: View {
                     }
                 }
                 
-                // 分类角标 (可选)
-                Text(item.category)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color.black.opacity(0.4))
-                    .clipShape(Capsule())
-                    .padding(8)
+                // 右上角收藏红心图标
+                if isFavorited {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(6)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.3), radius: 3, x: 0, y: 2)
+                        .padding(8)
+                }
+                
+                // 分类角标（如果未收藏，放在右上角；如果已收藏，放在左上角）
+                VStack(alignment: isFavorited ? .leading : .trailing, spacing: 4) {
+                    Text(item.category)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.4))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isFavorited ? .topLeading : .topTrailing)
+                .padding(8)
             }
             
             // 2. 商品信息区域
