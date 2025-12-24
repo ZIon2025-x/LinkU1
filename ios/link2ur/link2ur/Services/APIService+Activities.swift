@@ -95,5 +95,17 @@ extension APIService {
         
         return request(EmptyResponse.self, "/api/tasks/\(taskId)/participants/me/exit-request", method: "POST", body: bodyDict)
     }
+    
+    // MARK: - Activity Favorites (活动收藏)
+    
+    /// 收藏/取消收藏活动
+    func toggleActivityFavorite(activityId: Int) -> AnyPublisher<[String: Any], APIError> {
+        return request([String: Any].self, "/api/activities/\(activityId)/favorite", method: "POST")
+    }
+    
+    /// 获取活动收藏状态
+    func getActivityFavoriteStatus(activityId: Int) -> AnyPublisher<[String: Any], APIError> {
+        return request([String: Any].self, "/api/activities/\(activityId)/favorite/status", method: "GET")
+    }
 }
 

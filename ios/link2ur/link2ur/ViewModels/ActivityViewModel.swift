@@ -11,6 +11,8 @@ class ActivityViewModel: ObservableObject {
     @Published var timeSlots: [ServiceTimeSlot] = []
     @Published var isLoadingTimeSlots = false
     @Published var expert: TaskExpert? // 活动发布者的达人信息
+    @Published var isFavorited = false // 是否已收藏
+    @Published var isTogglingFavorite = false // 是否正在切换收藏状态
     
     private var cancellables = Set<AnyCancellable>()
     // 使用依赖注入获取服务
@@ -213,6 +215,8 @@ class ActivityViewModel: ObservableObject {
                     self?.isLoading = false
                     // 加载达人信息
                     self?.loadExpertInfo(expertId: activity.expertId)
+                    // 加载收藏状态
+                    self?.checkFavoriteStatus(activityId: activityId)
                 }
             )
             .store(in: &cancellables)
@@ -231,6 +235,57 @@ class ActivityViewModel: ObservableObject {
                 },
                 receiveValue: { [weak self] expert in
                     self?.expert = expert
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Activity Favorites
+    
+    /// 检查活动收藏状态
+    func checkFavoriteStatus(activityId: Int) {
+        apiService.getActivityFavoriteStatus(activityId: activityId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("获取活动收藏状态失败: \(error.localizedDescription)", category: .api)
+                    }
+                },
+                receiveValue: { [weak self] response in
+                    if let data = response["data"] as? [String: Any],
+                       let isFavorited = data["is_favorited"] as? Bool {
+                        self?.isFavorited = isFavorited
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    /// 切换收藏状态
+    func toggleFavorite(activityId: Int, completion: @escaping (Bool) -> Void) {
+        guard !isTogglingFavorite else { return }
+        isTogglingFavorite = true
+        
+        apiService.toggleActivityFavorite(activityId: activityId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] result in
+                    self?.isTogglingFavorite = false
+                    if case .failure(let error) = result {
+                        ErrorHandler.shared.handle(error, context: "收藏操作")
+                        completion(false)
+                    }
+                },
+                receiveValue: { [weak self] response in
+                    self?.isTogglingFavorite = false
+                    if let data = response["data"] as? [String: Any],
+                       let isFavorited = data["is_favorited"] as? Bool {
+                        self?.isFavorited = isFavorited
+                        completion(true)
+                    } else {
+                        completion(false)
+                    }
                 }
             )
             .store(in: &cancellables)

@@ -204,6 +204,7 @@ struct RecommendedContentView: View {
                 // 广告轮播（优先加载）
                 BannerCarouselSection()
                     .id("BannerCarouselSection")
+                    .padding(.top, -AppSpacing.md) // 减少与上方内容的间距
                 
                 // 推荐任务（优先加载）
                 RecommendedTasksSection()
@@ -1644,6 +1645,19 @@ class BannerCarouselViewModel: ObservableObject {
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
     
+    // 硬编码的跳蚤市场Banner（始终显示在第一个位置）
+    private var hardcodedFleaMarketBanner: Banner {
+        Banner(
+            id: -1, // 使用负数ID，避免与后端Banner冲突
+            imageUrl: "local:FleaMarketBanner", // 使用本地Assets中的跳蚤市场图片
+            title: "跳蚤市场",
+            subtitle: "发现心仪物品，出售闲置商品",
+            linkUrl: "/flea-market",
+            linkType: "internal",
+            order: -999 // 确保始终是第一个
+        )
+    }
+    
     func loadBanners() {
         guard !isLoading else { return }
         isLoading = true
@@ -1653,16 +1667,26 @@ class BannerCarouselViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
-                    self?.isLoading = false
+                    guard let self = self else { return }
+                    self.isLoading = false
                     if case .failure(let error) = completion {
-                        self?.errorMessage = error.localizedDescription
+                        self.errorMessage = error.localizedDescription
                         Logger.error("加载广告失败: \(error.localizedDescription)", category: .api)
+                        // 即使API失败，也显示硬编码的跳蚤市场Banner
+                        self.banners = [self.hardcodedFleaMarketBanner]
                     }
                 },
                 receiveValue: { [weak self] response in
-                    self?.banners = response.banners.sorted { $0.order < $1.order }
-                    self?.isLoading = false
-                    self?.errorMessage = nil
+                    guard let self = self else { return }
+                    // 将后端返回的Banner排序
+                    var serverBanners = response.banners.sorted { $0.order < $1.order }
+                    
+                    // 将硬编码的跳蚤市场Banner添加到最前面
+                    serverBanners.insert(self.hardcodedFleaMarketBanner, at: 0)
+                    
+                    self.banners = serverBanners
+                    self.isLoading = false
+                    self.errorMessage = nil
                 }
             )
             .store(in: &cancellables)

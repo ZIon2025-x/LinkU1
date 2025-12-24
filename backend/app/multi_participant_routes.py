@@ -14,7 +14,7 @@ from app.database import get_db
 from app.models import (
     Task, TaskParticipant, TaskParticipantReward, TaskAuditLog,
     User, AdminUser, TaskTimeSlotRelation, ServiceTimeSlot,
-    Activity, ActivityTimeSlotRelation
+    Activity, ActivityTimeSlotRelation, ActivityFavorite
 )
 from app.schemas import (
     MultiParticipantTaskCreate,
@@ -2329,4 +2329,239 @@ def distribute_rewards_custom(
         "participant_count": len(request.rewards),
         "reward_type": db_task.reward_type
     }
+
+
+# ==================== 活动收藏 API ====================
+
+@router.post("/activities/{activity_id}/favorite", response_model=dict)
+def toggle_activity_favorite(
+    activity_id: int,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """收藏/取消收藏活动"""
+    try:
+        # 检查活动是否存在
+        activity = db.query(Activity).filter(Activity.id == activity_id).first()
+        if not activity:
+            raise HTTPException(
+                status_code=404,
+                detail="活动不存在"
+            )
+        
+        # 检查是否已收藏
+        favorite = db.query(ActivityFavorite).filter(
+            and_(
+                ActivityFavorite.activity_id == activity_id,
+                ActivityFavorite.user_id == current_user.id
+            )
+        ).first()
+        
+        if favorite:
+            # 取消收藏
+            db.delete(favorite)
+            db.commit()
+            return {
+                "success": True,
+                "data": {"is_favorited": False},
+                "message": "已取消收藏"
+            }
+        else:
+            # 添加收藏
+            new_favorite = ActivityFavorite(
+                user_id=current_user.id,
+                activity_id=activity_id
+            )
+            db.add(new_favorite)
+            db.commit()
+            return {
+                "success": True,
+                "data": {"is_favorited": True},
+                "message": "收藏成功"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"收藏操作失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="操作失败"
+        )
+
+
+@router.get("/activities/{activity_id}/favorite/status", response_model=dict)
+def get_activity_favorite_status(
+    activity_id: int,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """获取活动收藏状态"""
+    try:
+        # 检查活动是否存在
+        activity = db.query(Activity).filter(Activity.id == activity_id).first()
+        if not activity:
+            raise HTTPException(
+                status_code=404,
+                detail="活动不存在"
+            )
+        
+        # 检查是否已收藏
+        favorite = db.query(ActivityFavorite).filter(
+            and_(
+                ActivityFavorite.activity_id == activity_id,
+                ActivityFavorite.user_id == current_user.id
+            )
+        ).first()
+        
+        # 获取收藏总数
+        favorite_count = db.query(ActivityFavorite).filter(
+            ActivityFavorite.activity_id == activity_id
+        ).count()
+        
+        return {
+            "success": True,
+            "data": {
+                "is_favorited": favorite is not None,
+                "favorite_count": favorite_count
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"获取收藏状态失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="操作失败"
+        )
+
+
+@router.get("/my/activities", response_model=dict)
+def get_my_activities(
+    type: str = Query("all", description="活动类型：all（全部）、applied（申请过的）、favorited（收藏的）"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """获取我的活动（申请过的和收藏的）"""
+    try:
+        from sqlalchemy import distinct
+        from sqlalchemy.orm import joinedload
+        from app.models import TaskParticipant
+        
+        activities_list = []
+        total = 0
+        
+        if type == "applied" or type == "all":
+            # 获取申请过的活动（通过TaskParticipant表）
+            applied_query = db.query(distinct(TaskParticipant.activity_id)).filter(
+                and_(
+                    TaskParticipant.user_id == current_user.id,
+                    TaskParticipant.activity_id.isnot(None)
+                )
+            )
+            applied_activity_ids = [row[0] for row in applied_query.all()]
+            
+            if applied_activity_ids:
+                applied_activities = db.query(Activity).options(
+                    joinedload(Activity.service)
+                ).filter(Activity.id.in_(applied_activity_ids)).all()
+                
+                for activity in applied_activities:
+                    # 计算当前参与者数量
+                    current_count = db.query(TaskParticipant).filter(
+                        and_(
+                            TaskParticipant.activity_id == activity.id,
+                            TaskParticipant.status.in_(["accepted", "in_progress"])
+                        )
+                    ).count()
+                    
+                    # 获取用户在该活动中的参与状态
+                    user_participant = db.query(TaskParticipant).filter(
+                        and_(
+                            TaskParticipant.activity_id == activity.id,
+                            TaskParticipant.user_id == current_user.id
+                        )
+                    ).first()
+                    
+                    # 使用from_orm_with_participants方法
+                    activity_out = ActivityOut.from_orm_with_participants(activity, current_count)
+                    
+                    # 转换为字典并处理日期序列化
+                    from fastapi.encoders import jsonable_encoder
+                    activity_dict = jsonable_encoder(activity_out)
+                    activity_dict["type"] = "applied"
+                    activity_dict["participant_status"] = user_participant.status if user_participant else None
+                    activities_list.append(activity_dict)
+        
+        if type == "favorited" or type == "all":
+            # 获取收藏的活动
+            favorited_query = db.query(ActivityFavorite.activity_id).filter(
+                ActivityFavorite.user_id == current_user.id
+            )
+            favorited_activity_ids = [row[0] for row in favorited_query.all()]
+            
+            if favorited_activity_ids:
+                favorited_activities = db.query(Activity).options(
+                    joinedload(Activity.service)
+                ).filter(Activity.id.in_(favorited_activity_ids)).all()
+                
+                for activity in favorited_activities:
+                    # 如果已经在applied列表中，跳过（避免重复）
+                    if any(a["id"] == activity.id for a in activities_list):
+                        # 更新类型为both
+                        for a in activities_list:
+                            if a["id"] == activity.id:
+                                a["type"] = "both"
+                                break
+                        continue
+                    
+                    # 计算当前参与者数量
+                    current_count = db.query(TaskParticipant).filter(
+                        and_(
+                            TaskParticipant.activity_id == activity.id,
+                            TaskParticipant.status.in_(["accepted", "in_progress"])
+                        )
+                    ).count()
+                    
+                    # 使用from_orm_with_participants方法
+                    activity_out = ActivityOut.from_orm_with_participants(activity, current_count)
+                    
+                    # 转换为字典并处理日期序列化
+                    from fastapi.encoders import jsonable_encoder
+                    activity_dict = jsonable_encoder(activity_out)
+                    activity_dict["type"] = "favorited"
+                    activities_list.append(activity_dict)
+        
+        # 按创建时间倒序排序
+        activities_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        total = len(activities_list)
+        
+        # 分页
+        paginated_activities = activities_list[offset:offset + limit]
+        
+        return {
+            "success": True,
+            "data": {
+                "activities": paginated_activities,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < total
+            }
+        }
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"获取我的活动失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="操作失败"
+        )
 

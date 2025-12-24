@@ -2019,6 +2019,25 @@ class FleaMarketFavoriteListResponse(BaseModel):
     hasMore: bool
 
 
+# ==================== 活动收藏 Schema ====================
+
+class ActivityFavoriteResponse(BaseModel):
+    id: int
+    activity_id: int
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class ActivityFavoriteListResponse(BaseModel):
+    activities: List[ActivityFavoriteResponse]
+    page: int
+    page_size: int
+    total: int
+    has_more: bool
+
+
 # ==================== 多人任务相关Schemas ====================
 
 # 管理员创建官方多人任务

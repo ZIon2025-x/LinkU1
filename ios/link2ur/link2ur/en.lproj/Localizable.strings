@@ -293,8 +293,8 @@
 "profile.my_posts_subtitle" = "Manage my second-hand items";
 "profile.my_wallet" = "My Wallet";
 "profile.my_wallet_subtitle" = "View balance and transaction history";
-"profile.my_applications" = "My Applications";
-"profile.my_applications_subtitle" = "View service application records";
+"profile.my_applications" = "My Activities";
+"profile.my_applications_subtitle" = "View applied and favorited activities";
 "profile.points_coupons" = "Points & Coupons";
 "profile.points_coupons_subtitle" = "View points, coupons and check-in";
 "profile.student_verification" = "Student Verification";

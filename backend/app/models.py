@@ -1813,6 +1813,7 @@ class Activity(Base):
     service = relationship("TaskExpertService", back_populates="activities")
     time_slot_relations = relationship("ActivityTimeSlotRelation", back_populates="activity", cascade="all, delete-orphan")
     created_tasks = relationship("Task", back_populates="parent_activity", foreign_keys="Task.parent_activity_id")
+    favorites = relationship("ActivityFavorite", back_populates="activity", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_activities_expert_id", expert_id),
@@ -1841,6 +1842,28 @@ class Activity(Base):
             "min_participants > 0 AND max_participants >= min_participants",
             name="chk_activity_participants"
         ),
+    )
+
+
+class ActivityFavorite(Base):
+    """活动收藏模型"""
+    __tablename__ = "activity_favorites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    
+    # 关系
+    user = relationship("User", backref="activity_favorites")
+    activity = relationship("Activity", backref="favorites")
+    
+    # 索引和约束
+    __table_args__ = (
+        UniqueConstraint("user_id", "activity_id", name="uix_user_activity_favorite"),
+        Index("idx_activity_favorites_user_id", user_id),
+        Index("idx_activity_favorites_activity_id", activity_id),
+        Index("idx_activity_favorites_created_at", created_at),
     )
 
 

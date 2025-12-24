@@ -102,12 +102,25 @@ struct BannerCard: View {
     // Banner 图片视图
     private var bannerImage: some View {
         ZStack(alignment: .bottomLeading) {
-            // 图片
-            AsyncImageView(
-                urlString: banner.imageUrl,
-                placeholder: Image(systemName: "photo.fill")
-            )
-            .aspectRatio(contentMode: .fill)
+            // 图片 - 支持本地图片和远程图片
+            Group {
+                if banner.imageUrl.hasPrefix("local:") {
+                    // 本地图片（从Assets加载）
+                    let imageName = String(banner.imageUrl.dropFirst(6)) // 去掉 "local:" 前缀
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        // 如果是跳蚤市场Banner，向上偏移显示更多顶部内容
+                        .offset(y: banner.linkUrl == "/flea-market" ? -50 : 0)
+                } else {
+                    // 远程图片
+                    AsyncImageView(
+                        urlString: banner.imageUrl,
+                        placeholder: Image(systemName: "photo.fill")
+                    )
+                    .offset(y: banner.linkUrl == "/flea-market" ? -50 : 0)
+                }
+            }
             .frame(maxWidth: .infinity)
             .frame(height: 180)
             .clipped()
@@ -192,10 +205,15 @@ struct InternalLinkView: View {
                 } else {
                     LeaderboardView()
                 }
-            } else if linkUrl.contains("/flea-market/") {
+            } else if linkUrl.contains("/flea-market") {
+                // 检查是否是商品详情页（包含item ID）
                 if let itemId = extractId(from: linkUrl, prefix: "/flea-market/items/") {
                     FleaMarketDetailView(itemId: String(itemId))
+                } else if let itemId = extractId(from: linkUrl, prefix: "/flea-market/") {
+                    // 支持 /flea-market/{itemId} 格式
+                    FleaMarketDetailView(itemId: String(itemId))
                 } else {
+                    // 跳转到跳蚤市场列表页
                     FleaMarketView()
                 }
             } else if linkUrl.contains("/activities/") {

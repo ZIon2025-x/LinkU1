@@ -293,8 +293,8 @@
 "profile.my_posts_subtitle" = "管理我的闲置物品";
 "profile.my_wallet" = "我的钱包";
 "profile.my_wallet_subtitle" = "查看余额和交易记录";
-"profile.my_applications" = "我的申请";
-"profile.my_applications_subtitle" = "查看服务申请记录";
+"profile.my_applications" = "我的活动";
+"profile.my_applications_subtitle" = "查看申请和收藏的活动";
 "profile.points_coupons" = "积分与优惠券";
 "profile.points_coupons_subtitle" = "查看积分、优惠券和签到";
 "profile.student_verification" = "学生认证";

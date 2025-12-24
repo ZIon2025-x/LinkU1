@@ -55,6 +55,19 @@ struct ActivityDetailView: View {
                 // 7. Bottom Action Bar
                 ActivityBottomBar(
                     activity: activity,
+                    isFavorited: viewModel.isFavorited,
+                    isTogglingFavorite: viewModel.isTogglingFavorite,
+                    onFavorite: {
+                        if appState.isAuthenticated {
+                            viewModel.toggleFavorite(activityId: activityId) { success in
+                                if success {
+                                    HapticFeedback.success()
+                                }
+                            }
+                        } else {
+                            showLogin = true
+                        }
+                    },
                     onApply: {
                         if appState.isAuthenticated {
                             showingApplySheet = true
@@ -458,6 +471,9 @@ struct PosterInfoRow: View {
 
 struct ActivityBottomBar: View {
     let activity: Activity
+    let isFavorited: Bool
+    let isTogglingFavorite: Bool
+    let onFavorite: () -> Void
     let onApply: () -> Void
     
     var body: some View {
@@ -469,16 +485,29 @@ struct ActivityBottomBar: View {
                 
                 HStack(spacing: AppSpacing.md) {
                     // Favorite Button
-                    Button(action: { /* Favorite toggle */ }) {
+                    Button(action: onFavorite) {
                         VStack(spacing: 4) {
-                            Image(systemName: "heart")
-                                .font(.system(size: 20))
+                            ZStack {
+                                if isTogglingFavorite {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                } else {
+                                    Image(systemName: isFavorited ? "heart.fill" : "heart")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(isFavorited ? .red : AppColors.textSecondary)
+                                        .scaleEffect(isFavorited ? 1.1 : 1.0)
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isFavorited)
+                                }
+                            }
+                            .frame(height: 24)
+                            
                             Text("收藏")
                                 .font(.system(size: 10))
+                                .foregroundColor(isFavorited ? .red : AppColors.textTertiary)
                         }
-                        .foregroundColor(AppColors.textSecondary)
                         .frame(width: 50)
                     }
+                    .disabled(isTogglingFavorite)
                     
                     if activity.isEnded {
                         Text("activity.ended")
