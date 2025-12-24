@@ -124,6 +124,9 @@ class CleanupTasks:
             # 清理不存在实体的图片文件夹（每周检查一次）
             await self._cleanup_orphan_entity_images()
             
+            # 清理旧格式图片（直接保存在 /uploads/images/ 下的，每周检查一次）
+            await self._cleanup_old_format_images()
+            
             # 清理过期时间段（每天检查一次）
             await self._cleanup_expired_time_slots()
             
@@ -768,6 +771,84 @@ class CleanupTasks:
                                 logger.debug(f"跳过无效的任务目录: {task_dir.name}: {e}")
                                 continue
                 
+                # 4. 清理不存在用户的头像文件夹
+                expert_avatars_dir = base_upload_dir / "public" / "images" / "expert_avatars"
+                if expert_avatars_dir.exists():
+                    # 获取所有存在的用户ID（任务达人头像使用用户ID）
+                    from sqlalchemy import select
+                    users_result = db.execute(select(models.User.id))
+                    existing_user_ids = {user_id for user_id, in users_result.all()}
+                    
+                    # 遍历目录，找出不存在的用户ID对应的文件夹
+                    for user_dir in expert_avatars_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if user_dir.is_dir():
+                            try:
+                                user_id = user_dir.name
+                                if user_id not in existing_user_ids:
+                                    # 用户不存在，删除头像文件夹
+                                    shutil.rmtree(user_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在用户 {user_id} 的头像文件夹: {user_dir}")
+                            except Exception as e:
+                                logger.debug(f"跳过无效的用户头像目录: {user_dir.name}: {e}")
+                                continue
+                
+                # 5. 清理不存在任务达人的服务图片文件夹
+                service_images_dir = base_upload_dir / "public" / "images" / "service_images"
+                if service_images_dir.exists():
+                    # 获取所有存在的任务达人ID
+                    from sqlalchemy import select
+                    experts_result = db.execute(select(models.TaskExpert.id))
+                    existing_expert_ids = {expert_id for expert_id, in experts_result.all()}
+                    
+                    # 遍历目录，找出不存在的任务达人ID对应的文件夹
+                    for expert_dir in service_images_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if expert_dir.is_dir():
+                            try:
+                                expert_id = expert_dir.name
+                                if expert_id not in existing_expert_ids:
+                                    # 任务达人不存在，删除服务图片文件夹
+                                    shutil.rmtree(expert_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在任务达人 {expert_id} 的服务图片文件夹: {expert_dir}")
+                            except Exception as e:
+                                logger.debug(f"跳过无效的服务图片目录: {expert_dir.name}: {e}")
+                                continue
+                
+                # 6. 清理不存在Banner的图片文件夹
+                banner_dir = base_upload_dir / "public" / "images" / "banner"
+                if banner_dir.exists():
+                    # 获取所有存在的Banner ID
+                    from sqlalchemy import select
+                    banners_result = db.execute(select(models.Banner.id))
+                    existing_banner_ids = {banner_id for banner_id, in banners_result.all()}
+                    
+                    # 遍历目录，找出不存在的Banner ID对应的文件夹
+                    for banner_item_dir in banner_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if banner_item_dir.is_dir():
+                            try:
+                                banner_id = int(banner_item_dir.name)
+                                if banner_id not in existing_banner_ids:
+                                    # Banner不存在，删除图片文件夹
+                                    shutil.rmtree(banner_item_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在Banner {banner_id} 的图片文件夹: {banner_item_dir}")
+                            except (ValueError, Exception) as e:
+                                logger.debug(f"跳过无效的Banner目录: {banner_item_dir.name}: {e}")
+                                continue
+                
             finally:
                 db.close()
             
@@ -778,6 +859,87 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理不存在实体的图片文件夹失败: {e}", exc_info=True)
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_old_format_images(self):
+        """清理旧格式图片（直接保存在 /uploads/images/ 下的，不在子目录中），每周检查一次，使用分布式锁"""
+        # 检查是否已经在本周执行过
+        today = get_utc_time().date()
+        if self.last_orphan_files_cleanup_date == today:
+            return
+        
+        lock_key = "scheduled_task:cleanup_old_format_images:lock"
+        lock_ttl = 7200  # 2小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理旧格式图片：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from pathlib import Path
+            import os
+            from datetime import timedelta
+            from app.utils.time_utils import file_timestamp_to_utc
+            
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_upload_dir = Path("/data/uploads")
+            else:
+                base_upload_dir = Path("uploads")
+            
+            # 旧格式图片可能直接保存在这些位置：
+            # - /uploads/images/ (根目录)
+            # - /uploads/public/images/ (不在子目录中)
+            old_format_dirs = [
+                base_upload_dir / "images",  # 旧格式：直接在 images 目录下
+                base_upload_dir / "public" / "images",  # 旧格式：直接在 public/images 目录下
+            ]
+            
+            # 计算30天前的时间（旧格式图片如果30天未使用，可能是无用的）
+            cutoff_time = get_utc_time() - timedelta(days=30)
+            cleaned_count = 0
+            max_files_per_run = 200  # 每次最多处理200个文件
+            
+            for old_dir in old_format_dirs:
+                if cleaned_count >= max_files_per_run:
+                    break
+                
+                if not old_dir.exists():
+                    continue
+                
+                # 检查目录中的文件（不包括子目录）
+                try:
+                    for item in old_dir.iterdir():
+                        if cleaned_count >= max_files_per_run:
+                            break
+                        
+                        if item.is_file():
+                            # 检查是否是图片文件
+                            if item.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                                # 检查文件修改时间
+                                try:
+                                    file_mtime = file_timestamp_to_utc(item.stat().st_mtime)
+                                    if file_mtime < cutoff_time:
+                                        # 超过30天未使用，删除
+                                        item.unlink()
+                                        cleaned_count += 1
+                                        logger.info(f"删除旧格式图片: {item}")
+                                except Exception as e:
+                                    logger.warning(f"处理旧格式图片失败 {item}: {e}")
+                except Exception as e:
+                    logger.warning(f"扫描旧格式图片目录失败 {old_dir}: {e}")
+            
+            if cleaned_count > 0:
+                logger.info(f"清理了 {cleaned_count} 个旧格式图片")
+            else:
+                logger.debug("未发现需要清理的旧格式图片")
+                
+        except Exception as e:
+            logger.error(f"清理旧格式图片失败: {e}", exc_info=True)
         finally:
             # 释放锁
             release_redis_distributed_lock(lock_key)
