@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, getTaskExpert, applyToActivity } from '../api';
+import { API_BASE_URL } from '../config';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
@@ -64,6 +65,28 @@ const TaskExperts: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [isMobile, setIsMobile] = useState(false);
+
+  // 处理活动图片URL（确保相对路径能正确显示）
+  const getActivityImageUrl = useCallback((imageValue: string | null | undefined): string => {
+    if (!imageValue) {
+      return 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
+    }
+    
+    const imageStr = String(imageValue);
+    
+    // 如果已经是完整的URL（包含 http:// 或 https://），直接返回
+    if (imageStr.startsWith('http://') || imageStr.startsWith('https://')) {
+      return imageStr;
+    }
+    
+    // 如果是相对路径（以 / 开头），添加API base URL
+    if (imageStr.startsWith('/')) {
+      return `${API_BASE_URL}${imageStr}`;
+    }
+    
+    // 其他情况直接返回
+    return imageStr;
+  }, []);
 
   // 生成canonical URL
   const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
@@ -1067,11 +1090,15 @@ const TaskExperts: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {expertActivities[expert.id].map((activity: any) => {
                         // 获取活动图片
-                        const activityImage = activity.images && activity.images.length > 0 
-                          ? activity.images[0] 
-                          : activity.service_images && activity.service_images.length > 0
-                          ? activity.service_images[0]
-                          : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
+                        let rawImageUrl: string | null = null;
+                        if (activity.images && Array.isArray(activity.images) && activity.images.length > 0) {
+                          rawImageUrl = activity.images[0];
+                        } else if (activity.service_images && Array.isArray(activity.service_images) && activity.service_images.length > 0) {
+                          rawImageUrl = activity.service_images[0];
+                        }
+                        
+                        // 处理图片URL，确保能正确显示
+                        const activityImage = getActivityImageUrl(rawImageUrl);
                         
                         // 格式化价格显示（支持折扣）
                         const hasDiscount = activity.discount_percentage && activity.discount_percentage > 0;
@@ -1128,15 +1155,21 @@ const TaskExperts: React.FC = () => {
                                 bottom: 0,
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                 zIndex: 0,
+                                overflow: 'hidden',
                               }}
                             >
                               <LazyImage
                                 src={activityImage}
                                 alt={activity.title}
                                 style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
                                   width: '100%',
                                   height: '100%',
+                                  minHeight: '100%',
                                   objectFit: 'cover',
+                                  objectPosition: 'center',
                                   opacity: 0.85,
                                 }}
                               />
@@ -1482,16 +1515,25 @@ const TaskExperts: React.FC = () => {
               }}
             >
               <LazyImage
-                src={selectedActivity.images && selectedActivity.images.length > 0 
-                  ? selectedActivity.images[0] 
-                  : selectedActivity.service_images && selectedActivity.service_images.length > 0
-                  ? selectedActivity.service_images[0]
-                  : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop'}
+                src={(() => {
+                  let rawImageUrl: string | null = null;
+                  if (selectedActivity.images && Array.isArray(selectedActivity.images) && selectedActivity.images.length > 0) {
+                    rawImageUrl = selectedActivity.images[0];
+                  } else if (selectedActivity.service_images && Array.isArray(selectedActivity.service_images) && selectedActivity.service_images.length > 0) {
+                    rawImageUrl = selectedActivity.service_images[0];
+                  }
+                  return getActivityImageUrl(rawImageUrl);
+                })()}
                 alt={selectedActivity.title}
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
                   width: '100%',
                   height: '100%',
+                  minHeight: '100%',
                   objectFit: 'cover',
+                  objectPosition: 'center',
                 }}
               />
               <div

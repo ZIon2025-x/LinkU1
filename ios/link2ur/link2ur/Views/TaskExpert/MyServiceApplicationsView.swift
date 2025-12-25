@@ -13,82 +13,153 @@ struct MyServiceApplicationsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // 标签页选择器
-                    HStack(spacing: 0) {
-                        ForEach(ActivityTab.allCases, id: \.self) { tab in
-                            Button(action: {
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // 标签页选择器 - 固定在顶部
+                HStack(spacing: 0) {
+                    ForEach(ActivityTab.allCases, id: \.self) { tab in
+                        Button(action: {
+                            HapticFeedback.selection()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 selectedTab = tab
-                                viewModel.loadActivities(type: tab.rawValue == "全部" ? "all" : (tab.rawValue == "申请过的" ? "applied" : "favorited"))
-                            }) {
-                                VStack(spacing: 4) {
-                                    Text(tab.rawValue)
-                                        .font(AppTypography.body)
-                                        .fontWeight(selectedTab == tab ? .semibold : .regular)
-                                        .foregroundColor(selectedTab == tab ? AppColors.primary : AppColors.textSecondary)
-                                    
-                                    if selectedTab == tab {
-                                        Rectangle()
-                                            .fill(AppColors.primary)
-                                            .frame(height: 2)
-                                    } else {
-                                        Rectangle()
-                                            .fill(Color.clear)
-                                            .frame(height: 2)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
                             }
+                        }) {
+                            VStack(spacing: 4) {
+                                Text(tab.rawValue)
+                                    .font(AppTypography.body)
+                                    .fontWeight(selectedTab == tab ? .semibold : .regular)
+                                    .foregroundColor(selectedTab == tab ? AppColors.primary : AppColors.textSecondary)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
+                                
+                                Rectangle()
+                                    .fill(selectedTab == tab ? AppColors.primary : Color.clear)
+                                    .frame(height: 2)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+                .background(AppColors.cardBackground)
+                
+                // 内容区域 - 使用 TabView 避免布局变化
+                TabView(selection: $selectedTab) {
+                    ActivityListViewContent(
+                        viewModel: viewModel,
+                        type: .all
+                    )
+                    .tag(ActivityTab.all)
+                    
+                    ActivityListViewContent(
+                        viewModel: viewModel,
+                        type: .applied
+                    )
+                    .tag(ActivityTab.applied)
+                    
+                    ActivityListViewContent(
+                        viewModel: viewModel,
+                        type: .favorited
+                    )
+                    .tag(ActivityTab.favorited)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.interactiveSpring(response: 0.4, dampingFraction: 0.9), value: selectedTab)
+            }
+        }
+        .navigationTitle("我的活动")
+        .navigationBarTitleDisplayMode(.inline)
+        .enableSwipeBack()
+        .toolbarBackground(AppColors.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .onAppear {
+            // 初始加载全部数据
+            viewModel.loadAllActivities()
+        }
+        .onChange(of: selectedTab) { _ in
+            // 切换标签时不需要重新加载，数据已经从 allActivities 中过滤显示
+            // 下拉刷新时会重新加载对应类型的数据
+        }
+    }
+}
+
+// 活动列表内容视图 - 独立组件，避免条件渲染
+struct ActivityListViewContent: View {
+    @ObservedObject var viewModel: MyActivitiesViewModel
+    let type: MyServiceApplicationsView.ActivityTab
+    
+    // 从 ViewModel 获取当前类型的数据（从缓存中过滤）
+    // 直接依赖 allActivities 确保视图能响应数据变化
+    private var filteredActivities: [ActivityWithType] {
+        // 优先从缓存获取
+        let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+        
+        // 如果已加载过该类型，从缓存返回
+        if let cached = viewModel.cachedActivities[typeString] {
+            return cached
+        }
+        
+        // 如果加载过全部数据，从全部数据中过滤
+        if !viewModel.allActivities.isEmpty && typeString != "all" {
+            return filterActivities(viewModel.allActivities, type: typeString)
+        }
+        
+        return []
+    }
+    
+    // 过滤活动数据
+    private func filterActivities(_ activities: [ActivityWithType], type: String) -> [ActivityWithType] {
+        switch type {
+        case "applied":
+            return activities.filter { $0.type == "applied" || $0.type == "both" }
+        case "favorited":
+            return activities.filter { $0.type == "favorited" || $0.type == "both" }
+        default:
+            return activities
+        }
+    }
+    
+    // 判断是否正在加载（只在初始加载且没有数据时显示）
+    private var showLoading: Bool {
+        viewModel.isLoading && filteredActivities.isEmpty && viewModel.loadedTypes.isEmpty
+    }
+    
+    var body: some View {
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            if showLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredActivities.isEmpty {
+                EmptyStateView(
+                    icon: "calendar",
+                    title: type == .favorited ? "暂无收藏" : "暂无活动",
+                    message: type == .favorited ? "您还没有收藏任何活动" : (type == .applied ? "您还没有申请过任何活动" : "您还没有申请或收藏任何活动")
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: AppSpacing.md) {
+                        ForEach(filteredActivities) { activity in
+                            NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
+                                ActivityCard(activity: activity)
+                            }
+                            .buttonStyle(ScaleButtonStyle())
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.sm)
-                    .background(AppColors.cardBackground)
-                    
-                    // 活动列表
-                    if viewModel.isLoading && viewModel.activities.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if viewModel.activities.isEmpty {
-                        EmptyStateView(
-                            icon: "calendar",
-                            title: selectedTab == .favorited ? "暂无收藏" : "暂无活动",
-                            message: selectedTab == .favorited ? "您还没有收藏任何活动" : (selectedTab == .applied ? "您还没有申请过任何活动" : "您还没有申请或收藏任何活动")
-                        )
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: AppSpacing.md) {
-                                ForEach(viewModel.activities) { activity in
-                                    NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
-                                        ActivityCard(activity: activity)
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                }
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.sm)
-                        }
-                    }
                 }
             }
-            .navigationTitle("我的活动")
-            .navigationBarTitleDisplayMode(.inline)
-            .enableSwipeBack()
-            .toolbarBackground(AppColors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .refreshable {
-                viewModel.loadActivities(type: selectedTab.rawValue == "全部" ? "all" : (selectedTab.rawValue == "申请过的" ? "applied" : "favorited"))
-            }
-            .onAppear {
-                if viewModel.activities.isEmpty {
-                    viewModel.loadActivities(type: "all")
-                }
-            }
+        }
+        .refreshable {
+            let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+            viewModel.loadActivities(type: typeString, forceRefresh: true)
         }
     }
 }
@@ -312,38 +383,85 @@ struct ActivityWithType: Codable, Identifiable {
 
 // 我的活动ViewModel
 class MyActivitiesViewModel: ObservableObject {
-    @Published var activities: [ActivityWithType] = []
+    @Published var allActivities: [ActivityWithType] = [] // 全部活动（用于缓存和过滤）
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    // 缓存已加载的数据（公开访问，用于视图过滤）
+    var cachedActivities: [String: [ActivityWithType]] = [:]
+    var loadedTypes: Set<String> = []
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
     
-    func loadActivities(type: String = "all") {
+    // 根据类型获取活动列表（从缓存中过滤）
+    func getActivities(for type: MyServiceApplicationsView.ActivityTab) -> [ActivityWithType] {
+        let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+        
+        // 如果已加载过该类型，直接返回缓存
+        if let cached = cachedActivities[typeString] {
+            return cached
+        }
+        
+        // 如果加载过全部数据，从全部数据中过滤
+        if !allActivities.isEmpty && typeString != "all" {
+            let filtered = filterActivities(allActivities, type: typeString)
+            // 缓存过滤后的结果，避免重复过滤
+            cachedActivities[typeString] = filtered
+            return filtered
+        }
+        
+        return []
+    }
+    
+    // 过滤活动数据
+    private func filterActivities(_ activities: [ActivityWithType], type: String) -> [ActivityWithType] {
+        switch type {
+        case "applied":
+            return activities.filter { $0.type == "applied" || $0.type == "both" }
+        case "favorited":
+            return activities.filter { $0.type == "favorited" || $0.type == "both" }
+        default:
+            return activities
+        }
+    }
+    
+    // 加载活动数据
+    func loadActivities(type: String = "all", forceRefresh: Bool = false) {
+        // 如果已加载过且不强制刷新，直接返回
+        if !forceRefresh && loadedTypes.contains(type) {
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
         var endpoint = "/api/my/activities?type=\(type)&limit=50&offset=0"
         
-        apiService.request([String: Any].self, endpoint, method: "GET")
+        apiService.request(MyActivitiesFullResponse.self, endpoint, method: "GET")
             .sink(
                 receiveCompletion: { [weak self] result in
-                    self?.isLoading = false
-                    if case .failure(let error) = result {
-                        ErrorHandler.shared.handle(error, context: "加载我的活动")
-                        self?.errorMessage = error.userFriendlyMessage
+                    DispatchQueue.main.async {
+                        self?.isLoading = false
+                        if case .failure(let error) = result {
+                            ErrorHandler.shared.handle(error, context: "加载我的活动")
+                            self?.errorMessage = error.userFriendlyMessage
+                        }
                     }
                 },
                 receiveValue: { [weak self] response in
-                    self?.isLoading = false
-                    if let data = response["data"] as? [String: Any],
-                       let activitiesArray = data["activities"] as? [[String: Any]] {
-                        do {
-                            let jsonData = try JSONSerialization.data(withJSONObject: activitiesArray)
-                            let decoder = JSONDecoder()
-                            self?.activities = try decoder.decode([ActivityWithType].self, from: jsonData)
-                        } catch {
-                            Logger.error("解析活动数据失败: \(error.localizedDescription)", category: .api)
+                    DispatchQueue.main.async {
+                        self?.isLoading = false
+                        if response.success {
+                            // 缓存数据
+                            self?.cachedActivities[type] = response.data.activities
+                            self?.loadedTypes.insert(type)
+                            
+                            // 如果是加载全部，更新 allActivities（触发视图更新）
+                            if type == "all" {
+                                self?.allActivities = response.data.activities
+                            }
+                        } else {
                             self?.errorMessage = "数据解析失败"
                         }
                     }
@@ -351,130 +469,13 @@ class MyActivitiesViewModel: ObservableObject {
             )
             .store(in: &cancellables)
     }
-}
-
-// 申请卡片（保留用于向后兼容，但不再使用）
-struct ApplicationCard: View {
-    let application: ServiceApplication
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 服务名称和状态
-            HStack {
-                Text(application.serviceName ?? "服务")
-                    .font(.headline)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                ApplicationStatusBadge(status: application.status)
-            }
-            
-            // 任务达人
-            if let expertName = application.expertName {
-                HStack {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(AppColors.textSecondary)
-                    Text(expertName)
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-            }
-            
-            // 申请留言
-            if let message = application.applicationMessage {
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.textPrimary)
-                    .padding(AppSpacing.sm)
-                    .background(AppColors.primaryLight)
-                    .cornerRadius(AppCornerRadius.small)
-            }
-            
-            // 议价信息
-            if application.status == "negotiating", let counterPrice = application.counterPrice {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(LocalizationKey.taskExpertExpertNegotiatePrice.localized)
-                        .font(.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text("¥ \(String(format: "%.2f", counterPrice))")
-                        .font(.headline)
-                        .foregroundColor(AppColors.error)
-                }
-                .padding(AppSpacing.sm)
-                .background(AppColors.warning.opacity(0.1))
-                .cornerRadius(AppCornerRadius.small)
-            }
-            
-            // 关联任务
-            if let taskId = application.taskId {
-                NavigationLink(destination: Text("任务详情: \(taskId)")) {
-                    HStack {
-                        Text(LocalizationKey.taskExpertViewTask.localized)
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.primary)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(AppColors.primary)
-                    }
-                }
-            }
-            
-            // 时间
-            Text(formatTime(application.createdAt))
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
+    // 加载所有类型的数据（用于初始加载）
+    func loadAllActivities() {
+        // 如果已经加载过全部，就不重复加载
+        if loadedTypes.contains("all") {
+            return
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
-    }
-    
-    private func formatTime(_ timeString: String) -> String {
-        return DateFormatterHelper.shared.formatTime(timeString)
+        loadActivities(type: "all")
     }
 }
-
-// 申请状态标签
-struct ApplicationStatusBadge: View {
-    let status: String
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 6, height: 6)
-            Text(statusText)
-                .font(.caption)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(statusColor.opacity(0.15))
-        .foregroundColor(statusColor)
-        .cornerRadius(AppCornerRadius.small)
-    }
-    
-    private var statusColor: Color {
-        switch status {
-        case "pending": return AppColors.warning
-        case "negotiating": return AppColors.primary
-        case "price_agreed": return AppColors.success
-        case "approved": return AppColors.success
-        case "rejected": return AppColors.error
-        default: return AppColors.textSecondary
-        }
-    }
-    
-    private var statusText: String {
-        switch status {
-        case "pending": return "待处理"
-        case "negotiating": return "议价中"
-        case "price_agreed": return "价格已达成"
-        case "approved": return "已同意"
-        case "rejected": return "已拒绝"
-        default: return status
-        }
-    }
-}
-

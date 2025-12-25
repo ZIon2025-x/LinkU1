@@ -200,3 +200,79 @@ struct TaskParticipantExitRequest: Encodable {
     }
 }
 
+// MARK: - Activity Favorite Response Models
+
+struct ActivityFavoriteToggleResponse: Decodable {
+    let success: Bool
+    let data: ActivityFavoriteData
+    let message: String?
+    
+    struct ActivityFavoriteData: Decodable {
+        let isFavorited: Bool
+        
+        enum CodingKeys: String, CodingKey {
+            case isFavorited = "is_favorited"
+        }
+    }
+}
+
+struct ActivityFavoriteStatusResponse: Decodable {
+    let success: Bool
+    let data: ActivityFavoriteStatusData
+    
+    struct ActivityFavoriteStatusData: Decodable {
+        let isFavorited: Bool
+        let favoriteCount: Int
+        
+        enum CodingKeys: String, CodingKey {
+            case isFavorited = "is_favorited"
+            case favoriteCount = "favorite_count"
+        }
+    }
+}
+
+// 我的活动响应（用于获取收藏的活动ID列表）
+// 简化版本：只包含我们需要的字段
+struct MyActivitiesResponse: Decodable {
+    let success: Bool
+    let data: MyActivitiesData
+    
+    struct MyActivitiesData: Decodable {
+        // 只解码 id 字段，忽略其他字段
+        let activities: [ActivityIdOnly]
+        let total: Int
+        let limit: Int
+        let offset: Int
+        let hasMore: Bool
+        
+        enum CodingKeys: String, CodingKey {
+            case activities, total, limit, offset
+            case hasMore = "has_more"
+        }
+    }
+    
+    // 只包含 id 的活动模型（用于提取收藏的活动ID）
+    struct ActivityIdOnly: Decodable {
+        let id: Int
+    }
+}
+
+// 我的活动完整响应（用于"我的活动"页面，包含完整的活动信息）
+struct MyActivitiesFullResponse: Decodable {
+    let success: Bool
+    let data: MyActivitiesFullData
+    
+    struct MyActivitiesFullData: Decodable {
+        let activities: [ActivityWithType]
+        let total: Int
+        let limit: Int
+        let offset: Int
+        let hasMore: Bool
+        
+        enum CodingKeys: String, CodingKey {
+            case activities, total, limit, offset
+            case hasMore = "has_more"
+        }
+    }
+}
+

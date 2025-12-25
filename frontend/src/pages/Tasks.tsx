@@ -1636,14 +1636,40 @@ const Tasks: React.FC = () => {
     }
   }, [t]);
 
+  // 处理活动图片URL（确保相对路径能正确显示）
+  const getActivityImageUrl = useCallback((imageValue: string | null | undefined): string => {
+    if (!imageValue) {
+      return 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
+    }
+    
+    const imageStr = String(imageValue);
+    
+    // 如果已经是完整的URL（包含 http:// 或 https://），直接返回
+    if (imageStr.startsWith('http://') || imageStr.startsWith('https://')) {
+      return imageStr;
+    }
+    
+    // 如果是相对路径（以 / 开头），添加API base URL
+    if (imageStr.startsWith('/')) {
+      return `${API_BASE_URL}${imageStr}`;
+    }
+    
+    // 其他情况直接返回
+    return imageStr;
+  }, []);
+
   // 渲染活动卡片（达人发布的多人活动）
   const renderActivityCard = useCallback((activity: any) => {
     // 获取活动图片
-    const activityImage = activity.images && activity.images.length > 0 
-      ? activity.images[0] 
-      : activity.service_images && activity.service_images.length > 0
-      ? activity.service_images[0]
-      : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
+    let rawImageUrl: string | null = null;
+    if (activity.images && Array.isArray(activity.images) && activity.images.length > 0) {
+      rawImageUrl = activity.images[0];
+    } else if (activity.service_images && Array.isArray(activity.service_images) && activity.service_images.length > 0) {
+      rawImageUrl = activity.service_images[0];
+    }
+    
+    // 处理图片URL，确保能正确显示
+    const activityImage = getActivityImageUrl(rawImageUrl);
     
     // 格式化价格显示（支持折扣）
     const hasDiscount = activity.discount_percentage && activity.discount_percentage > 0;
@@ -1698,15 +1724,21 @@ const Tasks: React.FC = () => {
             bottom: 0,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             zIndex: 0,
+            overflow: 'hidden',
           }}
         >
           <LazyImage
             src={activityImage}
             alt={activity.title}
             style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: '100%',
               height: '100%',
+              minHeight: '100%',
               objectFit: 'cover',
+              objectPosition: 'center',
               opacity: 0.85,
             }}
           />

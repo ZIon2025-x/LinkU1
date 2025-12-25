@@ -198,18 +198,12 @@ class ActivityViewModel: ObservableObject {
     
     /// 加载收藏的活动ID列表
     func loadFavoriteActivityIds() {
-        apiService.request([String: Any].self, "/api/my/activities?type=favorited&limit=100&offset=0", method: "GET")
+        apiService.request(MyActivitiesResponse.self, "/api/my/activities?type=favorited&limit=100&offset=0", method: "GET")
             .sink(receiveCompletion: { _ in
                 // 静默处理错误，不影响主列表显示
             }, receiveValue: { [weak self] response in
-                if let data = response["data"] as? [String: Any],
-                   let activitiesArray = data["activities"] as? [[String: Any]] {
-                    let favoriteIds = activitiesArray.compactMap { activity -> Int? in
-                        if let id = activity["id"] as? Int {
-                            return id
-                        }
-                        return nil
-                    }
+                if response.success {
+                    let favoriteIds = response.data.activities.map { $0.id }
                     self?.favoritedActivityIds = Set(favoriteIds)
                 }
             })
@@ -278,10 +272,7 @@ class ActivityViewModel: ObservableObject {
                     }
                 },
                 receiveValue: { [weak self] response in
-                    if let data = response["data"] as? [String: Any],
-                       let isFavorited = data["is_favorited"] as? Bool {
-                        self?.isFavorited = isFavorited
-                    }
+                    self?.isFavorited = response.data.isFavorited
                 }
             )
             .store(in: &cancellables)
@@ -304,13 +295,8 @@ class ActivityViewModel: ObservableObject {
                 },
                 receiveValue: { [weak self] response in
                     self?.isTogglingFavorite = false
-                    if let data = response["data"] as? [String: Any],
-                       let isFavorited = data["is_favorited"] as? Bool {
-                        self?.isFavorited = isFavorited
-                        completion(true)
-                    } else {
-                        completion(false)
-                    }
+                    self?.isFavorited = response.data.isFavorited
+                    completion(true)
                 }
             )
             .store(in: &cancellables)
