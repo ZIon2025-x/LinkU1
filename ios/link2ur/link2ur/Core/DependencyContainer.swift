@@ -88,7 +88,7 @@ public final class DependencyContainer {
         register(CacheManagerProtocol.self) { CacheManager.shared }
         
         // 位置服务
-        register(LocationServiceProtocol.self) { LocationService.shared }
+        register((any LocationServiceProtocol).self) { LocationService.shared as any LocationServiceProtocol }
         
         // Keychain 助手
         register(KeychainHelperProtocol.self) { KeychainHelper.shared }

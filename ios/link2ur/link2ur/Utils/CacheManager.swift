@@ -549,6 +549,16 @@ public class CacheManager {
         return load([CustomLeaderboard].self, forKey: key)
     }
     
+    /// 保存 Banner 列表
+    func saveBanners(_ banners: [Banner]) {
+        save(banners, forKey: "banners")
+    }
+    
+    /// 加载 Banner 列表
+    func loadBanners() -> [Banner]? {
+        return load([Banner].self, forKey: "banners")
+    }
+    
     // MARK: - 缓存键生成
     
     private func cacheKeyForTasks(category: String?, city: String?) -> String {

@@ -12,19 +12,25 @@ extension APIService {
     
     /// 获取活动列表
     func getActivities(expertId: String? = nil, status: String? = nil, limit: Int = 20, offset: Int = 0) -> AnyPublisher<[Activity], APIError> {
-        var endpoint = "/api/activities?limit=\(limit)&offset=\(offset)"
+        var queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "offset": "\(offset)"
+        ]
         if let expertId = expertId {
-            endpoint += "&expert_id=\(expertId)"
+            queryParams["expert_id"] = expertId
         }
         if let status = status {
-            endpoint += "&status=\(status)"
+            queryParams["status"] = status
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Activities.list)?\(queryString)"
+        
         return request([Activity].self, endpoint)
     }
     
     /// 获取活动详情
     func getActivityDetail(activityId: Int) -> AnyPublisher<Activity, APIError> {
-        return request(Activity.self, "/api/activities/\(activityId)")
+        return request(Activity.self, APIEndpoints.Activities.detail(activityId))
     }
     
     /// 申请参与活动
@@ -37,19 +43,18 @@ extension APIService {
             idempotencyKey: idempotencyKey
         )
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/activities/\(activityId)/apply", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Activities.apply(activityId), method: "POST", body: bodyDict)
     }
     
     // MARK: - Multi-Participant Tasks (多人任务)
     
     /// 获取任务参与者列表
     func getTaskParticipants(taskId: String) -> AnyPublisher<TaskParticipantsResponse, APIError> {
-        return request(TaskParticipantsResponse.self, "/api/tasks/\(taskId)/participants")
+        return request(TaskParticipantsResponse.self, APIEndpoints.Tasks.participants(taskId))
     }
     
     /// 申请参与多人任务 (非活动创建)
@@ -62,12 +67,12 @@ extension APIService {
             idempotencyKey: idempotencyKey
         )
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/apply", method: "POST", body: bodyDict)
+        // 使用支持字符串 ID 的 apply 方法
+        return request(EmptyResponse.self, APIEndpoints.Tasks.applyString(taskId), method: "POST", body: bodyDict)
     }
     
     /// 参与者提交完成
@@ -75,12 +80,11 @@ extension APIService {
         let idempotencyKey = UUID().uuidString
         let body = TaskParticipantCompleteRequest(completionNotes: completionNotes, idempotencyKey: idempotencyKey)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/participants/me/complete", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.participantComplete(taskId), method: "POST", body: bodyDict)
     }
     
     /// 参与者申请退出
@@ -88,24 +92,23 @@ extension APIService {
         let idempotencyKey = UUID().uuidString
         let body = TaskParticipantExitRequest(exitReason: exitReason, idempotencyKey: idempotencyKey)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/participants/me/exit-request", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.participantExitRequest(taskId), method: "POST", body: bodyDict)
     }
     
     // MARK: - Activity Favorites (活动收藏)
     
     /// 收藏/取消收藏活动
     func toggleActivityFavorite(activityId: Int) -> AnyPublisher<ActivityFavoriteToggleResponse, APIError> {
-        return request(ActivityFavoriteToggleResponse.self, "/api/activities/\(activityId)/favorite", method: "POST")
+        return request(ActivityFavoriteToggleResponse.self, APIEndpoints.Activities.favorite(activityId), method: "POST")
     }
     
     /// 获取活动收藏状态
     func getActivityFavoriteStatus(activityId: Int) -> AnyPublisher<ActivityFavoriteStatusResponse, APIError> {
-        return request(ActivityFavoriteStatusResponse.self, "/api/activities/\(activityId)/favorite/status", method: "GET")
+        return request(ActivityFavoriteStatusResponse.self, APIEndpoints.Activities.favoriteStatus(activityId))
     }
 }
 

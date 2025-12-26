@@ -125,7 +125,15 @@ public class APIService {
                                             .mapError { APIError.decodingError($0) }
                                             .eraseToAnyPublisher()
                                     } else {
-                                        return Fail(error: APIError.httpError(httpResponse.statusCode)).eraseToAnyPublisher()
+                                        // 尝试解析后端标准错误响应
+                                        let apiError: APIError
+                                        if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                                            Logger.error("API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
+                                            apiError = parsedError
+                                        } else {
+                                            apiError = APIError.httpError(httpResponse.statusCode)
+                                        }
+                                        return Fail(error: apiError).eraseToAnyPublisher()
                                     }
                                 }
                                 .eraseToAnyPublisher()
@@ -134,14 +142,22 @@ public class APIService {
                 } else {
                     // 记录性能指标（其他HTTP错误）
                     let duration = Date().timeIntervalSince(startTime)
+                    // 尝试解析后端标准错误响应
+                    let apiError: APIError
+                    if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                        Logger.error("API错误 (\(endpoint)): \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
+                        apiError = parsedError
+                    } else {
+                        apiError = APIError.httpError(httpResponse.statusCode)
+                    }
                     PerformanceMonitor.shared.recordNetworkRequest(
                         endpoint: endpoint,
                         method: method,
                         duration: duration,
                         statusCode: httpResponse.statusCode,
-                        error: APIError.httpError(httpResponse.statusCode)
+                        error: apiError
                     )
-                    return Fail(error: APIError.httpError(httpResponse.statusCode)).eraseToAnyPublisher()
+                    return Fail(error: apiError).eraseToAnyPublisher()
                 }
             }
             .receive(on: DispatchQueue.main)
@@ -159,19 +175,7 @@ public class APIService {
         
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         // 检查是否是公开端点（不需要认证）
-        let publicEndpoints = [
-            "/api/forum/posts",
-            "/api/forum/categories",
-            "/api/activities",
-            "/api/banners",
-            "/api/secure-auth/send-verification-code",
-            "/api/secure-auth/send-phone-verification-code",
-            "/api/secure-auth/login",
-            "/api/secure-auth/login-with-code",
-            "/api/secure-auth/login-with-phone-code",
-            "/api/users/register"
-        ]
-        let isPublicEndpoint = publicEndpoints.contains { endpoint.contains($0) }
+        let isPublicEndpoint = APIEndpoints.publicEndpoints.contains { endpoint.contains($0) }
         
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !sessionId.isEmpty {
             request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
@@ -354,16 +358,24 @@ public class APIService {
                                             .eraseToAnyPublisher()
                                     } else {
                                         Logger.error("❌ 重试后仍然失败，状态码: \(httpResponse.statusCode), 端点: \(endpoint)", category: .api)
-                                        // 尝试获取错误详情
-                                        if let errorData = String(data: data, encoding: .utf8) {
-                                            Logger.debug("❌ 错误响应内容: \(errorData.prefix(500))", category: .api)
+                                        // 尝试解析后端标准错误响应
+                                        let apiError: APIError
+                                        if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                                            Logger.error("API错误详情: \(errorMessage)", category: .api)
+                                            apiError = parsedError
+                                        } else {
+                                            // 尝试获取错误详情
+                                            if let errorData = String(data: data, encoding: .utf8) {
+                                                Logger.debug("❌ 错误响应内容: \(errorData.prefix(500))", category: .api)
+                                            }
+                                            apiError = APIError.httpError(httpResponse.statusCode)
                                         }
                                         // 如果是401错误且刷新也成功，可能是设备指纹不匹配或其他后端验证问题
                                         // 不自动清除Session，让用户手动处理
                                         if httpResponse.statusCode == 401 {
                                             Logger.warning("⚠️ Session 刷新成功但重试仍失败，可能是设备指纹不匹配或后端验证问题，请检查后端日志", category: .api)
                                         }
-                                        return Fail(error: APIError.httpError(httpResponse.statusCode)).eraseToAnyPublisher()
+                                        return Fail(error: apiError).eraseToAnyPublisher()
                                     }
                                 }
                                 .eraseToAnyPublisher()
@@ -397,7 +409,7 @@ public class APIService {
         isRefreshing = true
         
         // 后端使用 session-based 认证，refresh 端点通过 X-Session-ID header 验证，不需要 body
-        guard let refreshURL = URL(string: "\(baseURL)/api/secure-auth/refresh") else {
+        guard let refreshURL = URL(string: "\(baseURL)\(APIEndpoints.Auth.refresh)") else {
             isRefreshing = false
             return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
         }
@@ -478,7 +490,7 @@ public class APIService {
     
     // 文件上传
     func uploadImage(_ data: Data, filename: String = "image.jpg") -> AnyPublisher<String, APIError> {
-        guard let url = URL(string: "\(baseURL)/api/upload/image") else {
+        guard let url = URL(string: "\(baseURL)\(APIEndpoints.Common.uploadImage)") else {
             return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
         }
         
@@ -533,7 +545,15 @@ public class APIService {
                         }
                         .eraseToAnyPublisher()
                 } else {
-                    return Fail(error: APIError.httpError(httpResponse.statusCode)).eraseToAnyPublisher()
+                    // 尝试解析后端标准错误响应
+                    let apiError: APIError
+                    if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                        Logger.error("上传图片API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
+                        apiError = parsedError
+                    } else {
+                        apiError = APIError.httpError(httpResponse.statusCode)
+                    }
+                    return Fail(error: apiError).eraseToAnyPublisher()
                 }
             }
             .receive(on: DispatchQueue.main)
@@ -573,7 +593,7 @@ public class APIService {
         
         // 假设后端有 /api/users/device-token 或类似的端点
         // 如果没有，可以暂时注释掉或使用其他端点
-        request(EmptyResponse.self, "/api/users/device-token", method: "POST", body: body)
+        request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "POST", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure = result {
                     // 如果API不存在，静默失败（不影响应用使用）

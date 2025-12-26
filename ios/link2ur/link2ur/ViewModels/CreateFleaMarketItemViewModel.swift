@@ -19,6 +19,7 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isUploading = false
     @Published var errorMessage: String?
+    @Published var categories: [String] = [] // 从 API 加载的分类列表
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -26,13 +27,26 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+        loadCategories()
     }
     
     deinit {
         cancellables.removeAll()
     }
     
-    let categories = ["电子产品", "服装配饰", "家具家电", "图书文具", "运动户外", "美妆护肤", "其他"]
+    func loadCategories() {
+        apiService.request(FleaMarketCategoryResponse.self, "/api/flea-market/categories", method: "GET")
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    // 使用 ErrorHandler 统一处理错误
+                    ErrorHandler.shared.handle(error, context: "加载商品分类")
+                }
+            }, receiveValue: { [weak self] response in
+                // 使用分类名称列表（后端期望的是名称，如 "Electronics", "Clothing" 等）
+                self?.categories = response.data.categories
+            })
+            .store(in: &cancellables)
+    }
     
     func uploadImages(completion: @escaping (Bool) -> Void) {
         guard !selectedImages.isEmpty else {

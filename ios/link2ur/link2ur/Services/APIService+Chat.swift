@@ -69,33 +69,8 @@ struct TaskChatDetail: Decodable {
 
 struct SendTaskMessageRequest: Encodable {
     let content: String
-    let meta: [String: AnyCodable]? // 需要自定义 AnyCodable
+    let meta: [String: AnyCodable]? // 使用 APIErrorResponse.swift 中定义的 AnyCodable
     let attachments: [AttachmentRequest]?
-}
-
-// 简单的 AnyCodable 封装，用于处理 meta 字典
-struct AnyCodable: Encodable {
-    let value: Any
-    
-    init(_ value: Any) {
-        self.value = value
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        if let intVal = value as? Int {
-            try container.encode(intVal)
-        } else if let doubleVal = value as? Double {
-            try container.encode(doubleVal)
-        } else if let strVal = value as? String {
-            try container.encode(strVal)
-        } else if let boolVal = value as? Bool {
-            try container.encode(boolVal)
-        } else {
-            // 简单处理，忽略复杂嵌套
-            try container.encode(String(describing: value))
-        }
-    }
 }
 
 struct AttachmentRequest: Encodable {
@@ -227,17 +202,25 @@ extension APIService {
     
     /// 获取任务聊天列表
     func getTaskChatList(limit: Int = 20, offset: Int = 0) -> AnyPublisher<TaskChatListResponse, APIError> {
-        return request(TaskChatListResponse.self, "/api/messages/tasks?limit=\(limit)&offset=\(offset)")
+        let queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "offset": "\(offset)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.TaskMessages.list)?\(queryString)"
+        return request(TaskChatListResponse.self, endpoint)
     }
     
     /// 获取任务聊天详情（消息列表）
     func getTaskMessages(taskId: Int, limit: Int = 20, cursor: String? = nil) -> AnyPublisher<TaskMessagesResponse, APIError> {
-        var endpoint = "/api/messages/task/\(taskId)?limit=\(limit)"
+        var queryParams: [String: String?] = [
+            "limit": "\(limit)"
+        ]
         if let cursor = cursor {
-            endpoint += "&cursor=\(cursor)"
+            queryParams["cursor"] = cursor
         }
-        // URL编码处理cursor
-        endpoint = endpoint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? endpoint
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.TaskMessages.taskMessages(taskId))?\(queryString)"
         
         return request(TaskMessagesResponse.self, endpoint)
     }
@@ -255,103 +238,102 @@ extension APIService {
         
         let body = SendTaskMessageRequest(content: content, meta: metaCodable, attachments: attachments)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(TaskMessage.self, "/api/messages/task/\(taskId)/send", method: "POST", body: bodyDict)
+        return request(TaskMessage.self, APIEndpoints.TaskMessages.send(taskId), method: "POST", body: bodyDict)
     }
     
     /// 标记消息已读
     func markMessagesRead(taskId: Int, uptoMessageId: Int? = nil, messageIds: [Int]? = nil) -> AnyPublisher<EmptyResponse, APIError> {
         let body = MarkReadRequest(uptoMessageId: uptoMessageId, messageIds: messageIds)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/messages/task/\(taskId)/read", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.TaskMessages.read(taskId), method: "POST", body: bodyDict)
     }
     
     // MARK: - Task Applications & Negotiation
     
     /// 获取任务申请列表
     func getTaskApplications(taskId: Int, status: String? = nil, limit: Int = 20, offset: Int = 0) -> AnyPublisher<TaskApplicationListResponse, APIError> {
-        var endpoint = "/api/tasks/\(taskId)/applications?limit=\(limit)&offset=\(offset)"
+        var queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "offset": "\(offset)"
+        ]
         if let status = status {
-            endpoint += "&status=\(status)"
+            queryParams["status"] = status
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Tasks.applications(taskId))?\(queryString)"
         return request(TaskApplicationListResponse.self, endpoint)
     }
     
     /// 接受申请
     func acceptApplication(taskId: Int, applicationId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/accept", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Tasks.acceptApplication(taskId, applicationId), method: "POST")
     }
     
     /// 拒绝申请
     func rejectApplication(taskId: Int, applicationId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/reject", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Tasks.rejectApplication(taskId, applicationId), method: "POST")
     }
     
     /// 撤回申请
     func withdrawApplication(taskId: Int, applicationId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/withdraw", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Tasks.withdrawApplication(taskId, applicationId), method: "POST")
     }
     
     /// 发起再次议价 (发布者)
     func negotiateApplication(taskId: Int, applicationId: Int, price: Double, message: String?) -> AnyPublisher<EmptyResponse, APIError> {
         let body = NegotiateRequest(negotiatedPrice: price, message: message)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/negotiate", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.negotiateApplication(taskId, applicationId), method: "POST", body: bodyDict)
     }
     
     /// 获取议价Token (通过通知ID)
     func getNegotiationTokens(notificationId: Int) -> AnyPublisher<TokenResponse, APIError> {
-        return request(TokenResponse.self, "/api/notifications/\(notificationId)/negotiation-tokens", method: "GET")
+        return request(TokenResponse.self, APIEndpoints.Notifications.negotiationTokens(notificationId))
     }
     
     /// 处理再次议价 (同意/拒绝)
     func respondNegotiation(taskId: Int, applicationId: Int, action: String, token: String) -> AnyPublisher<EmptyResponse, APIError> {
         let body = RespondNegotiationRequest(action: action, token: token)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/respond-negotiation", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.respondNegotiation(taskId, applicationId), method: "POST", body: bodyDict)
     }
     
     /// 发送申请留言
     func sendApplicationMessage(taskId: Int, applicationId: Int, message: String, price: Double? = nil) -> AnyPublisher<EmptyResponse, APIError> {
         let body = SendApplicationMessageRequest(message: message, negotiatedPrice: price)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/send-message", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.sendApplicationMessage(taskId, applicationId), method: "POST", body: bodyDict)
     }
     
     /// 回复申请留言
     func replyApplicationMessage(taskId: Int, applicationId: Int, message: String, notificationId: Int) -> AnyPublisher<EmptyResponse, APIError> {
         let body = ReplyApplicationMessageRequest(message: message, notificationId: notificationId)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/applications/\(applicationId)/reply-message", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.replyApplicationMessage(taskId, applicationId), method: "POST", body: bodyDict)
     }
 }
 

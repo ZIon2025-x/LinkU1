@@ -10,27 +10,38 @@ extension APIService {
     
     /// 获取积分账户信息
     func getPointsAccount() -> AnyPublisher<PointsAccount, APIError> {
-        return request(PointsAccount.self, "/api/points/account")
+        return request(PointsAccount.self, APIEndpoints.Points.account)
     }
     
     /// 获取积分交易记录
     func getPointsTransactions(page: Int = 1, limit: Int = 20) -> AnyPublisher<PointsTransactionListResponse, APIError> {
-        return request(PointsTransactionListResponse.self, "/api/points/transactions?page=\(page)&limit=\(limit)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "limit": "\(limit)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Points.transactions)?\(queryString)"
+        return request(PointsTransactionListResponse.self, endpoint)
     }
     
     // MARK: - Coupons (优惠券)
     
     /// 获取可用优惠券列表
     func getAvailableCoupons() -> AnyPublisher<CouponListResponse, APIError> {
-        return request(CouponListResponse.self, "/api/coupons/available")
+        return request(CouponListResponse.self, APIEndpoints.Coupons.available)
     }
     
     /// 获取我的优惠券列表
     func getMyCoupons(status: String? = nil, page: Int = 1, limit: Int = 20) -> AnyPublisher<UserCouponListResponse, APIError> {
-        var endpoint = "/api/coupons/my?page=\(page)&limit=\(limit)"
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "limit": "\(limit)"
+        ]
         if let status = status {
-            endpoint += "&status=\(status)"
+            queryParams["status"] = status
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Coupons.my)?\(queryString)"
         return request(UserCouponListResponse.self, endpoint)
     }
     
@@ -39,29 +50,28 @@ extension APIService {
         let idempotencyKey = UUID().uuidString
         let body = CouponClaimRequest(couponId: couponId, promotionCode: promotionCode, idempotencyKey: idempotencyKey)
         
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, "/api/coupons/claim", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Coupons.claim, method: "POST", body: bodyDict)
     }
     
     // MARK: - Check In (签到)
     
     /// 每日签到
     func checkIn() -> AnyPublisher<CheckInResponse, APIError> {
-        return request(CheckInResponse.self, "/api/checkin", method: "POST")
+        return request(CheckInResponse.self, APIEndpoints.CheckIn.checkIn, method: "POST")
     }
     
     /// 获取签到状态
     func getCheckInStatus() -> AnyPublisher<CheckInStatus, APIError> {
-        return request(CheckInStatus.self, "/api/checkin/status")
+        return request(CheckInStatus.self, APIEndpoints.CheckIn.status)
     }
     
     /// 获取签到奖励配置
     func getCheckInRewards() -> AnyPublisher<CheckInRewardsListResponse, APIError> {
-        return request(CheckInRewardsListResponse.self, "/api/checkin/rewards")
+        return request(CheckInRewardsListResponse.self, APIEndpoints.CheckIn.rewards)
     }
     
     // MARK: - Invitation (邀请)
@@ -69,7 +79,7 @@ extension APIService {
     /// 验证邀请码
     func validateInvitationCode(_ code: String) -> AnyPublisher<InvitationCodeValidateResponse, APIError> {
         let body = ["code": code]
-        return request(InvitationCodeValidateResponse.self, "/api/invitation-codes/validate", method: "POST", body: body)
+        return request(InvitationCodeValidateResponse.self, APIEndpoints.InvitationCodes.validate, method: "POST", body: body)
     }
 }
 

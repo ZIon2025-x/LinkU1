@@ -81,6 +81,23 @@ struct CreateTaskView: View {
                                     options: viewModel.taskTypes.map { ($0.value, $0.label) },
                                     icon: "tag.fill"
                                 )
+                                
+                                // 校园生活类型权限提示
+                                if viewModel.taskType == "Campus Life" && viewModel.studentVerificationStatus?.isVerified != true {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.warning)
+                                        Text("只有已通过学生认证的用户才能发布"校园生活"类型的任务")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.warning)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(AppColors.warning.opacity(0.1))
+                                    .cornerRadius(AppCornerRadius.medium)
+                                }
                             }
                         }
                         .padding(AppSpacing.md)

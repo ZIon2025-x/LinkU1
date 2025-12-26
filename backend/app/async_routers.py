@@ -379,6 +379,35 @@ async def create_task_async(
         if False:  # 普通用户不再有客服权限
             raise HTTPException(status_code=403, detail="客服账号不能发布任务")
 
+        # 权限检查：只有学生用户才能发布"校园生活"类型的任务
+        if task.task_type == "Campus Life":
+            from sqlalchemy import select
+            from app.models import StudentVerification
+            
+            # 查询用户是否有已验证的学生认证
+            verification_result = await db.execute(
+                select(StudentVerification)
+                .where(StudentVerification.user_id == current_user.id)
+                .where(StudentVerification.status == 'verified')
+                .order_by(StudentVerification.created_at.desc())
+            )
+            verification = verification_result.scalar_one_or_none()
+            
+            if not verification:
+                raise HTTPException(
+                    status_code=403,
+                    detail="只有已通过学生认证的用户才能发布"校园生活"类型的任务，请先完成学生认证"
+                )
+            
+            # 检查认证是否过期
+            from app.utils import get_utc_time
+            now = get_utc_time()
+            if verification.expires_at and verification.expires_at < now:
+                raise HTTPException(
+                    status_code=403,
+                    detail="您的学生认证已过期，请先续期后再发布"校园生活"类型的任务"
+                )
+
         print(f"DEBUG: 开始创建任务，用户ID: {current_user.id}")
         print(f"DEBUG: 任务数据: {task}")
         

@@ -16,6 +16,7 @@ class ActivityViewModel: ObservableObject {
     @Published var favoritedActivityIds: Set<Int> = [] // 收藏的活动ID集合（用于列表页）
     
     private var cancellables = Set<AnyCancellable>()
+    private var isLoadingFavorites = false // 防止重复加载收藏列表
     // 使用依赖注入获取服务
     private let apiService: APIService
     
@@ -198,10 +199,19 @@ class ActivityViewModel: ObservableObject {
     
     /// 加载收藏的活动ID列表
     func loadFavoriteActivityIds() {
+        // 防止重复请求
+        guard !isLoadingFavorites else {
+            Logger.debug("收藏列表正在加载中，跳过重复请求", category: .api)
+            return
+        }
+        
+        isLoadingFavorites = true
         apiService.request(MyActivitiesResponse.self, "/api/my/activities?type=favorited&limit=100&offset=0", method: "GET")
-            .sink(receiveCompletion: { _ in
+            .sink(receiveCompletion: { [weak self] _ in
+                self?.isLoadingFavorites = false
                 // 静默处理错误，不影响主列表显示
             }, receiveValue: { [weak self] response in
+                self?.isLoadingFavorites = false
                 if response.success {
                     let favoriteIds = response.data.activities.map { $0.id }
                     self?.favoritedActivityIds = Set(favoriteIds)

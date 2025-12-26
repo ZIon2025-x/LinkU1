@@ -75,11 +75,7 @@ class CustomerServiceViewModel: ObservableObject {
                         // 注意：不在这里清除 Session，让用户决定是否重新登录
                         // 如果用户需要重新登录，可以在登录页面处理
                     } else {
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                         Logger.error("连接客服失败: \(error.localizedDescription)", category: .api)
                     }
                     completion(false)

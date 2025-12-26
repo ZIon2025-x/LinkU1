@@ -34,11 +34,7 @@ class StudentVerificationViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载学生认证状态")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] (response: StudentVerificationStatusResponse) in
@@ -89,11 +85,7 @@ class StudentVerificationViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载学生认证状态")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] (response: UniversityListResponse) in

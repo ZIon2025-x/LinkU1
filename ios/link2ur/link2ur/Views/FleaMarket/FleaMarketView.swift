@@ -55,8 +55,9 @@ struct FleaMarketView: View {
                     }
                     ForEach(viewModel.categories, id: \.id) { category in
                         Button(category.name) {
-                            selectedCategory = category.id
-                            viewModel.loadItems(category: category.id)
+                            // 使用分类名称进行筛选（后端期望的是名称，如 "Electronics", "Clothing" 等）
+                            selectedCategory = category.name
+                            viewModel.loadItems(category: category.name)
                         }
                     }
                 } label: {

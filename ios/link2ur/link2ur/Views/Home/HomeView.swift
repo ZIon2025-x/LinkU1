@@ -1289,7 +1289,12 @@ struct ShortcutButton: View {
 
 // 推荐任务区域组件
 struct RecommendedTasksSection: View {
-    @StateObject private var viewModel = TasksViewModel()
+    @StateObject private var viewModel: TasksViewModel = {
+        let vm = TasksViewModel()
+        // 初始化时立即从缓存加载数据，避免视图渲染时显示加载状态
+        vm.loadTasksFromCache(status: "open")
+        return vm
+    }()
     
     var body: some View {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -1346,11 +1351,15 @@ struct RecommendedTasksSection: View {
                 .animation(.easeInOut(duration: 0.2), value: viewModel.tasks.count) // 平滑过渡，减少闪烁
             }
         }
-        .onAppear {
-            // 立即加载，优先从缓存读取（预加载的数据已经在缓存中）
-            // loadTasks 方法会自动从缓存加载，然后后台刷新
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
+            // 如果初始化时已从缓存加载了数据，只需要在后台刷新
+            // 如果还没有数据，才需要加载
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
                 viewModel.loadTasks(status: "open")
+            } else if !viewModel.tasks.isEmpty {
+                // 已经有缓存数据，在后台静默刷新（不显示加载状态）
+                viewModel.loadTasks(status: "open", forceRefresh: false)
             }
         }
     }
@@ -1582,7 +1591,8 @@ struct PopularActivitiesSection: View {
                 .animation(.easeInOut(duration: 0.2), value: viewModel.activities.count) // 平滑过渡，减少闪烁
             }
         }
-        .onAppear {
+        .task {
+            // 使用 task 替代 onAppear，避免重复加载
             // 立即加载，优先从缓存读取（预加载的数据已经在缓存中）
             // 注意：由于 loadActivities 传入 status: "open"，不会从缓存加载
             // 但预加载的数据已经保存到缓存，这里立即加载可以快速显示
@@ -1633,7 +1643,12 @@ struct BannerCarouselSection: View {
         }
         .task {
             // 使用 task 替代 onAppear，避免重复加载
+            // 如果初始化时已从缓存加载了数据，只需要在后台刷新
+            // 如果还没有数据，才需要加载
             if viewModel.banners.isEmpty && !viewModel.isLoading {
+                viewModel.loadBanners()
+            } else if !viewModel.banners.isEmpty {
+                // 已经有缓存数据，在后台静默刷新
                 viewModel.loadBanners()
             }
         }
@@ -1662,10 +1677,32 @@ class BannerCarouselViewModel: ObservableObject {
         )
     }
     
+    init() {
+        // 初始化时立即从缓存加载数据，避免视图渲染时显示加载状态
+        loadBannersFromCache()
+    }
+    
+    /// 从缓存加载 Banner（同步，立即执行）
+    private func loadBannersFromCache() {
+        if let cachedBanners = CacheManager.shared.loadBanners(), !cachedBanners.isEmpty {
+            var sortedBanners = cachedBanners.sorted { $0.order < $1.order }
+            // 将硬编码的跳蚤市场Banner添加到最前面
+            sortedBanners.insert(self.hardcodedFleaMarketBanner, at: 0)
+            self.banners = sortedBanners
+            Logger.success("初始化时从缓存加载了 \(cachedBanners.count) 个 Banner", category: .cache)
+        }
+    }
+    
     func loadBanners() {
         guard !isLoading else { return }
-        isLoading = true
         errorMessage = nil
+        
+        // 如果已经有缓存数据（初始化时已加载），不需要再次从缓存加载
+        // 只需要在后台刷新数据
+        if banners.isEmpty {
+            // 没有缓存数据，需要显示加载状态
+            isLoading = true
+        }
         
         apiService.getBanners()
             .receive(on: DispatchQueue.main)
@@ -1676,8 +1713,10 @@ class BannerCarouselViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         self.errorMessage = error.localizedDescription
                         Logger.error("加载广告失败: \(error.localizedDescription)", category: .api)
-                        // 即使API失败，也显示硬编码的跳蚤市场Banner
-                        self.banners = [self.hardcodedFleaMarketBanner]
+                        // 如果之前没有缓存数据，显示硬编码的跳蚤市场Banner
+                        if self.banners.isEmpty {
+                            self.banners = [self.hardcodedFleaMarketBanner]
+                        }
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -1687,6 +1726,9 @@ class BannerCarouselViewModel: ObservableObject {
                     
                     // 将硬编码的跳蚤市场Banner添加到最前面
                     serverBanners.insert(self.hardcodedFleaMarketBanner, at: 0)
+                    
+                    // 保存到缓存
+                    CacheManager.shared.saveBanners(response.banners)
                     
                     self.banners = serverBanners
                     self.isLoading = false

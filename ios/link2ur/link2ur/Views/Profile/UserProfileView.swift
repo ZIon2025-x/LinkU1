@@ -123,8 +123,8 @@ class UserProfileViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载用户资料")
-                        // 错误处理：直接使用 APIError 的 userFriendlyMessage 或 localizedDescription
-                        self?.errorMessage = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                        // 错误处理：直接使用 APIError 的 userFriendlyMessage
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] profile in

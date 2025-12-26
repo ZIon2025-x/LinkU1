@@ -6,7 +6,7 @@ import Combine
 extension APIService {
     /// 获取首页广告横幅列表
     func getBanners() -> AnyPublisher<BannerListResponse, APIError> {
-        return request(BannerListResponse.self, "/api/banners")
+        return request(BannerListResponse.self, APIEndpoints.Common.banners)
     }
 }
 
@@ -171,12 +171,10 @@ extension APIService {
     /// 邮箱密码登录
     func login(email: String, password: String) -> AnyPublisher<LoginResponse, APIError> {
         let body = LoginRequest(email: email, password: password)
-        // 将 Encodable 转换为 Dictionary
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(LoginResponse.self, "/api/secure-auth/login", method: "POST", body: bodyDict)
+        return request(LoginResponse.self, APIEndpoints.Auth.login, method: "POST", body: bodyDict)
     }
     
     /// 邮箱验证码登录
@@ -188,17 +186,16 @@ extension APIService {
         if let captchaToken = captchaToken {
             body["captcha_token"] = captchaToken
         }
-        return request(LoginResponse.self, "/api/secure-auth/login-with-code", method: "POST", body: body)
+        return request(LoginResponse.self, APIEndpoints.Auth.loginWithCode, method: "POST", body: body)
     }
     
     /// 手机验证码登录
     func loginWithPhone(phone: String, code: String, captchaToken: String? = nil) -> AnyPublisher<LoginResponse, APIError> {
         let body = PhoneLoginRequest(phone: phone, verificationCode: code, captchaToken: captchaToken)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(LoginResponse.self, "/api/secure-auth/login-with-phone-code", method: "POST", body: bodyDict)
+        return request(LoginResponse.self, APIEndpoints.Auth.loginWithPhoneCode, method: "POST", body: bodyDict)
     }
     
     /// 发送邮箱验证码
@@ -207,7 +204,7 @@ extension APIService {
         if let captchaToken = captchaToken {
             body["captcha_token"] = captchaToken
         }
-        return request(EmptyResponse.self, "/api/secure-auth/send-verification-code", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Auth.sendVerificationCode, method: "POST", body: body)
     }
     
     /// 发送手机验证码
@@ -216,34 +213,34 @@ extension APIService {
         if let captchaToken = captchaToken {
             body["captcha_token"] = captchaToken
         }
-        return request(EmptyResponse.self, "/api/secure-auth/send-phone-verification-code", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Auth.sendPhoneVerificationCode, method: "POST", body: body)
     }
     
     /// 获取CAPTCHA site key
     func getCaptchaSiteKey() -> AnyPublisher<CaptchaConfigResponse, APIError> {
-        return request(CaptchaConfigResponse.self, "/api/secure-auth/captcha-site-key")
+        return request(CaptchaConfigResponse.self, APIEndpoints.Auth.captchaSiteKey)
     }
     
     /// 登出
     func logout() -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/secure-auth/logout", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Auth.logout, method: "POST")
     }
     
     // MARK: - User Profile (用户资料)
     
     /// 获取当前用户信息
     func getUserProfile() -> AnyPublisher<User, APIError> {
-        return request(User.self, "/api/users/profile/me")
+        return request(User.self, APIEndpoints.Users.profileMe)
     }
     
     /// 获取指定用户信息（简化版，只返回 User）
     func getUserProfile(userId: String) -> AnyPublisher<User, APIError> {
-        return request(User.self, "/api/users/profile/\(userId)")
+        return request(User.self, APIEndpoints.Users.profile(userId))
     }
     
     /// 获取指定用户完整资料（包含统计、任务、评价等）
     func getUserProfileDetail(userId: String) -> AnyPublisher<UserProfileResponse, APIError> {
-        return request(UserProfileResponse.self, "/api/users/profile/\(userId)")
+        return request(UserProfileResponse.self, APIEndpoints.Users.profile(userId))
     }
     
     /// 更新用户资料
@@ -252,52 +249,62 @@ extension APIService {
         if let name = name { body["name"] = name }
         if let avatar = avatar { body["avatar"] = avatar }
         if let residenceCity = residenceCity { body["residence_city"] = residenceCity }
-        // 根据 web 前端：/api/users/profile/avatar 和 /api/users/profile/timezone
-        return request(User.self, "/api/users/profile/me", method: "PATCH", body: body)
+        return request(User.self, APIEndpoints.Users.profileMe, method: "PATCH", body: body)
     }
     
     /// 更新头像
     func updateAvatar(avatar: String) -> AnyPublisher<User, APIError> {
         let body: [String: Any] = ["avatar": avatar]
-        return request(User.self, "/api/users/profile/avatar", method: "PATCH", body: body)
+        return request(User.self, APIEndpoints.Users.updateAvatar, method: "PATCH", body: body)
     }
     
     // MARK: - Tasks (任务)
     
     /// 获取任务列表
     func getTasks(page: Int = 1, pageSize: Int = 20, type: String? = nil, location: String? = nil, keyword: String? = nil, sortBy: String? = nil, userLatitude: Double? = nil, userLongitude: Double? = nil) -> AnyPublisher<TaskListResponse, APIError> {
-        var endpoint = "/api/tasks?page=\(page)&page_size=\(pageSize)"
-        if let type = type, type != "all" { endpoint += "&task_type=\(type)" }
-        if let location = location, location != "all" { endpoint += "&location=\(location)" }
-        if let keyword = keyword { endpoint += "&keyword=\(keyword)" }
-        if let sortBy = sortBy { endpoint += "&sort_by=\(sortBy)" }
-        // 添加用户位置参数（用于"附近"功能的距离排序）
-        if let lat = userLatitude, let lon = userLongitude {
-            endpoint += "&user_latitude=\(lat)&user_longitude=\(lon)"
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        if let type = type, type != "all" {
+            queryParams["task_type"] = type
         }
-        // URL 编码处理
-        endpoint = endpoint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? endpoint
+        if let location = location, location != "all" {
+            queryParams["location"] = location
+        }
+        if let keyword = keyword {
+            queryParams["keyword"] = keyword
+        }
+        if let sortBy = sortBy {
+            queryParams["sort_by"] = sortBy
+        }
+        if let lat = userLatitude, let lon = userLongitude {
+            queryParams["user_latitude"] = "\(lat)"
+            queryParams["user_longitude"] = "\(lon)"
+        }
+        
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Tasks.list)?\(queryString)"
         
         return request(TaskListResponse.self, endpoint)
     }
     
     /// 获取我的任务
     func getMyTasks() -> AnyPublisher<[Task], APIError> {
-        return request([Task].self, "/api/users/my-tasks")
+        return request([Task].self, APIEndpoints.Users.myTasks)
     }
     
     /// 获取任务详情
     func getTaskDetail(taskId: Int) -> AnyPublisher<Task, APIError> {
-        return request(Task.self, "/api/tasks/\(taskId)")
+        return request(Task.self, APIEndpoints.Tasks.detail(taskId))
     }
     
     /// 创建任务
     func createTask(_ task: TaskCreateRequest) -> AnyPublisher<Task, APIError> {
-        guard let bodyData = try? JSONEncoder().encode(task),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(task) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(Task.self, "/api/tasks", method: "POST", body: bodyDict)
+        return request(Task.self, APIEndpoints.Tasks.list, method: "POST", body: bodyDict)
     }
     
     /// 申请任务（支持议价）
@@ -306,20 +313,19 @@ extension APIService {
         if let message = message, !message.isEmpty { body["message"] = message }
         if let negotiatedPrice = negotiatedPrice { body["negotiated_price"] = negotiatedPrice }
         if let currency = currency { body["currency"] = currency }
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/apply", method: "POST", body: body.isEmpty ? nil : body)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.apply(taskId), method: "POST", body: body.isEmpty ? nil : body)
     }
     
     // 注意：acceptApplication 方法已移至 APIService+Chat.swift，这里不再重复定义
     
     /// 完成任务 (执行者)
     func completeTask(taskId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        // 后端路由在 routers.py 中定义为 /tasks/{task_id}/complete，注册在 /api/users 前缀下
-        return request(EmptyResponse.self, "/api/users/tasks/\(taskId)/complete", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Users.taskComplete(taskId), method: "POST")
     }
     
     /// 确认任务完成 (发布者)
     func confirmTaskCompletion(taskId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/confirm_completion", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Tasks.confirmCompletion(taskId), method: "POST")
     }
     
     /// 取消任务
@@ -328,208 +334,237 @@ extension APIService {
         if let reason = reason {
             body = ["reason": reason]
         }
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/cancel", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.cancel(taskId), method: "POST", body: body)
     }
     
     /// 删除任务
     func deleteTask(taskId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/delete", method: "DELETE")
+        return request(EmptyResponse.self, APIEndpoints.Tasks.delete(taskId), method: "DELETE")
     }
     
     // MARK: - Flea Market (跳蚤市场)
     
     /// 获取商品列表
     func getFleaMarketItems(page: Int = 1, pageSize: Int = 20, category: String? = nil) -> AnyPublisher<FleaMarketItemListResponse, APIError> {
-        var endpoint = "/api/flea-market/items?page=\(page)&page_size=\(pageSize)"
-        if let category = category { endpoint += "&category=\(category)" }
-        endpoint = endpoint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? endpoint
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        if let category = category {
+            queryParams["category"] = category
+        }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.FleaMarket.items)?\(queryString)"
         
         return request(FleaMarketItemListResponse.self, endpoint)
     }
     
     /// 获取商品详情
     func getFleaMarketItemDetail(itemId: String) -> AnyPublisher<FleaMarketItemResponse, APIError> {
-        return request(FleaMarketItemResponse.self, "/api/flea-market/items/\(itemId)")
+        return request(FleaMarketItemResponse.self, APIEndpoints.FleaMarket.itemDetail(itemId))
     }
     
     /// 发布商品
     func createFleaMarketItem(_ item: FleaMarketItemCreateRequest) -> AnyPublisher<CreateFleaMarketItemResponse, APIError> {
-        guard let bodyData = try? JSONEncoder().encode(item),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(item) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(CreateFleaMarketItemResponse.self, "/api/flea-market/items", method: "POST", body: bodyDict)
+        return request(CreateFleaMarketItemResponse.self, APIEndpoints.FleaMarket.items, method: "POST", body: bodyDict)
     }
     
     /// 购买商品 (直接购买)
     func purchaseItem(itemId: String) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/direct-purchase", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.FleaMarket.directPurchase(itemId), method: "POST")
     }
     
     /// 更新商品
     func updateFleaMarketItem(itemId: String, item: [String: Any]) -> AnyPublisher<FleaMarketItem, APIError> {
-        return request(FleaMarketItem.self, "/api/flea-market/items/\(itemId)", method: "PUT", body: item)
+        return request(FleaMarketItem.self, APIEndpoints.FleaMarket.itemDetail(itemId), method: "PUT", body: item)
     }
     
     /// 刷新商品（重置自动删除计时器）
     func refreshFleaMarketItem(itemId: String) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/refresh", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.FleaMarket.refresh(itemId), method: "POST")
     }
     
     /// 获取我的购买记录
     func getMyPurchases(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<MyPurchasesListResponse, APIError> {
-        return request(MyPurchasesListResponse.self, "/api/flea-market/my-purchases?page=\(page)&page_size=\(pageSize)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.FleaMarket.myPurchases)?\(queryString)"
+        
+        return request(MyPurchasesListResponse.self, endpoint)
     }
     
     // MARK: - Forum (论坛)
     
     /// 获取论坛板块列表（用户可见的）
     func getForumCategories(includeAll: Bool = false, viewAs: String? = nil, includeLatestPost: Bool = true) -> AnyPublisher<ForumCategoryListResponse, APIError> {
-        var endpoint = "/api/forum/forums/visible?include_all=\(includeAll)&include_latest_post=\(includeLatestPost)"
+        var queryParams: [String: String?] = [
+            "include_all": "\(includeAll)",
+            "include_latest_post": "\(includeLatestPost)"
+        ]
         if let viewAs = viewAs {
-            endpoint += "&view_as=\(viewAs)"
+            queryParams["view_as"] = viewAs
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.categories)?\(queryString)"
+        
         return request(ForumCategoryListResponse.self, endpoint)
     }
     
     /// 获取帖子列表
     func getForumPosts(page: Int = 1, pageSize: Int = 20, categoryId: Int? = nil, sort: String = "latest", keyword: String? = nil) -> AnyPublisher<ForumPostListResponse, APIError> {
-        var endpoint = "/api/forum/posts?page=\(page)&page_size=\(pageSize)&sort=\(sort)"
-        // 确保 categoryId 被正确传递（即使搜索时也要限制在当前板块）
-        if let categoryId = categoryId { 
-            endpoint += "&category_id=\(categoryId)" 
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)",
+            "sort": sort
+        ]
+        if let categoryId = categoryId {
+            queryParams["category_id"] = "\(categoryId)"
         }
-        if let keyword = keyword, !keyword.isEmpty { 
-            // 对关键词进行 URL 编码
-            if let encodedKeyword = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                endpoint += "&q=\(encodedKeyword)"
-            } else {
-                endpoint += "&q=\(keyword)"
-            }
+        if let keyword = keyword, !keyword.isEmpty {
+            queryParams["q"] = keyword
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.posts)?\(queryString)"
+        
         Logger.debug("论坛帖子 API 请求: \(endpoint)", category: .api)
         return request(ForumPostListResponse.self, endpoint)
     }
     
     /// 获取帖子详情
     func getForumPostDetail(postId: Int) -> AnyPublisher<ForumPostOut, APIError> {
-        return request(ForumPostOut.self, "/api/forum/posts/\(postId)")
+        return request(ForumPostOut.self, APIEndpoints.Forum.postDetail(postId))
     }
     
     /// 发布帖子
     func createForumPost(_ post: ForumPostCreateRequest) -> AnyPublisher<ForumPostOut, APIError> {
-        guard let bodyData = try? JSONEncoder().encode(post),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(post) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(ForumPostOut.self, "/api/forum/posts", method: "POST", body: bodyDict)
+        return request(ForumPostOut.self, APIEndpoints.Forum.posts, method: "POST", body: bodyDict)
     }
     
     /// 获取帖子回复
     func getForumReplies(postId: Int, page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ForumReplyListResponse, APIError> {
-        return request(ForumReplyListResponse.self, "/api/forum/posts/\(postId)/replies?page=\(page)&page_size=\(pageSize)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.replies(postId))?\(queryString)"
+        
+        return request(ForumReplyListResponse.self, endpoint)
     }
     
     /// 回复帖子
     func replyToPost(postId: Int, content: String, parentReplyId: Int? = nil) -> AnyPublisher<ForumReplyOut, APIError> {
         let body = ForumReplyCreateRequest(content: content, parentReplyId: parentReplyId)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(ForumReplyOut.self, "/api/forum/posts/\(postId)/replies", method: "POST", body: bodyDict)
+        return request(ForumReplyOut.self, APIEndpoints.Forum.replies(postId), method: "POST", body: bodyDict)
     }
     
     /// 点赞/取消点赞
     func toggleForumLike(targetType: String, targetId: Int) -> AnyPublisher<ForumLikeResponse, APIError> {
         let body: [String: Any] = ["target_type": targetType, "target_id": targetId]
-        return request(ForumLikeResponse.self, "/api/forum/likes", method: "POST", body: body)
+        return request(ForumLikeResponse.self, APIEndpoints.Forum.likes, method: "POST", body: body)
     }
     
     /// 收藏/取消收藏帖子
     func toggleForumFavorite(postId: Int) -> AnyPublisher<ForumFavoriteResponse, APIError> {
         let body: [String: Any] = ["post_id": postId]
-        return request(ForumFavoriteResponse.self, "/api/forum/favorites", method: "POST", body: body)
+        return request(ForumFavoriteResponse.self, APIEndpoints.Forum.favorites, method: "POST", body: body)
     }
     
     /// 增加帖子浏览量
     func incrementPostViewCount(postId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/forum/posts/\(postId)/view", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Forum.incrementView(postId), method: "POST")
     }
     
     // MARK: - Task Expert (任务达人)
     
     /// 获取任务达人列表
     func getTaskExperts() -> AnyPublisher<[TaskExpertOut], APIError> {
-        return request([TaskExpertOut].self, "/api/task-experts")
+        return request([TaskExpertOut].self, APIEndpoints.TaskExperts.list)
     }
     
     /// 获取达人详情
     func getTaskExpertDetail(expertId: String) -> AnyPublisher<TaskExpertOut, APIError> {
-        return request(TaskExpertOut.self, "/api/task-experts/\(expertId)")
+        return request(TaskExpertOut.self, APIEndpoints.TaskExperts.detail(expertId))
     }
     
     /// 获取达人服务列表
     func getTaskExpertServices(expertId: String) -> AnyPublisher<[TaskExpertServiceOut], APIError> {
-        // 根据 routers.py: @task_expert_router.get("/{expert_id}/services")
-        return request([TaskExpertServiceOut].self, "/api/task-experts/\(expertId)/services")
+        return request([TaskExpertServiceOut].self, APIEndpoints.TaskExperts.services(expertId))
     }
     
     /// 申请达人服务
     func applyForService(serviceId: Int, requestData: ServiceApplyRequest) -> AnyPublisher<ServiceApplication, APIError> {
-        guard let bodyData = try? JSONEncoder().encode(requestData),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(requestData) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(ServiceApplication.self, "/api/task-experts/services/\(serviceId)/apply", method: "POST", body: bodyDict)
+        return request(ServiceApplication.self, APIEndpoints.TaskExperts.applyForService(serviceId), method: "POST", body: bodyDict)
     }
     
     // MARK: - Notifications & Messages (通知与消息)
     
     /// 获取通知列表
     func getNotifications(limit: Int = 20) -> AnyPublisher<[NotificationOut], APIError> {
-        return request([NotificationOut].self, "/api/users/notifications?limit=\(limit)")
+        let queryParams: [String: String?] = ["limit": "\(limit)"]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Users.notifications)?\(queryString)"
+        return request([NotificationOut].self, endpoint)
     }
     
     /// 获取未读通知列表
     func getUnreadNotifications() -> AnyPublisher<[NotificationOut], APIError> {
-        return request([NotificationOut].self, "/api/users/notifications/unread")
+        return request([NotificationOut].self, APIEndpoints.Users.unreadNotifications)
     }
     
     /// 获取未读通知数量
     func getUnreadNotificationCount() -> AnyPublisher<[String: Int], APIError> {
-        return request([String: Int].self, "/api/users/notifications/unread/count")
+        return request([String: Int].self, APIEndpoints.Users.unreadNotificationCount)
     }
     
     /// 标记通知为已读（后端返回 NotificationOut）
     /// 注意：发送空 body 以确保后端正确解析 POST 请求
     func markNotificationRead(notificationId: Int) -> AnyPublisher<SystemNotification, APIError> {
-        return request(SystemNotification.self, "/api/users/notifications/\(notificationId)/read", method: "POST", body: [:])
+        return request(SystemNotification.self, APIEndpoints.Users.markNotificationRead(notificationId), method: "POST", body: [:])
     }
     
     /// 标记所有通知已读
     func markAllNotificationsRead() -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/users/notifications/read-all", method: "POST", body: [:])
+        return request(EmptyResponse.self, APIEndpoints.Users.markAllNotificationsRead, method: "POST", body: [:])
     }
     
     /// 获取论坛通知列表
     func getForumNotifications(page: Int = 1, pageSize: Int = 20, isRead: Bool? = nil) -> AnyPublisher<ForumNotificationListResponse, APIError> {
-        var queryParams = ["page=\(page)", "page_size=\(pageSize)"]
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
         if let isRead = isRead {
-            queryParams.append("is_read=\(isRead)")
+            queryParams["is_read"] = "\(isRead)"
         }
-        let endpoint = "/api/forum/notifications?\(queryParams.joined(separator: "&"))"
-        return request(ForumNotificationListResponse.self, endpoint, method: "GET")
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.notifications)?\(queryString)"
+        return request(ForumNotificationListResponse.self, endpoint)
     }
     
     /// 标记论坛通知为已读
     func markForumNotificationRead(notificationId: Int) -> AnyPublisher<ForumNotification, APIError> {
-        return request(ForumNotification.self, "/api/forum/notifications/\(notificationId)/read", method: "PUT")
+        return request(ForumNotification.self, APIEndpoints.Forum.markNotificationRead(notificationId), method: "PUT")
     }
     
     /// 标记所有论坛通知为已读
     func markAllForumNotificationsRead() -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/forum/notifications/read-all", method: "PUT")
+        return request(EmptyResponse.self, APIEndpoints.Forum.markAllNotificationsRead, method: "PUT")
     }
     
     /// 发送私信
@@ -537,12 +572,10 @@ extension APIService {
     /// 联系人聊天功能已移除，请使用任务聊天接口或客服对话接口
     func sendMessage(receiverId: String, content: String) -> AnyPublisher<MessageOut, APIError> {
         let body = MessageSendRequest(receiverId: receiverId, content: content)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(MessageOut.self, "/api/users/messages/send", method: "POST", body: bodyDict)
+        return request(MessageOut.self, APIEndpoints.Users.messagesSend, method: "POST", body: bodyDict)
     }
     
     // MARK: - Customer Service (客服对话)
@@ -550,33 +583,28 @@ extension APIService {
     /// 分配或获取客服会话
     /// 如果用户已有未结束的对话，返回现有对话；否则尝试分配在线客服
     func assignCustomerService() -> AnyPublisher<CustomerServiceAssignResponse, APIError> {
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(CustomerServiceAssignResponse.self, "/api/users/user/customer-service/assign", method: "POST", body: [:])
+        return request(CustomerServiceAssignResponse.self, APIEndpoints.Users.customerServiceAssign, method: "POST", body: [:])
     }
     
     /// 获取用户的客服会话列表
     func getCustomerServiceChats() -> AnyPublisher<[CustomerServiceChat], APIError> {
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request([CustomerServiceChat].self, "/api/users/user/customer-service/chats")
+        return request([CustomerServiceChat].self, APIEndpoints.Users.customerServiceChats)
     }
     
     /// 获取客服会话消息
     func getCustomerServiceMessages(chatId: String) -> AnyPublisher<[CustomerServiceMessage], APIError> {
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request([CustomerServiceMessage].self, "/api/users/user/customer-service/chats/\(chatId)/messages")
+        return request([CustomerServiceMessage].self, APIEndpoints.Users.customerServiceMessages(chatId))
     }
     
     /// 发送客服消息
     func sendCustomerServiceMessage(chatId: String, content: String) -> AnyPublisher<CustomerServiceMessage, APIError> {
         let body: [String: Any] = ["content": content]
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(CustomerServiceMessage.self, "/api/users/user/customer-service/chats/\(chatId)/messages", method: "POST", body: body)
+        return request(CustomerServiceMessage.self, APIEndpoints.Users.customerServiceMessages(chatId), method: "POST", body: body)
     }
     
     /// 结束客服对话
     func endCustomerServiceChat(chatId: String) -> AnyPublisher<EmptyResponse, APIError> {
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(EmptyResponse.self, "/api/users/user/customer-service/chats/\(chatId)/end", method: "POST", body: [:])
+        return request(EmptyResponse.self, APIEndpoints.Users.customerServiceEndChat(chatId), method: "POST", body: [:])
     }
     
     /// 对客服进行评分
@@ -585,63 +613,81 @@ extension APIService {
         if let comment = comment {
             body["comment"] = comment
         }
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(EmptyResponse.self, "/api/users/user/customer-service/chats/\(chatId)/rate", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Users.customerServiceRate(chatId), method: "POST", body: body)
     }
     
     /// 获取客服排队状态
     func getCustomerServiceQueueStatus() -> AnyPublisher<CustomerServiceQueueStatus, APIError> {
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(CustomerServiceQueueStatus.self, "/api/users/user/customer-service/queue-status")
+        return request(CustomerServiceQueueStatus.self, APIEndpoints.Users.customerServiceQueueStatus)
     }
     
     /// 获取历史消息
     func getMessageHistory(userId: String, limit: Int = 10, sessionId: Int? = nil, offset: Int = 0) -> AnyPublisher<[MessageOut], APIError> {
-        var endpoint = "/api/users/messages/history/\(userId)?limit=\(limit)&offset=\(offset)"
+        var queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "offset": "\(offset)"
+        ]
         if let sessionId = sessionId {
-            endpoint += "&session_id=\(sessionId)"
+            queryParams["session_id"] = "\(sessionId)"
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Users.messageHistory(userId))?\(queryString)"
         return request([MessageOut].self, endpoint)
     }
     
     /// 获取未读消息
     func getUnreadMessages() -> AnyPublisher<[MessageOut], APIError> {
-        return request([MessageOut].self, "/api/users/messages/unread")
+        return request([MessageOut].self, APIEndpoints.Users.messagesUnread)
     }
     
     /// 获取未读消息数量
     func getUnreadMessageCount() -> AnyPublisher<[String: Int], APIError> {
-        return request([String: Int].self, "/api/users/messages/unread/count")
+        return request([String: Int].self, APIEndpoints.Users.messagesUnreadCount)
     }
     
     /// 获取联系人列表
     func getContacts() -> AnyPublisher<[Contact], APIError> {
         // 添加时间戳避免缓存
         let timestamp = Int(Date().timeIntervalSince1970)
-        return request([Contact].self, "/api/users/contacts?t=\(timestamp)")
+        let queryParams: [String: String?] = ["t": "\(timestamp)"]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Users.contacts)?\(queryString)"
+        return request([Contact].self, endpoint)
     }
     
     /// 标记聊天消息为已读
     func markChatRead(contactId: String) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/users/messages/mark-chat-read/\(contactId)", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.Users.markChatRead(contactId), method: "POST")
     }
     
     // MARK: - Leaderboard (排行榜)
     
     /// 获取自定义排行榜列表
     func getCustomLeaderboards(page: Int = 1, limit: Int = 20) -> AnyPublisher<CustomLeaderboardListResponse, APIError> {
-        return request(CustomLeaderboardListResponse.self, "/api/custom-leaderboards?page=\(page)&limit=\(limit)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "limit": "\(limit)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Leaderboard.list)?\(queryString)"
+        return request(CustomLeaderboardListResponse.self, endpoint)
     }
     
     /// 获取排行榜详情（包含条目）
     func getLeaderboardItems(leaderboardId: Int, page: Int = 1, limit: Int = 20) -> AnyPublisher<LeaderboardItemListResponse, APIError> {
-        return request(LeaderboardItemListResponse.self, "/api/custom-leaderboards/\(leaderboardId)/items?page=\(page)&limit=\(limit)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "limit": "\(limit)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Leaderboard.items(leaderboardId))?\(queryString)"
+        return request(LeaderboardItemListResponse.self, endpoint)
     }
     
     /// 投票
     func voteLeaderboardItem(itemId: Int, voteType: String) -> AnyPublisher<LeaderboardItemOut, APIError> {
         let body: [String: Any] = ["item_id": itemId, "vote_type": voteType]
-        return request(LeaderboardItemOut.self, "/api/custom-leaderboards/vote", method: "POST", body: body)
+        return request(LeaderboardItemOut.self, APIEndpoints.Leaderboard.vote, method: "POST", body: body)
     }
 }
 
@@ -691,22 +737,20 @@ extension APIService {
     /// 发送修改邮箱验证码
     func sendEmailUpdateCode(newEmail: String) -> AnyPublisher<EmptyResponse, APIError> {
         let body = ["new_email": newEmail]
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(EmptyResponse.self, "/api/users/profile/send-email-update-code", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Users.sendEmailUpdateCode, method: "POST", body: body)
     }
     
     /// 发送修改手机验证码
     func sendPhoneUpdateCode(newPhone: String) -> AnyPublisher<EmptyResponse, APIError> {
         let body = ["new_phone": newPhone]
-        // 后端在 routers.py 中，router 注册在 /api/users 前缀下
-        return request(EmptyResponse.self, "/api/users/profile/send-phone-update-code", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Users.sendPhoneUpdateCode, method: "POST", body: body)
     }
     
     // MARK: - User Preferences (用户偏好)
     
     /// 获取用户任务偏好
     func getUserPreferences() -> AnyPublisher<UserPreferences, APIError> {
-        return request(UserPreferences.self, "/api/user-preferences", method: "GET")
+        return request(UserPreferences.self, APIEndpoints.UserPreferences.get)
     }
     
     /// 更新用户任务偏好
@@ -718,14 +762,14 @@ extension APIService {
             "keywords": preferences.keywords,
             "min_deadline_days": preferences.minDeadlineDays
         ]
-        return request(EmptyResponse.self, "/api/user-preferences", method: "PUT", body: body)
+        return request(EmptyResponse.self, APIEndpoints.UserPreferences.update, method: "PUT", body: body)
     }
     
     // MARK: - Tasks Extensions (任务扩展)
     
     /// 拒绝任务 (发布者拒绝申请或执行者拒绝)
     func rejectTask(taskId: Int) -> AnyPublisher<Task, APIError> {
-        return request(Task.self, "/api/tasks/\(taskId)/reject", method: "POST")
+        return request(Task.self, APIEndpoints.Tasks.reject(taskId), method: "POST")
     }
     
     // 注意：deleteTask 方法已在上面定义（第286行），这里不再重复定义
@@ -733,40 +777,42 @@ extension APIService {
     /// 评价任务
     func reviewTask(taskId: Int, rating: Double, comment: String?, isAnonymous: Bool = false) -> AnyPublisher<EmptyResponse, APIError> {
         let body = ReviewCreateRequest(rating: rating, comment: comment, isAnonymous: isAnonymous)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        // 注意：返回值可能是 Review 对象，这里简化为 EmptyResponse 或根据需要调整
-        return request(EmptyResponse.self, "/api/tasks/\(taskId)/review", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.review(taskId), method: "POST", body: bodyDict)
     }
     
     /// 获取任务评价
     func getTaskReviews(taskId: Int) -> AnyPublisher<[Review], APIError> {
-        return request([Review].self, "/api/tasks/\(taskId)/reviews")
+        return request([Review].self, APIEndpoints.Tasks.reviews(taskId))
     }
     
     // MARK: - Flea Market Extensions (跳蚤市场扩展)
     
     /// 收藏/取消收藏商品
     func favoriteItem(itemId: String) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/favorite", method: "POST")
+        return request(EmptyResponse.self, APIEndpoints.FleaMarket.favorite(itemId), method: "POST")
     }
     
     /// 获取我的收藏列表（包含完整商品信息）
     func getMyFavorites(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<FleaMarketItemListResponse, APIError> {
-        // 后端路径：/api/flea-market/favorites/items
-        return request(FleaMarketItemListResponse.self, "/api/flea-market/favorites/items?page=\(page)&page_size=\(pageSize)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.FleaMarket.favorites)?\(queryString)"
+        return request(FleaMarketItemListResponse.self, endpoint)
     }
     
     /// 申请购买/议价
     func requestPurchase(itemId: String, proposedPrice: Double, message: String?) -> AnyPublisher<EmptyResponse, APIError> {
         let body = PurchaseRequestCreate(proposedPrice: proposedPrice, message: message)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/purchase-request", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.FleaMarket.purchaseRequest(itemId), method: "POST", body: bodyDict)
     }
     
     // MARK: - Forum Extensions (论坛扩展)
@@ -774,17 +820,29 @@ extension APIService {
     /// 收藏帖子（已废弃，请使用 toggleForumFavorite）
     func favoritePost(postId: Int) -> AnyPublisher<ForumLikeResponse, APIError> { // 复用 LikeResponse 结构
         let body = ["post_id": postId]
-        return request(ForumLikeResponse.self, "/api/forum/favorites", method: "POST", body: body)
+        return request(ForumLikeResponse.self, APIEndpoints.Forum.favorites, method: "POST", body: body)
     }
     
     /// 获取我的帖子
     func getMyPosts(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ForumPostListResponse, APIError> {
-        return request(ForumPostListResponse.self, "/api/forum/my/posts?page=\(page)&page_size=\(pageSize)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.myPosts)?\(queryString)"
+        return request(ForumPostListResponse.self, endpoint)
     }
     
     /// 获取我的回复
     func getMyReplies(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ForumReplyListResponse, APIError> {
-        return request(ForumReplyListResponse.self, "/api/forum/my/replies?page=\(page)&page_size=\(pageSize)")
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.myReplies)?\(queryString)"
+        return request(ForumReplyListResponse.self, endpoint)
     }
     
     // MARK: - Task Expert Extensions (达人扩展)
@@ -792,27 +850,30 @@ extension APIService {
     /// 申请成为达人
     func applyToBeExpert(message: String?) -> AnyPublisher<EmptyResponse, APIError> {
         let body = ExpertApplyRequest(applicationMessage: message)
-        guard let bodyData = try? JSONEncoder().encode(body),
-              let bodyDict = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] else {
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(EmptyResponse.self, "/api/task-experts/apply", method: "POST", body: bodyDict)
+        return request(EmptyResponse.self, APIEndpoints.TaskExperts.apply, method: "POST", body: bodyDict)
     }
     
     /// 获取我的服务申请记录 (作为普通用户申请达人服务的记录)
     func getMyServiceApplications(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ServiceApplicationListResponse, APIError> {
-        // 后端使用 limit 和 offset，需要转换 page 和 pageSize
-        // 端点：/api/users/me/service-applications (普通用户获取自己申请的达人服务)
         let limit = pageSize
         let offset = (page - 1) * pageSize
-        return request(ServiceApplicationListResponse.self, "/api/users/me/service-applications?limit=\(limit)&offset=\(offset)")
+        let queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "offset": "\(offset)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Users.myServiceApplications)?\(queryString)"
+        return request(ServiceApplicationListResponse.self, endpoint)
     }
     
     // MARK: - Message Extensions (消息扩展)
     
     /// 标记单条消息已读
     func markMessageRead(messageId: Int) -> AnyPublisher<MessageOut, APIError> {
-        return request(MessageOut.self, "/api/messages/\(messageId)/read", method: "POST")
+        return request(MessageOut.self, APIEndpoints.Users.markMessageRead(messageId), method: "POST")
     }
     
     // MARK: - Common Extensions (公共扩展)
@@ -830,7 +891,7 @@ extension APIService {
             "reason": reason,
             "description": description ?? ""
         ]
-        return request(EmptyResponse.self, "/api/posts/reports", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Reports.forumPost, method: "POST", body: body)
     }
     
     /// 举报排行榜
@@ -839,7 +900,7 @@ extension APIService {
             "reason": reason,
             "description": description ?? ""
         ]
-        return request(EmptyResponse.self, "/api/custom-leaderboards/\(leaderboardId)/report", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Leaderboard.report(leaderboardId), method: "POST", body: body)
     }
     
     /// 举报排行榜条目
@@ -848,7 +909,7 @@ extension APIService {
             "reason": reason,
             "description": description ?? ""
         ]
-        return request(EmptyResponse.self, "/api/custom-leaderboards/items/\(itemId)/report", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.Leaderboard.reportItem(itemId), method: "POST", body: body)
     }
     
     /// 举报跳蚤市场商品
@@ -857,7 +918,7 @@ extension APIService {
             "reason": reason,
             "description": description ?? ""
         ]
-        return request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/report", method: "POST", body: body)
+        return request(EmptyResponse.self, APIEndpoints.FleaMarket.report(itemId), method: "POST", body: body)
     }
 }
 

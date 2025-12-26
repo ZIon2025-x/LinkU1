@@ -436,7 +436,7 @@ class MyActivitiesViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        var endpoint = "/api/my/activities?type=\(type)&limit=50&offset=0"
+        let endpoint = "/api/my/activities?type=\(type)&limit=50&offset=0"
         
         apiService.request(MyActivitiesFullResponse.self, endpoint, method: "GET")
             .sink(

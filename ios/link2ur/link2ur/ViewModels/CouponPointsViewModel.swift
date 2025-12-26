@@ -52,11 +52,7 @@ class CouponPointsViewModel: ObservableObject {
                             duration: duration,
                             error: error
                         )
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     } else {
                         // 记录成功请求的性能指标
                         self?.performanceMonitor.recordNetworkRequest(
@@ -86,11 +82,7 @@ class CouponPointsViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -118,11 +110,7 @@ class CouponPointsViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -144,11 +132,7 @@ class CouponPointsViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -179,11 +163,7 @@ class CouponPointsViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] status in
@@ -211,11 +191,7 @@ class CouponPointsViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         // 使用 ErrorHandler 统一处理错误
                         ErrorHandler.shared.handle(error, context: "加载积分账户")
-                        if let apiError = error as? APIError {
-                            self?.errorMessage = apiError.userFriendlyMessage
-                        } else {
-                            self?.errorMessage = error.localizedDescription
-                        }
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] response in

@@ -28,6 +28,10 @@ public class AppState: ObservableObject {
     private var lastNotificationRefreshTime: Date? // 记录上次刷新时间
     private var lastMessageRefreshTime: Date? // 记录上次刷新时间
     private let minRefreshInterval: TimeInterval = 10 // 最小刷新间隔（秒）- 增加到10秒，减少请求频率
+    private var isPreloadingHomeData = false // 防止重复预加载首页数据
+    private var preloadTaskCompleted = false // 预加载任务请求完成标志
+    private var preloadActivityCompleted = false // 预加载活动请求完成标志
+    private var isCheckingLogin = false // 防止重复检查登录状态
     
     public init() {
         setupNotifications()
@@ -219,6 +223,13 @@ public class AppState: ObservableObject {
     }
     
     public func checkLoginStatus() {
+        // 防止重复调用
+        guard !isCheckingLogin else {
+            Logger.debug("登录状态检查已在进行中，跳过重复调用", category: .auth)
+            return
+        }
+        
+        isCheckingLogin = true
         isCheckingLoginStatus = true
         let startTime = Date()
         let minimumDisplayTime: TimeInterval = 3.0 // 至少显示3秒
@@ -235,6 +246,7 @@ public class AppState: ObservableObject {
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
                         self?.isCheckingLoginStatus = false
+                        self?.isCheckingLogin = false
                         if case .failure = result {
                             // Token无效，清除并登出
                             self?.logout()
@@ -248,6 +260,7 @@ public class AppState: ObservableObject {
                         self?.currentUser = user
                         self?.isAuthenticated = true
                         self?.isCheckingLoginStatus = false
+                        self?.isCheckingLogin = false
                         
                         // 建立WebSocket连接
                         if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
@@ -269,6 +282,7 @@ public class AppState: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + minimumDisplayTime) {
                 self.isAuthenticated = false
                 self.isCheckingLoginStatus = false
+                self.isCheckingLogin = false
                 self.userSkippedLogin = skippedLogin
             }
         }
@@ -276,15 +290,34 @@ public class AppState: ObservableObject {
     
     /// 预加载首页数据，在加载界面显示期间提前加载
     private func preloadHomeData() {
+        // 防止重复预加载
+        guard !isPreloadingHomeData else {
+            Logger.debug("首页数据正在预加载中，跳过重复调用", category: .cache)
+            return
+        }
+        
+        isPreloadingHomeData = true
+        
+        // 重置完成标志
+        preloadTaskCompleted = false
+        preloadActivityCompleted = false
+        
         // 预加载推荐任务（首页最重要的数据）
         apiService.getTasks(page: 1, pageSize: 20, type: nil, location: nil, keyword: nil, sortBy: nil, userLatitude: nil, userLongitude: nil)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
+                guard let self = self else { return }
+                self.preloadTaskCompleted = true
                 if case .failure(let error) = result {
                     Logger.warning("预加载推荐任务失败: \(error.localizedDescription)", category: .api)
                 } else {
                     Logger.success("预加载推荐任务成功", category: .api)
                 }
-            }, receiveValue: { response in
+                // 如果两个请求都完成了，重置标志
+                if self.preloadTaskCompleted && self.preloadActivityCompleted {
+                    self.isPreloadingHomeData = false
+                }
+            }, receiveValue: { [weak self] response in
+                guard self != nil else { return }
                 // 将数据保存到缓存，这样首页加载时可以直接使用
                 let openTasks = response.tasks.filter { $0.status == .open }
                 CacheManager.shared.saveTasks(openTasks, category: nil, city: nil)
@@ -292,16 +325,43 @@ public class AppState: ObservableObject {
             })
             .store(in: &cancellables)
         
-        // 预加载热门活动（延迟一点，避免同时发起太多请求）
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.apiService.request([Activity].self, "/api/activities?status=active&limit=10", method: "GET")
+        // 预加载 Banner（延迟一点，避免同时发起太多请求）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            self.apiService.getBanners()
                 .sink(receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        Logger.warning("预加载 Banner 失败: \(error.localizedDescription)", category: .api)
+                    } else {
+                        Logger.success("预加载 Banner 成功", category: .api)
+                    }
+                }, receiveValue: { [weak self] response in
+                    guard self != nil else { return }
+                    // 将 Banner 数据保存到缓存
+                    CacheManager.shared.saveBanners(response.banners)
+                    Logger.success("已预加载并缓存 \(response.banners.count) 个 Banner", category: .cache)
+                })
+                .store(in: &self.cancellables)
+        }
+        
+        // 预加载热门活动（延迟一点，避免同时发起太多请求）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.apiService.request([Activity].self, "/api/activities?status=active&limit=10", method: "GET")
+                .sink(receiveCompletion: { [weak self] result in
+                    guard let self = self else { return }
+                    self.preloadActivityCompleted = true
                     if case .failure(let error) = result {
                         Logger.warning("预加载热门活动失败: \(error.localizedDescription)", category: .api)
                     } else {
                         Logger.success("预加载热门活动成功", category: .api)
                     }
-                }, receiveValue: { activities in
+                    // 如果两个请求都完成了，重置标志
+                    if self.preloadTaskCompleted && self.preloadActivityCompleted {
+                        self.isPreloadingHomeData = false
+                    }
+                }, receiveValue: { [weak self] activities in
+                    guard self != nil else { return }
                     Logger.success("已预加载 \(activities.count) 个活动", category: .cache)
                 })
                 .store(in: &self.cancellables)

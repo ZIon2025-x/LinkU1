@@ -102,9 +102,6 @@ class TaskDetailViewModel: ObservableObject {
     }
     
     func loadReviews(taskId: Int) {
-        let startTime = Date()
-        let endpoint = "/api/tasks/\(taskId)/reviews"
-        
         isLoadingReviews = true
         apiService.getTaskReviews(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in

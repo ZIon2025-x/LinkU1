@@ -129,10 +129,8 @@ public struct ContentView: View {
                 LoginView()
             }
         }
-        .onAppear {
-            // 静默检查登录状态，但不强制登录
-            appState.checkLoginStatus()
-        }
+        // 移除 onAppear 中的 checkLoginStatus 调用
+        // AppState 的 init() 中已经调用了 checkLoginStatus()，避免重复调用
         .onChange(of: appState.isCheckingLoginStatus) { isChecking in
             if !isChecking {
                 // 停止倒计时

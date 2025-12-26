@@ -28,7 +28,7 @@ extension APIService {
     
     /// 获取学生认证状态
     func getStudentVerificationStatus() -> AnyPublisher<StudentVerificationStatusResponse, APIError> {
-        return request(StudentVerificationStatusResponse.self, "/api/student-verification/status")
+        return request(StudentVerificationStatusResponse.self, APIEndpoints.StudentVerification.status)
     }
     
     /// 提交学生认证申请
@@ -37,30 +37,41 @@ extension APIService {
         // 注意：后端定义是 query param 还是 body param 取决于 FastAPI 的默认行为。
         // FastAPI 中如果参数未声明为 Body，默认为 Query param。
         // 查看后端代码: email: str 没有 = Body(...)，所以是 Query param。
-        let endpoint = "/api/student-verification/submit?email=\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? email)"
+        let queryParams: [String: String?] = ["email": email]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.StudentVerification.submit)?\(queryString)"
         return request(StudentVerificationSubmitResponse.self, endpoint, method: "POST")
     }
     
     /// 续期学生认证
     func renewStudentVerification(email: String) -> AnyPublisher<StudentVerificationSubmitResponse, APIError> {
         // 同上，email 是 Query param
-        let endpoint = "/api/student-verification/renew?email=\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? email)"
+        let queryParams: [String: String?] = ["email": email]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.StudentVerification.renew)?\(queryString)"
         return request(StudentVerificationSubmitResponse.self, endpoint, method: "POST")
     }
     
     /// 更换认证邮箱
     func changeStudentVerificationEmail(newEmail: String) -> AnyPublisher<StudentVerificationSubmitResponse, APIError> {
         // 后端参数名为 new_email，且为 Query param
-        let endpoint = "/api/student-verification/change-email?new_email=\(newEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? newEmail)"
+        let queryParams: [String: String?] = ["new_email": newEmail]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.StudentVerification.changeEmail)?\(queryString)"
         return request(StudentVerificationSubmitResponse.self, endpoint, method: "POST")
     }
     
     /// 获取支持的大学列表
     func getUniversities(page: Int = 1, pageSize: Int = 20, search: String? = nil) -> AnyPublisher<UniversityListResponse, APIError> {
-        var endpoint = "/api/student-verification/universities?page=\(page)&page_size=\(pageSize)"
+        var queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
         if let search = search {
-            endpoint += "&search=\(search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search)"
+            queryParams["search"] = search
         }
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.StudentVerification.universities)?\(queryString)"
         return request(UniversityListResponse.self, endpoint)
     }
 }

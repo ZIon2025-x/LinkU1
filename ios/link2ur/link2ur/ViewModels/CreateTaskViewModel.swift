@@ -23,12 +23,33 @@ class CreateTaskViewModel: ObservableObject {
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     
+    // 学生验证状态（用于检查权限）
+    @Published var studentVerificationStatus: StudentVerificationStatusData?
+    private var studentVerificationViewModel = StudentVerificationViewModel()
+    
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+        loadStudentVerificationStatus()
     }
     
     deinit {
         cancellables.removeAll()
+    }
+    
+    // 加载学生验证状态
+    private func loadStudentVerificationStatus() {
+        studentVerificationViewModel.loadStatus()
+        studentVerificationViewModel.$verificationStatus
+            .assign(to: &$studentVerificationStatus)
+    }
+    
+    // 检查用户是否有权限发布"校园生活"类型的任务
+    private func canPublishCampusLifeTask() -> Bool {
+        guard taskType == "Campus Life" else {
+            return true // 非校园生活类型，不需要检查
+        }
+        // 只有已通过学生认证的用户才能发布校园生活类型的任务
+        return studentVerificationStatus?.isVerified == true
     }
     
     // 后端真实的任务类型列表
@@ -96,6 +117,12 @@ class CreateTaskViewModel: ObservableObject {
     func createTask(completion: @escaping (Bool) -> Void) {
         guard !title.isEmpty, !description.isEmpty, !city.isEmpty else {
             errorMessage = "请填写所有必填项"
+            return
+        }
+        
+        // 权限检查：只有学生用户才能发布"校园生活"类型的任务
+        if !canPublishCampusLifeTask() {
+            errorMessage = "只有已通过学生认证的用户才能发布"校园生活"类型的任务，请先完成学生认证"
             return
         }
         

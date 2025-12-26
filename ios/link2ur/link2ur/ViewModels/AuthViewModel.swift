@@ -172,7 +172,7 @@ class AuthViewModel: ObservableObject {
                 )
                 
                     // 保存用户信息到 AppState
-                    DispatchQueue.main.async { [weak self] in
+                    DispatchQueue.main.async {
                         NotificationCenter.default.post(name: .userDidLogin, object: user)
                         
                     
@@ -289,12 +289,7 @@ class AuthViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    let errorMsg: String
-                    if let apiError = error as? APIError {
-                        errorMsg = apiError.userFriendlyMessage
-                    } else {
-                        errorMsg = error.localizedDescription
-                    }
+                    let errorMsg = error.userFriendlyMessage
                     Logger.error("发送验证码失败: \(errorMsg)", category: .auth)
                     self?.errorMessage = errorMsg
                     completion(false, errorMsg)
@@ -363,12 +358,7 @@ class AuthViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    let errorMsg: String
-                    if let apiError = error as? APIError {
-                        errorMsg = apiError.userFriendlyMessage
-                    } else {
-                        errorMsg = error.localizedDescription
-                    }
+                    let errorMsg = error.userFriendlyMessage
                     Logger.error("发送邮箱验证码失败: \(errorMsg)", category: .auth)
                     self?.errorMessage = errorMsg
                     completion(false, errorMsg)
@@ -470,7 +460,7 @@ class AuthViewModel: ObservableObject {
                 )
                 
                     // 保存用户信息到 AppState
-                    DispatchQueue.main.async { [weak self] in
+                    DispatchQueue.main.async {
                         NotificationCenter.default.post(name: .userDidLogin, object: user)
                         
                     
@@ -572,7 +562,7 @@ class AuthViewModel: ObservableObject {
                 )
                 
                     // 保存用户信息到 AppState
-                    DispatchQueue.main.async { [weak self] in
+                    DispatchQueue.main.async {
                         NotificationCenter.default.post(name: .userDidLogin, object: user)
                         
                     
@@ -678,12 +668,7 @@ class AuthViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误
                     ErrorHandler.shared.handle(error, context: "用户注册")
-                    let errorMsg: String
-                    if let apiError = error as? APIError {
-                        errorMsg = apiError.userFriendlyMessage
-                    } else {
-                        errorMsg = error.localizedDescription
-                    }
+                    let errorMsg = error.userFriendlyMessage
                     self?.errorMessage = errorMsg
                     completion(false, errorMsg)
                 }

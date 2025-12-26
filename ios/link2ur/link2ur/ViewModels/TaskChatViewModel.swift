@@ -55,11 +55,7 @@ class TaskChatViewModel: ObservableObject {
                     Logger.debug("尝试使用备用解析方法...", category: .api)
                     // 如果包装对象失败，尝试使用备用方法
                     self?.loadTaskChatsWithFallback()
-                    if case let apiError as APIError = error {
-                        self?.errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        self?.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(

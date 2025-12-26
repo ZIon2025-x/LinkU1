@@ -65,6 +65,10 @@ struct StudentVerificationView: View {
                             if status.isVerified {
                                 // Verified State
                                 VStack(spacing: AppSpacing.md) {
+                                    // 学生认证特权说明（已认证状态）
+                                    StudentBenefitsCard(isVerified: true)
+                                        .padding(.horizontal, AppSpacing.md)
+                                    
                                     if status.canRenew == true {
                                         Button(action: {
                                             showingRenewSheet = true
@@ -104,21 +108,27 @@ struct StudentVerificationView: View {
                                 .padding(.horizontal, AppSpacing.md)
                             } else {
                                 // Not Verified State
-                                Button(action: {
-                                    showingSubmitSheet = true
-                                }) {
-                                    HStack {
-                                        IconStyle.icon("checkmark.shield.fill", size: IconStyle.medium)
-                                        Text("提交认证")
-                                            .font(AppTypography.bodyBold)
+                                VStack(spacing: AppSpacing.md) {
+                                    // 学生认证特权说明（未认证状态）
+                                    StudentBenefitsCard(isVerified: false)
+                                        .padding(.horizontal, AppSpacing.md)
+                                    
+                                    Button(action: {
+                                        showingSubmitSheet = true
+                                    }) {
+                                        HStack {
+                                            IconStyle.icon("checkmark.shield.fill", size: IconStyle.medium)
+                                            Text("提交认证")
+                                                .font(AppTypography.bodyBold)
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, AppSpacing.md)
+                                        .background(AppColors.success)
+                                        .cornerRadius(AppCornerRadius.large)
                                     }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, AppSpacing.md)
-                                    .background(AppColors.success)
-                                    .cornerRadius(AppCornerRadius.large)
+                                    .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.large))
                                 }
-                                .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.large))
                                 .padding(.horizontal, AppSpacing.md)
                             }
                         } else {
@@ -148,12 +158,16 @@ struct StudentVerificationView: View {
                                         .fontWeight(.bold)
                                         .foregroundColor(AppColors.textPrimary)
                                     
-                                    Text("验证您的学生身份以享受学生专属优惠")
+                                    Text("验证您的学生身份以享受学生专属特权")
                                         .font(AppTypography.subheadline)
                                         .foregroundColor(AppColors.textSecondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal, AppSpacing.xl)
                                 }
+                                
+                                // 学生认证特权说明
+                                StudentBenefitsCard()
+                                    .padding(.horizontal, AppSpacing.md)
                                 
                                 Button(action: {
                                     showingSubmitSheet = true
@@ -686,6 +700,108 @@ struct ChangeEmailView: View {
                 }
             )
             .store(in: &cancellables)
+    }
+}
+
+// MARK: - Student Benefits Card
+struct StudentBenefitsCard: View {
+    var isVerified: Bool = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.sm) {
+                IconStyle.icon("sparkles", size: IconStyle.medium)
+                    .foregroundColor(AppColors.primary)
+                Text(isVerified ? "您已享有的学生特权" : "完成认证后，您将获得")
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            VStack(spacing: AppSpacing.sm) {
+                BenefitRow(
+                    icon: "graduationcap.fill",
+                    title: "发布校园生活任务",
+                    description: "只有学生用户才能发布"校园生活"类型的任务",
+                    color: .blue
+                )
+                
+                BenefitRow(
+                    icon: "person.3.fill",
+                    title: "进入学生社区",
+                    description: "访问专属的学生论坛板块，与同校同学交流",
+                    color: .green
+                )
+                
+                BenefitRow(
+                    icon: "gift.fill",
+                    title: "学生专属福利",
+                    description: "享受学生优惠、专属活动和更多特权",
+                    color: .orange
+                )
+                
+                BenefitRow(
+                    icon: "checkmark.seal.fill",
+                    title: "身份认证标识",
+                    description: "在个人主页显示学生认证徽章，提升信任度",
+                    color: .purple
+                )
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    AppColors.primary.opacity(0.05),
+                    AppColors.primary.opacity(0.02)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(AppCornerRadius.large)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                .stroke(
+                    isVerified ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.2),
+                    lineWidth: 1
+                )
+        )
+    }
+}
+
+struct BenefitRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    let color: Color
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                    .fill(color.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(color)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(description)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer()
+        }
     }
 }
 

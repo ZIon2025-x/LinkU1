@@ -20,6 +20,25 @@ class TasksViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
         self.locationService = locationService ?? LocationService.shared
     }
+    
+    /// 从缓存同步加载任务（用于初始化时立即显示，避免闪烁）
+    func loadTasksFromCache(category: String? = nil, city: String? = nil, status: String? = nil) {
+        // 仅在没有搜索关键词时从缓存加载
+        if let cachedTasks = CacheManager.shared.loadTasks(category: category, city: city) {
+            let filteredCachedTasks = cachedTasks.filter { 
+                if let status = status {
+                    return $0.status.rawValue == status
+                } else {
+                    return $0.status == .open
+                }
+            }
+            if !filteredCachedTasks.isEmpty {
+                self.tasks = filteredCachedTasks
+                Logger.success("初始化时从缓存加载了 \(self.tasks.count) 个任务", category: .cache)
+            }
+        }
+    }
+    
     private var cancellables = Set<AnyCancellable>()
     private var locationUpdateCancellable: AnyCancellable? // 位置更新监听器（单独管理）
     private var currentCategory: String?
@@ -42,7 +61,6 @@ class TasksViewModel: ObservableObject {
         
         // 如果页码为1，说明是重新加载，重置状态
         if page == 1 {
-            isLoading = true
             currentPage = 1
             hasMore = true
             
@@ -51,17 +69,42 @@ class TasksViewModel: ObservableObject {
                 CacheManager.shared.invalidateTasksCache()
             }
             
-            // 尝试从缓存加载数据（仅第一页且无搜索关键词时，且非强制刷新）
-            if !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
-                if let cachedTasks = CacheManager.shared.loadTasks(category: category, city: city) {
-                    self.tasks = cachedTasks.filter { $0.status == .open }
-                    Logger.success("从缓存加载了 \(self.tasks.count) 个任务", category: .cache)
-                    isLoading = false
-                    // 继续在后台刷新数据
+            // 如果 tasks 已经有数据（说明初始化时已从缓存加载），不需要再次从缓存加载
+            // 直接进行网络请求，不显示加载状态
+            if tasks.isEmpty {
+                // 先尝试从缓存加载数据（仅第一页且无搜索关键词时，且非强制刷新）
+                // 如果有缓存数据，立即显示，避免闪烁
+                if !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
+                    if let cachedTasks = CacheManager.shared.loadTasks(category: category, city: city) {
+                        let filteredCachedTasks = cachedTasks.filter { 
+                            if let status = status {
+                                return $0.status.rawValue == status
+                            } else {
+                                return $0.status == .open
+                            }
+                        }
+                        if !filteredCachedTasks.isEmpty {
+                            self.tasks = filteredCachedTasks
+                            Logger.success("从缓存加载了 \(self.tasks.count) 个任务，立即显示", category: .cache)
+                            // 有缓存数据时不设置 isLoading = true，避免闪烁
+                            // 继续在后台刷新数据，但不显示加载状态
+                        } else {
+                            // 缓存为空，需要显示加载状态
+                            isLoading = true
+                            tasks = []
+                        }
+                    } else {
+                        // 没有缓存，需要显示加载状态
+                        isLoading = true
+                        tasks = []
+                    }
+                } else {
+                    // 有搜索关键词或强制刷新，需要显示加载状态
+                    isLoading = true
+                    tasks = []
                 }
-            } else {
-                tasks = []
             }
+            // 如果 tasks 已经有数据，不设置 isLoading，直接进行后台刷新
         } else {
             isLoadingMore = true
         }

@@ -7,8 +7,26 @@ struct FleaMarketCategory: Codable {
     let icon: String?
 }
 
-struct FleaMarketCategoryResponse: Codable {
-    let categories: [FleaMarketCategory]
+// 跳蚤市场分类响应 - 处理 API 返回的 {success: true, data: {categories: [...]}} 结构
+struct FleaMarketCategoryResponse: Decodable {
+    let success: Bool
+    let data: FleaMarketCategoryData
+    let message: String?
+    
+    struct FleaMarketCategoryData: Decodable {
+        let categories: [String] // API 返回的是字符串数组
+    }
+    
+    // 计算属性：将字符串数组转换为 FleaMarketCategory 数组
+    var categoryList: [FleaMarketCategory] {
+        return data.categories.map { name in
+            FleaMarketCategory(
+                id: name, // 使用分类名称作为 ID（与后端一致）
+                name: name,
+                icon: nil
+            )
+        }
+    }
 }
 
 // 跳蚤市场商品

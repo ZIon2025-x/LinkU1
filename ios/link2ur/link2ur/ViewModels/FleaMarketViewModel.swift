@@ -29,7 +29,7 @@ class FleaMarketViewModel: ObservableObject {
                     ErrorHandler.shared.handle(error, context: "加载跳蚤市场分类")
                 }
             }, receiveValue: { [weak self] response in
-                self?.categories = response.categories
+                self?.categories = response.categoryList
             })
             .store(in: &cancellables)
     }

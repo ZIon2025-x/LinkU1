@@ -219,13 +219,6 @@ struct CreateFleaMarketItemView: View {
             .navigationTitle("发布商品")
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-            }
             .contentShape(Rectangle())
             .onTapGesture {
                 isLocationFocused = false
