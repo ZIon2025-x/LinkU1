@@ -396,7 +396,7 @@ async def create_task_async(
             if not verification:
                 raise HTTPException(
                     status_code=403,
-                    detail="只有已通过学生认证的用户才能发布"校园生活"类型的任务，请先完成学生认证"
+                    detail='只有已通过学生认证的用户才能发布"校园生活"类型的任务，请先完成学生认证'
                 )
             
             # 检查认证是否过期
@@ -405,7 +405,7 @@ async def create_task_async(
             if verification.expires_at and verification.expires_at < now:
                 raise HTTPException(
                     status_code=403,
-                    detail="您的学生认证已过期，请先续期后再发布"校园生活"类型的任务"
+                    detail='您的学生认证已过期，请先续期后再发布"校园生活"类型的任务'
                 )
 
         print(f"DEBUG: 开始创建任务，用户ID: {current_user.id}")
