@@ -122,7 +122,7 @@ class CreateTaskViewModel: ObservableObject {
         
         // 权限检查：只有学生用户才能发布"校园生活"类型的任务
         if !canPublishCampusLifeTask() {
-            errorMessage = "只有已通过学生认证的用户才能发布"校园生活"类型的任务，请先完成学生认证"
+            errorMessage = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证"
             return
         }
         

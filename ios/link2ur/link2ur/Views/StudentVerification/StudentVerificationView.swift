@@ -719,28 +719,28 @@ struct StudentBenefitsCard: View {
             }
             
             VStack(spacing: AppSpacing.sm) {
-                BenefitRow(
+                StudentBenefitRow(
                     icon: "graduationcap.fill",
                     title: "发布校园生活任务",
-                    description: "只有学生用户才能发布"校园生活"类型的任务",
+                    description: "只有学生用户才能发布\"校园生活\"类型的任务",
                     color: .blue
                 )
                 
-                BenefitRow(
+                StudentBenefitRow(
                     icon: "person.3.fill",
                     title: "进入学生社区",
                     description: "访问专属的学生论坛板块，与同校同学交流",
                     color: .green
                 )
                 
-                BenefitRow(
+                StudentBenefitRow(
                     icon: "gift.fill",
                     title: "学生专属福利",
                     description: "享受学生优惠、专属活动和更多特权",
                     color: .orange
                 )
                 
-                BenefitRow(
+                StudentBenefitRow(
                     icon: "checkmark.seal.fill",
                     title: "身份认证标识",
                     description: "在个人主页显示学生认证徽章，提升信任度",
@@ -770,7 +770,7 @@ struct StudentBenefitsCard: View {
     }
 }
 
-struct BenefitRow: View {
+struct StudentBenefitRow: View {
     let icon: String
     let title: String
     let description: String

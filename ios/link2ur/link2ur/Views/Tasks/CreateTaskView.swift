@@ -88,7 +88,7 @@ struct CreateTaskView: View {
                                         Image(systemName: "exclamationmark.triangle.fill")
                                             .font(.system(size: 14))
                                             .foregroundColor(AppColors.warning)
-                                        Text("只有已通过学生认证的用户才能发布"校园生活"类型的任务")
+                                        Text("只有已通过学生认证的用户才能发布\"校园生活\"类型的任务")
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.warning)
                                     }
