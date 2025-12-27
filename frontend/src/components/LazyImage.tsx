@@ -44,6 +44,13 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    // 如果图片是绝对定位的，直接加载（因为绝对定位的图片通常需要立即显示）
+    const isAbsolutePositioned = style?.position === 'absolute';
+    if (isAbsolutePositioned) {
+      setIsInView(true);
+      return;
+    }
+    
     // 如果浏览器不支持 Intersection Observer，直接加载图片
     if (!('IntersectionObserver' in window)) {
       setIsInView(true);
@@ -75,7 +82,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
       }
       observer.disconnect();
     };
-  }, [rootMargin]);
+  }, [rootMargin, style?.position]);
 
   const handleLoad = () => {
     setIsLoaded(true);
@@ -140,10 +147,11 @@ const LazyImage: React.FC<LazyImageProps> = ({
   ];
   
   // 构建容器样式，排除图片相关的样式属性
+  // 当图片绝对定位时，容器应该填充父容器（100%宽高），并保持relative作为定位上下文
   const containerStyle: React.CSSProperties = {
     position: 'relative',
-    width: width || '100%',
-    height: hasFixedSize ? height : (height || 'auto'),
+    width: isAbsolutePositioned ? '100%' : (width || '100%'),
+    height: isAbsolutePositioned ? '100%' : (hasFixedSize ? height : (height || 'auto')),
     overflow: 'hidden',
   };
   
