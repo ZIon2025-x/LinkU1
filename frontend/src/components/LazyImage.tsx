@@ -139,8 +139,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     'width', 'height'
   ];
   
+  // 构建容器样式，排除图片相关的样式属性
   const containerStyle: React.CSSProperties = {
-    position: isAbsolutePositioned ? 'relative' : 'relative',
+    position: 'relative',
     width: width || '100%',
     height: hasFixedSize ? height : (height || 'auto'),
     overflow: 'hidden',
@@ -148,9 +149,13 @@ const LazyImage: React.FC<LazyImageProps> = ({
   
   // 将非图片相关的样式应用到容器
   if (style) {
-    Object.keys(style).forEach(key => {
-      if (!imageStyleProps.includes(key)) {
-        containerStyle[key as keyof React.CSSProperties] = style[key as keyof React.CSSProperties];
+    const styleKeys = Object.keys(style) as Array<keyof React.CSSProperties>;
+    styleKeys.forEach(key => {
+      if (!imageStyleProps.includes(key as string)) {
+        const value = style[key];
+        if (value !== undefined) {
+          (containerStyle as any)[key] = value;
+        }
       }
     });
   }
