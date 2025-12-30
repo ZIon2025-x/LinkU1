@@ -111,7 +111,7 @@ public struct DeviceInfo {
         
         // 生成新的标识符
         let identifier = UUID().uuidString
-        KeychainHelper.shared.save(
+        _ = KeychainHelper.shared.save(
             identifier.data(using: .utf8) ?? Data(),
             service: Constants.Keychain.service,
             account: key

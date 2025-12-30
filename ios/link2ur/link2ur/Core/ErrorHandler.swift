@@ -108,7 +108,7 @@ public final class ErrorHandler: ObservableObject {
         let strategy = getRecoveryStrategy(for: error)
         
         switch strategy {
-        case .retry(let maxAttempts, let delay):
+        case .retry(_, _):
             // 重试逻辑由调用方处理
             currentError = appError
             isShowingError = true

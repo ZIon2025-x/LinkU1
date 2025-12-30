@@ -344,6 +344,13 @@ def create_task_payment(
     if task.is_paid:
         raise HTTPException(status_code=400, detail="任务已支付")
     
+    # 检查任务状态：只有 pending_confirmation 状态的任务需要支付
+    if task.status != "pending_confirmation":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_confirmation"
+        )
+    
     # 计算平台服务费（申请费）
     # 假设平台服务费为任务金额的10%，或从系统设置读取
     application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
@@ -465,6 +472,9 @@ def create_task_payment(
         # 标记任务为已支付
         task.is_paid = 1
         task.escrow_amount = task_amount
+        # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
+        if task.status == "pending_confirmation":
+            task.status = "in_progress"
         
         db.commit()
         

@@ -37,7 +37,7 @@ public class StorageManager {
     public func saveData(_ data: Data, to path: String) throws {
         let url = fileManager.documentsDirectory.appendingPathComponent(path)
         let directory = url.deletingLastPathComponent()
-        try fileManager.createDirectoryIfNeeded(at: directory)
+        _ = fileManager.createDirectoryIfNeeded(at: directory)
         try data.write(to: url)
     }
     

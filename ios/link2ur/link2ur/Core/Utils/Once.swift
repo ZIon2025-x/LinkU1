@@ -17,12 +17,18 @@ public class Once {
     
     /// 异步执行一次操作
     public func executeAsync(_ operation: () async -> Void) async {
-        lock.lock()
-        let shouldExecute = !executed
-        if shouldExecute {
-            executed = true
+        // 使用同步队列来避免在异步上下文中直接使用 NSLock
+        let shouldExecute = await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                self.lock.lock()
+                let shouldExecute = !self.executed
+                if shouldExecute {
+                    self.executed = true
+                }
+                self.lock.unlock()
+                continuation.resume(returning: shouldExecute)
+            }
         }
-        lock.unlock()
         
         if shouldExecute {
             await operation()

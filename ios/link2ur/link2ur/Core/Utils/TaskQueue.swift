@@ -52,12 +52,15 @@ public class TaskQueue {
                 Logger.error("任务执行失败: \(error)", category: .general)
             }
             
-            lock.lock()
-            isProcessing = false
-            lock.unlock()
-            
-            // 处理下一个任务
-            processNext()
+            // 使用同步队列来更新状态，避免在异步上下文中直接使用 NSLock
+            queue.async {
+                self.lock.lock()
+                self.isProcessing = false
+                self.lock.unlock()
+                
+                // 处理下一个任务
+                self.processNext()
+            }
         }
     }
     

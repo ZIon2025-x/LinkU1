@@ -20,14 +20,14 @@ public class Semaphore {
     
     /// 执行带信号量控制的操作
     public func execute<T>(_ operation: () throws -> T) rethrows -> T {
-        wait()
+        _ = wait()
         defer { signal() }
         return try operation()
     }
     
     /// 异步执行带信号量控制的操作
     public func executeAsync<T>(_ operation: () async throws -> T) async rethrows -> T {
-        wait()
+        _ = wait()
         defer { signal() }
         return try await operation()
     }

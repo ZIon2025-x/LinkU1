@@ -29,12 +29,14 @@ struct StripePaymentView: View {
                         Text("支付成功！")
                             .font(.title2)
                             .fontWeight(.bold)
-                        Text("任务已成功支付")
+                        Text("任务已成功支付，正在更新状态...")
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        // 等待后端 webhook 处理完成（通常需要 1-2 秒）
+                        // 然后关闭支付界面，让父视图刷新任务状态
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                             dismiss()
                         }
                     }

@@ -9,19 +9,19 @@ class TaskQueueExample {
     /// 示例1: 基本任务队列
     func basicTaskQueue() {
         // 添加高优先级任务
-        TaskQueue.shared.enqueue(priority: .high) { [self] in
+        TaskQueue.shared.enqueue({ [self] in
             try await self.uploadCriticalData()
-        }
+        }, priority: .high)
         
         // 添加普通任务
-        TaskQueue.shared.enqueue(priority: .normal) { [self] in
+        TaskQueue.shared.enqueue({ [self] in
             try await self.syncData()
-        }
+        }, priority: .normal)
         
         // 添加低优先级任务
-        TaskQueue.shared.enqueue(priority: .low) { [self] in
+        TaskQueue.shared.enqueue({ [self] in
             try await self.cleanupCache()
-        }
+        }, priority: .low)
     }
     
     /// 示例2: 图片上传队列
@@ -29,9 +29,9 @@ class TaskQueueExample {
         let images = [UIImage(), UIImage(), UIImage()]
         
         for (index, image) in images.enumerated() {
-            TaskQueue.shared.enqueue(priority: .normal) {
+            TaskQueue.shared.enqueue({
                 try await self.uploadImage(image, index: index)
-            }
+            }, priority: .normal)
         }
     }
     
@@ -41,9 +41,9 @@ class TaskQueueExample {
         
         // 将任务分批添加到队列
         for chunk in items.chunked(into: 10) {
-            TaskQueue.shared.enqueue(priority: .normal) { [self] in
+            TaskQueue.shared.enqueue({ [self] in
                 try await self.processBatch(chunk)
-            }
+            }, priority: .normal)
         }
     }
     
@@ -52,11 +52,11 @@ class TaskQueueExample {
         let semaphore = Semaphore(value: 3) // 最多3个并发
         
         for i in 0..<10 {
-            TaskQueue.shared.enqueue(priority: .normal) { [self] in
+            TaskQueue.shared.enqueue({ [self] in
                 try await semaphore.executeAsync {
                     try await self.processItem(i)
                 }
-            }
+            }, priority: .normal)
         }
     }
     

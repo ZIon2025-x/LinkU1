@@ -40,19 +40,6 @@ class PaymentViewModel: ObservableObject {
             requestBody["coupon_code"] = couponCode.uppercased()
         }
         
-        // 构建请求体
-        var requestBody: [String: Any] = [
-            "payment_method": paymentMethod
-        ]
-        
-        if let pointsAmount = pointsAmount {
-            requestBody["points_amount"] = Int(pointsAmount * 100) // 转换为便士
-        }
-        
-        if let couponCode = couponCode {
-            requestBody["coupon_code"] = couponCode.uppercased()
-        }
-        
         // 调用 API - 使用 Combine Publisher
         apiService.request(
             PaymentResponse.self,

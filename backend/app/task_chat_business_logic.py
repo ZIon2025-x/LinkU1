@@ -168,7 +168,10 @@ class AcceptApplicationLogic:
             
             # 更新任务
             locked_task.taker_id = application.applicant_id
-            locked_task.status = "in_progress"
+            # 接受申请后，任务状态设置为 pending_confirmation，等待支付完成后才进入 in_progress
+            locked_task.status = "pending_confirmation"
+            # 确保 is_paid 为 0（未支付）
+            locked_task.is_paid = 0
             
             # 如果申请包含议价，更新 agreed_reward（不覆盖 base_reward）
             if application.negotiated_price is not None:

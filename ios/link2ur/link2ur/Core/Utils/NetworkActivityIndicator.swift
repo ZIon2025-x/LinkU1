@@ -29,9 +29,22 @@ public class NetworkActivityIndicator {
     
     /// 更新指示器状态
     private func updateIndicator() {
+        // 注意：isNetworkActivityIndicatorVisible 在 iOS 13+ 已弃用
+        // 如果需要网络活动指示，应该使用自定义 UI 组件
+        #if swift(>=5.0)
+        if #available(iOS 13.0, *) {
+            // iOS 13+ 不再支持系统网络活动指示器
+            // 可以在这里添加自定义的网络活动指示器逻辑
+        } else {
+            DispatchQueue.main.async {
+                UIApplication.shared.isNetworkActivityIndicatorVisible = self.activityCount > 0
+            }
+        }
+        #else
         DispatchQueue.main.async {
             UIApplication.shared.isNetworkActivityIndicatorVisible = self.activityCount > 0
         }
+        #endif
     }
     
     /// 执行网络操作（自动管理指示器）

@@ -42,6 +42,8 @@ extension Data {
     }
     
     /// 计算 MD5 哈希
+    /// 注意：MD5 已弃用，建议使用 SHA256
+    @available(iOS, deprecated: 13.0, message: "MD5 已弃用，建议使用 sha256")
     public var md5: Data {
         var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
         _ = withUnsafeBytes {

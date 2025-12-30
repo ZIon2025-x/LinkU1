@@ -14,10 +14,7 @@ struct InAppWebView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
-        // 使用共享的进程池，避免创建过多进程
-        if configuration.processPool == nil {
-            configuration.processPool = WKProcessPool()
-        }
+        // 注意：processPool 在 iOS 15+ 已弃用，不再需要手动设置
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator

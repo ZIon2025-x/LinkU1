@@ -106,6 +106,7 @@ struct TaskDetailView: View {
                     showCancelConfirm: $showCancelConfirm,
                     cancelReason: $cancelReason,
                     showLogin: $showLogin,
+                    showPaymentView: $showPaymentView,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -180,7 +181,10 @@ struct TaskDetailView: View {
                     StripePaymentView(taskId: taskId, amount: paymentAmount)
                         .onDisappear {
                             // 支付完成后刷新任务详情
-                            viewModel.loadTask(taskId: taskId)
+                            // 由于后端通过 webhook 异步更新状态，需要延迟刷新以确保状态已更新
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                viewModel.loadTask(taskId: taskId)
+                            }
                         }
                 }
             }
@@ -600,6 +604,7 @@ struct TaskDetailContentView: View {
     @Binding var showCancelConfirm: Bool
     @Binding var cancelReason: String
     @Binding var showLogin: Bool
+    @Binding var showPaymentView: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -645,8 +650,20 @@ struct TaskDetailContentView: View {
                                 viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success in
                                     actionLoading = false
                                     if success {
+                                        // 重新加载任务信息
                                         viewModel.loadTask(taskId: taskId)
                                         viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                        
+                                        // 延迟检查是否需要支付（等待任务信息更新）
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            // 检查任务是否有接受者且需要支付
+                                            if let updatedTask = viewModel.task,
+                                               updatedTask.takerId != nil,
+                                               updatedTask.status == .pendingConfirmation {
+                                                // 任务已接受但未支付，显示支付界面
+                                                showPaymentView = true
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -677,7 +694,6 @@ struct TaskDetailContentView: View {
                         showCancelConfirm: $showCancelConfirm,
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
-                        showLogin: $showLogin,
                         taskId: taskId,
                         viewModel: viewModel
                     )
@@ -1109,12 +1125,15 @@ struct TaskActionButtonsView: View {
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
-            // 支付按钮（发布者且任务未支付时显示）
-            if isPoster {
-                // 检查任务是否已支付（需要根据后端返回的字段判断）
-                // 如果后端返回 is_paid 字段，使用 task.isPaid == 0
-                // 这里暂时使用任务状态判断，实际应该使用 is_paid 字段
-                if task.status == .open {
+            // 支付按钮（发布者已接受申请且任务未支付时显示）
+            // 支付条件：
+            // 1. 发布者已接受申请（takerId != nil）
+            // 2. 任务状态是 pendingConfirmation（已接受但未支付，等待支付后进入进行中状态）
+            // 3. 任务有奖励金额需要支付
+            if isPoster && task.takerId != nil && task.status == .pendingConfirmation {
+                let hasReward = task.agreedReward != nil || task.baseReward != nil || task.reward > 0
+                
+                if hasReward {
                     Button(action: {
                         showPaymentView = true
                     }) {

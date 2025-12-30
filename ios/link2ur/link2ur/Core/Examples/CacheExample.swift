@@ -34,10 +34,10 @@ class CacheExample {
         CacheManager.shared.setMemoryCache(image, forKey: "avatar_1")
         
         // 从内存获取
-        if let cachedImage = CacheManager.shared.getMemoryCache(
+        if CacheManager.shared.getMemoryCache(
             forKey: "avatar_1",
             as: UIImage.self
-        ) {
+        ) != nil {
             print("从内存缓存获取图片")
         }
         #endif

@@ -32,7 +32,7 @@ class NetworkRequestExample {
     /// 示例2: 使用 RequestBuilder
     func requestWithBuilder() {
         do {
-            let request = try RequestBuilder(
+            _ = try RequestBuilder(
                 baseURL: Constants.API.baseURL,
                 endpoint: "/api/users/me"
             )

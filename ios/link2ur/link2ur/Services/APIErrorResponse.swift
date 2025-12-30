@@ -2,7 +2,7 @@ import Foundation
 
 /// 后端标准错误响应格式
 /// 对应后端 error_handlers.py 中的 create_error_response 格式
-struct APIErrorResponse: Decodable {
+nonisolated struct APIErrorResponse: Decodable {
     let error: Bool
     let message: String
     let errorCode: String
@@ -92,7 +92,9 @@ extension APIError {
     /// 从 HTTP 响应数据解析错误
     /// 返回 (APIError, 错误消息)
     nonisolated static func parse(from data: Data) -> (error: APIError, message: String)? {
-        guard let errorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data) else {
+        // 在非隔离上下文中解码，避免 Swift 6 兼容性问题
+        let decoder = JSONDecoder()
+        guard let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) else {
             return nil
         }
         return (from(errorResponse: errorResponse), errorResponse.message)

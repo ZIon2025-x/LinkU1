@@ -2874,8 +2874,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 task.is_paid = 1
                 # 使用最终成交价（如果有议价）或原始标价
                 task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
+                if task.status == "pending_confirmation":
+                    task.status = "in_progress"
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent")
+                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress")
             else:
                 logger.warning(f"Task {task_id} already paid or not found")
     
@@ -2913,8 +2916,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             if task and not task.is_paid:
                 task.is_paid = 1
                 task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
+                if task.status == "pending_confirmation":
+                    task.status = "in_progress"
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session")
+                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress")
     
     else:
         logger.info(f"Unhandled event type: {event_type}")

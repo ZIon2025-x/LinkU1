@@ -59,7 +59,7 @@ public class KeychainHelper {
     // 辅助方法：直接保存字符串
     public func save(_ string: String, service: String, account: String) {
         if let data = string.data(using: .utf8) {
-            save(data, service: service, account: account)
+            _ = save(data, service: service, account: account)
         }
     }
 }

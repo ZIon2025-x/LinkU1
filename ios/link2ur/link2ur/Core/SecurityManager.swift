@@ -29,7 +29,7 @@ public final class SecurityManager {
             let keyData = key.withUnsafeBytes { Data($0) }
             let keyDataBase64 = keyData.base64EncodedString()
             if let keyDataUTF8 = keyDataBase64.data(using: .utf8) {
-                KeychainHelper.shared.save(
+                _ = KeychainHelper.shared.save(
                     keyDataUTF8,
                     service: Constants.Keychain.service,
                     account: "encryption_key"
