@@ -1469,8 +1469,34 @@ class TaskPaymentResponse(BaseModel):
     currency: str
     final_amount: int  # 最终需要支付的金额（整数，最小货币单位）
     final_amount_display: str
-    checkout_url: Optional[str] = None
+    checkout_url: Optional[str] = None  # 保留兼容性，Payment Intent 不使用
+    client_secret: Optional[str] = None  # Payment Intent 的 client_secret，前端需要
+    payment_intent_id: Optional[str] = None  # Payment Intent ID
     note: str
+
+
+# ==================== Stripe Connect Schema ====================
+
+class StripeConnectAccountResponse(BaseModel):
+    account_id: str
+    onboarding_url: Optional[str] = None
+    account_status: bool  # details_submitted
+    message: str
+
+
+class StripeConnectAccountStatusResponse(BaseModel):
+    account_id: str
+    details_submitted: bool
+    charges_enabled: bool
+    payouts_enabled: bool
+    onboarding_url: Optional[str] = None
+    needs_onboarding: bool
+    requirements: Optional[Dict[str, Any]] = None
+
+
+class StripeConnectAccountLinkResponse(BaseModel):
+    onboarding_url: str
+    expires_at: int
 
 
 # ==================== 任务达人功能 Schema ====================

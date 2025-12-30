@@ -2,8 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+    @ObservedObject private var appTheme = AppTheme.shared
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
     
     var body: some View {
         ZStack {
@@ -18,7 +18,15 @@ struct SettingsView: View {
                 
                 // 外观设置
                 Section("外观") {
-                    Toggle("深色模式", isOn: $darkModeEnabled)
+                    Picker("主题模式", selection: Binding(
+                        get: { appTheme.themeMode },
+                        set: { appTheme.setThemeMode($0) }
+                    )) {
+                        ForEach(ThemeMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
                 }
                 
                 // 会员

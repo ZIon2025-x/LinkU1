@@ -490,32 +490,19 @@ def create_task_payment(
     if final_amount > 0:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
         
-        # 创建Stripe支付会话
-        session = stripe.checkout.Session.create(
+        # 创建 Payment Intent（用于 Stripe Elements 嵌入式支付表单）
+        payment_intent = stripe.PaymentIntent.create(
+            amount=final_amount,  # 便士
+            currency="gbp",
             payment_method_types=["card"],
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "gbp",
-                        "product_data": {
-                            "name": f"任务 #{task_id} 平台服务费",
-                            "description": f"{task.title} - 平台服务费"
-                        },
-                        "unit_amount": final_amount,
-                    },
-                    "quantity": 1,
-                }
-            ],
-            mode="payment",
-            success_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/tasks/{task_id}/pay/success",
-            cancel_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/tasks/{task_id}/pay/cancel",
             metadata={
-                "task_id": task_id,
-                "user_id": current_user.id,
+                "task_id": str(task_id),
+                "user_id": str(current_user.id),
                 "points_used": str(points_used) if points_used else "",
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
                 "application_fee": str(application_fee_pence)
             },
+            description=f"任务 #{task_id} 平台服务费 - {task.title}",
         )
         
         return {
@@ -532,7 +519,9 @@ def create_task_payment(
             "currency": "GBP",
             "final_amount": final_amount,
             "final_amount_display": f"{final_amount / 100:.2f}",
-            "checkout_url": session.url,
+            "checkout_url": None,  # Payment Intent 不需要 checkout_url
+            "client_secret": payment_intent.client_secret,  # 前端需要这个来确认支付
+            "payment_intent_id": payment_intent.id,
             "note": "积分仅用于抵扣申请费/平台服务费，任务奖励将按法币结算给服务者"
         }
     

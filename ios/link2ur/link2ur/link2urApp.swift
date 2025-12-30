@@ -9,11 +9,13 @@ import SwiftUI
 import UIKit
 import UserNotifications
 import LinkU
+import StripeCore
 
 @main
 struct link2urApp: App {
     // 使用 @StateObject 创建全局状态对象，确保生命周期跟随 App
     @StateObject private var appState = AppState()
+    @StateObject private var appTheme = AppTheme.shared
     
     // 适配 AppDelegate 用于处理推送通知等
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -22,9 +24,13 @@ struct link2urApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState) // 注入全局状态
+                .preferredColorScheme(appTheme.colorScheme) // 应用主题颜色方案
                 .onAppear {
                     // 应用启动时的初始化操作
                     print("Link²Ur App Started")
+                    
+                    // 初始化 Stripe
+                    StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
                 }
         }
     }

@@ -89,6 +89,7 @@ const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperat
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 const StudentVerification = lazyWithRetry(() => import('./pages/StudentVerification'));
+const TaskPayment = lazyWithRetry(() => import('./pages/TaskPayment'));
 const VerifyStudentEmail = lazyWithRetry(() => import('./pages/VerifyStudentEmail'));
 const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
 const Forum = lazyWithRetry(() => import('./pages/Forum'));
@@ -228,6 +229,11 @@ const LanguageRoutes: React.FC = () => {
             </ProtectedRoute>
           } />
           <Route path={`/${lang}/tasks/:id`} element={<TaskDetail />} />
+          <Route path={`/${lang}/tasks/:taskId/payment`} element={
+            <ProtectedRoute>
+              <TaskPayment />
+            </ProtectedRoute>
+          } />
           <Route path={`/${lang}/my-tasks`} element={
             <ProtectedRoute>
               <MyTasks />

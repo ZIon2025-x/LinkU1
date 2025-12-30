@@ -25,6 +25,7 @@ struct TaskDetailView: View {
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
     @State private var showApplySuccessAlert = false
+    @State private var showPaymentView = false
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -170,6 +171,17 @@ struct TaskDetailView: View {
                     TaskShareSheet(task: task, taskId: taskId, shareImage: shareImage)
                         .presentationDetents([.medium, .large])
                         .presentationDragIndicator(.visible)
+                }
+            }
+            .sheet(isPresented: $showPaymentView) {
+                if let task = viewModel.task {
+                    // 计算需要支付的金额（通常是任务金额的 10% 作为平台服务费）
+                    let paymentAmount = (task.agreedReward ?? task.baseReward ?? task.reward) * 0.1
+                    StripePaymentView(taskId: taskId, amount: paymentAmount)
+                        .onDisappear {
+                            // 支付完成后刷新任务详情
+                            viewModel.loadTask(taskId: taskId)
+                        }
                 }
             }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
@@ -664,6 +676,8 @@ struct TaskDetailContentView: View {
                         showReviewModal: $showReviewModal,
                         showCancelConfirm: $showCancelConfirm,
                         showLogin: $showLogin,
+                        showPaymentView: $showPaymentView,
+                        showLogin: $showLogin,
                         taskId: taskId,
                         viewModel: viewModel
                     )
@@ -1088,12 +1102,28 @@ struct TaskActionButtonsView: View {
     @Binding var showReviewModal: Bool
     @Binding var showCancelConfirm: Bool
     @Binding var showLogin: Bool
+    @Binding var showPaymentView: Bool
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
+            // 支付按钮（发布者且任务未支付时显示）
+            if isPoster {
+                // 检查任务是否已支付（需要根据后端返回的字段判断）
+                // 如果后端返回 is_paid 字段，使用 task.isPaid == 0
+                // 这里暂时使用任务状态判断，实际应该使用 is_paid 字段
+                if task.status == .open {
+                    Button(action: {
+                        showPaymentView = true
+                    }) {
+                        Label("支付平台服务费", systemImage: "creditcard.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
+            }
+            
             // 申请按钮或状态显示
             if !isPoster {
                 // 如果用户已申请，无论任务状态如何，都显示申请状态卡片

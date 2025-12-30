@@ -2841,22 +2841,84 @@ def create_payment(
 
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_...yourkey...")
+    
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError as e:
+        logger.error(f"Invalid payload: {e}")
+        return {"error": "Invalid payload"}, 400
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Invalid signature: {e}")
+        return {"error": "Invalid signature"}, 400
     except Exception as e:
-        return {"error": str(e)}
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        task_id = int(session["metadata"]["task_id"])
-        task = crud.get_task(db, task_id)
-        if task:
-            task.is_paid = 1
-            # 使用最终成交价（如果有议价）或原始标价
-            task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-            db.commit()
+        logger.error(f"Webhook error: {e}")
+        return {"error": str(e)}, 400
+    
+    event_type = event["type"]
+    event_data = event["data"]["object"]
+    
+    # 处理 Payment Intent 事件（用于 Stripe Elements）
+    if event_type == "payment_intent.succeeded":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task and not task.is_paid:  # 幂等性检查
+                task.is_paid = 1
+                # 使用最终成交价（如果有议价）或原始标价
+                task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                db.commit()
+                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent")
+            else:
+                logger.warning(f"Task {task_id} already paid or not found")
+    
+    elif event_type == "payment_intent.payment_failed":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        logger.warning(f"Payment failed for task {task_id}: {payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')}")
+    
+    # 处理退款事件
+    elif event_type == "charge.refunded":
+        charge = event_data
+        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task:
+                # 更新任务状态，退还积分等
+                task.is_paid = 0  # 或设置退款状态
+                refund_amount = charge.get("amount_refunded", 0) / 100.0
+                db.commit()
+                logger.info(f"Task {task_id} refunded: £{refund_amount:.2f}")
+    
+    # 处理争议事件
+    elif event_type == "charge.dispute.created":
+        dispute = event_data
+        charge_id = dispute.get("charge")
+        logger.warning(f"Dispute created for charge {charge_id}: {dispute.get('reason')}")
+        # TODO: 处理争议逻辑，可能需要冻结资金
+    
+    # 保留对 Checkout Session 的兼容性（如果仍有使用）
+    elif event_type == "checkout.session.completed":
+        session = event_data
+        task_id = int(session.get("metadata", {}).get("task_id", 0))
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task and not task.is_paid:
+                task.is_paid = 1
+                task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                db.commit()
+                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session")
+    
+    else:
+        logger.info(f"Unhandled event type: {event_type}")
+    
     return {"status": "success"}
 
 

@@ -159,6 +159,7 @@ class User(Base):
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     flea_market_notice_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 跳蚤市场须知同意时间
+    stripe_account_id = Column(String(255), nullable=True, unique=True)  # Stripe Connect 账户 ID
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"

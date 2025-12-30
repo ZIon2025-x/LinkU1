@@ -293,6 +293,9 @@ app.include_router(task_chat_router, prefix="/api", tags=["任务聊天"])
 from app.coupon_points_routes import router as coupon_points_router
 app.include_router(coupon_points_router, tags=["优惠券和积分系统"])
 
+from app.stripe_connect_routes import router as stripe_connect_router
+app.include_router(stripe_connect_router, tags=["Stripe Connect"])
+
 # 添加管理员优惠券和积分系统路由
 from app.admin_coupon_points_routes import router as admin_coupon_points_router
 app.include_router(admin_coupon_points_router, tags=["管理员-优惠券和积分系统"])

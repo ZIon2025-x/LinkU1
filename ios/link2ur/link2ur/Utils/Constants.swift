@@ -43,6 +43,26 @@ public struct Constants {
         static let cornerRadius: CGFloat = 12.0
         static let padding: CGFloat = 16.0
     }
+    
+    struct Stripe {
+        // Stripe Publishable Key
+        // 从环境变量读取，如果没有则使用默认值
+        #if DEBUG
+        static let publishableKey: String = {
+            if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
+                return key
+            }
+            return "pk_test_..." // 替换为你的测试密钥
+        }()
+        #else
+        static let publishableKey: String = {
+            if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
+                return key
+            }
+            return "pk_live_..." // 替换为你的生产密钥
+        }()
+        #endif
+    }
 }
 
 // MARK: - URL 工具函数
