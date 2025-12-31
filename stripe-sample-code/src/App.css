@@ -1,0 +1,195 @@
+/* Base styles */
+:root {
+  --primary-color: #556cd6;
+  --primary-dark: #242d60;
+  --error-color: #ff4444;
+  --success-color: #00c851;
+  --border-color: #e6e6e6;
+  --text-color: #e0e3f0;
+  --background-color: #242d60;
+}
+
+body {
+  background: var(--background-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+  'Helvetica Neue', 'Ubuntu', sans-serif;
+  height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  gap: 24px;
+}
+
+.logo {
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 24px;
+}
+
+.product {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.round-border {
+  border-radius: 6px;
+}
+
+.product-info {
+  display: flex;
+  flex: 1;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.description {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+img {
+  border-radius: 6px;
+  width: 54px;
+  height: 57px;
+  margin-right: 10px
+}
+
+.button {
+  height: 42px;
+  background: var(--primary-color);
+  color: white;
+  width: 100%;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 0;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  font-family: inherit
+}
+
+.button:hover {
+  opacity: 0.8;
+}
+
+.product .button {
+  height: 36px;
+  border-radius: 0;
+}
+
+/* Form styles */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-top: 0.25rem;
+  box-sizing: border-box;
+}
+
+p {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.154px;
+  color: var(--primary-dark);
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+h3,
+h5 {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.154px;
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+h5 {
+  opacity: 0.5;
+}
+
+.message {
+  color: var(--text-color);
+  font-size: 16px;
+}
+
+.account-status {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.status-header h3 {
+  margin: 0;
+  color: var(--primary-dark);
+}
+
+.status-details {
+  background-color: #f7fafc;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.status-item:last-child {
+  border-bottom: none;
+}
+
+

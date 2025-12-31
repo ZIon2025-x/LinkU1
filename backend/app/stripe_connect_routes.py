@@ -33,13 +33,25 @@ def create_connect_account(
     try:
         # 检查用户是否已有 Stripe Connect 账户
         if current_user.stripe_account_id:
-            # 检查账户状态
+            # 检查账户状态 (使用 Accounts v2 API)
             try:
-                account = stripe.Account.retrieve(current_user.stripe_account_id)
+                try:
+                    account = stripe.v2.core.accounts.retrieve(
+                        current_user.stripe_account_id,
+                        include=['requirements', 'configuration.recipient']
+                    )
+                    # v2 API 返回的账户状态检查方式不同
+                    summary_status = account.requirements.summary.minimum_deadline.status if hasattr(account.requirements, 'summary') else None
+                    details_submitted = not summary_status or summary_status == 'eventually_due'
+                except AttributeError:
+                    # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
+                    account = stripe.Account.retrieve(current_user.stripe_account_id)
+                    details_submitted = account.details_submitted
+                
                 return {
                     "account_id": account.id,
                     "onboarding_url": None,
-                    "account_status": account.details_submitted,
+                    "account_status": details_submitted,
                     "message": "账户已存在"
                 }
             except stripe.error.StripeError as e:
@@ -48,22 +60,65 @@ def create_connect_account(
                 current_user.stripe_account_id = None
                 db.commit()
         
-        # 创建 Express Account
-        # 注意：测试环境使用 sk_test_...，生产环境使用 sk_live_...
-        account = stripe.Account.create(
-            type="express",
-            country="GB",  # 英国
-            email=current_user.email or f"user_{current_user.id}@link2ur.com",
-            capabilities={
-                "card_payments": {"requested": True},
-                "transfers": {"requested": True},
-            },
-            metadata={
-                "user_id": str(current_user.id),
-                "platform": "LinkU",
-                "user_name": current_user.name
-            }
-        )
+        # 创建 Express Account (完全按照官方示例代码)
+        # 参考: stripe-sample-code/server.js line 89-114
+        try:
+            account = stripe.v2.core.accounts.create({
+                "display_name": current_user.email or f"user_{current_user.id}@link2ur.com",
+                "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                "dashboard": "express",
+                "defaults": {
+                    "responsibilities": {
+                        "fees_collector": "application",
+                        "losses_collector": "application",
+                    },
+                },
+                "identity": {
+                    "country": "GB",
+                    "entity_type": "company",
+                },
+                "configuration": {
+                    "recipient": {
+                        "capabilities": {
+                            "stripe_balance": {
+                                "stripe_transfers": {
+                                    "requested": True,
+                                },
+                            },
+                        },
+                    },
+                },
+                "metadata": {
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
+                    "user_name": current_user.name
+                }
+            })
+            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
+        except AttributeError:
+            # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
+            logger.warning("Stripe SDK does not support v2 API, falling back to legacy API")
+            account = stripe.Account.create(
+                type="express",
+                country="GB",
+                email=current_user.email or f"user_{current_user.id}@link2ur.com",
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+                metadata={
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
+                    "user_name": current_user.name
+                }
+            )
+            logger.info(f"Created Stripe Connect account {account.id} using legacy API for user {current_user.id}")
+        except Exception as e:
+            logger.error(f"Error creating Stripe Connect account: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"创建 Stripe 账户失败: {str(e)}"
+            )
         
         # 保存账户 ID 到用户记录
         current_user.stripe_account_id = account.id
@@ -71,14 +126,30 @@ def create_connect_account(
         
         logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
         
-        # 创建账户链接用于 onboarding
+        # 创建账户链接用于 onboarding (完全按照官方示例代码)
+        # 参考: stripe-sample-code/server.js line 126-136
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        account_link = stripe.AccountLink.create(
-            account=account.id,
-            refresh_url=f"{frontend_url}/stripe/connect/refresh",
-            return_url=f"{frontend_url}/stripe/connect/success",
-            type="account_onboarding",
-        )
+        try:
+            account_link = stripe.v2.core.accountLinks.create({
+                "account": account.id,
+                "use_case": {
+                    "type": "account_onboarding",
+                    "account_onboarding": {
+                        "configurations": ["recipient"],
+                        "refresh_url": f"{frontend_url}/stripe/connect/refresh",
+                        "return_url": f"{frontend_url}/stripe/connect/success?accountId={account.id}",
+                    },
+                },
+            })
+        except AttributeError:
+            # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
+            logger.warning("Stripe SDK does not support v2 AccountLink API, falling back to legacy API")
+            account_link = stripe.AccountLink.create(
+                account=account.id,
+                refresh_url=f"{frontend_url}/stripe/connect/refresh",
+                return_url=f"{frontend_url}/stripe/connect/success",
+                type="account_onboarding",
+            )
         
         return {
             "account_id": account.id,
@@ -124,8 +195,8 @@ def create_connect_account_embedded(
                     return {
                         "account_id": account.id,
                         "client_secret": None,
-                        "account_status": account.details_submitted,
-                        "charges_enabled": account.charges_enabled,
+                        "account_status": details_submitted,
+                        "charges_enabled": charges_enabled,
                         "message": "账户已存在且已完成设置"
                     }
                 
@@ -142,8 +213,8 @@ def create_connect_account_embedded(
                 return {
                     "account_id": account.id,
                     "client_secret": onboarding_session.client_secret,
-                    "account_status": account.details_submitted,
-                    "charges_enabled": account.charges_enabled,
+                    "account_status": details_submitted,
+                    "charges_enabled": charges_enabled,
                     "message": "账户已存在，请完成设置"
                 }
             except stripe.error.StripeError as e:
@@ -152,21 +223,65 @@ def create_connect_account_embedded(
                 current_user.stripe_account_id = None
                 db.commit()
         
-        # 创建 Express Account
-        account = stripe.Account.create(
-            type="express",
-            country="GB",  # 英国
-            email=current_user.email or f"user_{current_user.id}@link2ur.com",
-            capabilities={
-                "card_payments": {"requested": True},
-                "transfers": {"requested": True},
-            },
-            metadata={
-                "user_id": str(current_user.id),
-                "platform": "LinkU",
-                "user_name": current_user.name
-            }
-        )
+        # 创建 Express Account (完全按照官方示例代码)
+        # 参考: stripe-sample-code/server.js line 89-114
+        try:
+            account = stripe.v2.core.accounts.create({
+                "display_name": current_user.email or f"user_{current_user.id}@link2ur.com",
+                "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                "dashboard": "express",
+                "defaults": {
+                    "responsibilities": {
+                        "fees_collector": "application",
+                        "losses_collector": "application",
+                    },
+                },
+                "identity": {
+                    "country": "GB",
+                    "entity_type": "company",
+                },
+                "configuration": {
+                    "recipient": {
+                        "capabilities": {
+                            "stripe_balance": {
+                                "stripe_transfers": {
+                                    "requested": True,
+                                },
+                            },
+                        },
+                    },
+                },
+                "metadata": {
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
+                    "user_name": current_user.name
+                }
+            })
+            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
+        except AttributeError:
+            # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
+            logger.warning("Stripe SDK does not support v2 API, falling back to legacy API")
+            account = stripe.Account.create(
+                type="express",
+                country="GB",
+                email=current_user.email or f"user_{current_user.id}@link2ur.com",
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+                metadata={
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
+                    "user_name": current_user.name
+                }
+            )
+            logger.info(f"Created Stripe Connect account {account.id} using legacy API for user {current_user.id}")
+        except Exception as e:
+            logger.error(f"Error creating Stripe Connect account: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"创建 Stripe 账户失败: {str(e)}"
+            )
         
         # 保存账户 ID 到用户记录
         current_user.stripe_account_id = account.id

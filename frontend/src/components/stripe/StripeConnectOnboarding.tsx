@@ -38,39 +38,89 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
     const initConnect = async () => {
       try {
-        // loadConnect 返回 StripeConnectWrapper 对象
-        // 这个对象应该有 create 方法
+        // loadConnect 返回的对象需要检查其结构
         const connectWrapper = await loadConnect();
         
-        // 检查返回对象的属性和方法
-        console.log('ConnectJS wrapper:', {
+        // 检查返回对象的详细结构
+        const wrapperKeys = connectWrapper ? Object.keys(connectWrapper) : [];
+        const firstKey = wrapperKeys[0];
+        const firstValue = connectWrapper && firstKey ? (connectWrapper as any)[firstKey] : null;
+        
+        console.log('ConnectJS wrapper details:', {
           type: typeof connectWrapper,
-          keys: connectWrapper ? Object.keys(connectWrapper) : [],
-          hasCreate: connectWrapper && typeof (connectWrapper as any).create === 'function',
-          hasConnect: connectWrapper && typeof (connectWrapper as any).connect === 'function'
+          keys: wrapperKeys,
+          firstKey: firstKey,
+          firstValueType: typeof firstValue,
+          firstValueKeys: firstValue && typeof firstValue === 'object' ? Object.keys(firstValue) : []
         });
         
-        // ConnectComponentsProvider 期望接收有 create 方法的对象
-        // 如果 wrapper 有 create 方法，直接使用；否则可能需要包装
-        if (connectWrapper && typeof (connectWrapper as any).create === 'function') {
-          setConnectInstance(connectWrapper);
-          console.log('✅ ConnectJS wrapper initialized (has create method)');
-        } else {
-          // 如果没有 create 方法，创建一个包装对象
-          const wrappedInstance = {
-            create: (publishableKey: string, options?: any) => {
-              // 如果 wrapper 有 connect 方法，使用它
-              if (connectWrapper && typeof (connectWrapper as any).connect === 'function') {
-                return (connectWrapper as any).connect(publishableKey, options);
-              }
-              // 否则返回 wrapper 本身
-              return connectWrapper;
-            },
-            ...connectWrapper
-          };
-          setConnectInstance(wrappedInstance);
-          console.log('✅ ConnectJS wrapper initialized (wrapped)');
+        // 如果返回的对象只有一个 key，可能是嵌套结构
+        // 尝试获取实际的 ConnectJS 实例
+        let actualInstance = connectWrapper;
+        if (wrapperKeys.length === 1 && firstValue && typeof firstValue === 'object') {
+          // 可能是 { connect: {...} } 或类似结构
+          if (typeof firstValue.create === 'function') {
+            // 使用 create 方法创建实例
+            actualInstance = firstValue.create(STRIPE_PUBLISHABLE_KEY);
+            console.log('✅ Created ConnectJS instance via nested create()');
+          } else if (typeof firstValue === 'function') {
+            // 如果值本身是函数，调用它
+            actualInstance = firstValue(STRIPE_PUBLISHABLE_KEY);
+            console.log('✅ Created ConnectJS instance via function call');
+          } else {
+            // 直接使用嵌套对象
+            actualInstance = firstValue;
+            console.log('✅ Using nested object as instance');
+          }
+        } else if (connectWrapper && typeof (connectWrapper as any).create === 'function') {
+          // 如果 wrapper 本身有 create 方法
+          actualInstance = (connectWrapper as any).create(STRIPE_PUBLISHABLE_KEY);
+          console.log('✅ Created ConnectJS instance via create()');
         }
+        
+        // 创建一个完整的包装对象，包含所有必需的方法
+        const fullInstance = {
+          ...actualInstance,
+          // create 方法 - ConnectComponentsProvider 需要
+          create: (publishableKey: string, options?: any) => {
+            if (actualInstance && typeof (actualInstance as any).create === 'function') {
+              return (actualInstance as any).create(publishableKey, options);
+            }
+            // 如果实例本身没有 create，返回实例本身
+            return actualInstance;
+          },
+          // update 方法 - 用于更新 clientSecret
+          update: (options: any) => {
+            if (actualInstance && typeof (actualInstance as any).update === 'function') {
+              return (actualInstance as any).update(options);
+            }
+            console.warn('update method not available on instance');
+          },
+          // setReactSdkAnalytics - ConnectComponentsProvider 需要
+          setReactSdkAnalytics: (version: string) => {
+            if (actualInstance && typeof (actualInstance as any).setReactSdkAnalytics === 'function') {
+              return (actualInstance as any).setReactSdkAnalytics(version);
+            }
+            // 空实现，避免错误
+            console.log('setReactSdkAnalytics called:', version);
+          },
+          // addEventListener - ConnectComponentsProvider 需要
+          addEventListener: (type: string, listener: any, options?: any) => {
+            if (actualInstance && typeof (actualInstance as any).addEventListener === 'function') {
+              return (actualInstance as any).addEventListener(type, listener, options);
+            }
+            // 空实现，避免错误
+            console.log('addEventListener called:', type);
+          },
+          // removeEventListener - 可能也需要
+          removeEventListener: (type: string, listener: any, options?: any) => {
+            if (actualInstance && typeof (actualInstance as any).removeEventListener === 'function') {
+              return (actualInstance as any).removeEventListener(type, listener, options);
+            }
+          }
+        };
+        setConnectInstance(fullInstance);
+        console.log('✅ ConnectJS instance set (with all required methods)');
       } catch (err: any) {
         console.error('Error initializing ConnectJS:', err);
         // 如果初始化失败，切换到 AccountLink
