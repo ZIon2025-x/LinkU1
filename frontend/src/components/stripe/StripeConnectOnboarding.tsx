@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import api from '../../services/api';
+import api from '../../api';
 
 const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || '';
 

@@ -14,74 +14,16 @@ struct StripeConnectOnboardingView: View {
             AppColors.background
                 .ignoresSafeArea()
             
-            VStack(spacing: 0) {
+            Group {
                 if viewModel.isLoading {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text("加载中...")
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    loadingView
                 } else if let error = viewModel.error {
-                    VStack(spacing: 20) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.orange)
-                        
-                        Text("加载失败")
-                            .font(.headline)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Text(error)
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        
-                        Button(action: {
-                            viewModel.loadOnboardingSession()
-                        }) {
-                            Text("重试")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(AppColors.primary)
-                                .cornerRadius(25)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    errorView(error: error)
                 } else if viewModel.isCompleted {
-                    VStack(spacing: 20) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.green)
-                        
-                        Text("收款账户已设置完成")
-                            .font(.headline)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Text("您可以开始接收任务奖励了")
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
-                        
-                        Button(action: {
-                            dismiss()
-                        }) {
-                            Text("完成")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(AppColors.primary)
-                                .cornerRadius(25)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let clientSecret = viewModel.clientSecret {
+                    completedView
+                } else if let secret = viewModel.clientSecret {
                     StripeConnectWebView(
-                        clientSecret: clientSecret,
+                        clientSecret: secret,
                         onComplete: {
                             viewModel.checkAccountStatus()
                         },
@@ -103,6 +45,76 @@ struct StripeConnectOnboardingView: View {
             Text(errorMessage)
         }
     }
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.5)
+            Text("加载中...")
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func errorView(error: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            Text("加载失败")
+                .font(.headline)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text(error)
+                .font(.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            Button(action: {
+                viewModel.loadOnboardingSession()
+            }) {
+                Text("重试")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(AppColors.primary)
+                    .cornerRadius(25)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private var completedView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.green)
+            
+            Text("收款账户已设置完成")
+                .font(.headline)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text("您可以开始接收任务奖励了")
+                .font(.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text("完成")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(AppColors.primary)
+                    .cornerRadius(25)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
 
 struct StripeConnectWebView: UIViewRepresentable {
@@ -112,7 +124,10 @@ struct StripeConnectWebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.preferences.javaScriptEnabled = true
+        // 使用新的 API 替代已弃用的 javaScriptEnabled
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
