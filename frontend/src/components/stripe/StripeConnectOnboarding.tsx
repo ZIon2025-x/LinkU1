@@ -369,7 +369,6 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       
       <ConnectComponentsProvider 
         connectInstance={connectInstance}
-        publishableKey={STRIPE_PUBLISHABLE_KEY}
       >
         <ConnectAccountOnboarding
           onExit={() => {
