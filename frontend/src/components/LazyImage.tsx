@@ -148,18 +148,32 @@ const LazyImage: React.FC<LazyImageProps> = ({
   
   // 构建容器样式，排除图片相关的样式属性
   // 当图片绝对定位时，容器应该填充父容器（100%宽高），并保持relative作为定位上下文
+  // 如果 style 中有 width 和 height，优先使用它们来保持容器的宽高比（特别是对于圆形头像）
+  const containerWidth = isAbsolutePositioned 
+    ? '100%' 
+    : (style?.width || width || '100%');
+  const containerHeight = isAbsolutePositioned 
+    ? '100%' 
+    : (style?.height || (hasFixedSize ? height : (height || 'auto')));
+  
   const containerStyle: React.CSSProperties = {
     position: 'relative',
-    width: isAbsolutePositioned ? '100%' : (width || '100%'),
-    height: isAbsolutePositioned ? '100%' : (hasFixedSize ? height : (height || 'auto')),
+    width: containerWidth,
+    height: containerHeight,
     overflow: 'hidden',
+    // 如果 style 中有 borderRadius，应用到容器以保持圆形
+    borderRadius: style?.borderRadius || undefined,
   };
   
-  // 将非图片相关的样式应用到容器
+  // 将非图片相关的样式应用到容器（但排除已经在上面处理的属性）
   if (style) {
     const styleKeys = Object.keys(style) as Array<keyof React.CSSProperties>;
     styleKeys.forEach(key => {
-      if (!imageStyleProps.includes(key as string)) {
+      // 排除图片相关的样式属性，以及已经手动设置的属性
+      if (!imageStyleProps.includes(key as string) && 
+          key !== 'borderRadius' && 
+          key !== 'width' && 
+          key !== 'height') {
         const value = style[key];
         if (value !== undefined) {
           (containerStyle as any)[key] = value;
@@ -170,17 +184,18 @@ const LazyImage: React.FC<LazyImageProps> = ({
   
   // 图片样式：合并传入的图片相关样式和默认样式
   // 优先使用 style 中的 width/height，然后是 props 中的 width/height，最后是默认值
+  // 对于圆形头像，图片应该填充整个容器
   const imgStyle: React.CSSProperties = {
     opacity: isLoaded ? (style?.opacity !== undefined ? style.opacity : 1) : 0,
     transition: 'opacity 0.3s ease-in-out',
     width: isAbsolutePositioned 
       ? (style?.width || '100%') 
-      : (style?.width || width || '100%'),
+      : '100%', // 图片填充容器宽度
     height: isAbsolutePositioned 
       ? (style?.height || '100%') 
-      : (style?.height || (hasFixedSize ? height : 'auto')),
-    maxWidth: style?.maxWidth || '100%',
-    maxHeight: style?.maxHeight || (hasFixedSize ? '100%' : 'none'),
+      : '100%', // 图片填充容器高度
+    maxWidth: '100%',
+    maxHeight: '100%',
     objectFit: (style?.objectFit as any) || 'cover',
     objectPosition: (style?.objectPosition as any) || 'center',
     display: 'block',
