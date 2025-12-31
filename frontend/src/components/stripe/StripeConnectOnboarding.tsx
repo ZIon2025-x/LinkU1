@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ConnectComponentsProvider, ConnectAccountOnboarding, useConnect } from '@stripe/react-connect-js';
+import { ConnectComponentsProvider, ConnectAccountOnboarding } from '@stripe/react-connect-js';
+import { loadConnect } from '@stripe/connect-js';
 import api from '../../api';
 
 // 从环境变量获取 Stripe Publishable Key
@@ -26,11 +27,27 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   } | null>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [useAccountLink, setUseAccountLink] = useState<boolean>(false);
-  // 使用 useConnect hook 初始化 ConnectJS
-  const connectInstance = useConnect({
-    publishableKey: STRIPE_PUBLISHABLE_KEY || '',
-    clientSecret: clientSecret || undefined,
-  });
+  const [connectInstance, setConnectInstance] = useState<any>(null);
+
+  // 初始化 ConnectJS
+  useEffect(() => {
+    if (!STRIPE_PUBLISHABLE_KEY) {
+      console.error('STRIPE_PUBLISHABLE_KEY is not set');
+      return;
+    }
+
+    const initConnect = async () => {
+      try {
+        const connect = await loadConnect(STRIPE_PUBLISHABLE_KEY);
+        setConnectInstance(connect);
+        console.log('✅ ConnectJS initialized');
+      } catch (err: any) {
+        console.error('Error initializing ConnectJS:', err);
+      }
+    };
+
+    initConnect();
+  }, []);
 
   useEffect(() => {
     console.log('Component mounted, STRIPE_PUBLISHABLE_KEY:', STRIPE_PUBLISHABLE_KEY ? 'Set' : 'Not set');
@@ -146,7 +163,20 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     }
   };
 
-  // useConnect hook 会自动处理 clientSecret 的更新
+  // 当 clientSecret 更新时，更新 ConnectJS 实例
+  useEffect(() => {
+    if (!connectInstance || !clientSecret) return;
+
+    try {
+      // 更新 ConnectJS 实例的 clientSecret
+      if (typeof connectInstance.update === 'function') {
+        connectInstance.update({ clientSecret });
+        console.log('✅ ConnectJS clientSecret updated');
+      }
+    } catch (err: any) {
+      console.error('Error updating ConnectJS clientSecret:', err);
+    }
+  }, [connectInstance, clientSecret]);
 
   if (loading && !clientSecret && !onboardingUrl) {
     return (
