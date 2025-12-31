@@ -290,8 +290,8 @@
     
     <!-- Stripe.js - Load first, Connect Embedded depends on it -->
     <script src="https://js.stripe.com/v3/"></script>
-    <!-- Stripe Connect Embedded - Load after Stripe.js -->
-    <script src="https://js.stripe.com/connect-embedded/v1/"></script>
+    <!-- Stripe Connect Embedded - Load after Stripe.js, ensure synchronous loading -->
+    <script src="https://js.stripe.com/connect-embedded/v1/" defer></script>
     
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
