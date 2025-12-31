@@ -134,10 +134,7 @@ def create_connect_account_embedded(
                     account=account.id,
                     components={
                         "account_onboarding": {
-                            "enabled": True,
-                            "features": {
-                                "external_account_collection": {"enabled": True},
-                            }
+                            "enabled": True
                         }
                     }
                 )
@@ -182,10 +179,7 @@ def create_connect_account_embedded(
             account=account.id,
             components={
                 "account_onboarding": {
-                    "enabled": True,
-                    "features": {
-                        "external_account_collection": {"enabled": True},
-                    }
+                    "enabled": True
                 }
             }
         )
@@ -340,10 +334,7 @@ def create_onboarding_session(
             account=account.id,
             components={
                 "account_onboarding": {
-                    "enabled": True,
-                    "features": {
-                        "external_account_collection": {"enabled": True},
-                    }
+                    "enabled": True
                 }
             }
         )
