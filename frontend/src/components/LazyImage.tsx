@@ -169,11 +169,16 @@ const LazyImage: React.FC<LazyImageProps> = ({
   }
   
   // 图片样式：合并传入的图片相关样式和默认样式
+  // 优先使用 style 中的 width/height，然后是 props 中的 width/height，最后是默认值
   const imgStyle: React.CSSProperties = {
     opacity: isLoaded ? (style?.opacity !== undefined ? style.opacity : 1) : 0,
     transition: 'opacity 0.3s ease-in-out',
-    width: isAbsolutePositioned ? (style?.width || '100%') : (width || '100%'),
-    height: isAbsolutePositioned ? (style?.height || '100%') : (hasFixedSize ? height : 'auto'),
+    width: isAbsolutePositioned 
+      ? (style?.width || '100%') 
+      : (style?.width || width || '100%'),
+    height: isAbsolutePositioned 
+      ? (style?.height || '100%') 
+      : (style?.height || (hasFixedSize ? height : 'auto')),
     maxWidth: style?.maxWidth || '100%',
     maxHeight: style?.maxHeight || (hasFixedSize ? '100%' : 'none'),
     objectFit: (style?.objectFit as any) || 'cover',
