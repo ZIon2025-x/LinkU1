@@ -40,6 +40,17 @@ export const useStripeConnect = (connectedAccountId: string | null | undefined) 
       } catch (error: any) {
         console.error("Error fetching client secret:", error);
         const errorMessage = error.response?.data?.detail || error.message || "An error occurred";
+        
+        // 如果是 403 错误（账户不匹配），可能是账户刚创建，需要等待
+        if (error.response?.status === 403) {
+          console.warn("Account session access denied, account may not be ready yet");
+        }
+        
+        // 如果是 500 错误，可能是 Stripe API 问题或账户未准备好
+        if (error.response?.status === 500) {
+          console.warn("Server error creating account session, account may not be ready yet");
+        }
+        
         throw new Error(errorMessage);
       }
     };

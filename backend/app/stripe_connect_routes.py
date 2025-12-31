@@ -321,19 +321,25 @@ def create_connect_account_embedded(
         )
 
 
-@router.get("/account/status", response_model=schemas.StripeConnectAccountStatusResponse)
+@router.get("/account/status")
 def get_account_status(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
     获取 Stripe Connect 账户状态
+    如果没有账户，返回空状态而不是 404
     """
     if not current_user.stripe_account_id:
-        raise HTTPException(
-            status_code=404,
-            detail="未找到 Stripe Connect 账户，请先创建账户"
-        )
+        return {
+            "account_id": None,
+            "details_submitted": False,
+            "charges_enabled": False,
+            "payouts_enabled": False,
+            "onboarding_url": None,
+            "needs_onboarding": True,
+            "requirements": None
+        }
     
     try:
         account = stripe.Account.retrieve(current_user.stripe_account_id)
@@ -430,7 +436,12 @@ def create_account_session(
         account_id = request.account
         
         # 验证账户是否属于当前用户
-        if account_id != current_user.stripe_account_id:
+        # 如果用户还没有 stripe_account_id，先更新它（可能刚创建）
+        if not current_user.stripe_account_id:
+            current_user.stripe_account_id = account_id
+            db.commit()
+            logger.info(f"Updated user {current_user.id} with stripe_account_id: {account_id}")
+        elif account_id != current_user.stripe_account_id:
             raise HTTPException(
                 status_code=403,
                 detail="无权访问此账户"

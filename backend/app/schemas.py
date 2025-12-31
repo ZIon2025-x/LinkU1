@@ -1498,7 +1498,7 @@ class StripeConnectAccountResponse(BaseModel):
 
 
 class StripeConnectAccountStatusResponse(BaseModel):
-    account_id: str
+    account_id: Optional[str] = None  # 如果没有账户，返回 None
     details_submitted: bool
     charges_enabled: bool
     payouts_enabled: bool

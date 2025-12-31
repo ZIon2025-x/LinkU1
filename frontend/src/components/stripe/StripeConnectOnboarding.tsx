@@ -43,6 +43,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         const response = await api.get('/api/stripe/connect/account/status');
         const data = response.data;
 
+        // 后端现在返回空状态而不是 404
         if (data.account_id) {
           setConnectedAccountId(data.account_id);
           setAccountStatus({
@@ -59,8 +60,10 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           }
         }
       } catch (err: any) {
-        // 如果用户还没有账户，这是正常的，不需要显示错误
-        console.log('No existing Stripe Connect account found');
+        // 如果请求失败，可能是网络问题，但不影响流程
+        if (err.response?.status !== 404) {
+          console.error('Error checking account status:', err);
+        }
       }
     };
 
@@ -83,14 +86,24 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         setConnectedAccountId(data.account);
       } else if (data.account_id) {
         // 我们的后端格式
-        setConnectedAccountId(data.account_id);
+        const accountId = data.account_id;
+        setConnectedAccountId(accountId);
         if (data.account_status !== undefined) {
           setAccountStatus({
-            account_id: data.account_id,
+            account_id: accountId,
             account_status: data.account_status,
             charges_enabled: data.charges_enabled || false,
           });
         }
+        
+        // 如果账户已经完成设置，不需要继续 onboarding
+        if (data.charges_enabled && data.account_status) {
+          if (onComplete) {
+            onComplete();
+          }
+        }
+        // 注意：如果返回了 client_secret，useStripeConnect hook 会使用它
+        // 否则，hook 会调用 account_session 端点获取
       } else if (data.error) {
         setError(data.error);
         if (onError) {
