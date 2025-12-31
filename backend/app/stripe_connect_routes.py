@@ -381,8 +381,36 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
     event_type = event["type"]
     event_data = event["data"]["object"]
     
+    logger.info(f"Received Stripe Connect webhook event: {event_type}")
+    
+    # 处理账户创建事件
+    if event_type == "account.created":
+        account = event_data
+        account_id = account.get("id")
+        
+        if not account_id:
+            logger.warning("account.created event missing account ID")
+            return {"status": "success"}
+        
+        # 尝试通过 metadata 查找用户
+        user_id = account.get("metadata", {}).get("user_id")
+        if user_id:
+            user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+            if user:
+                # 如果用户还没有 stripe_account_id，则设置
+                if not user.stripe_account_id:
+                    user.stripe_account_id = account_id
+                    db.commit()
+                    logger.info(f"Account created for user {user.id}: account_id={account_id}")
+                else:
+                    logger.info(f"Account created event for user {user.id}, but stripe_account_id already set: {user.stripe_account_id}")
+            else:
+                logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
+        else:
+            logger.warning(f"Account.created event for account {account_id}, but no metadata.user_id found")
+    
     # 处理账户更新事件
-    if event_type == "account.updated":
+    elif event_type == "account.updated":
         account = event_data
         account_id = account.get("id")
         
@@ -427,7 +455,32 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             else:
                 logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
     
-    # 处理账户验证事件
+    # 处理账户能力更新事件（如支付能力、提现能力等）
+    elif event_type == "capability.updated":
+        capability = event_data
+        account_id = capability.get("account")
+        
+        if account_id:
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+            if user:
+                status = capability.get("status")
+                capability_type = capability.get("type")
+                logger.info(f"Capability updated for user {user.id}: account_id={account_id}, type={capability_type}, status={status}")
+            else:
+                logger.warning(f"Capability.updated event for account {account_id}, but no matching user found")
+    
+    # 处理外部账户创建事件（银行账户等）
+    elif event_type == "account.external_account.created":
+        external_account = event_data
+        account_id = external_account.get("account")
+        
+        if account_id:
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+            if user:
+                account_type = external_account.get("object")  # "bank_account" or "card"
+                logger.info(f"External account created for user {user.id}: account_id={account_id}, type={account_type}")
+    
+    # 处理账户取消授权事件
     elif event_type == "account.application.deauthorized":
         account = event_data
         account_id = account.get("id")

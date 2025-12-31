@@ -196,12 +196,15 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           const scripts = Array.from(document.querySelectorAll('script[src*="connect-embedded"]')) as HTMLScriptElement[];
           console.error('Connect Embedded scripts found:', scripts.length);
           scripts.forEach((s, i) => {
-            console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'), 'complete:', s.complete);
+            // 使用类型断言访问 complete 属性（HTMLScriptElement 的标准属性）
+            const scriptComplete = (s as any).complete;
+            console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'), 'complete:', scriptComplete);
           });
           
           // 检查脚本的加载状态
           const connectScript = scripts[0];
-          if (connectScript && !connectScript.complete) {
+          // 使用类型断言访问 complete 属性
+          if (connectScript && !(connectScript as any).complete) {
             console.log('Script is still loading, waiting a bit more...');
             // 如果脚本还在加载，再等待一下
             connectScript.onload = () => {
