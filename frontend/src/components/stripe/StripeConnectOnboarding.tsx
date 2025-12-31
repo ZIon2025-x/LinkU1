@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import api from '../../api';
 
 // 从环境变量获取 Stripe Publishable Key
@@ -32,28 +31,33 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   useEffect(() => {
     console.log('Component mounted, STRIPE_PUBLISHABLE_KEY:', STRIPE_PUBLISHABLE_KEY ? 'Set' : 'Not set');
     
-    // 初始化 Stripe
-    if (STRIPE_PUBLISHABLE_KEY) {
-      console.log('Loading Stripe...');
-      loadStripe(STRIPE_PUBLISHABLE_KEY).then((stripeInstance) => {
-        console.log('Stripe promise resolved:', { hasInstance: !!stripeInstance });
-        if (stripeInstance) {
-          setStripeLoaded(true);
-          console.log('Stripe loaded successfully, stripeLoaded set to true');
-        } else {
-          console.error('Failed to load Stripe: instance is null');
-          setError('无法加载 Stripe');
+    // 检查全局 Stripe 是否已加载（HTML 中已预加载）
+    const checkStripeLoaded = () => {
+      // @ts-ignore
+      if (window.Stripe) {
+        console.log('Global Stripe found, setting stripeLoaded to true');
+        setStripeLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    // 如果 Stripe 还没加载，等待它加载
+    if (!checkStripeLoaded()) {
+      console.log('Waiting for global Stripe to load...');
+      let attempts = 0;
+      const maxAttempts = 50; // 最多等待5秒
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (checkStripeLoaded()) {
+          clearInterval(checkInterval);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error('Global Stripe failed to load after timeout');
+          setError('Stripe 加载失败，请刷新页面重试');
           setLoading(false);
         }
-      }).catch((err) => {
-        console.error('Error loading Stripe:', err);
-        setError('无法加载 Stripe: ' + (err.message || '未知错误'));
-        setLoading(false);
-      });
-    } else {
-      console.error('STRIPE_PUBLISHABLE_KEY is not set');
-      setError('Stripe 密钥未配置');
-      setLoading(false);
+      }, 100);
     }
 
     // 获取或创建 onboarding session
@@ -156,7 +160,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       
       // 脚本已在 HTML 中预加载，等待它加载完成
       let attempts = 0;
-      const maxAttempts = 100; // 最多等待10秒（因为脚本可能加载较慢）
+      const maxAttempts = 150; // 最多等待15秒（因为脚本可能加载较慢）
       
       const checkInterval = setInterval(() => {
         attempts++;
@@ -168,7 +172,9 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         if (attempts % 10 === 0) {
           console.log(`Checking ConnectEmbedded (attempt ${attempts}/${maxAttempts}):`, {
             hasStripe,
-            hasConnectEmbedded
+            hasConnectEmbedded,
+            // @ts-ignore
+            stripeKeys: window.Stripe ? Object.keys(window.Stripe) : []
           });
         }
         
@@ -183,19 +189,50 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           console.error('window.Stripe:', window.Stripe);
           // @ts-ignore
           console.error('window.Stripe.ConnectEmbedded:', window.Stripe?.ConnectEmbedded);
+          // @ts-ignore
+          console.error('window.Stripe keys:', window.Stripe ? Object.keys(window.Stripe) : 'Stripe not found');
           
           // 检查脚本是否真的加载了
           const scripts = Array.from(document.querySelectorAll('script[src*="connect-embedded"]')) as HTMLScriptElement[];
           console.error('Connect Embedded scripts found:', scripts.length);
           scripts.forEach((s, i) => {
-            console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'));
+            console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'), 'complete:', s.complete);
           });
+          
+          // 检查脚本的加载状态
+          const connectScript = scripts[0];
+          if (connectScript && !connectScript.complete) {
+            console.log('Script is still loading, waiting a bit more...');
+            // 如果脚本还在加载，再等待一下
+            connectScript.onload = () => {
+              console.log('Connect Embedded script onload fired');
+              setTimeout(() => {
+                // @ts-ignore
+                if (window.Stripe && window.Stripe.ConnectEmbedded) {
+                  console.log('ConnectEmbedded available after script onload');
+                  initializeConnectEmbedded();
+                } else {
+                  console.error('ConnectEmbedded still not available after script onload');
+                  setError('Stripe Connect Embedded 加载失败。请检查网络连接或刷新页面重试。如果问题持续，请联系技术支持。');
+                  setLoading(false);
+                }
+              }, 500);
+            };
+            return; // 继续等待
+          }
           
           // 尝试动态加载作为备用方案
           console.log('Attempting to load script dynamically as fallback...');
+          // 检查是否已经有脚本在加载
+          const existingFallback = document.querySelector('script[src="https://js.stripe.com/connect-embedded/v1/"]');
+          if (existingFallback) {
+            console.log('Fallback script already exists, waiting for it...');
+            return;
+          }
+          
           const script = document.createElement('script');
           script.src = 'https://js.stripe.com/connect-embedded/v1/';
-          script.async = false; // 同步加载以确保顺序
+          script.async = true;
           
           script.onload = () => {
             console.log('Fallback script loaded, checking ConnectEmbedded...');
@@ -246,14 +283,28 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           return;
         }
 
-        console.log('Creating ConnectEmbedded instance...', {
+        // 使用 Stripe 函数初始化实例（需要 publishable key）
+        if (!STRIPE_PUBLISHABLE_KEY) {
+          console.error('STRIPE_PUBLISHABLE_KEY is not set');
+          setError('Stripe 密钥未配置');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Creating Stripe instance and ConnectEmbedded...', {
           // @ts-ignore
           hasConnectEmbedded: !!StripeGlobal.ConnectEmbedded,
-          clientSecret: clientSecret.substring(0, 30) + '...'
+          clientSecret: clientSecret.substring(0, 30) + '...',
+          hasPublishableKey: !!STRIPE_PUBLISHABLE_KEY
         });
 
+        // 初始化 Stripe 实例
         // @ts-ignore
-        const connectEmbedded = new StripeGlobal.ConnectEmbedded({
+        const stripeInstance = StripeGlobal(STRIPE_PUBLISHABLE_KEY);
+        
+        // 创建 ConnectEmbedded 实例
+        // @ts-ignore
+        const connectEmbedded = new stripeInstance.ConnectEmbedded({
           clientSecret: clientSecret,
           onReady: () => {
             console.log('Stripe Connect onboarding ready');
