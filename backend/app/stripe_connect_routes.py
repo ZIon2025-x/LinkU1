@@ -384,24 +384,69 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
     # 处理账户更新事件
     if event_type == "account.updated":
         account = event_data
-        user_id = account.get("metadata", {}).get("user_id")
+        account_id = account.get("id")
         
-        if user_id:
-            user = db.query(models.User).filter(models.User.id == user_id).first()
-            if user:
-                # 可以在这里更新用户的账户状态
-                logger.info(f"Account updated for user {user_id}: details_submitted={account.get('details_submitted')}")
+        if not account_id:
+            logger.warning("account.updated event missing account ID")
+            return {"status": "success"}
+        
+        # 通过 stripe_account_id 查找用户（更可靠）
+        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+        
+        if user:
+            details_submitted = account.get("details_submitted", False)
+            charges_enabled = account.get("charges_enabled", False)
+            payouts_enabled = account.get("payouts_enabled", False)
+            
+            # 检查状态变化
+            previous_attributes = event.get("data", {}).get("previous_attributes", {})
+            was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
+            was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
+            
+            # 如果账户刚刚激活，记录日志
+            if not was_charges_enabled and charges_enabled:
+                logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+            
+            # 如果账户刚刚启用提现，记录日志
+            if not was_payouts_enabled and payouts_enabled:
+                logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
+            
+            logger.info(f"Account updated for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+        else:
+            # 如果通过 account_id 找不到，尝试通过 metadata
+            user_id = account.get("metadata", {}).get("user_id")
+            if user_id:
+                user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                if user:
+                    # 更新用户的 stripe_account_id（可能之前没有保存）
+                    user.stripe_account_id = account_id
+                    db.commit()
+                    logger.info(f"Updated stripe_account_id for user {user_id} from account.updated webhook")
+                else:
+                    logger.warning(f"Account.updated event for account {account_id} with metadata user_id {user_id}, but user not found")
+            else:
+                logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
     
     # 处理账户验证事件
     elif event_type == "account.application.deauthorized":
         account = event_data
-        user_id = account.get("metadata", {}).get("user_id")
+        account_id = account.get("id")
         
-        if user_id:
-            user = db.query(models.User).filter(models.User.id == user_id).first()
+        if account_id:
+            # 通过 stripe_account_id 查找用户
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             if user:
                 user.stripe_account_id = None
                 db.commit()
-                logger.info(f"Account deauthorized for user {user_id}")
+                logger.info(f"Account deauthorized for user {user.id}: account_id={account_id}")
+            else:
+                # 尝试通过 metadata
+                user_id = account.get("metadata", {}).get("user_id")
+                if user_id:
+                    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                    if user:
+                        user.stripe_account_id = None
+                        db.commit()
+                        logger.info(f"Account deauthorized for user {user.id} (found via metadata)")
     
     return {"status": "success"}

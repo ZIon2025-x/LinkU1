@@ -14,7 +14,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   onError,
 }) => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [stripe, setStripe] = useState<any>(null);
+  const [stripe, setStripe] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accountStatus, setAccountStatus] = useState<{
@@ -25,13 +25,32 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 初始化 Stripe
+    // 初始化 Stripe - 同时加载全局 Stripe.js 和 Connect Embedded
     if (STRIPE_PUBLISHABLE_KEY) {
-      loadStripe(STRIPE_PUBLISHABLE_KEY).then((stripeInstance) => {
-        if (stripeInstance) {
-          setStripe(stripeInstance);
+      // 先加载全局 Stripe.js（Connect Embedded 需要）
+      const stripeScript = document.createElement('script');
+      stripeScript.src = 'https://js.stripe.com/v3/';
+      stripeScript.async = true;
+      stripeScript.onload = () => {
+        // @ts-ignore
+        if (window.Stripe) {
+          // @ts-ignore
+          window.Stripe(STRIPE_PUBLISHABLE_KEY);
+          setStripe(true); // 标记为已加载
         }
-      });
+      };
+      
+      // 检查是否已加载
+      if (document.querySelector('script[src="https://js.stripe.com/v3/"]')) {
+        // @ts-ignore
+        if (window.Stripe) {
+          // @ts-ignore
+          window.Stripe(STRIPE_PUBLISHABLE_KEY);
+          setStripe(true);
+        }
+      } else {
+        document.head.appendChild(stripeScript);
+      }
     }
 
     // 获取或创建 onboarding session
@@ -82,59 +101,123 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
   useEffect(() => {
     if (!stripe || !clientSecret || !containerRef.current) {
+      console.log('Waiting for stripe, clientSecret, or container:', { 
+        stripe: !!stripe, 
+        clientSecret: !!clientSecret, 
+        container: !!containerRef.current 
+      });
       return;
     }
 
-    // 动态加载 Stripe Connect Embedded
-    const script = document.createElement('script');
-    script.src = 'https://js.stripe.com/connect-embedded/v1/';
-    script.async = true;
-    script.onload = () => {
-      // @ts-ignore
-      if (window.Stripe && window.Stripe.ConnectEmbedded) {
-        try {
-          // @ts-ignore
-          const connectEmbedded = new window.Stripe.ConnectEmbedded({
-            clientSecret: clientSecret,
-            onReady: () => {
-              console.log('Stripe Connect onboarding ready');
-            },
-            onComplete: async () => {
-              console.log('Stripe Connect onboarding completed');
-              // 验证账户状态
-              await checkAccountStatus();
-            },
-            onExit: (event: any) => {
-              console.log('User exited onboarding', event);
-            },
-            onError: (event: any) => {
-              console.error('Onboarding error:', event);
-              const errorMsg = event.error?.message || '设置过程中发生错误';
-              setError(errorMsg);
-              if (onError) {
-                onError(errorMsg);
-              }
-            },
-          });
+    console.log('Initializing Stripe Connect Embedded...', { clientSecret: clientSecret.substring(0, 20) + '...' });
 
-          connectEmbedded.mount(containerRef.current!);
-        } catch (err: any) {
-          console.error('Error initializing Connect Embedded:', err);
-          setError(err.message || '初始化失败');
+    // 检查是否已经加载了 Connect Embedded 脚本
+    const existingScript = document.querySelector('script[src="https://js.stripe.com/connect-embedded/v1/"]');
+    if (existingScript) {
+      // 脚本已存在，直接初始化
+      initializeConnectEmbedded();
+    } else {
+      // 动态加载 Stripe Connect Embedded
+      const script = document.createElement('script');
+      script.src = 'https://js.stripe.com/connect-embedded/v1/';
+      script.async = true;
+      script.onload = () => {
+        console.log('Stripe Connect Embedded script loaded');
+        initializeConnectEmbedded();
+      };
+      script.onerror = (err) => {
+        console.error('Failed to load Stripe Connect Embedded script:', err);
+        setError('无法加载 Stripe Connect 脚本');
+        if (onError) {
+          onError('无法加载 Stripe Connect 脚本');
+        }
+      };
+
+      document.head.appendChild(script);
+
+      return () => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+    }
+
+    function initializeConnectEmbedded() {
+      // 等待一小段时间确保脚本完全加载
+      setTimeout(() => {
+        // @ts-ignore
+        const StripeGlobal = window.Stripe;
+        // @ts-ignore
+        if (StripeGlobal && StripeGlobal.ConnectEmbedded) {
+          try {
+            console.log('Creating ConnectEmbedded instance...', {
+              hasStripe: !!StripeGlobal,
+              // @ts-ignore
+              hasConnectEmbedded: !!StripeGlobal.ConnectEmbedded,
+              clientSecret: clientSecret?.substring(0, 30) + '...'
+            });
+            // @ts-ignore
+            const connectEmbedded = new StripeGlobal.ConnectEmbedded({
+              clientSecret: clientSecret,
+              onReady: () => {
+                console.log('Stripe Connect onboarding ready');
+                setLoading(false);
+              },
+              onComplete: async () => {
+                console.log('Stripe Connect onboarding completed');
+                // 验证账户状态
+                await checkAccountStatus();
+              },
+              onExit: (event: any) => {
+                console.log('User exited onboarding', event);
+              },
+              onError: (event: any) => {
+                console.error('Onboarding error:', event);
+                const errorMsg = event.error?.message || '设置过程中发生错误';
+                setError(errorMsg);
+                setLoading(false);
+                if (onError) {
+                  onError(errorMsg);
+                }
+              },
+            });
+
+            console.log('Mounting ConnectEmbedded to container...', {
+              container: !!containerRef.current,
+              containerId: containerRef.current?.id
+            });
+            if (containerRef.current) {
+              connectEmbedded.mount(containerRef.current);
+            } else {
+              console.error('Container ref is null');
+              setError('容器元素未找到');
+              setLoading(false);
+            }
+          } catch (err: any) {
+            console.error('Error initializing Connect Embedded:', err);
+            setError(err.message || '初始化失败');
+            setLoading(false);
+            if (onError) {
+              onError(err.message || '初始化失败');
+            }
+          }
+        } else {
+          console.error('Stripe.ConnectEmbedded not available', {
+            // @ts-ignore
+            hasStripe: !!window.Stripe,
+            // @ts-ignore
+            hasConnectEmbedded: !!(window.Stripe && window.Stripe.ConnectEmbedded),
+            // @ts-ignore
+            windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('stripe'))
+          });
+          setError('Stripe Connect Embedded 未加载，请刷新页面重试');
+          setLoading(false);
           if (onError) {
-            onError(err.message || '初始化失败');
+            onError('Stripe Connect Embedded 未加载');
           }
         }
-      }
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
+      }, 500); // 增加等待时间到 500ms
+    }
   }, [stripe, clientSecret]);
 
   const checkAccountStatus = async () => {
@@ -219,9 +302,29 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         id="stripe-connect-embedded"
         style={{
           minHeight: '600px',
-          width: '100%'
+          width: '100%',
+          background: '#f8f9fa',
+          border: '1px solid #e9ecef',
+          borderRadius: '8px',
+          padding: '20px'
         }}
-      />
+      >
+        {!stripe && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            正在加载 Stripe...
+          </div>
+        )}
+        {stripe && !clientSecret && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            正在获取 onboarding session...
+          </div>
+        )}
+        {stripe && clientSecret && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            正在初始化表单...
+          </div>
+        )}
+      </div>
     </div>
   );
 };
