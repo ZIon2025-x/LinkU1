@@ -137,7 +137,6 @@ def create_connect_account_embedded(
                             "enabled": True,
                             "features": {
                                 "external_account_collection": {"enabled": True},
-                                "collect_tos_acceptance": {"enabled": True},
                             }
                         }
                     }
@@ -186,7 +185,6 @@ def create_connect_account_embedded(
                     "enabled": True,
                     "features": {
                         "external_account_collection": {"enabled": True},
-                        "collect_tos_acceptance": {"enabled": True},
                     }
                 }
             }
@@ -345,7 +343,6 @@ def create_onboarding_session(
                     "enabled": True,
                     "features": {
                         "external_account_collection": {"enabled": True},
-                        "collect_tos_acceptance": {"enabled": True},
                     }
                 }
             }
