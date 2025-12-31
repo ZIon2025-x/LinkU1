@@ -150,16 +150,31 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       }
 
       console.log('Waiting for Connect Embedded script to load...');
+      // 检查脚本是否在 HTML 中
+      const existingScript = document.querySelector('script[src*="connect-embedded"]');
+      console.log('Existing Connect Embedded script in HTML:', !!existingScript);
+      
       // 脚本已在 HTML 中预加载，等待它加载完成
       let attempts = 0;
-      const maxAttempts = 50; // 最多等待5秒
+      const maxAttempts = 100; // 最多等待10秒（因为脚本可能加载较慢）
       
       const checkInterval = setInterval(() => {
         attempts++;
         // @ts-ignore
-        if (window.Stripe && window.Stripe.ConnectEmbedded) {
+        const hasStripe = !!window.Stripe;
+        // @ts-ignore
+        const hasConnectEmbedded = !!(window.Stripe && window.Stripe.ConnectEmbedded);
+        
+        if (attempts % 10 === 0) {
+          console.log(`Checking ConnectEmbedded (attempt ${attempts}/${maxAttempts}):`, {
+            hasStripe,
+            hasConnectEmbedded
+          });
+        }
+        
+        if (hasConnectEmbedded) {
           clearInterval(checkInterval);
-          console.log('ConnectEmbedded is now available');
+          console.log('ConnectEmbedded is now available!');
           initializeConnectEmbedded();
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval);
@@ -169,26 +184,39 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           // @ts-ignore
           console.error('window.Stripe.ConnectEmbedded:', window.Stripe?.ConnectEmbedded);
           
+          // 检查脚本是否真的加载了
+          const scripts = Array.from(document.querySelectorAll('script[src*="connect-embedded"]'));
+          console.error('Connect Embedded scripts found:', scripts.length);
+          scripts.forEach((s, i) => {
+            console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'));
+          });
+          
           // 尝试动态加载作为备用方案
           console.log('Attempting to load script dynamically as fallback...');
           const script = document.createElement('script');
           script.src = 'https://js.stripe.com/connect-embedded/v1/';
-          script.async = true;
+          script.async = false; // 同步加载以确保顺序
           
           script.onload = () => {
             console.log('Fallback script loaded, checking ConnectEmbedded...');
+            // 等待更长时间，因为脚本可能需要初始化
             setTimeout(() => {
               // @ts-ignore
               if (window.Stripe && window.Stripe.ConnectEmbedded) {
+                console.log('ConnectEmbedded available after fallback load');
                 initializeConnectEmbedded();
               } else {
-                setError('Stripe Connect Embedded 加载失败，请刷新页面重试');
+                console.error('ConnectEmbedded still not available after fallback');
+                // @ts-ignore
+                console.error('window.Stripe keys:', window.Stripe ? Object.keys(window.Stripe) : 'Stripe not found');
+                setError('Stripe Connect Embedded 加载失败。请检查网络连接或刷新页面重试。如果问题持续，请联系技术支持。');
                 setLoading(false);
               }
-            }, 500);
+            }, 1000);
           };
           
-          script.onerror = () => {
+          script.onerror = (err) => {
+            console.error('Fallback script load error:', err);
             setError('无法加载 Stripe Connect 脚本。请检查网络连接或刷新页面重试。');
             setLoading(false);
             if (onError) {
