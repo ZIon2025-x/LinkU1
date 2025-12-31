@@ -350,13 +350,6 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           onExit={() => {
             console.log('User exited onboarding');
           }}
-          onStepChange={(stepChange) => {
-            console.log('Step changed:', stepChange.step);
-          }}
-          onComplete={async () => {
-            console.log('✅ Onboarding completed');
-            await checkAccountStatus();
-          }}
         />
       </ConnectComponentsProvider>
     </div>
