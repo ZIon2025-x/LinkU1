@@ -103,6 +103,17 @@ struct SettingsView: View {
                     }
                 }
                 
+                // 收款账户
+                Section("收款账户") {
+                    NavigationLink(destination: StripeConnectOnboardingView()) {
+                        HStack {
+                            Image(systemName: "creditcard.fill")
+                                .foregroundColor(AppColors.primary)
+                            Text("设置收款账户")
+                        }
+                    }
+                }
+                
                 // 账户信息
                 Section("账户") {
                     if let user = appState.currentUser {

@@ -57,12 +57,62 @@ def add_points_transaction(
     description: Optional[str] = None,
     idempotency_key: Optional[str] = None
 ) -> models.PointsTransaction:
-    """添加积分交易记录并更新账户余额"""
-    # 获取或创建积分账户
-    account = get_or_create_points_account(db, user_id)
+    """
+    添加积分交易记录并更新账户余额（带并发控制和幂等性保护）
+    """
+    from sqlalchemy import select
     
-    # 计算新余额
+    # 幂等性检查：如果提供了 idempotency_key，检查是否已存在
+    if idempotency_key:
+        existing_transaction = db.query(models.PointsTransaction).filter(
+            models.PointsTransaction.idempotency_key == idempotency_key
+        ).first()
+        if existing_transaction:
+            # 幂等性：返回已存在的交易
+            return existing_transaction
+    
+    # 使用 SELECT FOR UPDATE 锁定积分账户，防止并发修改
+    account_query = select(models.PointsAccount).where(
+        models.PointsAccount.user_id == user_id
+    ).with_for_update()
+    account_result = db.execute(account_query)
+    account = account_result.scalar_one_or_none()
+    
+    # 如果账户不存在，创建新账户
+    if not account:
+        account = models.PointsAccount(
+            user_id=user_id,
+            balance=0,
+            currency="GBP",
+            total_earned=0,
+            total_spent=0
+        )
+        db.add(account)
+        db.flush()  # 刷新以获取ID
+    
+    # 验证 amount 符号是否正确
+    if type == "earn" or type == "refund":
+        if amount <= 0:
+            raise ValueError(f"类型 {type} 的 amount 必须为正数，当前值：{amount}")
+    elif type == "spend" or type == "expire":
+        if amount >= 0:
+            raise ValueError(f"类型 {type} 的 amount 必须为负数，当前值：{amount}")
+        # 对于消费类型，检查余额是否足够
+        if account.balance < abs(amount):
+            raise ValueError(
+                f"积分余额不足，当前余额：{account.balance / 100:.2f}，"
+                f"需要：{abs(amount) / 100:.2f}"
+            )
+    
+    # 在锁内计算新余额（确保准确性）
     new_balance = account.balance + amount
+    
+    # 验证余额不会变成负数（额外安全检查）
+    if new_balance < 0:
+        raise ValueError(
+            f"积分余额不能为负数，当前余额：{account.balance / 100:.2f}，"
+            f"操作金额：{amount / 100:.2f}，结果余额：{new_balance / 100:.2f}"
+        )
     
     # 创建交易记录
     transaction = models.PointsTransaction(
@@ -81,16 +131,27 @@ def add_points_transaction(
     )
     db.add(transaction)
     
-    # 更新账户余额
+    # 更新账户余额（在锁内更新，安全）
     account.balance = new_balance
     if type == "earn" or type == "refund":
         account.total_earned += abs(amount)
     elif type == "spend" or type == "expire":
         account.total_spent += abs(amount)
     
-    db.commit()
-    db.refresh(transaction)
-    return transaction
+    try:
+        db.commit()
+        db.refresh(transaction)
+        return transaction
+    except Exception as e:
+        db.rollback()
+        # 如果是唯一约束冲突（idempotency_key），重新查询并返回已存在的交易
+        if idempotency_key and "unique constraint" in str(e).lower():
+            existing = db.query(models.PointsTransaction).filter(
+                models.PointsTransaction.idempotency_key == idempotency_key
+            ).first()
+            if existing:
+                return existing
+        raise
 
 
 def get_points_transactions(

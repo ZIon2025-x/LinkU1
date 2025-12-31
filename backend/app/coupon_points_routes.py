@@ -333,16 +333,48 @@ def create_task_payment(
     import stripe
     import os
     
-    # 获取任务
-    task = crud.get_task(db, task_id)
+    # 使用 SELECT FOR UPDATE 锁定任务，防止并发重复支付
+    from sqlalchemy import select
+    from sqlalchemy.orm import with_for_update
+    
+    task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
+    task_result = db.execute(task_query)
+    task = task_result.scalar_one_or_none()
+    
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
     
     if task.poster_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权访问此任务")
     
+    # 幂等性检查：如果任务已支付，直接返回成功
     if task.is_paid:
-        raise HTTPException(status_code=400, detail="任务已支付")
+        # 返回已支付的信息，避免重复扣款
+        task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+        application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+        application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+        task_amount_pence = int(task_amount * 100)
+        application_fee_pence = int(task_amount_pence * application_fee_rate)
+        
+        return {
+            "payment_id": None,
+            "fee_type": "task_amount",
+            "total_amount": task_amount_pence,
+            "total_amount_display": f"{task_amount_pence / 100:.2f}",
+            "points_used": None,
+            "points_used_display": None,
+            "coupon_discount": None,
+            "coupon_discount_display": None,
+            "stripe_amount": None,
+            "stripe_amount_display": None,
+            "currency": "GBP",
+            "final_amount": 0,
+            "final_amount_display": "0.00",
+            "checkout_url": None,
+            "client_secret": None,
+            "payment_intent_id": None,
+            "note": "任务已支付"
+        }
     
     # 检查任务状态：只有 pending_confirmation 状态的任务需要支付
     if task.status != "pending_confirmation":
@@ -351,18 +383,35 @@ def create_task_payment(
             detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_confirmation"
         )
     
-    # 计算平台服务费（申请费）
+    # 计算平台服务费（申请费）- 从任务接受人端扣除
     # 假设平台服务费为任务金额的10%，或从系统设置读取
     application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
     application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10  # 默认10%
     
     # 获取任务金额（使用最终成交价或原始标价）
     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+    
+    # 验证任务金额必须大于0
+    if task_amount <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="任务金额必须大于0，无法进行支付"
+        )
+    
     task_amount_pence = int(task_amount * 100)  # 转换为最小货币单位
     
-    # 计算平台服务费
+    # 计算平台服务费（从接受人端扣除，包含Stripe服务费）
     application_fee_pence = int(task_amount_pence * application_fee_rate)
-    total_amount = application_fee_pence
+    
+    # 验证平台服务费必须大于0
+    if application_fee_pence <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="平台服务费计算错误，无法进行支付"
+        )
+    
+    # 发布者支付任务金额（可优惠券/积分抵扣）
+    total_amount = task_amount_pence
     
     # 初始化变量
     points_used = 0
@@ -370,17 +419,50 @@ def create_task_payment(
     user_coupon_id_used = None
     coupon_usage_log = None
     
-    # 处理积分抵扣
+    # 处理积分抵扣（使用 SELECT FOR UPDATE 锁定积分账户，防止并发扣款）
     if payment_request.payment_method in ["points", "mixed"] and payment_request.points_amount:
-        points_account = get_or_create_points_account(db, current_user.id)
+        # 输入验证：积分数量必须是正数
+        if payment_request.points_amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="积分数量必须大于0"
+            )
         
+        # 输入验证：积分数量不能超过合理范围（例如 100万积分 = £10,000）
+        MAX_POINTS_AMOUNT = 100_000_000  # 100万积分
+        if payment_request.points_amount > MAX_POINTS_AMOUNT:
+            raise HTTPException(
+                status_code=400,
+                detail=f"积分数量超出最大限制：{MAX_POINTS_AMOUNT / 100:.2f}"
+            )
+        
+        # 使用 SELECT FOR UPDATE 锁定积分账户，防止并发时余额计算错误
+        points_account_query = select(models.PointsAccount).where(
+            models.PointsAccount.user_id == current_user.id
+        ).with_for_update()
+        points_account_result = db.execute(points_account_query)
+        points_account = points_account_result.scalar_one_or_none()
+        
+        # 如果账户不存在，创建新账户
+        if not points_account:
+            points_account = models.PointsAccount(
+                user_id=current_user.id,
+                balance=0,
+                currency="GBP",
+                total_earned=0,
+                total_spent=0
+            )
+            db.add(points_account)
+            db.flush()  # 刷新以获取ID
+        
+        # 在锁内重新检查余额（防止并发时余额变化）
         if points_account.balance < payment_request.points_amount:
             raise HTTPException(
                 status_code=400,
                 detail=f"积分不足，当前余额：{points_account.balance / 100:.2f}，需要：{payment_request.points_amount / 100:.2f}"
             )
         
-        # 积分只能抵扣平台服务费，不能超过服务费总额
+        # 积分可以抵扣任务金额
         points_used = min(payment_request.points_amount, total_amount)
         total_amount -= points_used
     
@@ -419,12 +501,12 @@ def create_task_payment(
         if not user_coupon:
             raise HTTPException(status_code=404, detail="用户优惠券不存在")
         
-        # 验证优惠券（针对平台服务费）
+        # 验证优惠券（针对任务金额）
         is_valid, error_msg, discount_amount = validate_coupon_usage(
             db,
             current_user.id,
             user_coupon.coupon_id,
-            application_fee_pence,  # 优惠券针对平台服务费
+            task_amount_pence,  # 优惠券针对任务金额
             task.location,
             task.task_type,
             get_utc_time()
@@ -439,7 +521,7 @@ def create_task_payment(
             current_user.id,
             user_coupon_id_used,
             task_id,
-            application_fee_pence,
+            task_amount_pence,  # 优惠券针对任务金额
             task.location,
             task.task_type,
             get_utc_time(),
@@ -457,32 +539,77 @@ def create_task_payment(
     
     # 如果使用积分全额抵扣，直接完成支付
     if final_amount == 0 and points_used > 0:
-        # 创建积分交易记录（add_points_transaction 会自动更新账户余额）
-        # 注意：spend 类型的 amount 必须为负数
-        add_points_transaction(
-            db,
-            current_user.id,
-            type="spend",
-            amount=-points_used,  # 消费用负数
-            source="platform_fee",
-            description=f"任务 #{task_id} 平台服务费支付",
-            batch_id=None
-        )
-        
-        # 标记任务为已支付
-        task.is_paid = 1
-        task.escrow_amount = task_amount
-        # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
-        if task.status == "pending_confirmation":
-            task.status = "in_progress"
-        
-        db.commit()
+        try:
+            # 使用幂等性 key 防止重复扣款
+            idempotency_key = f"task_payment_points_{task_id}_{current_user.id}"
+            
+            # 检查是否已存在相同的交易（幂等性检查）
+            existing_transaction = db.query(models.PointsTransaction).filter(
+                models.PointsTransaction.idempotency_key == idempotency_key
+            ).first()
+            
+            if existing_transaction:
+                # 如果交易已存在，检查任务是否已支付
+                if task.is_paid:
+                    # 返回已支付的信息
+                    return {
+                        "payment_id": None,
+                        "fee_type": "task_amount",
+                        "total_amount": task_amount_pence,
+                        "total_amount_display": f"{task_amount_pence / 100:.2f}",
+                        "points_used": points_used,
+                        "points_used_display": f"{points_used / 100:.2f}",
+                        "coupon_discount": coupon_discount,
+                        "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount else None,
+                        "stripe_amount": None,
+                        "stripe_amount_display": None,
+                        "currency": "GBP",
+                        "final_amount": 0,
+                        "final_amount_display": "0.00",
+                        "checkout_url": None,
+                        "client_secret": None,
+                        "payment_intent_id": None,
+                        "note": f"任务金额已支付，任务接受人将获得 {task_amount - (application_fee_pence / 100.0):.2f} 镑（已扣除平台服务费 {application_fee_pence / 100.0:.2f} 镑）"
+                    }
+                # 如果交易存在但任务未支付，继续处理（可能是部分失败的情况）
+            
+            # 创建积分交易记录（add_points_transaction 会自动更新账户余额）
+            # 注意：spend 类型的 amount 必须为负数
+            add_points_transaction(
+                db,
+                current_user.id,
+                type="spend",
+                amount=-points_used,  # 消费用负数
+                source="task_payment",
+                related_id=task_id,
+                related_type="task",
+                description=f"任务 #{task_id} 任务金额支付",
+                idempotency_key=idempotency_key
+            )
+            
+            # 标记任务为已支付
+            task.is_paid = 1
+            # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
+            taker_amount = task_amount - (application_fee_pence / 100.0)
+            task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
+            # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
+            if task.status == "pending_confirmation":
+                task.status = "in_progress"
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"积分支付失败: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"积分支付处理失败，请稍后重试"
+            )
         
         return {
             "payment_id": None,
-            "fee_type": "application_fee",
-            "total_amount": application_fee_pence,
-            "total_amount_display": f"{application_fee_pence / 100:.2f}",
+            "fee_type": "task_amount",
+            "total_amount": task_amount_pence,
+            "total_amount_display": f"{task_amount_pence / 100:.2f}",
             "points_used": points_used,
             "points_used_display": f"{points_used / 100:.2f}",
             "coupon_discount": coupon_discount,
@@ -493,7 +620,7 @@ def create_task_payment(
             "final_amount": 0,
             "final_amount_display": "0.00",
             "checkout_url": None,
-            "note": "积分仅用于抵扣申请费/平台服务费，任务奖励将按法币结算给服务者"
+            "note": f"任务金额已支付，任务接受人将获得 {task_amount - (application_fee_pence / 100.0):.2f} 镑（已扣除平台服务费 {application_fee_pence / 100.0:.2f} 镑）"
         }
     
     # 如果需要Stripe支付
@@ -508,18 +635,19 @@ def create_task_payment(
             metadata={
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
+                "task_amount": str(task_amount_pence),  # 任务金额
                 "points_used": str(points_used) if points_used else "",
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
-                "application_fee": str(application_fee_pence)
+                "application_fee": str(application_fee_pence)  # 平台服务费（从接受人端扣除）
             },
-            description=f"任务 #{task_id} 平台服务费 - {task.title}",
+            description=f"任务 #{task_id} 任务金额支付 - {task.title}",
         )
         
         return {
             "payment_id": None,
-            "fee_type": "application_fee",
-            "total_amount": application_fee_pence,
-            "total_amount_display": f"{application_fee_pence / 100:.2f}",
+            "fee_type": "task_amount",
+            "total_amount": task_amount_pence,
+            "total_amount_display": f"{task_amount_pence / 100:.2f}",
             "points_used": points_used,
             "points_used_display": f"{points_used / 100:.2f}" if points_used else None,
             "coupon_discount": coupon_discount,
@@ -532,7 +660,7 @@ def create_task_payment(
             "checkout_url": None,  # Payment Intent 不需要 checkout_url
             "client_secret": payment_intent.client_secret,  # 前端需要这个来确认支付
             "payment_intent_id": payment_intent.id,
-            "note": "积分仅用于抵扣申请费/平台服务费，任务奖励将按法币结算给服务者"
+            "note": f"任务金额已支付，任务接受人将获得 {task_amount - (application_fee_pence / 100.0):.2f} 镑（已扣除平台服务费 {application_fee_pence / 100.0:.2f} 镑）"
         }
     
     raise HTTPException(status_code=400, detail="支付金额计算错误")

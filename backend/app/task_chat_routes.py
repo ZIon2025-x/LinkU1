@@ -1317,6 +1317,53 @@ async def accept_application(
                 detail="任务已被接受"
             )
         
+        # 检查申请人是否有 Stripe Connect 账户（用于接收任务奖励）
+        applicant = await db.get(models.User, application.applicant_id)
+        if not applicant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请人不存在"
+            )
+        
+        if not applicant.stripe_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="申请人尚未创建 Stripe Connect 收款账户，无法接受任务。请先创建收款账户。",
+                headers={"X-Stripe-Connect-Required": "true"}
+            )
+        
+        # 检查 Stripe Connect 账户状态（异步检查，不阻塞）
+        try:
+            import stripe
+            import os
+            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            
+            account = stripe.Account.retrieve(applicant.stripe_account_id)
+            
+            # 检查账户是否已完成 onboarding
+            if not account.details_submitted:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="申请人的 Stripe Connect 账户尚未完成设置，无法接受任务。请先完成账户设置。",
+                    headers={"X-Stripe-Connect-Onboarding-Required": "true"}
+                )
+            
+            # 检查账户是否已启用收款
+            if not account.charges_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="申请人的 Stripe Connect 账户尚未启用收款功能，无法接受任务。",
+                    headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            # 如果 Stripe API 调用失败，记录错误但不阻止接受申请
+            # 在确认完成时会再次检查
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
+        
         # 获取当前时间
         current_time = get_utc_time()
         

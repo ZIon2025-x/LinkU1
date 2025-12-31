@@ -1449,10 +1449,23 @@ class BatchRewardList(BaseModel):
 
 class TaskPaymentRequest(BaseModel):
     payment_method: str  # points, stripe, mixed
-    points_amount: Optional[int] = None  # 积分数量（整数，最小货币单位）
+    points_amount: Optional[int] = Field(None, ge=0, description="积分数量（整数，最小货币单位，必须>=0）")  # 积分数量（整数，最小货币单位）
     coupon_code: Optional[str] = None  # 优惠券代码
     user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
-    stripe_amount: Optional[int] = None  # Stripe支付金额（整数，最小货币单位）
+    stripe_amount: Optional[int] = Field(None, ge=0, description="Stripe支付金额（整数，最小货币单位，必须>=0）")  # Stripe支付金额（整数，最小货币单位）
+    
+    @validator('payment_method')
+    def validate_payment_method(cls, v):
+        allowed_methods = ["points", "stripe", "mixed"]
+        if v not in allowed_methods:
+            raise ValueError(f"payment_method 必须是以下之一：{', '.join(allowed_methods)}")
+        return v
+    
+    @validator('points_amount')
+    def validate_points_amount(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("points_amount 必须大于0")
+        return v
 
 
 class TaskPaymentResponse(BaseModel):
@@ -1497,6 +1510,15 @@ class StripeConnectAccountStatusResponse(BaseModel):
 class StripeConnectAccountLinkResponse(BaseModel):
     onboarding_url: str
     expires_at: int
+
+
+class StripeConnectAccountEmbeddedResponse(BaseModel):
+    """用于嵌入式 onboarding 的响应"""
+    account_id: str
+    client_secret: Optional[str] = None  # AccountSession client_secret，用于前端嵌入
+    account_status: bool  # details_submitted
+    charges_enabled: bool
+    message: str
 
 
 # ==================== 任务达人功能 Schema ====================

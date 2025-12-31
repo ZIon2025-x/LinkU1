@@ -2872,13 +2872,30 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             task = crud.get_task(db, task_id)
             if task and not task.is_paid:  # 幂等性检查
                 task.is_paid = 1
-                # 使用最终成交价（如果有议价）或原始标价
-                task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                # 获取任务金额（使用最终成交价或原始标价）
+                task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                
+                # 计算平台服务费（从 metadata 获取或重新计算）
+                metadata = payment_intent.get("metadata", {})
+                application_fee_pence = int(metadata.get("application_fee", 0))
+                
+                # 如果没有 metadata，从系统设置重新计算
+                if application_fee_pence == 0:
+                    from app.crud import get_system_setting
+                    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+                    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+                    application_fee_pence = int(task_amount * 100 * application_fee_rate)
+                
+                # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
+                application_fee = application_fee_pence / 100.0
+                taker_amount = task_amount - application_fee
+                task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
+                
                 # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
                 if task.status == "pending_confirmation":
                     task.status = "in_progress"
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress")
+                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress, escrow_amount: {task.escrow_amount}")
             else:
                 logger.warning(f"Task {task_id} already paid or not found")
     
@@ -2915,12 +2932,30 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             task = crud.get_task(db, task_id)
             if task and not task.is_paid:
                 task.is_paid = 1
-                task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                # 获取任务金额（使用最终成交价或原始标价）
+                task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                
+                # 计算平台服务费（从 metadata 获取或重新计算）
+                metadata = session.get("metadata", {})
+                application_fee_pence = int(metadata.get("application_fee", 0))
+                
+                # 如果没有 metadata，从系统设置重新计算
+                if application_fee_pence == 0:
+                    from app.crud import get_system_setting
+                    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+                    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+                    application_fee_pence = int(task_amount * 100 * application_fee_rate)
+                
+                # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
+                application_fee = application_fee_pence / 100.0
+                taker_amount = task_amount - application_fee
+                task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
+                
                 # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
                 if task.status == "pending_confirmation":
                     task.status = "in_progress"
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress")
+                logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")
     
     else:
         logger.info(f"Unhandled event type: {event_type}")
@@ -2932,6 +2967,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 def confirm_task_complete(
     task_id: int, current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):
+    """
+    确认任务完成并转账给任务接受人
+    
+    要求：
+    1. 任务必须已支付
+    2. 任务状态必须为 completed
+    3. 任务接受人必须有 Stripe Connect 账户且已完成 onboarding
+    """
+    import stripe
+    import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
     task = crud.get_task(db, task_id)
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission.")
@@ -2939,11 +2989,111 @@ def confirm_task_complete(
         raise HTTPException(
             status_code=400, detail="Task not eligible for confirmation."
         )
-    task.is_confirmed = 1
-    task.paid_to_user_id = task.taker_id
-    task.escrow_amount = 0.0
-    db.commit()
-    return {"message": "Payment released to taker."}
+    
+    if not task.taker_id:
+        raise HTTPException(
+            status_code=400, detail="Task has no taker."
+        )
+    
+    # 获取任务接受人信息
+    taker = crud.get_user_by_id(db, task.taker_id)
+    if not taker:
+        raise HTTPException(
+            status_code=404, detail="Task taker not found."
+        )
+    
+    # 检查任务接受人是否有 Stripe Connect 账户
+    if not taker.stripe_account_id:
+        raise HTTPException(
+            status_code=400,
+            detail="任务接受人尚未创建 Stripe Connect 账户，无法接收付款。请通知接受人先创建收款账户。",
+            headers={"X-Stripe-Connect-Required": "true"}
+        )
+    
+    # 检查 Stripe Connect 账户状态
+    try:
+        account = stripe.Account.retrieve(taker.stripe_account_id)
+        
+        # 检查账户是否已完成 onboarding
+        if not account.details_submitted:
+            raise HTTPException(
+                status_code=400,
+                detail="任务接受人的 Stripe Connect 账户尚未完成设置，无法接收付款。请通知接受人完成账户设置。",
+                headers={"X-Stripe-Connect-Onboarding-Required": "true"}
+            )
+        
+        # 检查账户是否已启用收款
+        if not account.charges_enabled:
+            raise HTTPException(
+                status_code=400,
+                detail="任务接受人的 Stripe Connect 账户尚未启用收款功能，无法接收付款。",
+                headers={"X-Stripe-Connect-Charges-Not-Enabled": "true"}
+            )
+    except stripe.error.StripeError as e:
+        logger.error(f"Error retrieving Stripe account for user {taker.id}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"无法验证任务接受人的收款账户: {str(e)}"
+        )
+    
+    # 检查 escrow_amount 是否大于0
+    if task.escrow_amount <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="任务托管金额为0，无需转账。"
+        )
+    
+    # 执行 Stripe Transfer 转账
+    try:
+        transfer_amount_pence = int(task.escrow_amount * 100)  # 转换为便士
+        
+        # 创建 Transfer 到接受人的 Stripe Connect 账户
+        transfer = stripe.Transfer.create(
+            amount=transfer_amount_pence,
+            currency="gbp",
+            destination=taker.stripe_account_id,
+            metadata={
+                "task_id": str(task_id),
+                "taker_id": str(taker.id),
+                "poster_id": str(current_user.id),
+                "transfer_type": "task_reward"
+            },
+            description=f"任务 #{task_id} 奖励 - {task.title}"
+        )
+        
+        logger.info(f"Transfer created: {transfer.id} for task {task_id}, amount: £{task.escrow_amount:.2f}")
+        
+        # 更新任务状态
+        task.is_confirmed = 1
+        task.paid_to_user_id = task.taker_id
+        task.escrow_amount = 0.0
+        
+        # 可以在这里添加转账记录到数据库（如果需要）
+        # TODO: 创建 PaymentTransfer 记录
+        
+        db.commit()
+        
+        return {
+            "message": "Payment released to taker.",
+            "transfer_id": transfer.id,
+            "amount": task.escrow_amount,
+            "currency": "GBP"
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe transfer error for task {task_id}: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"转账失败: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error confirming task {task_id}: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"确认任务完成时发生错误: {str(e)}"
+        )
 
 
 # 删除重复的admin/users端点，使用后面的get_users_for_admin

@@ -1,0 +1,6 @@
+// Stripe Configuration
+// 复制此文件为 Config.xcconfig 并填入真实的密钥
+// 注意：Config.xcconfig 应该添加到 .gitignore
+
+STRIPE_PUBLISHABLE_KEY = pk_test_...
+

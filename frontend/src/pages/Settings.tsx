@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
@@ -491,6 +492,7 @@ const Settings: React.FC = () => {
   }
 
   const tabs = [
+    { id: 'payment', label: '收款账户', icon: '💳' },
     { id: 'profile', label: t('settings.profile'), icon: '👤' },
     { id: 'preferences', label: t('settings.preferences'), icon: '🎯' },
     { id: 'notifications', label: t('settings.notifications'), icon: '🔔' },

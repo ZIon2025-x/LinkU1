@@ -46,22 +46,30 @@ public struct Constants {
     
     struct Stripe {
         // Stripe Publishable Key
-        // 从环境变量读取，如果没有则使用默认值
-        #if DEBUG
+        // 
+        // 配置方式（推荐顺序）：
+        // 1. 通过 Xcode Scheme 配置（推荐）：
+        //    - Product → Scheme → Edit Scheme...
+        //    - Run → Arguments → Environment Variables
+        //    - 添加：Name = STRIPE_PUBLISHABLE_KEY, Value = pk_test_...
+        //
+        // 2. 直接修改下面的默认值（快速测试，不推荐用于生产）
+        //
+        // 详细说明请查看：ios/配置Stripe密钥指南.md
         static let publishableKey: String = {
+            // 优先从环境变量读取
             if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
                 return key
             }
-            return "pk_test_..." // 替换为你的测试密钥
+            
+            // 如果没有环境变量，使用默认值
+            // ⚠️ 请通过 Xcode Scheme 配置环境变量，或在这里填入你的密钥
+            #if DEBUG
+            return "pk_test_..." // 👈 测试环境：在这里填入你的测试密钥，或通过环境变量配置
+            #else
+            return "pk_live_..." // 👈 生产环境：在这里填入你的生产密钥，或通过环境变量配置
+            #endif
         }()
-        #else
-        static let publishableKey: String = {
-            if let key = ProcessInfo.processInfo.environment["STRIPE_PUBLISHABLE_KEY"], !key.isEmpty {
-                return key
-            }
-            return "pk_live_..." // 替换为你的生产密钥
-        }()
-        #endif
     }
 }
 
