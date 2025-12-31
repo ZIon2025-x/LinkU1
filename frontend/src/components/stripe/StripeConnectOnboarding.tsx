@@ -185,7 +185,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           console.error('window.Stripe.ConnectEmbedded:', window.Stripe?.ConnectEmbedded);
           
           // 检查脚本是否真的加载了
-          const scripts = Array.from(document.querySelectorAll('script[src*="connect-embedded"]'));
+          const scripts = Array.from(document.querySelectorAll('script[src*="connect-embedded"]')) as HTMLScriptElement[];
           console.error('Connect Embedded scripts found:', scripts.length);
           scripts.forEach((s, i) => {
             console.error(`Script ${i}:`, s.src, 'loaded:', s.getAttribute('data-loaded'));
