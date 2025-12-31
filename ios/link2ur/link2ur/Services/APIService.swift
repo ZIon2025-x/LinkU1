@@ -131,6 +131,10 @@ public class APIService {
                                             Logger.error("API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
                                             apiError = parsedError
                                         } else {
+                                            // 尝试从响应中提取错误详情
+                                            if let errorData = String(data: data, encoding: .utf8) {
+                                                Logger.error("HTTP错误响应 (\(httpResponse.statusCode)): \(errorData.prefix(500))", category: .api)
+                                            }
                                             apiError = APIError.httpError(httpResponse.statusCode)
                                         }
                                         return Fail(error: apiError).eraseToAnyPublisher()
@@ -148,6 +152,10 @@ public class APIService {
                         Logger.error("API错误 (\(endpoint)): \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
                         apiError = parsedError
                     } else {
+                        // 记录详细的错误响应内容
+                        if let errorData = String(data: data, encoding: .utf8) {
+                            Logger.error("HTTP错误响应 (\(httpResponse.statusCode)): \(errorData.prefix(500))", category: .api)
+                        }
                         apiError = APIError.httpError(httpResponse.statusCode)
                     }
                     PerformanceMonitor.shared.recordNetworkRequest(

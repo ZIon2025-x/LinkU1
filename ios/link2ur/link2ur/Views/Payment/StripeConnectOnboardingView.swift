@@ -3,6 +3,13 @@ import WebKit
 import Foundation
 import Combine
 
+enum OnboardingViewState {
+    case loading
+    case error(String)
+    case completed
+    case ready(String) // clientSecret
+}
+
 struct StripeConnectOnboardingView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = StripeConnectOnboardingViewModel()
@@ -14,25 +21,7 @@ struct StripeConnectOnboardingView: View {
             AppColors.background
                 .ignoresSafeArea()
             
-            Group {
-                if viewModel.isLoading {
-                    loadingView
-                } else if let error = viewModel.error {
-                    errorView(error: error)
-                } else if viewModel.isCompleted {
-                    completedView
-                } else if let secret = viewModel.clientSecret {
-                    StripeConnectWebView(
-                        clientSecret: secret,
-                        onComplete: {
-                            viewModel.checkAccountStatus()
-                        },
-                        onError: { error in
-                            viewModel.error = error
-                        }
-                    )
-                }
-            }
+            stateBasedView
         }
         .navigationTitle("设置收款账户")
         .navigationBarTitleDisplayMode(.inline)
@@ -43,6 +32,28 @@ struct StripeConnectOnboardingView: View {
             Button("确定", role: .cancel) { }
         } message: {
             Text(errorMessage)
+        }
+    }
+    
+    @ViewBuilder
+    private var stateBasedView: some View {
+        switch viewModel.viewState {
+        case .loading:
+            loadingView
+        case .error(let message):
+            errorView(error: message)
+        case .completed:
+            completedView
+        case .ready(let secret):
+            StripeConnectWebView(
+                clientSecret: secret,
+                onComplete: {
+                    viewModel.checkAccountStatus()
+                },
+                onError: { error in
+                    viewModel.error = error
+                }
+            )
         }
     }
     
@@ -247,6 +258,20 @@ class StripeConnectOnboardingViewModel: ObservableObject {
     
     private let apiService = APIService.shared
     
+    var viewState: OnboardingViewState {
+        if isLoading {
+            return .loading
+        } else if let error = error {
+            return .error(error)
+        } else if isCompleted {
+            return .completed
+        } else if let secret = clientSecret {
+            return .ready(secret)
+        } else {
+            return .loading
+        }
+    }
+    
     func loadOnboardingSession() {
         isLoading = true
         error = nil
@@ -266,7 +291,13 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                 receiveCompletion: { [weak self] completion in
                     self?.isLoading = false
                     if case .failure(let apiError) = completion {
-                        self?.error = apiError.localizedDescription
+                        // 显示更详细的错误信息
+                        var errorMessage = apiError.localizedDescription
+                        if case .httpError(let code) = apiError {
+                            errorMessage = "请求失败 (HTTP \(code))"
+                        }
+                        self?.error = errorMessage
+                        print("❌ Stripe Connect 创建失败: \(errorMessage)")
                     }
                 },
                 receiveValue: { [weak self] response in

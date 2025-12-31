@@ -1525,11 +1525,11 @@ const Home: React.FC = () => {
                       {post.author && (
                         <>
                           <LazyImage
-                            src={post.author.avatar || 'https://via.placeholder.com/32'}
+                            src={post.author.avatar || 'https://via.placeholder.com/24'}
                             alt={post.author.name}
                             style={{
-                              width: '32px',
-                              height: '32px',
+                              width: '24px',
+                              height: '24px',
                               borderRadius: '50%',
                               objectFit: 'cover',
                               border: '1px solid #e2e8f0'

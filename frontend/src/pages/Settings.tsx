@@ -666,10 +666,10 @@ const Settings: React.FC = () => {
                     src={formatAvatarUrl(user?.avatar)}
                     alt="头像"
                     style={{
-                      width: isMobile ? '100px' : '80px',
-                      height: isMobile ? '100px' : '80px',
+                      width: isMobile ? '60px' : '50px',
+                      height: isMobile ? '60px' : '50px',
                       borderRadius: '50%',
-                      border: '3px solid #3b82f6',
+                      border: '2px solid #3b82f6',
                       marginRight: isMobile ? '0' : '20px',
                       objectFit: 'cover'
                     }}
