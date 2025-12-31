@@ -39,16 +39,38 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     const initConnect = async () => {
       try {
         // loadConnect 返回 StripeConnectWrapper 对象
-        // 根据官方文档，应该直接使用返回的对象
+        // 这个对象应该有 create 方法
         const connectWrapper = await loadConnect();
         
-        // StripeConnectWrapper 对象可以直接使用
-        // 需要在 ConnectComponentsProvider 中传入 publishableKey
-        setConnectInstance(connectWrapper);
-        console.log('✅ ConnectJS initialized', { 
-          hasWrapper: !!connectWrapper,
-          wrapperType: typeof connectWrapper 
+        // 检查返回对象的属性和方法
+        console.log('ConnectJS wrapper:', {
+          type: typeof connectWrapper,
+          keys: connectWrapper ? Object.keys(connectWrapper) : [],
+          hasCreate: connectWrapper && typeof (connectWrapper as any).create === 'function',
+          hasConnect: connectWrapper && typeof (connectWrapper as any).connect === 'function'
         });
+        
+        // ConnectComponentsProvider 期望接收有 create 方法的对象
+        // 如果 wrapper 有 create 方法，直接使用；否则可能需要包装
+        if (connectWrapper && typeof (connectWrapper as any).create === 'function') {
+          setConnectInstance(connectWrapper);
+          console.log('✅ ConnectJS wrapper initialized (has create method)');
+        } else {
+          // 如果没有 create 方法，创建一个包装对象
+          const wrappedInstance = {
+            create: (publishableKey: string, options?: any) => {
+              // 如果 wrapper 有 connect 方法，使用它
+              if (connectWrapper && typeof (connectWrapper as any).connect === 'function') {
+                return (connectWrapper as any).connect(publishableKey, options);
+              }
+              // 否则返回 wrapper 本身
+              return connectWrapper;
+            },
+            ...connectWrapper
+          };
+          setConnectInstance(wrappedInstance);
+          console.log('✅ ConnectJS wrapper initialized (wrapped)');
+        }
       } catch (err: any) {
         console.error('Error initializing ConnectJS:', err);
         // 如果初始化失败，切换到 AccountLink
@@ -345,7 +367,10 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         请完成以下信息以接收任务奖励。所有信息将安全地存储在 Stripe 中。
       </p>
       
-      <ConnectComponentsProvider connectInstance={connectInstance}>
+      <ConnectComponentsProvider 
+        connectInstance={connectInstance}
+        publishableKey={STRIPE_PUBLISHABLE_KEY}
+      >
         <ConnectAccountOnboarding
           onExit={() => {
             console.log('User exited onboarding');
