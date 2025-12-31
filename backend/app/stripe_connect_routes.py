@@ -123,8 +123,9 @@ def create_connect_account(
         # 保存账户 ID 到用户记录
         current_user.stripe_account_id = account.id
         db.commit()
+        db.refresh(current_user)  # 刷新对象以确保数据是最新的
         
-        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
+        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
         
         # 创建账户链接用于 onboarding (完全按照官方示例代码)
         # 参考: stripe-sample-code/server.js line 126-136
@@ -286,8 +287,9 @@ def create_connect_account_embedded(
         # 保存账户 ID 到用户记录
         current_user.stripe_account_id = account.id
         db.commit()
+        db.refresh(current_user)  # 刷新对象以确保数据是最新的
         
-        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
+        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
         
         # 创建 AccountSession 用于嵌入式 onboarding
         onboarding_session = stripe.AccountSession.create(
@@ -440,6 +442,7 @@ def create_account_session(
         if not current_user.stripe_account_id:
             current_user.stripe_account_id = account_id
             db.commit()
+            db.refresh(current_user)  # 刷新对象以确保数据是最新的
             logger.info(f"Updated user {current_user.id} with stripe_account_id: {account_id}")
         elif account_id != current_user.stripe_account_id:
             raise HTTPException(

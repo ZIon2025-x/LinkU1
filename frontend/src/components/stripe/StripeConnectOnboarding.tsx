@@ -44,12 +44,12 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         const data = response.data;
 
         // 后端现在返回空状态而不是 404
-        if (data.account_id) {
+        if (data && data.account_id) {
           setConnectedAccountId(data.account_id);
           setAccountStatus({
             account_id: data.account_id,
-            account_status: data.details_submitted,
-            charges_enabled: data.charges_enabled,
+            account_status: data.details_submitted || false,
+            charges_enabled: data.charges_enabled || false,
           });
 
           // 如果账户已完成设置，调用 onComplete
@@ -58,12 +58,19 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
               onComplete();
             }
           }
+        } else {
+          // 没有账户，重置状态
+          setConnectedAccountId(null);
+          setAccountStatus(null);
         }
       } catch (err: any) {
         // 如果请求失败，可能是网络问题，但不影响流程
         if (err.response?.status !== 404) {
           console.error('Error checking account status:', err);
         }
+        // 404 是正常的（没有账户），重置状态
+        setConnectedAccountId(null);
+        setAccountStatus(null);
       }
     };
 
@@ -127,9 +134,49 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   // 处理 onboarding 退出
   const handleOnboardingExit = () => {
     setOnboardingExited(true);
-    // 检查账户状态
-    checkAccountStatus();
+    // 延迟检查账户状态，给 Stripe 一些时间更新
+    setTimeout(() => {
+      checkAccountStatus();
+    }, 1000);
   };
+
+  // 当有账户 ID 时，定期检查账户状态（用于检测 onboarding 完成）
+  useEffect(() => {
+    if (!connectedAccountId || accountStatus?.charges_enabled) {
+      return; // 没有账户或已完成，不需要检查
+    }
+
+    // 每 3 秒检查一次账户状态
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await api.get('/api/stripe/connect/account/status');
+        const data = response.data;
+
+        // 如果有账户 ID，更新状态
+        if (data && data.account_id) {
+          setAccountStatus({
+            account_id: data.account_id,
+            account_status: data.details_submitted || false,
+            charges_enabled: data.charges_enabled || false,
+          });
+
+          // 如果账户已完成设置，调用 onComplete
+          if (data.charges_enabled && data.details_submitted) {
+            if (onComplete) {
+              onComplete();
+            }
+          }
+        }
+      } catch (err: any) {
+        // 忽略错误，继续检查
+        console.log('Periodic account status check:', err.response?.status || err.message);
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [connectedAccountId, accountStatus?.charges_enabled, onComplete]);
 
   // 检查账户状态
   const checkAccountStatus = async () => {
@@ -137,19 +184,28 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       const response = await api.get('/api/stripe/connect/account/status');
       const data = response.data;
 
-      if (data.charges_enabled && data.details_submitted) {
+      // 如果有账户 ID，更新状态
+      if (data.account_id) {
+        setConnectedAccountId(data.account_id);
         setAccountStatus({
           account_id: data.account_id,
           account_status: data.details_submitted,
           charges_enabled: data.charges_enabled,
         });
-        
-        if (onComplete) {
-          onComplete();
+
+        // 如果账户已完成设置，调用 onComplete
+        if (data.charges_enabled && data.details_submitted) {
+          if (onComplete) {
+            onComplete();
+          }
         }
       }
     } catch (err: any) {
       console.error('Error checking account status:', err);
+      // 如果是 404，说明没有账户，这是正常的
+      if (err.response?.status === 404) {
+        console.log('No Stripe Connect account found');
+      }
     }
   };
 
