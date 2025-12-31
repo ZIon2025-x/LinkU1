@@ -38,12 +38,17 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
     const initConnect = async () => {
       try {
-        // loadConnect 不接受参数，返回 ConnectJS 构造函数
-        const ConnectJS = await loadConnect();
-        // 使用 publishableKey 创建实例
-        const connect = ConnectJS(STRIPE_PUBLISHABLE_KEY);
-        setConnectInstance(connect);
-        console.log('✅ ConnectJS initialized');
+        // loadConnect 返回 StripeConnectWrapper 对象
+        // 根据官方文档，应该直接使用返回的对象
+        const connectWrapper = await loadConnect();
+        
+        // StripeConnectWrapper 对象可以直接使用
+        // 需要在 ConnectComponentsProvider 中传入 publishableKey
+        setConnectInstance(connectWrapper);
+        console.log('✅ ConnectJS initialized', { 
+          hasWrapper: !!connectWrapper,
+          wrapperType: typeof connectWrapper 
+        });
       } catch (err: any) {
         console.error('Error initializing ConnectJS:', err);
         // 如果初始化失败，切换到 AccountLink
@@ -177,9 +182,19 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
     try {
       // 更新 ConnectJS 实例的 clientSecret
-      if (typeof connectInstance.update === 'function') {
-        connectInstance.update({ clientSecret });
-        console.log('✅ ConnectJS clientSecret updated');
+      // StripeConnectWrapper 可能有 update 方法或 create 方法
+      if (connectInstance && typeof (connectInstance as any).update === 'function') {
+        (connectInstance as any).update({ clientSecret });
+        console.log('✅ ConnectJS clientSecret updated via update()');
+      } else if (connectInstance && typeof (connectInstance as any).create === 'function') {
+        // 如果有 create 方法，可能需要重新创建实例
+        const newInstance = (connectInstance as any).create(STRIPE_PUBLISHABLE_KEY, { clientSecret });
+        if (newInstance) {
+          setConnectInstance(newInstance);
+          console.log('✅ ConnectJS instance recreated with clientSecret');
+        }
+      } else {
+        console.warn('ConnectJS instance does not have update or create method');
       }
     } catch (err: any) {
       console.error('Error updating ConnectJS clientSecret:', err);
