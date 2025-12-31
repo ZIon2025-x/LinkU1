@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ConnectComponentsProvider, ConnectAccountOnboarding } from '@stripe/react-connect-js';
-import { useConnect } from '@stripe/connect-js';
+import { ConnectComponentsProvider, ConnectAccountOnboarding, useConnect } from '@stripe/react-connect-js';
 import api from '../../api';
 
 // 从环境变量获取 Stripe Publishable Key
