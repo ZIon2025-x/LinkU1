@@ -40,6 +40,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "postinstall": "echo 'Dependencies installed'",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js' --no-open",
     "analyze:size": "npm run build && node -e \"const fs=require('fs');const path=require('path');const files=fs.readdirSync('build/static/js').filter(f=>f.endsWith('.js')).map(f=>{const s=fs.statSync(path.join('build/static/js',f));return{name:f,size:(s.size/1024).toFixed(2)+'KB'}}).sort((a,b)=>parseFloat(b.size)-parseFloat(a.size));console.log('Bundle Sizes:');files.forEach(f=>console.log(f.name.padEnd(40),f.size))\"",
     "analyze:html": "npm run build && npx source-map-explorer 'build/static/js/*.js' --html bundle-analysis.html 2>&1 | findstr /V \"source map refers to generated column\" || npx source-map-explorer 'build/static/js/*.js' --html bundle-analysis.html",
@@ -63,5 +64,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "overrides": {
+    "@stripe/react-connect-js": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }
