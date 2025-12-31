@@ -195,8 +195,8 @@ def create_connect_account_embedded(
                     return {
                         "account_id": account.id,
                         "client_secret": None,
-                        "account_status": details_submitted,
-                        "charges_enabled": charges_enabled,
+                        "account_status": account.details_submitted,
+                        "charges_enabled": account.charges_enabled,
                         "message": "账户已存在且已完成设置"
                     }
                 
@@ -213,8 +213,8 @@ def create_connect_account_embedded(
                 return {
                     "account_id": account.id,
                     "client_secret": onboarding_session.client_secret,
-                    "account_status": details_submitted,
-                    "charges_enabled": charges_enabled,
+                    "account_status": account.details_submitted,
+                    "charges_enabled": account.charges_enabled,
                     "message": "账户已存在，请完成设置"
                 }
             except stripe.error.StripeError as e:
@@ -411,6 +411,57 @@ def create_onboarding_link(
         raise HTTPException(
             status_code=400,
             detail=f"创建 onboarding 链接失败: {str(e)}"
+        )
+
+
+@router.post("/account_session", response_model=schemas.StripeConnectAccountSessionResponse)
+def create_account_session(
+    request: schemas.StripeConnectAccountSessionRequest,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    创建 Account Session（用于嵌入式 onboarding）
+    
+    参考 stripe-sample-code/server.js 的 /account_session 端点
+    返回 client_secret，前端可以使用 Stripe Connect Embedded Components
+    """
+    try:
+        account_id = request.account
+        
+        # 验证账户是否属于当前用户
+        if account_id != current_user.stripe_account_id:
+            raise HTTPException(
+                status_code=403,
+                detail="无权访问此账户"
+            )
+        
+        # 创建 AccountSession（完全按照官方示例代码）
+        # 参考: stripe-sample-code/server.js line 12-34
+        account_session = stripe.AccountSession.create(
+            account=account_id,
+            components={
+                "account_onboarding": {
+                    "enabled": True
+                }
+            }
+        )
+        
+        return {
+            "client_secret": account_session.client_secret
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating account session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"创建 account session 失败: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error creating account session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"服务器错误: {str(e)}"
         )
 
 

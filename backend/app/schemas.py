@@ -1512,6 +1512,16 @@ class StripeConnectAccountLinkResponse(BaseModel):
     expires_at: int
 
 
+class StripeConnectAccountSessionRequest(BaseModel):
+    """创建 Account Session 的请求"""
+    account: str  # Stripe Connect 账户 ID
+
+
+class StripeConnectAccountSessionResponse(BaseModel):
+    """创建 Account Session 的响应（参考示例代码）"""
+    client_secret: str
+
+
 class StripeConnectAccountEmbeddedResponse(BaseModel):
     """用于嵌入式 onboarding 的响应"""
     account_id: str

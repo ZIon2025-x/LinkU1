@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { ConnectComponentsProvider, ConnectAccountOnboarding } from '@stripe/react-connect-js';
-import { loadConnect } from '@stripe/connect-js';
+import React, { useState, useEffect } from 'react';
+import { useStripeConnect } from '../../hooks/useStripeConnect';
+import {
+  ConnectAccountOnboarding,
+  ConnectComponentsProvider,
+} from '@stripe/react-connect-js';
 import api from '../../api';
 
 // 从环境变量获取 Stripe Publishable Key
@@ -13,327 +16,132 @@ interface StripeConnectOnboardingProps {
   onError?: (error: string) => void;
 }
 
+/**
+ * Stripe Connect Onboarding 组件
+ * 参考 stripe-sample-code/src/Home.jsx
+ */
 const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   onComplete,
   onError,
 }) => {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [accountCreatePending, setAccountCreatePending] = useState(false);
+  const [onboardingExited, setOnboardingExited] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectedAccountId, setConnectedAccountId] = useState<string | null>(null);
   const [accountStatus, setAccountStatus] = useState<{
     account_id: string;
     account_status: boolean;
     charges_enabled: boolean;
   } | null>(null);
-  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
-  const [useAccountLink, setUseAccountLink] = useState<boolean>(false);
-  const [connectInstance, setConnectInstance] = useState<any>(null);
+  
+  const stripeConnectInstance = useStripeConnect(connectedAccountId);
 
-  // 初始化 ConnectJS
+  // 检查用户是否已有 Stripe Connect 账户
   useEffect(() => {
-    if (!STRIPE_PUBLISHABLE_KEY) {
-      console.error('STRIPE_PUBLISHABLE_KEY is not set');
-      return;
-    }
-
-    const initConnect = async () => {
+    const checkExistingAccount = async () => {
       try {
-        // loadConnect 返回的对象需要检查其结构
-        const connectWrapper = await loadConnect();
-        
-        // 检查返回对象的详细结构
-        const wrapperKeys = connectWrapper ? Object.keys(connectWrapper) : [];
-        const firstKey = wrapperKeys[0];
-        const firstValue = connectWrapper && firstKey ? (connectWrapper as any)[firstKey] : null;
-        
-        console.log('ConnectJS wrapper details:', {
-          type: typeof connectWrapper,
-          keys: wrapperKeys,
-          firstKey: firstKey,
-          firstValueType: typeof firstValue,
-          firstValueKeys: firstValue && typeof firstValue === 'object' ? Object.keys(firstValue) : []
-        });
-        
-        // 如果返回的对象只有一个 key，可能是嵌套结构
-        // 尝试获取实际的 ConnectJS 实例
-        let actualInstance = connectWrapper;
-        if (wrapperKeys.length === 1 && firstValue && typeof firstValue === 'object') {
-          // 可能是 { connect: {...} } 或类似结构
-          if (typeof firstValue.create === 'function') {
-            // 使用 create 方法创建实例
-            actualInstance = firstValue.create(STRIPE_PUBLISHABLE_KEY);
-            console.log('✅ Created ConnectJS instance via nested create()');
-          } else if (typeof firstValue === 'function') {
-            // 如果值本身是函数，调用它
-            actualInstance = firstValue(STRIPE_PUBLISHABLE_KEY);
-            console.log('✅ Created ConnectJS instance via function call');
-          } else {
-            // 直接使用嵌套对象
-            actualInstance = firstValue;
-            console.log('✅ Using nested object as instance');
+        const response = await api.get('/api/stripe/connect/account/status');
+        const data = response.data;
+
+        if (data.account_id) {
+          setConnectedAccountId(data.account_id);
+          setAccountStatus({
+            account_id: data.account_id,
+            account_status: data.details_submitted,
+            charges_enabled: data.charges_enabled,
+          });
+
+          // 如果账户已完成设置，调用 onComplete
+          if (data.charges_enabled && data.details_submitted) {
+            if (onComplete) {
+              onComplete();
+            }
           }
-        } else if (connectWrapper && typeof (connectWrapper as any).create === 'function') {
-          // 如果 wrapper 本身有 create 方法
-          actualInstance = (connectWrapper as any).create(STRIPE_PUBLISHABLE_KEY);
-          console.log('✅ Created ConnectJS instance via create()');
         }
-        
-        // 创建一个完整的包装对象，包含所有必需的方法
-        const fullInstance = {
-          ...actualInstance,
-          // create 方法 - ConnectComponentsProvider 需要
-          create: (publishableKey: string, options?: any) => {
-            if (actualInstance && typeof (actualInstance as any).create === 'function') {
-              return (actualInstance as any).create(publishableKey, options);
-            }
-            // 如果实例本身没有 create，返回实例本身
-            return actualInstance;
-          },
-          // update 方法 - 用于更新 clientSecret
-          update: (options: any) => {
-            if (actualInstance && typeof (actualInstance as any).update === 'function') {
-              return (actualInstance as any).update(options);
-            }
-            console.warn('update method not available on instance');
-          },
-          // setReactSdkAnalytics - ConnectComponentsProvider 需要
-          setReactSdkAnalytics: (version: string) => {
-            if (actualInstance && typeof (actualInstance as any).setReactSdkAnalytics === 'function') {
-              return (actualInstance as any).setReactSdkAnalytics(version);
-            }
-            // 空实现，避免错误
-            console.log('setReactSdkAnalytics called:', version);
-          },
-          // addEventListener - ConnectComponentsProvider 需要
-          addEventListener: (type: string, listener: any, options?: any) => {
-            if (actualInstance && typeof (actualInstance as any).addEventListener === 'function') {
-              return (actualInstance as any).addEventListener(type, listener, options);
-            }
-            // 空实现，避免错误
-            console.log('addEventListener called:', type);
-          },
-          // removeEventListener - 可能也需要
-          removeEventListener: (type: string, listener: any, options?: any) => {
-            if (actualInstance && typeof (actualInstance as any).removeEventListener === 'function') {
-              return (actualInstance as any).removeEventListener(type, listener, options);
-            }
-          }
-        };
-        setConnectInstance(fullInstance);
-        console.log('✅ ConnectJS instance set (with all required methods)');
       } catch (err: any) {
-        console.error('Error initializing ConnectJS:', err);
-        // 如果初始化失败，切换到 AccountLink
-        setError('ConnectJS 初始化失败，将使用跳转方式...');
-        setTimeout(() => {
-          loadOnboardingSession(true);
-        }, 1000);
+        // 如果用户还没有账户，这是正常的，不需要显示错误
+        console.log('No existing Stripe Connect account found');
       }
     };
 
-    initConnect();
-  }, []);
+    checkExistingAccount();
+  }, [onComplete]);
 
-  useEffect(() => {
-    console.log('Component mounted, STRIPE_PUBLISHABLE_KEY:', STRIPE_PUBLISHABLE_KEY ? 'Set' : 'Not set');
+  // 创建 Stripe Connect 账户
+  const createAccount = async () => {
+    setAccountCreatePending(true);
+    setError(null);
     
-    // 检查 URL 参数，看是否从 Stripe 页面返回
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromStripe = urlParams.get('from_stripe') === 'true' || 
-                       window.location.pathname.includes('/stripe/connect/success');
-    
-    if (fromStripe) {
-      console.log('Returned from Stripe onboarding, checking account status...');
-      checkAccountStatus().then(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      });
-      return;
-    }
-
-    // 加载 onboarding session
-    loadOnboardingSession();
-  }, []);
-
-  const loadOnboardingSession = async (useLink: boolean = false) => {
     try {
-      console.log('Loading onboarding session...', { useLink });
-      setLoading(true);
-      setError(null);
-
-      const endpoint = useLink 
-        ? '/api/stripe/connect/account/create' 
-        : '/api/stripe/connect/account/create-embedded';
-      
-      const response = await api.post(endpoint);
-      console.log('Onboarding session response:', { 
-        status: response.status,
-        hasData: !!response.data,
-        data: response.data 
-      });
-      
+      // 参考 stripe-sample-code/server.js 的 /account 端点
+      // 我们的后端返回 account_id 而不是 account
+      const response = await api.post('/api/stripe/connect/account/create-embedded');
       const data = response.data;
 
-      if (useLink && data.onboarding_url) {
-        console.log('Onboarding URL received:', data.onboarding_url);
-        setOnboardingUrl(data.onboarding_url);
-        setUseAccountLink(true);
-        setAccountStatus({
-          account_id: data.account_id,
-          account_status: data.account_status,
-          charges_enabled: data.charges_enabled,
-        });
-        setLoading(false);
-      } else if (data.client_secret) {
-        console.log('Client secret received:', data.client_secret.substring(0, 20) + '...');
-        setClientSecret(data.client_secret);
-        setAccountStatus({
-          account_id: data.account_id,
-          account_status: data.account_status,
-          charges_enabled: data.charges_enabled,
-        });
-        setLoading(false);
-      } else if (data.account_status && data.charges_enabled) {
-        console.log('Account already set up');
-        setAccountStatus({
-          account_id: data.account_id,
-          account_status: data.account_status,
-          charges_enabled: data.charges_enabled,
-        });
-        setLoading(false);
-        if (onComplete) {
-          onComplete();
+      if (data.account) {
+        // 示例代码格式
+        setConnectedAccountId(data.account);
+      } else if (data.account_id) {
+        // 我们的后端格式
+        setConnectedAccountId(data.account_id);
+        if (data.account_status !== undefined) {
+          setAccountStatus({
+            account_id: data.account_id,
+            account_status: data.account_status,
+            charges_enabled: data.charges_enabled || false,
+          });
+        }
+      } else if (data.error) {
+        setError(data.error);
+        if (onError) {
+          onError(data.error);
         }
       } else {
-        console.error('No client_secret/onboarding_url and account not set up:', data);
-        setError('无法创建 onboarding session: ' + (data.message || '未知错误'));
-        if (onError) {
-          onError('无法创建 onboarding session');
-        }
-        setLoading(false);
+        throw new Error('No account ID in response');
       }
     } catch (err: any) {
-      console.error('Error loading onboarding session:', err);
-      const errorMessage = err.response?.data?.detail || err.message || '加载失败';
-      console.error('Error message:', errorMessage);
+      console.error('Error creating account:', err);
+      const errorMessage = err.response?.data?.detail || err.message || '创建账户失败';
       setError(errorMessage);
       if (onError) {
         onError(errorMessage);
       }
-      setLoading(false);
+    } finally {
+      setAccountCreatePending(false);
     }
   };
 
+  // 处理 onboarding 退出
+  const handleOnboardingExit = () => {
+    setOnboardingExited(true);
+    // 检查账户状态
+    checkAccountStatus();
+  };
+
+  // 检查账户状态
   const checkAccountStatus = async () => {
     try {
       const response = await api.get('/api/stripe/connect/account/status');
       const data = response.data;
 
-      if (data.charges_enabled) {
+      if (data.charges_enabled && data.details_submitted) {
         setAccountStatus({
           account_id: data.account_id,
           account_status: data.details_submitted,
           charges_enabled: data.charges_enabled,
         });
-        setLoading(false);
+        
         if (onComplete) {
           onComplete();
         }
-      } else {
-        setError('账户设置中，请稍候...');
-        setLoading(false);
       }
     } catch (err: any) {
       console.error('Error checking account status:', err);
-      setLoading(false);
     }
   };
 
-  // 当 clientSecret 更新时，更新 ConnectJS 实例
-  useEffect(() => {
-    if (!connectInstance || !clientSecret) return;
-
-    try {
-      // 更新 ConnectJS 实例的 clientSecret
-      // StripeConnectWrapper 可能有 update 方法或 create 方法
-      if (connectInstance && typeof (connectInstance as any).update === 'function') {
-        (connectInstance as any).update({ clientSecret });
-        console.log('✅ ConnectJS clientSecret updated via update()');
-      } else if (connectInstance && typeof (connectInstance as any).create === 'function') {
-        // 如果有 create 方法，可能需要重新创建实例
-        const newInstance = (connectInstance as any).create(STRIPE_PUBLISHABLE_KEY, { clientSecret });
-        if (newInstance) {
-          setConnectInstance(newInstance);
-          console.log('✅ ConnectJS instance recreated with clientSecret');
-        }
-      } else {
-        console.warn('ConnectJS instance does not have update or create method');
-      }
-    } catch (err: any) {
-      console.error('Error updating ConnectJS clientSecret:', err);
-    }
-  }, [connectInstance, clientSecret]);
-
-  if (loading && !clientSecret && !onboardingUrl) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>加载中...</div>
-        <div style={{ fontSize: '12px', color: '#999', marginTop: '10px' }}>
-          正在初始化 Stripe 和获取 onboarding session...
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !useAccountLink) {
-    return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ color: 'red', marginBottom: '10px' }}>错误: {error}</div>
-        <button
-          onClick={() => loadOnboardingSession(false)}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          重试
-        </button>
-        <button
-          onClick={() => loadOnboardingSession(true)}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginLeft: '10px',
-          }}
-        >
-          使用跳转方式
-        </button>
-      </div>
-    );
-  }
-
+  // 如果账户已完成设置
   if (accountStatus?.charges_enabled) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ color: 'green', marginBottom: '10px' }}>
-          ✓ 收款账户已设置完成
-        </div>
-        <div style={{ fontSize: '14px', color: '#666' }}>
-          您可以开始接收任务奖励了
-        </div>
-      </div>
-    );
-  }
-
-  // 如果使用 AccountLink 方式，显示跳转按钮
-  if (useAccountLink && onboardingUrl) {
     return (
       <div style={{ 
         maxWidth: '800px', 
@@ -341,64 +149,15 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         padding: '20px',
         background: '#fff',
         borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        textAlign: 'center'
       }}>
-        <h2 style={{ marginBottom: '10px', color: '#333' }}>设置收款账户</h2>
-        <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-          请点击下方按钮跳转到 Stripe 页面完成账户设置。所有信息将安全地存储在 Stripe 中。
-        </p>
-        <div style={{ textAlign: 'center', marginTop: '30px' }}>
-          <button
-            onClick={() => {
-              window.location.href = onboardingUrl;
-            }}
-            style={{
-              padding: '15px 40px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(0,123,255,0.3)',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#0056b3';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,123,255,0.4)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#007bff';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,123,255,0.3)';
-            }}
-          >
-            前往 Stripe 完成设置
-          </button>
+        <div style={{ color: 'green', marginBottom: '10px', fontSize: '18px' }}>
+          ✓ 收款账户已设置完成
         </div>
-        <div style={{ 
-          marginTop: '20px', 
-          padding: '15px', 
-          backgroundColor: '#f8f9fa', 
-          borderRadius: '8px',
-          fontSize: '13px',
-          color: '#666'
-        }}>
-          <strong>提示：</strong>完成设置后，您将被重定向回本页面。如果页面没有自动刷新，请手动刷新查看状态。
+        <div style={{ fontSize: '14px', color: '#666' }}>
+          您可以开始接收任务奖励了
         </div>
-      </div>
-    );
-  }
-
-  // 使用官方 React 组件
-  if (!clientSecret || !connectInstance) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>正在初始化...</div>
-        {!connectInstance && <div style={{ fontSize: '12px', color: '#999', marginTop: '10px' }}>正在加载 ConnectJS...</div>}
-        {!clientSecret && connectInstance && <div style={{ fontSize: '12px', color: '#999', marginTop: '10px' }}>正在获取 onboarding session...</div>}
       </div>
     );
   }
@@ -412,20 +171,101 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       borderRadius: '12px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
     }}>
-      <h2 style={{ marginBottom: '10px', color: '#333' }}>设置收款账户</h2>
-      <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-        请完成以下信息以接收任务奖励。所有信息将安全地存储在 Stripe 中。
-      </p>
+      {!connectedAccountId && (
+        <>
+          <h2 style={{ marginBottom: '10px', color: '#333' }}>准备开始收款</h2>
+          <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
+            设置您的 Stripe 收款账户以接收任务奖励。所有信息将安全地存储在 Stripe 中。
+          </p>
+        </>
+      )}
       
-      <ConnectComponentsProvider 
-        connectInstance={connectInstance}
-      >
-        <ConnectAccountOnboarding
-          onExit={() => {
-            console.log('User exited onboarding');
-          }}
-        />
-      </ConnectComponentsProvider>
+      {connectedAccountId && !stripeConnectInstance && (
+        <>
+          <h2 style={{ marginBottom: '10px', color: '#333' }}>添加信息以开始收款</h2>
+          <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
+            正在初始化...
+          </p>
+        </>
+      )}
+
+      {!accountCreatePending && !connectedAccountId && (
+        <div style={{ textAlign: 'center', marginTop: '30px' }}>
+          <button
+            onClick={createAccount}
+            style={{
+              padding: '15px 40px',
+              backgroundColor: '#635BFF',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(99, 91, 255, 0.3)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#4f46e5';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 8px rgba(99, 91, 255, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#635BFF';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(99, 91, 255, 0.3)';
+            }}
+          >
+            注册
+          </button>
+        </div>
+      )}
+
+      {accountCreatePending && (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <div>正在创建账户...</div>
+        </div>
+      )}
+
+      {stripeConnectInstance && (
+        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+          <ConnectAccountOnboarding
+            onExit={handleOnboardingExit}
+          />
+        </ConnectComponentsProvider>
+      )}
+
+      {error && (
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '15px', 
+          backgroundColor: '#fee', 
+          borderRadius: '8px',
+          color: '#E61947',
+          fontSize: '14px'
+        }}>
+          错误: {error}
+        </div>
+      )}
+
+      {(connectedAccountId || accountCreatePending || onboardingExited) && (
+        <div style={{ 
+          marginTop: '20px', 
+          padding: '15px', 
+          backgroundColor: '#f8f9fa', 
+          borderRadius: '8px',
+          fontSize: '13px',
+          color: '#666'
+        }}>
+          {connectedAccountId && (
+            <p>
+              您的连接账户 ID: <code style={{ fontWeight: '700', fontSize: '14px' }}>{connectedAccountId}</code>
+            </p>
+          )}
+          {accountCreatePending && <p>正在创建连接账户...</p>}
+          {onboardingExited && <p>账户入驻组件已退出</p>}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,18 +1,21 @@
-# Stripe Sample Integration
-Explore a full, working code sample of an integration with Stripe where customers
-click a button on your site and get redirected to a payment page hosted by Stripe.
-The example includes client- and server-side code, and the payment page is prebuilt.
+# Onboard accounts to your Connect platform
 
-### Install dependencies
+Build a Connect integration which creates an account and onboards it to your platform.
 
-Run `npm install` from the root of the project to install the dependencies.
+Here are some basic scripts you can use to build and run the application.
 
+## Run the sample
 
-### Run the application
+1. Build the application
 
-Run `npm run dev` from the root of the project to start the application.
+~~~
+npm install
+~~~
 
-### Navigate to the application
+2. Run the application
 
-Go to [http://localhost:3000/](http://localhost:3000/) in your web browser.
+~~~
+npm start
+~~~
 
+3. Go to [http://localhost:4242/index.html](http://localhost:4242/index.html)
