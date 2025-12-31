@@ -202,12 +202,26 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   }
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h2 style={{ marginBottom: '10px' }}>设置收款账户</h2>
-      <p style={{ marginBottom: '20px', color: '#666' }}>
+    <div style={{ 
+      maxWidth: '800px', 
+      margin: '0 auto', 
+      padding: '20px',
+      background: '#fff',
+      borderRadius: '12px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    }}>
+      <h2 style={{ marginBottom: '10px', color: '#333' }}>设置收款账户</h2>
+      <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
         请完成以下信息以接收任务奖励。所有信息将安全地存储在 Stripe 中。
       </p>
-      <div ref={containerRef} id="stripe-connect-embedded" />
+      <div 
+        ref={containerRef} 
+        id="stripe-connect-embedded"
+        style={{
+          minHeight: '600px',
+          width: '100%'
+        }}
+      />
     </div>
   );
 };

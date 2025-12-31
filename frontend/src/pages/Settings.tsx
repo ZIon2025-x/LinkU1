@@ -649,6 +649,26 @@ const Settings: React.FC = () => {
 
           {/* 内容区域 */}
           <div style={{ flex: 1, padding: isMobile ? '16px' : '30px' }}>
+            {activeTab === 'payment' && (
+              <div>
+                <h2 style={{ 
+                  color: '#333', 
+                  marginBottom: isMobile ? '16px' : '20px', 
+                  fontSize: isMobile ? '18px' : '20px' 
+                }}>
+                  💳 收款账户
+                </h2>
+                <StripeConnectOnboarding
+                  onComplete={() => {
+                    message.success('收款账户设置完成！');
+                  }}
+                  onError={(error) => {
+                    message.error(`设置失败: ${error}`);
+                  }}
+                />
+              </div>
+            )}
+
             {activeTab === 'profile' && (
               <div>
                 <h2 style={{ color: '#333', marginBottom: isMobile ? '16px' : '20px', fontSize: isMobile ? '18px' : '20px' }}>
