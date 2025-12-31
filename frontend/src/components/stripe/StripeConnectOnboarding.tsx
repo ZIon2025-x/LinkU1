@@ -38,11 +38,19 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
     const initConnect = async () => {
       try {
-        const connect = await loadConnect(STRIPE_PUBLISHABLE_KEY);
+        // loadConnect 不接受参数，返回 ConnectJS 构造函数
+        const ConnectJS = await loadConnect();
+        // 使用 publishableKey 创建实例
+        const connect = ConnectJS(STRIPE_PUBLISHABLE_KEY);
         setConnectInstance(connect);
         console.log('✅ ConnectJS initialized');
       } catch (err: any) {
         console.error('Error initializing ConnectJS:', err);
+        // 如果初始化失败，切换到 AccountLink
+        setError('ConnectJS 初始化失败，将使用跳转方式...');
+        setTimeout(() => {
+          loadOnboardingSession(true);
+        }, 1000);
       }
     };
 
