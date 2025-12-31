@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ConnectComponentsProvider, ConnectAccountOnboarding } from '@stripe/react-connect-js';
-import { loadConnect } from '@stripe/connect-js';
+import { useConnect } from '@stripe/connect-js';
 import api from '../../api';
 
 // 从环境变量获取 Stripe Publishable Key
@@ -27,35 +27,11 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   } | null>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
   const [useAccountLink, setUseAccountLink] = useState<boolean>(false);
-  const [connectInstance, setConnectInstance] = useState<any>(null);
-
-  // 初始化 ConnectJS
-  useEffect(() => {
-    if (!STRIPE_PUBLISHABLE_KEY) {
-      console.error('STRIPE_PUBLISHABLE_KEY is not set');
-      setError('Stripe 密钥未配置');
-      setLoading(false);
-      return;
-    }
-
-    const initializeConnect = async () => {
-      try {
-        const connect = await loadConnect({
-          publishableKey: STRIPE_PUBLISHABLE_KEY,
-        });
-        setConnectInstance(connect);
-        console.log('✅ ConnectJS initialized');
-      } catch (err: any) {
-        console.error('Error initializing ConnectJS:', err);
-        setError('ConnectJS 初始化失败，将使用跳转方式...');
-        setTimeout(() => {
-          loadOnboardingSession(true);
-        }, 1000);
-      }
-    };
-
-    initializeConnect();
-  }, []);
+  // 使用 useConnect hook 初始化 ConnectJS
+  const connectInstance = useConnect({
+    publishableKey: STRIPE_PUBLISHABLE_KEY || '',
+    clientSecret: clientSecret || undefined,
+  });
 
   useEffect(() => {
     console.log('Component mounted, STRIPE_PUBLISHABLE_KEY:', STRIPE_PUBLISHABLE_KEY ? 'Set' : 'Not set');
@@ -171,33 +147,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     }
   };
 
-  // 当 clientSecret 更新时，更新 ConnectJS 实例
-  useEffect(() => {
-    if (!connectInstance || !clientSecret) return;
-
-    // 更新 ConnectJS 实例的 clientSecret
-    try {
-      // 根据官方文档，使用 update 方法更新 clientSecret
-      if (typeof connectInstance.update === 'function') {
-        connectInstance.update({ clientSecret });
-        console.log('✅ ConnectJS clientSecret updated');
-      } else {
-        console.warn('connectInstance.update is not a function, trying alternative method');
-        // 如果 update 方法不可用，重新初始化
-        loadConnect({
-          publishableKey: STRIPE_PUBLISHABLE_KEY,
-          clientSecret: clientSecret,
-        }).then((newConnect) => {
-          setConnectInstance(newConnect);
-          console.log('✅ ConnectJS reinitialized with clientSecret');
-        }).catch((err) => {
-          console.error('Error reinitializing ConnectJS:', err);
-        });
-      }
-    } catch (err: any) {
-      console.error('Error updating ConnectJS clientSecret:', err);
-    }
-  }, [connectInstance, clientSecret]);
+  // useConnect hook 会自动处理 clientSecret 的更新
 
   if (loading && !clientSecret && !onboardingUrl) {
     return (
