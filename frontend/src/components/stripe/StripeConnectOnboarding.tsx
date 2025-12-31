@@ -25,11 +25,28 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     account_status: boolean;
     charges_enabled: boolean;
   } | null>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null); // AccountLink 备用方案
+  const [useAccountLink, setUseAccountLink] = useState<boolean>(false); // 是否使用 AccountLink
   const containerRef = useRef<HTMLDivElement>(null);
   const connectEmbeddedRef = useRef<any>(null);
 
   useEffect(() => {
     console.log('Component mounted, STRIPE_PUBLISHABLE_KEY:', STRIPE_PUBLISHABLE_KEY ? 'Set' : 'Not set');
+    
+    // 检查 URL 参数，看是否从 Stripe 页面返回
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromStripe = urlParams.get('from_stripe') === 'true' || 
+                       window.location.pathname.includes('/stripe/connect/success');
+    
+    if (fromStripe) {
+      console.log('Returned from Stripe onboarding, checking account status...');
+      // 从 Stripe 返回，检查账户状态
+      checkAccountStatus().then(() => {
+        // 清除 URL 参数
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+      return;
+    }
     
     // 检查全局 Stripe 是否已加载（HTML 中已预加载）
     const checkStripeLoaded = () => {
@@ -54,23 +71,29 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval);
           console.error('Global Stripe failed to load after timeout');
-          setError('Stripe 加载失败，请刷新页面重试');
-          setLoading(false);
+          // Stripe 加载失败，直接使用 AccountLink
+          console.log('Stripe failed to load, using AccountLink method...');
+          loadOnboardingSession(true);
         }
       }, 100);
+    } else {
+      // Stripe 已加载，尝试使用嵌入式方式
+      loadOnboardingSession(false);
     }
-
-    // 获取或创建 onboarding session
-    loadOnboardingSession();
   }, []);
 
-  const loadOnboardingSession = async () => {
+  const loadOnboardingSession = async (useLink: boolean = false) => {
     try {
-      console.log('Loading onboarding session...');
+      console.log('Loading onboarding session...', { useLink });
       setLoading(true);
       setError(null);
 
-      const response = await api.post('/api/stripe/connect/account/create-embedded');
+      // 如果使用 AccountLink，调用不同的 API
+      const endpoint = useLink 
+        ? '/api/stripe/connect/account/create' 
+        : '/api/stripe/connect/account/create-embedded';
+      
+      const response = await api.post(endpoint);
       console.log('Onboarding session response:', { 
         status: response.status,
         hasData: !!response.data,
@@ -79,7 +102,19 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       
       const data = response.data;
 
-      if (data.client_secret) {
+      if (useLink && data.onboarding_url) {
+        // 使用 AccountLink 方式
+        console.log('Onboarding URL received:', data.onboarding_url);
+        setOnboardingUrl(data.onboarding_url);
+        setUseAccountLink(true);
+        setAccountStatus({
+          account_id: data.account_id,
+          account_status: data.account_status,
+          charges_enabled: data.charges_enabled,
+        });
+        setLoading(false);
+      } else if (data.client_secret) {
+        // 使用嵌入式方式
         console.log('Client secret received:', data.client_secret.substring(0, 20) + '...');
         setClientSecret(data.client_secret);
         setAccountStatus({
@@ -100,7 +135,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           onComplete();
         }
       } else {
-        console.error('No client_secret and account not set up:', data);
+        console.error('No client_secret/onboarding_url and account not set up:', data);
         setError('无法创建 onboarding session: ' + (data.message || '未知错误'));
         if (onError) {
           onError('无法创建 onboarding session');
@@ -305,19 +340,21 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                     }
                   }
                   
-                  setError('Stripe Connect Embedded 加载失败。请检查网络连接或刷新页面重试。如果问题持续，请联系技术支持。');
-                  setLoading(false);
+                  // Connect Embedded 加载失败，切换到 AccountLink 方式
+                  console.log('Connect Embedded failed, switching to AccountLink method...');
+                  setError(null); // 清除错误，准备使用备用方案
+                  loadOnboardingSession(true); // 使用 AccountLink
+                  return;
                 }
               }, 2000);
             };
             
             script.onerror = (err) => {
               console.error('Reload script error:', err);
-              setError('无法加载 Stripe Connect 脚本。请检查网络连接或刷新页面重试。');
-              setLoading(false);
-              if (onError) {
-                onError('无法加载 Stripe Connect 脚本');
-              }
+              // 脚本加载失败，切换到 AccountLink 方式
+              console.log('Script load failed, switching to AccountLink method...');
+              setError(null);
+              loadOnboardingSession(true);
             };
             
             document.head.appendChild(script);
@@ -342,9 +379,11 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           initializeConnectEmbedded();
         } else if (checkAttempts >= maxCheckAttempts) {
           clearInterval(checkInterval);
-          console.error('ConnectEmbedded still not available after delay');
-          setError('Stripe Connect Embedded 加载失败。请检查网络连接或刷新页面重试。');
-          setLoading(false);
+                  console.error('ConnectEmbedded still not available after delay');
+                  // 切换到 AccountLink 方式
+                  console.log('Switching to AccountLink method as fallback...');
+                  setError(null);
+                  loadOnboardingSession(true);
         }
       }, 100);
     };
@@ -374,56 +413,74 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           return;
         }
 
-        console.log('Creating Stripe instance and ConnectEmbedded...', {
+        console.log('Initializing ConnectEmbedded...', {
           // @ts-ignore
           hasConnectEmbedded: !!StripeGlobal.ConnectEmbedded,
           clientSecret: clientSecret.substring(0, 30) + '...',
-          hasPublishableKey: !!STRIPE_PUBLISHABLE_KEY
+          hasPublishableKey: !!STRIPE_PUBLISHABLE_KEY,
+          // @ts-ignore
+          connectEmbeddedType: typeof StripeGlobal.ConnectEmbedded
         });
 
-        // 初始化 Stripe 实例
+        // 检查 ConnectEmbedded 是否可用
         // @ts-ignore
-        const stripeInstance = StripeGlobal(STRIPE_PUBLISHABLE_KEY);
-        
-        // 检查 ConnectEmbedded 是否在 Stripe 实例上
-        // @ts-ignore
-        const ConnectEmbeddedClass = stripeInstance.ConnectEmbedded || StripeGlobal.ConnectEmbedded;
-        
-        if (!ConnectEmbeddedClass) {
-          console.error('ConnectEmbedded class not found', {
+        if (!StripeGlobal.ConnectEmbedded) {
+          console.error('ConnectEmbedded not available on window.Stripe', {
             // @ts-ignore
-            hasStripeInstance: !!stripeInstance,
+            stripeKeys: Object.keys(StripeGlobal),
             // @ts-ignore
-            hasStripeGlobalConnectEmbedded: !!StripeGlobal.ConnectEmbedded,
-            // @ts-ignore
-            stripeInstanceKeys: stripeInstance ? Object.keys(stripeInstance) : [],
-            // @ts-ignore
-            stripeGlobalKeys: Object.keys(StripeGlobal)
+            stripeType: typeof StripeGlobal
           });
-          setError('Stripe Connect Embedded 未找到。请确保脚本已正确加载。');
-          setLoading(false);
+          setError('Stripe Connect Embedded 未加载。可能原因：1) 账户不支持 Embedded 2) 脚本未正确加载 3) client_secret 类型错误。将切换到跳转方式...');
+          // 切换到 AccountLink
+          setTimeout(() => {
+            loadOnboardingSession(true);
+          }, 1000);
           return;
         }
+
+        // 使用正确的初始化方式：window.Stripe.ConnectEmbedded.init()
+        // @ts-ignore
+        if (typeof StripeGlobal.ConnectEmbedded.init !== 'function') {
+          console.error('ConnectEmbedded.init is not a function', {
+            // @ts-ignore
+            connectEmbeddedType: typeof StripeGlobal.ConnectEmbedded,
+            // @ts-ignore
+            connectEmbeddedKeys: StripeGlobal.ConnectEmbedded ? Object.keys(StripeGlobal.ConnectEmbedded) : []
+          });
+          setError('ConnectEmbedded 初始化方法不可用。将切换到跳转方式...');
+          setTimeout(() => {
+            loadOnboardingSession(true);
+          }, 1000);
+          return;
+        }
+
+        console.log('Calling ConnectEmbedded.init()...');
         
-        console.log('Creating ConnectEmbedded instance with class:', ConnectEmbeddedClass);
-        
-        // 创建 ConnectEmbedded 实例
-        const connectEmbedded = new ConnectEmbeddedClass({
+        // 使用正确的初始化方式：window.Stripe.ConnectEmbedded.init()
+        // @ts-ignore
+        const connectEmbedded = StripeGlobal.ConnectEmbedded.init({
+          publishableKey: STRIPE_PUBLISHABLE_KEY,
           clientSecret: clientSecret,
           onReady: () => {
-            console.log('Stripe Connect onboarding ready');
+            console.log('✅ Stripe Connect Embedded ready');
             setLoading(false);
           },
           onComplete: async () => {
-            console.log('Stripe Connect onboarding completed');
+            console.log('✅ Stripe Connect onboarding completed');
             await checkAccountStatus();
           },
           onExit: (event: any) => {
             console.log('User exited onboarding', event);
           },
           onError: (event: any) => {
-            console.error('Onboarding error:', event);
-            const errorMsg = event.error?.message || '设置过程中发生错误';
+            console.error('❌ Onboarding error:', event);
+            const errorMsg = event.error?.message || event.message || '设置过程中发生错误';
+            console.error('Error details:', {
+              error: event.error,
+              message: errorMsg,
+              type: event.type
+            });
             setError(errorMsg);
             setLoading(false);
             if (onError) {
