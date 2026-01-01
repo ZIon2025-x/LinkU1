@@ -255,8 +255,8 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
 
       {/* 待办事项 */}
       {accountDetails.requirements && (
-        (accountDetails.requirements.currently_due?.length > 0 ||
-         accountDetails.requirements.past_due?.length > 0) && (
+        ((accountDetails.requirements.currently_due && accountDetails.requirements.currently_due.length > 0) ||
+         (accountDetails.requirements.past_due && accountDetails.requirements.past_due.length > 0)) && (
           <div style={{ 
             marginTop: '20px',
             padding: '15px',
@@ -267,7 +267,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
             <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#856404' }}>
               ⚠️ 待完成事项
             </h4>
-            {accountDetails.requirements.past_due?.length > 0 && (
+            {accountDetails.requirements.past_due && accountDetails.requirements.past_due.length > 0 && (
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ fontSize: '12px', color: '#721c24', marginBottom: '4px', fontWeight: '600' }}>
                   逾期事项：
@@ -279,7 +279,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
                 </ul>
               </div>
             )}
-            {accountDetails.requirements.currently_due?.length > 0 && (
+            {accountDetails.requirements.currently_due && accountDetails.requirements.currently_due.length > 0 && (
               <div>
                 <div style={{ fontSize: '12px', color: '#856404', marginBottom: '4px', fontWeight: '600' }}>
                   当前待办：
