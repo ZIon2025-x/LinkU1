@@ -1491,8 +1491,9 @@ class TaskPaymentResponse(BaseModel):
 # ==================== Stripe Connect Schema ====================
 
 class StripeConnectAccountResponse(BaseModel):
+    """已废弃，请使用 StripeConnectAccountEmbeddedResponse"""
     account_id: str
-    onboarding_url: Optional[str] = None
+    onboarding_url: Optional[str] = None  # 已废弃，使用嵌入式组件
     account_status: bool  # details_submitted
     message: str
 
@@ -1523,7 +1524,8 @@ class StripeConnectAccountDetailsResponse(BaseModel):
 
 
 class StripeConnectAccountLinkResponse(BaseModel):
-    onboarding_url: str
+    """已废弃，请使用 StripeConnectAccountSessionResponse"""
+    onboarding_url: str  # 已废弃，使用嵌入式组件
     expires_at: int
 
 

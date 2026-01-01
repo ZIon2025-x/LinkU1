@@ -103,15 +103,17 @@ def verify_account_ownership(account_id: str, current_user: models.User) -> bool
         return False
 
 
-@router.post("/account/create", response_model=schemas.StripeConnectAccountResponse)
+@router.post("/account/create", response_model=schemas.StripeConnectAccountEmbeddedResponse)
 def create_connect_account(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
-    创建 Stripe Connect Express Account
+    创建 Stripe Connect Express Account（使用嵌入式组件）
     
     为当前用户创建 Stripe Connect Express 账户，用于接收任务奖励支付
+    返回账户 ID 和 client_secret，前端可以使用 Stripe Connect Embedded Components
+    在自己的页面中完成 onboarding，无需跳转到 Stripe 页面
     注意：每个用户只能有一个 Stripe Connect 账户
     """
     try:
@@ -170,21 +172,36 @@ def create_connect_account(
         db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
         if db_user_check and db_user_check.stripe_account_id:
             logger.warning(f"User {current_user.id} already has a Stripe account {db_user_check.stripe_account_id}, skipping creation of {account.id}")
-            # 如果用户已经有账户，返回现有账户信息
+            # 如果用户已经有账户，返回现有账户信息（使用嵌入式组件）
             try:
                 existing_account = stripe.Account.retrieve(db_user_check.stripe_account_id)
-                frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-                account_link = stripe.AccountLink.create(
+                
+                # 如果账户已完成 onboarding，返回成功
+                if existing_account.details_submitted:
+                    return {
+                        "account_id": existing_account.id,
+                        "client_secret": None,
+                        "account_status": existing_account.details_submitted,
+                        "charges_enabled": existing_account.charges_enabled,
+                        "message": "您已经有一个 Stripe 账户且已完成设置"
+                    }
+                
+                # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
+                onboarding_session = stripe.AccountSession.create(
                     account=existing_account.id,
-                    refresh_url=f"{frontend_url}/stripe/connect/refresh",
-                    return_url=f"{frontend_url}/stripe/connect/success?accountId={existing_account.id}",
-                    type="account_onboarding",
+                    components={
+                        "account_onboarding": {
+                            "enabled": True
+                        }
+                    }
                 )
+                
                 return {
                     "account_id": existing_account.id,
-                    "onboarding_url": account_link.url,
+                    "client_secret": onboarding_session.client_secret,
                     "account_status": existing_account.details_submitted,
-                    "message": "您已经有一个 Stripe 账户，请使用现有账户完成设置"
+                    "charges_enabled": existing_account.charges_enabled,
+                    "message": "您已经有一个 Stripe 账户，请完成设置"
                 }
             except stripe.error.StripeError as e:
                 logger.error(f"Error retrieving existing account: {e}")
@@ -230,20 +247,33 @@ def create_connect_account(
             logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
             raise
         
-        # 创建账户链接用于 onboarding (使用 V1 API，与 webhook 保持一致)
-        # 参考: stripe-sample-code/server.js line 126-136
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        account_link = stripe.AccountLink.create(
-            account=account.id,
-            refresh_url=f"{frontend_url}/stripe/connect/refresh",
-            return_url=f"{frontend_url}/stripe/connect/success?accountId={account.id}",
-            type="account_onboarding",
-        )
+        # 创建 AccountSession 用于嵌入式 onboarding（不使用跳转链接）
+        try:
+            onboarding_session = stripe.AccountSession.create(
+                account=account.id,
+                components={
+                    "account_onboarding": {
+                        "enabled": True
+                    }
+                }
+            )
+            logger.info(f"Created AccountSession for account {account.id}")
+        except stripe.error.StripeError as session_err:
+            logger.error(f"Stripe error creating AccountSession: {session_err}")
+            # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
+            return {
+                "account_id": account.id,
+                "client_secret": None,
+                "account_status": account.details_submitted,
+                "charges_enabled": account.charges_enabled,
+                "message": f"账户创建成功，但无法立即创建 onboarding session: {str(session_err)}"
+            }
         
         return {
             "account_id": account.id,
-            "onboarding_url": account_link.url,
+            "client_secret": onboarding_session.client_secret,
             "account_status": account.details_submitted,
+            "charges_enabled": account.charges_enabled,
             "message": "账户创建成功，请完成账户设置"
         }
         
@@ -512,7 +542,7 @@ def get_account_status(
             "details_submitted": False,
             "charges_enabled": False,
             "payouts_enabled": False,
-            "onboarding_url": None,
+            "client_secret": None,
             "needs_onboarding": True,
             "requirements": None
         }
@@ -531,23 +561,28 @@ def get_account_status(
         # 检查是否需要重新 onboarding
         needs_onboarding = not account.details_submitted
         
-        onboarding_url = None
+        # 使用嵌入式组件，不创建跳转链接
+        client_secret = None
         if needs_onboarding:
-            frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-            account_link = stripe.AccountLink.create(
-                account=account.id,
-                refresh_url=f"{frontend_url}/stripe/connect/refresh",
-                return_url=f"{frontend_url}/stripe/connect/success",
-                type="account_onboarding",
-            )
-            onboarding_url = account_link.url
+            try:
+                onboarding_session = stripe.AccountSession.create(
+                    account=account.id,
+                    components={
+                        "account_onboarding": {
+                            "enabled": True
+                        }
+                    }
+                )
+                client_secret = onboarding_session.client_secret
+            except stripe.error.StripeError as e:
+                logger.warning(f"Failed to create AccountSession for onboarding: {e}")
         
         return {
             "account_id": account.id,
             "details_submitted": account.details_submitted,
             "charges_enabled": account.charges_enabled,
             "payouts_enabled": account.payouts_enabled,
-            "onboarding_url": onboarding_url,
+            "client_secret": client_secret,  # 用于嵌入式组件
             "needs_onboarding": needs_onboarding,
             "requirements": {
                 "currently_due": account.requirements.currently_due or [],
@@ -823,15 +858,15 @@ def get_account_transactions(
         )
 
 
-@router.post("/account/onboarding-link", response_model=schemas.StripeConnectAccountLinkResponse)
-def create_onboarding_link(
+@router.post("/account/onboarding-session", response_model=schemas.StripeConnectAccountSessionResponse)
+def create_onboarding_session(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
-    创建账户 onboarding 链接
+    创建账户 onboarding session（用于嵌入式组件）
     
-    用于重新开始或继续账户设置流程
+    用于重新开始或继续账户设置流程，返回 client_secret 用于嵌入式组件
     """
     if not current_user.stripe_account_id:
         raise HTTPException(
@@ -850,17 +885,18 @@ def create_onboarding_link(
                 detail="账户验证失败：账户不属于当前用户"
             )
         
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        account_link = stripe.AccountLink.create(
+        # 创建 AccountSession 用于嵌入式组件
+        onboarding_session = stripe.AccountSession.create(
             account=account.id,
-            refresh_url=f"{frontend_url}/stripe/connect/refresh",
-            return_url=f"{frontend_url}/stripe/connect/success",
-            type="account_onboarding",
+            components={
+                "account_onboarding": {
+                    "enabled": True
+                }
+            }
         )
         
         return {
-            "onboarding_url": account_link.url,
-            "expires_at": account_link.expires_at
+            "client_secret": onboarding_session.client_secret
         }
         
     except stripe.error.StripeError as e:
