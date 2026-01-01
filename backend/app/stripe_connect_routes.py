@@ -164,9 +164,22 @@ def create_connect_account(
         # 保存账户 ID 到用户记录
         try:
             current_user.stripe_account_id = account.id
+            db.add(current_user)  # 确保对象被添加到会话
             db.commit()
             db.refresh(current_user)  # 刷新对象以确保数据是最新的
-            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+            
+            # 验证保存是否成功
+            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if db_user and db_user.stripe_account_id == account.id:
+                logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            else:
+                logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
+                # 尝试再次保存
+                if db_user:
+                    db_user.stripe_account_id = account.id
+                    db.commit()
+                    db.refresh(db_user)
+                    logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
         except Exception as db_err:
             # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
             db.rollback()
@@ -176,6 +189,7 @@ def create_connect_account(
                     status_code=400,
                     detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
                 )
+            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
             raise
         
         # 创建账户链接用于 onboarding (完全按照官方示例代码)
@@ -406,9 +420,21 @@ def create_connect_account_embedded(
         # 保存账户 ID 到用户记录
         try:
             current_user.stripe_account_id = account.id
+            db.add(current_user)  # 确保对象被添加到会话
             db.commit()
             db.refresh(current_user)  # 刷新对象以确保数据是最新的
-            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+            
+            # 验证保存是否成功
+            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if db_user and db_user.stripe_account_id == account.id:
+                logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            else:
+                logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
+                # 尝试再次保存
+                db_user.stripe_account_id = account.id
+                db.commit()
+                db.refresh(db_user)
+                logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
         except Exception as db_err:
             # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
             db.rollback()
@@ -423,6 +449,19 @@ def create_connect_account_embedded(
                 status_code=500,
                 detail=f"保存账户信息失败: {str(db_err)}"
             )
+        
+        # 最终验证：确保账户 ID 已保存到数据库
+        final_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if not final_check or final_check.stripe_account_id != account.id:
+            logger.error(f"❌ Final check failed: stripe_account_id not saved for user {current_user.id}")
+            # 最后一次尝试保存
+            if final_check:
+                final_check.stripe_account_id = account.id
+                db.commit()
+                db.refresh(final_check)
+                logger.info(f"Final retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            else:
+                logger.error(f"Cannot find user {current_user.id} in database for final check")
         
         # 创建 AccountSession 用于嵌入式 onboarding
         try:
@@ -961,15 +1000,29 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 if not user.stripe_account_id:
                     try:
                         user.stripe_account_id = account_id
+                        db.add(user)  # 确保对象被添加到会话
                         db.commit()
-                        logger.info(f"Account created for user {user.id}: account_id={account_id}")
+                        db.refresh(user)  # 刷新对象
+                        
+                        # 验证保存是否成功
+                        db_user = db.query(models.User).filter(models.User.id == user.id).first()
+                        if db_user and db_user.stripe_account_id == account_id:
+                            logger.info(f"✅ Webhook verified: Account {account_id} saved to database for user {user.id}")
+                        else:
+                            logger.error(f"❌ Webhook failed to verify: stripe_account_id not saved for user {user.id}")
+                            # 尝试再次保存
+                            if db_user:
+                                db_user.stripe_account_id = account_id
+                                db.commit()
+                                db.refresh(db_user)
+                                logger.info(f"Webhook retry: Account {account_id} saved to database for user {user.id}")
                     except Exception as e:
                         # 捕获唯一性约束错误（如果账户ID已被其他用户使用）
                         db.rollback()
                         if "unique" in str(e).lower() or "duplicate" in str(e).lower():
                             logger.warning(f"Account {account_id} already assigned to another user, skipping for user {user.id}")
                         else:
-                            logger.error(f"Error saving account_id for user {user.id}: {e}")
+                            logger.error(f"Error saving account_id for user {user.id}: {e}", exc_info=True)
                 else:
                     # 用户已经有账户，检查是否是同一个账户
                     if user.stripe_account_id == account_id:
