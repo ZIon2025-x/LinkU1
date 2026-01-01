@@ -185,6 +185,14 @@ def create_connect_account_embedded(
     在自己的页面中完成 onboarding，无需跳转到 Stripe 页面
     """
     try:
+        # 检查 Stripe API Key 是否配置
+        if not stripe.api_key:
+            logger.error("STRIPE_SECRET_KEY is not set")
+            raise HTTPException(
+                status_code=500,
+                detail="Stripe 配置错误：未设置 API Key"
+            )
+        
         # 检查用户是否已有 Stripe Connect 账户
         if current_user.stripe_account_id:
             # 检查账户状态
@@ -226,86 +234,127 @@ def create_connect_account_embedded(
         
         # 创建 Express Account (完全按照官方示例代码)
         # 参考: stripe-sample-code/server.js line 89-114
+        account = None
         try:
-            account = stripe.v2.core.accounts.create({
-                "display_name": current_user.email or f"user_{current_user.id}@link2ur.com",
-                "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
-                "dashboard": "express",
-                "defaults": {
-                    "responsibilities": {
-                        "fees_collector": "application",
-                        "losses_collector": "application",
-                    },
-                },
-                "identity": {
-                    "country": "GB",
-                    "entity_type": "company",
-                },
-                "configuration": {
-                    "recipient": {
-                        "capabilities": {
-                            "stripe_balance": {
-                                "stripe_transfers": {
-                                    "requested": True,
+            # 首先尝试使用 v2 API
+            if hasattr(stripe, 'v2') and hasattr(stripe.v2, 'core') and hasattr(stripe.v2.core, 'accounts'):
+                try:
+                    account = stripe.v2.core.accounts.create({
+                        "display_name": current_user.email or f"user_{current_user.id}@link2ur.com",
+                        "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                        "dashboard": "express",
+                        "defaults": {
+                            "responsibilities": {
+                                "fees_collector": "application",
+                                "losses_collector": "application",
+                            },
+                        },
+                        "identity": {
+                            "country": "GB",
+                            "entity_type": "company",
+                        },
+                        "configuration": {
+                            "recipient": {
+                                "capabilities": {
+                                    "stripe_balance": {
+                                        "stripe_transfers": {
+                                            "requested": True,
+                                        },
+                                    },
                                 },
                             },
                         },
+                        "metadata": {
+                            "user_id": str(current_user.id),
+                            "platform": "LinkU",
+                            "user_name": current_user.name
+                        }
+                    })
+                    logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id} using v2 API")
+                except stripe.error.StripeError as v2_err:
+                    logger.warning(f"v2 API failed: {v2_err}, falling back to legacy API")
+                    raise  # 重新抛出，让外层 catch 处理
+            else:
+                raise AttributeError("v2 API not available")
+        except (AttributeError, stripe.error.StripeError) as e:
+            # 如果 Stripe SDK 版本不支持 v2 API 或 v2 API 失败，回退到旧版 API
+            logger.warning(f"Stripe SDK v2 API not available or failed ({e}), falling back to legacy API")
+            try:
+                account = stripe.Account.create(
+                    type="express",
+                    country="GB",
+                    email=current_user.email or f"user_{current_user.id}@link2ur.com",
+                    capabilities={
+                        "card_payments": {"requested": True},
+                        "transfers": {"requested": True},
                     },
-                },
-                "metadata": {
-                    "user_id": str(current_user.id),
-                    "platform": "LinkU",
-                    "user_name": current_user.name
-                }
-            })
-            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}")
-        except AttributeError:
-            # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
-            logger.warning("Stripe SDK does not support v2 API, falling back to legacy API")
-            account = stripe.Account.create(
-                type="express",
-                country="GB",
-                email=current_user.email or f"user_{current_user.id}@link2ur.com",
-                capabilities={
-                    "card_payments": {"requested": True},
-                    "transfers": {"requested": True},
-                },
-                metadata={
-                    "user_id": str(current_user.id),
-                    "platform": "LinkU",
-                    "user_name": current_user.name
-                }
-            )
-            logger.info(f"Created Stripe Connect account {account.id} using legacy API for user {current_user.id}")
+                    metadata={
+                        "user_id": str(current_user.id),
+                        "platform": "LinkU",
+                        "user_name": current_user.name
+                    }
+                )
+                logger.info(f"Created Stripe Connect account {account.id} using legacy API for user {current_user.id}")
+            except stripe.error.StripeError as legacy_err:
+                logger.error(f"Stripe error creating account with legacy API: {legacy_err}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"创建 Stripe 账户失败: {str(legacy_err)}"
+                )
         except Exception as e:
-            logger.error(f"Error creating Stripe Connect account: {e}")
+            logger.error(f"Unexpected error creating Stripe Connect account: {e}", exc_info=True)
             raise HTTPException(
-                status_code=400,
+                status_code=500,
                 detail=f"创建 Stripe 账户失败: {str(e)}"
             )
         
-        # 保存账户 ID 到用户记录
-        current_user.stripe_account_id = account.id
-        db.commit()
-        db.refresh(current_user)  # 刷新对象以确保数据是最新的
+        if not account:
+            raise HTTPException(
+                status_code=500,
+                detail="无法创建 Stripe 账户：未知错误"
+            )
         
-        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+        # 保存账户 ID 到用户记录
+        try:
+            current_user.stripe_account_id = account.id
+            db.commit()
+            db.refresh(current_user)  # 刷新对象以确保数据是最新的
+            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+        except Exception as db_err:
+            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"保存账户信息失败: {str(db_err)}"
+            )
         
         # 创建 AccountSession 用于嵌入式 onboarding
-        onboarding_session = stripe.AccountSession.create(
-            account=account.id,
-            components={
-                "account_onboarding": {
-                    "enabled": True
+        try:
+            onboarding_session = stripe.AccountSession.create(
+                account=account.id,
+                components={
+                    "account_onboarding": {
+                        "enabled": True
+                    }
                 }
+            )
+            logger.info(f"Created AccountSession for account {account.id}")
+        except stripe.error.StripeError as session_err:
+            logger.error(f"Stripe error creating AccountSession: {session_err}")
+            # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
+            return {
+                "account_id": account.id,
+                "client_secret": None,
+                "account_status": getattr(account, 'details_submitted', False),
+                "charges_enabled": getattr(account, 'charges_enabled', False),
+                "message": f"账户创建成功，但无法创建 onboarding session: {str(session_err)}"
             }
-        )
         
         return {
             "account_id": account.id,
             "client_secret": onboarding_session.client_secret,
-            "account_status": account.details_submitted,
-            "charges_enabled": account.charges_enabled,
+            "account_status": getattr(account, 'details_submitted', False),
+            "charges_enabled": getattr(account, 'charges_enabled', False),
             "message": "账户创建成功，请完成账户设置"
         }
         
