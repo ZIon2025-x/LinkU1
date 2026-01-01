@@ -80,6 +80,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   const [applying, setApplying] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showStripeConnectModal, setShowStripeConnectModal] = useState(false);
   // 时间段相关状态
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
