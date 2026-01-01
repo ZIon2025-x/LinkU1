@@ -23,6 +23,7 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import styles from './TaskDetail.module.css';
+import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -84,6 +85,8 @@ const TaskDetail: React.FC = () => {
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [userParticipant, setUserParticipant] = useState<any>(null);
+  // 收款账户注册弹窗
+  const [showStripeConnectModal, setShowStripeConnectModal] = useState(false);
 
   // 加载用户数据、通知和系统设置
   useEffect(() => {
@@ -1268,7 +1271,13 @@ const TaskDetail: React.FC = () => {
         await checkUserApplication();
         await loadParticipants();
       } catch (error: any) {
-                alert(getErrorMessage(error));
+        // 检查是否是收款账户未注册错误（428）
+        if (error.response?.status === 428) {
+          setShowStripeConnectModal(true);
+          setShowApplyModal(false);
+        } else {
+          alert(getErrorMessage(error));
+        }
       } finally {
         setActionLoading(false);
       }
@@ -3935,6 +3944,67 @@ const TaskDetail: React.FC = () => {
       )}
       
       {/* 登录弹窗 */}
+      {/* 收款账户注册弹窗 */}
+      {showStripeConnectModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }} onClick={() => setShowStripeConnectModal(false)}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative'
+          }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowStripeConnectModal(false)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#666'
+              }}
+            >
+              ×
+            </button>
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
+              {language === 'zh' ? '注册收款账户' : 'Register Payment Account'}
+            </h2>
+            <p style={{ marginBottom: '20px', color: '#666' }}>
+              {language === 'zh' 
+                ? '申请任务前需要先注册收款账户，以便接收任务奖励。' 
+                : 'You need to register a payment account before applying for tasks to receive rewards.'}
+            </p>
+            <StripeConnectOnboarding
+              onComplete={() => {
+                setShowStripeConnectModal(false);
+                alert(language === 'zh' ? '收款账户注册成功！现在可以申请任务了。' : 'Payment account registered successfully! You can now apply for tasks.');
+              }}
+              onError={(error) => {
+                console.error('Stripe Connect onboarding error:', error);
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
       <LoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

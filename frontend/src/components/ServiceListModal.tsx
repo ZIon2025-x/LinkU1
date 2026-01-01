@@ -12,6 +12,7 @@ import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from './LazyImage';
+import StripeConnectOnboarding from './stripe/StripeConnectOnboarding';
 
 interface ServiceListModalProps {
   isOpen: boolean;
@@ -301,7 +302,13 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       // 重新加载服务列表以更新申请数量
       await loadServices();
     } catch (err: any) {
-      message.error(err.response?.data?.detail || '提交申请失败');
+      // 检查是否是收款账户未注册错误（428）
+      if (err.response?.status === 428) {
+        setShowStripeConnectModal(true);
+        setShowApplyModal(false);
+      } else {
+        message.error(err.response?.data?.detail || '提交申请失败');
+      }
     } finally {
       setApplying(false);
     }
@@ -309,8 +316,71 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
 
   if (!isOpen) return null;
 
+  const { language } = useLanguage();
+
   return (
     <>
+      {/* 收款账户注册弹窗 */}
+      {showStripeConnectModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }} onClick={() => setShowStripeConnectModal(false)}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative'
+          }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowStripeConnectModal(false)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#666'
+              }}
+            >
+              ×
+            </button>
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
+              {language === 'zh' ? '注册收款账户' : 'Register Payment Account'}
+            </h2>
+            <p style={{ marginBottom: '20px', color: '#666' }}>
+              {language === 'zh' 
+                ? '申请服务前需要先注册收款账户，以便接收任务奖励。' 
+                : 'You need to register a payment account before applying for services to receive rewards.'}
+            </p>
+            <StripeConnectOnboarding
+              onComplete={() => {
+                setShowStripeConnectModal(false);
+                message.success(language === 'zh' ? '收款账户注册成功！现在可以申请服务了。' : 'Payment account registered successfully! You can now apply for services.');
+              }}
+              onError={(error) => {
+                console.error('Stripe Connect onboarding error:', error);
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
       <div style={{
         ...MODAL_OVERLAY_STYLE,
         background: 'rgba(0, 0, 0, 0.6)',

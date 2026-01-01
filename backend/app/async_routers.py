@@ -603,6 +603,35 @@ async def apply_for_task(
 ):
     """申请任务（异步版本，支持议价价格）"""
     try:
+        import os
+        import stripe
+        
+        # 0. 检查用户是否有收款账户（Stripe Connect 账户）
+        if not current_user.stripe_account_id:
+            logger.warning(f"用户 {current_user.id} 尝试申请任务 {task_id}，但没有收款账户")
+            raise HTTPException(
+                status_code=428,  # 428 Precondition Required
+                detail="申请任务前需要先注册收款账户。请先完成收款账户注册。"
+            )
+        
+        # 验证收款账户是否有效
+        try:
+            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            account = stripe.Account.retrieve(current_user.stripe_account_id)
+            # 检查账户是否已完成设置
+            if not account.details_submitted:
+                logger.warning(f"用户 {current_user.id} 的收款账户 {current_user.stripe_account_id} 未完成设置")
+                raise HTTPException(
+                    status_code=428,
+                    detail="您的收款账户尚未完成设置。请先完成收款账户注册。"
+                )
+        except stripe.error.StripeError as e:
+            logger.error(f"验证用户 {current_user.id} 的收款账户失败: {e}")
+            raise HTTPException(
+                status_code=428,
+                detail="收款账户验证失败。请先完成收款账户注册。"
+            )
+        
         message = request_data.get('message', None)
         negotiated_price = request_data.get('negotiated_price', None)
         currency = request_data.get('currency', None)
