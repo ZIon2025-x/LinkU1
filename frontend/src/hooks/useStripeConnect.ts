@@ -73,6 +73,8 @@ export const useStripeConnect = (connectedAccountId: string | null | undefined) 
             colorPrimary: "#635BFF",
           },
         },
+        // 确保使用嵌入式组件，不跳转到外部页面
+        // 这些配置确保所有操作都在应用内完成
       });
 
       setStripeConnectInstance(instance);
