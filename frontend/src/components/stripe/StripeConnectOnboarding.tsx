@@ -4,6 +4,7 @@ import {
   ConnectAccountOnboarding,
   ConnectComponentsProvider,
 } from '@stripe/react-connect-js';
+import { loadConnectAndInitialize } from '@stripe/connect-js';
 import api from '../../api';
 import StripeConnectAccountInfo from './StripeConnectAccountInfo';
 
@@ -34,8 +35,9 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     account_status: boolean;
     charges_enabled: boolean;
   } | null>(null);
+  const [manualStripeConnectInstance, setManualStripeConnectInstance] = useState<any>(null);
   
-  const stripeConnectInstance = useStripeConnect(connectedAccountId);
+  const stripeConnectInstance = useStripeConnect(connectedAccountId) || manualStripeConnectInstance;
 
   // 检查用户是否已有 Stripe Connect 账户
   useEffect(() => {
@@ -264,6 +266,72 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
             正在初始化...
           </p>
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              onClick={async () => {
+                // 手动创建 onboarding session 并使用嵌入式组件
+                try {
+                  setError(null);
+                  const response = await api.post('/api/stripe/connect/account/onboarding-session');
+                  const data = response.data;
+                  
+                  if (data.client_secret) {
+                    // 使用 client_secret 直接创建 Stripe Connect instance
+                    const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
+                      (process.env as any).STRIPE_PUBLISHABLE_KEY;
+                    
+                    if (!publishableKey) {
+                      setError('Stripe Publishable Key 未配置');
+                      return;
+                    }
+                    
+                    const instance = loadConnectAndInitialize({
+                      publishableKey,
+                      fetchClientSecret: async () => {
+                        // 直接返回已获取的 client_secret
+                        return data.client_secret;
+                      },
+                      appearance: {
+                        overlays: "dialog",
+                        variables: {
+                          colorPrimary: "#635BFF",
+                        },
+                      },
+                    });
+                    
+                    setManualStripeConnectInstance(instance);
+                  } else {
+                    setError('无法获取 client_secret');
+                  }
+                } catch (err: any) {
+                  console.error('Error creating onboarding session:', err);
+                  setError(err.response?.data?.detail || err.message || '创建 onboarding session 失败');
+                }
+              }}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#635BFF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(99, 91, 255, 0.3)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#4f46e5';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#635BFF';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              添加信息
+            </button>
+          </div>
         </>
       )}
 
