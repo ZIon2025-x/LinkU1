@@ -309,13 +309,6 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
           <ConnectAccountOnboarding
             onExit={handleOnboardingExit}
-            onComplete={() => {
-              // 当 onboarding 完成时，检查账户状态
-              checkAccountStatus();
-              if (onComplete) {
-                onComplete();
-              }
-            }}
           />
         </ConnectComponentsProvider>
       )}
