@@ -21,6 +21,44 @@ router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
+def verify_account_ownership(account_id: str, current_user: models.User) -> bool:
+    """
+    验证 Stripe 账户是否属于当前用户
+    
+    通过检查账户的 metadata 中的 user_id 来验证账户所有权
+    如果 metadata 中没有 user_id 或 user_id 不匹配，返回 False
+    """
+    try:
+        account = stripe.Account.retrieve(account_id)
+        account_metadata = getattr(account, 'metadata', {})
+        
+        # 如果 metadata 是 dict，直接获取；如果是对象，使用 getattr
+        if isinstance(account_metadata, dict):
+            account_user_id = account_metadata.get('user_id')
+        else:
+            account_user_id = getattr(account_metadata, 'user_id', None)
+        
+        if not account_user_id:
+            logger.warning(f"Account {account_id} has no user_id in metadata")
+            return False
+        
+        # 验证 user_id 是否匹配
+        if str(account_user_id) != str(current_user.id):
+            logger.warning(
+                f"Account ownership mismatch: account {account_id} metadata.user_id={account_user_id}, "
+                f"current_user.id={current_user.id}"
+            )
+            return False
+        
+        return True
+    except stripe.error.StripeError as e:
+        logger.error(f"Error verifying account ownership for account {account_id}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error verifying account ownership: {e}", exc_info=True)
+        return False
+
+
 @router.post("/account/create", response_model=schemas.StripeConnectAccountResponse)
 def create_connect_account(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
@@ -530,6 +568,14 @@ def get_account_status(
     try:
         account = stripe.Account.retrieve(current_user.stripe_account_id)
         
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
         # 检查是否需要重新 onboarding
         needs_onboarding = not account.details_submitted
         
@@ -584,6 +630,14 @@ def get_account_details(
     
     try:
         account = stripe.Account.retrieve(current_user.stripe_account_id)
+        
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
         
         # 创建仪表板登录链接（Express 账户）
         dashboard_url = None
@@ -650,6 +704,14 @@ def get_account_balance(
         )
     
     try:
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
         # 获取账户余额（需要以账户身份调用）
         balance = stripe.Balance.retrieve(
             stripe_account=current_user.stripe_account_id
@@ -710,6 +772,14 @@ def get_account_transactions(
         )
     
     try:
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
         transactions = []
         
         # 获取收入记录（Charges - 作为服务者收到的付款）
@@ -820,6 +890,14 @@ def create_onboarding_link(
     try:
         account = stripe.Account.retrieve(current_user.stripe_account_id)
         
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
         account_link = stripe.AccountLink.create(
             account=account.id,
@@ -855,6 +933,14 @@ def create_account_session(
     """
     try:
         account_id = request.account
+        
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
         
         # 验证账户是否属于当前用户
         # 如果用户还没有 stripe_account_id，先更新它（可能刚创建）
