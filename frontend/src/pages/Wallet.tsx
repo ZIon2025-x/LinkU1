@@ -36,22 +36,38 @@ const Wallet: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);  // 钱包交易记录
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null);  // 积分账户
   const [pointsTransactions, setPointsTransactions] = useState<PointsTransaction[]>([]);  // 积分交易记录
-  const [activeTab, setActiveTab] = useState<'balance' | 'points'>('balance');  // 当前标签页
+  const [activeTab, setActiveTab] = useState<'balance' | 'points' | 'stripe'>('balance');  // 当前标签页
   const [loading, setLoading] = useState(true);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsPage, setPointsPage] = useState(1);
   const [pointsTotal, setPointsTotal] = useState(0);
+  
+  // Stripe 相关状态
+  const [stripeBalance, setStripeBalance] = useState<{
+    available: number;
+    pending: number;
+    total: number;
+    currency: string;
+  } | null>(null);
+  const [stripeTransactions, setStripeTransactions] = useState<any[]>([]);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [hasStripeAccount, setHasStripeAccount] = useState(false);
+  const [stripeDashboardUrl, setStripeDashboardUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // 加载钱包数据
     loadWalletData();
     // 加载积分数据
     loadPointsData();
+    // 检查是否有 Stripe 账户
+    checkStripeAccount();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'points' && pointsAccount) {
       loadPointsTransactions();
+    } else if (activeTab === 'stripe' && hasStripeAccount) {
+      loadStripeData();
     }
   }, [activeTab, pointsPage]);
 
@@ -95,6 +111,77 @@ const Wallet: React.FC = () => {
     } catch (error) {
           } finally {
       setPointsLoading(false);
+    }
+  };
+
+  // 检查是否有 Stripe 账户
+  const checkStripeAccount = async () => {
+    try {
+      const response = await api.get('/api/stripe/connect/account/status');
+      if (response.data && response.data.account_id) {
+        setHasStripeAccount(true);
+        // 获取仪表板链接
+        try {
+          const detailsResponse = await api.get('/api/stripe/connect/account/details');
+          if (detailsResponse.data && detailsResponse.data.dashboard_url) {
+            setStripeDashboardUrl(detailsResponse.data.dashboard_url);
+          }
+        } catch (error) {
+          // 获取仪表板链接失败，不影响其他功能
+        }
+      }
+    } catch (error) {
+      // 没有账户是正常的
+      setHasStripeAccount(false);
+    }
+  };
+
+  // 加载 Stripe 数据
+  const loadStripeData = async () => {
+    if (!hasStripeAccount) {
+      return;
+    }
+    
+    try {
+      setStripeLoading(true);
+      
+      // 加载余额
+      try {
+        const balanceResponse = await api.get('/api/stripe/connect/account/balance');
+        setStripeBalance(balanceResponse.data);
+      } catch (error: any) {
+        if (error.response?.status !== 404) {
+          console.error('Error loading Stripe balance:', error);
+        }
+      }
+      
+      // 加载交易记录
+      try {
+        const transactionsResponse = await api.get('/api/stripe/connect/account/transactions', {
+          params: { limit: 50 }
+        });
+        setStripeTransactions(transactionsResponse.data.transactions || []);
+      } catch (error: any) {
+        if (error.response?.status !== 404) {
+          console.error('Error loading Stripe transactions:', error);
+        }
+      }
+      
+      // 获取仪表板链接（如果还没有）
+      if (!stripeDashboardUrl) {
+        try {
+          const detailsResponse = await api.get('/api/stripe/connect/account/details');
+          if (detailsResponse.data && detailsResponse.data.dashboard_url) {
+            setStripeDashboardUrl(detailsResponse.data.dashboard_url);
+          }
+        } catch (error: any) {
+          // 获取仪表板链接失败，不影响其他功能
+        }
+      }
+    } catch (error) {
+      console.error('Error loading Stripe data:', error);
+    } finally {
+      setStripeLoading(false);
     }
   };
 
@@ -187,7 +274,8 @@ const Wallet: React.FC = () => {
             display: 'flex',
             gap: '10px',
             justifyContent: 'center',
-            marginBottom: '20px'
+            marginBottom: '20px',
+            flexWrap: 'wrap'
           }}>
             <button
               onClick={() => setActiveTab('balance')}
@@ -221,6 +309,24 @@ const Wallet: React.FC = () => {
             >
               ⭐ {t('wallet.points')}
             </button>
+            {hasStripeAccount && (
+              <button
+                onClick={() => setActiveTab('stripe')}
+                style={{
+                  background: activeTab === 'stripe' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '8px 20px',
+                  borderRadius: '20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: activeTab === 'stripe' ? 'bold' : 'normal',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                💳 Stripe 账户
+              </button>
+            )}
           </div>
 
           {/* 余额显示 */}
@@ -230,6 +336,30 @@ const Wallet: React.FC = () => {
                 £{balance.toFixed(2)}
               </div>
               <div style={{ fontSize: '16px', opacity: 0.9 }}>{t('wallet.currentBalance')}</div>
+            </>
+          )}
+
+          {/* Stripe 余额显示 */}
+          {activeTab === 'stripe' && (
+            <>
+              {stripeLoading ? (
+                <div style={{ fontSize: '16px', opacity: 0.9 }}>加载中...</div>
+              ) : stripeBalance ? (
+                <>
+                  <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
+                    {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.total.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '16px', opacity: 0.9, marginBottom: '8px' }}>
+                    Stripe 账户余额
+                  </div>
+                  <div style={{ fontSize: '14px', opacity: 0.8 }}>
+                    可用: {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.available.toFixed(2)} | 
+                    待处理: {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.pending.toFixed(2)}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: '16px', opacity: 0.9 }}>暂无余额信息</div>
+              )}
             </>
           )}
 
@@ -316,6 +446,46 @@ const Wallet: React.FC = () => {
           </div>
         )}
 
+        {/* Stripe 操作按钮 */}
+        {activeTab === 'stripe' && stripeDashboardUrl && (
+          <div style={{ 
+            padding: '30px',
+            display: 'flex',
+            gap: '20px',
+            justifyContent: 'center'
+          }}>
+            <a
+              href={stripeDashboardUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: 'linear-gradient(135deg, #635BFF, #4f46e5)',
+                color: '#fff',
+                border: 'none',
+                padding: '15px 30px',
+                borderRadius: '25px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                boxShadow: '0 4px 15px rgba(99, 91, 255, 0.3)',
+                transition: 'all 0.3s ease',
+                display: 'inline-block'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 91, 255, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(99, 91, 255, 0.3)';
+              }}
+            >
+              🔗 打开 Stripe 仪表板
+            </a>
+          </div>
+        )}
+
         {/* 积分统计信息 - 仅积分标签页显示 */}
         {activeTab === 'points' && pointsAccount && (
           <div style={{ 
@@ -349,7 +519,11 @@ const Wallet: React.FC = () => {
             fontSize: '20px',
             fontWeight: 'bold'
           }}>
-            📊 {activeTab === 'balance' ? '交易记录' : '积分交易记录'}
+            📊 {
+              activeTab === 'balance' ? '交易记录' : 
+              activeTab === 'points' ? '积分交易记录' : 
+              'Stripe 交易记录'
+            }
           </h2>
           
           {/* 余额交易记录 */}
@@ -431,6 +605,130 @@ const Wallet: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Stripe 交易记录 */}
+          {activeTab === 'stripe' && (
+            <>
+              {stripeLoading ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px',
+                  color: '#666',
+                  fontSize: '16px'
+                }}>
+                  加载中...
+                </div>
+              ) : stripeTransactions.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px',
+                  color: '#666',
+                  fontSize: '16px'
+                }}>
+                  暂无 Stripe 交易记录
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {stripeTransactions.map((transaction) => {
+                    const isIncome = transaction.type === 'income';
+                    const color = isIncome ? '#4CAF50' : '#FF9800';
+                    const icon = isIncome ? '💰' : '💸';
+                    const statusColor = transaction.status === 'succeeded' ? '#4CAF50' : 
+                                       transaction.status === 'pending' ? '#FF9800' : '#9E9E9E';
+                    
+                    return (
+                      <div
+                        key={transaction.id}
+                        style={{
+                          background: '#f8f9fa',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: '1px solid #e9ecef',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '18px'
+                          }}>
+                            {icon}
+                          </div>
+                          <div>
+                            <div style={{ 
+                              fontWeight: 'bold', 
+                              color: '#333',
+                              marginBottom: '4px'
+                            }}>
+                              {transaction.description}
+                            </div>
+                            <div style={{ 
+                              fontSize: '14px', 
+                              color: '#666',
+                              display: 'flex',
+                              gap: '8px',
+                              alignItems: 'center'
+                            }}>
+                              <span>
+                                {new Date(transaction.created_at).toLocaleString('zh-CN', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                backgroundColor: statusColor + '20',
+                                color: statusColor,
+                                fontWeight: '600'
+                              }}>
+                                {transaction.status === 'succeeded' ? '成功' : 
+                                 transaction.status === 'pending' ? '待处理' : 
+                                 transaction.status === 'reversed' ? '已撤销' : transaction.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          textAlign: 'right'
+                        }}>
+                          <div style={{
+                            fontWeight: 'bold',
+                            fontSize: '16px',
+                            color: color
+                          }}>
+                            {isIncome ? '+' : '-'}{transaction.currency === 'GBP' ? '£' : transaction.currency}{transaction.amount.toFixed(2)}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#666',
+                            textTransform: 'capitalize'
+                          }}>
+                            {transaction.source === 'charge' ? '收款' : 
+                             transaction.source === 'transfer' ? '转账' : 
+                             transaction.source === 'payout' ? '提现' : transaction.source}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -618,6 +916,30 @@ const Wallet: React.FC = () => {
                 <li>发布任务需要支付少量费用</li>
                 <li>余额可用于发布任务或提现</li>
                 <li>所有交易记录都会在此显示</li>
+              </ul>
+            </>
+          ) : activeTab === 'stripe' ? (
+            <>
+              <h3 style={{ 
+                color: '#333', 
+                marginBottom: '10px', 
+                fontSize: '16px',
+                fontWeight: 'bold'
+              }}>
+                💡 Stripe 账户说明
+              </h3>
+              <ul style={{ 
+                color: '#666', 
+                fontSize: '14px', 
+                lineHeight: '1.6',
+                margin: 0,
+                paddingLeft: '20px'
+              }}>
+                <li>Stripe 账户用于接收任务奖励和提现</li>
+                <li>可用余额可以立即提现到银行账户</li>
+                <li>待处理余额需要等待 Stripe 处理完成后才能提现</li>
+                <li>所有收入和支出记录都会在此显示</li>
+                <li>点击"打开 Stripe 仪表板"可查看更详细的交易信息</li>
               </ul>
             </>
           ) : (

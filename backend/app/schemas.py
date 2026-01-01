@@ -1546,6 +1546,37 @@ class StripeConnectAccountEmbeddedResponse(BaseModel):
     message: str
 
 
+class StripeConnectAccountBalanceResponse(BaseModel):
+    """Stripe Connect 账户余额"""
+    available: float  # 可用余额
+    pending: float  # 待处理余额
+    total: float  # 总余额
+    currency: str  # 货币代码
+    available_breakdown: List[Dict[str, Any]]  # 可用余额明细
+    pending_breakdown: List[Dict[str, Any]]  # 待处理余额明细
+
+
+class StripeConnectTransaction(BaseModel):
+    """Stripe Connect 交易记录"""
+    id: str
+    type: str  # income 或 expense
+    amount: float
+    currency: str
+    description: str
+    status: str
+    created: int  # Unix 时间戳
+    created_at: str  # ISO 格式时间
+    source: str  # charge, transfer, payout
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class StripeConnectTransactionsResponse(BaseModel):
+    """Stripe Connect 交易记录列表"""
+    transactions: List[StripeConnectTransaction]
+    total: int
+    has_more: bool
+
+
 # ==================== 任务达人功能 Schema ====================
 
 class TaskExpertApplicationCreate(BaseModel):

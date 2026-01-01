@@ -3,8 +3,9 @@ Stripe Connect 账户管理 API 路由
 """
 import logging
 import os
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 import stripe
 
@@ -590,6 +591,174 @@ def get_account_details(
         raise HTTPException(
             status_code=400,
             detail=f"获取账户详细信息失败: {str(e)}"
+        )
+
+
+@router.get("/account/balance", response_model=schemas.StripeConnectAccountBalanceResponse)
+def get_account_balance(
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    获取 Stripe Connect 账户余额
+    
+    返回账户的可用余额、待处理余额等
+    """
+    if not current_user.stripe_account_id:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到 Stripe Connect 账户，请先创建账户"
+        )
+    
+    try:
+        # 获取账户余额（需要以账户身份调用）
+        balance = stripe.Balance.retrieve(
+            stripe_account=current_user.stripe_account_id
+        )
+        
+        # 计算总余额（可用 + 待处理）
+        available_amount = sum([b.amount for b in balance.available]) if balance.available else 0
+        pending_amount = sum([b.amount for b in balance.pending]) if balance.pending else 0
+        total_amount = available_amount + pending_amount
+        
+        return {
+            "available": available_amount / 100,  # 转换为货币单位
+            "pending": pending_amount / 100,
+            "total": total_amount / 100,
+            "currency": balance.available[0].currency.upper() if balance.available else "GBP",
+            "available_breakdown": [
+                {
+                    "amount": b.amount / 100,
+                    "currency": b.currency.upper(),
+                    "source_types": b.source_types
+                }
+                for b in balance.available
+            ] if balance.available else [],
+            "pending_breakdown": [
+                {
+                    "amount": b.amount / 100,
+                    "currency": b.currency.upper(),
+                    "source_types": b.source_types
+                }
+                for b in balance.pending
+            ] if balance.pending else []
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error retrieving account balance: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"获取账户余额失败: {str(e)}"
+        )
+
+
+@router.get("/account/transactions", response_model=schemas.StripeConnectTransactionsResponse)
+def get_account_transactions(
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    starting_after: Optional[str] = None
+):
+    """
+    获取 Stripe Connect 账户交易记录
+    
+    返回账户的收入（charges）和支出（transfers/payouts）记录
+    """
+    if not current_user.stripe_account_id:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到 Stripe Connect 账户，请先创建账户"
+        )
+    
+    try:
+        transactions = []
+        
+        # 获取收入记录（Charges - 作为服务者收到的付款）
+        try:
+            charges = stripe.Charge.list(
+                limit=limit,
+                starting_after=starting_after,
+                stripe_account=current_user.stripe_account_id
+            )
+            for charge in charges.data:
+                transactions.append({
+                    "id": charge.id,
+                    "type": "income",
+                    "amount": charge.amount / 100,
+                    "currency": charge.currency.upper(),
+                    "description": charge.description or f"收款 #{charge.id[:12]}",
+                    "status": charge.status,
+                    "created": charge.created,
+                    "created_at": datetime.fromtimestamp(charge.created, tz=timezone.utc).isoformat(),
+                    "source": "charge",
+                    "metadata": charge.metadata
+                })
+        except stripe.error.StripeError as e:
+            logger.warning(f"Error retrieving charges: {e}")
+        
+        # 获取转账记录（Transfers - 从平台账户转出的资金）
+        try:
+            transfers = stripe.Transfer.list(
+                limit=limit,
+                starting_after=starting_after,
+                destination=current_user.stripe_account_id
+            )
+            for transfer in transfers.data:
+                transactions.append({
+                    "id": transfer.id,
+                    "type": "income",
+                    "amount": transfer.amount / 100,
+                    "currency": transfer.currency.upper(),
+                    "description": transfer.description or f"转账 #{transfer.id[:12]}",
+                    "status": "succeeded" if transfer.reversed is False else "reversed",
+                    "created": transfer.created,
+                    "created_at": datetime.fromtimestamp(transfer.created, tz=timezone.utc).isoformat(),
+                    "source": "transfer",
+                    "metadata": transfer.metadata
+                })
+        except stripe.error.StripeError as e:
+            logger.warning(f"Error retrieving transfers: {e}")
+        
+        # 获取提现记录（Payouts - 从账户提现到银行账户）
+        try:
+            payouts = stripe.Payout.list(
+                limit=limit,
+                starting_after=starting_after,
+                stripe_account=current_user.stripe_account_id
+            )
+            for payout in payouts.data:
+                transactions.append({
+                    "id": payout.id,
+                    "type": "expense",
+                    "amount": payout.amount / 100,
+                    "currency": payout.currency.upper(),
+                    "description": f"提现到银行账户 #{payout.id[:12]}",
+                    "status": payout.status,
+                    "created": payout.created,
+                    "created_at": datetime.fromtimestamp(payout.created, tz=timezone.utc).isoformat(),
+                    "source": "payout",
+                    "metadata": payout.metadata
+                })
+        except stripe.error.StripeError as e:
+            logger.warning(f"Error retrieving payouts: {e}")
+        
+        # 按时间排序（最新的在前）
+        transactions.sort(key=lambda x: x["created"], reverse=True)
+        
+        # 限制返回数量
+        transactions = transactions[:limit]
+        
+        return {
+            "transactions": transactions,
+            "total": len(transactions),
+            "has_more": len(transactions) >= limit
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error retrieving transactions: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"获取交易记录失败: {str(e)}"
         )
 
 
