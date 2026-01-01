@@ -21,6 +21,50 @@ router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
+def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
+    """
+    检查用户是否已有 Stripe Connect 账户
+    
+    通过以下方式检查：
+    1. 检查数据库中的 stripe_account_id
+    2. 通过 Stripe API 查询是否有该 user_id 的账户（通过 metadata）
+    
+    返回账户 ID（如果存在），否则返回 None
+    """
+    # 首先检查数据库
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user and user.stripe_account_id:
+        # 验证账户是否真的存在且属于该用户
+        try:
+            account = stripe.Account.retrieve(user.stripe_account_id)
+            account_metadata = getattr(account, 'metadata', {})
+            
+            # 检查 metadata 中的 user_id 是否匹配
+            if isinstance(account_metadata, dict):
+                account_user_id = account_metadata.get('user_id')
+            else:
+                account_user_id = getattr(account_metadata, 'user_id', None)
+            
+            if account_user_id and str(account_user_id) == str(user_id):
+                logger.info(f"User {user_id} already has Stripe account {user.stripe_account_id} (verified via metadata)")
+                return user.stripe_account_id
+            else:
+                logger.warning(f"User {user_id} has stripe_account_id {user.stripe_account_id} but metadata.user_id doesn't match")
+        except stripe.error.StripeError as e:
+            logger.warning(f"Stripe account {user.stripe_account_id} for user {user_id} not found in Stripe: {e}")
+            # 账户不存在，清除数据库记录
+            user.stripe_account_id = None
+            db.commit()
+            db.refresh(user)
+    
+    # 通过 Stripe API 查询是否有该 user_id 的账户（通过 metadata）
+    # 注意：Stripe API 不支持直接通过 metadata 查询，所以我们需要依赖数据库记录
+    # 但我们可以通过列出所有账户来检查（这在生产环境中不推荐，因为账户数量可能很大）
+    # 更好的做法是确保数据库记录是准确的，并在创建前检查数据库
+    
+    return None
+
+
 def verify_account_ownership(account_id: str, current_user: models.User) -> bool:
     """
     验证 Stripe 账户是否属于当前用户
@@ -72,12 +116,13 @@ def create_connect_account(
     """
     try:
         # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
-        if current_user.stripe_account_id:
+        existing_account_id = check_user_has_stripe_account(current_user.id, db)
+        if existing_account_id:
             # 检查账户状态 (使用 Accounts v2 API)
             try:
                 try:
                     account = stripe.v2.core.accounts.retrieve(
-                        current_user.stripe_account_id,
+                        existing_account_id,
                         include=['requirements', 'configuration.recipient']
                     )
                     # v2 API 返回的账户状态检查方式不同
@@ -85,20 +130,22 @@ def create_connect_account(
                     details_submitted = not summary_status or summary_status == 'eventually_due'
                 except AttributeError:
                     # 如果 Stripe SDK 版本不支持 v2 API，回退到旧版 API
-                    account = stripe.Account.retrieve(current_user.stripe_account_id)
+                    account = stripe.Account.retrieve(existing_account_id)
                     details_submitted = account.details_submitted
                 
-                return {
-                    "account_id": account.id,
-                    "onboarding_url": None,
-                    "account_status": details_submitted,
-                    "message": "账户已存在"
-                }
+                logger.info(f"User {current_user.id} already has Stripe account {existing_account_id}, returning existing account")
+                raise HTTPException(
+                    status_code=400,
+                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                )
+            except HTTPException:
+                raise
             except stripe.error.StripeError as e:
                 logger.error(f"Error retrieving Stripe account: {e}")
-                # 如果账户不存在，清除记录
+                # 如果账户不存在，清除记录并继续创建
                 current_user.stripe_account_id = None
                 db.commit()
+                db.refresh(current_user)
         
         # 创建 Express Account (完全按照官方示例代码)
         # 参考: stripe-sample-code/server.js line 89-114
@@ -298,10 +345,11 @@ def create_connect_account_embedded(
             )
         
         # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
-        if current_user.stripe_account_id:
+        existing_account_id = check_user_has_stripe_account(current_user.id, db)
+        if existing_account_id:
             # 检查账户状态
             try:
-                account = stripe.Account.retrieve(current_user.stripe_account_id)
+                account = stripe.Account.retrieve(existing_account_id)
                 
                 # 如果账户已完成 onboarding，返回成功
                 if account.details_submitted:
@@ -420,11 +468,12 @@ def create_connect_account_embedded(
         
         # 再次检查用户是否已有账户（防止并发创建）
         db.refresh(current_user)
-        if current_user.stripe_account_id:
-            logger.warning(f"User {current_user.id} already has a Stripe account {current_user.stripe_account_id}, skipping creation of {account.id}")
+        existing_account_id = check_user_has_stripe_account(current_user.id, db)
+        if existing_account_id and existing_account_id != account.id:
+            logger.warning(f"User {current_user.id} already has a Stripe account {existing_account_id}, skipping creation of {account.id}")
             # 如果用户已经有账户，返回现有账户信息
             try:
-                existing_account = stripe.Account.retrieve(current_user.stripe_account_id)
+                existing_account = stripe.Account.retrieve(existing_account_id)
                 if existing_account.details_submitted:
                     return {
                         "account_id": existing_account.id,
@@ -1114,8 +1163,30 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     if user.stripe_account_id == account_id:
                         logger.info(f"Account created event for user {user.id}, account_id already set: {user.stripe_account_id}")
                     else:
-                        logger.warning(f"Account created event for user {user.id}, but user already has different account: {user.stripe_account_id} (new: {account_id})")
+                        logger.warning(
+                            f"Account created event for user {user.id}, but user already has different account: "
+                            f"{user.stripe_account_id} (new: {account_id}). "
+                            f"Rejecting new account creation - each user can only have one Stripe Connect account."
+                        )
                         # 不更新，保持现有账户（每个用户只能有一个账户）
+                        # 验证现有账户的 metadata 确保它属于该用户
+                        try:
+                            existing_account = stripe.Account.retrieve(user.stripe_account_id)
+                            existing_metadata = getattr(existing_account, 'metadata', {})
+                            if isinstance(existing_metadata, dict):
+                                existing_user_id = existing_metadata.get('user_id')
+                            else:
+                                existing_user_id = getattr(existing_metadata, 'user_id', None)
+                            
+                            if existing_user_id and str(existing_user_id) == str(user.id):
+                                logger.info(f"Existing account {user.stripe_account_id} verified to belong to user {user.id}")
+                            else:
+                                logger.error(
+                                    f"Existing account {user.stripe_account_id} metadata.user_id={existing_user_id} "
+                                    f"doesn't match user.id={user.id}. This is a data inconsistency issue."
+                                )
+                        except stripe.error.StripeError as e:
+                            logger.error(f"Error verifying existing account {user.stripe_account_id}: {e}")
             else:
                 logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
         else:
