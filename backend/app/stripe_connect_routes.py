@@ -133,9 +133,11 @@ def create_connect_account(
             except stripe.error.StripeError as e:
                 logger.error(f"Error retrieving Stripe account: {e}")
                 # 如果账户不存在，清除记录并继续创建
-                current_user.stripe_account_id = None
-                db.commit()
-                db.refresh(current_user)
+                db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if db_user_clear:
+                    db_user_clear.stripe_account_id = None
+                    db.commit()
+                    db.refresh(db_user_clear)
         
         # 创建 Express Account (使用 V1 API，与 webhook 保持一致)
         # 参考: stripe-sample-code/server.js line 89-114
@@ -164,12 +166,13 @@ def create_connect_account(
             )
         
         # 再次检查用户是否已有账户（防止并发创建）
-        db.refresh(current_user)
-        if current_user.stripe_account_id:
-            logger.warning(f"User {current_user.id} already has a Stripe account {current_user.stripe_account_id}, skipping creation of {account.id}")
+        # 重新查询用户以确保对象在当前会话中
+        db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if db_user_check and db_user_check.stripe_account_id:
+            logger.warning(f"User {current_user.id} already has a Stripe account {db_user_check.stripe_account_id}, skipping creation of {account.id}")
             # 如果用户已经有账户，返回现有账户信息
             try:
-                existing_account = stripe.Account.retrieve(current_user.stripe_account_id)
+                existing_account = stripe.Account.retrieve(db_user_check.stripe_account_id)
                 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
                 account_link = stripe.AccountLink.create(
                     account=existing_account.id,
@@ -186,19 +189,26 @@ def create_connect_account(
             except stripe.error.StripeError as e:
                 logger.error(f"Error retrieving existing account: {e}")
                 # 如果现有账户无效，清除记录并继续
-                current_user.stripe_account_id = None
-                db.commit()
+                db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if db_user_clear:
+                    db_user_clear.stripe_account_id = None
+                    db.commit()
+                    db.refresh(db_user_clear)
         
         # 保存账户 ID 到用户记录
         try:
-            current_user.stripe_account_id = account.id
-            db.add(current_user)  # 确保对象被添加到会话
+            # 重新查询用户以确保对象在当前会话中
+            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if not db_user:
+                raise HTTPException(status_code=404, detail="用户不存在")
+            
+            db_user.stripe_account_id = account.id
+            db.add(db_user)  # 确保对象被添加到会话
             db.commit()
-            db.refresh(current_user)  # 刷新对象以确保数据是最新的
+            db.refresh(db_user)  # 刷新对象以确保数据是最新的
             
             # 验证保存是否成功
-            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-            if db_user and db_user.stripe_account_id == account.id:
+            if db_user.stripe_account_id == account.id:
                 logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
             else:
                 logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
@@ -352,8 +362,12 @@ def create_connect_account_embedded(
             )
         
         # 再次检查用户是否已有账户（防止并发创建）
-        db.refresh(current_user)
-        existing_account_id = check_user_has_stripe_account(current_user.id, db)
+        # 重新查询用户以确保对象在当前会话中
+        db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if db_user_check:
+            existing_account_id = check_user_has_stripe_account(db_user_check.id, db)
+        else:
+            existing_account_id = None
         if existing_account_id and existing_account_id != account.id:
             logger.warning(f"User {current_user.id} already has a Stripe account {existing_account_id}, skipping creation of {account.id}")
             # 如果用户已经有账户，返回现有账户信息
@@ -391,14 +405,18 @@ def create_connect_account_embedded(
         
         # 保存账户 ID 到用户记录
         try:
-            current_user.stripe_account_id = account.id
-            db.add(current_user)  # 确保对象被添加到会话
+            # 重新查询用户以确保对象在当前会话中
+            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if not db_user:
+                raise HTTPException(status_code=404, detail="用户不存在")
+            
+            db_user.stripe_account_id = account.id
+            db.add(db_user)  # 确保对象被添加到会话
             db.commit()
-            db.refresh(current_user)  # 刷新对象以确保数据是最新的
+            db.refresh(db_user)  # 刷新对象以确保数据是最新的
             
             # 验证保存是否成功
-            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-            if db_user and db_user.stripe_account_id == account.id:
+            if db_user.stripe_account_id == account.id:
                 logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
             else:
                 logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
@@ -878,12 +896,13 @@ def create_account_session(
         
         # 验证账户是否属于当前用户
         # 如果用户还没有 stripe_account_id，先更新它（可能刚创建）
-        if not current_user.stripe_account_id:
-            current_user.stripe_account_id = account_id
+        db_user_session = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if db_user_session and not db_user_session.stripe_account_id:
+            db_user_session.stripe_account_id = account_id
             db.commit()
-            db.refresh(current_user)  # 刷新对象以确保数据是最新的
+            db.refresh(db_user_session)  # 刷新对象以确保数据是最新的
             logger.info(f"Updated user {current_user.id} with stripe_account_id: {account_id}")
-        elif account_id != current_user.stripe_account_id:
+        elif db_user_session and account_id != db_user_session.stripe_account_id:
             raise HTTPException(
                 status_code=403,
                 detail="无权访问此账户"
