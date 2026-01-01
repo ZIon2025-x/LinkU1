@@ -64,7 +64,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   expertId,
   expertName,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -315,8 +315,6 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   };
 
   if (!isOpen) return null;
-
-  const { language } = useLanguage();
 
   return (
     <>
