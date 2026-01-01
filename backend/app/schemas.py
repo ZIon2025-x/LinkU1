@@ -1507,6 +1507,21 @@ class StripeConnectAccountStatusResponse(BaseModel):
     requirements: Optional[Dict[str, Any]] = None
 
 
+class StripeConnectAccountDetailsResponse(BaseModel):
+    """Stripe Connect 账户详细信息"""
+    account_id: str
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    country: str
+    type: str
+    details_submitted: bool
+    charges_enabled: bool
+    payouts_enabled: bool
+    dashboard_url: Optional[str] = None  # Stripe 仪表板登录链接
+    requirements: Optional[Dict[str, Any]] = None
+    capabilities: Optional[Dict[str, str]] = None
+
+
 class StripeConnectAccountLinkResponse(BaseModel):
     onboarding_url: str
     expires_at: int

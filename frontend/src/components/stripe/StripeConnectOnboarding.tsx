@@ -5,6 +5,7 @@ import {
   ConnectComponentsProvider,
 } from '@stripe/react-connect-js';
 import api from '../../api';
+import StripeConnectAccountInfo from './StripeConnectAccountInfo';
 
 // 从环境变量获取 Stripe Publishable Key
 const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
@@ -209,24 +210,32 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     }
   };
 
-  // 如果账户已完成设置
-  if (accountStatus?.charges_enabled) {
+  // 如果账户已完成设置（有账户ID且已提交详细信息），显示账户详细信息
+  if (accountStatus?.account_id && accountStatus?.account_status) {
     return (
-      <div style={{ 
-        maxWidth: '800px', 
-        margin: '0 auto', 
-        padding: '20px',
-        background: '#fff',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        textAlign: 'center'
-      }}>
-        <div style={{ color: 'green', marginBottom: '10px', fontSize: '18px' }}>
-          ✓ 收款账户已设置完成
+      <div>
+        <div style={{ 
+          maxWidth: '800px', 
+          margin: '0 auto 20px', 
+          padding: '20px',
+          background: '#fff',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ color: 'green', marginBottom: '10px', fontSize: '18px' }}>
+            ✓ 收款账户已设置完成
+          </div>
+          <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+            您可以开始接收任务奖励了
+          </div>
+          {accountStatus.charges_enabled && (
+            <div style={{ fontSize: '12px', color: '#28a745' }}>
+              ✓ 收款功能已启用
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: '14px', color: '#666' }}>
-          您可以开始接收任务奖励了
-        </div>
+        <StripeConnectAccountInfo accountId={accountStatus.account_id} />
       </div>
     );
   }

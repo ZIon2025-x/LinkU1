@@ -29,9 +29,10 @@ def create_connect_account(
     创建 Stripe Connect Express Account
     
     为当前用户创建 Stripe Connect Express 账户，用于接收任务奖励支付
+    注意：每个用户只能有一个 Stripe Connect 账户
     """
     try:
-        # 检查用户是否已有 Stripe Connect 账户
+        # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
         if current_user.stripe_account_id:
             # 检查账户状态 (使用 Accounts v2 API)
             try:
@@ -120,12 +121,61 @@ def create_connect_account(
                 detail=f"创建 Stripe 账户失败: {str(e)}"
             )
         
-        # 保存账户 ID 到用户记录
-        current_user.stripe_account_id = account.id
-        db.commit()
-        db.refresh(current_user)  # 刷新对象以确保数据是最新的
+        # 再次检查用户是否已有账户（防止并发创建）
+        db.refresh(current_user)
+        if current_user.stripe_account_id:
+            logger.warning(f"User {current_user.id} already has a Stripe account {current_user.stripe_account_id}, skipping creation of {account.id}")
+            # 如果用户已经有账户，返回现有账户信息
+            try:
+                existing_account = stripe.Account.retrieve(current_user.stripe_account_id)
+                frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+                try:
+                    account_link = stripe.v2.core.accountLinks.create({
+                        "account": existing_account.id,
+                        "use_case": {
+                            "type": "account_onboarding",
+                            "account_onboarding": {
+                                "configurations": ["recipient"],
+                                "refresh_url": f"{frontend_url}/stripe/connect/refresh",
+                                "return_url": f"{frontend_url}/stripe/connect/success?accountId={existing_account.id}",
+                            },
+                        },
+                    })
+                except AttributeError:
+                    account_link = stripe.AccountLink.create(
+                        account=existing_account.id,
+                        refresh_url=f"{frontend_url}/stripe/connect/refresh",
+                        return_url=f"{frontend_url}/stripe/connect/success",
+                        type="account_onboarding",
+                    )
+                return {
+                    "account_id": existing_account.id,
+                    "onboarding_url": account_link.url,
+                    "account_status": existing_account.details_submitted,
+                    "message": "您已经有一个 Stripe 账户，请使用现有账户完成设置"
+                }
+            except stripe.error.StripeError as e:
+                logger.error(f"Error retrieving existing account: {e}")
+                # 如果现有账户无效，清除记录并继续
+                current_user.stripe_account_id = None
+                db.commit()
         
-        logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+        # 保存账户 ID 到用户记录
+        try:
+            current_user.stripe_account_id = account.id
+            db.commit()
+            db.refresh(current_user)  # 刷新对象以确保数据是最新的
+            logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
+        except Exception as db_err:
+            # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
+            db.rollback()
+            if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
+                logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+                raise HTTPException(
+                    status_code=400,
+                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                )
+            raise
         
         # 创建账户链接用于 onboarding (完全按照官方示例代码)
         # 参考: stripe-sample-code/server.js line 126-136
@@ -183,6 +233,7 @@ def create_connect_account_embedded(
     
     返回账户 ID 和 client_secret，前端可以使用 Stripe Connect Embedded Components
     在自己的页面中完成 onboarding，无需跳转到 Stripe 页面
+    注意：每个用户只能有一个 Stripe Connect 账户
     """
     try:
         # 检查 Stripe API Key 是否配置
@@ -193,7 +244,7 @@ def create_connect_account_embedded(
                 detail="Stripe 配置错误：未设置 API Key"
             )
         
-        # 检查用户是否已有 Stripe Connect 账户
+        # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
         if current_user.stripe_account_id:
             # 检查账户状态
             try:
@@ -314,6 +365,43 @@ def create_connect_account_embedded(
                 detail="无法创建 Stripe 账户：未知错误"
             )
         
+        # 再次检查用户是否已有账户（防止并发创建）
+        db.refresh(current_user)
+        if current_user.stripe_account_id:
+            logger.warning(f"User {current_user.id} already has a Stripe account {current_user.stripe_account_id}, skipping creation of {account.id}")
+            # 如果用户已经有账户，返回现有账户信息
+            try:
+                existing_account = stripe.Account.retrieve(current_user.stripe_account_id)
+                if existing_account.details_submitted:
+                    return {
+                        "account_id": existing_account.id,
+                        "client_secret": None,
+                        "account_status": existing_account.details_submitted,
+                        "charges_enabled": existing_account.charges_enabled,
+                        "message": "您已经有一个 Stripe 账户且已完成设置"
+                    }
+                # 如果账户未完成 onboarding，创建 onboarding session
+                onboarding_session = stripe.AccountSession.create(
+                    account=existing_account.id,
+                    components={
+                        "account_onboarding": {
+                            "enabled": True
+                        }
+                    }
+                )
+                return {
+                    "account_id": existing_account.id,
+                    "client_secret": onboarding_session.client_secret,
+                    "account_status": existing_account.details_submitted,
+                    "charges_enabled": existing_account.charges_enabled,
+                    "message": "您已经有一个 Stripe 账户，请完成设置"
+                }
+            except stripe.error.StripeError as e:
+                logger.error(f"Error retrieving existing account: {e}")
+                # 如果现有账户无效，清除记录并继续
+                current_user.stripe_account_id = None
+                db.commit()
+        
         # 保存账户 ID 到用户记录
         try:
             current_user.stripe_account_id = account.id
@@ -321,8 +409,15 @@ def create_connect_account_embedded(
             db.refresh(current_user)  # 刷新对象以确保数据是最新的
             logger.info(f"Created Stripe Connect account {account.id} for user {current_user.id}, saved to database")
         except Exception as db_err:
-            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
+            # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
             db.rollback()
+            if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
+                logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+                raise HTTPException(
+                    status_code=400,
+                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                )
+            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail=f"保存账户信息失败: {str(db_err)}"
@@ -428,6 +523,73 @@ def get_account_status(
         raise HTTPException(
             status_code=400,
             detail=f"获取账户状态失败: {str(e)}"
+        )
+
+
+@router.get("/account/details", response_model=schemas.StripeConnectAccountDetailsResponse)
+def get_account_details(
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    获取 Stripe Connect 账户详细信息
+    
+    返回账户的详细信息，包括账户ID、状态、能力、仪表板登录链接等
+    """
+    if not current_user.stripe_account_id:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到 Stripe Connect 账户，请先创建账户"
+        )
+    
+    try:
+        account = stripe.Account.retrieve(current_user.stripe_account_id)
+        
+        # 创建仪表板登录链接（Express 账户）
+        dashboard_url = None
+        try:
+            login_link = stripe.Account.create_login_link(current_user.stripe_account_id)
+            dashboard_url = login_link.url
+        except stripe.error.StripeError as e:
+            logger.warning(f"Failed to create dashboard login link: {e}")
+            # 如果无法创建登录链接，仍然返回其他信息
+        
+        # 获取账户的显示名称和邮箱
+        display_name = getattr(account, 'display_name', None) or getattr(account, 'business_profile', {}).get('name', None) if hasattr(account, 'business_profile') else None
+        email = getattr(account, 'email', None) or current_user.email
+        
+        # 获取国家信息
+        country = getattr(account, 'country', 'GB')
+        
+        # 获取账户类型
+        account_type = getattr(account, 'type', 'express')
+        
+        return {
+            "account_id": account.id,
+            "display_name": display_name,
+            "email": email,
+            "country": country,
+            "type": account_type,
+            "details_submitted": account.details_submitted,
+            "charges_enabled": account.charges_enabled,
+            "payouts_enabled": account.payouts_enabled,
+            "dashboard_url": dashboard_url,
+            "requirements": {
+                "currently_due": account.requirements.currently_due or [],
+                "eventually_due": account.requirements.eventually_due or [],
+                "past_due": account.requirements.past_due or [],
+            } if hasattr(account, 'requirements') else None,
+            "capabilities": {
+                "card_payments": getattr(account.capabilities, 'card_payments', 'inactive') if hasattr(account, 'capabilities') else 'inactive',
+                "transfers": getattr(account.capabilities, 'transfers', 'inactive') if hasattr(account, 'capabilities') else 'inactive',
+            } if hasattr(account, 'capabilities') else None
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error retrieving account details: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"获取账户详细信息失败: {str(e)}"
         )
 
 
@@ -628,11 +790,24 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             if user:
                 # 如果用户还没有 stripe_account_id，则设置
                 if not user.stripe_account_id:
-                    user.stripe_account_id = account_id
-                    db.commit()
-                    logger.info(f"Account created for user {user.id}: account_id={account_id}")
+                    try:
+                        user.stripe_account_id = account_id
+                        db.commit()
+                        logger.info(f"Account created for user {user.id}: account_id={account_id}")
+                    except Exception as e:
+                        # 捕获唯一性约束错误（如果账户ID已被其他用户使用）
+                        db.rollback()
+                        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                            logger.warning(f"Account {account_id} already assigned to another user, skipping for user {user.id}")
+                        else:
+                            logger.error(f"Error saving account_id for user {user.id}: {e}")
                 else:
-                    logger.info(f"Account created event for user {user.id}, but stripe_account_id already set: {user.stripe_account_id}")
+                    # 用户已经有账户，检查是否是同一个账户
+                    if user.stripe_account_id == account_id:
+                        logger.info(f"Account created event for user {user.id}, account_id already set: {user.stripe_account_id}")
+                    else:
+                        logger.warning(f"Account created event for user {user.id}, but user already has different account: {user.stripe_account_id} (new: {account_id})")
+                        # 不更新，保持现有账户（每个用户只能有一个账户）
             else:
                 logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
         else:
