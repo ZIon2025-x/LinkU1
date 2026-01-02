@@ -581,8 +581,8 @@ def get_device_fingerprint(request: Request) -> str:
     # 如果 User-Agent 为空，尝试使用其他头部信息
     if not user_agent:
         # 尝试从其他头部获取信息
-    accept_language = request.headers.get("accept-language", "")
-    accept_encoding = request.headers.get("accept-encoding", "")
+        accept_language = request.headers.get("accept-language", "")
+        accept_encoding = request.headers.get("accept-encoding", "")
         device_string = f"unknown|{accept_language}|{accept_encoding}"
     else:
         # 只使用 User-Agent，这是最稳定的特征

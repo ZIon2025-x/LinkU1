@@ -513,6 +513,7 @@ const MessagePage: React.FC = () => {
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
