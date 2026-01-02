@@ -1382,7 +1382,7 @@ async def accept_application(
         
         # 计算平台服务费
         application_fee_rate_setting = await db.execute(
-            select(models.SystemSetting).where(models.SystemSetting.setting_key == "application_fee_rate")
+            select(models.SystemSettings).where(models.SystemSettings.setting_key == "application_fee_rate")
         )
         application_fee_rate_setting = application_fee_rate_setting.scalar_one_or_none()
         application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
