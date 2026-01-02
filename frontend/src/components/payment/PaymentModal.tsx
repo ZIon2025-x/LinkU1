@@ -383,7 +383,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       ) : (
         <div>
           {/* 显示支付信息 */}
-          {paymentData && (
+          {paymentData ? (
             <div style={{ marginBottom: '24px' }}>
               <div style={{ marginBottom: '12px' }}>
                 <strong>总金额:</strong> £{paymentData.total_amount_display}
@@ -405,7 +405,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 {paymentData.note}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* 如果纯积分支付，已成功 */}
           {paymentData && paymentData.final_amount === 0 ? (
