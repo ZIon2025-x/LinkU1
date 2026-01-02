@@ -676,10 +676,16 @@ def create_task_payment(
         # application_fee_amount: 平台服务费（从任务接受人端扣除）
         # 注意：在 Destination charges 模式下，资金先到平台账户，然后自动 transfer 到 destination
         # 任务接受人实际收到的金额 = final_amount - application_fee_amount
+        # 使用 automatic_payment_methods（与 Stripe sample code 一致）
+        # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            payment_method_types=["card", "apple_pay", "google_pay", "link"],  # 支持多种支付方式
+            # 使用 automatic_payment_methods（Stripe 推荐方式，与 sample code 一致）
+            # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
+            automatic_payment_methods={
+                "enabled": True,
+            },
             # Stripe Connect Destination charges: 将资金转到任务接受人的账户（与 sample code 一致）
             application_fee_amount=application_fee_pence,
             transfer_data={

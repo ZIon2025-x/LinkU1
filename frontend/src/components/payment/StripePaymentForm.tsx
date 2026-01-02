@@ -53,35 +53,43 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
 
     try {
       // 使用 PaymentElement 确认支付（支持多种支付方式）
+      // 参考 Stripe sample code 的实现方式
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          // 可以在这里添加 return_url，但通常不需要，因为我们使用嵌入式表单
+          // 对于嵌入式支付，不需要 return_url
+          // 如果需要重定向（如某些支付方式），Stripe 会自动处理
         },
         redirect: 'if_required', // 只在需要时重定向（如 3D Secure）
       });
 
+      // 错误处理（参考 Stripe sample code）
       if (confirmError) {
-        // 如果是需要额外操作（如 3D Secure），Stripe 会自动处理
-        // 如果确认失败，显示错误
-        setError(confirmError.message || '支付失败');
-        onError(confirmError.message || '支付失败');
-      } else if (paymentIntent) {
-        // 检查支付状态
-        if (paymentIntent.status === 'succeeded') {
+        // 处理卡片错误或验证错误
+        if (confirmError.type === 'card_error' || confirmError.type === 'validation_error') {
+          setError(confirmError.message || '支付失败');
+          onError(confirmError.message || '支付失败');
+        } else {
+          setError('支付过程中发生意外错误');
+          onError('支付过程中发生意外错误');
+        }
+        setProcessing(false);
+        return;
+      }
+
+      // 支付成功
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
         message.success('支付成功！');
         onSuccess();
-        } else if (paymentIntent.status === 'requires_action') {
-          // 需要额外操作（3D Secure），PaymentElement 会自动处理
-          // 这种情况通常不会到达这里，因为 confirmPayment 会等待用户完成操作
-          setError('支付需要额外验证，请完成验证');
-        } else {
-          setError(`支付状态异常: ${paymentIntent.status}`);
-          onError(`支付状态异常: ${paymentIntent.status}`);
-        }
+      } else if (paymentIntent && paymentIntent.status === 'requires_action') {
+        // 需要额外操作（如 3D Secure），Stripe 会自动处理
+        // 这种情况通常不会到达这里，因为 confirmPayment 会等待用户完成操作
+        setError('支付需要额外验证，请完成验证');
+        onError('支付需要额外验证，请完成验证');
       } else {
-        setError('支付状态异常');
-        onError('支付状态异常');
+        // 其他状态（如 processing）
+        setError(`支付状态: ${paymentIntent?.status || '未知'}`);
+        onError(`支付状态: ${paymentIntent?.status || '未知'}`);
       }
     } catch (err: any) {
       const errorMessage = err.message || '支付处理出错';
@@ -153,7 +161,23 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
     clientSecret: props.clientSecret,
     appearance: {
       theme: 'stripe',
+      // 自定义外观以匹配网站设计
+      variables: {
+        colorPrimary: '#1890ff', // 主色调（与网站主题一致）
+        colorBackground: '#ffffff', // 背景色
+        colorText: 'rgba(0, 0, 0, 0.85)', // 文本颜色
+        colorDanger: '#ff4d4f', // 错误颜色
+        colorSuccess: '#52c41a', // 成功颜色
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif', // 字体（与网站一致）
+        fontSizeBase: '16px', // 基础字体大小（确保移动端输入框至少 16px）
+        spacingUnit: '4px', // 基础间距单位
+        borderRadius: '4px', // 圆角（与网站一致）
+      },
+      // 输入框和标签样式
+      inputs: 'spaced', // 输入框之间有间距
+      labels: 'auto', // 标签自动调整位置
     },
+    loader: 'auto', // 启用骨架屏加载器，优化加载体验（与 Stripe sample code 一致）
   };
 
   return (

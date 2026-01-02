@@ -581,8 +581,8 @@ def get_device_fingerprint(request: Request) -> str:
     # 如果 User-Agent 为空，尝试使用其他头部信息
     if not user_agent:
         # 尝试从其他头部获取信息
-        accept_language = request.headers.get("accept-language", "")
-        accept_encoding = request.headers.get("accept-encoding", "")
+    accept_language = request.headers.get("accept-language", "")
+    accept_encoding = request.headers.get("accept-encoding", "")
         device_string = f"unknown|{accept_language}|{accept_encoding}"
     else:
         # 只使用 User-Agent，这是最稳定的特征
@@ -949,13 +949,13 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
             data['ip_address'] = ip_address
             redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
         else:
-            logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
-            logger.error(f"  用户ID: {user_id}")
-            logger.error(f"  存储IP: {stored_ip}")
-            logger.error(f"  当前IP: {ip_address}")
-            # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
-            redis_client.delete(key_str)
-            return None
+        logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
+        logger.error(f"  用户ID: {user_id}")
+        logger.error(f"  存储IP: {stored_ip}")
+        logger.error(f"  当前IP: {ip_address}")
+        # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
+        redis_client.delete(key_str)
+        return None
     elif not stored_ip and ip_address:
         # 如果存储的IP为空但当前有IP，更新存储的IP
         logger.info(f"[SECURE_AUTH] refresh token 更新IP地址 - 用户: {user_id}, 当前IP: {ip_address}")
@@ -985,13 +985,13 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
             redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
         else:
             logger.error(f"[SECURE_AUTH] refresh token 设备指纹差异过大，拒绝访问并撤销token")
-            logger.error(f"  用户ID: {user_id}")
-            logger.error(f"  存储设备: {stored_device}")
-            logger.error(f"  当前设备: {device_fingerprint}")
+        logger.error(f"  用户ID: {user_id}")
+        logger.error(f"  存储设备: {stored_device}")
+        logger.error(f"  当前设备: {device_fingerprint}")
             logger.error(f"  相似度阈值: {threshold}")
             # 设备指纹差异过大，立即撤销token（安全策略：一个token只能在一个设备使用）
-            redis_client.delete(key_str)
-            return None
+        redis_client.delete(key_str)
+        return None
     elif not stored_device and device_fingerprint:
         # 如果存储的设备指纹为空但当前有指纹，更新存储的指纹
         logger.info(f"[SECURE_AUTH] refresh token 更新设备指纹 - 用户: {user_id}, 当前设备: {device_fingerprint}")

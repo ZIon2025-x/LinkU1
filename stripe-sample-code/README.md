@@ -1,18 +1,26 @@
-# Stripe Sample Integration
-Explore a full, working code sample of an integration with Stripe where customers
-click a button on your site and get redirected to a payment page hosted by Stripe.
-The example includes client- and server-side code, and the payment page is prebuilt.
+# Accept a Payment
 
-### Install dependencies
+Build a simple checkout form to collect payment details. Included are some basic
+build and run scripts you can use to start up the application.
 
-Run `npm install` from the root of the project to install the dependencies.
+## Running the sample
 
+1. Build the application
 
-### Run the application
+~~~
+npm install
+~~~
 
-Run `npm run dev` from the root of the project to start the application.
+2. Run the application
 
-### Navigate to the application
+~~~
+npm start
+~~~
 
-Go to [http://localhost:3000/](http://localhost:3000/) in your web browser.
+3. Go to [http://localhost:3000/checkout](http://localhost:3000/checkout)
 
+## API Keys
+
+This code sample uses a public sample test API key. Don’t submit any personally identifiable information in requests made with this key.
+
+The "View details" link to see the PaymentIntent details in the Dashboard won't work until you use your own test [API key](https://docs.stripe.com/keys).
