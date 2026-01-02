@@ -197,9 +197,10 @@ def create_connect_account(
                     db.refresh(db_user_clear)
         
         # 创建 Express Account (使用 V2 API)
-        # 参考: https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
+        # 参考: stripe-sample-code/server.js 和 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
         try:
             # 使用 V2 API 创建账户
+            # 根据 sample code，使用 recipient 配置用于接收支付
             account = stripe.v2.core.accounts.create(
                 contact_email=current_user.email or f"user_{current_user.id}@link2ur.com",
                 display_name=current_user.name or f"User {current_user.id}",
@@ -209,6 +210,17 @@ def create_connect_account(
                     "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
                 },
                 configuration={
+                    # 使用 recipient 配置用于接收支付（marketplace 模式）
+                    "recipient": {
+                        "capabilities": {
+                            "stripe_balance": {
+                                "stripe_transfers": {
+                                    "requested": True
+                                }
+                            }
+                        }
+                    },
+                    # 同时支持 merchant 配置（如果需要直接收款）
                     "merchant": {
                         "capabilities": {
                             "card_payments": {
@@ -220,8 +232,8 @@ def create_connect_account(
                 defaults={
                     "currency": "gbp",
                     "responsibilities": {
-                        "fees_collector": "stripe",
-                        "losses_collector": "stripe"
+                        "fees_collector": "application",  # 平台收取费用
+                        "losses_collector": "application"  # 平台承担损失
                     },
                     "locales": ["en-GB"]
                 },
@@ -231,6 +243,7 @@ def create_connect_account(
                     "user_name": current_user.name or f"User {current_user.id}"
                 },
                 include=[
+                    "configuration.recipient",
                     "configuration.merchant",
                     "identity",
                     "requirements"
@@ -370,28 +383,49 @@ def create_connect_account(
             }
         
         # V2 API 返回的账户对象结构不同，需要从 requirements 判断状态
+        # 参考: stripe-sample-code/server.js 的账户状态检查逻辑
         account_status = False
         charges_enabled = False
+        payouts_enabled = False
         try:
             # 尝试从 V2 API 获取完整账户信息
             v2_account = stripe.v2.core.accounts.retrieve(
                 account.id,
-                include=["requirements", "configuration.merchant"]
+                include=["requirements", "configuration.recipient", "configuration.merchant"]
             )
             requirements = v2_account.get("requirements", {})
             currently_due = requirements.get("currently_due", [])
-            account_status = len(currently_due) == 0
             
-            # 检查 merchant 配置中的 capabilities
-            merchant_config = v2_account.get("configuration", {}).get("merchant", {})
-            capabilities = merchant_config.get("capabilities", {})
-            card_payments = capabilities.get("card_payments", {})
-            charges_enabled = card_payments.get("status") == "active"
+            # 检查 summary 状态（参考 sample code）
+            summary = requirements.get("summary", {})
+            minimum_deadline = summary.get("minimum_deadline", {})
+            deadline_status = minimum_deadline.get("status")
+            # details_submitted 表示没有当前需要提交的要求
+            account_status = not deadline_status or deadline_status == "eventually_due"
+            
+            # 检查 recipient 配置中的 capabilities（用于接收支付）
+            recipient_config = v2_account.get("configuration", {}).get("recipient", {})
+            recipient_capabilities = recipient_config.get("capabilities", {})
+            stripe_balance = recipient_capabilities.get("stripe_balance", {})
+            stripe_transfers = stripe_balance.get("stripe_transfers", {})
+            charges_enabled = stripe_transfers.get("status") == "active"
+            
+            # 检查 payouts 状态
+            payouts = stripe_balance.get("payouts", {})
+            payouts_enabled = payouts.get("status") == "active"
+            
+            # 如果 recipient 不可用，回退到 merchant 配置
+            if not charges_enabled:
+                merchant_config = v2_account.get("configuration", {}).get("merchant", {})
+                merchant_capabilities = merchant_config.get("capabilities", {})
+                card_payments = merchant_capabilities.get("card_payments", {})
+                charges_enabled = card_payments.get("status") == "active"
         except Exception as status_err:
             logger.warning(f"Failed to get account status from V2 API: {status_err}, using defaults")
             # 如果 V2 API 失败，使用默认值
             account_status = False
             charges_enabled = False
+            payouts_enabled = False
         
         return {
             "account_id": account.id,
@@ -481,7 +515,7 @@ def create_connect_account_embedded(
         # 注意：统一使用 V1 API，因为 webhook 事件是 V1 格式，AccountSession 也是 V1 API
         account = None
         try:
-            # 使用 V2 API 创建账户
+            # 使用 V2 API 创建账户（参考 sample code）
             account = stripe.v2.core.accounts.create(
                 contact_email=current_user.email or f"user_{current_user.id}@link2ur.com",
                 display_name=current_user.name or f"User {current_user.id}",
@@ -491,6 +525,17 @@ def create_connect_account_embedded(
                     "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
                 },
                 configuration={
+                    # 使用 recipient 配置用于接收支付（marketplace 模式）
+                    "recipient": {
+                        "capabilities": {
+                            "stripe_balance": {
+                                "stripe_transfers": {
+                                    "requested": True
+                                }
+                            }
+                        }
+                    },
+                    # 同时支持 merchant 配置（如果需要直接收款）
                     "merchant": {
                         "capabilities": {
                             "card_payments": {
@@ -502,8 +547,8 @@ def create_connect_account_embedded(
                 defaults={
                     "currency": "gbp",
                     "responsibilities": {
-                        "fees_collector": "stripe",
-                        "losses_collector": "stripe"
+                        "fees_collector": "application",  # 平台收取费用
+                        "losses_collector": "application"  # 平台承担损失
                     },
                     "locales": ["en-GB"]
                 },
@@ -513,6 +558,7 @@ def create_connect_account_embedded(
                     "user_name": current_user.name or f"User {current_user.id}"
                 },
                 include=[
+                    "configuration.recipient",
                     "configuration.merchant",
                     "identity",
                     "requirements"
@@ -695,18 +741,72 @@ def get_account_status(
         }
     
     try:
-        account = stripe.Account.retrieve(current_user.stripe_account_id)
-        
-        # 验证账户所有权（通过 metadata 中的 user_id）
-        if not verify_account_ownership(current_user.stripe_account_id, current_user):
-            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
-            raise HTTPException(
-                status_code=403,
-                detail="账户验证失败：账户不属于当前用户"
+        # 优先使用 V2 API，兼容 V1 API
+        try:
+            account = stripe.v2.core.accounts.retrieve(
+                current_user.stripe_account_id,
+                include=["requirements", "configuration.recipient", "configuration.merchant"]
             )
-        
-        # 检查是否需要重新 onboarding
-        needs_onboarding = not account.details_submitted
+            
+            # 验证账户所有权（通过 metadata 中的 user_id）
+            account_metadata = account.get("metadata", {})
+            account_user_id = account_metadata.get("user_id") if isinstance(account_metadata, dict) else None
+            if not account_user_id or str(account_user_id) != str(current_user.id):
+                logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+                raise HTTPException(
+                    status_code=403,
+                    detail="账户验证失败：账户不属于当前用户"
+                )
+            
+            # 检查账户状态（参考 sample code）
+            requirements = account.get("requirements", {})
+            summary = requirements.get("summary", {})
+            minimum_deadline = summary.get("minimum_deadline", {})
+            deadline_status = minimum_deadline.get("status")
+            
+            # details_submitted 表示没有当前需要提交的要求
+            details_submitted = not deadline_status or deadline_status == "eventually_due"
+            
+            # 检查 recipient 配置中的 capabilities（用于接收支付）
+            recipient_config = account.get("configuration", {}).get("recipient", {})
+            recipient_capabilities = recipient_config.get("capabilities", {})
+            stripe_balance = recipient_capabilities.get("stripe_balance", {})
+            stripe_transfers = stripe_balance.get("stripe_transfers", {})
+            charges_enabled = stripe_transfers.get("status") == "active"
+            
+            # 检查 payouts 状态
+            payouts = stripe_balance.get("payouts", {})
+            payouts_enabled = payouts.get("status") == "active"
+            
+            # 如果 recipient 不可用，回退到 merchant 配置
+            if not charges_enabled:
+                merchant_config = account.get("configuration", {}).get("merchant", {})
+                merchant_capabilities = merchant_config.get("capabilities", {})
+                card_payments = merchant_capabilities.get("card_payments", {})
+                charges_enabled = card_payments.get("status") == "active"
+            
+            needs_onboarding = not details_submitted
+            requirements_entries = requirements.get("entries", [])
+            
+        except stripe.error.StripeError as v2_err:
+            # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
+            logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+            account = stripe.Account.retrieve(current_user.stripe_account_id)
+            
+            # 验证账户所有权（通过 metadata 中的 user_id）
+            if not verify_account_ownership(current_user.stripe_account_id, current_user):
+                logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+                raise HTTPException(
+                    status_code=403,
+                    detail="账户验证失败：账户不属于当前用户"
+                )
+            
+            # V1 API 的状态检查
+            details_submitted = account.details_submitted
+            charges_enabled = account.charges_enabled
+            payouts_enabled = account.payouts_enabled
+            needs_onboarding = not details_submitted
+            requirements_entries = None
         
         # 使用嵌入式组件，不创建跳转链接
         client_secret = None
@@ -724,18 +824,30 @@ def get_account_status(
             except stripe.error.StripeError as e:
                 logger.warning(f"Failed to create AccountSession for onboarding: {e}")
         
+        # 使用嵌入式组件，不创建跳转链接
+        client_secret = None
+        if needs_onboarding:
+            try:
+                onboarding_session = stripe.AccountSession.create(
+                    account=current_user.stripe_account_id,
+                    components={
+                        "account_onboarding": {
+                            "enabled": True
+                        }
+                    }
+                )
+                client_secret = onboarding_session.client_secret
+            except stripe.error.StripeError as e:
+                logger.warning(f"Failed to create AccountSession for onboarding: {e}")
+        
         return {
-            "account_id": account.id,
-            "details_submitted": account.details_submitted,
-            "charges_enabled": account.charges_enabled,
-            "payouts_enabled": account.payouts_enabled,
+            "account_id": current_user.stripe_account_id,
+            "details_submitted": details_submitted,
+            "charges_enabled": charges_enabled,
+            "payouts_enabled": payouts_enabled,
             "client_secret": client_secret,  # 用于嵌入式组件
             "needs_onboarding": needs_onboarding,
-            "requirements": {
-                "currently_due": account.requirements.currently_due or [],
-                "eventually_due": account.requirements.eventually_due or [],
-                "past_due": account.requirements.past_due or [],
-            } if hasattr(account, 'requirements') else None
+            "requirements": requirements_entries if requirements_entries else None
         }
         
     except stripe.error.StripeError as e:

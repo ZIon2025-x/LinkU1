@@ -566,13 +566,28 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 def get_device_fingerprint(request: Request) -> str:
-    """生成设备指纹"""
-    user_agent = request.headers.get("user-agent", "")
-    accept_language = request.headers.get("accept-language", "")
-    accept_encoding = request.headers.get("accept-encoding", "")
+    """
+    生成设备指纹
     
-    # 组合设备特征
-    device_string = f"{user_agent}|{accept_language}|{accept_encoding}"
+    只使用 User-Agent 来生成指纹，因为：
+    1. User-Agent 是最稳定的浏览器特征
+    2. Accept-Language 和 Accept-Encoding 可能因浏览器设置、扩展、隐私模式等变化
+    3. 使用完整的 User-Agent 可以更准确地识别设备
+    
+    如果 User-Agent 为空，使用其他可用的头部信息作为后备
+    """
+    user_agent = request.headers.get("user-agent", "")
+    
+    # 如果 User-Agent 为空，尝试使用其他头部信息
+    if not user_agent:
+        # 尝试从其他头部获取信息
+        accept_language = request.headers.get("accept-language", "")
+        accept_encoding = request.headers.get("accept-encoding", "")
+        device_string = f"unknown|{accept_language}|{accept_encoding}"
+    else:
+        # 只使用 User-Agent，这是最稳定的特征
+        # 移除可能变化的部分（如扩展信息），但保留核心信息
+        device_string = user_agent
     
     # 生成哈希指纹
     return hashlib.sha256(device_string.encode()).hexdigest()[:16]
@@ -744,9 +759,12 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
         logger.warning(f"  用户ID: {session.user_id}")
         logger.warning(f"  原始指纹: {session.device_fingerprint}")
         logger.warning(f"  当前指纹: {current_fingerprint}")
+        logger.warning(f"  IP地址: {session.ip_address} -> {current_ip}")
         
-        # 移动端使用更宽松的阈值 (0.4)，Web端使用标准阈值 (0.7)
-        threshold = 0.4 if is_mobile else 0.7
+        # 移动端使用更宽松的阈值 (0.4)，Web端使用标准阈值 (0.6)
+        # 由于只使用 User-Agent，指纹应该更稳定，但如果 User-Agent 变化（如浏览器更新），
+        # 仍然需要允许一定的变化
+        threshold = 0.4 if is_mobile else 0.6
         
         # 检查指纹差异是否在可接受范围内（允许部分变化）
         if is_fingerprint_similar(session.device_fingerprint, current_fingerprint, threshold):
@@ -754,11 +772,21 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
             # 更新会话的设备指纹为新的指纹
             session.device_fingerprint = current_fingerprint
             SecureAuthManager.update_session(session_id, session)
+        elif session.ip_address == current_ip:
+            # 如果 IP 地址相同，允许更新设备指纹（可能是浏览器设置变化）
+            # 这是一个安全权衡：相同 IP 地址下，设备指纹变化更可能是合法的
+            logger.info(f"[SECURE_AUTH] IP地址相同，允许更新设备指纹（可能是浏览器设置变化）")
+            logger.info(f"  原始指纹: {session.device_fingerprint}")
+            logger.info(f"  新指纹: {current_fingerprint}")
+            # 更新会话的设备指纹为新的指纹
+            session.device_fingerprint = current_fingerprint
+            SecureAuthManager.update_session(session_id, session)
         else:
-            # 设备指纹差异过大，拒绝访问并撤销会话（安全策略：一个会话只能在一个设备使用）
-            logger.error(f"[SECURE_AUTH] 设备指纹差异过大，可能存在会话劫持或多地使用，拒绝访问并撤销会话")
+            # 设备指纹差异过大且 IP 地址不同，拒绝访问并撤销会话（安全策略：一个会话只能在一个设备使用）
+            logger.error(f"[SECURE_AUTH] 设备指纹差异过大且IP地址不同，可能存在会话劫持或多地使用，拒绝访问并撤销会话")
             logger.error(f"  用户ID: {session.user_id}")
             logger.error(f"  会话ID: {session_id[:8]}...")
+            logger.error(f"  IP地址变化: {session.ip_address} -> {current_ip}")
             # 撤销可疑会话
             SecureAuthManager.revoke_session(session_id)
             return None
