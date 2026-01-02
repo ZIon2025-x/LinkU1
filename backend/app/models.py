@@ -2548,7 +2548,7 @@ class PaymentHistory(Base):
     application_fee = Column(BigInteger, nullable=True)  # 平台服务费（便士）
     escrow_amount = Column(DECIMAL(12, 2), nullable=True)  # 托管金额
     coupon_usage_log_id = Column(BigInteger, ForeignKey("coupon_usage_logs.id", ondelete="SET NULL"), nullable=True)
-    metadata = Column(JSONB, nullable=True)  # 额外元数据
+    extra_metadata = Column(JSONB, nullable=True)  # 额外元数据（使用 extra_metadata 避免与 SQLAlchemy 的 metadata 属性冲突）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     

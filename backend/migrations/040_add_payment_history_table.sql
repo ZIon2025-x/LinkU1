@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS payment_history (
     application_fee BIGINT NULL,
     escrow_amount DECIMAL(12, 2) NULL,
     coupon_usage_log_id BIGINT NULL REFERENCES coupon_usage_logs(id) ON DELETE SET NULL,
-    metadata JSONB NULL,
+    extra_metadata JSONB NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -47,7 +47,7 @@ COMMENT ON COLUMN payment_history.status IS '支付状态：pending, succeeded, 
 COMMENT ON COLUMN payment_history.application_fee IS '平台服务费（便士）';
 COMMENT ON COLUMN payment_history.escrow_amount IS '托管金额';
 COMMENT ON COLUMN payment_history.coupon_usage_log_id IS '关联的优惠券使用记录ID';
-COMMENT ON COLUMN payment_history.metadata IS '额外元数据（JSON格式）';
+COMMENT ON COLUMN payment_history.extra_metadata IS '额外元数据（JSON格式，使用 extra_metadata 避免与 SQLAlchemy 的 metadata 属性冲突）';
 COMMENT ON COLUMN payment_history.created_at IS '创建时间';
 COMMENT ON COLUMN payment_history.updated_at IS '更新时间';
 

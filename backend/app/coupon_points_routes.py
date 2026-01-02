@@ -613,7 +613,7 @@ def create_task_payment(
                 application_fee=application_fee_pence,
                 escrow_amount=taker_amount,
                 coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
-                metadata={
+                extra_metadata={
                     "points_only": True,
                     "task_title": task.title
                 }
@@ -701,7 +701,7 @@ def create_task_payment(
             status="pending",  # 待支付，webhook 会更新为 succeeded
             application_fee=application_fee_pence,
             coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
-            metadata={
+            extra_metadata={
                 "task_title": task.title,
                 "taker_id": str(task.taker_id)
             }
