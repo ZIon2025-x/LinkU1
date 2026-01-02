@@ -173,11 +173,10 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
         spacingUnit: '4px', // 基础间距单位
         borderRadius: '4px', // 圆角（与网站一致）
       },
-      // @ts-ignore - inputs 和 labels 是有效的 appearance 属性，但类型定义可能不完整
+      // inputs 和 labels 是有效的 appearance 属性，但类型定义可能不完整
       inputs: 'spaced', // 输入框之间有间距
-      // @ts-ignore
       labels: 'auto', // 标签自动调整位置
-    },
+    } as any,
     loader: 'auto', // 启用骨架屏加载器，优化加载体验（与 Stripe sample code 一致）
   };
 
