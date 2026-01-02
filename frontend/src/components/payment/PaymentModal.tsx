@@ -410,28 +410,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             stripeLoaded ? (
               <Elements 
                 stripe={stripePromise} 
-                options={{
-                  clientSecret: paymentData.client_secret,
-                  appearance: {
-                    theme: 'stripe',
-                    // 自定义外观以匹配网站设计
-                    variables: {
-                      colorPrimary: '#1890ff', // 主色调（与网站主题一致）
-                      colorBackground: '#ffffff', // 背景色
-                      colorText: 'rgba(0, 0, 0, 0.85)', // 文本颜色
-                      colorDanger: '#ff4d4f', // 错误颜色
-                      colorSuccess: '#52c41a', // 成功颜色
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif', // 字体（与网站一致）
-                      fontSizeBase: '16px', // 基础字体大小（确保移动端输入框至少 16px）
-                      spacingUnit: '4px', // 基础间距单位
-                      borderRadius: '4px', // 圆角（与网站一致）
+                options={(() => {
+                  const elementsOptions: StripeElementsOptions = {
+                    clientSecret: paymentData.client_secret,
+                    appearance: {
+                      theme: 'stripe',
+                      // 自定义外观以匹配网站设计
+                      variables: {
+                        colorPrimary: '#1890ff', // 主色调（与网站主题一致）
+                        colorBackground: '#ffffff', // 背景色
+                        colorText: 'rgba(0, 0, 0, 0.85)', // 文本颜色
+                        colorDanger: '#ff4d4f', // 错误颜色
+                        colorSuccess: '#52c41a', // 成功颜色
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif', // 字体（与网站一致）
+                        fontSizeBase: '16px', // 基础字体大小（确保移动端输入框至少 16px）
+                        spacingUnit: '4px', // 基础间距单位
+                        borderRadius: '4px', // 圆角（与网站一致）
+                      },
+                      // @ts-ignore - inputs 和 labels 是有效的 appearance 属性，但类型定义可能不完整
+                      inputs: 'spaced', // 输入框之间有间距
+                      // @ts-ignore
+                      labels: 'auto', // 标签自动调整位置
                     },
-                    // 输入框和标签样式
-                    inputs: 'spaced', // 输入框之间有间距
-                    labels: 'auto', // 标签自动调整位置
-                  },
-                  loader: 'auto', // 启用骨架屏加载器，优化加载体验（与 Stripe sample code 一致）
-                } as StripeElementsOptions}
+                    loader: 'auto', // 启用骨架屏加载器，优化加载体验（与 Stripe sample code 一致）
+                  };
+                  return elementsOptions;
+                })()}
               >
                 <PaymentForm
                   clientSecret={paymentData.client_secret}
