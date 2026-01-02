@@ -1992,6 +1992,127 @@ def cancel_expired_tasks(db: Session):
         return 0
 
 
+def revert_unpaid_application_approvals(db: Session):
+    """
+    撤销超时未支付的申请批准
+    如果任务在 pending_payment 状态超过24小时，自动撤销申请批准
+    """
+    from datetime import timedelta
+    from sqlalchemy import select
+    
+    logger.info("开始检查超时未支付的申请批准")
+    
+    try:
+        # 获取当前UTC时间
+        now_utc = get_utc_time()
+        # 24小时前的时间
+        timeout_threshold = now_utc - timedelta(hours=24)
+        
+        # 查找所有 pending_payment 状态超过24小时的任务
+        # 需要检查任务的更新时间或创建时间
+        from app.models import Task, TaskApplication
+        
+        # 查找超时的 pending_payment 任务
+        # 注意：这里使用 updated_at 字段，如果没有则使用 created_at
+        timeout_tasks = db.query(Task).filter(
+            and_(
+                Task.status == "pending_payment",
+                Task.taker_id.isnot(None),
+                Task.is_paid == 0,
+                # 如果 updated_at 存在且超过24小时，或者 created_at 超过24小时
+                or_(
+                    and_(
+                        Task.updated_at.isnot(None),
+                        Task.updated_at <= timeout_threshold
+                    ),
+                    and_(
+                        Task.updated_at.is_(None),
+                        Task.created_at <= timeout_threshold
+                    )
+                )
+            )
+        ).all()
+        
+        logger.info(f"找到 {len(timeout_tasks)} 个超时未支付的任务")
+        
+        reverted_count = 0
+        for task in timeout_tasks:
+            try:
+                # 查找已批准的申请
+                application = db.execute(
+                    select(TaskApplication).where(
+                        and_(
+                            TaskApplication.task_id == task.id,
+                            TaskApplication.applicant_id == task.taker_id,
+                            TaskApplication.status == "approved"
+                        )
+                    )
+                ).scalar_one_or_none()
+                
+                if application:
+                    # 撤销申请批准：将申请状态改回 pending
+                    application.status = "pending"
+                    
+                    # 回滚任务状态：清除接受者，状态改回 open
+                    task.taker_id = None
+                    task.status = "open"
+                    task.is_paid = 0
+                    task.payment_intent_id = None
+                    
+                    # 发送通知给申请者
+                    try:
+                        create_notification(
+                            db,
+                            application.applicant_id,
+                            "application_payment_timeout",
+                            "支付超时，申请已撤销",
+                            f'任务 "{task.title}" 的支付超时（超过24小时），您的申请已撤销，可以重新申请。',
+                            task.id,
+                            auto_commit=False,
+                        )
+                    except Exception as e:
+                        logger.warning(f"发送超时通知失败: {e}")
+                    
+                    # 发送通知给发布者
+                    try:
+                        create_notification(
+                            db,
+                            task.poster_id,
+                            "application_payment_timeout",
+                            "支付超时，申请已撤销",
+                            f'任务 "{task.title}" 的支付超时（超过24小时），已接受的申请已撤销，任务已重新开放。',
+                            task.id,
+                            auto_commit=False,
+                        )
+                    except Exception as e:
+                        logger.warning(f"发送超时通知给发布者失败: {e}")
+                    
+                    reverted_count += 1
+                    logger.info(f"✅ 已撤销任务 {task.id} 的超时未支付申请批准，申请 {application.id} 状态已改回 pending")
+                else:
+                    # 如果没有找到申请，直接回滚任务状态
+                    task.taker_id = None
+                    task.status = "open"
+                    task.is_paid = 0
+                    task.payment_intent_id = None
+                    logger.warning(f"⚠️ 任务 {task.id} 处于 pending_payment 状态但未找到对应的已批准申请，已直接回滚任务状态")
+                    reverted_count += 1
+                    
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 时出错: {e}", exc_info=True)
+                continue
+        
+        # 提交所有更改
+        db.commit()
+        logger.info(f"成功撤销 {reverted_count} 个超时未支付的申请批准")
+        return reverted_count
+        
+    except Exception as e:
+        logger.error(f"撤销超时未支付申请批准时出错: {e}", exc_info=True)
+        db.rollback()
+        return 0
+
+
 def cleanup_cancelled_tasks(db: Session):
     """清理已取消的任务"""
     from app.models import Task

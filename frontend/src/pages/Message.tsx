@@ -514,6 +514,8 @@ const MessagePage: React.FC = () => {
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
@@ -6124,31 +6126,27 @@ const MessagePage: React.FC = () => {
                         <button
                           onClick={async () => {
                             try {
-                              await acceptApplication(activeTaskId, app.id);
-                              alert(t('messages.notifications.applicationAccepted'));
-                              setShowApplicationListModal(false);
-                              // 重新加载任务和申请列表
-                              if (activeTaskId) {
-                                await loadTaskMessages(activeTaskId);
-                                await loadApplications(activeTaskId);
-                                await loadTasks();
-                                
-                                // 检查任务状态，如果是 pending_payment，显示支付弹窗
-                                try {
-                                  const taskRes = await api.get(`/api/tasks/${activeTaskId}`);
-                                  const task = taskRes.data;
-                                  if (task.status === 'pending_payment' && task.poster_id === user?.id) {
-                                    // 延迟一下，让用户看到成功提示
-                                    setTimeout(() => {
-                                      setShowPaymentModal(true);
-                                    }, 1000);
-                                  }
-                                } catch (err) {
-                                  // 忽略检查错误
+                              const response = await acceptApplication(activeTaskId, app.id);
+                              // 如果返回了支付信息，立即显示支付弹窗
+                              if (response.client_secret && response.payment_intent_id) {
+                                setShowApplicationListModal(false);
+                                // 设置支付信息并显示支付弹窗
+                                setPaymentIntentId(response.payment_intent_id);
+                                setPaymentClientSecret(response.client_secret);
+                                setShowPaymentModal(true);
+                              } else {
+                                // 如果没有支付信息，说明可能已经支付成功或使用积分支付
+                                alert(t('messages.notifications.applicationAccepted'));
+                                setShowApplicationListModal(false);
+                                // 重新加载任务和申请列表
+                                if (activeTaskId) {
+                                  await loadTaskMessages(activeTaskId);
+                                  await loadApplications(activeTaskId);
+                                  await loadTasks();
                                 }
                               }
                             } catch (error: any) {
-                                                            alert(getErrorMessage(error));
+                              alert(getErrorMessage(error));
                             }
                           }}
                           style={{
@@ -7194,15 +7192,24 @@ const MessagePage: React.FC = () => {
           visible={showPaymentModal}
           taskId={activeTaskId}
           taskTitle={activeTask?.title}
+          clientSecret={paymentClientSecret}
+          paymentIntentId={paymentIntentId}
           onSuccess={() => {
             setShowPaymentModal(false);
+            setPaymentClientSecret(null);
+            setPaymentIntentId(null);
             // 重新加载任务信息
             if (activeTaskId) {
               loadTaskMessages(activeTaskId);
+              loadApplications(activeTaskId);
               loadTasks();
             }
           }}
-          onCancel={() => setShowPaymentModal(false)}
+          onCancel={() => {
+            setShowPaymentModal(false);
+            setPaymentClientSecret(null);
+            setPaymentIntentId(null);
+          }}
         />
       )}
     </div>

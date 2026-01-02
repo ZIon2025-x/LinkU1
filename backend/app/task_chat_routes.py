@@ -1367,73 +1367,77 @@ async def accept_application(
         # 获取当前时间
         current_time = get_utc_time()
         
-        # 更新任务
-        locked_task.taker_id = application.applicant_id
-        # 接受申请后，任务状态设置为 pending_payment（等待支付）
-        # 需要任务发布者完成支付后，任务才会进入 in_progress 状态
-        locked_task.status = "pending_payment"
-        # 确保 is_paid 为 0（未支付）
-        locked_task.is_paid = 0
+        # 不立即批准申请，而是创建支付意图
+        # 申请状态保持为 pending，等待支付成功后才批准
         
-        # 如果申请包含议价，更新 agreed_reward
+        # 计算任务金额
+        from app.crud import get_system_setting
+        task_amount = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
+        
+        if task_amount <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="任务金额必须大于0，无法进行支付"
+            )
+        
+        task_amount_pence = int(task_amount * 100)
+        
+        # 计算平台服务费
+        application_fee_rate_setting = await db.execute(
+            select(models.SystemSetting).where(models.SystemSetting.setting_key == "application_fee_rate")
+        )
+        application_fee_rate_setting = application_fee_rate_setting.scalar_one_or_none()
+        application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+        application_fee_pence = int(task_amount_pence * application_fee_rate)
+        
+        # 创建 Stripe Payment Intent
+        import stripe
+        import os
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # 获取接受者的 Stripe Connect 账户ID
+        taker_stripe_account_id = applicant.stripe_account_id
+        
+        # 创建 Payment Intent，使用 Destination charges
+        payment_intent = stripe.PaymentIntent.create(
+            amount=task_amount_pence,
+            currency="gbp",
+            application_fee_amount=application_fee_pence,
+            transfer_data={
+                "destination": taker_stripe_account_id
+            },
+            metadata={
+                "task_id": str(task_id),
+                "application_id": str(application_id),
+                "poster_id": str(current_user.id),
+                "taker_id": str(application.applicant_id),
+                "pending_approval": "true"  # 标记这是待确认的批准
+            },
+            automatic_payment_methods={"enabled": True},
+        )
+        
+        # 保存 payment_intent_id 到任务（临时存储，支付成功后才会真正批准）
+        locked_task.payment_intent_id = payment_intent.id
+        
+        # 如果申请包含议价，更新 agreed_reward（但不更新 taker_id 和状态）
         if application.negotiated_price is not None:
             locked_task.agreed_reward = application.negotiated_price
         
-        # 更新申请状态
-        application.status = "approved"
-        
-        # 自动拒绝所有其他待处理的申请
-        other_applications_query = select(models.TaskApplication).where(
-            and_(
-                models.TaskApplication.task_id == task_id,
-                models.TaskApplication.id != application_id,
-                models.TaskApplication.status == "pending"
-            )
-        )
-        other_apps_result = await db.execute(other_applications_query)
-        other_applications = other_apps_result.scalars().all()
-        
-        for other_app in other_applications:
-            other_app.status = "rejected"
-        
-        # 写入操作日志
-        log_entry = models.NegotiationResponseLog(
-            task_id=task_id,
-            application_id=application_id,
-            user_id=current_user.id,
-            action="accept",
-            negotiated_price=application.negotiated_price,
-            responded_at=current_time
-        )
-        db.add(log_entry)
+        # 不更新申请状态，保持为 pending
+        # 不更新任务状态，保持原状态
+        # 不设置 taker_id，等待支付成功后再设置
         
         await db.commit()
         
-        # 发送通知给申请者
-        try:
-            notification_time = get_utc_time()
-            
-            # ⚠️ 直接使用文本内容，不存储 JSON
-            content = f"您的任务申请已被接受：{task.title}"
-            
-            new_notification = models.Notification(
-                user_id=application.applicant_id,
-                type="application_accepted",
-                title="您的申请已被接受",
-                content=content,  # 直接使用文本，不存储 JSON
-                related_id=application_id,
-                created_at=notification_time
-            )
-            db.add(new_notification)
-            await db.commit()
-        except Exception as e:
-            logger.error(f"发送接受申请通知失败: {e}")
-            # 通知失败不影响主流程
-        
         return {
-            "message": "申请已接受",
+            "message": "请完成支付以确认批准申请",
             "application_id": application_id,
-            "task_id": task_id
+            "task_id": task_id,
+            "payment_intent_id": payment_intent.id,
+            "client_secret": payment_intent.client_secret,
+            "amount": task_amount_pence,
+            "amount_display": f"{task_amount_pence / 100:.2f}",
+            "currency": "GBP"
         }
     
     except HTTPException:

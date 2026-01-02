@@ -188,6 +188,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   visible,
   taskId,
   taskTitle,
+  clientSecret: propClientSecret,
+  paymentIntentId: propPaymentIntentId,
   onSuccess,
   onCancel
 }) => {
@@ -199,6 +201,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [couponCode, setCouponCode] = useState<string>('');
   const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [stripeLoaded, setStripeLoaded] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number>(300); // 5分钟 = 300秒
+  const [timeoutTimer, setTimeoutTimer] = useState<NodeJS.Timeout | null>(null);
 
   // 加载积分余额
   useEffect(() => {
@@ -217,7 +221,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   // 加载 Stripe
   useEffect(() => {
-    if (visible && paymentData?.client_secret) {
+    if (visible && (paymentData?.client_secret || propClientSecret)) {
       stripePromise.then(() => {
         setStripeLoaded(true);
       }).catch((err) => {
@@ -225,7 +229,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         message.error('无法加载支付服务');
       });
     }
-  }, [visible, paymentData]);
+  }, [visible, paymentData, propClientSecret]);
 
   const handleCreatePayment = async () => {
     setLoading(true);
@@ -283,7 +287,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     <Modal
       title={
         <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-          {paymentData ? '完成支付' : '任务支付'}
+          {paymentData || propClientSecret ? '完成支付' : '任务支付'}
+          {propClientSecret && timeRemaining > 0 && (
+            <span style={{ 
+              marginLeft: '12px', 
+              fontSize: '14px', 
+              color: timeRemaining < 60 ? '#ff4d4f' : '#666',
+              fontWeight: 'normal'
+            }}>
+              (剩余时间: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')})
+            </span>
+          )}
         </div>
       }
       open={visible}
@@ -291,8 +305,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       footer={null}
       width={600}
       destroyOnClose
+      centered
+      zIndex={10003}
+      maskStyle={{ zIndex: 10003 }}
+      style={{ zIndex: 10003 }}
+      maskClosable={false}
     >
-      {!paymentData ? (
+      {!paymentData && !propClientSecret ? (
         <div>
           {/* 支付方式选择 */}
           <div style={{ marginBottom: '24px' }}>
@@ -405,13 +424,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 确定
               </button>
             </div>
-          ) : paymentData.client_secret ? (
+          ) : (paymentData?.client_secret || propClientSecret) ? (
             // 显示 Stripe Elements 支付表单（支持 Apple Pay 等）
             stripeLoaded ? (
               <Elements 
                 stripe={stripePromise} 
                 options={{
-                  clientSecret: paymentData.client_secret,
+                  clientSecret: propClientSecret || paymentData?.client_secret || '',
                   appearance: {
                     theme: 'stripe',
                     // 自定义外观以匹配网站设计

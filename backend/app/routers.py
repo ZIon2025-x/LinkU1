@@ -2897,6 +2897,76 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 taker_amount = task_amount - application_fee
                 task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
                 
+                # 检查是否是待确认的批准（pending_approval）
+                is_pending_approval = payment_intent.get("metadata", {}).get("pending_approval") == "true"
+                application_id = payment_intent.get("metadata", {}).get("application_id")
+                
+                if is_pending_approval and application_id:
+                    # 这是批准申请时的支付，需要确认批准
+                    from sqlalchemy import select
+                    application = db.execute(
+                        select(models.TaskApplication).where(
+                            and_(
+                                models.TaskApplication.id == int(application_id),
+                                models.TaskApplication.task_id == task_id,
+                                models.TaskApplication.status == "pending"
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    
+                    if application:
+                        # 批准申请
+                        application.status = "approved"
+                        task.taker_id = application.applicant_id
+                        task.status = "pending_payment"  # 先设置为 pending_payment，下面会更新为 in_progress
+                        
+                        # 如果申请包含议价，更新 agreed_reward
+                        if application.negotiated_price is not None:
+                            task.agreed_reward = application.negotiated_price
+                        
+                        # 自动拒绝所有其他待处理的申请
+                        other_applications = db.execute(
+                            select(models.TaskApplication).where(
+                                and_(
+                                    models.TaskApplication.task_id == task_id,
+                                    models.TaskApplication.id != int(application_id),
+                                    models.TaskApplication.status == "pending"
+                                )
+                            )
+                        ).scalars().all()
+                        
+                        for other_app in other_applications:
+                            other_app.status = "rejected"
+                        
+                        # 写入操作日志
+                        from app.utils.time_utils import get_utc_time
+                        log_entry = models.NegotiationResponseLog(
+                            task_id=task_id,
+                            application_id=int(application_id),
+                            user_id=task.poster_id,
+                            action="accept",
+                            negotiated_price=application.negotiated_price,
+                            responded_at=get_utc_time()
+                        )
+                        db.add(log_entry)
+                        
+                        # 发送通知给申请者
+                        try:
+                            from app import crud
+                            crud.create_notification(
+                                db,
+                                application.applicant_id,
+                                "application_accepted",
+                                "您的申请已被接受",
+                                f"您的任务申请已被接受：{task.title}",
+                                task.id,
+                                auto_commit=False,
+                            )
+                        except Exception as e:
+                            logger.error(f"发送接受申请通知失败: {e}")
+                        
+                        logger.info(f"✅ 支付成功，申请 {application_id} 已批准")
+                
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
                 if task.status == "pending_payment":
                     task.status = "in_progress"
@@ -2920,7 +2990,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "payment_intent.payment_failed":
         payment_intent = event_data
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
-        logger.warning(f"Payment failed for task {task_id}: {payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')}")
+        application_id = payment_intent.get("metadata", {}).get("application_id")
+        error_message = payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')
+        logger.warning(f"Payment failed for task {task_id}, application {application_id}: {error_message}")
+        
+        # 支付失败时，清除 payment_intent_id（申请状态保持为 pending，可以重新尝试）
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task:
+                task.payment_intent_id = None
+                db.commit()
+                logger.info(f"✅ 支付失败，已清除任务 {task_id} 的 payment_intent_id，申请 {application_id} 仍为 pending 状态")
     
     # 处理退款事件
     elif event_type == "charge.refunded":
