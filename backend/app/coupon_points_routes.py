@@ -378,10 +378,21 @@ def create_task_payment(
     
     # 检查任务状态：只有 pending_payment 状态的任务需要支付
     if task.status != "pending_payment":
+        logger.warning(f"任务状态不正确: task_id={task_id}, status={task.status}, expected=pending_payment")
         raise HTTPException(
             status_code=400, 
-            detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_payment（等待支付）"
+            detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_payment（等待支付）。请先接受申请。"
         )
+    
+    # 检查任务是否已接受申请（必须有接受人）
+    if not task.taker_id:
+        logger.warning(f"任务尚未接受申请: task_id={task_id}, taker_id=None")
+        raise HTTPException(
+            status_code=400,
+            detail="任务尚未接受申请，无法进行支付。请先接受申请。"
+        )
+    
+    logger.info(f"任务支付检查通过: task_id={task_id}, status={task.status}, taker_id={task.taker_id}")
     
     # 计算平台服务费（申请费）- 从任务接受人端扣除
     # 假设平台服务费为任务金额的10%，或从系统设置读取

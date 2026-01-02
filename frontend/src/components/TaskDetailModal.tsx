@@ -410,8 +410,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       
       // 重新加载任务信息和申请者列表
       const res = await api.get(`/api/tasks/${taskId}`);
-      setTask(res.data);
+      const updatedTask = res.data;
+      setTask(updatedTask);
       await loadApplications();
+      
+      // 检查任务状态，如果是 pending_payment，跳转到支付页面
+      if (updatedTask.status === 'pending_payment' && updatedTask.poster_id === user?.id) {
+        // 延迟一下，让用户看到成功提示
+        setTimeout(() => {
+          navigate(`/${language}/tasks/${taskId}/payment`);
+        }, 1000);
+      }
     } catch (error: any) {
             alert(getErrorMessage(error));
     } finally {
@@ -2498,6 +2507,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               }}
             >
               💬 {t('taskDetail.contactTaker')}
+            </button>
+          )}
+
+          {/* 支付按钮：任务状态为 pending_payment 且用户是发布者时显示 */}
+          {task.status === 'pending_payment' && isTaskPoster && (
+            <button
+              onClick={() => taskId && navigate(`/${language}/tasks/${taskId}/payment`)}
+              style={{
+                background: '#10b981',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 32px',
+                fontWeight: 700,
+                fontSize: 18,
+                cursor: 'pointer',
+                marginRight: '16px'
+              }}
+            >
+              💳 {language === 'zh' ? '立即支付' : 'Pay Now'}
             </button>
           )}
 

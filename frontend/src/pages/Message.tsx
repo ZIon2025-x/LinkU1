@@ -6130,6 +6130,20 @@ const MessagePage: React.FC = () => {
                                 await loadTaskMessages(activeTaskId);
                                 await loadApplications(activeTaskId);
                                 await loadTasks();
+                                
+                                // 检查任务状态，如果是 pending_payment，跳转到支付页面
+                                try {
+                                  const taskRes = await api.get(`/api/tasks/${activeTaskId}`);
+                                  const task = taskRes.data;
+                                  if (task.status === 'pending_payment' && task.poster_id === user?.id) {
+                                    // 延迟一下，让用户看到成功提示
+                                    setTimeout(() => {
+                                      navigate(`/${language}/tasks/${activeTaskId}/payment`);
+                                    }, 1000);
+                                  }
+                                } catch (err) {
+                                  // 忽略检查错误
+                                }
                               }
                             } catch (error: any) {
                                                             alert(getErrorMessage(error));
