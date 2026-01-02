@@ -1360,8 +1360,6 @@ async def accept_application(
         except Exception as e:
             # 如果 Stripe API 调用失败，记录错误但不阻止接受申请
             # 在确认完成时会再次检查
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"无法验证申请人 {application.applicant_id} 的 Stripe Connect 账户: {e}")
         
         # 获取当前时间
