@@ -2863,15 +2863,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     event_type = event["type"]
     event_data = event["data"]["object"]
     
+    logger.info(f"Received Stripe webhook event: {event_type}, event_id: {event.get('id')}")
+    
     # 处理 Payment Intent 事件（用于 Stripe Elements）
     if event_type == "payment_intent.succeeded":
         payment_intent = event_data
+        payment_intent_id = payment_intent.get("id")
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        
+        logger.info(f"Payment intent succeeded: {payment_intent_id}, task_id: {task_id}, amount: {payment_intent.get('amount')}")
         
         if task_id:
             task = crud.get_task(db, task_id)
             if task and not task.is_paid:  # 幂等性检查
                 task.is_paid = 1
+                task.payment_intent_id = payment_intent_id  # 保存 Payment Intent ID 用于关联
                 # 获取任务金额（使用最终成交价或原始标价）
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                 
@@ -2891,13 +2897,15 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 taker_amount = task_amount - application_fee
                 task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
                 
-                # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
-                if task.status == "pending_confirmation":
+                # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
+                if task.status == "pending_payment":
                     task.status = "in_progress"
                 db.commit()
-                logger.info(f"Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress, escrow_amount: {task.escrow_amount}")
+                logger.info(f"✅ Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress, escrow_amount: {task.escrow_amount}, payment_intent_id: {payment_intent_id}")
             else:
-                logger.warning(f"Task {task_id} already paid or not found")
+                logger.warning(f"⚠️ Task {task_id} already paid or not found (payment_intent_id: {payment_intent_id})")
+        else:
+            logger.warning(f"⚠️ Payment intent succeeded but no task_id in metadata: {payment_intent_id}")
     
     elif event_type == "payment_intent.payment_failed":
         payment_intent = event_data
@@ -3038,8 +3046,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 taker_amount = task_amount - application_fee
                 task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
                 
-                # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
-                if task.status == "pending_confirmation":
+                # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
+                if task.status == "pending_payment":
                     task.status = "in_progress"
                 db.commit()
                 logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")

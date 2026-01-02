@@ -193,6 +193,7 @@ class Task(Base):
     accepted_at = Column(DateTime(timezone=True), nullable=True)  # 任务接受时间
     completed_at = Column(DateTime(timezone=True), nullable=True)  # 任务完成时间
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
+    payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID，用于关联支付记录
     escrow_amount = Column(Float, default=0.0)
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL

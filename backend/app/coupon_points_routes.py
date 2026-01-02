@@ -376,11 +376,11 @@ def create_task_payment(
             "note": "任务已支付"
         }
     
-    # 检查任务状态：只有 pending_confirmation 状态的任务需要支付
-    if task.status != "pending_confirmation":
+    # 检查任务状态：只有 pending_payment 状态的任务需要支付
+    if task.status != "pending_payment":
         raise HTTPException(
             status_code=400, 
-            detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_confirmation"
+            detail=f"任务状态不正确，无法支付。当前状态：{task.status}，需要状态：pending_payment（等待支付）"
         )
     
     # 计算平台服务费（申请费）- 从任务接受人端扣除
@@ -587,13 +587,14 @@ def create_task_payment(
                 idempotency_key=idempotency_key
             )
             
-            # 标记任务为已支付
+            # 标记任务为已支付（积分支付，没有 payment_intent_id）
             task.is_paid = 1
+            task.payment_intent_id = None  # 积分支付没有 Payment Intent
             # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
             taker_amount = task_amount - (application_fee_pence / 100.0)
             task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
-            # 支付成功后，将任务状态从 pending_confirmation 更新为 in_progress
-            if task.status == "pending_confirmation":
+            # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
+            if task.status == "pending_payment":
                 task.status = "in_progress"
             
             db.commit()
@@ -627,14 +628,34 @@ def create_task_payment(
     if final_amount > 0:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
         
+        # 获取任务接受人的 Stripe Connect 账户 ID
+        taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
+        if not taker or not taker.stripe_account_id:
+            raise HTTPException(
+                status_code=400,
+                detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
+            )
+        
         # 创建 Payment Intent（用于 Stripe Elements 嵌入式支付表单）
+        # 使用 Stripe Connect Platform charges 模式（Direct charges）
+        # on_behalf_of: 指定资金将转到任务接受人的账户（Direct charges 模式）
+        # application_fee_amount: 平台服务费（从任务接受人端扣除）
+        # 注意：在 Direct charges 模式下，资金会自动转到 on_behalf_of 指定的账户
+        # 任务接受人实际收到的金额 = final_amount - application_fee_amount
         payment_intent = stripe.PaymentIntent.create(
-            amount=final_amount,  # 便士
+            amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
             payment_method_types=["card"],
+            # Stripe Connect Direct charges: 将资金转到任务接受人的账户
+            on_behalf_of=taker.stripe_account_id,
+            # 平台服务费（从任务接受人端扣除）
+            # 注意：application_fee_amount 是基于任务总金额计算的，不是基于 final_amount
+            # 但实际扣除时，Stripe 会从 final_amount 中扣除 application_fee_amount
+            application_fee_amount=application_fee_pence,
             metadata={
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
+                "taker_id": str(task.taker_id),
                 "task_amount": str(task_amount_pence),  # 任务金额
                 "points_used": str(points_used) if points_used else "",
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
@@ -664,6 +685,82 @@ def create_task_payment(
         }
     
     raise HTTPException(status_code=400, detail="支付金额计算错误")
+
+
+@router.get("/tasks/{task_id}/payment-status")
+def get_task_payment_status(
+    task_id: int,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    查询任务支付状态
+    
+    返回任务的支付信息，包括：
+    - 是否已支付
+    - Payment Intent ID（如果使用 Stripe 支付）
+    - 支付金额
+    - 托管金额
+    """
+    import stripe
+    import os
+    
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 权限检查：只有任务发布者或接受者可以查看支付状态
+    if task.poster_id != current_user.id and task.taker_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权查看此任务的支付状态")
+    
+    # 获取任务金额
+    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+    
+    # 构建响应
+    response = {
+        "task_id": task_id,
+        "is_paid": bool(task.is_paid),
+        "payment_intent_id": task.payment_intent_id,
+        "task_amount": task_amount,
+        "escrow_amount": task.escrow_amount,
+        "status": task.status,
+        "currency": task.currency or "GBP"
+    }
+    
+    # 如果有 Payment Intent ID，从 Stripe 获取详细信息
+    if task.payment_intent_id:
+        try:
+            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+            
+            response["payment_details"] = {
+                "payment_intent_id": payment_intent.id,
+                "status": payment_intent.status,  # succeeded, processing, requires_payment_method, etc.
+                "amount": payment_intent.amount,  # 便士
+                "amount_display": f"{payment_intent.amount / 100:.2f}",
+                "currency": payment_intent.currency.upper(),
+                "created": payment_intent.created,
+                "charges": []
+            }
+            
+            # 获取关联的 Charge 信息
+            if payment_intent.charges and len(payment_intent.charges.data) > 0:
+                for charge in payment_intent.charges.data:
+                    response["payment_details"]["charges"].append({
+                        "charge_id": charge.id,
+                        "status": charge.status,
+                        "paid": charge.paid,
+                        "amount": charge.amount,
+                        "amount_display": f"{charge.amount / 100:.2f}",
+                        "created": charge.created
+                    })
+        except stripe.error.StripeError as e:
+            logger.warning(f"Failed to retrieve payment intent {task.payment_intent_id}: {e}")
+            response["payment_details"] = {
+                "error": f"无法从 Stripe 获取支付详情: {str(e)}"
+            }
+    
+    return response
 
 
 # ==================== 签到相关 API ====================

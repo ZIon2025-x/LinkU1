@@ -32,6 +32,8 @@ class TaskStatusLogic:
                 return "completed"
             elif task.status == "in_progress":
                 return "in_progress"
+            elif task.status == "pending_payment":
+                return "pending_payment"
             elif task.status == "pending_confirmation":
                 return "pending_confirmation"
             else:
@@ -168,8 +170,9 @@ class AcceptApplicationLogic:
             
             # 更新任务
             locked_task.taker_id = application.applicant_id
-            # 接受申请后，任务状态设置为 pending_confirmation，等待支付完成后才进入 in_progress
-            locked_task.status = "pending_confirmation"
+            # 接受申请后，任务状态设置为 pending_payment（等待支付）
+            # 需要任务发布者完成支付后，任务才会进入 in_progress 状态
+            locked_task.status = "pending_payment"
             # 确保 is_paid 为 0（未支付）
             locked_task.is_paid = 0
             
