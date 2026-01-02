@@ -284,7 +284,7 @@ def create_connect_account(
                 except stripe.error.StripeError as v2_err:
                     # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
                     logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-                account = stripe.Account.retrieve(existing_account_id)
+                    account = stripe.Account.retrieve(existing_account_id)
                     is_complete = account.details_submitted
                 
                 logger.info(f"User {current_user.id} already has Stripe account {existing_account_id}, returning existing account")
@@ -1540,10 +1540,10 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
             else:
                 # V1 API 使用传统字段
-            details_submitted = account.get("details_submitted", False)
-            charges_enabled = account.get("charges_enabled", False)
-            payouts_enabled = account.get("payouts_enabled", False)
-            
+                details_submitted = account.get("details_submitted", False)
+                charges_enabled = account.get("charges_enabled", False)
+                payouts_enabled = account.get("payouts_enabled", False)
+                
                 logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
             
             # 检查状态变化（对 V1 和 V2 都适用）
