@@ -237,9 +237,13 @@ def refresh_session(
                 device_fingerprint = get_device_fingerprint(request)
                 client_ip = get_client_ip(request)
                 
+                # 检测是否为 iOS 应用
+                from app.secure_auth import is_ios_app_request
+                is_ios_app = is_ios_app_request(request)
+                
                 # 验证refresh_token
                 from app.secure_auth import verify_user_refresh_token
-                user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint)
+                user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint, is_ios_app)
                 if user_id:
                     # refresh_token有效，创建新session
                     user = crud.get_user_by_id(db, user_id)
@@ -373,9 +377,13 @@ def refresh_session_with_token(
         device_fingerprint = get_device_fingerprint(request)
         client_ip = get_client_ip(request)
         
+        # 检测是否为 iOS 应用
+        from app.secure_auth import is_ios_app_request
+        is_ios_app = is_ios_app_request(request)
+        
         # 验证refresh_token
         from app.secure_auth import verify_user_refresh_token
-        user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint)
+        user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint, is_ios_app)
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 

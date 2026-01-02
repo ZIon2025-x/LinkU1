@@ -1044,7 +1044,13 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
     
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
-    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    # 使用专门的 Stripe Connect Webhook Secret
+    # 如果未设置，则回退到通用的 STRIPE_WEBHOOK_SECRET（向后兼容）
+    endpoint_secret = os.getenv("STRIPE_CONNECT_WEBHOOK_SECRET") or os.getenv("STRIPE_WEBHOOK_SECRET")
+    
+    if not endpoint_secret:
+        logger.error("STRIPE_CONNECT_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET not configured")
+        return {"error": "Webhook secret not configured"}, 500
     
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)

@@ -854,12 +854,21 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     return refresh_token
 
 
-def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
-    """验证用户refresh token，严格检查IP和设备指纹绑定（一个token只能在一个IP、一个设备使用）"""
+def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "", is_ios_app: bool = False) -> Optional[str]:
+    """验证用户refresh token，严格检查IP和设备指纹绑定（一个token只能在一个IP、一个设备使用）
+    
+    Args:
+        refresh_token: 刷新令牌
+        ip_address: 当前IP地址
+        device_fingerprint: 当前设备指纹
+        is_ios_app: 是否为iOS应用（iOS应用允许IP变化）
+    """
     if not refresh_token:
+        logger.debug(f"[SECURE_AUTH] verify_user_refresh_token: refresh_token为空")
         return None
     
     if not USE_REDIS or not redis_client:
+        logger.warning(f"[SECURE_AUTH] verify_user_refresh_token: Redis未启用或未连接")
         return None
     
     # 查找refresh token
@@ -867,12 +876,14 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     keys = redis_client.keys(pattern)
     
     if not keys:
+        logger.warning(f"[SECURE_AUTH] verify_user_refresh_token: 未找到refresh token: {refresh_token[:8]}...")
         return None
     
     # 获取token数据
     key_str = keys[0].decode() if isinstance(keys[0], bytes) else keys[0]
     data = safe_redis_get(key_str)
     if not data:
+        logger.warning(f"[SECURE_AUTH] verify_user_refresh_token: refresh token数据为空: {refresh_token[:8]}...")
         return None
     
     user_id = data.get('user_id')
@@ -883,31 +894,81 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         expires_at = parse_iso_utc(expires_at_str)
         if get_utc_time() > expires_at:
             # 过期了，删除
-            logger.info(f"[SECURE_AUTH] refresh token已过期，删除: {refresh_token[:8]}...")
+            logger.info(f"[SECURE_AUTH] refresh token已过期，删除: {refresh_token[:8]}..., 用户: {user_id}")
             redis_client.delete(key_str)
             return None
     
-    # ========== 严格验证：IP地址必须完全匹配 ==========
+    # ========== IP地址验证：iOS应用使用更宽松的策略 ==========
     stored_ip = data.get('ip_address', '')
-    if stored_ip and ip_address and stored_ip != ip_address:
-        logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
-        logger.error(f"  用户ID: {user_id}")
-        logger.error(f"  存储IP: {stored_ip}")
-        logger.error(f"  当前IP: {ip_address}")
-        # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
-        redis_client.delete(key_str)
-        return None
+    if not ip_address or ip_address == "unknown":
+        # 当前IP地址未知或为空
+        if is_ios_app:
+            # iOS应用允许IP未知的情况（某些网络环境可能无法获取IP）
+            logger.info(f"[SECURE_AUTH] refresh token IP地址未知（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}")
+        elif stored_ip:
+            # 非iOS应用，如果存储了IP但当前IP未知，拒绝访问
+            logger.error(f"[SECURE_AUTH] refresh token 当前IP地址未知，拒绝访问并撤销token")
+            logger.error(f"  用户ID: {user_id}")
+            logger.error(f"  存储IP: {stored_ip}")
+            logger.error(f"  当前IP: {ip_address}")
+            redis_client.delete(key_str)
+            return None
+    elif stored_ip and stored_ip != ip_address:
+        if is_ios_app:
+            # iOS应用允许IP地址变化（用户可能切换WiFi/移动网络）
+            logger.info(f"[SECURE_AUTH] refresh token IP地址变化（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}, 当前IP: {ip_address}")
+            # 更新存储的IP地址为当前IP
+            data['ip_address'] = ip_address
+            redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+        else:
+            logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
+            logger.error(f"  用户ID: {user_id}")
+            logger.error(f"  存储IP: {stored_ip}")
+            logger.error(f"  当前IP: {ip_address}")
+            # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
+            redis_client.delete(key_str)
+            return None
+    elif not stored_ip and ip_address:
+        # 如果存储的IP为空但当前有IP，更新存储的IP
+        logger.info(f"[SECURE_AUTH] refresh token 更新IP地址 - 用户: {user_id}, 当前IP: {ip_address}")
+        data['ip_address'] = ip_address
+        redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
     
-    # ========== 严格验证：设备指纹必须匹配 ==========
+    # ========== 设备指纹验证：使用相似度检查 ==========
     stored_device = data.get('device_fingerprint', '')
-    if stored_device and device_fingerprint and stored_device != device_fingerprint:
-        logger.error(f"[SECURE_AUTH] refresh token 设备指纹不匹配，拒绝访问并撤销token")
-        logger.error(f"  用户ID: {user_id}")
-        logger.error(f"  存储设备: {stored_device}")
-        logger.error(f"  当前设备: {device_fingerprint}")
-        # 设备指纹不匹配，立即撤销token（安全策略：一个token只能在一个设备使用）
-        redis_client.delete(key_str)
-        return None
+    if not device_fingerprint:
+        # 当前设备指纹为空
+        if stored_device:
+            # 如果存储了设备指纹但当前为空，拒绝访问（可能是请求缺少必要信息）
+            logger.error(f"[SECURE_AUTH] refresh token 当前设备指纹为空，拒绝访问并撤销token")
+            logger.error(f"  用户ID: {user_id}")
+            logger.error(f"  存储设备: {stored_device}")
+            redis_client.delete(key_str)
+            return None
+    elif stored_device and stored_device != device_fingerprint:
+        # 检查指纹相似度（允许部分变化）
+        is_mobile = is_ios_app  # iOS应用视为移动端
+        threshold = 0.4 if is_mobile else 0.7
+        
+        if is_fingerprint_similar(stored_device, device_fingerprint, threshold):
+            logger.info(f"[SECURE_AUTH] refresh token 设备指纹相似 (阈值: {threshold})，允许访问并更新指纹 - 用户: {user_id}")
+            # 更新设备指纹
+            data['device_fingerprint'] = device_fingerprint
+            redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+        else:
+            logger.error(f"[SECURE_AUTH] refresh token 设备指纹差异过大，拒绝访问并撤销token")
+            logger.error(f"  用户ID: {user_id}")
+            logger.error(f"  存储设备: {stored_device}")
+            logger.error(f"  当前设备: {device_fingerprint}")
+            logger.error(f"  相似度阈值: {threshold}")
+            # 设备指纹差异过大，立即撤销token（安全策略：一个token只能在一个设备使用）
+            redis_client.delete(key_str)
+            return None
+    elif not stored_device and device_fingerprint:
+        # 如果存储的设备指纹为空但当前有指纹，更新存储的指纹
+        logger.info(f"[SECURE_AUTH] refresh token 更新设备指纹 - 用户: {user_id}, 当前设备: {device_fingerprint}")
+        data['device_fingerprint'] = device_fingerprint
+        redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
     
     # 检查频率限制（20分钟内最多使用一次）
     last_used_str = data.get('last_used')
