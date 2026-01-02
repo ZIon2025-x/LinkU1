@@ -23,6 +23,8 @@ interface PaymentModalProps {
   visible: boolean;
   taskId: number;
   taskTitle?: string;
+  clientSecret?: string | null;  // 直接传入的 client_secret（用于批准申请时的支付）
+  paymentIntentId?: string | null;  // Payment Intent ID（用于5分钟超时检查）
   onSuccess: () => void;
   onCancel: () => void;
 }
