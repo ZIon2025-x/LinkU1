@@ -37,6 +37,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
+import PaymentModal from '../components/payment/PaymentModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
@@ -6131,14 +6132,14 @@ const MessagePage: React.FC = () => {
                                 await loadApplications(activeTaskId);
                                 await loadTasks();
                                 
-                                // 检查任务状态，如果是 pending_payment，跳转到支付页面
+                                // 检查任务状态，如果是 pending_payment，显示支付弹窗
                                 try {
                                   const taskRes = await api.get(`/api/tasks/${activeTaskId}`);
                                   const task = taskRes.data;
                                   if (task.status === 'pending_payment' && task.poster_id === user?.id) {
                                     // 延迟一下，让用户看到成功提示
                                     setTimeout(() => {
-                                      navigate(`/${language}/tasks/${activeTaskId}/payment`);
+                                      setShowPaymentModal(true);
                                     }, 1000);
                                   }
                                 } catch (err) {
@@ -7184,6 +7185,24 @@ const MessagePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* 支付弹窗 */}
+      {activeTaskId && (
+        <PaymentModal
+          visible={showPaymentModal}
+          taskId={activeTaskId}
+          taskTitle={activeTask?.title}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            // 重新加载任务信息
+            if (activeTaskId) {
+              loadTaskMessages(activeTaskId);
+              loadTasks();
+            }
+          }}
+          onCancel={() => setShowPaymentModal(false)}
+        />
       )}
     </div>
   );

@@ -161,9 +161,9 @@ const TaskPayment: React.FC = () => {
           setTimeout(poll, pollInterval);
         } else {
           // 轮询超时，直接跳转（让用户自己检查）
-          setTimeout(() => {
-            localizedNavigate(`/tasks/${taskId}`);
-          }, 1500);
+    setTimeout(() => {
+      localizedNavigate(`/tasks/${taskId}`);
+    }, 1500);
         }
       }
     };

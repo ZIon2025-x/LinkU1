@@ -180,12 +180,12 @@ def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
             except stripe.error.StripeError as v2_err:
                 # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
                 logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-                account = stripe.Account.retrieve(user.stripe_account_id)
-                account_metadata = getattr(account, 'metadata', {})
-                if isinstance(account_metadata, dict):
-                    account_user_id = account_metadata.get('user_id')
-                else:
-                    account_user_id = getattr(account_metadata, 'user_id', None)
+            account = stripe.Account.retrieve(user.stripe_account_id)
+            account_metadata = getattr(account, 'metadata', {})
+            if isinstance(account_metadata, dict):
+                account_user_id = account_metadata.get('user_id')
+            else:
+                account_user_id = getattr(account_metadata, 'user_id', None)
             
             # 检查 metadata 中的 user_id 是否匹配
             if account_user_id and str(account_user_id) == str(user_id):
@@ -225,12 +225,12 @@ def verify_account_ownership(account_id: str, current_user: models.User) -> bool
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
             logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-            account = stripe.Account.retrieve(account_id)
-            account_metadata = getattr(account, 'metadata', {})
-            if isinstance(account_metadata, dict):
-                account_user_id = account_metadata.get('user_id')
-            else:
-                account_user_id = getattr(account_metadata, 'user_id', None)
+        account = stripe.Account.retrieve(account_id)
+        account_metadata = getattr(account, 'metadata', {})
+        if isinstance(account_metadata, dict):
+            account_user_id = account_metadata.get('user_id')
+        else:
+            account_user_id = getattr(account_metadata, 'user_id', None)
         
         if not account_user_id:
             logger.warning(f"Account {account_id} has no user_id in metadata")
@@ -272,7 +272,7 @@ def create_connect_account(
         if existing_account_id:
             # 检查账户状态（优先使用 V2 API，兼容 V1 API）
             try:
-                try:
+            try:
                     # 尝试使用 V2 API
                     account = stripe_v2.core.accounts.retrieve(
                         existing_account_id,
@@ -284,7 +284,7 @@ def create_connect_account(
                 except stripe.error.StripeError as v2_err:
                     # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
                     logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-                    account = stripe.Account.retrieve(existing_account_id)
+                account = stripe.Account.retrieve(existing_account_id)
                     is_complete = account.details_submitted
                 
                 logger.info(f"User {current_user.id} already has Stripe account {existing_account_id}, returning existing account")
@@ -340,8 +340,8 @@ def create_connect_account(
                         "locales": ["en-GB"]
                     },
                     "metadata": {
-                        "user_id": str(current_user.id),
-                        "platform": "LinkU",
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [
@@ -393,14 +393,14 @@ def create_connect_account(
                 except stripe.error.StripeError as v2_err:
                     logger.warning(f"Failed to retrieve account using V2 API: {v2_err}, falling back to V1 check")
                     # 回退到 V1 API 检查
-                    if existing_account.details_submitted:
-                        return {
-                            "account_id": existing_account.id,
-                            "client_secret": None,
-                            "account_status": existing_account.details_submitted,
-                            "charges_enabled": existing_account.charges_enabled,
-                            "message": "您已经有一个 Stripe 账户且已完成设置"
-                        }
+                if existing_account.details_submitted:
+                    return {
+                        "account_id": existing_account.id,
+                        "client_secret": None,
+                        "account_status": existing_account.details_submitted,
+                        "charges_enabled": existing_account.charges_enabled,
+                        "message": "您已经有一个 Stripe 账户且已完成设置"
+                    }
                 
                 # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
                 onboarding_session = stripe.AccountSession.create(
@@ -651,8 +651,8 @@ def create_connect_account_embedded(
                         "locales": ["en-GB"]
                     },
                     "metadata": {
-                        "user_id": str(current_user.id),
-                        "platform": "LinkU",
+                    "user_id": str(current_user.id),
+                    "platform": "LinkU",
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [
@@ -890,16 +890,16 @@ def get_account_status(
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
             logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-            account = stripe.Account.retrieve(current_user.stripe_account_id)
-            
-            # 验证账户所有权（通过 metadata 中的 user_id）
-            if not verify_account_ownership(current_user.stripe_account_id, current_user):
-                logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
-                raise HTTPException(
-                    status_code=403,
-                    detail="账户验证失败：账户不属于当前用户"
-                )
-            
+        account = stripe.Account.retrieve(current_user.stripe_account_id)
+        
+        # 验证账户所有权（通过 metadata 中的 user_id）
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
             # V1 API 的状态检查
             details_submitted = account.details_submitted
             charges_enabled = account.charges_enabled
@@ -1540,23 +1540,23 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
             else:
                 # V1 API 使用传统字段
-                details_submitted = account.get("details_submitted", False)
-                charges_enabled = account.get("charges_enabled", False)
-                payouts_enabled = account.get("payouts_enabled", False)
-                
-                # 检查状态变化
-                previous_attributes = event.get("data", {}).get("previous_attributes", {})
-                was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
-                was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
-                
-                # 如果账户刚刚激活，记录日志
-                if not was_charges_enabled and charges_enabled:
-                    logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-                
-                # 如果账户刚刚启用提现，记录日志
-                if not was_payouts_enabled and payouts_enabled:
-                    logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
-                
+            details_submitted = account.get("details_submitted", False)
+            charges_enabled = account.get("charges_enabled", False)
+            payouts_enabled = account.get("payouts_enabled", False)
+            
+            # 检查状态变化
+            previous_attributes = event.get("data", {}).get("previous_attributes", {})
+            was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
+            was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
+            
+            # 如果账户刚刚激活，记录日志
+            if not was_charges_enabled and charges_enabled:
+                logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+            
+            # 如果账户刚刚启用提现，记录日志
+            if not was_payouts_enabled and payouts_enabled:
+                logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
+            
                 logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
         else:
             # 如果通过 account_id 找不到，尝试通过 metadata

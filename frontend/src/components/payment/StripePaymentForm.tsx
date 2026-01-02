@@ -69,8 +69,8 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       } else if (paymentIntent) {
         // 检查支付状态
         if (paymentIntent.status === 'succeeded') {
-          message.success('支付成功！');
-          onSuccess();
+        message.success('支付成功！');
+        onSuccess();
         } else if (paymentIntent.status === 'requires_action') {
           // 需要额外操作（3D Secure），PaymentElement 会自动处理
           // 这种情况通常不会到达这里，因为 confirmPayment 会等待用户完成操作

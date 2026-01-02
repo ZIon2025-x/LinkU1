@@ -6,6 +6,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from './LoginModal';
+import PaymentModal from './payment/PaymentModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
@@ -76,6 +77,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [userParticipant, setUserParticipant] = useState<any>(null);
   // 时间段信息
   const [timeSlot, setTimeSlot] = useState<any>(null);
+  // 支付弹窗状态
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -2513,7 +2516,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 支付按钮：任务状态为 pending_payment 且用户是发布者时显示 */}
           {task.status === 'pending_payment' && isTaskPoster && (
             <button
-              onClick={() => taskId && navigate(`/${language}/tasks/${taskId}/payment`)}
+              onClick={() => setShowPaymentModal(true)}
               style={{
                 background: '#10b981',
                 color: '#fff',
@@ -2739,6 +2742,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             setShowForgotPasswordModal(false);
           }}
         />
+        
+        {/* 支付弹窗 */}
+        {taskId && (
+          <PaymentModal
+            visible={showPaymentModal}
+            taskId={taskId}
+            taskTitle={task?.title}
+            onSuccess={() => {
+              setShowPaymentModal(false);
+              // 重新加载任务信息
+              if (taskId) {
+                loadTaskData();
+              }
+            }}
+            onCancel={() => setShowPaymentModal(false)}
+          />
+        )}
 
         {/* 申请任务弹窗 */}
         {showApplyModal && taskId && (

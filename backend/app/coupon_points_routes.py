@@ -34,7 +34,7 @@ from app import models
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["优惠券和积分系统"])
+router = APIRouter(prefix="/api/coupon-points", tags=["优惠券和积分系统"])
 
 
 # ==================== 积分相关 API ====================
@@ -679,7 +679,7 @@ def create_task_payment(
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            payment_method_types=["card"],
+            payment_method_types=["card", "apple_pay", "google_pay", "link"],  # 支持多种支付方式
             # Stripe Connect Destination charges: 将资金转到任务接受人的账户（与 sample code 一致）
             application_fee_amount=application_fee_pence,
             transfer_data={
