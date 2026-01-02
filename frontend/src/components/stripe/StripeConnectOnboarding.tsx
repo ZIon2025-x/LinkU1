@@ -39,6 +39,76 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   
   const stripeConnectInstance = useStripeConnect(connectedAccountId) || manualStripeConnectInstance;
 
+  // 防止页面跳转到 Stripe 外部页面
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // 如果正在 onboarding 过程中，阻止跳转
+      if (stripeConnectInstance || manualStripeConnectInstance) {
+        // 不阻止，让用户正常完成流程
+      }
+    };
+
+    // 监听所有链接点击，防止跳转到 Stripe 外部页面
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      if (link && link.href) {
+        // 阻止所有指向 Stripe Connect 外部页面的链接
+        if (link.href.includes('connect.stripe.com') || 
+            link.href.includes('stripe.com/app/express')) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Blocked navigation to Stripe external page:', link.href);
+          // 显示提示信息
+          if (onError) {
+            onError('请使用嵌入式组件完成设置，不要跳转到外部页面');
+          }
+          return false;
+        }
+      }
+    };
+    
+    // 监听 window.location 变化，防止程序化跳转
+    const originalLocation = window.location;
+    const checkLocation = () => {
+      if (window.location.href.includes('connect.stripe.com') || 
+          window.location.href.includes('stripe.com/app/express')) {
+        console.log('Detected navigation to Stripe external page, blocking...');
+        // 阻止跳转并返回
+        window.history.back();
+        if (onError) {
+          onError('检测到跳转到外部页面，已阻止。请使用嵌入式组件完成设置。');
+        }
+      }
+    };
+    
+    // 定期检查 location 变化
+    const locationCheckInterval = setInterval(checkLocation, 100);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick, true);
+    
+    // 监听 popstate 事件，防止通过浏览器历史记录跳转
+    const handlePopState = (e: PopStateEvent) => {
+      if (window.location.href.includes('connect.stripe.com') || 
+          window.location.href.includes('stripe.com/app/express')) {
+        e.preventDefault();
+        window.history.pushState(null, '', window.location.pathname);
+        console.log('Blocked popstate navigation to Stripe external page');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleLinkClick, true);
+      window.removeEventListener('popstate', handlePopState);
+      if (locationCheckInterval) {
+        clearInterval(locationCheckInterval);
+      }
+    };
+  }, [stripeConnectInstance, manualStripeConnectInstance]);
+
   // 检查用户是否已有 Stripe Connect 账户
   useEffect(() => {
     const checkExistingAccount = async () => {
@@ -272,24 +342,59 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                 // 手动创建 onboarding session 并使用嵌入式组件
                 try {
                   setError(null);
-                  const response = await api.post('/api/stripe/connect/account/onboarding-session');
-                  const data = response.data;
+                  setAccountCreatePending(true);
                   
-                  if (data.client_secret) {
+                  // 先尝试通过 account_session 端点获取 client_secret
+                  let clientSecret: string | null = null;
+                  try {
+                    const sessionResponse = await api.post('/api/stripe/connect/account_session', {
+                      account: connectedAccountId,
+                    });
+                    if (sessionResponse.data?.client_secret) {
+                      clientSecret = sessionResponse.data.client_secret;
+                    }
+                  } catch (sessionErr: any) {
+                    console.log('Account session endpoint failed, trying onboarding-session:', sessionErr);
+                  }
+                  
+                  // 如果 account_session 失败，尝试 onboarding-session
+                  if (!clientSecret) {
+                    const response = await api.post('/api/stripe/connect/account/onboarding-session');
+                    const data = response.data;
+                    if (data.client_secret) {
+                      clientSecret = data.client_secret;
+                    }
+                  }
+                  
+                  if (clientSecret) {
                     // 使用 client_secret 直接创建 Stripe Connect instance
                     const publishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
                       (process.env as any).STRIPE_PUBLISHABLE_KEY;
                     
                     if (!publishableKey) {
                       setError('Stripe Publishable Key 未配置');
+                      setAccountCreatePending(false);
                       return;
                     }
                     
+                    // 创建一个持久的 fetchClientSecret 函数
+                    const clientSecretValue = clientSecret;
                     const instance = loadConnectAndInitialize({
                       publishableKey,
                       fetchClientSecret: async () => {
-                        // 直接返回已获取的 client_secret
-                        return data.client_secret;
+                        // 每次都重新获取最新的 client_secret
+                        try {
+                          const refreshResponse = await api.post('/api/stripe/connect/account_session', {
+                            account: connectedAccountId,
+                          });
+                          if (refreshResponse.data?.client_secret) {
+                            return refreshResponse.data.client_secret;
+                          }
+                        } catch (err) {
+                          console.warn('Failed to refresh client_secret, using cached value');
+                        }
+                        // 如果刷新失败，返回缓存的 client_secret
+                        return clientSecretValue;
                       },
                       appearance: {
                         overlays: "dialog",
@@ -300,12 +405,15 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                     });
                     
                     setManualStripeConnectInstance(instance);
+                    setAccountCreatePending(false);
                   } else {
                     setError('无法获取 client_secret');
+                    setAccountCreatePending(false);
                   }
                 } catch (err: any) {
                   console.error('Error creating onboarding session:', err);
                   setError(err.response?.data?.detail || err.message || '创建 onboarding session 失败');
+                  setAccountCreatePending(false);
                 }
               }}
               style={{
@@ -374,11 +482,38 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       )}
 
       {stripeConnectInstance && (
-        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-          <ConnectAccountOnboarding
-            onExit={handleOnboardingExit}
-          />
-        </ConnectComponentsProvider>
+        <div 
+          style={{ 
+            width: '100%',
+            minHeight: '600px',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+          // 防止组件内部链接导致页面跳转
+          onClick={(e) => {
+            // 阻止所有链接的默认行为
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'A' || target.closest('a')) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+            <ConnectAccountOnboarding
+              onExit={handleOnboardingExit}
+              onStepChange={(stepChange) => {
+                // 监听步骤变化，确保在应用内完成
+                console.log('Onboarding step changed:', stepChange);
+              }}
+              // 根据官方文档，这些是可选的配置
+              // 但可以确保组件完全在应用内工作
+              // collectionOptions={{
+              //   fields: 'currently_due', // 或 'eventually_due' 用于完整收集
+              // }}
+            />
+          </ConnectComponentsProvider>
+        </div>
       )}
 
       {error && (

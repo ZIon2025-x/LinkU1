@@ -945,12 +945,15 @@ def create_account_session(
             )
         
         # 创建 AccountSession（完全按照官方示例代码）
-        # 参考: stripe-sample-code/server.js line 12-34
+        # 参考: stripe-sample-code/server.js line 12-34 和官方文档
+        # https://docs.stripe.com/connect/embedded-onboarding
         account_session = stripe.AccountSession.create(
             account=account_id,
             components={
                 "account_onboarding": {
-                    "enabled": True
+                    "enabled": True,
+                    # 确保使用嵌入式组件，不跳转到外部页面
+                    # 根据文档，这是默认行为，但明确指定以确保一致性
                 }
             }
         )
