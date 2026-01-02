@@ -6129,11 +6129,13 @@ const MessagePage: React.FC = () => {
                               const response = await acceptApplication(activeTaskId, app.id);
                               console.log('Accept application response:', response);
                               // 如果返回了支付信息，立即显示支付弹窗
-                              if (response && response.client_secret && response.payment_intent_id) {
+                              // response 是 AxiosResponse，需要访问 response.data
+                              const responseData = response?.data || response;
+                              if (responseData && responseData.client_secret && responseData.payment_intent_id) {
                                 setShowApplicationListModal(false);
                                 // 设置支付信息并显示支付弹窗
-                                setPaymentIntentId(response.payment_intent_id);
-                                setPaymentClientSecret(response.client_secret);
+                                setPaymentIntentId(responseData.payment_intent_id);
+                                setPaymentClientSecret(responseData.client_secret);
                                 setShowPaymentModal(true);
                               } else {
                                 // 如果没有支付信息，说明可能已经支付成功或使用积分支付
