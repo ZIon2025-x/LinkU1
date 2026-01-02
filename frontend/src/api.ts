@@ -727,7 +727,7 @@ export async function getTaskApplications(taskId: number) {
 // 接受申请
 export async function acceptApplication(taskId: number, applicationId: number) {
   const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/accept`);
-  return res.data;
+  return res; // 返回完整响应，以便访问 data 和其他属性
 }
 
 // 拒绝申请

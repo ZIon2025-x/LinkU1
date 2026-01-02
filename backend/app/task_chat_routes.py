@@ -1369,7 +1369,6 @@ async def accept_application(
         # 申请状态保持为 pending，等待支付成功后才批准
         
         # 计算任务金额
-        from app.crud import get_system_setting
         task_amount = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
         
         if task_amount <= 0:
@@ -1380,11 +1379,11 @@ async def accept_application(
         
         task_amount_pence = int(task_amount * 100)
         
-        # 计算平台服务费
-        application_fee_rate_setting = await db.execute(
+        # 计算平台服务费（异步查询系统设置）
+        application_fee_rate_setting_result = await db.execute(
             select(models.SystemSettings).where(models.SystemSettings.setting_key == "application_fee_rate")
         )
-        application_fee_rate_setting = application_fee_rate_setting.scalar_one_or_none()
+        application_fee_rate_setting = application_fee_rate_setting_result.scalar_one_or_none()
         application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
         application_fee_pence = int(task_amount_pence * application_fee_rate)
         
@@ -1396,10 +1395,16 @@ async def accept_application(
         # 获取接受者的 Stripe Connect 账户ID
         taker_stripe_account_id = applicant.stripe_account_id
         
-        # 创建 Payment Intent，使用 Destination charges
+        # 创建 Payment Intent（参考 Stripe Payment Intents API sample code）
+        # Create a PaymentIntent with the order amount and currency
+        # 使用 automatic_payment_methods（与官方 sample code 一致）
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
+            # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
+            automatic_payment_methods={"enabled": True},
+            # Stripe Connect Destination charges: 将资金转到任务接受人的账户
+            # 这是平台业务需求，官方 sample code 不包含此配置
             application_fee_amount=application_fee_pence,
             transfer_data={
                 "destination": taker_stripe_account_id
@@ -1411,7 +1416,6 @@ async def accept_application(
                 "taker_id": str(application.applicant_id),
                 "pending_approval": "true"  # 标记这是待确认的批准
             },
-            automatic_payment_methods={"enabled": True},
         )
         
         # 保存 payment_intent_id 到任务（临时存储，支付成功后才会真正批准）

@@ -6127,8 +6127,9 @@ const MessagePage: React.FC = () => {
                           onClick={async () => {
                             try {
                               const response = await acceptApplication(activeTaskId, app.id);
+                              console.log('Accept application response:', response);
                               // 如果返回了支付信息，立即显示支付弹窗
-                              if (response.client_secret && response.payment_intent_id) {
+                              if (response && response.client_secret && response.payment_intent_id) {
                                 setShowApplicationListModal(false);
                                 // 设置支付信息并显示支付弹窗
                                 setPaymentIntentId(response.payment_intent_id);
@@ -6146,6 +6147,7 @@ const MessagePage: React.FC = () => {
                                 }
                               }
                             } catch (error: any) {
+                              console.error('Accept application error:', error);
                               alert(getErrorMessage(error));
                             }
                           }}

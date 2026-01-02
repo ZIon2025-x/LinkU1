@@ -6,7 +6,6 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from './LoginModal';
-import PaymentModal from './payment/PaymentModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
@@ -77,8 +76,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [userParticipant, setUserParticipant] = useState<any>(null);
   // 时间段信息
   const [timeSlot, setTimeSlot] = useState<any>(null);
-  // 支付弹窗状态
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -408,7 +405,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
     setActionLoading(true);
     try {
-      await acceptApplication(taskId!, applicationId);
+      const response = await acceptApplication(taskId!, applicationId);
+      const responseData = response?.data || response;
+      
       alert(t('taskDetail.approveSuccess'));
       
       // 重新加载任务信息和申请者列表
@@ -417,9 +416,24 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setTask(updatedTask);
       await loadApplications();
       
-      // 检查任务状态，如果是 pending_payment，跳转到支付页面
-      if (updatedTask.status === 'pending_payment' && updatedTask.poster_id === user?.id) {
+      // 如果返回了支付信息，跳转到支付页面（带上支付信息参数）
+      if (responseData?.client_secret && responseData?.payment_intent_id) {
         // 延迟一下，让用户看到成功提示
+        setTimeout(() => {
+          const params = new URLSearchParams({
+            client_secret: responseData.client_secret,
+            payment_intent_id: responseData.payment_intent_id,
+          });
+          if (responseData.amount) {
+            params.set('amount', responseData.amount.toString());
+          }
+          if (responseData.amount_display) {
+            params.set('amount_display', responseData.amount_display);
+          }
+          navigate(`/${language}/tasks/${taskId}/payment?${params.toString()}`);
+        }, 1000);
+      } else if (updatedTask.status === 'pending_payment' && updatedTask.poster_id === user?.id) {
+        // 如果任务状态变为 pending_payment，也跳转到支付页面
         setTimeout(() => {
           navigate(`/${language}/tasks/${taskId}/payment`);
         }, 1000);
@@ -429,7 +443,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  }, [taskId, t, loadApplications]);
+  }, [taskId, t, loadApplications, language, navigate, user]);
 
   const handleRejectApplication = useCallback(async (applicationId: number) => {
     if (!window.confirm(t('taskDetail.confirmRejectApplication'))) {
@@ -1518,6 +1532,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             whiteSpace: 'pre-wrap'
           }}>{translatedDescription || task.description}</div>
         </div>
+
         {/* 任务图片 */}
         {task.images && Array.isArray(task.images) && task.images.length > 0 && (
           <div style={{
@@ -2514,9 +2529,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           )}
 
           {/* 支付按钮：任务状态为 pending_payment 且用户是发布者时显示 */}
-          {task.status === 'pending_payment' && isTaskPoster && (
+          {task.status === 'pending_payment' && isTaskPoster && taskId && (
             <button
-              onClick={() => setShowPaymentModal(true)}
+              onClick={() => navigate(`/${language}/tasks/${taskId}/payment`)}
               style={{
                 background: '#10b981',
                 color: '#fff',
@@ -2743,22 +2758,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           }}
         />
         
-        {/* 支付弹窗 */}
-        {taskId && (
-          <PaymentModal
-            visible={showPaymentModal}
-            taskId={taskId}
-            taskTitle={task?.title}
-            onSuccess={() => {
-              setShowPaymentModal(false);
-              // 重新加载任务信息
-              if (taskId) {
-                loadTaskData();
-              }
-            }}
-            onCancel={() => setShowPaymentModal(false)}
-          />
-        )}
 
         {/* 申请任务弹窗 */}
         {showApplyModal && taskId && (

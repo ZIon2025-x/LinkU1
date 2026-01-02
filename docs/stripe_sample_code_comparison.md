@@ -1,21 +1,37 @@
-# Stripe Sample Code 对比分析
+# Stripe Payment Intents API Sample Code 对比分析
 
 ## 概述
 
-本文档对比了 Stripe 官方 sample code 和我们的实现，说明关键差异和设计决策。
+本文档对比了 Stripe 官方 Payment Intents API sample code（`stripe-sample-code` 文件夹）和我们的实现，说明关键差异和设计决策。
+
+**参考文件**：
+- 官方 sample code: `stripe-sample-code/server.js`, `stripe-sample-code/src/CheckoutForm.jsx`
+- 我们的实现: `backend/app/coupon_points_routes.py`, `frontend/src/components/payment/StripePaymentForm.tsx`
 
 ## 关键差异对比
 
 ### 1. Payment Intent 创建
 
-#### Stripe Sample Code
+#### Stripe Sample Code (`server.js`)
 ```javascript
 const paymentIntent = await stripe.paymentIntents.create({
-  amount: calculateOrderAmount(items),
+  amount: amount,
   currency: "gbp",
+  // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
   automatic_payment_methods: {
     enabled: true,
   },
+  hooks: {
+    inputs: {
+      tax: {
+        calculation: taxCalculation.id
+      }
+    }
+  },
+});
+
+res.send({
+  clientSecret: paymentIntent.client_secret,
 });
 ```
 
@@ -42,11 +58,12 @@ payment_intent = stripe.PaymentIntent.create(
 
 ### 2. Elements 配置
 
-#### Stripe Sample Code
+#### Stripe Sample Code (`App.jsx`)
 ```javascript
 const appearance = {
   theme: 'stripe',
 };
+// Enable the skeleton loader UI for optimal loading.
 const loader = 'auto';
 
 <Elements options={{clientSecret, appearance, loader}} stripe={stripePromise}>
@@ -71,7 +88,7 @@ const loader = 'auto';
 
 ### 3. PaymentElement 布局
 
-#### Stripe Sample Code
+#### Stripe Sample Code (`CheckoutForm.jsx`)
 ```javascript
 const paymentElementOptions = {
   layout: "accordion"
@@ -96,17 +113,21 @@ const paymentElementOptions = {
 
 ### 4. confirmPayment 实现
 
-#### Stripe Sample Code（重定向模式）
+#### Stripe Sample Code (`CheckoutForm.jsx` - 重定向模式)
 ```javascript
 const { error } = await stripe.confirmPayment({
   elements,
   confirmParams: {
+    // Make sure to change this to your payment completion page
     return_url: "http://localhost:3000/complete",
   },
 });
 
-// 注释说明：只有在立即错误时才会到达这里
-// 否则会重定向到 return_url
+// This point will only be reached if there is an immediate error when
+// confirming the payment. Otherwise, your customer will be redirected to
+// your `return_url`. For some payment methods like iDEAL, your customer will
+// be redirected to an intermediate site first to authorize the payment, then
+// redirected to the `return_url`.
 if (error.type === "card_error" || error.type === "validation_error") {
   setMessage(error.message);
 } else {

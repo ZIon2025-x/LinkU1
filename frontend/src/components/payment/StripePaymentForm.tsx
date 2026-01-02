@@ -53,7 +53,10 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
 
     try {
       // 使用 PaymentElement 确认支付（支持多种支付方式）
-      // 参考 Stripe sample code 的实现方式
+      // 参考 Stripe Payment Intents API sample code 的实现方式
+      // 注意：我们使用嵌入式支付模式（redirect: 'if_required'），而不是重定向模式（return_url）
+      // 这是因为我们的支付界面是弹窗形式，用户不需要离开当前页面
+      // 对于需要重定向的支付方式（如某些银行支付），Stripe 会自动处理
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -63,9 +66,12 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         redirect: 'if_required', // 只在需要时重定向（如 3D Secure）
       });
 
-      // 错误处理（参考 Stripe sample code）
+      // 错误处理（参考 Stripe sample code 的错误处理逻辑）
+      // This point will only be reached if there is an immediate error when
+      // confirming the payment. Otherwise, the payment will be processed or
+      // the user will be redirected for additional authentication (3D Secure, etc.)
       if (confirmError) {
-        // 处理卡片错误或验证错误
+        // 处理卡片错误或验证错误（与官方 sample code 一致）
         if (confirmError.type === 'card_error' || confirmError.type === 'validation_error') {
           setError(confirmError.message || '支付失败');
           onError(confirmError.message || '支付失败');
@@ -77,7 +83,8 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         return;
       }
 
-      // 支付成功
+      // 支付成功（嵌入式模式需要检查 paymentIntent 状态）
+      // 在重定向模式下，用户会被重定向到 return_url，不会到达这里
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         message.success('支付成功！');
         onSuccess();
@@ -104,7 +111,11 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
     <form onSubmit={handleSubmit} style={{ width: '100%' }}>
       <div style={{ marginBottom: '20px' }}>
         <PaymentElement 
+          id="payment-element"
           options={{
+            // 官方 sample code 使用 'accordion' 布局
+            // 我们使用 'tabs' 布局，更适合弹窗设计
+            // 两者都是有效的布局选项，只是 UI 风格不同
             layout: 'tabs' // 使用标签页布局，支持多种支付方式
           }}
         />
@@ -157,11 +168,12 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
     );
   }
 
+  // Elements 配置（参考 Stripe Payment Intents API sample code）
   const options: StripeElementsOptions = {
     clientSecret: props.clientSecret,
     appearance: {
-      theme: 'stripe',
-      // 自定义外观以匹配网站设计
+      theme: 'stripe', // 与官方 sample code 一致
+      // 自定义外观以匹配网站设计（官方 sample code 只使用 theme: 'stripe'）
       variables: {
         colorPrimary: '#1890ff', // 主色调（与网站主题一致）
         colorBackground: '#ffffff', // 背景色
@@ -177,7 +189,8 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
       inputs: 'spaced', // 输入框之间有间距
       labels: 'auto', // 标签自动调整位置
     } as any,
-    loader: 'auto', // 启用骨架屏加载器，优化加载体验（与 Stripe sample code 一致）
+    // Enable the skeleton loader UI for optimal loading（与官方 sample code 一致）
+    loader: 'auto',
   };
 
   return (

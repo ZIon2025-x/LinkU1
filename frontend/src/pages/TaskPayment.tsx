@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Button, Spin, message, Input, Select } from 'antd';
 import api from '../api';
 import StripePaymentForm from '../components/payment/StripePaymentForm';
@@ -32,6 +32,7 @@ interface PaymentData {
 const TaskPayment: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
   const { navigate: localizedNavigate } = useLocalizedNavigation();
   
@@ -65,6 +66,37 @@ const TaskPayment: React.FC = () => {
     
     checkUser();
   }, []);
+
+  // 检查 URL 参数中是否有支付信息（从批准申请跳转过来时）
+  useEffect(() => {
+    const clientSecret = searchParams.get('client_secret');
+    const paymentIntentId = searchParams.get('payment_intent_id');
+    const amount = searchParams.get('amount');
+    const amountDisplay = searchParams.get('amount_display');
+
+    if (clientSecret && paymentIntentId && taskId) {
+      // 从批准申请跳转过来，直接使用已有的支付信息
+      setPaymentData({
+        payment_id: null,
+        fee_type: 'task_amount',
+        total_amount: amount ? parseInt(amount) : 0,
+        total_amount_display: amountDisplay || '0.00',
+        points_used: null,
+        points_used_display: null,
+        coupon_discount: null,
+        coupon_discount_display: null,
+        stripe_amount: amount ? parseInt(amount) : null,
+        stripe_amount_display: amountDisplay || null,
+        currency: 'GBP',
+        final_amount: amount ? parseInt(amount) : 0,
+        final_amount_display: amountDisplay || '0.00',
+        checkout_url: null,
+        client_secret: clientSecret,
+        payment_intent_id: paymentIntentId,
+        note: '请完成支付以确认批准申请'
+      });
+    }
+  }, [searchParams, taskId]);
 
   const handleCreatePayment = async () => {
     if (!taskId) {

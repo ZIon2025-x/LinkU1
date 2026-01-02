@@ -670,23 +670,21 @@ def create_task_payment(
                 detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
             )
         
-        # 创建 Payment Intent（用于 Stripe Elements 嵌入式支付表单）
-        # 使用 Stripe Connect Destination charges 模式（与 sample code 一致）
-        # transfer_data.destination: 指定资金将转到任务接受人的账户（Destination charges 模式）
-        # application_fee_amount: 平台服务费（从任务接受人端扣除）
-        # 注意：在 Destination charges 模式下，资金先到平台账户，然后自动 transfer 到 destination
-        # 任务接受人实际收到的金额 = final_amount - application_fee_amount
-        # 使用 automatic_payment_methods（与 Stripe sample code 一致）
+        # 创建 Payment Intent（参考 Stripe Payment Intents API sample code）
+        # Create a PaymentIntent with the order amount and currency
+        # 使用 automatic_payment_methods（与官方 sample code 一致）
+        # In the latest version of the API, specifying the `automatic_payment_methods` parameter
+        # is optional because Stripe enables its functionality by default.
         # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            # 使用 automatic_payment_methods（Stripe 推荐方式，与 sample code 一致）
-            # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
+            # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
             automatic_payment_methods={
                 "enabled": True,
             },
-            # Stripe Connect Destination charges: 将资金转到任务接受人的账户（与 sample code 一致）
+            # Stripe Connect Destination charges: 将资金转到任务接受人的账户
+            # 这是平台业务需求，官方 sample code 不包含此配置
             application_fee_amount=application_fee_pence,
             transfer_data={
                 "destination": taker.stripe_account_id
