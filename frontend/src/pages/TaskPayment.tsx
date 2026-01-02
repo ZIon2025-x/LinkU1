@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Button, Spin, message, Input, Select } from 'antd';
+import { Card, Button, Spin, message, Input, Select, Image } from 'antd';
 import api from '../api';
 import StripePaymentForm from '../components/payment/StripePaymentForm';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
+import LazyImage from '../components/LazyImage';
 
 const { Option } = Select;
 
@@ -29,11 +30,22 @@ interface PaymentData {
   note: string;
 }
 
+interface TaskInfo {
+  id: number;
+  title: string;
+  images: string[];
+  task_type: string;
+  base_reward: number;
+  agreed_reward: number | null;
+  currency: string;
+  location: string;
+}
+
 const TaskPayment: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate: localizedNavigate } = useLocalizedNavigation();
   
   const [loading, setLoading] = useState(false);
@@ -44,6 +56,52 @@ const TaskPayment: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pointsBalance, setPointsBalance] = useState<number>(0);
+  const [taskInfo, setTaskInfo] = useState<TaskInfo | null>(null);
+  const [loadingTask, setLoadingTask] = useState(true);
+
+  // 加载任务信息
+  useEffect(() => {
+    const loadTaskInfo = async () => {
+      if (!taskId) return;
+      
+      try {
+        setLoadingTask(true);
+        const response = await api.get(`/api/tasks/${taskId}`);
+        const task = response.data;
+        
+        // 解析任务图片
+        let images: string[] = [];
+        if (task.images) {
+          try {
+            if (typeof task.images === 'string') {
+              images = JSON.parse(task.images);
+            } else if (Array.isArray(task.images)) {
+              images = task.images;
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+        
+        setTaskInfo({
+          id: task.id,
+          title: task.title,
+          images: images,
+          task_type: task.task_type,
+          base_reward: task.base_reward,
+          agreed_reward: task.agreed_reward,
+          currency: task.currency || 'GBP',
+          location: task.location || '',
+        });
+      } catch (error) {
+        console.error('Failed to load task info:', error);
+      } finally {
+        setLoadingTask(false);
+      }
+    };
+    
+    loadTaskInfo();
+  }, [taskId]);
 
   useEffect(() => {
     // 检查用户登录状态
@@ -93,10 +151,10 @@ const TaskPayment: React.FC = () => {
         checkout_url: null,
         client_secret: clientSecret,
         payment_intent_id: paymentIntentId,
-        note: '请完成支付以确认批准申请'
+        note: language === 'zh' ? '请完成支付以确认批准申请' : 'Please complete payment to confirm the application approval'
       });
     }
-  }, [searchParams, taskId]);
+  }, [searchParams, taskId, language]);
 
   const handleCreatePayment = async () => {
     if (!taskId) {
@@ -193,9 +251,9 @@ const TaskPayment: React.FC = () => {
           setTimeout(poll, pollInterval);
         } else {
           // 轮询超时，直接跳转（让用户自己检查）
-    setTimeout(() => {
-      localizedNavigate(`/tasks/${taskId}`);
-    }, 1500);
+          setTimeout(() => {
+            localizedNavigate(`/tasks/${taskId}`);
+          }, 1500);
         }
       }
     };
@@ -229,126 +287,306 @@ const TaskPayment: React.FC = () => {
     );
   }
 
-  return (
-    <div style={{ maxWidth: '600px', margin: '40px auto', padding: '0 20px' }}>
-      <Card title="支付平台服务费">
-        {!paymentData ? (
-          <div>
-            {/* 支付方式选择 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                支付方式
-              </label>
-              <Select
-                value={paymentMethod}
-                onChange={(value) => setPaymentMethod(value)}
-                style={{ width: '100%' }}
-              >
-                <Option value="stripe">Stripe（信用卡/借记卡）</Option>
-                <Option value="points">积分支付</Option>
-                <Option value="mixed">混合支付（积分 + Stripe）</Option>
-              </Select>
-            </div>
+  // 计算任务金额显示
+  const taskReward = taskInfo?.agreed_reward || taskInfo?.base_reward || 0;
+  const taskRewardDisplay = taskReward.toFixed(2);
 
-            {/* 积分输入（如果使用积分或混合支付） */}
-            {(paymentMethod === 'points' || paymentMethod === 'mixed') && (
+  return (
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '40px 20px'
+    }}>
+      <div style={{ 
+        maxWidth: '900px', 
+        margin: '0 auto',
+        background: '#fff',
+        borderRadius: '16px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        overflow: 'hidden'
+      }}>
+        {/* 任务信息头部 */}
+        {loadingTask ? (
+          <div style={{ padding: '60px', textAlign: 'center' }}>
+            <Spin size="large" />
+            <div style={{ marginTop: '16px', color: '#666' }}>加载任务信息中...</div>
+          </div>
+        ) : taskInfo ? (
+          <div style={{ 
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            padding: '32px',
+            borderBottom: '1px solid #e8e8e8'
+          }}>
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+              {/* 任务图片 */}
+              {taskInfo.images && taskInfo.images.length > 0 && (
+                <div style={{ 
+                  flex: '0 0 auto',
+                  width: '200px',
+                  height: '150px',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  <LazyImage
+                    src={taskInfo.images[0]}
+                    alt={taskInfo.title}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              )}
+              
+              {/* 任务信息 */}
+              <div style={{ flex: '1', minWidth: '300px' }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  fontWeight: 'bold', 
+                  color: '#1a1a1a',
+                  marginBottom: '12px',
+                  lineHeight: 1.3
+                }}>
+                  {taskInfo.title}
+                </div>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <div style={{ 
+                    padding: '6px 12px',
+                    background: '#e8f4f8',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    color: '#1890ff',
+                    fontWeight: 500
+                  }}>
+                    {taskInfo.task_type}
+                  </div>
+                  {taskInfo.location && (
+                    <div style={{ 
+                      padding: '6px 12px',
+                      background: '#f0f0f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      color: '#666'
+                    }}>
+                      📍 {taskInfo.location}
+                    </div>
+                  )}
+                </div>
+                <div style={{ 
+                  fontSize: '20px', 
+                  fontWeight: 'bold', 
+                  color: '#52c41a',
+                  marginTop: '8px'
+                }}>
+                  £{taskRewardDisplay} {taskInfo.currency}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* 支付内容区域 */}
+        <div style={{ padding: '40px' }}>
+          {!paymentData ? (
+            <div>
+              <h2 style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                marginBottom: '32px',
+                color: '#1a1a1a'
+              }}>
+                {language === 'zh' ? '选择支付方式' : 'Select Payment Method'}
+              </h2>
+
+              {/* 支付方式选择 */}
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                  使用积分（当前余额: £{(pointsBalance / 100).toFixed(2)}）
+                <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
+                  {language === 'zh' ? '支付方式' : 'Payment Method'}
+                </label>
+                <Select
+                  value={paymentMethod}
+                  onChange={(value) => setPaymentMethod(value)}
+                  style={{ width: '100%' }}
+                  size="large"
+                >
+                  <Option value="stripe">Stripe（信用卡/借记卡/Apple Pay）</Option>
+                  <Option value="points">{language === 'zh' ? '积分支付' : 'Points Payment'}</Option>
+                  <Option value="mixed">{language === 'zh' ? '混合支付（积分 + Stripe）' : 'Mixed Payment (Points + Stripe)'}</Option>
+                </Select>
+              </div>
+
+              {/* 积分输入（如果使用积分或混合支付） */}
+              {(paymentMethod === 'points' || paymentMethod === 'mixed') && (
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
+                    {language === 'zh' ? `使用积分（当前余额: £${(pointsBalance / 100).toFixed(2)}）` : `Use Points (Balance: £${(pointsBalance / 100).toFixed(2)})`}
+                  </label>
+                  <Input
+                    type="number"
+                    value={pointsAmount}
+                    onChange={(e) => setPointsAmount(parseFloat(e.target.value) || 0)}
+                    placeholder={language === 'zh' ? '输入积分数量' : 'Enter points amount'}
+                    addonAfter="GBP"
+                    min={0}
+                    max={pointsBalance / 100}
+                    size="large"
+                  />
+                </div>
+              )}
+
+              {/* 优惠券输入 */}
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
+                  {language === 'zh' ? '优惠券代码（可选）' : 'Coupon Code (Optional)'}
                 </label>
                 <Input
-                  type="number"
-                  value={pointsAmount}
-                  onChange={(e) => setPointsAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="输入积分数量"
-                  addonAfter="GBP"
-                  min={0}
-                  max={pointsBalance / 100}
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  placeholder={language === 'zh' ? '输入优惠券代码' : 'Enter coupon code'}
+                  size="large"
                 />
               </div>
-            )}
 
-            {/* 优惠券输入 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                优惠券代码（可选）
-              </label>
-              <Input
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                placeholder="输入优惠券代码"
-              />
-            </div>
-
-            <Button
-              type="primary"
-              onClick={handleCreatePayment}
-              loading={loading}
-              block
-              size="large"
-            >
-              {loading ? '创建支付中...' : '创建支付'}
-            </Button>
-          </div>
-        ) : (
-          <div>
-            {/* 显示支付信息 */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>总金额:</strong> £{paymentData.total_amount_display}
-              </div>
-              {paymentData.points_used_display && (
-                <div style={{ marginBottom: '12px', color: '#52c41a' }}>
-                  <strong>积分抵扣:</strong> £{paymentData.points_used_display}
-                </div>
-              )}
-              {paymentData.coupon_discount_display && (
-                <div style={{ marginBottom: '12px', color: '#52c41a' }}>
-                  <strong>优惠券折扣:</strong> £{paymentData.coupon_discount_display}
-                </div>
-              )}
-              <div style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
-                <strong>最终支付:</strong> £{paymentData.final_amount_display}
-              </div>
-              <div style={{ marginTop: '16px', padding: '12px', background: '#f0f0f0', borderRadius: '4px' }}>
-                {paymentData.note}
-              </div>
-            </div>
-
-            {/* 如果纯积分支付，已成功 */}
-            {paymentData.final_amount === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <div style={{ fontSize: '18px', color: '#52c41a', marginBottom: '16px' }}>
-                  ✓ 支付成功！
-                </div>
-                <Button type="primary" onClick={() => localizedNavigate(`/tasks/${taskId}`)}>
-                  返回任务详情
-                </Button>
-              </div>
-            ) : paymentData.client_secret ? (
-              // 显示 Stripe Elements 支付表单
-              <StripePaymentForm
-                clientSecret={paymentData.client_secret}
-                amount={paymentData.final_amount}
-                currency={paymentData.currency}
-                onSuccess={handlePaymentSuccess}
-                onError={handlePaymentError}
-                onCancel={() => {
-                  setPaymentData(null);
+              <Button
+                type="primary"
+                onClick={handleCreatePayment}
+                loading={loading}
+                block
+                size="large"
+                style={{
+                  height: '50px',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
                 }}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Spin />
-                <div style={{ marginTop: '16px' }}>正在准备支付...</div>
+              >
+                {loading ? (language === 'zh' ? '创建支付中...' : 'Creating payment...') : (language === 'zh' ? '创建支付' : 'Create Payment')}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <h2 style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                marginBottom: '24px',
+                color: '#1a1a1a'
+              }}>
+                {language === 'zh' ? '支付详情' : 'Payment Details'}
+              </h2>
+
+              {/* 显示支付信息 */}
+              <div style={{ 
+                marginBottom: '32px',
+                padding: '24px',
+                background: '#f8f9fa',
+                borderRadius: '12px',
+                border: '1px solid #e8e8e8'
+              }}>
+                <div style={{ marginBottom: '16px', fontSize: '16px' }}>
+                  <strong>{language === 'zh' ? '总金额:' : 'Total Amount:'}</strong> 
+                  <span style={{ marginLeft: '8px', fontSize: '18px', fontWeight: 'bold' }}>
+                    £{paymentData.total_amount_display}
+                  </span>
+                </div>
+                {paymentData.points_used_display && (
+                  <div style={{ marginBottom: '12px', color: '#52c41a', fontSize: '16px' }}>
+                    <strong>{language === 'zh' ? '积分抵扣:' : 'Points Used:'}</strong> 
+                    <span style={{ marginLeft: '8px' }}>£{paymentData.points_used_display}</span>
+                  </div>
+                )}
+                {paymentData.coupon_discount_display && (
+                  <div style={{ marginBottom: '12px', color: '#52c41a', fontSize: '16px' }}>
+                    <strong>{language === 'zh' ? '优惠券折扣:' : 'Coupon Discount:'}</strong> 
+                    <span style={{ marginLeft: '8px' }}>£{paymentData.coupon_discount_display}</span>
+                  </div>
+                )}
+                <div style={{ 
+                  marginTop: '16px',
+                  padding: '16px',
+                  background: '#fff',
+                  borderRadius: '8px',
+                  border: '2px solid #1890ff'
+                }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                    {language === 'zh' ? '最终支付金额' : 'Final Payment Amount'}
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1890ff' }}>
+                    £{paymentData.final_amount_display}
+                  </div>
+                </div>
+                {paymentData.note && (
+                  <div style={{ 
+                    marginTop: '16px', 
+                    padding: '12px', 
+                    background: '#fff3cd', 
+                    borderRadius: '8px',
+                    border: '1px solid #ffc107',
+                    fontSize: '14px',
+                    color: '#856404'
+                  }}>
+                    {paymentData.note}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
-      </Card>
+
+              {/* 如果纯积分支付，已成功 */}
+              {paymentData.final_amount === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+                  <div style={{ fontSize: '24px', color: '#52c41a', marginBottom: '24px', fontWeight: 'bold' }}>
+                    {language === 'zh' ? '支付成功！' : 'Payment Successful!'}
+                  </div>
+                  <Button 
+                    type="primary" 
+                    size="large"
+                    onClick={() => localizedNavigate(`/tasks/${taskId}`)}
+                    style={{
+                      height: '50px',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      padding: '0 40px'
+                    }}
+                  >
+                    {language === 'zh' ? '返回任务详情' : 'Back to Task Details'}
+                  </Button>
+                </div>
+              ) : paymentData.client_secret ? (
+                // 显示 Stripe Elements 支付表单
+                <div>
+                  <h3 style={{ 
+                    fontSize: '20px', 
+                    fontWeight: 'bold', 
+                    marginBottom: '20px',
+                    color: '#1a1a1a'
+                  }}>
+                    {language === 'zh' ? '完成支付' : 'Complete Payment'}
+                  </h3>
+                  <StripePaymentForm
+                    clientSecret={paymentData.client_secret}
+                    amount={paymentData.final_amount}
+                    currency={paymentData.currency}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    onCancel={() => {
+                      setPaymentData(null);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <Spin size="large" />
+                  <div style={{ marginTop: '16px', color: '#666' }}>
+                    {language === 'zh' ? '正在准备支付...' : 'Preparing payment...'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default TaskPayment;
-

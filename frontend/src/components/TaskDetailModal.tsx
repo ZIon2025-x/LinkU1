@@ -408,35 +408,31 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       const response = await acceptApplication(taskId!, applicationId);
       const responseData = response?.data || response;
       
-      alert(t('taskDetail.approveSuccess'));
-      
       // 重新加载任务信息和申请者列表
       const res = await api.get(`/api/tasks/${taskId}`);
       const updatedTask = res.data;
       setTask(updatedTask);
       await loadApplications();
       
-      // 如果返回了支付信息，跳转到支付页面（带上支付信息参数）
+      // 如果返回了支付信息，直接跳转到支付页面（新页面）
       if (responseData?.client_secret && responseData?.payment_intent_id) {
-        // 延迟一下，让用户看到成功提示
-        setTimeout(() => {
-          const params = new URLSearchParams({
-            client_secret: responseData.client_secret,
-            payment_intent_id: responseData.payment_intent_id,
-          });
-          if (responseData.amount) {
-            params.set('amount', responseData.amount.toString());
-          }
-          if (responseData.amount_display) {
-            params.set('amount_display', responseData.amount_display);
-          }
-          navigate(`/${language}/tasks/${taskId}/payment?${params.toString()}`);
-        }, 1000);
+        const params = new URLSearchParams({
+          client_secret: responseData.client_secret,
+          payment_intent_id: responseData.payment_intent_id,
+        });
+        if (responseData.amount) {
+          params.set('amount', responseData.amount.toString());
+        }
+        if (responseData.amount_display) {
+          params.set('amount_display', responseData.amount_display);
+        }
+        // 在新页面打开支付页面
+        const paymentUrl = `/${language}/tasks/${taskId}/payment?${params.toString()}`;
+        window.open(paymentUrl, '_blank');
       } else if (updatedTask.status === 'pending_payment' && updatedTask.poster_id === user?.id) {
-        // 如果任务状态变为 pending_payment，也跳转到支付页面
-        setTimeout(() => {
-          navigate(`/${language}/tasks/${taskId}/payment`);
-        }, 1000);
+        // 如果任务状态变为 pending_payment，也跳转到支付页面（新页面）
+        const paymentUrl = `/${language}/tasks/${taskId}/payment`;
+        window.open(paymentUrl, '_blank');
       }
     } catch (error: any) {
             alert(getErrorMessage(error));

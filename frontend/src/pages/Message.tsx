@@ -6128,25 +6128,36 @@ const MessagePage: React.FC = () => {
                             try {
                               const response = await acceptApplication(activeTaskId, app.id);
                               console.log('Accept application response:', response);
-                              // 如果返回了支付信息，立即显示支付弹窗
                               // response 是 AxiosResponse，需要访问 response.data
                               const responseData = response?.data || response;
+                              
+                              // 重新加载任务和申请列表
+                              if (activeTaskId) {
+                                await loadTaskMessages(activeTaskId);
+                                await loadApplications(activeTaskId);
+                                await loadTasks();
+                              }
+                              
+                              // 如果返回了支付信息，直接跳转到支付页面（新页面）
                               if (responseData && responseData.client_secret && responseData.payment_intent_id) {
                                 setShowApplicationListModal(false);
-                                // 设置支付信息并显示支付弹窗
-                                setPaymentIntentId(responseData.payment_intent_id);
-                                setPaymentClientSecret(responseData.client_secret);
-                                setShowPaymentModal(true);
+                                // 构建支付页面 URL
+                                const params = new URLSearchParams({
+                                  client_secret: responseData.client_secret,
+                                  payment_intent_id: responseData.payment_intent_id,
+                                });
+                                if (responseData.amount) {
+                                  params.set('amount', responseData.amount.toString());
+                                }
+                                if (responseData.amount_display) {
+                                  params.set('amount_display', responseData.amount_display);
+                                }
+                                // 在新页面打开支付页面
+                                const paymentUrl = `/${language}/tasks/${activeTaskId}/payment?${params.toString()}`;
+                                window.open(paymentUrl, '_blank');
                               } else {
                                 // 如果没有支付信息，说明可能已经支付成功或使用积分支付
-                                alert(t('messages.notifications.applicationAccepted'));
                                 setShowApplicationListModal(false);
-                                // 重新加载任务和申请列表
-                                if (activeTaskId) {
-                                  await loadTaskMessages(activeTaskId);
-                                  await loadApplications(activeTaskId);
-                                  await loadTasks();
-                                }
                               }
                             } catch (error: any) {
                               console.error('Accept application error:', error);
