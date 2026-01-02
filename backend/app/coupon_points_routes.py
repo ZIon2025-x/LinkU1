@@ -597,6 +597,29 @@ def create_task_payment(
             if task.status == "pending_payment":
                 task.status = "in_progress"
             
+            # 创建支付历史记录
+            payment_history = models.PaymentHistory(
+                task_id=task_id,
+                user_id=current_user.id,
+                payment_intent_id=None,
+                payment_method="points",
+                total_amount=task_amount_pence,
+                points_used=points_used,
+                coupon_discount=coupon_discount,
+                stripe_amount=0,
+                final_amount=0,
+                currency="GBP",
+                status="succeeded",
+                application_fee=application_fee_pence,
+                escrow_amount=taker_amount,
+                coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
+                metadata={
+                    "points_only": True,
+                    "task_title": task.title
+                }
+            )
+            db.add(payment_history)
+            
             db.commit()
         except Exception as e:
             db.rollback()
@@ -637,21 +660,20 @@ def create_task_payment(
             )
         
         # 创建 Payment Intent（用于 Stripe Elements 嵌入式支付表单）
-        # 使用 Stripe Connect Platform charges 模式（Direct charges）
-        # on_behalf_of: 指定资金将转到任务接受人的账户（Direct charges 模式）
+        # 使用 Stripe Connect Destination charges 模式（与 sample code 一致）
+        # transfer_data.destination: 指定资金将转到任务接受人的账户（Destination charges 模式）
         # application_fee_amount: 平台服务费（从任务接受人端扣除）
-        # 注意：在 Direct charges 模式下，资金会自动转到 on_behalf_of 指定的账户
+        # 注意：在 Destination charges 模式下，资金先到平台账户，然后自动 transfer 到 destination
         # 任务接受人实际收到的金额 = final_amount - application_fee_amount
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
             payment_method_types=["card"],
-            # Stripe Connect Direct charges: 将资金转到任务接受人的账户
-            on_behalf_of=taker.stripe_account_id,
-            # 平台服务费（从任务接受人端扣除）
-            # 注意：application_fee_amount 是基于任务总金额计算的，不是基于 final_amount
-            # 但实际扣除时，Stripe 会从 final_amount 中扣除 application_fee_amount
+            # Stripe Connect Destination charges: 将资金转到任务接受人的账户（与 sample code 一致）
             application_fee_amount=application_fee_pence,
+            transfer_data={
+                "destination": taker.stripe_account_id
+            },
             metadata={
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
@@ -663,6 +685,29 @@ def create_task_payment(
             },
             description=f"任务 #{task_id} 任务金额支付 - {task.title}",
         )
+        
+        # 创建支付历史记录（待支付状态）
+        payment_history = models.PaymentHistory(
+            task_id=task_id,
+            user_id=current_user.id,
+            payment_intent_id=payment_intent.id,
+            payment_method="stripe" if points_used == 0 else "mixed",
+            total_amount=task_amount_pence,
+            points_used=points_used,
+            coupon_discount=coupon_discount,
+            stripe_amount=final_amount,
+            final_amount=final_amount,
+            currency="GBP",
+            status="pending",  # 待支付，webhook 会更新为 succeeded
+            application_fee=application_fee_pence,
+            coupon_usage_log_id=coupon_usage_log.id if coupon_usage_log else None,
+            metadata={
+                "task_title": task.title,
+                "taker_id": str(task.taker_id)
+            }
+        )
+        db.add(payment_history)
+        db.commit()
         
         return {
             "payment_id": None,
@@ -685,6 +730,73 @@ def create_task_payment(
         }
     
     raise HTTPException(status_code=400, detail="支付金额计算错误")
+
+
+@router.get("/payment-history")
+def get_payment_history(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    task_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    获取用户的支付历史记录
+    
+    支持按任务ID和状态筛选
+    """
+    query = db.query(models.PaymentHistory).filter(
+        models.PaymentHistory.user_id == current_user.id
+    )
+    
+    if task_id:
+        query = query.filter(models.PaymentHistory.task_id == task_id)
+    
+    if status:
+        query = query.filter(models.PaymentHistory.status == status)
+    
+    # 按创建时间倒序排列
+    query = query.order_by(models.PaymentHistory.created_at.desc())
+    
+    total = query.count()
+    payments = query.offset(skip).limit(limit).all()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "payments": [
+            {
+                "id": p.id,
+                "task_id": p.task_id,
+                "payment_intent_id": p.payment_intent_id,
+                "payment_method": p.payment_method,
+                "total_amount": p.total_amount,
+                "total_amount_display": f"{p.total_amount / 100:.2f}",
+                "points_used": p.points_used,
+                "points_used_display": f"{p.points_used / 100:.2f}" if p.points_used else None,
+                "coupon_discount": p.coupon_discount,
+                "coupon_discount_display": f"{p.coupon_discount / 100:.2f}" if p.coupon_discount else None,
+                "stripe_amount": p.stripe_amount,
+                "stripe_amount_display": f"{p.stripe_amount / 100:.2f}" if p.stripe_amount else None,
+                "final_amount": p.final_amount,
+                "final_amount_display": f"{p.final_amount / 100:.2f}",
+                "currency": p.currency,
+                "status": p.status,
+                "application_fee": p.application_fee,
+                "application_fee_display": f"{p.application_fee / 100:.2f}" if p.application_fee else None,
+                "escrow_amount": float(p.escrow_amount) if p.escrow_amount else None,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+                "task": {
+                    "id": p.task.id if p.task else None,
+                    "title": p.task.title if p.task else None,
+                } if p.task else None,
+            }
+            for p in payments
+        ]
+    }
 
 
 @router.get("/tasks/{task_id}/payment-status")

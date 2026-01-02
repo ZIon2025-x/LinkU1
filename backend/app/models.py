@@ -2527,6 +2527,45 @@ class VerificationHistory(Base):
     )
 
 
+# ==================== 支付历史记录模型 ====================
+
+class PaymentHistory(Base):
+    """支付历史记录表"""
+    __tablename__ = "payment_history"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 支付者ID
+    payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID
+    payment_method = Column(String(20), nullable=False)  # stripe, points, mixed
+    total_amount = Column(BigInteger, nullable=False)  # 总金额（便士）
+    points_used = Column(BigInteger, default=0)  # 使用的积分（便士）
+    coupon_discount = Column(BigInteger, default=0)  # 优惠券折扣（便士）
+    stripe_amount = Column(BigInteger, nullable=True)  # Stripe 支付金额（便士）
+    final_amount = Column(BigInteger, nullable=False)  # 最终支付金额（便士）
+    currency = Column(String(3), default="GBP")
+    status = Column(String(20), default="pending")  # pending, succeeded, failed, canceled
+    application_fee = Column(BigInteger, nullable=True)  # 平台服务费（便士）
+    escrow_amount = Column(DECIMAL(12, 2), nullable=True)  # 托管金额
+    coupon_usage_log_id = Column(BigInteger, ForeignKey("coupon_usage_logs.id", ondelete="SET NULL"), nullable=True)
+    metadata = Column(JSONB, nullable=True)  # 额外元数据
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    task = relationship("Task", foreign_keys=[task_id])
+    user = relationship("User", foreign_keys=[user_id])
+    coupon_usage_log = relationship("CouponUsageLog", foreign_keys=[coupon_usage_log_id])
+    
+    __table_args__ = (
+        Index("ix_payment_history_task", task_id),
+        Index("ix_payment_history_user", user_id),
+        Index("ix_payment_history_payment_intent", payment_intent_id),
+        Index("ix_payment_history_status", status),
+        Index("ix_payment_history_created", created_at),
+    )
+
+
 # ==================== Banner 广告系统模型 ====================
 
 class Banner(Base):

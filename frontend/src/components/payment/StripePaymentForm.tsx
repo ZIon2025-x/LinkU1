@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import {
   Elements,
-  CardElement,
+  PaymentElement,
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
@@ -51,31 +51,34 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
     setProcessing(true);
     setError(null);
 
-    const cardElement = elements.getElement(CardElement);
-
-    if (!cardElement) {
-      setError('支付表单未加载');
-      setProcessing(false);
-      return;
-    }
-
     try {
-      // 确认支付
-      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
-          payment_method: {
-            card: cardElement,
-          }
-        }
-      );
+      // 使用 PaymentElement 确认支付（支持多种支付方式）
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // 可以在这里添加 return_url，但通常不需要，因为我们使用嵌入式表单
+        },
+        redirect: 'if_required', // 只在需要时重定向（如 3D Secure）
+      });
 
       if (confirmError) {
+        // 如果是需要额外操作（如 3D Secure），Stripe 会自动处理
+        // 如果确认失败，显示错误
         setError(confirmError.message || '支付失败');
         onError(confirmError.message || '支付失败');
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        message.success('支付成功！');
-        onSuccess();
+      } else if (paymentIntent) {
+        // 检查支付状态
+        if (paymentIntent.status === 'succeeded') {
+          message.success('支付成功！');
+          onSuccess();
+        } else if (paymentIntent.status === 'requires_action') {
+          // 需要额外操作（3D Secure），PaymentElement 会自动处理
+          // 这种情况通常不会到达这里，因为 confirmPayment 会等待用户完成操作
+          setError('支付需要额外验证，请完成验证');
+        } else {
+          setError(`支付状态异常: ${paymentIntent.status}`);
+          onError(`支付状态异常: ${paymentIntent.status}`);
+        }
       } else {
         setError('支付状态异常');
         onError('支付状态异常');
@@ -89,25 +92,14 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
     }
   };
 
-  const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: '16px',
-        color: '#424770',
-        '::placeholder': {
-          color: '#aab7c4',
-        },
-      },
-      invalid: {
-        color: '#9e2146',
-      },
-    },
-  };
-
   return (
     <form onSubmit={handleSubmit} style={{ width: '100%' }}>
       <div style={{ marginBottom: '20px' }}>
-        <CardElement options={cardElementOptions} />
+        <PaymentElement 
+          options={{
+            layout: 'tabs' // 使用标签页布局，支持多种支付方式
+          }}
+        />
       </div>
       
       {error && (

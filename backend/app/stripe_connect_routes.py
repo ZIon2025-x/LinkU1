@@ -316,15 +316,17 @@ def create_connect_account(
                     "display_name": current_user.name or f"User {current_user.id}",
                     "dashboard": "express",  # Express Dashboard
                     "identity": {
-                        "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
-                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
+                        "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
+                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
                     },
                     "configuration": {
-                        # 使用 merchant 配置用于接收支付（根据官方文档）
-                        "merchant": {
+                        # 使用 recipient 配置用于接收支付（与 sample code 一致）
+                        "recipient": {
                             "capabilities": {
-                                "card_payments": {
-                                    "requested": True
+                                "stripe_balance": {
+                                    "stripe_transfers": {
+                                        "requested": True
+                                    }
                                 }
                             }
                         }
@@ -343,7 +345,7 @@ def create_connect_account(
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [
-                        "configuration.merchant",
+                        "configuration.recipient",
                         "identity",
                         "requirements"
                     ]
@@ -492,7 +494,7 @@ def create_connect_account(
             # 尝试从 V2 API 获取完整账户信息
             v2_account = stripe_v2.core.accounts.retrieve(
                 account.id,
-                include=["requirements", "configuration.recipient", "configuration.merchant"]
+                include=["requirements", "configuration.recipient"]  # 与 sample code 一致
             )
             requirements = v2_account.get("requirements", {})
             currently_due = requirements.get("currently_due", [])
@@ -625,15 +627,17 @@ def create_connect_account_embedded(
                     "display_name": current_user.name or f"User {current_user.id}",
                     "dashboard": "express",  # Express Dashboard
                     "identity": {
-                        "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
-                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
+                        "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
+                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
                     },
                     "configuration": {
-                        # 根据官方文档，使用 merchant 配置用于接收支付
-                        "merchant": {
+                        # 使用 recipient 配置用于接收支付（与 sample code 一致）
+                        "recipient": {
                             "capabilities": {
-                                "card_payments": {
-                                    "requested": True
+                                "stripe_balance": {
+                                    "stripe_transfers": {
+                                        "requested": True
+                                    }
                                 }
                             }
                         }
@@ -652,7 +656,7 @@ def create_connect_account_embedded(
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [
-                        "configuration.merchant",
+                        "configuration.recipient",
                         "identity",
                         "requirements"
                     ]
@@ -840,7 +844,7 @@ def get_account_status(
         try:
             account = stripe_v2.core.accounts.retrieve(
                 current_user.stripe_account_id,
-                include=["requirements", "configuration.recipient", "configuration.merchant"]
+                include=["requirements", "configuration.recipient"]  # 与 sample code 一致
             )
             
             # 验证账户所有权（通过 metadata 中的 user_id）

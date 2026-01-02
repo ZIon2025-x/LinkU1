@@ -115,9 +115,61 @@ const TaskPayment: React.FC = () => {
 
   const handlePaymentSuccess = () => {
     message.success('支付成功！');
-    setTimeout(() => {
-      localizedNavigate(`/tasks/${taskId}`);
-    }, 1500);
+    // 开始轮询支付状态，确保 webhook 已处理
+    startPaymentStatusPolling();
+  };
+
+  // 支付状态轮询（作为 webhook 的备选方案）
+  const startPaymentStatusPolling = async () => {
+    if (!taskId || !paymentData?.payment_intent_id) {
+      return;
+    }
+
+    let pollCount = 0;
+    const maxPolls = 10; // 最多轮询 10 次
+    const pollInterval = 2000; // 每 2 秒轮询一次
+
+    const poll = async () => {
+      if (pollCount >= maxPolls) {
+        // 轮询超时，但支付可能已成功（webhook 延迟），直接跳转
+        setTimeout(() => {
+          localizedNavigate(`/tasks/${taskId}`);
+        }, 1500);
+        return;
+      }
+
+      try {
+        const response = await api.get(`/api/coupon-points/tasks/${taskId}/payment-status`);
+        const { is_paid, payment_details } = response.data;
+
+        if (is_paid && payment_details?.status === 'succeeded') {
+          // 支付成功，停止轮询并跳转
+          message.success('支付已确认！');
+          setTimeout(() => {
+            localizedNavigate(`/tasks/${taskId}`);
+          }, 1000);
+          return;
+        }
+
+        // 继续轮询
+        pollCount++;
+        setTimeout(poll, pollInterval);
+      } catch (error) {
+        // 轮询出错，但可能支付已成功，继续轮询
+        pollCount++;
+        if (pollCount < maxPolls) {
+          setTimeout(poll, pollInterval);
+        } else {
+          // 轮询超时，直接跳转（让用户自己检查）
+          setTimeout(() => {
+            localizedNavigate(`/tasks/${taskId}`);
+          }, 1500);
+        }
+      }
+    };
+
+    // 延迟 2 秒后开始第一次轮询（给 webhook 一些时间）
+    setTimeout(poll, pollInterval);
   };
 
   const handlePaymentError = (error: string) => {

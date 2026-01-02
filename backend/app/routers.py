@@ -2900,6 +2900,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
                 if task.status == "pending_payment":
                     task.status = "in_progress"
+                
+                # 更新支付历史记录状态
+                payment_history = db.query(models.PaymentHistory).filter(
+                    models.PaymentHistory.payment_intent_id == payment_intent_id
+                ).first()
+                if payment_history:
+                    payment_history.status = "succeeded"
+                    payment_history.escrow_amount = task.escrow_amount
+                    payment_history.updated_at = get_utc_time()
+                
                 db.commit()
                 logger.info(f"✅ Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress, escrow_amount: {task.escrow_amount}, payment_intent_id: {payment_intent_id}")
             else:

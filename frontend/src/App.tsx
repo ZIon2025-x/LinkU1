@@ -90,6 +90,7 @@ const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 const StudentVerification = lazyWithRetry(() => import('./pages/StudentVerification'));
 const TaskPayment = lazyWithRetry(() => import('./pages/TaskPayment'));
+const PaymentHistory = lazyWithRetry(() => import('./pages/PaymentHistory'));
 const VerifyStudentEmail = lazyWithRetry(() => import('./pages/VerifyStudentEmail'));
 const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
 const Forum = lazyWithRetry(() => import('./pages/Forum'));
@@ -256,6 +257,11 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/wallet`} element={
             <ProtectedRoute>
               <Wallet />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/payment-history`} element={
+            <ProtectedRoute>
+              <PaymentHistory />
             </ProtectedRoute>
           } />
           <Route path={`/${lang}/settings`} element={
