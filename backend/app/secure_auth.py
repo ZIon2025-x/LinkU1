@@ -949,13 +949,13 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
             data['ip_address'] = ip_address
             redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
         else:
-        logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
-        logger.error(f"  用户ID: {user_id}")
-        logger.error(f"  存储IP: {stored_ip}")
-        logger.error(f"  当前IP: {ip_address}")
-        # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
-        redis_client.delete(key_str)
-        return None
+            logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
+            logger.error(f"  用户ID: {user_id}")
+            logger.error(f"  存储IP: {stored_ip}")
+            logger.error(f"  当前IP: {ip_address}")
+            # IP地址不匹配，立即撤销token（安全策略：一个token只能在一个IP使用）
+            redis_client.delete(key_str)
+            return None
     elif not stored_ip and ip_address:
         # 如果存储的IP为空但当前有IP，更新存储的IP
         logger.info(f"[SECURE_AUTH] refresh token 更新IP地址 - 用户: {user_id}, 当前IP: {ip_address}")
