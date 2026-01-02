@@ -370,7 +370,7 @@ def create_connect_account(
                 # 检查账户状态（V2 API 使用 requirements 字段）
                 # 尝试使用 V2 API 检索账户
                 try:
-                    v2_account = stripe.v2.core.accounts.retrieve(
+                    v2_account = stripe_v2.core.accounts.retrieve(
                         existing_account.id,
                         include=["requirements"]
                     )
@@ -490,7 +490,7 @@ def create_connect_account(
         payouts_enabled = False
         try:
             # 尝试从 V2 API 获取完整账户信息
-            v2_account = stripe.v2.core.accounts.retrieve(
+            v2_account = stripe_v2.core.accounts.retrieve(
                 account.id,
                 include=["requirements", "configuration.recipient", "configuration.merchant"]
             )
@@ -838,7 +838,7 @@ def get_account_status(
     try:
         # 优先使用 V2 API，兼容 V1 API
         try:
-            account = stripe.v2.core.accounts.retrieve(
+            account = stripe_v2.core.accounts.retrieve(
                 current_user.stripe_account_id,
                 include=["requirements", "configuration.recipient", "configuration.merchant"]
             )

@@ -2921,8 +2921,95 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "charge.dispute.created":
         dispute = event_data
         charge_id = dispute.get("charge")
-        logger.warning(f"Dispute created for charge {charge_id}: {dispute.get('reason')}")
-        # TODO: 处理争议逻辑，可能需要冻结资金
+        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        logger.warning(f"Dispute created for charge {charge_id}, task {task_id}: {dispute.get('reason')}")
+        # TODO: 处理争议逻辑，可能需要冻结资金、通知用户等
+    
+    elif event_type == "charge.dispute.updated":
+        dispute = event_data
+        charge_id = dispute.get("charge")
+        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        status = dispute.get("status")
+        logger.info(f"Dispute updated for charge {charge_id}, task {task_id}: status={status}")
+    
+    elif event_type == "charge.dispute.closed":
+        dispute = event_data
+        charge_id = dispute.get("charge")
+        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        status = dispute.get("status")
+        logger.info(f"Dispute closed for charge {charge_id}, task {task_id}: status={status}")
+    
+    elif event_type == "charge.dispute.funds_withdrawn":
+        dispute = event_data
+        charge_id = dispute.get("charge")
+        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        logger.warning(f"Dispute funds withdrawn for charge {charge_id}, task {task_id}")
+    
+    elif event_type == "charge.dispute.funds_reinstated":
+        dispute = event_data
+        charge_id = dispute.get("charge")
+        task_id = int(dispute.get("metadata", {}).get("task_id", 0))
+        logger.info(f"Dispute funds reinstated for charge {charge_id}, task {task_id}")
+    
+    # 处理其他 charge 事件
+    elif event_type == "charge.succeeded":
+        charge = event_data
+        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        if task_id:
+            logger.info(f"Charge succeeded for task {task_id}: charge_id={charge.get('id')}")
+    
+    elif event_type == "charge.failed":
+        charge = event_data
+        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        logger.warning(f"Charge failed for task {task_id}: {charge.get('failure_message', 'Unknown error')}")
+    
+    elif event_type == "charge.captured":
+        charge = event_data
+        task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        logger.info(f"Charge captured for task {task_id}: charge_id={charge.get('id')}")
+    
+    elif event_type == "charge.refund.updated":
+        refund = event_data
+        charge_id = refund.get("charge")
+        task_id = int(refund.get("metadata", {}).get("task_id", 0))
+        status = refund.get("status")
+        logger.info(f"Refund updated for charge {charge_id}, task {task_id}: status={status}")
+    
+    # 处理 Payment Intent 其他事件
+    elif event_type == "payment_intent.created":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        logger.info(f"Payment intent created for task {task_id}: payment_intent_id={payment_intent.get('id')}")
+    
+    elif event_type == "payment_intent.canceled":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        logger.warning(f"Payment intent canceled for task {task_id}: payment_intent_id={payment_intent.get('id')}")
+    
+    elif event_type == "payment_intent.requires_action":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        logger.info(f"Payment intent requires action for task {task_id}: payment_intent_id={payment_intent.get('id')}")
+    
+    elif event_type == "payment_intent.processing":
+        payment_intent = event_data
+        task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
+        logger.info(f"Payment intent processing for task {task_id}: payment_intent_id={payment_intent.get('id')}")
+    
+    # 处理 Invoice 事件（用于订阅）
+    elif event_type == "invoice.paid":
+        invoice = event_data
+        subscription_id = invoice.get("subscription")
+        logger.info(f"Invoice paid: invoice_id={invoice.get('id')}, subscription_id={subscription_id}")
+    
+    elif event_type == "invoice.payment_failed":
+        invoice = event_data
+        subscription_id = invoice.get("subscription")
+        logger.warning(f"Invoice payment failed: invoice_id={invoice.get('id')}, subscription_id={subscription_id}")
+    
+    elif event_type == "invoice.finalized":
+        invoice = event_data
+        logger.info(f"Invoice finalized: invoice_id={invoice.get('id')}")
     
     # 保留对 Checkout Session 的兼容性（如果仍有使用）
     elif event_type == "checkout.session.completed":
