@@ -16,6 +16,7 @@ Stripe Connect 账户管理 API 路由
 """
 import logging
 import os
+import requests
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
@@ -33,17 +34,123 @@ router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 # 设置 Stripe API Key
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# 设置 Stripe API 版本（V2 API 需要 preview 版本）
-# V2 API 使用 2025-04-30.preview 或更新版本
-# 注意：这会影响所有 Stripe API 调用，如果需要同时支持 V1 和 V2，
-# 可以在调用时使用 stripe.v2.core.accounts（它会自动使用正确的版本）
-try:
-    # 尝试设置 API 版本，如果 SDK 不支持则忽略
-    if hasattr(stripe, 'api_version'):
-        # 仅在需要时设置，避免影响其他使用 V1 API 的代码
-        pass
-except Exception:
-    pass
+# V2 API 辅助函数：由于 Python SDK 可能不支持 v2.core.accounts，
+# 我们使用 HTTP 请求直接调用 V2 API
+import requests
+
+def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
+    """
+    直接使用 HTTP 请求调用 Stripe V2 API
+    
+    Args:
+        method: HTTP 方法 ('GET', 'POST', 'PUT', 'DELETE')
+        endpoint: API 端点（如 'accounts', 'accounts/{id}'）
+        data: 请求体数据（字典，用于 POST/PUT）
+        params: URL 参数（字典，用于 GET）
+    
+    Returns:
+        API 响应（字典）
+    """
+    api_key = os.getenv("STRIPE_SECRET_KEY")
+    if not api_key:
+        raise ValueError("STRIPE_SECRET_KEY not set")
+    
+    url = f"https://api.stripe.com/v2/core/{endpoint}"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Stripe-Version": "2025-04-30.preview",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        if method.upper() == "GET":
+            # GET 请求使用 params
+            query_params = {}
+            if params:
+                query_params.update(params)
+            # 处理 include 参数
+            if data and "include" in data:
+                include_list = data.get("include", [])
+                if include_list:
+                    query_params["include[]"] = include_list
+            response = requests.get(url, headers=headers, params=query_params)
+        elif method.upper() == "POST":
+            response = requests.post(url, headers=headers, json=data)
+        elif method.upper() == "PUT":
+            response = requests.put(url, headers=headers, json=data)
+        elif method.upper() == "DELETE":
+            response = requests.delete(url, headers=headers)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+        
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Stripe V2 API request failed: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get('error', {})
+                if isinstance(error_msg, dict):
+                    message = error_msg.get('message', str(e))
+                    code = error_msg.get('code', 'api_error')
+                else:
+                    message = str(error_msg) if error_msg else str(e)
+                    code = 'api_error'
+                raise stripe.error.StripeError(message=message, code=code)
+            except stripe.error.StripeError:
+                raise
+            except:
+                raise stripe.error.StripeError(message=str(e), code='api_error')
+        raise
+
+
+class StripeV2Account:
+    """模拟 Stripe V2 Account 对象"""
+    def __init__(self, data: dict):
+        self._data = data
+        for key, value in data.items():
+            setattr(self, key, value)
+    
+    def get(self, key: str, default=None):
+        return self._data.get(key, default)
+    
+    def __getitem__(self, key: str):
+        return self._data[key]
+    
+    def __contains__(self, key: str):
+        return key in self._data
+
+
+class StripeV2Accounts:
+    """模拟 Stripe V2 Accounts API"""
+    @staticmethod
+    def create(**kwargs) -> StripeV2Account:
+        """创建账户"""
+        account_data = stripe_v2_api_request("POST", "accounts", data=kwargs)
+        return StripeV2Account(account_data)
+    
+    @staticmethod
+    def retrieve(account_id: str, include: list = None) -> StripeV2Account:
+        """检索账户"""
+        params = {}
+        if include:
+            params["include"] = include
+        account_data = stripe_v2_api_request("GET", f"accounts/{account_id}", params=params)
+        return StripeV2Account(account_data)
+
+
+# 创建模拟的 stripe.v2.core.accounts 对象
+class StripeV2Core:
+    accounts = StripeV2Accounts()
+
+
+class StripeV2:
+    core = StripeV2Core()
+
+
+# 创建一个兼容的对象，可以像 stripe.v2.core.accounts 一样使用
+stripe_v2 = StripeV2()
 
 
 def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
@@ -64,7 +171,7 @@ def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
         try:
             # 尝试使用 V2 API 检索
             try:
-                account = stripe.v2.core.accounts.retrieve(
+                account = stripe_v2.core.accounts.retrieve(
                     user.stripe_account_id,
                     include=["identity"]
                 )
@@ -112,7 +219,7 @@ def verify_account_ownership(account_id: str, current_user: models.User) -> bool
     try:
         # 首先尝试使用 V2 API，如果失败则回退到 V1 API（兼容旧账户）
         try:
-            account = stripe.v2.core.accounts.retrieve(account_id)
+            account = stripe_v2.core.accounts.retrieve(account_id)
             account_metadata = account.get("metadata", {})
             account_user_id = account_metadata.get('user_id') if isinstance(account_metadata, dict) else None
         except stripe.error.StripeError as v2_err:
@@ -167,7 +274,7 @@ def create_connect_account(
             try:
                 try:
                     # 尝试使用 V2 API
-                    account = stripe.v2.core.accounts.retrieve(
+                    account = stripe_v2.core.accounts.retrieve(
                         existing_account_id,
                         include=["requirements"]
                     )
@@ -197,58 +304,52 @@ def create_connect_account(
                     db.refresh(db_user_clear)
         
         # 创建 Express Account (使用 V2 API)
-        # 参考: stripe-sample-code/server.js 和 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
+        # 参考: 官方文档 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
         try:
-            # 使用 V2 API 创建账户
-            # 根据 sample code，使用 recipient 配置用于接收支付
-            account = stripe.v2.core.accounts.create(
-                contact_email=current_user.email or f"user_{current_user.id}@link2ur.com",
-                display_name=current_user.name or f"User {current_user.id}",
-                dashboard="express",  # Express Dashboard
-                identity={
-                    "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
-                    "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
-                },
-                configuration={
-                    # 使用 recipient 配置用于接收支付（marketplace 模式）
-                    "recipient": {
-                        "capabilities": {
-                            "stripe_balance": {
-                                "stripe_transfers": {
+            # 使用 V2 API 创建账户（通过 HTTP 请求）
+            # 根据官方文档，使用 merchant 配置用于接收支付
+            account_data = stripe_v2_api_request(
+                "POST",
+                "accounts",
+                data={
+                    "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                    "display_name": current_user.name or f"User {current_user.id}",
+                    "dashboard": "express",  # Express Dashboard
+                    "identity": {
+                        "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
+                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
+                    },
+                    "configuration": {
+                        # 使用 merchant 配置用于接收支付（根据官方文档）
+                        "merchant": {
+                            "capabilities": {
+                                "card_payments": {
                                     "requested": True
                                 }
                             }
                         }
                     },
-                    # 同时支持 merchant 配置（如果需要直接收款）
-                    "merchant": {
-                        "capabilities": {
-                            "card_payments": {
-                                "requested": True
-                            }
-                        }
-                    }
-                },
-                defaults={
-                    "currency": "gbp",
-                    "responsibilities": {
-                        "fees_collector": "application",  # 平台收取费用
-                        "losses_collector": "application"  # 平台承担损失
+                    "defaults": {
+                        "currency": "gbp",
+                        "responsibilities": {
+                            "fees_collector": "application",  # 平台收取费用
+                            "losses_collector": "application"  # 平台承担损失
+                        },
+                        "locales": ["en-GB"]
                     },
-                    "locales": ["en-GB"]
-                },
-                metadata={
-                    "user_id": str(current_user.id),
-                    "platform": "LinkU",
-                    "user_name": current_user.name or f"User {current_user.id}"
-                },
-                include=[
-                    "configuration.recipient",
-                    "configuration.merchant",
-                    "identity",
-                    "requirements"
-                ]
+                    "metadata": {
+                        "user_id": str(current_user.id),
+                        "platform": "LinkU",
+                        "user_name": current_user.name or f"User {current_user.id}"
+                    },
+                    "include": [
+                        "configuration.merchant",
+                        "identity",
+                        "requirements"
+                    ]
+                }
             )
+            account = StripeV2Account(account_data)
             logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
         except Exception as e:
             logger.error(f"Error creating Stripe Connect account: {e}")
@@ -515,55 +616,49 @@ def create_connect_account_embedded(
         # 注意：统一使用 V1 API，因为 webhook 事件是 V1 格式，AccountSession 也是 V1 API
         account = None
         try:
-            # 使用 V2 API 创建账户（参考 sample code）
-            account = stripe.v2.core.accounts.create(
-                contact_email=current_user.email or f"user_{current_user.id}@link2ur.com",
-                display_name=current_user.name or f"User {current_user.id}",
-                dashboard="express",  # Express Dashboard
-                identity={
-                    "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
-                    "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
-                },
-                configuration={
-                    # 使用 recipient 配置用于接收支付（marketplace 模式）
-                    "recipient": {
-                        "capabilities": {
-                            "stripe_balance": {
-                                "stripe_transfers": {
+            # 使用 V2 API 创建账户（根据官方文档）
+            account_data = stripe_v2_api_request(
+                "POST",
+                "accounts",
+                data={
+                    "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                    "display_name": current_user.name or f"User {current_user.id}",
+                    "dashboard": "express",  # Express Dashboard
+                    "identity": {
+                        "country": "gb",  # 默认使用 GB，用户可以在 onboarding 时更改
+                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改
+                    },
+                    "configuration": {
+                        # 根据官方文档，使用 merchant 配置用于接收支付
+                        "merchant": {
+                            "capabilities": {
+                                "card_payments": {
                                     "requested": True
                                 }
                             }
                         }
                     },
-                    # 同时支持 merchant 配置（如果需要直接收款）
-                    "merchant": {
-                        "capabilities": {
-                            "card_payments": {
-                                "requested": True
-                            }
-                        }
-                    }
-                },
-                defaults={
-                    "currency": "gbp",
-                    "responsibilities": {
-                        "fees_collector": "application",  # 平台收取费用
-                        "losses_collector": "application"  # 平台承担损失
+                    "defaults": {
+                        "currency": "gbp",
+                        "responsibilities": {
+                            "fees_collector": "application",  # 平台收取费用
+                            "losses_collector": "application"  # 平台承担损失
+                        },
+                        "locales": ["en-GB"]
                     },
-                    "locales": ["en-GB"]
-                },
-                metadata={
-                    "user_id": str(current_user.id),
-                    "platform": "LinkU",
-                    "user_name": current_user.name or f"User {current_user.id}"
-                },
-                include=[
-                    "configuration.recipient",
-                    "configuration.merchant",
-                    "identity",
-                    "requirements"
-                ]
+                    "metadata": {
+                        "user_id": str(current_user.id),
+                        "platform": "LinkU",
+                        "user_name": current_user.name or f"User {current_user.id}"
+                    },
+                    "include": [
+                        "configuration.merchant",
+                        "identity",
+                        "requirements"
+                    ]
+                }
             )
+            account = StripeV2Account(account_data)
             logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error creating account: {e}")
@@ -1325,8 +1420,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
     
     logger.info(f"Received Stripe Connect webhook event: {event_type}")
     
-    # 处理账户创建事件
-    if event_type == "account.created":
+    # 处理账户创建事件（V1 和 V2）
+    if event_type == "account.created" or event_type == "v2.core.account.created":
         account = event_data
         account_id = account.get("id")
         
@@ -1400,8 +1495,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
         else:
             logger.warning(f"Account.created event for account {account_id}, but no metadata.user_id found")
     
-    # 处理账户更新事件（V1 API）
-    elif event_type == "account.updated":
+    # 处理账户更新事件（V1 和 V2）
+    elif event_type == "account.updated" or event_type == "v2.core.account.updated":
         account = event_data
         account_id = account.get("id")
         
@@ -1413,24 +1508,52 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
         user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
         
         if user:
-            details_submitted = account.get("details_submitted", False)
-            charges_enabled = account.get("charges_enabled", False)
-            payouts_enabled = account.get("payouts_enabled", False)
+            # 判断是 V1 还是 V2 API 事件
+            is_v2_event = event_type == "v2.core.account.updated"
             
-            # 检查状态变化
-            previous_attributes = event.get("data", {}).get("previous_attributes", {})
-            was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
-            was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
-            
-            # 如果账户刚刚激活，记录日志
-            if not was_charges_enabled and charges_enabled:
-                logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-            
-            # 如果账户刚刚启用提现，记录日志
-            if not was_payouts_enabled and payouts_enabled:
-                logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
-            
-            logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+            if is_v2_event:
+                # V2 API 使用 requirements 和 configuration 字段
+                requirements = account.get("requirements", {})
+                summary = requirements.get("summary", {})
+                minimum_deadline = summary.get("minimum_deadline", {})
+                deadline_status = minimum_deadline.get("status")
+                details_submitted = not deadline_status or deadline_status == "eventually_due"
+                
+                # 检查 merchant 配置中的 capabilities
+                configuration = account.get("configuration", {})
+                merchant = configuration.get("merchant", {})
+                capabilities = merchant.get("capabilities", {})
+                card_payments = capabilities.get("card_payments", {})
+                charges_enabled = card_payments.get("status") == "active"
+                
+                # 检查 recipient 配置中的 payouts
+                recipient = configuration.get("recipient", {})
+                recipient_capabilities = recipient.get("capabilities", {})
+                stripe_balance = recipient_capabilities.get("stripe_balance", {})
+                payouts = stripe_balance.get("payouts", {})
+                payouts_enabled = payouts.get("status") == "active"
+                
+                logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+            else:
+                # V1 API 使用传统字段
+                details_submitted = account.get("details_submitted", False)
+                charges_enabled = account.get("charges_enabled", False)
+                payouts_enabled = account.get("payouts_enabled", False)
+                
+                # 检查状态变化
+                previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
+                was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
+                
+                # 如果账户刚刚激活，记录日志
+                if not was_charges_enabled and charges_enabled:
+                    logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+                
+                # 如果账户刚刚启用提现，记录日志
+                if not was_payouts_enabled and payouts_enabled:
+                    logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
+                
+                logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
         else:
             # 如果通过 account_id 找不到，尝试通过 metadata
             user_id = account.get("metadata", {}).get("user_id")
@@ -1446,8 +1569,28 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             else:
                 logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
     
+    # 处理账户关闭事件（V2 API）
+    elif event_type == "v2.core.account.closed":
+        account = event_data
+        account_id = account.get("id")
+        
+        if not account_id:
+            logger.warning(f"{event_type} event missing account ID")
+            return {"status": "success"}
+        
+        # 通过 stripe_account_id 查找用户
+        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+        
+        if user:
+            logger.warning(f"Stripe Connect account (V2) closed for user {user.id}: account_id={account_id}")
+            # 可以选择清除账户ID或保留（取决于业务需求）
+            # user.stripe_account_id = None
+            # db.commit()
+        else:
+            logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
+    
     # 处理账户要求更新事件（V2 API）
-    elif event_type == "v2.core.account.requirements.updated" or event_type.startswith("v2.core.account"):
+    elif event_type == "v2.core.account.requirements.updated":
         account = event_data
         account_id = account.get("id")
         
@@ -1537,6 +1680,64 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             if user:
                 account_type = external_account.get("object")  # "bank_account" or "card"
                 logger.info(f"External account created for user {user.id}: account_id={account_id}, type={account_type}")
+    
+    # 处理 V2 API 配置更新事件
+    elif event_type in [
+        "v2.core.account[configuration.merchant].updated",
+        "v2.core.account[configuration.merchant].capability_status_updated",
+        "v2.core.account[configuration.recipient].updated",
+        "v2.core.account[configuration.recipient].capability_status_updated",
+        "v2.core.account[configuration.customer].updated",
+        "v2.core.account[configuration.customer].capability_status_updated",
+        "v2.core.account[defaults].updated",
+        "v2.core.account[identity].updated"
+    ]:
+        account = event_data
+        account_id = account.get("id")
+        
+        if not account_id:
+            logger.warning(f"{event_type} event missing account ID")
+            return {"status": "success"}
+        
+        # 通过 stripe_account_id 查找用户
+        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+        
+        if user:
+            # 根据事件类型记录不同的信息
+            if "configuration.merchant" in event_type:
+                configuration = account.get("configuration", {})
+                merchant = configuration.get("merchant", {})
+                capabilities = merchant.get("capabilities", {})
+                logger.info(f"Account merchant configuration updated (V2) for user {user.id}: account_id={account_id}, capabilities={capabilities}")
+            elif "configuration.recipient" in event_type:
+                configuration = account.get("configuration", {})
+                recipient = configuration.get("recipient", {})
+                capabilities = recipient.get("capabilities", {})
+                logger.info(f"Account recipient configuration updated (V2) for user {user.id}: account_id={account_id}, capabilities={capabilities}")
+            elif "identity" in event_type:
+                identity = account.get("identity", {})
+                logger.info(f"Account identity updated (V2) for user {user.id}: account_id={account_id}")
+            else:
+                logger.info(f"Account configuration updated (V2) for user {user.id}: account_id={account_id}, event={event_type}")
+        else:
+            logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
+    
+    # 处理账户人员事件（V2 API）
+    elif event_type in [
+        "v2.core.account_person.created",
+        "v2.core.account_person.updated",
+        "v2.core.account_person.deleted"
+    ]:
+        person = event_data
+        account_id = person.get("account")
+        
+        if account_id:
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+            if user:
+                person_id = person.get("id")
+                logger.info(f"Account person {event_type} (V2) for user {user.id}: account_id={account_id}, person_id={person_id}")
+            else:
+                logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
     
     # 处理账户取消授权事件
     elif event_type == "account.application.deauthorized":
