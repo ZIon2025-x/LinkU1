@@ -383,30 +383,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       ) : (
         <div>
           {/* 显示支付信息 */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ marginBottom: '12px' }}>
-              <strong>总金额:</strong> £{paymentData.total_amount_display}
-            </div>
-            {paymentData.points_used_display && (
-              <div style={{ marginBottom: '12px', color: '#52c41a' }}>
-                <strong>积分抵扣:</strong> £{paymentData.points_used_display}
+          {paymentData && (
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <strong>总金额:</strong> £{paymentData.total_amount_display}
               </div>
-            )}
-            {paymentData.coupon_discount_display && (
-              <div style={{ marginBottom: '12px', color: '#52c41a' }}>
-                <strong>优惠券折扣:</strong> £{paymentData.coupon_discount_display}
+              {paymentData.points_used_display && (
+                <div style={{ marginBottom: '12px', color: '#52c41a' }}>
+                  <strong>积分抵扣:</strong> £{paymentData.points_used_display}
+                </div>
+              )}
+              {paymentData.coupon_discount_display && (
+                <div style={{ marginBottom: '12px', color: '#52c41a' }}>
+                  <strong>优惠券折扣:</strong> £{paymentData.coupon_discount_display}
+                </div>
+              )}
+              <div style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
+                <strong>最终支付:</strong> £{paymentData.final_amount_display}
               </div>
-            )}
-            <div style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 'bold' }}>
-              <strong>最终支付:</strong> £{paymentData.final_amount_display}
+              <div style={{ marginTop: '16px', padding: '12px', background: '#f0f0f0', borderRadius: '4px' }}>
+                {paymentData.note}
+              </div>
             </div>
-            <div style={{ marginTop: '16px', padding: '12px', background: '#f0f0f0', borderRadius: '4px' }}>
-              {paymentData.note}
-            </div>
-          </div>
+          )}
 
           {/* 如果纯积分支付，已成功 */}
-          {paymentData.final_amount === 0 ? (
+          {paymentData && paymentData.final_amount === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px' }}>
               <div style={{ fontSize: '18px', color: '#52c41a', marginBottom: '16px' }}>
                 ✓ 支付成功！
@@ -455,9 +457,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 } as StripeElementsOptions}
               >
                 <PaymentForm
-                  clientSecret={paymentData.client_secret}
-                  amount={paymentData.final_amount}
-                  currency={paymentData.currency}
+                  clientSecret={propClientSecret || paymentData?.client_secret || ''}
+                  amount={paymentData?.final_amount || 0}
+                  currency={paymentData?.currency || 'GBP'}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                   onCancel={handleCancel}
