@@ -321,7 +321,15 @@ def create_task_payment(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    """创建任务支付（支持积分和优惠券抵扣平台服务费）"""
+    """
+    创建任务支付（支持积分和优惠券抵扣平台服务费）
+    
+    安全说明：
+    - 此 API 只创建 PaymentIntent 或处理积分支付，不更新 Stripe 支付状态
+    - 所有 Stripe 支付状态更新必须通过 Webhook 处理（/api/stripe/webhook）
+    - 前端只能创建支付意图，不能确认支付状态
+    - 支付状态更新只能由 Stripe Webhook 触发，确保安全性
+    """
     from app import crud
     from app.coupon_points_crud import (
         get_or_create_points_account,
@@ -677,6 +685,14 @@ def create_task_payment(
         # In the latest version of the API, specifying the `automatic_payment_methods` parameter
         # is optional because Stripe enables its functionality by default.
         # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
+        # 
+        # 交易市场托管模式（Marketplace/Escrow）：
+        # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+        # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+        # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
+        # 
+        # 注意：官方示例代码使用的是 Checkout Session + Direct Charges 模式（立即转账）
+        # 但交易市场需要托管模式，所以不设置 transfer_data.destination
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
@@ -684,25 +700,25 @@ def create_task_payment(
             automatic_payment_methods={
                 "enabled": True,
             },
-            # Stripe Connect Destination charges: 将资金转到任务接受人的账户
-            # 这是平台业务需求，官方 sample code 不包含此配置
-            application_fee_amount=application_fee_pence,
-            transfer_data={
-                "destination": taker.stripe_account_id
-            },
+            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             metadata={
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
                 "taker_id": str(task.taker_id),
+                "taker_stripe_account_id": taker.stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
                 "task_amount": str(task_amount_pence),  # 任务金额
                 "points_used": str(points_used) if points_used else "",
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
-                "application_fee": str(application_fee_pence)  # 平台服务费（从接受人端扣除）
+                "application_fee": str(application_fee_pence)  # 保存服务费金额，用于后续转账时扣除
             },
             description=f"任务 #{task_id} 任务金额支付 - {task.title}",
         )
         
         # 创建支付历史记录（待支付状态）
+        # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
+        # 这里只创建 PaymentIntent 和支付历史记录，不更新任务状态（is_paid, status）
+        # 任务状态更新只能由 Stripe Webhook 触发
         payment_history = models.PaymentHistory(
             task_id=task_id,
             user_id=current_user.id,
@@ -822,7 +838,12 @@ def get_task_payment_status(
     db: Session = Depends(get_db)
 ):
     """
-    查询任务支付状态
+    查询任务支付状态（只读，不更新任何状态）
+    
+    安全说明：
+    - 此 API 仅用于查询支付状态，不会更新任何数据库字段
+    - 所有支付状态更新必须通过 Stripe Webhook 处理
+    - 前端只能读取状态，不能修改状态
     
     返回任务的支付信息，包括：
     - 是否已支付
@@ -832,6 +853,8 @@ def get_task_payment_status(
     """
     import stripe
     import os
+    import logging
+    logger = logging.getLogger(__name__)
     
     task = crud.get_task(db, task_id)
     if not task:
@@ -841,25 +864,29 @@ def get_task_payment_status(
     if task.poster_id != current_user.id and task.taker_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权查看此任务的支付状态")
     
+    # 安全：此 API 只读取状态，不更新任何字段
+    # 所有状态更新必须通过 webhook 处理
+    logger.info(f"🔍 [READ-ONLY] 查询任务支付状态: task_id={task_id}, user_id={current_user.id}, is_paid={task.is_paid}")
+    
     # 获取任务金额
     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
     
-    # 构建响应
+    # 构建响应（只读）
     response = {
         "task_id": task_id,
-        "is_paid": bool(task.is_paid),
-        "payment_intent_id": task.payment_intent_id,
+        "is_paid": bool(task.is_paid),  # 从数据库读取，不修改
+        "payment_intent_id": task.payment_intent_id,  # 从数据库读取，不修改
         "task_amount": task_amount,
-        "escrow_amount": task.escrow_amount,
-        "status": task.status,
+        "escrow_amount": task.escrow_amount,  # 从数据库读取，不修改
+        "status": task.status,  # 从数据库读取，不修改
         "currency": task.currency or "GBP"
     }
     
-    # 如果有 Payment Intent ID，从 Stripe 获取详细信息
+    # 如果有 Payment Intent ID，从 Stripe 获取详细信息（只读）
     if task.payment_intent_id:
         try:
             stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-            # 检索 Payment Intent（不展开 charges，因为在新版本 API 中可能不支持）
+            # 检索 Payment Intent（只读，不修改）
             payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
             
             response["payment_details"] = {
@@ -872,7 +899,7 @@ def get_task_payment_status(
                 "charges": []
             }
             
-            # 尝试获取关联的 Charge 信息
+            # 尝试获取关联的 Charge 信息（只读）
             # 在新版本的 Stripe API 中，charges 可能不再直接可用
             # 我们可以通过 latest_charge 或单独查询 charges 来获取
             try:

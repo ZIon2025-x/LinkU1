@@ -1421,22 +1421,25 @@ async def accept_application(
         # 创建 Payment Intent（参考 Stripe Payment Intents API sample code）
         # Create a PaymentIntent with the order amount and currency
         # 使用 automatic_payment_methods（与官方 sample code 一致）
+        # 
+        # 交易市场托管模式：
+        # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+        # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+        # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
             # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
             automatic_payment_methods={"enabled": True},
-            # Stripe Connect Destination charges: 将资金转到任务接受人的账户
-            # 这是平台业务需求，官方 sample code 不包含此配置
-            application_fee_amount=application_fee_pence,
-            transfer_data={
-                "destination": taker_stripe_account_id
-            },
+            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             metadata={
                 "task_id": str(task_id),
                 "application_id": str(application_id),
                 "poster_id": str(current_user.id),
                 "taker_id": str(application.applicant_id),
+                "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
                 "pending_approval": "true"  # 标记这是待确认的批准
             },
         )

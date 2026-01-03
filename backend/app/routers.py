@@ -2868,17 +2868,29 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     logger.info(f"  - Signature 前缀: {sig_header[:30] if sig_header else 'None'}...")
     logger.info(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret and endpoint_secret != 'whsec_...yourkey...' else '❌ 未配置或默认值'}")
     
+    # 严格验证 Webhook 签名（安全要求）
+    # 只有通过 Stripe 签名验证的请求才能处理
+    if not endpoint_secret or endpoint_secret == "whsec_...yourkey...":
+        logger.error(f"❌ [WEBHOOK] 安全错误：Webhook Secret 未正确配置")
+        return {"error": "Webhook secret not configured"}, 500
+    
+    if not sig_header:
+        logger.error(f"❌ [WEBHOOK] 安全错误：缺少 Stripe 签名头")
+        return {"error": "Missing stripe-signature header"}, 400
+    
     try:
+        # 严格验证 Webhook 签名
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-        logger.info(f"✅ [WEBHOOK] 事件验证成功")
+        logger.info(f"✅ [WEBHOOK] 事件验证成功（签名已验证）")
     except ValueError as e:
         logger.error(f"❌ [WEBHOOK] Invalid payload: {e}")
         logger.error(f"  - Payload 内容 (前500字符): {payload[:500].decode('utf-8', errors='ignore')}")
         return {"error": "Invalid payload"}, 400
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"❌ [WEBHOOK] Invalid signature: {e}")
-        logger.error(f"  - 提供的 Signature: {sig_header}")
+        logger.error(f"❌ [WEBHOOK] 安全错误：签名验证失败: {e}")
+        logger.error(f"  - 提供的 Signature: {sig_header[:50]}...")
         logger.error(f"  - 使用的 Secret: {endpoint_secret[:10]}...")
+        logger.error(f"  - 这可能是恶意请求或配置错误，已拒绝处理")
         return {"error": "Invalid signature"}, 400
     except Exception as e:
         logger.error(f"❌ [WEBHOOK] 处理错误: {type(e).__name__}: {e}")
@@ -2973,16 +2985,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"🔍 找到申请: {application is not None}")
                     
                     if application:
-                        logger.info(f"✅ 开始批准申请 {application_id}, applicant_id={application.applicant_id}")
+                        logger.info(f"✅ [WEBHOOK] 开始批准申请 {application_id}, applicant_id={application.applicant_id}")
                         # 批准申请
                         application.status = "approved"
                         task.taker_id = application.applicant_id
                         task.status = "pending_payment"  # 先设置为 pending_payment，下面会更新为 in_progress
-                        logger.info(f"✅ 申请已批准，任务状态设置为 pending_payment, taker_id={task.taker_id}")
+                        logger.info(f"✅ [WEBHOOK] 申请已批准，任务状态设置为 pending_payment, taker_id={task.taker_id}")
                         
                         # 如果申请包含议价，更新 agreed_reward
                         if application.negotiated_price is not None:
                             task.agreed_reward = application.negotiated_price
+                            logger.info(f"✅ [WEBHOOK] 更新任务成交价: {application.negotiated_price}")
                         
                         # 自动拒绝所有其他待处理的申请
                         other_applications = db.execute(
@@ -2997,6 +3010,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         
                         for other_app in other_applications:
                             other_app.status = "rejected"
+                            logger.info(f"✅ [WEBHOOK] 自动拒绝其他申请: application_id={other_app.id}")
                         
                         # 写入操作日志
                         from app.utils.time_utils import get_utc_time
@@ -3009,6 +3023,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             responded_at=get_utc_time()
                         )
                         db.add(log_entry)
+                        logger.info(f"✅ [WEBHOOK] 已添加操作日志")
                         
                         # 发送通知给申请者
                         try:
@@ -3022,10 +3037,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 task.id,
                                 auto_commit=False,
                             )
+                            logger.info(f"✅ [WEBHOOK] 已发送接受申请通知给申请者 {application.applicant_id}")
                         except Exception as e:
-                            logger.error(f"发送接受申请通知失败: {e}")
+                            logger.error(f"❌ [WEBHOOK] 发送接受申请通知失败: {e}")
                         
-                        logger.info(f"✅ 支付成功，申请 {application_id} 已批准")
+                        logger.info(f"✅ [WEBHOOK] 支付成功，申请 {application_id} 已批准")
                     else:
                         logger.warning(f"⚠️ 未找到申请: application_id={application_id_str}, task_id={task_id}, status=pending")
                 else:
@@ -3053,14 +3069,31 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 # 提交数据库更改
                 try:
+                    # 在提交前记录更新前的状态
+                    logger.info(f"📝 [WEBHOOK] 提交前任务状态:")
+                    logger.info(f"  - is_paid (更新前): {task.is_paid}")
+                    logger.info(f"  - status: {task.status}")
+                    logger.info(f"  - payment_intent_id: {task.payment_intent_id}")
+                    logger.info(f"  - escrow_amount: {task.escrow_amount}")
+                    logger.info(f"  - taker_id: {task.taker_id}")
+                    
                     db.commit()
                     logger.info(f"✅ [WEBHOOK] 数据库提交成功")
-                    logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成:")
+                    
+                    # 刷新任务对象以获取最新状态
+                    db.refresh(task)
+                    
+                    # 验证更新是否成功
+                    logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成（提交后验证）:")
                     logger.info(f"  - 任务状态: {task.status}")
-                    logger.info(f"  - 是否已支付: {task.is_paid}")
+                    logger.info(f"  - 是否已支付 (is_paid): {task.is_paid} {'✅' if task.is_paid == 1 else '❌'}")
                     logger.info(f"  - Payment Intent ID: {task.payment_intent_id}")
                     logger.info(f"  - Escrow 金额: {task.escrow_amount}")
                     logger.info(f"  - Taker ID: {task.taker_id}")
+                    
+                    # 如果 is_paid 没有正确更新，记录警告
+                    if task.is_paid != 1:
+                        logger.error(f"❌ [WEBHOOK] 警告：任务 {task_id} 的 is_paid 字段未正确更新！当前值: {task.is_paid}")
                 except Exception as e:
                     logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
                     import traceback
@@ -3403,10 +3436,26 @@ def confirm_task_complete(
         )
     
     # 执行 Stripe Transfer 转账
+    # 交易市场模式：资金在平台账户，现在转账给任务接受人
     try:
+        # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+        if task.escrow_amount <= 0:
+            # 重新计算 escrow_amount
+            task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+            from app.crud import get_system_setting
+            application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+            application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+            application_fee = task_amount * application_fee_rate
+            task.escrow_amount = max(0.0, task_amount - application_fee)
+            logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
+        
         transfer_amount_pence = int(task.escrow_amount * 100)  # 转换为便士
         
+        logger.info(f"准备转账: 金额={transfer_amount_pence} 便士 (£{task.escrow_amount:.2f}), 目标账户={taker.stripe_account_id}")
+        
         # 创建 Transfer 到接受人的 Stripe Connect 账户
+        # 注意：这是从平台账户转账到连接账户，不涉及 application_fee
+        # 平台服务费已经在计算 escrow_amount 时扣除
         transfer = stripe.Transfer.create(
             amount=transfer_amount_pence,
             currency="gbp",
@@ -3420,12 +3469,12 @@ def confirm_task_complete(
             description=f"任务 #{task_id} 奖励 - {task.title}"
         )
         
-        logger.info(f"Transfer created: {transfer.id} for task {task_id}, amount: £{task.escrow_amount:.2f}")
+        logger.info(f"✅ Transfer 创建成功: transfer_id={transfer.id}, amount=£{task.escrow_amount:.2f}")
         
         # 更新任务状态
         task.is_confirmed = 1
         task.paid_to_user_id = task.taker_id
-        task.escrow_amount = 0.0
+        task.escrow_amount = 0.0  # 转账后清空托管金额
         
         # 可以在这里添加转账记录到数据库（如果需要）
         # TODO: 创建 PaymentTransfer 记录
