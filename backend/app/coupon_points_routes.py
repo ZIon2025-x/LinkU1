@@ -859,6 +859,7 @@ def get_task_payment_status(
     if task.payment_intent_id:
         try:
             stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            # 检索 Payment Intent（不展开 charges，因为在新版本 API 中可能不支持）
             payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
             
             response["payment_details"] = {
@@ -871,17 +872,62 @@ def get_task_payment_status(
                 "charges": []
             }
             
-            # 获取关联的 Charge 信息
-            if payment_intent.charges and len(payment_intent.charges.data) > 0:
-                for charge in payment_intent.charges.data:
-                    response["payment_details"]["charges"].append({
-                        "charge_id": charge.id,
-                        "status": charge.status,
-                        "paid": charge.paid,
-                        "amount": charge.amount,
-                        "amount_display": f"{charge.amount / 100:.2f}",
-                        "created": charge.created
-                    })
+            # 尝试获取关联的 Charge 信息
+            # 在新版本的 Stripe API 中，charges 可能不再直接可用
+            # 我们可以通过 latest_charge 或单独查询 charges 来获取
+            try:
+                # 方法1: 尝试使用 latest_charge（如果存在）
+                if hasattr(payment_intent, 'latest_charge') and payment_intent.latest_charge:
+                    charge_id = payment_intent.latest_charge
+                    if isinstance(charge_id, str):
+                        # 如果 latest_charge 是字符串 ID，需要单独检索
+                        charge = stripe.Charge.retrieve(charge_id)
+                        response["payment_details"]["charges"].append({
+                            "charge_id": charge.id,
+                            "status": charge.status,
+                            "paid": charge.paid,
+                            "amount": charge.amount,
+                            "amount_display": f"{charge.amount / 100:.2f}",
+                            "created": charge.created
+                        })
+                    else:
+                        # 如果 latest_charge 已经是展开的对象
+                        charge = charge_id
+                        response["payment_details"]["charges"].append({
+                            "charge_id": charge.id,
+                            "status": charge.status,
+                            "paid": charge.paid,
+                            "amount": charge.amount,
+                            "amount_display": f"{charge.amount / 100:.2f}",
+                            "created": charge.created
+                        })
+                # 方法2: 尝试访问 charges 属性（旧版本 API）
+                elif hasattr(payment_intent, 'charges'):
+                    charges_obj = payment_intent.charges
+                    if hasattr(charges_obj, 'data') and charges_obj.data:
+                        for charge in charges_obj.data:
+                            response["payment_details"]["charges"].append({
+                                "charge_id": charge.id,
+                                "status": charge.status,
+                                "paid": charge.paid,
+                                "amount": charge.amount,
+                                "amount_display": f"{charge.amount / 100:.2f}",
+                                "created": charge.created
+                            })
+                    elif isinstance(charges_obj, list):
+                        for charge in charges_obj:
+                            response["payment_details"]["charges"].append({
+                                "charge_id": charge.id,
+                                "status": charge.status,
+                                "paid": charge.paid,
+                                "amount": charge.amount,
+                                "amount_display": f"{charge.amount / 100:.2f}",
+                                "created": charge.created
+                            })
+            except (AttributeError, stripe.error.StripeError) as charge_error:
+                # 如果无法获取 charge 信息，只记录警告，不影响主要功能
+                logger.debug(f"Could not retrieve charge details for payment intent {task.payment_intent_id}: {charge_error}")
+                
         except stripe.error.StripeError as e:
             logger.warning(f"Failed to retrieve payment intent {task.payment_intent_id}: {e}")
             response["payment_details"] = {
