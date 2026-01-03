@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
+import { message } from 'antd';
 import { API_BASE_URL, WS_BASE_URL } from '../config';
 import api, { 
   fetchCurrentUser, 
@@ -6152,9 +6153,27 @@ const MessagePage: React.FC = () => {
                                 if (responseData.amount_display) {
                                   params.set('amount_display', responseData.amount_display);
                                 }
-                                // 在新页面打开支付页面
+                                // 在新页面打开支付页面，传递返回 URL
+                                params.set('return_url', window.location.href);
+                                params.set('return_type', 'message'); // 标识来源页面类型
                                 const paymentUrl = `/${language}/tasks/${activeTaskId}/payment?${params.toString()}`;
-                                window.open(paymentUrl, '_blank');
+                                const paymentWindow = window.open(paymentUrl, '_blank');
+                                
+                                // 监听支付成功消息
+                                const handlePaymentSuccess = (event: MessageEvent) => {
+                                  if (event.data?.type === 'payment_success' && event.data?.taskId === activeTaskId) {
+                                    // 显示批准成功提示
+                                    message.success(t('messages.notifications.applicationAccepted') || '申请已批准！');
+                                    // 重新加载数据
+                                    if (activeTaskId) {
+                                      loadTaskMessages(activeTaskId);
+                                      loadApplications(activeTaskId);
+                                      loadTasks();
+                                    }
+                                    window.removeEventListener('message', handlePaymentSuccess);
+                                  }
+                                };
+                                window.addEventListener('message', handlePaymentSuccess);
                               } else {
                                 // 如果没有支付信息，说明可能已经支付成功或使用积分支付
                                 setShowApplicationListModal(false);

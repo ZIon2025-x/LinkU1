@@ -58,6 +58,8 @@ const TaskPayment: React.FC = () => {
   const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [taskInfo, setTaskInfo] = useState<TaskInfo | null>(null);
   const [loadingTask, setLoadingTask] = useState(true);
+  const [returnUrl, setReturnUrl] = useState<string | null>(null);
+  const [returnType, setReturnType] = useState<string | null>(null);
 
   // 加载任务信息
   useEffect(() => {
@@ -125,12 +127,22 @@ const TaskPayment: React.FC = () => {
     checkUser();
   }, []);
 
-  // 检查 URL 参数中是否有支付信息（从批准申请跳转过来时）
+  // 检查 URL 参数中是否有支付信息和返回 URL
   useEffect(() => {
     const clientSecret = searchParams.get('client_secret');
     const paymentIntentId = searchParams.get('payment_intent_id');
     const amount = searchParams.get('amount');
     const amountDisplay = searchParams.get('amount_display');
+    const returnUrlParam = searchParams.get('return_url');
+    const returnTypeParam = searchParams.get('return_type');
+
+    // 保存返回 URL 和类型
+    if (returnUrlParam) {
+      setReturnUrl(returnUrlParam);
+    }
+    if (returnTypeParam) {
+      setReturnType(returnTypeParam);
+    }
 
     if (clientSecret && paymentIntentId && taskId) {
       // 从批准申请跳转过来，直接使用已有的支付信息
@@ -190,10 +202,23 @@ const TaskPayment: React.FC = () => {
 
       // 如果纯积分支付，直接成功
       if (response.data.final_amount === 0) {
-        message.success('支付成功！');
-        setTimeout(() => {
-          localizedNavigate(`/tasks/${taskId}`);
-        }, 1500);
+        message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
+        
+        // 如果有返回 URL，通知原页面并关闭支付页面
+        if (returnUrl && window.opener) {
+          window.opener.postMessage({
+            type: 'payment_success',
+            taskId: taskId,
+            message: language === 'zh' ? '申请已批准！' : 'Application approved!'
+          }, '*');
+          setTimeout(() => {
+            window.close();
+          }, 1500);
+        } else {
+          setTimeout(() => {
+            localizedNavigate(`/tasks/${taskId}`);
+          }, 1500);
+        }
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || error.message || '创建支付失败';
@@ -204,9 +229,25 @@ const TaskPayment: React.FC = () => {
   };
 
   const handlePaymentSuccess = () => {
-    message.success('支付成功！');
-    // 开始轮询支付状态，确保 webhook 已处理
-    startPaymentStatusPolling();
+    message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
+    
+    // 如果有返回 URL，通知原页面并关闭支付页面
+    if (returnUrl && window.opener) {
+      // 通知原页面支付成功
+      window.opener.postMessage({
+        type: 'payment_success',
+        taskId: taskId,
+        message: language === 'zh' ? '申请已批准！' : 'Application approved!'
+      }, '*');
+      
+      // 延迟关闭窗口，让用户看到成功消息
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    } else {
+      // 没有返回 URL，开始轮询支付状态，确保 webhook 已处理
+      startPaymentStatusPolling();
+    }
   };
 
   // 支付状态轮询（作为 webhook 的备选方案）
@@ -221,10 +262,22 @@ const TaskPayment: React.FC = () => {
 
     const poll = async () => {
       if (pollCount >= maxPolls) {
-        // 轮询超时，但支付可能已成功（webhook 延迟），直接跳转
-        setTimeout(() => {
-          localizedNavigate(`/tasks/${taskId}`);
-        }, 1500);
+        // 轮询超时，但支付可能已成功（webhook 延迟）
+        if (returnUrl && window.opener) {
+          // 通知原页面（即使轮询超时，支付可能已成功）
+          window.opener.postMessage({
+            type: 'payment_success',
+            taskId: taskId,
+            message: language === 'zh' ? '申请已批准！' : 'Application approved!'
+          }, '*');
+          setTimeout(() => {
+            window.close();
+          }, 1500);
+        } else {
+          setTimeout(() => {
+            localizedNavigate(`/tasks/${taskId}`);
+          }, 1500);
+        }
         return;
       }
 
@@ -233,11 +286,25 @@ const TaskPayment: React.FC = () => {
         const { is_paid, payment_details } = response.data;
 
         if (is_paid && payment_details?.status === 'succeeded') {
-          // 支付成功，停止轮询并跳转
-          message.success('支付已确认！');
-          setTimeout(() => {
-            localizedNavigate(`/tasks/${taskId}`);
-          }, 1000);
+          // 支付成功，停止轮询
+          message.success(language === 'zh' ? '支付已确认！' : 'Payment confirmed!');
+          
+          // 如果有返回 URL，通知原页面并关闭支付页面
+          if (returnUrl && window.opener) {
+            window.opener.postMessage({
+              type: 'payment_success',
+              taskId: taskId,
+              message: language === 'zh' ? '申请已批准！' : 'Application approved!'
+            }, '*');
+            setTimeout(() => {
+              window.close();
+            }, 1000);
+          } else {
+            // 没有返回 URL，跳转到任务详情
+            setTimeout(() => {
+              localizedNavigate(`/tasks/${taskId}`);
+            }, 1000);
+          }
           return;
         }
 
@@ -250,10 +317,21 @@ const TaskPayment: React.FC = () => {
         if (pollCount < maxPolls) {
           setTimeout(poll, pollInterval);
         } else {
-          // 轮询超时，直接跳转（让用户自己检查）
-          setTimeout(() => {
-            localizedNavigate(`/tasks/${taskId}`);
-          }, 1500);
+          // 轮询超时
+          if (returnUrl && window.opener) {
+            window.opener.postMessage({
+              type: 'payment_success',
+              taskId: taskId,
+              message: language === 'zh' ? '申请已批准！' : 'Application approved!'
+            }, '*');
+            setTimeout(() => {
+              window.close();
+            }, 1500);
+          } else {
+            setTimeout(() => {
+              localizedNavigate(`/tasks/${taskId}`);
+            }, 1500);
+          }
         }
       }
     };

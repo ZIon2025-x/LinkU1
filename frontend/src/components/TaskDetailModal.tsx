@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
+import { message } from 'antd';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -426,9 +427,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         if (responseData.amount_display) {
           params.set('amount_display', responseData.amount_display);
         }
-        // 在新页面打开支付页面
+        // 在新页面打开支付页面，传递返回 URL
+        params.set('return_url', window.location.href);
+        params.set('return_type', 'task_detail'); // 标识来源页面类型
         const paymentUrl = `/${language}/tasks/${taskId}/payment?${params.toString()}`;
-        window.open(paymentUrl, '_blank');
+        const paymentWindow = window.open(paymentUrl, '_blank');
+        
+        // 监听支付成功消息
+        const handlePaymentSuccess = (event: MessageEvent) => {
+          if (event.data?.type === 'payment_success' && event.data?.taskId === taskId) {
+            // 显示批准成功提示
+            message.success(t('taskDetail.approveSuccess') || (language === 'zh' ? '申请已批准！' : 'Application approved!'));
+            // 重新加载任务数据
+            if (taskId) {
+              loadTaskData();
+              loadApplications();
+            }
+            window.removeEventListener('message', handlePaymentSuccess);
+          }
+        };
+        window.addEventListener('message', handlePaymentSuccess);
       } else if (updatedTask.status === 'pending_payment' && updatedTask.poster_id === user?.id) {
         // 如果任务状态变为 pending_payment，也跳转到支付页面（新页面）
         const paymentUrl = `/${language}/tasks/${taskId}/payment`;

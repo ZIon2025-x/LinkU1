@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from app import schemas
+from app import crud
 from app.utils.time_utils import get_utc_time
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.coupon_points_crud import (
