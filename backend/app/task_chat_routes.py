@@ -1305,6 +1305,17 @@ async def accept_application(
         # 幂等性检查：如果申请已经是 approved，检查是否有待支付的 PaymentIntent
         if application.status == "approved":
             logger.info(f"⚠️ 申请 {application_id} 已经是 approved 状态，检查是否有待支付的 PaymentIntent")
+            
+            # 如果任务已支付，直接返回已接受的消息
+            if locked_task.is_paid == 1:
+                logger.info(f"✅ 申请 {application_id} 已批准，任务已支付")
+                return {
+                    "message": "申请已被接受，任务已支付",
+                    "application_id": application_id,
+                    "task_id": task_id,
+                    "is_paid": True
+                }
+            
             # 如果任务有 payment_intent_id 且状态是 pending_payment，返回支付信息
             if locked_task.payment_intent_id and locked_task.status == "pending_payment":
                 try:
@@ -1312,6 +1323,20 @@ async def accept_application(
                     import os
                     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
                     payment_intent = stripe.PaymentIntent.retrieve(locked_task.payment_intent_id)
+                    
+                    # 检查 PaymentIntent 状态
+                    if payment_intent.status == "succeeded":
+                        logger.info(f"✅ PaymentIntent 已成功，但任务状态未更新，可能是 webhook 延迟")
+                        # 返回已支付信息，但不包含 client_secret（因为已支付）
+                        return {
+                            "message": "申请已被接受，支付已完成",
+                            "application_id": application_id,
+                            "task_id": task_id,
+                            "payment_intent_id": payment_intent.id,
+                            "payment_status": "succeeded",
+                            "is_paid": True
+                        }
+                    
                     logger.info(f"✅ 找到待支付的 PaymentIntent: {locked_task.payment_intent_id}")
                     return {
                         "message": "请完成支付以确认批准申请",
@@ -1325,6 +1350,7 @@ async def accept_application(
                     }
                 except Exception as e:
                     logger.error(f"❌ 获取 PaymentIntent 失败: {e}")
+            
             # 否则返回已接受的消息（不包含支付信息）
             logger.info(f"ℹ️ 申请 {application_id} 已批准，但无需支付或已支付")
             return {
@@ -1332,6 +1358,13 @@ async def accept_application(
                 "application_id": application_id,
                 "task_id": task_id
             }
+        
+        # 检查任务是否已支付（防止重复支付）
+        if locked_task.is_paid == 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="任务已支付，无法重复支付。如果支付未完成，请联系客服。"
+            )
         
         # 检查任务是否还有名额
         if locked_task.taker_id is not None:
@@ -1426,6 +1459,11 @@ async def accept_application(
         # - 支付时：资金先到平台账户（不立即转账给任务接受人）
         # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
         # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
+        
+        # 构建支付描述（方便在 Stripe Dashboard 中查看）
+        task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
+        payment_description = f"任务 #{task_id}: {task_title_short} - 批准申请 #{application_id}"
+        
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
@@ -1433,14 +1471,23 @@ async def accept_application(
             automatic_payment_methods={"enabled": True},
             # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
             # 不设置 application_fee_amount，服务费在任务完成转账时扣除
+            description=payment_description,  # 支付描述，方便在 Stripe Dashboard 中查看
             metadata={
                 "task_id": str(task_id),
+                "task_title": locked_task.title[:200] if locked_task.title else "",  # 任务标题（限制长度）
                 "application_id": str(application_id),
                 "poster_id": str(current_user.id),
+                "poster_name": current_user.name or f"User {current_user.id}",  # 发布者名称
                 "taker_id": str(application.applicant_id),
+                "taker_name": applicant.name or f"User {application.applicant_id}",  # 接受者名称
                 "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
                 "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                "pending_approval": "true"  # 标记这是待确认的批准
+                "task_amount": str(task_amount_pence),  # 任务金额（便士）
+                "task_amount_display": f"{task_amount:.2f}",  # 任务金额（显示格式）
+                "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",  # 议价金额
+                "pending_approval": "true",  # 标记这是待确认的批准
+                "platform": "LinkU",  # 平台标识
+                "payment_type": "application_approval"  # 支付类型：申请批准
             },
         )
         
