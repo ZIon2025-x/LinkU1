@@ -2898,27 +2898,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 task.escrow_amount = max(0.0, taker_amount)  # 确保不为负数
                 
                 # 检查是否是待确认的批准（pending_approval）
-                is_pending_approval = payment_intent.get("metadata", {}).get("pending_approval") == "true"
-                application_id = payment_intent.get("metadata", {}).get("application_id")
+                metadata = payment_intent.get("metadata", {})
+                is_pending_approval = metadata.get("pending_approval") == "true"
+                application_id_str = metadata.get("application_id")
                 
-                if is_pending_approval and application_id:
+                logger.info(f"🔍 Webhook检查: is_pending_approval={is_pending_approval}, application_id={application_id_str}, metadata={metadata}")
+                
+                if is_pending_approval and application_id_str:
                     # 这是批准申请时的支付，需要确认批准
                     from sqlalchemy import select
+                    application_id = int(application_id_str)
+                    logger.info(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
+                    
                     application = db.execute(
                         select(models.TaskApplication).where(
                             and_(
-                                models.TaskApplication.id == int(application_id),
+                                models.TaskApplication.id == application_id,
                                 models.TaskApplication.task_id == task_id,
                                 models.TaskApplication.status == "pending"
                             )
                         )
                     ).scalar_one_or_none()
                     
+                    logger.info(f"🔍 找到申请: {application is not None}")
+                    
                     if application:
+                        logger.info(f"✅ 开始批准申请 {application_id}, applicant_id={application.applicant_id}")
                         # 批准申请
                         application.status = "approved"
                         task.taker_id = application.applicant_id
                         task.status = "pending_payment"  # 先设置为 pending_payment，下面会更新为 in_progress
+                        logger.info(f"✅ 申请已批准，任务状态设置为 pending_payment, taker_id={task.taker_id}")
                         
                         # 如果申请包含议价，更新 agreed_reward
                         if application.negotiated_price is not None:
@@ -2929,7 +2939,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             select(models.TaskApplication).where(
                                 and_(
                                     models.TaskApplication.task_id == task_id,
-                                    models.TaskApplication.id != int(application_id),
+                                    models.TaskApplication.id != application_id,
                                     models.TaskApplication.status == "pending"
                                 )
                             )
@@ -2942,7 +2952,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         from app.utils.time_utils import get_utc_time
                         log_entry = models.NegotiationResponseLog(
                             task_id=task_id,
-                            application_id=int(application_id),
+                            application_id=application_id,
                             user_id=task.poster_id,
                             action="accept",
                             negotiated_price=application.negotiated_price,
@@ -2966,10 +2976,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             logger.error(f"发送接受申请通知失败: {e}")
                         
                         logger.info(f"✅ 支付成功，申请 {application_id} 已批准")
+                    else:
+                        logger.warning(f"⚠️ 未找到申请: application_id={application_id_str}, task_id={task_id}, status=pending")
+                else:
+                    logger.info(f"ℹ️ 不是待确认的批准支付: is_pending_approval={is_pending_approval}, application_id={application_id_str}")
                 
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
+                logger.info(f"🔍 检查任务状态: 当前状态={task.status}, is_paid={task.is_paid}")
                 if task.status == "pending_payment":
+                    logger.info(f"✅ 任务状态从 pending_payment 更新为 in_progress")
                     task.status = "in_progress"
+                else:
+                    logger.info(f"⚠️ 任务状态不是 pending_payment，当前状态: {task.status}，跳过状态更新")
                 
                 # 更新支付历史记录状态
                 payment_history = db.query(models.PaymentHistory).filter(
