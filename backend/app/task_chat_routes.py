@@ -1302,8 +1302,31 @@ async def accept_application(
         locked_task_result = await db.execute(locked_task_query)
         locked_task = locked_task_result.scalar_one_or_none()
         
-        # 幂等性检查：如果申请已经是 approved，直接返回成功
+        # 幂等性检查：如果申请已经是 approved，检查是否有待支付的 PaymentIntent
         if application.status == "approved":
+            logger.info(f"⚠️ 申请 {application_id} 已经是 approved 状态，检查是否有待支付的 PaymentIntent")
+            # 如果任务有 payment_intent_id 且状态是 pending_payment，返回支付信息
+            if locked_task.payment_intent_id and locked_task.status == "pending_payment":
+                try:
+                    import stripe
+                    import os
+                    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+                    payment_intent = stripe.PaymentIntent.retrieve(locked_task.payment_intent_id)
+                    logger.info(f"✅ 找到待支付的 PaymentIntent: {locked_task.payment_intent_id}")
+                    return {
+                        "message": "请完成支付以确认批准申请",
+                        "application_id": application_id,
+                        "task_id": task_id,
+                        "payment_intent_id": payment_intent.id,
+                        "client_secret": payment_intent.client_secret,
+                        "amount": payment_intent.amount,
+                        "amount_display": f"{payment_intent.amount / 100:.2f}",
+                        "currency": payment_intent.currency.upper()
+                    }
+                except Exception as e:
+                    logger.error(f"❌ 获取 PaymentIntent 失败: {e}")
+            # 否则返回已接受的消息（不包含支付信息）
+            logger.info(f"ℹ️ 申请 {application_id} 已批准，但无需支付或已支付")
             return {
                 "message": "申请已被接受",
                 "application_id": application_id,
@@ -1434,7 +1457,8 @@ async def accept_application(
         # 记录详细的响应信息
         logger.info(f"✅ 批准申请成功: task_id={task_id}, application_id={application_id}")
         logger.info(f"✅ 创建 PaymentIntent: payment_intent_id={payment_intent.id}, amount={task_amount_pence}, currency=GBP")
-        logger.info(f"✅ 返回支付信息: client_secret={'存在' if payment_intent.client_secret else '缺失'}, payment_intent_id={payment_intent.id}")
+        logger.info(f"✅ PaymentIntent client_secret 存在: {bool(payment_intent.client_secret)}")
+        logger.info(f"✅ PaymentIntent client_secret 长度: {len(payment_intent.client_secret) if payment_intent.client_secret else 0}")
         
         response_data = {
             "message": "请完成支付以确认批准申请",
@@ -1447,7 +1471,18 @@ async def accept_application(
             "currency": "GBP"
         }
         
-        logger.info(f"✅ 返回响应数据: {response_data}")
+        # 记录响应数据的各个字段，确保格式正确
+        logger.info(f"✅ 返回响应数据字段检查:")
+        logger.info(f"  - message: {response_data.get('message')}")
+        logger.info(f"  - application_id: {response_data.get('application_id')} (类型: {type(response_data.get('application_id'))})")
+        logger.info(f"  - task_id: {response_data.get('task_id')} (类型: {type(response_data.get('task_id'))})")
+        logger.info(f"  - payment_intent_id: {response_data.get('payment_intent_id')} (类型: {type(response_data.get('payment_intent_id'))})")
+        logger.info(f"  - client_secret 存在: {bool(response_data.get('client_secret'))}")
+        logger.info(f"  - client_secret 类型: {type(response_data.get('client_secret'))}")
+        logger.info(f"  - client_secret 长度: {len(response_data.get('client_secret')) if response_data.get('client_secret') else 0}")
+        logger.info(f"  - amount: {response_data.get('amount')} (类型: {type(response_data.get('amount'))})")
+        logger.info(f"  - amount_display: {response_data.get('amount_display')} (类型: {type(response_data.get('amount_display'))})")
+        logger.info(f"  - currency: {response_data.get('currency')} (类型: {type(response_data.get('currency'))})")
         
         return response_data
     

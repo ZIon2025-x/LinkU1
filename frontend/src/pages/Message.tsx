@@ -6205,7 +6205,7 @@ const MessagePage: React.FC = () => {
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            fontSize: '14px',
+                            fontSize: '18px',
                             fontWeight: 600,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease'
@@ -6219,7 +6219,7 @@ const MessagePage: React.FC = () => {
                             e.currentTarget.style.transform = 'translateY(0)';
                           }}
                         >
-                          接受
+                          ✓
                         </button>
                         <button
                           onClick={async () => {
@@ -6242,7 +6242,7 @@ const MessagePage: React.FC = () => {
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            fontSize: '14px',
+                            fontSize: '18px',
                             fontWeight: 600,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease'
@@ -6256,7 +6256,7 @@ const MessagePage: React.FC = () => {
                             e.currentTarget.style.transform = 'translateY(0)';
                           }}
                         >
-                          拒绝
+                          ✗
                         </button>
                         <button
                           onClick={(e) => {

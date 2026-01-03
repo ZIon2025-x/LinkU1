@@ -2842,31 +2842,78 @@ def create_payment(
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     import logging
+    import json
     logger = logging.getLogger(__name__)
     
+    # 记录请求开始时间
+    import time
+    start_time = time.time()
+    
+    # 获取请求信息
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_...yourkey...")
+    content_type = request.headers.get("content-type", "unknown")
+    user_agent = request.headers.get("user-agent", "unknown")
+    client_ip = request.client.host if request.client else "unknown"
     
-    # 记录 webhook 接收日志
-    logger.info(f"🔔 Webhook 请求接收: Content-Type={request.headers.get('content-type')}, Signature={sig_header[:20] if sig_header else 'None'}..., Secret配置={'已配置' if endpoint_secret and endpoint_secret != 'whsec_...yourkey...' else '未配置或默认值'}")
+    # 详细记录 webhook 接收信息
+    logger.info("=" * 80)
+    logger.info(f"🔔 [WEBHOOK] 收到 Stripe Webhook 请求")
+    logger.info(f"  - 时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
+    logger.info(f"  - 客户端IP: {client_ip}")
+    logger.info(f"  - User-Agent: {user_agent}")
+    logger.info(f"  - Content-Type: {content_type}")
+    logger.info(f"  - Payload 大小: {len(payload)} bytes")
+    logger.info(f"  - Signature 前缀: {sig_header[:30] if sig_header else 'None'}...")
+    logger.info(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret and endpoint_secret != 'whsec_...yourkey...' else '❌ 未配置或默认值'}")
     
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        logger.info(f"✅ [WEBHOOK] 事件验证成功")
     except ValueError as e:
-        logger.error(f"❌ Invalid payload: {e}")
+        logger.error(f"❌ [WEBHOOK] Invalid payload: {e}")
+        logger.error(f"  - Payload 内容 (前500字符): {payload[:500].decode('utf-8', errors='ignore')}")
         return {"error": "Invalid payload"}, 400
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"❌ Invalid signature: {e}")
+        logger.error(f"❌ [WEBHOOK] Invalid signature: {e}")
+        logger.error(f"  - 提供的 Signature: {sig_header}")
+        logger.error(f"  - 使用的 Secret: {endpoint_secret[:10]}...")
         return {"error": "Invalid signature"}, 400
     except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
+        logger.error(f"❌ [WEBHOOK] 处理错误: {type(e).__name__}: {e}")
+        import traceback
+        logger.error(f"  - 错误堆栈: {traceback.format_exc()}")
         return {"error": str(e)}, 400
     
     event_type = event["type"]
+    event_id = event.get("id")
     event_data = event["data"]["object"]
+    livemode = event.get("livemode", False)
+    created = event.get("created")
     
-    logger.info(f"✅ Received Stripe webhook event: {event_type}, event_id: {event.get('id')}, livemode: {event.get('livemode', False)}")
+    # 记录事件详细信息
+    logger.info(f"📦 [WEBHOOK] 事件详情:")
+    logger.info(f"  - 事件类型: {event_type}")
+    logger.info(f"  - 事件ID: {event_id}")
+    logger.info(f"  - Livemode: {livemode}")
+    logger.info(f"  - 创建时间: {created} ({time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created)) if created else 'N/A'})")
+    
+    # 如果是 payment_intent 相关事件，记录更多细节
+    if "payment_intent" in event_type:
+        payment_intent_id = event_data.get("id")
+        payment_status = event_data.get("status")
+        amount = event_data.get("amount")
+        currency = event_data.get("currency", "unknown")
+        metadata = event_data.get("metadata", {})
+        logger.info(f"💳 [WEBHOOK] Payment Intent 详情:")
+        logger.info(f"  - Payment Intent ID: {payment_intent_id}")
+        logger.info(f"  - 状态: {payment_status}")
+        logger.info(f"  - 金额: {amount / 100 if amount else 0:.2f} {currency.upper()}")
+        logger.info(f"  - Metadata: {json.dumps(metadata, ensure_ascii=False)}")
+        logger.info(f"  - Task ID (from metadata): {metadata.get('task_id', 'N/A')}")
+        logger.info(f"  - Application ID (from metadata): {metadata.get('application_id', 'N/A')}")
+        logger.info(f"  - Pending Approval (from metadata): {metadata.get('pending_approval', 'N/A')}")
     
     # 处理 Payment Intent 事件（用于 Stripe Elements）
     if event_type == "payment_intent.succeeded":
@@ -3000,28 +3047,120 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     payment_history.status = "succeeded"
                     payment_history.escrow_amount = task.escrow_amount
                     payment_history.updated_at = get_utc_time()
+                    logger.info(f"📝 [WEBHOOK] 更新支付历史记录: payment_intent_id={payment_intent_id}, status=succeeded, escrow_amount={task.escrow_amount}")
+                else:
+                    logger.warning(f"⚠️ [WEBHOOK] 未找到支付历史记录: payment_intent_id={payment_intent_id}")
                 
-                db.commit()
-                logger.info(f"✅ Task {task_id} payment completed via Stripe Payment Intent, status updated to in_progress, escrow_amount: {task.escrow_amount}, payment_intent_id: {payment_intent_id}")
+                # 提交数据库更改
+                try:
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] 数据库提交成功")
+                    logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成:")
+                    logger.info(f"  - 任务状态: {task.status}")
+                    logger.info(f"  - 是否已支付: {task.is_paid}")
+                    logger.info(f"  - Payment Intent ID: {task.payment_intent_id}")
+                    logger.info(f"  - Escrow 金额: {task.escrow_amount}")
+                    logger.info(f"  - Taker ID: {task.taker_id}")
+                except Exception as e:
+                    logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
+                    import traceback
+                    logger.error(f"  - 错误堆栈: {traceback.format_exc()}")
+                    db.rollback()
+                    raise
             else:
-                logger.warning(f"⚠️ Task {task_id} already paid or not found (payment_intent_id: {payment_intent_id})")
+                logger.warning(f"⚠️ [WEBHOOK] 任务 {task_id} 已支付或不存在")
+                if task:
+                    logger.warning(f"  - 任务已支付状态: {task.is_paid}")
+                    logger.warning(f"  - 任务当前状态: {task.status}")
         else:
-            logger.warning(f"⚠️ Payment intent succeeded but no task_id in metadata: {payment_intent_id}")
+            logger.warning(f"⚠️ [WEBHOOK] Payment Intent 成功但 metadata 中没有 task_id")
+            logger.warning(f"  - Metadata: {json.dumps(payment_intent.get('metadata', {}), ensure_ascii=False)}")
+            logger.warning(f"  - Payment Intent ID: {payment_intent_id}")
     
     elif event_type == "payment_intent.payment_failed":
         payment_intent = event_data
+        payment_intent_id = payment_intent.get("id")
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
-        application_id = payment_intent.get("metadata", {}).get("application_id")
+        application_id_str = payment_intent.get("metadata", {}).get("application_id")
         error_message = payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')
-        logger.warning(f"Payment failed for task {task_id}, application {application_id}: {error_message}")
+        
+        logger.warning(f"❌ [WEBHOOK] Payment Intent 支付失败:")
+        logger.warning(f"  - Payment Intent ID: {payment_intent_id}")
+        logger.warning(f"  - Task ID: {task_id}")
+        logger.warning(f"  - Application ID: {application_id_str}")
+        logger.warning(f"  - 错误信息: {error_message}")
+        logger.warning(f"  - 完整错误: {json.dumps(payment_intent.get('last_payment_error', {}), ensure_ascii=False)}")
         
         # 支付失败时，清除 payment_intent_id（申请状态保持为 pending，可以重新尝试）
-        if task_id:
+        if task_id and application_id_str:
+            from sqlalchemy import select
+            application_id = int(application_id_str)
             task = crud.get_task(db, task_id)
-            if task:
+            
+            if task and task.status == "pending_payment" and task.taker_id:
+                # 查找已批准的申请
+                application = db.execute(
+                    select(models.TaskApplication).where(
+                        and_(
+                            models.TaskApplication.id == application_id,
+                            models.TaskApplication.task_id == task_id,
+                            models.TaskApplication.status == "approved"
+                        )
+                    )
+                ).scalar_one_or_none()
+                
+                if application:
+                    logger.info(f"🔄 [WEBHOOK] 撤销申请批准: application_id={application_id}")
+                    application.status = "pending"
+                    task.taker_id = None
+                    task.status = "open"
+                    task.is_paid = 0
+                    task.payment_intent_id = None
+                    
+                    # 发送通知
+                    try:
+                        from app import crud
+                        crud.create_notification(
+                            db,
+                            application.applicant_id,
+                            "payment_failed",
+                            "支付失败",
+                            f"任务支付失败，申请已撤销：{task.title}",
+                            task.id,
+                            auto_commit=False,
+                        )
+                        crud.create_notification(
+                            db,
+                            task.poster_id,
+                            "payment_failed",
+                            "支付失败",
+                            f"任务支付失败：{task.title}",
+                            task.id,
+                            auto_commit=False,
+                        )
+                        logger.info(f"✅ [WEBHOOK] 已发送支付失败通知")
+                    except Exception as e:
+                        logger.error(f"❌ [WEBHOOK] 发送支付失败通知失败: {e}")
+                    
+                    try:
+                        db.commit()
+                        logger.info(f"✅ [WEBHOOK] 已撤销申请批准并恢复任务状态")
+                        logger.info(f"  - 申请状态: pending")
+                        logger.info(f"  - 任务状态: {task.status}")
+                        logger.info(f"  - Taker ID: {task.taker_id}")
+                    except Exception as e:
+                        logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
+                        db.rollback()
+                else:
+                    logger.warning(f"⚠️ [WEBHOOK] 未找到已批准的申请: application_id={application_id}")
+            elif task:
                 task.payment_intent_id = None
-                db.commit()
-                logger.info(f"✅ 支付失败，已清除任务 {task_id} 的 payment_intent_id，申请 {application_id} 仍为 pending 状态")
+                try:
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的 payment_intent_id")
+                except Exception as e:
+                    logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
+                    db.rollback()
     
     # 处理退款事件
     elif event_type == "charge.refunded":
@@ -3164,7 +3303,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")
     
     else:
-        logger.info(f"Unhandled event type: {event_type}")
+        logger.info(f"ℹ️ [WEBHOOK] 未处理的事件类型: {event_type}")
+        logger.info(f"  - 事件ID: {event_id}")
+        # 只记录关键字段，避免日志过长
+        event_summary = {}
+        if isinstance(event_data, dict):
+            for key in ['id', 'object', 'status', 'amount', 'currency']:
+                if key in event_data:
+                    event_summary[key] = event_data[key]
+        logger.info(f"  - 事件数据摘要: {json.dumps(event_summary, ensure_ascii=False)}")
+    
+    # 记录处理耗时和总结
+    processing_time = time.time() - start_time
+    logger.info(f"⏱️ [WEBHOOK] 处理耗时: {processing_time:.3f} 秒")
+    logger.info(f"✅ [WEBHOOK] Webhook 处理完成: {event_type}")
+    logger.info("=" * 80)
     
     return {"status": "success"}
 
