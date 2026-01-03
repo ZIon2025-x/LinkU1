@@ -123,6 +123,38 @@ stripe trigger payment_intent.succeeded
 - 复制事件数据用于测试
 - 手动在 Stripe Dashboard 中重放事件
 
+#### 方法 2.1: 创建包含正确 metadata 的测试事件
+
+**重要**: 默认的 `stripe trigger payment_intent.succeeded` 创建的测试事件**不包含**我们代码需要的 metadata（如 `task_id`, `application_id` 等），因此不会触发业务逻辑。
+
+要创建包含正确 metadata 的测试事件，你需要：
+
+1. **先创建一个包含 metadata 的 PaymentIntent**（通过 API 或使用实际的任务支付流程）
+2. **然后确认该 PaymentIntent**（通过 Stripe Dashboard 或 API）
+
+或者，你可以使用以下方法创建测试事件：
+
+```bash
+# 方法 A: 使用 Stripe CLI 创建包含 metadata 的 PaymentIntent，然后确认它
+# 1. 创建 PaymentIntent（包含 metadata）
+stripe payment_intents create \
+  --amount=2000 \
+  --currency=gbp \
+  --metadata[task_id]=127 \
+  --metadata[application_id]=39 \
+  --metadata[pending_approval]=true \
+  --metadata[application_fee]=200
+
+# 2. 确认该 PaymentIntent（这会触发 payment_intent.succeeded 事件）
+stripe payment_intents confirm <payment_intent_id> \
+  --payment-method=pm_card_visa
+```
+
+**注意**: 使用实际的任务 ID 和申请 ID 进行测试，确保：
+- `task_id` 对应数据库中存在的任务
+- `application_id` 对应该任务的待处理申请
+- `pending_approval=true` 表示这是批准申请时的支付
+
 #### 方法 3: 使用 Stripe Dashboard 测试
 
 1. 登录 Stripe Dashboard

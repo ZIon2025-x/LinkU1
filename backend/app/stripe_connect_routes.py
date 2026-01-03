@@ -153,6 +153,28 @@ class StripeV2:
 stripe_v2 = StripeV2()
 
 
+def create_account_session_safe(account_id: str) -> stripe.AccountSession:
+    """
+    安全地创建 AccountSession，确保所有布尔值都是正确的类型
+    
+    这个函数确保 components 配置中的 enabled 字段是 Python 布尔值，
+    而不是字符串，避免 "Invalid boolean" 错误
+    """
+    # 显式创建 components 配置，确保所有布尔值都是 Python 布尔类型
+    components_config = {
+        "account_onboarding": {
+            "enabled": bool(True)  # 显式转换为布尔值，确保不是字符串
+        }
+    }
+    
+    logger.debug(f"Creating AccountSession for account {account_id} with components: {components_config}")
+    
+    return stripe.AccountSession.create(
+        account=account_id,
+        components=components_config
+    )
+
+
 def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
     """
     检查用户是否已有 Stripe Connect 账户
@@ -168,18 +190,24 @@ def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
     if user and user.stripe_account_id:
         # 验证账户是否真的存在且属于该用户
         # 首先尝试使用 V2 API，如果失败则回退到 V1 API（兼容旧账户）
+        account = None
+        account_user_id = None
         try:
             # 尝试使用 V2 API 检索
-            try:
-                account = stripe_v2.core.accounts.retrieve(
-                    user.stripe_account_id,
-                    include=["identity"]
-                )
-                account_metadata = account.get("metadata", {})
-                account_user_id = account_metadata.get("user_id") if isinstance(account_metadata, dict) else None
-            except stripe.error.StripeError as v2_err:
-                # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
+            account = stripe_v2.core.accounts.retrieve(
+                user.stripe_account_id,
+                include=["identity"]
+            )
+            account_metadata = account.get("metadata", {})
+            account_user_id = account_metadata.get("user_id") if isinstance(account_metadata, dict) else None
+        except stripe.error.StripeError as v2_err:
+            # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
+            error_message = str(v2_err)
+            if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                logger.debug(f"Account {user.stripe_account_id} is a V1 account, using V1 API")
+            else:
                 logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+            # 回退到 V1 API
             account = stripe.Account.retrieve(user.stripe_account_id)
             account_metadata = getattr(account, 'metadata', {})
             if isinstance(account_metadata, dict):
@@ -218,19 +246,26 @@ def verify_account_ownership(account_id: str, current_user: models.User) -> bool
     """
     try:
         # 首先尝试使用 V2 API，如果失败则回退到 V1 API（兼容旧账户）
+        account = None
+        account_user_id = None
         try:
             account = stripe_v2.core.accounts.retrieve(account_id)
             account_metadata = account.get("metadata", {})
             account_user_id = account_metadata.get('user_id') if isinstance(account_metadata, dict) else None
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
-            logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-        account = stripe.Account.retrieve(account_id)
-        account_metadata = getattr(account, 'metadata', {})
-        if isinstance(account_metadata, dict):
-            account_user_id = account_metadata.get('user_id')
-        else:
-            account_user_id = getattr(account_metadata, 'user_id', None)
+            error_message = str(v2_err)
+            if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                logger.debug(f"Account {account_id} is a V1 account, using V1 API")
+            else:
+                logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+            # 回退到 V1 API
+            account = stripe.Account.retrieve(account_id)
+            account_metadata = getattr(account, 'metadata', {})
+            if isinstance(account_metadata, dict):
+                account_user_id = account_metadata.get('user_id')
+            else:
+                account_user_id = getattr(account_metadata, 'user_id', None)
         
         if not account_user_id:
             logger.warning(f"Account {account_id} has no user_id in metadata")
@@ -273,6 +308,8 @@ def create_connect_account(
             # 检查账户状态（优先使用 V2 API，兼容 V1 API）
             try:
                 # 尝试使用 V2 API
+                account = None
+                is_complete = False
                 try:
                     account = stripe_v2.core.accounts.retrieve(
                         existing_account_id,
@@ -283,7 +320,12 @@ def create_connect_account(
                     is_complete = len(currently_due) == 0
                 except stripe.error.StripeError as v2_err:
                     # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
-                    logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+                    error_message = str(v2_err)
+                    if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                        logger.debug(f"Account {existing_account_id} is a V1 account, using V1 API")
+                    else:
+                        logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+                    # 回退到 V1 API
                     account = stripe.Account.retrieve(existing_account_id)
                     is_complete = account.details_submitted
                 
@@ -391,9 +433,15 @@ def create_connect_account(
                             "message": "您已经有一个 Stripe 账户且已完成设置"
                         }
                 except stripe.error.StripeError as v2_err:
-                    logger.warning(f"Failed to retrieve account using V2 API: {v2_err}, falling back to V1 check")
+                    # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
+                    error_message = str(v2_err)
+                    if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                        logger.debug(f"Account {existing_account.id} is a V1 account, using V1 API result")
+                    else:
+                        logger.warning(f"Failed to retrieve account using V2 API: {v2_err}, falling back to V1 check")
                     # 回退到 V1 API 检查
-                if existing_account.details_submitted:
+                    is_complete = existing_account.details_submitted
+                if is_complete or existing_account.details_submitted:
                     return {
                         "account_id": existing_account.id,
                         "client_secret": None,
@@ -403,14 +451,7 @@ def create_connect_account(
                     }
                 
                 # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
-                onboarding_session = stripe.AccountSession.create(
-                    account=existing_account.id,
-                    components={
-                        "account_onboarding": {
-                            "enabled": True
-                        }
-                    }
-                )
+                onboarding_session = create_account_session_safe(existing_account.id)
                 
                 return {
                     "account_id": existing_account.id,
@@ -465,14 +506,7 @@ def create_connect_account(
         
         # 创建 AccountSession 用于嵌入式 onboarding（不使用跳转链接）
         try:
-            onboarding_session = stripe.AccountSession.create(
-                account=account.id,
-                components={
-                    "account_onboarding": {
-                        "enabled": True
-                    }
-                }
-            )
+            onboarding_session = create_account_session_safe(account.id)
             logger.info(f"Created AccountSession for account {account.id}")
         except stripe.error.StripeError as session_err:
             logger.error(f"Stripe error creating AccountSession: {session_err}")
@@ -523,9 +557,20 @@ def create_connect_account(
                 merchant_capabilities = merchant_config.get("capabilities", {})
                 card_payments = merchant_capabilities.get("card_payments", {})
                 charges_enabled = card_payments.get("status") == "active"
+        except stripe.error.StripeError as v2_err:
+            # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
+            error_message = str(v2_err)
+            if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                logger.debug(f"Account {account.id} is a V1 account, using V1 API result")
+            else:
+                logger.warning(f"Failed to get account status from V2 API: {v2_err}, using V1 API result")
+            # 使用 V1 API 已经检索的账户信息
+            account_status = account.details_submitted
+            charges_enabled = account.charges_enabled
+            payouts_enabled = account.payouts_enabled
         except Exception as status_err:
-            logger.warning(f"Failed to get account status from V2 API: {status_err}, using defaults")
-            # 如果 V2 API 失败，使用默认值
+            logger.warning(f"Failed to get account status: {status_err}, using defaults")
+            # 如果所有 API 都失败，使用默认值
             account_status = False
             charges_enabled = False
             payouts_enabled = False
@@ -591,14 +636,7 @@ def create_connect_account_embedded(
                     }
                 
                 # 如果账户未完成 onboarding，创建 onboarding session
-                onboarding_session = stripe.AccountSession.create(
-                    account=account.id,
-                    components={
-                        "account_onboarding": {
-                            "enabled": True
-                        }
-                    }
-                )
+                onboarding_session = create_account_session_safe(account.id)
                 
                 return {
                     "account_id": account.id,
@@ -704,14 +742,7 @@ def create_connect_account_embedded(
                         "message": "您已经有一个 Stripe 账户且已完成设置"
                     }
                 # 如果账户未完成 onboarding，创建 onboarding session
-                onboarding_session = stripe.AccountSession.create(
-                    account=existing_account.id,
-                    components={
-                        "account_onboarding": {
-                            "enabled": True
-                        }
-                    }
-                )
+                onboarding_session = create_account_session_safe(existing_account.id)
                 return {
                     "account_id": existing_account.id,
                     "client_secret": onboarding_session.client_secret,
@@ -777,14 +808,7 @@ def create_connect_account_embedded(
         
         # 创建 AccountSession 用于嵌入式 onboarding
         try:
-            onboarding_session = stripe.AccountSession.create(
-                account=account.id,
-                components={
-                    "account_onboarding": {
-                        "enabled": True
-                    }
-                }
-            )
+            onboarding_session = create_account_session_safe(account.id)
             logger.info(f"Created AccountSession for account {account.id}")
         except stripe.error.StripeError as session_err:
             logger.error(f"Stripe error creating AccountSession: {session_err}")
@@ -889,16 +913,28 @@ def get_account_status(
             
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
-            logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-        account = stripe.Account.retrieve(current_user.stripe_account_id)
-        
-        # 验证账户所有权（通过 metadata 中的 user_id）
-        if not verify_account_ownership(current_user.stripe_account_id, current_user):
-            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
-            raise HTTPException(
-                status_code=403,
-                detail="账户验证失败：账户不属于当前用户"
-            )
+            error_message = str(v2_err)
+            if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                logger.debug(f"Account {current_user.stripe_account_id} is a V1 account, using V1 API")
+            else:
+                logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+            # 回退到 V1 API
+            account = stripe.Account.retrieve(current_user.stripe_account_id)
+            
+            # 验证账户所有权（通过 metadata 中的 user_id）
+            if not verify_account_ownership(current_user.stripe_account_id, current_user):
+                logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+                raise HTTPException(
+                    status_code=403,
+                    detail="账户验证失败：账户不属于当前用户"
+                )
+            
+            # V1 API 的账户状态检查
+            details_submitted = account.details_submitted
+            charges_enabled = account.charges_enabled
+            payouts_enabled = account.payouts_enabled
+            needs_onboarding = not details_submitted
+            requirements_entries = []
         
             # V1 API 的状态检查
             details_submitted = account.details_submitted
@@ -911,14 +947,7 @@ def get_account_status(
         client_secret = None
         if needs_onboarding:
             try:
-                onboarding_session = stripe.AccountSession.create(
-                    account=account.id,
-                    components={
-                        "account_onboarding": {
-                            "enabled": True
-                        }
-                    }
-                )
+                onboarding_session = create_account_session_safe(account.id)
                 client_secret = onboarding_session.client_secret
             except stripe.error.StripeError as e:
                 logger.warning(f"Failed to create AccountSession for onboarding: {e}")
@@ -927,14 +956,7 @@ def get_account_status(
         client_secret = None
         if needs_onboarding:
             try:
-                onboarding_session = stripe.AccountSession.create(
-                    account=current_user.stripe_account_id,
-                    components={
-                        "account_onboarding": {
-                            "enabled": True
-                        }
-                    }
-                )
+                onboarding_session = create_account_session_safe(current_user.stripe_account_id)
                 client_secret = onboarding_session.client_secret
             except stripe.error.StripeError as e:
                 logger.warning(f"Failed to create AccountSession for onboarding: {e}")
@@ -1244,14 +1266,7 @@ def create_onboarding_session(
             )
         
         # 创建 AccountSession 用于嵌入式组件
-        onboarding_session = stripe.AccountSession.create(
-            account=account.id,
-            components={
-                "account_onboarding": {
-                    "enabled": True
-                }
-            }
-        )
+        onboarding_session = create_account_session_safe(account.id)
         
         return {
             "client_secret": onboarding_session.client_secret
@@ -1305,16 +1320,8 @@ def create_account_session(
         # 创建 AccountSession（完全按照官方示例代码）
         # 参考: stripe-sample-code/server.js line 12-34 和官方文档
         # https://docs.stripe.com/connect/embedded-onboarding
-        account_session = stripe.AccountSession.create(
-            account=account_id,
-            components={
-                "account_onboarding": {
-                    "enabled": True,
-                    # 确保使用嵌入式组件，不跳转到外部页面
-                    # 根据文档，这是默认行为，但明确指定以确保一致性
-                }
-            }
-        )
+        # 使用辅助函数确保所有布尔值都是正确的类型
+        account_session = create_account_session_safe(account_id)
         
         return {
             "client_secret": account_session.client_secret
@@ -1365,14 +1372,7 @@ def create_onboarding_session(
             }
         
         # 创建 AccountSession 用于嵌入式 onboarding
-        onboarding_session = stripe.AccountSession.create(
-            account=account.id,
-            components={
-                "account_onboarding": {
-                    "enabled": True
-                }
-            }
-        )
+        onboarding_session = create_account_session_safe(account.id)
         
         return {
             "account_id": account.id,

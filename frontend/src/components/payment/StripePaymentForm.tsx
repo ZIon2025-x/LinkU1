@@ -40,11 +40,18 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentSucceeded, setPaymentSucceeded] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!stripe || !elements) {
+      return;
+    }
+
+    // 防止重复提交
+    if (processing || paymentSucceeded) {
+      console.log('⚠️ 支付已处理中或已成功，忽略重复提交');
       return;
     }
 
@@ -71,6 +78,16 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       // confirming the payment. Otherwise, the payment will be processed or
       // the user will be redirected for additional authentication (3D Secure, etc.)
       if (confirmError) {
+        // 检查是否是 PaymentIntent 已经成功的错误
+        if (confirmError.message && confirmError.message.includes('already succeeded')) {
+          console.log('✅ PaymentIntent 已经成功，可能是重复提交');
+          setPaymentSucceeded(true);
+          message.success('支付已成功！');
+          onSuccess();
+          setProcessing(false);
+          return;
+        }
+        
         // 处理卡片错误或验证错误（与官方 sample code 一致）
         if (confirmError.type === 'card_error' || confirmError.type === 'validation_error') {
           setError(confirmError.message || '支付失败');
@@ -87,6 +104,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       // 在重定向模式下，用户会被重定向到 return_url，不会到达这里
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         console.log('✅ 支付成功，PaymentIntent ID:', paymentIntent.id, '状态:', paymentIntent.status);
+        setPaymentSucceeded(true); // 标记支付已成功，防止重复提交
         message.success('支付成功！');
         onSuccess();
       } else if (paymentIntent && paymentIntent.status === 'requires_action') {
@@ -100,6 +118,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         // 即使状态不是 succeeded，也可能正在处理中，等待 webhook
         if (paymentIntent?.status === 'processing') {
           message.info('支付正在处理中，请稍候...');
+          setPaymentSucceeded(true); // 标记为已处理，防止重复提交
           // 对于 processing 状态，也调用 onSuccess，让轮询机制检查最终状态
           onSuccess();
         } else {
@@ -108,9 +127,18 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         }
       }
     } catch (err: any) {
+      // 检查是否是 PaymentIntent 已经成功的错误
       const errorMessage = err.message || '支付处理出错';
-      setError(errorMessage);
-      onError(errorMessage);
+      if (errorMessage.includes('already succeeded') || errorMessage.includes('already been confirmed')) {
+        console.log('✅ PaymentIntent 已经成功（从异常中检测）');
+        setPaymentSucceeded(true);
+        message.success('支付已成功！');
+        onSuccess();
+      } else {
+        console.error('❌ 支付处理出错:', err);
+        setError(errorMessage);
+        onError(errorMessage);
+      }
     } finally {
       setProcessing(false);
     }
@@ -145,10 +173,10 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         <Button
           type="primary"
           htmlType="submit"
-          disabled={!stripe || processing}
+          disabled={!stripe || processing || paymentSucceeded}
           loading={processing}
         >
-          {processing ? '处理中...' : `支付 £${(amount / 100).toFixed(2)}`}
+          {paymentSucceeded ? '支付成功' : processing ? '处理中...' : `支付 £${(amount / 100).toFixed(2)}`}
         </Button>
       </div>
     </form>
