@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS payment_transfers (
     max_retries INTEGER DEFAULT 5,  -- 最大重试次数
     last_error TEXT NULL,  -- 最后一次错误信息
     next_retry_at TIMESTAMP WITH TIME ZONE NULL,  -- 下次重试时间
-    metadata JSONB NULL,  -- 额外元数据
+    extra_metadata JSONB NULL,  -- 额外元数据（使用 extra_metadata 避免与 SQLAlchemy 的 metadata 属性冲突）
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     succeeded_at TIMESTAMP WITH TIME ZONE NULL  -- 成功时间
@@ -42,7 +42,7 @@ COMMENT ON COLUMN payment_transfers.retry_count IS '重试次数';
 COMMENT ON COLUMN payment_transfers.max_retries IS '最大重试次数';
 COMMENT ON COLUMN payment_transfers.last_error IS '最后一次错误信息';
 COMMENT ON COLUMN payment_transfers.next_retry_at IS '下次重试时间';
-COMMENT ON COLUMN payment_transfers.metadata IS '额外元数据（JSON格式）';
+COMMENT ON COLUMN payment_transfers.extra_metadata IS '额外元数据（JSON格式，使用 extra_metadata 避免与 SQLAlchemy 的 metadata 属性冲突）';
 COMMENT ON COLUMN payment_transfers.created_at IS '创建时间';
 COMMENT ON COLUMN payment_transfers.updated_at IS '更新时间';
 COMMENT ON COLUMN payment_transfers.succeeded_at IS '成功时间';

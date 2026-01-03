@@ -52,7 +52,7 @@ def create_transfer_record(
         status="pending",
         retry_count=0,
         max_retries=len(RETRY_DELAYS),
-        metadata=metadata or {}
+        extra_metadata=metadata or {}
     )
     db.add(transfer_record)
     db.commit()

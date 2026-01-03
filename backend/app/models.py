@@ -2584,7 +2584,7 @@ class PaymentTransfer(Base):
     max_retries = Column(Integer, default=5)  # 最大重试次数
     last_error = Column(Text, nullable=True)  # 最后一次错误信息
     next_retry_at = Column(DateTime(timezone=True), nullable=True)  # 下次重试时间
-    metadata = Column(JSONB, nullable=True)  # 额外元数据
+    extra_metadata = Column(JSONB, nullable=True)  # 额外元数据（使用 extra_metadata 避免与 SQLAlchemy 的 metadata 属性冲突）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     succeeded_at = Column(DateTime(timezone=True), nullable=True)  # 成功时间
