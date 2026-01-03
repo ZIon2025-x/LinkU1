@@ -3334,13 +3334,39 @@ def get_dashboard_stats(db: Session):
 def update_task_by_admin(db: Session, task_id: int, task_update: dict):
     """管理员更新任务信息"""
     import json
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # 敏感字段黑名单（不允许通过 API 直接修改，只能通过 webhook 或系统逻辑更新）
+    SENSITIVE_FIELDS = {
+        'is_paid',           # 任务是否已支付（只能通过 webhook 更新）
+        'escrow_amount',    # 托管金额（只能通过 webhook 或系统逻辑更新）
+        'payment_intent_id', # Stripe Payment Intent ID（只能通过 webhook 更新）
+        'is_confirmed',     # 任务是否已确认完成（只能通过系统逻辑更新）
+        'paid_to_user_id',  # 已支付给的用户ID（只能通过转账逻辑更新）
+        'taker_id',         # 任务接受人（只能通过申请批准流程设置）
+        'agreed_reward',    # 最终成交价（只能通过议价流程设置）
+    }
+    
+    # 过滤掉敏感字段
+    filtered_update = {k: v for k, v in task_update.items() if k not in SENSITIVE_FIELDS}
+    
+    # 如果尝试修改敏感字段，记录警告
+    attempted_sensitive_fields = set(task_update.keys()) & SENSITIVE_FIELDS
+    if attempted_sensitive_fields:
+        logger.warning(
+            f"⚠️ 管理员尝试修改任务的敏感字段（已阻止）: "
+            f"task_id={task_id}, fields={attempted_sensitive_fields}"
+        )
+    
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if task:
         # 记录修改前的值
         old_values = {}
         new_values = {}
         
-        for field, value in task_update.items():
+        # 只处理过滤后的字段
+        for field, value in filtered_update.items():
             if value is not None and hasattr(task, field):
                 old_value = getattr(task, field)
                 # 特殊处理 images 字段：如果是列表，需要序列化为 JSON 字符串

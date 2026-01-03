@@ -3923,9 +3923,34 @@ def admin_update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # 检查是否尝试修改敏感字段
+    update_data = task_update.dict(exclude_unset=True)
+    SENSITIVE_FIELDS = {'is_paid', 'escrow_amount', 'payment_intent_id', 'is_confirmed', 'paid_to_user_id', 'taker_id', 'agreed_reward'}
+    attempted_sensitive_fields = set(update_data.keys()) & SENSITIVE_FIELDS
+    
+    if attempted_sensitive_fields:
+        # 记录尝试修改敏感字段的审计日志
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="attempted_sensitive_field_update",
+            entity_type="task",
+            entity_id=str(task_id),
+            admin_id=current_user.id,
+            user_id=task.poster_id,
+            old_value=None,
+            new_value={k: v for k, v in update_data.items() if k in attempted_sensitive_fields},
+            reason=f"管理员 {current_user.id} ({current_user.name}) 尝试修改敏感支付字段（已被阻止）",
+            ip_address=ip_address,
+        )
+        logger.warning(
+            f"⚠️ 管理员 {current_user.id} 尝试修改任务的敏感字段（已阻止）: "
+            f"task_id={task_id}, fields={attempted_sensitive_fields}"
+        )
+    
     # 更新任务（返回变更信息）
     updated_task, old_values, new_values = crud.update_task_by_admin(
-        db, task_id, task_update.dict(exclude_unset=True)
+        db, task_id, update_data
     )
 
     # 记录操作历史（管理员操作时user_id设为None，因为管理员不在users表中）
