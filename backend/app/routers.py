@@ -2849,6 +2849,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     import time
     start_time = time.time()
     
+    # 确保 crud 模块已导入（避免 UnboundLocalError）
+    from app import crud
+    
     # 获取请求信息
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
@@ -2949,8 +2952,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 # 如果没有 metadata，从系统设置重新计算
                 if application_fee_pence == 0:
-                    from app.crud import get_system_setting
-                    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+                    application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
                     application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
                     application_fee_pence = int(task_amount * 100 * application_fee_rate)
                 
@@ -3319,8 +3321,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 # 如果没有 metadata，从系统设置重新计算
                 if application_fee_pence == 0:
-                    from app.crud import get_system_setting
-                    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+                    application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
                     application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
                     application_fee_pence = int(task_amount * 100 * application_fee_rate)
                 
