@@ -39,7 +39,7 @@ from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
 from pydantic import BaseModel
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, select
 
 from app.security import verify_password
 from app.security import create_access_token
@@ -2970,7 +2970,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 if is_pending_approval and application_id_str:
                     # 这是批准申请时的支付，需要确认批准
-                    from sqlalchemy import select
                     application_id = int(application_id_str)
                     logger.info(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
                     
@@ -3128,7 +3127,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         
         # 支付失败时，清除 payment_intent_id（申请状态保持为 pending，可以重新尝试）
         if task_id and application_id_str:
-            from sqlalchemy import select
             application_id = int(application_id_str)
             task = crud.get_task(db, task_id)
             
