@@ -6161,16 +6161,25 @@ const MessagePage: React.FC = () => {
                                 
                                 // 监听支付成功消息
                                 const handlePaymentSuccess = (event: MessageEvent) => {
+                                  console.log('📨 收到支付成功消息:', event.data);
                                   if (event.data?.type === 'payment_success' && event.data?.taskId === activeTaskId) {
+                                    console.log('✅ 支付成功消息验证通过, taskId:', activeTaskId, 'paymentIntentId:', event.data?.paymentIntentId);
                                     // 显示批准成功提示
                                     message.success(t('messages.notifications.applicationAccepted') || '申请已批准！');
                                     // 重新加载数据
                                     if (activeTaskId) {
+                                      console.log('🔄 重新加载任务数据');
                                       loadTaskMessages(activeTaskId);
                                       loadApplications(activeTaskId);
                                       loadTasks();
                                     }
                                     window.removeEventListener('message', handlePaymentSuccess);
+                                  } else {
+                                    console.log('⚠️ 支付成功消息验证失败:', { 
+                                      type: event.data?.type, 
+                                      taskId: event.data?.taskId, 
+                                      activeTaskId 
+                                    });
                                   }
                                 };
                                 window.addEventListener('message', handlePaymentSuccess);

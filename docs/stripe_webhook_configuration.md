@@ -92,17 +92,77 @@ STRIPE_CONNECT_WEBHOOK_SECRET=whsec_...  # Connect webhook 签名密钥（推荐
 
 ## 测试
 
-### 测试支付 Webhook
+### 使用 Stripe CLI 测试 Webhook
+
+#### 方法 1: 监听并转发到服务器（推荐用于生产测试）
+
 ```bash
-# 使用 Stripe CLI 测试
+# 1. 启动监听并转发到支付 webhook
 stripe listen --forward-to https://api.link2ur.com/api/stripe/webhook
+
+# 2. 在另一个终端触发测试事件
 stripe trigger payment_intent.succeeded
 ```
 
-### 测试 Connect Webhook
+**注意**: 如果 `--forward-to` 参数不工作，可能是 Stripe CLI 版本问题。请尝试：
+- 更新 Stripe CLI: `brew upgrade stripe/stripe-cli/stripe` (macOS) 或查看 [Stripe CLI 文档](https://stripe.com/docs/stripe-cli)
+- 或者使用方法 2（仅监听，不转发）
+
+#### 方法 2: 仅监听事件（用于查看事件详情）
+
 ```bash
-# 使用 Stripe CLI 测试
+# 1. 启动监听（不转发，仅显示事件）
+stripe listen
+
+# 2. 在另一个终端触发测试事件
+stripe trigger payment_intent.succeeded
+```
+
+监听器会显示接收到的所有事件，你可以：
+- 查看事件 ID
+- 复制事件数据用于测试
+- 手动在 Stripe Dashboard 中重放事件
+
+#### 方法 3: 使用 Stripe Dashboard 测试
+
+1. 登录 Stripe Dashboard
+2. 进入 Developers → Webhooks
+3. 找到你的 webhook 端点
+4. 点击 "Send test webhook"
+5. 选择要测试的事件类型（如 `payment_intent.succeeded`）
+6. 点击 "Send test webhook"
+
+### 测试 Connect Webhook
+
+```bash
+# 监听并转发到 Connect webhook
 stripe listen --forward-to https://api.link2ur.com/api/stripe/connect/webhook
+
+# 在另一个终端触发测试事件
 stripe trigger account.updated
 ```
+
+### 查看 Webhook 日志
+
+在服务器日志中查找以下信息：
+- `Received Stripe webhook event: payment_intent.succeeded`
+- `✅ 支付成功，申请 xxx 已批准`
+- `✅ Task xxx payment completed via Stripe Payment Intent, status updated to in_progress`
+
+### 常见问题
+
+**Q: `--forward-to` 参数不工作？**
+A: 
+- 确保 Stripe CLI 已更新到最新版本
+- 检查是否需要先登录: `stripe login`
+- 尝试使用 `stripe listen` 仅监听事件，然后手动在 Dashboard 中重放
+
+**Q: 如何查看 webhook 事件详情？**
+A: 使用 `stripe events retrieve <event_id>` 查看特定事件的详细信息
+
+**Q: 如何测试特定的事件？**
+A: 使用 `stripe trigger <event_type>` 触发测试事件，例如：
+- `stripe trigger payment_intent.succeeded`
+- `stripe trigger payment_intent.payment_failed`
+- `stripe trigger account.updated`
 

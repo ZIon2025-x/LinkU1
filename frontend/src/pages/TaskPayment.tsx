@@ -229,22 +229,27 @@ const TaskPayment: React.FC = () => {
   };
 
   const handlePaymentSuccess = () => {
+    console.log('✅ 前端支付成功回调触发, taskId:', taskId, 'paymentIntentId:', paymentData?.payment_intent_id);
     message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
     
     // 如果有返回 URL，通知原页面并关闭支付页面
     if (returnUrl && window.opener) {
+      console.log('📤 通知原页面支付成功, returnUrl:', returnUrl);
       // 通知原页面支付成功
       window.opener.postMessage({
         type: 'payment_success',
         taskId: taskId,
+        paymentIntentId: paymentData?.payment_intent_id,
         message: language === 'zh' ? '申请已批准！' : 'Application approved!'
       }, '*');
       
       // 延迟关闭窗口，让用户看到成功消息
       setTimeout(() => {
+        console.log('🔒 关闭支付窗口');
         window.close();
       }, 1500);
     } else {
+      console.log('🔄 开始轮询支付状态');
       // 没有返回 URL，开始轮询支付状态，确保 webhook 已处理
       startPaymentStatusPolling();
     }
@@ -282,8 +287,11 @@ const TaskPayment: React.FC = () => {
       }
 
       try {
+        console.log(`🔄 轮询支付状态 (${pollCount + 1}/${maxPolls}), taskId: ${taskId}, paymentIntentId: ${paymentData?.payment_intent_id}`);
         const response = await api.get(`/api/coupon-points/tasks/${taskId}/payment-status`);
         const { is_paid, payment_details } = response.data;
+        
+        console.log('📊 支付状态响应:', { is_paid, status: payment_details?.status, paymentIntentId: payment_details?.payment_intent_id });
 
         if (is_paid && payment_details?.status === 'succeeded') {
           // 支付成功，停止轮询

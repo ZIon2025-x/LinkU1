@@ -86,6 +86,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       // 支付成功（嵌入式模式需要检查 paymentIntent 状态）
       // 在重定向模式下，用户会被重定向到 return_url，不会到达这里
       if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('✅ 支付成功，PaymentIntent ID:', paymentIntent.id, '状态:', paymentIntent.status);
         message.success('支付成功！');
         onSuccess();
       } else if (paymentIntent && paymentIntent.status === 'requires_action') {
@@ -95,8 +96,16 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         onError('支付需要额外验证，请完成验证');
       } else {
         // 其他状态（如 processing）
-        setError(`支付状态: ${paymentIntent?.status || '未知'}`);
-        onError(`支付状态: ${paymentIntent?.status || '未知'}`);
+        console.log('⚠️ 支付状态不是 succeeded:', paymentIntent?.status, 'PaymentIntent ID:', paymentIntent?.id);
+        // 即使状态不是 succeeded，也可能正在处理中，等待 webhook
+        if (paymentIntent?.status === 'processing') {
+          message.info('支付正在处理中，请稍候...');
+          // 对于 processing 状态，也调用 onSuccess，让轮询机制检查最终状态
+          onSuccess();
+        } else {
+          setError(`支付状态: ${paymentIntent?.status || '未知'}`);
+          onError(`支付状态: ${paymentIntent?.status || '未知'}`);
+        }
       }
     } catch (err: any) {
       const errorMessage = err.message || '支付处理出错';

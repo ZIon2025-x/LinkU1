@@ -2848,22 +2848,25 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     sig_header = request.headers.get("stripe-signature")
     endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_...yourkey...")
     
+    # 记录 webhook 接收日志
+    logger.info(f"🔔 Webhook 请求接收: Content-Type={request.headers.get('content-type')}, Signature={sig_header[:20] if sig_header else 'None'}..., Secret配置={'已配置' if endpoint_secret and endpoint_secret != 'whsec_...yourkey...' else '未配置或默认值'}")
+    
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
     except ValueError as e:
-        logger.error(f"Invalid payload: {e}")
+        logger.error(f"❌ Invalid payload: {e}")
         return {"error": "Invalid payload"}, 400
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"Invalid signature: {e}")
+        logger.error(f"❌ Invalid signature: {e}")
         return {"error": "Invalid signature"}, 400
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.error(f"❌ Webhook error: {e}")
         return {"error": str(e)}, 400
     
     event_type = event["type"]
     event_data = event["data"]["object"]
     
-    logger.info(f"Received Stripe webhook event: {event_type}, event_id: {event.get('id')}")
+    logger.info(f"✅ Received Stripe webhook event: {event_type}, event_id: {event.get('id')}, livemode: {event.get('livemode', False)}")
     
     # 处理 Payment Intent 事件（用于 Stripe Elements）
     if event_type == "payment_intent.succeeded":
