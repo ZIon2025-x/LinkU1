@@ -2566,6 +2566,65 @@ class PaymentHistory(Base):
     )
 
 
+# ==================== 支付转账记录模型 ====================
+
+class PaymentTransfer(Base):
+    """支付转账记录表（用于审计和重试）"""
+    __tablename__ = "payment_transfers"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    taker_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务接受人ID
+    poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 任务发布者ID
+    transfer_id = Column(String(255), nullable=True)  # Stripe Transfer ID
+    amount = Column(DECIMAL(12, 2), nullable=False)  # 转账金额
+    currency = Column(String(3), default="GBP")
+    status = Column(String(20), default="pending")  # pending, succeeded, failed, retrying
+    retry_count = Column(Integer, default=0)  # 重试次数
+    max_retries = Column(Integer, default=5)  # 最大重试次数
+    last_error = Column(Text, nullable=True)  # 最后一次错误信息
+    next_retry_at = Column(DateTime(timezone=True), nullable=True)  # 下次重试时间
+    metadata = Column(JSONB, nullable=True)  # 额外元数据
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    succeeded_at = Column(DateTime(timezone=True), nullable=True)  # 成功时间
+    
+    # 关系
+    task = relationship("Task", foreign_keys=[task_id])
+    taker = relationship("User", foreign_keys=[taker_id])
+    poster = relationship("User", foreign_keys=[poster_id])
+    
+    __table_args__ = (
+        Index("ix_payment_transfer_task", task_id),
+        Index("ix_payment_transfer_taker", taker_id),
+        Index("ix_payment_transfer_status", status),
+        Index("ix_payment_transfer_retry", next_retry_at),
+        Index("ix_payment_transfer_created", created_at),
+    )
+
+
+# ==================== Webhook 事件记录模型 ====================
+
+class WebhookEvent(Base):
+    """Webhook 事件记录表（用于 idempotency 和审计）"""
+    __tablename__ = "webhook_events"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    event_id = Column(String(255), unique=True, nullable=False, index=True)  # Stripe 事件 ID（唯一索引防止重复处理）
+    event_type = Column(String(100), nullable=False, index=True)  # 事件类型
+    livemode = Column(Boolean, default=False)  # 是否为生产模式
+    processed = Column(Boolean, default=False, index=True)  # 是否已处理
+    processed_at = Column(DateTime(timezone=True), nullable=True)  # 处理时间
+    processing_error = Column(Text, nullable=True)  # 处理错误信息
+    event_data = Column(JSONB, nullable=False)  # 完整事件数据（JSON格式）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    __table_args__ = (
+        Index("ix_webhook_events_created", created_at),
+    )
+
+
 # ==================== Banner 广告系统模型 ====================
 
 class Banner(Base):

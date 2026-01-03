@@ -1633,6 +1633,70 @@ def confirm_task_completion(
         except Exception as e:
             logger.error(f"发放任务完成积分奖励失败: {e}", exc_info=True)
             # 积分发放失败不影响任务完成流程
+    
+    # 如果任务已支付且未确认，执行转账给任务接受人
+    if task.is_paid == 1 and task.is_confirmed == 0 and task.taker_id and task.escrow_amount > 0:
+        try:
+            from app.payment_transfer_service import create_transfer_record, execute_transfer
+            from decimal import Decimal
+            
+            # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+            if task.escrow_amount <= 0:
+                # 重新计算 escrow_amount
+                task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
+                application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
+                application_fee = task_amount * application_fee_rate
+                task.escrow_amount = max(0.0, task_amount - application_fee)
+                logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
+            
+            # 获取任务接受人信息
+            taker = crud.get_user_by_id(db, task.taker_id)
+            if not taker:
+                logger.warning(f"任务接受人不存在: taker_id={task.taker_id}")
+            elif not taker.stripe_account_id:
+                logger.warning(f"任务接受人尚未创建 Stripe Connect 账户: taker_id={task.taker_id}")
+                # 创建转账记录，等待账户设置完成后由定时任务处理
+                create_transfer_record(
+                    db,
+                    task_id=task_id,
+                    taker_id=task.taker_id,
+                    poster_id=current_user.id,
+                    amount=Decimal(str(task.escrow_amount)),
+                    currency="GBP",
+                    metadata={
+                        "task_title": task.title,
+                        "reason": "taker_stripe_account_not_setup"
+                    }
+                )
+                logger.info(f"✅ 已创建转账记录，等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
+            else:
+                # 创建转账记录（用于审计）
+                transfer_record = create_transfer_record(
+                    db,
+                    task_id=task_id,
+                    taker_id=task.taker_id,
+                    poster_id=current_user.id,
+                    amount=Decimal(str(task.escrow_amount)),
+                    currency="GBP",
+                    metadata={
+                        "task_title": task.title,
+                        "transfer_source": "confirm_completion"
+                    }
+                )
+                
+                # 尝试立即执行转账
+                success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
+                
+                if success:
+                    logger.info(f"✅ 任务 {task_id} 转账完成，金额已转给接受人 {task.taker_id}")
+                else:
+                    # 转账失败，但已创建转账记录，定时任务会自动重试
+                    logger.warning(f"⚠️ 任务 {task_id} 转账失败: {error_msg}，已创建转账记录，定时任务将自动重试")
+                    # 不更新任务状态，等待定时任务重试成功后再更新
+        except Exception as e:
+            logger.error(f"转账处理失败 for task {task_id}: {e}", exc_info=True)
+            # 转账失败不影响任务完成确认流程
 
     return task
 
@@ -2914,6 +2978,64 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     logger.info(f"  - Livemode: {livemode}")
     logger.info(f"  - 创建时间: {created} ({time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created)) if created else 'N/A'})")
     
+    # Idempotency 检查：防止重复处理同一个 webhook 事件
+    import json
+    from app.utils.time_utils import get_utc_time
+    
+    if event_id:
+        existing_event = db.query(models.WebhookEvent).filter(
+            models.WebhookEvent.event_id == event_id
+        ).first()
+        
+        if existing_event:
+            if existing_event.processed:
+                logger.warning(f"⚠️ [WEBHOOK] 事件已处理过，跳过: event_id={event_id}, processed_at={existing_event.processed_at}")
+                return {"status": "already_processed", "event_id": event_id}
+            else:
+                logger.info(f"🔄 [WEBHOOK] 事件之前处理失败，重新处理: event_id={event_id}, error={existing_event.processing_error}")
+        else:
+            # 创建新的事件记录
+            webhook_event = models.WebhookEvent(
+                event_id=event_id,
+                event_type=event_type,
+                livemode=livemode,
+                processed=False,
+                event_data=json.loads(json.dumps(event))  # 保存完整事件数据
+            )
+            db.add(webhook_event)
+            try:
+                db.commit()
+                logger.info(f"✅ [WEBHOOK] 已创建事件记录: event_id={event_id}")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"❌ [WEBHOOK] 创建事件记录失败: {e}")
+                # 如果是因为重复事件ID导致的错误，可能是并发请求，检查是否已存在
+                existing_event = db.query(models.WebhookEvent).filter(
+                    models.WebhookEvent.event_id == event_id
+                ).first()
+                if existing_event and existing_event.processed:
+                    logger.warning(f"⚠️ [WEBHOOK] 并发请求，事件已处理: event_id={event_id}")
+                    return {"status": "already_processed", "event_id": event_id}
+                raise
+    else:
+        logger.warning(f"⚠️ [WEBHOOK] 事件没有 ID，无法进行 idempotency 检查: event_type={event_type}")
+    
+    # 标记事件开始处理
+    processing_started = False
+    try:
+        if event_id:
+            webhook_event = db.query(models.WebhookEvent).filter(
+                models.WebhookEvent.event_id == event_id
+            ).first()
+            if webhook_event:
+                webhook_event.processed = False  # 重置处理状态
+                webhook_event.processing_error = None
+                db.commit()
+                processing_started = True
+    except Exception as e:
+        logger.error(f"❌ [WEBHOOK] 更新事件处理状态失败: {e}")
+        db.rollback()
+    
     # 如果是 payment_intent 相关事件，记录更多细节
     if "payment_intent" in event_type:
         payment_intent_id = event_data.get("id")
@@ -3043,10 +3165,110 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             logger.error(f"❌ [WEBHOOK] 发送接受申请通知失败: {e}")
                         
                         logger.info(f"✅ [WEBHOOK] 支付成功，申请 {application_id} 已批准")
+                        
+                        # 增强支付审计信息：记录申请批准相关的支付信息
+                        try:
+                            # 创建或更新 PaymentHistory（如果不存在）
+                            payment_history = db.query(models.PaymentHistory).filter(
+                                models.PaymentHistory.payment_intent_id == payment_intent_id
+                            ).first()
+                            
+                            if payment_history:
+                                # 更新现有记录
+                                payment_history.status = "succeeded"
+                                payment_history.escrow_amount = task.escrow_amount
+                                payment_history.updated_at = get_utc_time()
+                                # 增强 metadata
+                                if not payment_history.extra_metadata:
+                                    payment_history.extra_metadata = {}
+                                payment_history.extra_metadata.update({
+                                    "application_id": str(application_id),
+                                    "taker_id": str(application.applicant_id),
+                                    "taker_name": application.applicant.name if hasattr(application, 'applicant') and application.applicant else None,
+                                    "pending_approval": "true",
+                                    "approved_via_webhook": True,
+                                    "webhook_event_id": event_id,
+                                    "approved_at": get_utc_time().isoformat()
+                                })
+                                logger.info(f"✅ [WEBHOOK] 已更新支付历史记录: payment_history_id={payment_history.id}")
+                            else:
+                                # 创建新的支付历史记录（用于审计）
+                                from decimal import Decimal
+                                payment_history = models.PaymentHistory(
+                                    task_id=task_id,
+                                    user_id=task.poster_id,
+                                    payment_intent_id=payment_intent_id,
+                                    payment_method="stripe",
+                                    total_amount=int(task_amount * 100),
+                                    stripe_amount=int(task_amount * 100),
+                                    final_amount=int(task_amount * 100),
+                                    currency="GBP",
+                                    status="succeeded",
+                                    application_fee=application_fee_pence,
+                                    escrow_amount=Decimal(str(task.escrow_amount)),
+                                    extra_metadata={
+                                        "application_id": str(application_id),
+                                        "taker_id": str(application.applicant_id),
+                                        "pending_approval": "true",
+                                        "approved_via_webhook": True,
+                                        "webhook_event_id": event_id,
+                                        "approved_at": get_utc_time().isoformat()
+                                    }
+                                )
+                                db.add(payment_history)
+                                logger.info(f"✅ [WEBHOOK] 已创建支付历史记录: payment_history_id={payment_history.id}")
+                        except Exception as e:
+                            logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败: {e}", exc_info=True)
+                            # 支付历史记录失败不影响主流程
                     else:
                         logger.warning(f"⚠️ 未找到申请: application_id={application_id_str}, task_id={task_id}, status=pending")
                 else:
                     logger.info(f"ℹ️ 不是待确认的批准支付: is_pending_approval={is_pending_approval}, application_id={application_id_str}")
+                    # 即使不是 pending_approval，也要记录支付历史
+                    try:
+                        payment_history = db.query(models.PaymentHistory).filter(
+                            models.PaymentHistory.payment_intent_id == payment_intent_id
+                        ).first()
+                        
+                        if not payment_history:
+                            # 创建新的支付历史记录
+                            from decimal import Decimal
+                            payment_history = models.PaymentHistory(
+                                task_id=task_id,
+                                user_id=task.poster_id,
+                                payment_intent_id=payment_intent_id,
+                                payment_method="stripe",
+                                total_amount=int(task_amount * 100),
+                                stripe_amount=int(task_amount * 100),
+                                final_amount=int(task_amount * 100),
+                                currency="GBP",
+                                status="succeeded",
+                                application_fee=application_fee_pence,
+                                escrow_amount=Decimal(str(task.escrow_amount)),
+                                extra_metadata={
+                                    "approved_via_webhook": True,
+                                    "webhook_event_id": event_id,
+                                    "approved_at": get_utc_time().isoformat()
+                                }
+                            )
+                            db.add(payment_history)
+                            logger.info(f"✅ [WEBHOOK] 已创建支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                        else:
+                            # 更新现有记录
+                            payment_history.status = "succeeded"
+                            payment_history.escrow_amount = task.escrow_amount
+                            payment_history.updated_at = get_utc_time()
+                            if not payment_history.extra_metadata:
+                                payment_history.extra_metadata = {}
+                            payment_history.extra_metadata.update({
+                                "approved_via_webhook": True,
+                                "webhook_event_id": event_id,
+                                "approved_at": get_utc_time().isoformat()
+                            })
+                            logger.info(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                    except Exception as e:
+                        logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败（非 pending_approval）: {e}", exc_info=True)
+                        # 支付历史记录失败不影响主流程
                 
                 # 支付成功后，将任务状态从 pending_payment 更新为 in_progress
                 logger.info(f"🔍 检查任务状态: 当前状态={task.status}, is_paid={task.is_paid}")
@@ -3056,17 +3278,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 else:
                     logger.info(f"⚠️ 任务状态不是 pending_payment，当前状态: {task.status}，跳过状态更新")
                 
-                # 更新支付历史记录状态
-                payment_history = db.query(models.PaymentHistory).filter(
-                    models.PaymentHistory.payment_intent_id == payment_intent_id
-                ).first()
-                if payment_history:
-                    payment_history.status = "succeeded"
-                    payment_history.escrow_amount = task.escrow_amount
-                    payment_history.updated_at = get_utc_time()
-                    logger.info(f"📝 [WEBHOOK] 更新支付历史记录: payment_intent_id={payment_intent_id}, status=succeeded, escrow_amount={task.escrow_amount}")
-                else:
-                    logger.warning(f"⚠️ [WEBHOOK] 未找到支付历史记录: payment_intent_id={payment_intent_id}")
+                # 支付历史记录已在上面更新（如果存在待确认的批准支付）
                 
                 # 提交数据库更改
                 try:
@@ -3334,6 +3546,88 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.commit()
                 logger.info(f"Task {task_id} payment completed via Stripe Checkout Session, status updated to in_progress, escrow_amount: {task.escrow_amount}")
     
+    # 处理 Transfer 事件（转账给任务接受人）
+    elif event_type == "transfer.paid":
+        transfer = event_data
+        transfer_id = transfer.get("id")
+        transfer_record_id_str = transfer.get("metadata", {}).get("transfer_record_id")
+        task_id = int(transfer.get("metadata", {}).get("task_id", 0))
+        
+        logger.info(f"✅ [WEBHOOK] Transfer 支付成功:")
+        logger.info(f"  - Transfer ID: {transfer_id}")
+        logger.info(f"  - Transfer Record ID: {transfer_record_id_str}")
+        logger.info(f"  - Task ID: {task_id}")
+        logger.info(f"  - Amount: {transfer.get('amount')} {transfer.get('currency')}")
+        
+        if transfer_record_id_str:
+            transfer_record_id = int(transfer_record_id_str)
+            transfer_record = db.query(models.PaymentTransfer).filter(
+                models.PaymentTransfer.id == transfer_record_id
+            ).first()
+            
+            if transfer_record:
+                # 防止重复处理：检查是否已经成功
+                if transfer_record.status == "succeeded":
+                    logger.warning(f"⚠️ [WEBHOOK] Transfer 记录已成功，跳过重复处理: transfer_record_id={transfer_record_id}")
+                else:
+                    # 更新转账记录状态
+                    from decimal import Decimal
+                    transfer_record.status = "succeeded"
+                    transfer_record.succeeded_at = get_utc_time()
+                    transfer_record.last_error = None
+                    transfer_record.next_retry_at = None
+                    
+                    # 更新任务状态
+                    task = crud.get_task(db, transfer_record.task_id)
+                    if task:
+                        task.is_confirmed = 1
+                        task.paid_to_user_id = transfer_record.taker_id
+                        task.escrow_amount = Decimal('0.0')  # 转账后清空托管金额
+                        logger.info(f"✅ [WEBHOOK] 任务 {task.id} 转账完成，金额已转给接受人 {transfer_record.taker_id}")
+                    
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] Transfer 记录已更新为成功: transfer_record_id={transfer_record_id}")
+            else:
+                logger.warning(f"⚠️ [WEBHOOK] 未找到转账记录: transfer_record_id={transfer_record_id_str}")
+        else:
+            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id")
+    
+    elif event_type == "transfer.failed":
+        transfer = event_data
+        transfer_id = transfer.get("id")
+        transfer_record_id_str = transfer.get("metadata", {}).get("transfer_record_id")
+        task_id = int(transfer.get("metadata", {}).get("task_id", 0))
+        failure_code = transfer.get("failure_code", "unknown")
+        failure_message = transfer.get("failure_message", "Unknown error")
+        
+        logger.warning(f"❌ [WEBHOOK] Transfer 支付失败:")
+        logger.warning(f"  - Transfer ID: {transfer_id}")
+        logger.warning(f"  - Transfer Record ID: {transfer_record_id_str}")
+        logger.warning(f"  - Task ID: {task_id}")
+        logger.warning(f"  - 失败代码: {failure_code}")
+        logger.warning(f"  - 失败信息: {failure_message}")
+        
+        if transfer_record_id_str:
+            transfer_record_id = int(transfer_record_id_str)
+            transfer_record = db.query(models.PaymentTransfer).filter(
+                models.PaymentTransfer.id == transfer_record_id
+            ).first()
+            
+            if transfer_record:
+                # 更新转账记录状态为失败
+                transfer_record.status = "failed"
+                transfer_record.last_error = f"{failure_code}: {failure_message}"
+                transfer_record.next_retry_at = None
+                
+                # 不更新任务状态，保持原状
+                
+                db.commit()
+                logger.info(f"✅ [WEBHOOK] Transfer 记录已更新为失败: transfer_record_id={transfer_record_id}")
+            else:
+                logger.warning(f"⚠️ [WEBHOOK] 未找到转账记录: transfer_record_id={transfer_record_id_str}")
+        else:
+            logger.warning(f"⚠️ [WEBHOOK] Transfer metadata 中没有 transfer_record_id")
+    
     else:
         logger.info(f"ℹ️ [WEBHOOK] 未处理的事件类型: {event_type}")
         logger.info(f"  - 事件ID: {event_id}")
@@ -3344,6 +3638,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 if key in event_data:
                     event_summary[key] = event_data[key]
         logger.info(f"  - 事件数据摘要: {json.dumps(event_summary, ensure_ascii=False)}")
+    
+    # 标记事件处理完成
+    if event_id:
+        try:
+            webhook_event = db.query(models.WebhookEvent).filter(
+                models.WebhookEvent.event_id == event_id
+            ).first()
+            if webhook_event:
+                webhook_event.processed = True
+                webhook_event.processed_at = get_utc_time()
+                webhook_event.processing_error = None
+                db.commit()
+                logger.info(f"✅ [WEBHOOK] 事件处理完成，已标记: event_id={event_id}")
+        except Exception as e:
+            logger.error(f"❌ [WEBHOOK] 更新事件处理状态失败: {e}", exc_info=True)
+            db.rollback()
     
     # 记录处理耗时和总结
     processing_time = time.time() - start_time

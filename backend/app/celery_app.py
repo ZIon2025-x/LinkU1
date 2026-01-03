@@ -73,6 +73,18 @@ celery_app.conf.beat_schedule = {
         'schedule': 60.0,  # 1分钟
     },
     
+    # 处理待处理的支付转账 - 每5分钟执行一次（重试失败的转账）
+    'process-pending-payment-transfers': {
+        'task': 'app.celery_tasks.process_pending_payment_transfers_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
+    # 检查转账超时 - 每1小时执行一次（检查长时间处于 pending 状态的转账）
+    'check-transfer-timeout': {
+        'task': 'app.celery_tasks.check_transfer_timeout_task',
+        'schedule': 3600.0,  # 1小时
+    },
+    
     # ========== 中频任务（每5分钟）==========
     
     # 检查过期优惠券 - 每15分钟执行一次（降低频率，减少DB压力）

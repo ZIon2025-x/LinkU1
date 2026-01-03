@@ -264,6 +264,74 @@ if CELERY_AVAILABLE:
             db.close()
     
     @celery_app.task(
+        name='app.celery_tasks.process_pending_payment_transfers_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def process_pending_payment_transfers_task(self):
+        """处理待处理的支付转账 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'process_pending_payment_transfers_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            from app.payment_transfer_service import process_pending_transfers
+            stats = process_pending_transfers(db)
+            duration = time.time() - start_time
+            logger.info(f"✅ 处理待处理转账完成: 处理={stats['processed']}, 成功={stats['succeeded']}, 失败={stats['failed']}, 重试中={stats['retrying']} (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "stats": stats}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"处理待处理转账失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+    
+    @celery_app.task(
+        name='app.celery_tasks.check_transfer_timeout_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def check_transfer_timeout_task(self):
+        """检查转账超时 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'check_transfer_timeout_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            from app.payment_transfer_service import check_transfer_timeout
+            stats = check_transfer_timeout(db, timeout_hours=24)
+            duration = time.time() - start_time
+            logger.info(f"✅ 转账超时检查完成: 检查={stats['checked']}, 超时={stats['timeout']}, 更新={stats['updated']} (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "stats": stats}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"检查转账超时失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+    
+    @celery_app.task(
         name='app.celery_tasks.process_expired_verifications_task',
         bind=True,
         max_retries=3,
