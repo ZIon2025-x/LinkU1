@@ -1431,7 +1431,12 @@ async def accept_application(
         
         await db.commit()
         
-        return {
+        # 记录详细的响应信息
+        logger.info(f"✅ 批准申请成功: task_id={task_id}, application_id={application_id}")
+        logger.info(f"✅ 创建 PaymentIntent: payment_intent_id={payment_intent.id}, amount={task_amount_pence}, currency=GBP")
+        logger.info(f"✅ 返回支付信息: client_secret={'存在' if payment_intent.client_secret else '缺失'}, payment_intent_id={payment_intent.id}")
+        
+        response_data = {
             "message": "请完成支付以确认批准申请",
             "application_id": application_id,
             "task_id": task_id,
@@ -1441,6 +1446,10 @@ async def accept_application(
             "amount_display": f"{task_amount_pence / 100:.2f}",
             "currency": "GBP"
         }
+        
+        logger.info(f"✅ 返回响应数据: {response_data}")
+        
+        return response_data
     
     except HTTPException:
         await db.rollback()

@@ -4119,6 +4119,8 @@ const MessagePage: React.FC = () => {
                                     src={app.applicant_avatar || '/static/avatar1.png'}
                                     alt={app.applicant_name || '用户'}
                                     className={styles.applicationItemAvatar}
+                                    width={32}
+                                    height={32}
                                   />
                                   <div className={styles.applicationItemInfo}>
                                     <div className={styles.applicationItemName}>
@@ -6128,7 +6130,6 @@ const MessagePage: React.FC = () => {
                           onClick={async () => {
                             try {
                               const response = await acceptApplication(activeTaskId, app.id);
-                              console.log('Accept application response:', response);
                               // response 是 AxiosResponse，需要访问 response.data
                               const responseData = response?.data || response;
                               
@@ -6158,6 +6159,10 @@ const MessagePage: React.FC = () => {
                                 params.set('return_type', 'message'); // 标识来源页面类型
                                 const paymentUrl = `/${language}/tasks/${activeTaskId}/payment?${params.toString()}`;
                                 const paymentWindow = window.open(paymentUrl, '_blank');
+                                
+                                if (!paymentWindow) {
+                                  alert('无法打开支付页面，请检查浏览器弹窗设置');
+                                }
                                 
                                 // 监听支付成功消息
                                 const handlePaymentSuccess = (event: MessageEvent) => {
