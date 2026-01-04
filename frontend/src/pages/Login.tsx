@@ -288,12 +288,16 @@ const Login: React.FC = () => {
 
   // 密码登录
   const onFinish = async (values: any) => {
+    console.log('登录表单提交:', { email: values.email, passwordLength: values.password?.length });
     setLoading(true);
+    setErrorMsg(''); // 清空之前的错误信息
     try {
+      console.log('发送登录请求...');
       const res = await api.post('/api/secure-auth/login', {
         email: values.email,
         password: values.password,
       });
+      console.log('登录响应:', res.status, res.data);
       
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
       
@@ -325,6 +329,13 @@ const Login: React.FC = () => {
         navigate('/');
       }, 100);
     } catch (err: any) {
+      console.error('登录错误:', err);
+      console.error('错误详情:', {
+        message: err?.message,
+        response: err?.response,
+        status: err?.response?.status,
+        data: err?.response?.data
+      });
       let msg = t('auth.loginError');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
@@ -338,8 +349,11 @@ const Login: React.FC = () => {
         }
       } else if (err?.message) {
         msg = err.message;
+      } else if (!err?.response) {
+        msg = '网络错误，请检查网络连接或稍后重试';
       }
       setErrorMsg(msg);
+      message.error(msg); // 同时显示错误提示
     } finally {
       setLoading(false);
     }
@@ -420,15 +434,32 @@ const Login: React.FC = () => {
         </div>
 
         {loginMethod === 'password' ? (
-          <Form layout="vertical" onFinish={onFinish}>
-            <Form.Item label={t('common.email')} name="email" rules={[{ required: true, type: 'email' }]}> 
+          <Form 
+            layout="vertical" 
+            onFinish={onFinish}
+            onFinishFailed={(errorInfo) => {
+              console.log('表单验证失败:', errorInfo);
+              setErrorMsg('请填写完整的登录信息');
+            }}
+          >
+            <Form.Item label={t('common.email')} name="email" rules={[{ required: true, type: 'email', message: '请输入有效的邮箱地址' }]}> 
               <Input placeholder={t('common.email')} />
             </Form.Item>
-            <Form.Item label={t('common.password')} name="password" rules={[{ required: true }]}> 
+            <Form.Item label={t('common.password')} name="password" rules={[{ required: true, message: '请输入密码' }]}> 
               <Input.Password placeholder={t('common.password')} />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" block loading={loading}>{t('common.login')}</Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                block 
+                loading={loading}
+                onClick={() => {
+                  console.log('登录按钮被点击');
+                }}
+              >
+                {t('common.login')}
+              </Button>
             </Form.Item>
           </Form>
         ) : loginMethod === 'code' ? (
