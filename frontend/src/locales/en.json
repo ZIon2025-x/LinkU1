@@ -2219,13 +2219,13 @@
     "effectiveDate": "Effective Date: October 10, 2025",
     "jurisdiction": "Applicable Jurisdiction: England & Wales",
     "operatorInfo": "Entity Information",
-    "operator": "Operator (\"We\" \"Link²Ur\"): Zixiong Zhang, trading as \"Link²Ur\".",
+    "operator": "Operator (\"We\" \"Link²Ur\"): LINK2UR LTD",
     "contact": "Contact: info@link2ur.com",
     "serviceNature": {
       "title": "1. Nature of Service",
-      "content": "This service is an early beta version (Beta/MVP) designed for matching and communication, and does not provide payment or fund custody within the platform. We may change, suspend or terminate access at any time.",
+      "content": "Link²Ur is an online task matching platform connecting task posters with task takers. We provide information matching services and process in-platform payment transactions through the Stripe payment system. We may change, suspend or terminate access at any time.",
       "testingPhase": "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
-      "paymentLimitation": "Payment Limitations: The platform currently has no online payment channels and does not support online payment functions. All transactions must be completed offline by users themselves, and the platform does not participate in any fund flows."
+      "paymentSystem": "Payment System: The platform uses the Stripe payment system to process online payments. All payments are securely processed through Stripe, and the platform acts as an escrow service, transferring funds to task takers upon task completion."
     },
     "userTypes": {
       "title": "2. User Types and Eligibility",
@@ -2242,39 +2242,84 @@
     },
     "feesAndRules": {
       "title": "4. Fees and Platform Rules",
-      "content": "During the testing phase, we do not charge platform service fees to users; if we charge fees in the future, we will prominently display them on the page and update these terms.",
-      "reviews": "Reviews and Content: Prohibited are false/misleading reviews, review manipulation or organizing \"positive review tasks\". We may delete related content and restrict or terminate accounts."
+      "content": "Platform Service Fee: The platform charges a percentage service fee from each task payment (specific rates are displayed on the platform). The service fee is automatically deducted at payment, and the remaining amount is held in escrow and transferred to the task taker upon task completion.",
+      "reviews": "Reviews and Content: Prohibited are false/misleading reviews, review manipulation or organizing \"positive review tasks\". We may delete related content and restrict or terminate accounts.",
+      "paymentProcessing": "Payment Processing: All payments are processed through the Stripe payment system. The platform acts as an escrow service, holding funds in the platform account after the task poster pays, and transferring them to the task taker upon task completion.",
+      "applicationFee": "Platform Service Fee: The platform deducts a percentage service fee from the task amount (typically 10% of the task amount, specific rates are displayed on the platform). The service fee is used to maintain platform operations, provide technical support and service guarantees."
+    },
+    "paymentAndRefund": {
+      "title": "5. Payment and Refund",
+      "paymentMethod": "Payment Methods: The platform supports online payments through the Stripe payment system, including credit cards, debit cards and other payment methods.",
+      "paymentProcess": "Payment Process: After accepting an application, task posters need to complete payment through the Stripe payment system. Once payment is successful, funds will be held in the platform account.",
+      "escrowService": "Escrow Service: The platform provides escrow services to ensure the security of task poster funds. Funds will be transferred to the task taker upon task completion.",
+      "refundPolicy": "Refund Policy:",
+      "refundEligibility": "Refund Eligibility: Task posters are eligible to apply for refunds only under the following circumstances:",
+      "refundConditions": "(1) Task Not Started: Task status is pending_payment (pending payment) or in_progress (in progress) but the task taker has not actually started work.\n(2) Task Not Completed and Not Accepted: The task taker failed to complete the task as agreed, and the task poster has not confirmed task completion (task status is pending_confirmation or in_progress).\n(3) Task Quality Does Not Meet Requirements: The task is completed but the quality clearly does not meet the task description or agreement, and the task poster can provide sufficient evidence.\n(4) Task Taker Breach of Contract: The task taker violated the agreement, such as failing to complete on time, abandoning midway, providing false services, etc.",
+      "refundEvidence": "Evidence Required for Refund Applications:",
+      "refundEvidenceList": "• Task Status Screenshot: Showing current task status (pending_payment, in_progress, pending_confirmation, etc.)\n• Communication Records: In-platform messages, emails or other communication records with the task taker, proving the task has not started, not completed or quality does not meet requirements\n• Task Description Comparison: If applying for refund due to quality issues, provide comparison evidence between task description and actual delivery results\n• Time Proof: If applying for refund due to late completion, provide comparison between task deadline and actual completion time\n• Other Relevant Evidence: Depending on the specific situation, the platform may require other relevant evidence",
+      "refundProcess": "Refund Process:",
+      "refundProcessSteps": "(1) Submit Application: Task poster submits refund application through the platform and uploads relevant evidence.\n(2) Platform Review: The platform will review within 3-5 business days after receiving the application, and may contact both parties if necessary to understand the situation.\n(3) Mutual Negotiation: If the task has started, the platform will attempt to facilitate mutual negotiation. If both parties reach an agreement, process according to the negotiation results.\n(4) Platform Decision: If both parties cannot reach an agreement, the platform will make a decision based on factors such as task completion status, communication records, evidence materials, etc.\n(5) Refund Processing: If the refund application is approved, the platform will refund through the original payment method within 5-10 business days (deducting platform service fees already incurred).",
+      "refundTimeLimit": "Refund Time Limits:",
+      "refundTimeLimitDetails": "• Before Task Starts: Can apply for refund at any time before the task starts\n• During Task: Can apply for refund when task status is in_progress or pending_confirmation\n• After Task Completion: After the task poster confirms task completion, refund applications will generally not be accepted unless there is sufficient evidence of fraud, breach of contract or other serious misconduct by the task taker\n• Refund applications should be submitted within 7 days after task completion, applications after 7 days will not be accepted (unless there are special circumstances)",
+      "nonRefundable": "Non-Refundable Situations:",
+      "nonRefundableList": "• Task is completed and task poster has confirmed completion (is_confirmed = 1)\n• Task poster changed their mind for personal reasons (such as no longer needing the service)\n• Task poster failed to provide sufficient refund evidence\n• Task taker has completed work as agreed, but task poster is not satisfied (unless there is evidence that quality clearly does not meet requirements)\n• Task cannot be completed due to force majeure (such as natural disasters, government policy changes, etc.)",
+      "partialRefund": "Partial Refund:",
+      "partialRefundDetails": "In some cases, the platform may approve partial refunds:\n• Partial Task Completion: If the task taker has completed part of the work, the platform may approve a partial refund based on the value of the completed portion\n• Partial Quality Issues: If task quality partially does not meet requirements but still has some value, the platform may approve a partial refund\n• Mutual Agreement: If both parties agree on a partial refund, the platform will process according to the agreement",
+      "refundDispute": "Dispute Resolution:",
+      "refundDisputeDetails": "If there is a dispute regarding refunds:\n(1) The platform will first attempt to facilitate mutual negotiation\n(2) If negotiation fails, the platform will make a decision based on the following factors:\n  • Task completion status (whether completed, completion quality)\n  • Communication records between both parties (whether there is clear agreement, whether there are disputes)\n  • Evidence materials (whether sufficient, whether credible)\n  • Platform rules and fairness principles\n(3) Platform decision is final, both parties must comply\n(4) If there is objection to the platform decision, can be resolved through legal channels",
+      "refundProcessing": "Refund Processing:",
+      "refundProcessingDetails": "• All refunds will be processed through the original payment method (if original payment method is unavailable, platform will contact user to provide alternative refund method)\n• Refund processing time is typically 5-10 business days (from the date of refund application approval)\n• Platform service fees will be deducted from the refund amount (if task is partially completed, service fees are deducted proportionally)\n• After successful refund, platform will notify user via email or in-platform message",
+      "chargeback": "Chargeback Handling:",
+      "chargebackDetails": "If a chargeback occurs:\n• The platform will cooperate with the payment processor (Stripe) to investigate\n• The platform will provide relevant transaction records, communication records and other evidence\n• Based on investigation results, the platform will take appropriate measures\n• If the chargeback is determined to be malicious, the platform reserves the right to pursue legal action",
+      "paymentSecurity": "Payment Security: The platform uses the Stripe payment system, which complies with PCI DSS security standards to ensure payment information security. The platform does not store your complete payment credentials."
+    },
+    "prohibitedTasks": {
+      "title": "6. Prohibited Task Types",
+      "introduction": "To maintain platform safety, legality and user experience, the following types of tasks are strictly prohibited on the platform:",
+      "illegalActivities": "(1) Illegal Activities: Any tasks that violate UK laws and regulations or international law, including but not limited to:",
+      "illegalActivitiesList": "• Drug trafficking, illegal drug-related services\n• Weapons, firearms, explosives trading or related services\n• Human trafficking, sex trade, prostitution services\n• Money laundering, financial fraud, illegal fundraising\n• Counterfeit documents, files, currency\n• Hacking services, cyber attacks, malicious software development\n• Services that infringe on others' intellectual property (such as pirated software, pirated content)",
+      "harmfulContent": "(2) Harmful Content: Tasks that may cause harm to users or society, including but not limited to:",
+      "harmfulContentList": "• Violence, threats, intimidation services\n• Harassment, stalking, malicious defamation services\n• Spreading hate speech, discriminatory content\n• Inappropriate content involving minors\n• Animal abuse-related services",
+      "fraudulentServices": "(3) Fraudulent Services: False, misleading or fraudulent tasks, including but not limited to:",
+      "fraudulentServicesList": "• Fake reviews, fake orders, review manipulation services\n• Fake identity verification, fake certification services\n• Exam cheating, exam proxy, essay writing services (academic dishonesty)\n• Fake investments, pyramid schemes, Ponzi schemes\n• Fake prizes, fake discount information",
+      "regulatedServices": "(4) Regulated Services Without Qualifications: Tasks that require specific licenses, qualifications or certifications but the poster or taker does not have the required qualifications, including but not limited to:",
+      "regulatedServicesList": "• Medical services, medical consultation (requires medical practice license)\n• Legal services, legal consultation (requires lawyer practice license)\n• Financial services, investment advice (requires financial regulatory license)\n• Construction, renovation services (requires construction qualifications)\n• Food processing, catering services (requires food safety license)\n• Educational services, training (requires educational institution qualifications)\n• Driving instruction (requires driving instructor qualification)",
+      "platformAbuse": "(5) Platform Abuse: Tasks that misuse the platform, including but not limited to:",
+      "platformAbuseList": "• Fake orders, fake reviews, fake transactions\n• Cash-out, money laundering, fund transfers\n• Malicious competition, malicious reporting\n• System vulnerability exploitation, automated script abuse",
+      "otherProhibited": "(6) Other Prohibited Content:",
+      "otherProhibitedList": "• Trading of personal privacy information\n• Trading of others' accounts, passwords, personal information\n• Gambling, betting-related services\n• Politically sensitive content\n• Other content that violates platform rules or public order and morals",
+      "enforcement": "Enforcement: If prohibited task types are found, the platform will immediately delete the task and take measures against the poster including warnings, function restrictions, account suspension or permanent ban based on the severity of the violation. The platform reserves the right to report to relevant regulatory or law enforcement agencies."
     },
     "userBehavior": {
-      "title": "5. User Behavior and Prohibited Activities",
-      "prohibited": "You may not: (1) publish illegal, infringing, fraudulent, misleading or harmful content; (2) publish tasks requiring licenses without proper qualifications; (3) scrape, attack, bypass access controls or attempt to damage the system; (4) engage in money laundering, sanctions evasion or other financial crimes.",
+      "title": "7. User Behavior and Prohibited Activities",
+      "prohibited": "In addition to prohibited task types, users may not: (1) publish illegal, infringing, fraudulent, misleading or harmful content; (2) publish tasks requiring licenses without proper qualifications; (3) scrape, attack, bypass access controls or attempt to damage the system; (4) engage in money laundering, sanctions evasion or other financial crimes; (5) malicious fake orders, fake transactions, cash-out, etc.",
       "consequences": "If violated, we may delete content, restrict/terminate access, and report to regulatory or law enforcement agencies when necessary.",
       "accountSuspension": "Account Suspension Policy: If the platform discovers or becomes aware of any illegal or violations by users, including but not limited to violations of these terms, engaging in illegal activities, fraud, harassment of other users, publishing false information, etc., the platform has the right and obligation to immediately suspend the user's account. Account suspension may include but is not limited to: temporary account suspension, permanent account ban, restriction of account functions, deletion of violating content, etc. The platform will take appropriate measures based on the severity of the violations and reserves the right to report to relevant regulatory or law enforcement agencies. After a user's account is suspended, they will not be able to continue using the platform services, published tasks may be deleted, and ongoing transactions may be terminated."
     },
     "intellectualProperty": {
-      "title": "6. Intellectual Property and User Content",
+      "title": "9. Intellectual Property and User Content",
       "platformRights": "All rights to the platform and its content belong to us or our licensors.",
       "userContent": "You retain rights to uploaded content, but for the purpose of providing, operating and promoting the service, you grant us a worldwide, non-exclusive, royalty-free, sublicensable license (for display, backup, review, indexing and promotion).",
       "complaints": "Infringement complaints are handled through our notice-and-takedown process (please contact us via the above email)."
     },
     "privacyData": {
-      "title": "7. Privacy and Data (UK GDPR)",
-      "controller": "We act as a **data controller** processing account, log and communication data, only within the scope of \"providing services, ensuring security, improving experience\", as detailed in the Privacy Notice (Beta) below; you may exercise rights of access, rectification, erasure, restriction of processing, data portability, objection to processing, withdrawal of consent, etc.; you may also complain to the ICO.",
-      "payments": "Off-platform payments are handled by relevant third parties or transaction counterparts; we do not access complete payment credentials."
+      "title": "10. Privacy and Data (UK GDPR)",
+      "controller": "We act as a **data controller** processing account, log and communication data, only within the scope of \"providing services, ensuring security, improving experience\", as detailed in the Privacy Notice below; you may exercise rights of access, rectification, erasure, restriction of processing, data portability, objection to processing, withdrawal of consent, etc.; you may also complain to the ICO.",
+      "payments": "Payment Processing: The platform uses the Stripe payment system to process payments. Stripe, as the payment processor, collects and processes necessary payment information. We only receive payment status and necessary reconciliation information, and do not access complete payment credentials (such as full credit card numbers). All payment data security is handled by Stripe in compliance with PCI DSS standards."
     },
     "disclaimer": {
-      "title": "8. Disclaimer and Limitation of Liability",
+      "title": "11. Disclaimer and Limitation of Liability",
       "service": "The service is provided \"as is\" / \"as available\" without warranty of uninterrupted or error-free operation.",
       "liability": "We are not liable for indirect, consequential, punitive damages or loss of profits/goodwill.",
       "limit": "Total liability cap: For any single or combined claim, our liability is limited to the total amount you actually paid us in the past 12 months or **£100 (whichever is higher)**; except for legally mandatory liability (such as personal injury or death due to negligence)."
     },
     "termination": {
-      "title": "9. Termination and Data Retention",
+      "title": "12. Termination and Data Retention",
       "content": "You or we may terminate test access at any time. To comply with legal obligations and legitimate purposes, we may retain logs and records for the shortest necessary period (as detailed in the Privacy Notice (Beta)).",
       "effect": "Termination does not affect existing rights and obligations."
     },
     "disputes": {
-      "title": "10. Disputes and Applicable Law",
+      "title": "13. Disputes and Applicable Law",
       "negotiation": "Parties should first negotiate amicably; if negotiation fails, submit to the exclusive jurisdiction of courts in England and Wales.",
       "law": "These terms are governed by and construed in accordance with the laws of England and Wales."
     },
@@ -2291,9 +2336,8 @@
     "version": "Version: v0.9-beta",
     "effectiveDate": "Effective Date: October 10, 2025",
     "controller": "Controller",
-    "operator": "Zixiong Zhang (trading as \"Link²Ur\")",
+    "operator": "LINK2UR LTD",
     "contactEmail": "Contact Email: info@link2ur.com",
-    "address": "Mailing Address: A3, B16 9NB, UK",
     "dpoNote": "(For data protection contact/DPO, please use the above email)",
     "dataCollection": {
       "title": "What Data We Collect & Processing Purposes (Legal Basis)",
@@ -2302,7 +2346,7 @@
       "locationData": "Location Information: When you use the map location picker feature, we collect location coordinates (latitude/longitude). We only display obfuscated locations (such as city or area), not precise coordinates. Location information is used to help you select task/item locations, calculate distances, and matching. You can choose to manually enter locations instead; location services are not mandatory (contract performance/legitimate interests).",
       "technicalData": "Technical and Log Data: IP, device information, error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).",
       "analyticsData": "Optional Analytics Cookies (if enabled): For understanding usage and improving experience (consent).",
-      "paymentData": "Payment Related: We do not process payments within the platform; if you make off-platform payments, payment data is handled by relevant third parties or transaction counterparts, and we only obtain minimal necessary information for reconciliation or support needs (contract performance/legitimate interests)."
+      "paymentData": "Payment Related: The platform uses the Stripe payment system to process payments. Payment information we collect includes: payment amount, payment status, payment time, task ID and other necessary information for reconciliation, support services and dispute resolution. Complete payment credentials (such as full credit card numbers) are processed by Stripe, and we do not access or store them. All payment data security is handled by Stripe in compliance with PCI DSS standards (contract performance/legitimate interests)."
     },
     "dataSharing": {
       "title": "Who We Share With",

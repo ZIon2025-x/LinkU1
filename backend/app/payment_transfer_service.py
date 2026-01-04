@@ -124,13 +124,46 @@ def execute_transfer(
             logger.error(f"{error_msg}: amount={transfer_record.amount}")
             return False, None, error_msg
         
-        logger.info(f"准备转账: task_id={transfer_record.task_id}, amount={transfer_amount_pence} 便士 (£{transfer_record.amount:.2f}), destination={taker_stripe_account_id}")
+        # 检查主账户可用余额（仅用于日志记录，不影响转账）
+        # 注意：Transfer 使用主账户的可用余额（available balance），不是总余额
+        # 如果资金还在 pending 状态，需要等待资金可用后才能转账
+        try:
+            balance = stripe.Balance.retrieve()
+            available_balance = balance.available[0].amount if balance.available else 0
+            pending_balance = balance.pending[0].amount if balance.pending else 0
+            logger.info(
+                f"💰 主账户余额检查: "
+                f"需要转账={transfer_amount_pence} 便士 (£{transfer_record.amount:.2f}), "
+                f"可用余额={available_balance} 便士 (£{available_balance/100:.2f}), "
+                f"待处理余额={pending_balance} 便士 (£{pending_balance/100:.2f})"
+            )
+            
+            if available_balance < transfer_amount_pence:
+                logger.warning(
+                    f"⚠️ 主账户可用余额不足: "
+                    f"需要={transfer_amount_pence} 便士 (£{transfer_record.amount:.2f}), "
+                    f"可用={available_balance} 便士 (£{available_balance/100:.2f})。"
+                    f"如果资金还在 pending 状态（待处理余额={pending_balance} 便士），需要等待资金可用后才能转账。"
+                )
+        except Exception as e:
+            logger.warning(f"无法获取主账户余额信息: {e}")
         
-        # 创建 Transfer
+        # 详细记录金额信息，便于调试和验证
+        logger.info(
+            f"💰 转账金额详情: "
+            f"task_id={transfer_record.task_id}, "
+            f"原始金额={transfer_record.amount} 英镑, "
+            f"转账金额={transfer_amount_pence} 便士 (£{transfer_amount_pence/100:.2f}), "
+            f"destination={taker_stripe_account_id} (从主账户转到 Connect 子账户)"
+        )
+        
+        # 创建 Transfer（从主账户转到 Connect 子账户）
+        # 注意：Transfer 使用主账户的可用余额（available balance），不是总余额
+        # 如果资金还在 pending 状态，需要等待资金可用后才能转账
         transfer = stripe.Transfer.create(
             amount=transfer_amount_pence,
             currency=transfer_record.currency.lower(),
-            destination=taker_stripe_account_id,
+            destination=taker_stripe_account_id,  # Connect 子账户 ID
             metadata={
                 "task_id": str(transfer_record.task_id),
                 "taker_id": str(transfer_record.taker_id),
@@ -161,7 +194,48 @@ def execute_transfer(
         
     except stripe.error.StripeError as e:
         error_msg = f"Stripe 转账错误: {str(e)}"
-        logger.error(f"{error_msg}: task_id={transfer_record.task_id}, error_type={type(e).__name__}")
+        error_type = type(e).__name__
+        error_code = getattr(e, 'code', None)
+        
+        logger.error(f"{error_msg}: task_id={transfer_record.task_id}, error_type={error_type}, error_code={error_code}")
+        
+        # 对于余额不足错误，提供更详细的说明
+        if error_code == 'balance_insufficient':
+            try:
+                balance = stripe.Balance.retrieve()
+                available_balance = balance.available[0].amount if balance.available else 0
+                pending_balance = balance.pending[0].amount if balance.pending else 0
+                logger.error(
+                    f"❌ 主账户可用余额不足详情: "
+                    f"需要转账 {transfer_amount_pence} 便士 (£{transfer_record.amount:.2f}), "
+                    f"主账户可用余额={available_balance} 便士 (£{available_balance/100:.2f}), "
+                    f"待处理余额={pending_balance} 便士 (£{pending_balance/100:.2f})。"
+                    f"注意：Transfer 使用可用余额（available balance），不是总余额。"
+                    f"如果资金还在 pending 状态，需要等待资金可用后才能转账。"
+                )
+            except Exception as balance_error:
+                logger.warning(f"无法获取余额详情: {balance_error}")
+        
+        # 对于余额不足等可重试的错误，更新转账记录状态为 retrying
+        if error_code in ['balance_insufficient', 'account_invalid', 'rate_limit']:
+            transfer_record.status = "retrying"
+            transfer_record.last_error = error_msg
+            transfer_record.retry_count += 1
+            if transfer_record.retry_count < transfer_record.max_retries:
+                retry_index = min(transfer_record.retry_count - 1, len(RETRY_DELAYS) - 1)
+                delay_seconds = RETRY_DELAYS[retry_index]
+                transfer_record.next_retry_at = get_utc_time() + timedelta(seconds=delay_seconds)
+                logger.info(f"🔄 转账失败但可重试，已设置重试: transfer_record_id={transfer_record.id}, retry_count={transfer_record.retry_count}, next_retry_at={transfer_record.next_retry_at}")
+            else:
+                transfer_record.status = "failed"
+                transfer_record.next_retry_at = None
+                logger.error(f"❌ 转账失败且已达到最大重试次数: transfer_record_id={transfer_record.id}")
+            try:
+                db.commit()
+            except Exception as commit_error:
+                logger.error(f"更新转账记录失败: {commit_error}")
+                db.rollback()
+        
         return False, None, error_msg
     except Exception as e:
         error_msg = f"转账处理错误: {str(e)}"
