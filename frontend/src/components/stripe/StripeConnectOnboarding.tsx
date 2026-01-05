@@ -27,7 +27,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   onComplete,
   onError,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [accountCreatePending, setAccountCreatePending] = useState(false);
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [error, setError] = useState<string | null>(null);
