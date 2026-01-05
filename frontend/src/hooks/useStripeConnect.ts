@@ -6,7 +6,13 @@ import api from "../api";
  * Hook for managing Stripe Connect instance
  * Based on stripe-sample-code/hooks/useStripeConnect.js
  */
-export const useStripeConnect = (connectedAccountId: string | null | undefined) => {
+export const useStripeConnect = (
+  connectedAccountId: string | null | undefined,
+  enablePayouts: boolean = false,
+  enableAccountManagement: boolean = false,
+  enableAccountOnboarding: boolean = false,
+  disableStripeUserAuthentication: boolean = false
+) => {
   const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
 
   useEffect(() => {
@@ -20,6 +26,10 @@ export const useStripeConnect = (connectedAccountId: string | null | undefined) 
         // 参考 stripe-sample-code/server.js 的 /account_session 端点
         const response = await api.post("/api/stripe/connect/account_session", {
           account: connectedAccountId,
+          enable_payouts: enablePayouts,  // 如果启用 payouts，传递此参数
+          enable_account_management: enableAccountManagement,  // 如果启用 account_management，传递此参数
+          enable_account_onboarding: enableAccountOnboarding,  // 如果启用 account_onboarding，传递此参数
+          disable_stripe_user_authentication: disableStripeUserAuthentication,  // 如果禁用 Stripe 用户认证，传递此参数
         });
 
         if (!response.data) {
@@ -81,7 +91,7 @@ export const useStripeConnect = (connectedAccountId: string | null | undefined) 
     } catch (error) {
       console.error("Error initializing Stripe Connect:", error);
     }
-  }, [connectedAccountId]);
+  }, [connectedAccountId, enablePayouts, enableAccountManagement, enableAccountOnboarding, disableStripeUserAuthentication]);
 
   return stripeConnectInstance;
 };

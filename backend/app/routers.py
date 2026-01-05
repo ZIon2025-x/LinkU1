@@ -3947,7 +3947,7 @@ def admin_update_task(
             f"⚠️ 管理员 {current_user.id} 尝试修改任务的敏感字段（已阻止）: "
             f"task_id={task_id}, fields={attempted_sensitive_fields}"
         )
-    
+
     # 更新任务（返回变更信息）
     updated_task, old_values, new_values = crud.update_task_by_admin(
         db, task_id, update_data

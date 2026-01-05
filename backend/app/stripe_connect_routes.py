@@ -86,7 +86,32 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"Stripe V2 API request failed: {e}")
+        # 检查是否是 400 错误（可能是 V1 账户，不支持 V2 API）
+        is_v1_account_error = False
+        error_message = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            status_code = e.response.status_code
+            if status_code == 400:
+                try:
+                    error_data = e.response.json()
+                    error_msg = error_data.get('error', {})
+                    if isinstance(error_msg, dict):
+                        message = error_msg.get('message', '')
+                        code = error_msg.get('code', '')
+                        # 检查是否是 V1 账户相关的错误
+                        if 'v1' in message.lower() or 'V1' in message or code == 'v1_account_instead_of_v2_account':
+                            is_v1_account_error = True
+                            error_message = message
+                except:
+                    pass
+        
+        # 如果是 V1 账户错误，使用 DEBUG 级别（这是正常的回退情况）
+        # 其他错误使用 WARNING 级别（避免过多 ERROR 日志）
+        if is_v1_account_error:
+            logger.debug(f"Stripe V2 API request failed (V1 account, will fallback to V1 API): {error_message}")
+        else:
+            logger.warning(f"Stripe V2 API request failed: {error_message}")
+        
         if hasattr(e, 'response') and e.response is not None:
             try:
                 error_data = e.response.json()
@@ -153,19 +178,102 @@ class StripeV2:
 stripe_v2 = StripeV2()
 
 
-def create_account_session_safe(account_id: str) -> stripe.AccountSession:
+def detect_account_type(account_id: str) -> str:
+    """
+    检测 Stripe 账户类型（V1 或 V2）
+    
+    Returns:
+        "v1" 或 "v2"
+    """
+    try:
+        # 尝试使用 V2 API 检索
+        account = stripe_v2.core.accounts.retrieve(account_id)
+        return "v2"
+    except stripe.error.StripeError as v2_err:
+        error_message = str(v2_err)
+        if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+            return "v1"
+        # 如果错误不是 V1 账户错误，尝试 V1 API 确认
+        try:
+            account = stripe.Account.retrieve(account_id)
+            return "v1"
+        except:
+            # 如果都失败，返回 unknown
+            return "unknown"
+    except Exception:
+        # 如果都失败，尝试 V1 API
+        try:
+            account = stripe.Account.retrieve(account_id)
+            return "v1"
+        except:
+            return "unknown"
+
+
+def create_account_session_safe(
+    account_id: str, 
+    enable_payouts: bool = False,
+    enable_account_management: bool = False,
+    enable_account_onboarding: bool = False,
+    disable_stripe_user_authentication: bool = False
+) -> stripe.AccountSession:
     """
     安全地创建 AccountSession，确保所有布尔值都是正确的类型
     
     这个函数确保 components 配置中的 enabled 字段是 Python 布尔值，
     而不是字符串，避免 "Invalid boolean" 错误
+    
+    Args:
+        account_id: Stripe Connect 账户 ID
+        enable_payouts: 是否启用 payouts 组件（用于钱包和设置页面）
+        enable_account_management: 是否启用 account_management 组件（用于设置页面管理账户信息）
+        enable_account_onboarding: 是否启用 account_onboarding 组件（用于账户入驻）
+        disable_stripe_user_authentication: 是否禁用 Stripe 用户认证（仅适用于 Custom 账户且平台负责收集信息）
     """
     # 显式创建 components 配置，确保所有布尔值都是 Python 布尔类型
-    components_config = {
-        "account_onboarding": {
-            "enabled": bool(True)  # 显式转换为布尔值，确保不是字符串
+    components_config = {}
+    
+    # 如果启用 account_onboarding，添加 account_onboarding 组件配置
+    if enable_account_onboarding:
+        components_config["account_onboarding"] = {
+            "enabled": bool(True),
+            "features": {}
         }
-    }
+        # 如果禁用 Stripe 用户认证，添加此配置
+        # 注意：这仅适用于 Custom 账户且平台负责收集信息的情况
+        if disable_stripe_user_authentication:
+            components_config["account_onboarding"]["features"]["disable_stripe_user_authentication"] = bool(True)
+        # external_account_collection 默认为 true，如果需要禁用可以添加
+        # components_config["account_onboarding"]["features"]["external_account_collection"] = bool(False)
+    else:
+        # 默认情况下，account_onboarding 总是启用的（用于兼容现有代码）
+        components_config["account_onboarding"] = {
+            "enabled": bool(True)
+        }
+    
+    # 如果启用 payouts，添加 payouts 组件配置
+    if enable_payouts:
+        components_config["payouts"] = {
+            "enabled": bool(True),
+            "features": {
+                "instant_payouts": bool(True),  # 即时提现
+                "standard_payouts": bool(True),  # 标准提现
+                "edit_payout_schedule": bool(True),  # 编辑提现计划
+                "external_account_collection": bool(True),  # 外部账户收集（银行卡）
+                "disable_stripe_user_authentication": bool(True),  # 禁用 Stripe 用户认证（用于自定义账户）
+            }
+        }
+    
+    # 如果启用 account_management，添加 account_management 组件配置
+    if enable_account_management:
+        components_config["account_management"] = {
+            "enabled": bool(True),
+            "features": {
+                "external_account_collection": bool(True),  # 启用银行卡管理功能
+                # 注意：disable_stripe_user_authentication 默认值取决于 external_account_collection
+                # 如果 external_account_collection 为 true，则 disable_stripe_user_authentication 默认为 false
+                # 如果需要禁用 Stripe 用户认证，需要明确设置（仅适用于 Custom 账户且平台负责收集信息）
+            }
+        }
     
     logger.debug(f"Creating AccountSession for account {account_id} with components: {components_config}")
     
@@ -651,11 +759,12 @@ def create_connect_account_embedded(
                 current_user.stripe_account_id = None
                 db.commit()
         
-        # 创建 Express Account (使用 V1 API，与 webhook 保持一致)
-        # 参考: stripe-sample-code/server.js line 89-114
-        # 注意：统一使用 V1 API，因为 webhook 事件是 V1 格式，AccountSession 也是 V1 API
+        # 创建 Express Account (使用 V2 API)
+        # 参考: Stripe Connect Embedded Onboarding 官方文档
+        # 注意：使用 V2 API 创建账户，但 AccountSession API 是 V1 API（可以与 V2 账户一起使用）
         account = None
         try:
+            logger.info(f"使用 V2 API 创建 Stripe Connect 账户 for user {current_user.id}")
             # 使用 V2 API 创建账户（根据官方文档）
             account_data = stripe_v2_api_request(
                 "POST",
@@ -910,14 +1019,16 @@ def get_account_status(
             
             needs_onboarding = not details_submitted
             requirements_entries = requirements.get("entries", [])
+            account_type = "v2"  # V2 API 成功，账户类型为 V2
+            logger.info(f"✅ 账户 {current_user.stripe_account_id} 是 V2 账户")
             
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
             error_message = str(v2_err)
             if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
-                logger.debug(f"Account {current_user.stripe_account_id} is a V1 account, using V1 API")
+                logger.info(f"ℹ️ 账户 {current_user.stripe_account_id} 是 V1 账户（旧账户），使用 V1 API")
             else:
-                logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
+                logger.warning(f"⚠️ V2 API 检索失败，尝试 V1 API: {v2_err}")
             # 回退到 V1 API
             account = stripe.Account.retrieve(current_user.stripe_account_id)
             
@@ -935,22 +1046,7 @@ def get_account_status(
             payouts_enabled = account.payouts_enabled
             needs_onboarding = not details_submitted
             requirements_entries = []
-        
-            # V1 API 的状态检查
-            details_submitted = account.details_submitted
-            charges_enabled = account.charges_enabled
-            payouts_enabled = account.payouts_enabled
-            needs_onboarding = not details_submitted
-            requirements_entries = None
-        
-        # 使用嵌入式组件，不创建跳转链接
-        client_secret = None
-        if needs_onboarding:
-            try:
-                onboarding_session = create_account_session_safe(account.id)
-                client_secret = onboarding_session.client_secret
-            except stripe.error.StripeError as e:
-                logger.warning(f"Failed to create AccountSession for onboarding: {e}")
+            account_type = "v1"  # V2 API 失败，回退到 V1 API，账户类型为 V1
         
         # 使用嵌入式组件，不创建跳转链接
         client_secret = None
@@ -963,6 +1059,7 @@ def get_account_status(
         
         return {
             "account_id": current_user.stripe_account_id,
+            "account_type": account_type,  # "v1" 或 "v2"
             "details_submitted": details_submitted,
             "charges_enabled": charges_enabled,
             "payouts_enabled": payouts_enabled,
@@ -1287,13 +1384,19 @@ def create_account_session(
     db: Session = Depends(get_db)
 ):
     """
-    创建 Account Session（用于嵌入式 onboarding）
+    创建 Account Session（用于嵌入式组件）
     
     参考 stripe-sample-code/server.js 的 /account_session 端点
     返回 client_secret，前端可以使用 Stripe Connect Embedded Components
+    
+    支持通过 enable_payouts 参数启用 payouts 组件（用于钱包和设置页面）
     """
     try:
         account_id = request.account
+        enable_payouts = getattr(request, 'enable_payouts', False)
+        enable_account_management = getattr(request, 'enable_account_management', False)
+        enable_account_onboarding = getattr(request, 'enable_account_onboarding', False)
+        disable_stripe_user_authentication = getattr(request, 'disable_stripe_user_authentication', False)
         
         # 验证账户所有权（通过 metadata 中的 user_id）
         if not verify_account_ownership(account_id, current_user):
@@ -1321,7 +1424,14 @@ def create_account_session(
         # 参考: stripe-sample-code/server.js line 12-34 和官方文档
         # https://docs.stripe.com/connect/embedded-onboarding
         # 使用辅助函数确保所有布尔值都是正确的类型
-        account_session = create_account_session_safe(account_id)
+        # 如果启用 payouts、account_management 或 account_onboarding，则创建包含相应组件的 session
+        account_session = create_account_session_safe(
+            account_id, 
+            enable_payouts=enable_payouts,
+            enable_account_management=enable_account_management,
+            enable_account_onboarding=enable_account_onboarding,
+            disable_stripe_user_authentication=disable_stripe_user_authentication
+        )
         
         return {
             "client_secret": account_session.client_secret

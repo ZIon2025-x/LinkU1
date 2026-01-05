@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
+import StripeConnectAccountInfo from '../components/stripe/StripeConnectAccountInfo';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
@@ -7,6 +8,12 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateEmail, validateName } from '../utils/inputValidators';
 import LazyImage from '../components/LazyImage';
+import { useStripeConnect } from '../hooks/useStripeConnect';
+import {
+  ConnectComponentsProvider,
+  ConnectAccountManagement,
+  ConnectPayouts,
+} from '@stripe/react-connect-js';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -40,6 +47,10 @@ const Settings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   const [isMobile, setIsMobile] = useState(false);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  // 启用 payouts 和 account_management 组件（用于设置页面显示提现和账户管理）
+  const stripeConnectInstance = useStripeConnect(stripeAccountId, true, true);
   const [sessions, setSessions] = useState<Array<any>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string>('');
@@ -90,7 +101,30 @@ const Settings: React.FC = () => {
   useEffect(() => {
     // 加载用户数据
     loadUserData();
+    // 检查 Stripe 账户状态
+    checkStripeAccount();
   }, []);
+
+  // 检查 Stripe 账户状态
+  const checkStripeAccount = async () => {
+    try {
+      const response = await api.get('/api/stripe/connect/account/status');
+      if (response.data && response.data.account_id) {
+        setStripeAccountId(response.data.account_id);
+        setStripeAccountStatus(response.data);
+      } else {
+        setStripeAccountId(null);
+        setStripeAccountStatus(null);
+      }
+    } catch (error: any) {
+      // 404 是正常的（没有账户）
+      if (error.response?.status !== 404) {
+        console.error('Error checking Stripe account:', error);
+      }
+      setStripeAccountId(null);
+      setStripeAccountStatus(null);
+    }
+  };
 
   // 切换到安全设置时加载会话列表
   useEffect(() => {
@@ -651,21 +685,81 @@ const Settings: React.FC = () => {
           <div style={{ flex: 1, padding: isMobile ? '16px' : '30px' }}>
             {activeTab === 'payment' && (
               <div>
-                <h2 style={{ 
-                  color: '#333', 
-                  marginBottom: isMobile ? '16px' : '20px', 
-                  fontSize: isMobile ? '18px' : '20px' 
-                }}>
-                  💳 收款账户
-                </h2>
-                <StripeConnectOnboarding
-                  onComplete={() => {
-                    message.success('收款账户设置完成！');
-                  }}
-                  onError={(error) => {
-                    message.error(`设置失败: ${error}`);
-                  }}
-                />
+                {/* 如果已有账户，显示账户信息和银行卡管理 */}
+                {stripeAccountId ? (
+                  <div>
+                    {/* 账户管理和提现（包括银行卡信息） */}
+                    {stripeConnectInstance && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* 账户管理 */}
+                        <div style={{ 
+                          padding: '24px',
+                          background: '#fff',
+                          borderRadius: '16px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                          border: '1px solid #f0f0f0'
+                        }}>
+                          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+                            <ConnectAccountManagement />
+                          </ConnectComponentsProvider>
+                        </div>
+                        
+                        {/* 提现管理 */}
+                        <div style={{ 
+                          padding: '24px',
+                          background: '#fff',
+                          borderRadius: '16px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                          border: '1px solid #f0f0f0'
+                        }}>
+                          <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+                            <ConnectPayouts />
+                          </ConnectComponentsProvider>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* 如果没有账户，显示注册界面 */
+                  <div style={{
+                    padding: '32px',
+                    background: '#fff',
+                    borderRadius: '16px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    border: '1px solid #f0f0f0'
+                  }}>
+                    <div style={{
+                      marginBottom: '24px',
+                      textAlign: 'center'
+                    }}>
+                      <h3 style={{
+                        fontSize: '20px',
+                        fontWeight: '600',
+                        color: '#1a202c',
+                        marginBottom: '8px'
+                      }}>
+                        设置收款账户
+                      </h3>
+                      <p style={{
+                        fontSize: '14px',
+                        color: '#64748b',
+                        lineHeight: '1.6'
+                      }}>
+                        完成设置后，您将能够接收任务奖励并提现到银行账户
+                      </p>
+                    </div>
+                    <StripeConnectOnboarding
+                      onComplete={() => {
+                        message.success('收款账户设置完成！');
+                        // 重新检查账户状态
+                        checkStripeAccount();
+                      }}
+                      onError={(error) => {
+                        message.error(`设置失败: ${error}`);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

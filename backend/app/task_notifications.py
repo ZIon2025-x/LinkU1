@@ -542,9 +542,9 @@ async def send_service_application_notification(
                                 None,
                                 lambda: send_email(expert.email, email_subject, email_body)
                             )
-                            logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
-                        except Exception as e:
-                            logger.error(f"发送服务申请邮件失败: {e}")
+                        logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
+                    except Exception as e:
+                        logger.error(f"发送服务申请邮件失败: {e}")
                 
                 # 在后台执行邮件发送，不阻塞主流程
                 asyncio.create_task(send_email_task())

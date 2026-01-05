@@ -1532,6 +1532,10 @@ class StripeConnectAccountLinkResponse(BaseModel):
 class StripeConnectAccountSessionRequest(BaseModel):
     """创建 Account Session 的请求"""
     account: str  # Stripe Connect 账户 ID
+    enable_payouts: Optional[bool] = False  # 是否启用 payouts 组件
+    enable_account_management: Optional[bool] = False  # 是否启用 account_management 组件
+    enable_account_onboarding: Optional[bool] = False  # 是否启用 account_onboarding 组件
+    disable_stripe_user_authentication: Optional[bool] = False  # 是否禁用 Stripe 用户认证（仅适用于 Custom 账户）
 
 
 class StripeConnectAccountSessionResponse(BaseModel):

@@ -37,7 +37,15 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   } | null>(null);
   const [manualStripeConnectInstance, setManualStripeConnectInstance] = useState<any>(null);
   
-  const stripeConnectInstance = useStripeConnect(connectedAccountId) || manualStripeConnectInstance;
+  // 对于 onboarding，启用 account_onboarding 组件
+  // 如果使用 Custom 账户且平台负责收集信息，可以禁用 Stripe 用户认证
+  const stripeConnectInstance = useStripeConnect(
+    connectedAccountId,
+    false, // enablePayouts
+    false, // enableAccountManagement
+    true,  // enableAccountOnboarding - 启用 onboarding 组件
+    false  // disableStripeUserAuthentication - 默认不禁用（如果需要可以改为 true）
+  ) || manualStripeConnectInstance;
 
   // 防止页面跳转到 Stripe 外部页面
   useEffect(() => {
@@ -503,14 +511,25 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
             <ConnectAccountOnboarding
               onExit={handleOnboardingExit}
               onStepChange={(stepChange) => {
-                // 监听步骤变化，确保在应用内完成
-                console.log('Onboarding step changed:', stepChange);
+                // 监听步骤变化，用于分析和调试
+                // stepChange.step 包含当前步骤名称，如 'business_type', 'external_account' 等
+                console.log('Onboarding step changed:', stepChange.step);
               }}
               // 根据官方文档，这些是可选的配置
-              // 但可以确保组件完全在应用内工作
+              // collectionOptions 可以控制收集哪些要求
               // collectionOptions={{
-              //   fields: 'currently_due', // 或 'eventually_due' 用于完整收集
+              //   fields: 'currently_due', // 默认值，只收集当前需要的要求
+              //   // fields: 'eventually_due', // 也可以收集未来需要的要求
+              //   // futureRequirements: 'include', // 包含未来要求
+              //   // requirements: {
+              //   //   only: ['business_details.*'], // 只收集特定要求
+              //   //   // exclude: ['tos_acceptance.*'], // 排除特定要求
+              //   // }
               // }}
+              // 自定义策略链接（可选）
+              // fullTermsOfServiceUrl="https://your-domain.com/terms"
+              // recipientTermsOfServiceUrl="https://your-domain.com/recipient-terms"
+              // privacyPolicyUrl="https://your-domain.com/privacy"
             />
           </ConnectComponentsProvider>
         </div>

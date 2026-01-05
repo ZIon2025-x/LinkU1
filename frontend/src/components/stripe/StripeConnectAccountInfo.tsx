@@ -78,12 +78,13 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
   const getStatusBadge = (enabled: boolean) => {
     return (
       <span style={{
-        padding: '4px 8px',
-        borderRadius: '4px',
+        padding: '6px 12px',
+        borderRadius: '8px',
         fontSize: '12px',
         fontWeight: '600',
-        backgroundColor: enabled ? '#d4edda' : '#f8d7da',
-        color: enabled ? '#155724' : '#721c24'
+        backgroundColor: enabled ? '#d1fae5' : '#fee2e2',
+        color: enabled ? '#065f46' : '#991b1b',
+        display: 'inline-block'
       }}>
         {enabled ? '✓ 已启用' : '✗ 未启用'}
       </span>
@@ -102,32 +103,45 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
 
   return (
     <div style={{
-      maxWidth: '800px',
-      margin: '0 auto',
-      padding: '20px',
+      maxWidth: '100%',
+      padding: '24px',
       background: '#fff',
-      borderRadius: '12px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      borderRadius: '16px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+      border: '1px solid #e2e8f0'
     }}>
-      <h3 style={{ marginBottom: '20px', color: '#333', fontSize: '18px' }}>
-        📊 账户信息
+      <h3 style={{ 
+        marginBottom: '20px', 
+        color: '#1a202c', 
+        fontSize: '17px',
+        fontWeight: '600',
+        letterSpacing: '-0.2px'
+      }}>
+        账户信息
       </h3>
 
       {/* 账户基本信息 */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: '24px' }}>
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '15px',
-          marginBottom: '15px'
+          gap: '16px'
         }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>账户 ID</div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#64748b', 
+              marginBottom: '6px',
+              fontWeight: '500'
+            }}>
+              账户 ID
+            </div>
             <div style={{ 
               fontFamily: 'monospace', 
-              fontSize: '14px', 
-              color: '#333',
-              wordBreak: 'break-all'
+              fontSize: '13px', 
+              color: '#1a202c',
+              wordBreak: 'break-all',
+              fontWeight: '500'
             }}>
               {accountDetails.account_id}
             </div>
@@ -135,8 +149,19 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
           
           {accountDetails.display_name && (
             <div>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>显示名称</div>
-              <div style={{ fontSize: '14px', color: '#333' }}>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#64748b', 
+                marginBottom: '6px',
+                fontWeight: '500'
+              }}>
+                显示名称
+              </div>
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#1a202c',
+                fontWeight: '500'
+              }}>
                 {accountDetails.display_name}
               </div>
             </div>
@@ -144,16 +169,38 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
           
           {accountDetails.email && (
             <div>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>邮箱</div>
-              <div style={{ fontSize: '14px', color: '#333' }}>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#64748b', 
+                marginBottom: '6px',
+                fontWeight: '500'
+              }}>
+                邮箱
+              </div>
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#1a202c',
+                fontWeight: '500'
+              }}>
                 {accountDetails.email}
               </div>
             </div>
           )}
           
           <div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>国家/地区</div>
-            <div style={{ fontSize: '14px', color: '#333' }}>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#64748b', 
+              marginBottom: '6px',
+              fontWeight: '500'
+            }}>
+              国家/地区
+            </div>
+            <div style={{ 
+              fontSize: '14px', 
+              color: '#1a202c',
+              fontWeight: '500'
+            }}>
               {accountDetails.country}
             </div>
           </div>
@@ -162,23 +209,56 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
 
       {/* 账户状态 */}
       <div style={{ 
-        marginBottom: '20px',
-        padding: '15px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px'
+        marginBottom: '24px',
+        padding: '20px',
+        backgroundColor: '#fafbfc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0'
       }}>
-        <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#333' }}>账户状态</h4>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+        <h4 style={{ 
+          marginBottom: '16px', 
+          fontSize: '14px', 
+          color: '#1a202c',
+          fontWeight: '600'
+        }}>
+          账户状态
+        </h4>
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '16px'
+        }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>信息提交</div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#64748b', 
+              marginBottom: '6px',
+              fontWeight: '500'
+            }}>
+              信息提交
+            </div>
             {getStatusBadge(accountDetails.details_submitted)}
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>收款能力</div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#64748b', 
+              marginBottom: '6px',
+              fontWeight: '500'
+            }}>
+              收款能力
+            </div>
             {getStatusBadge(accountDetails.charges_enabled)}
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>提现能力</div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#64748b', 
+              marginBottom: '6px',
+              fontWeight: '500'
+            }}>
+              提现能力
+            </div>
             {getStatusBadge(accountDetails.payouts_enabled)}
           </div>
         </div>
@@ -187,25 +267,59 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
       {/* 账户能力 */}
       {accountDetails.capabilities && (
         <div style={{ 
-          marginBottom: '20px',
-          padding: '15px',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px'
+          marginBottom: '24px',
+          padding: '20px',
+          backgroundColor: '#fafbfc',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0'
         }}>
-          <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#333' }}>账户能力</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+          <h4 style={{ 
+            marginBottom: '16px', 
+            fontSize: '14px', 
+            color: '#1a202c',
+            fontWeight: '600'
+          }}>
+            账户能力
+          </h4>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '16px'
+          }}>
             {accountDetails.capabilities.card_payments && (
               <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>卡支付</div>
-                <div style={{ fontSize: '14px', color: '#333' }}>
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#64748b', 
+                  marginBottom: '6px',
+                  fontWeight: '500'
+                }}>
+                  卡支付
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#1a202c',
+                  fontWeight: '500'
+                }}>
                   {getCapabilityStatus(accountDetails.capabilities.card_payments)}
                 </div>
               </div>
             )}
             {accountDetails.capabilities.transfers && (
               <div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>转账</div>
-                <div style={{ fontSize: '14px', color: '#333' }}>
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#64748b', 
+                  marginBottom: '6px',
+                  fontWeight: '500'
+                }}>
+                  转账
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#1a202c',
+                  fontWeight: '500'
+                }}>
                   {getCapabilityStatus(accountDetails.capabilities.transfers)}
                 </div>
               </div>
@@ -216,37 +330,41 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
 
       {/* Stripe 仪表板链接 */}
       {accountDetails.dashboard_url && (
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <a
             href={accountDetails.dashboard_url}
             target="_blank"
             rel="noopener noreferrer"
             style={{
               display: 'inline-block',
-              padding: '12px 24px',
-              backgroundColor: '#635BFF',
+              padding: '10px 20px',
+              backgroundColor: '#667eea',
               color: 'white',
               textDecoration: 'none',
-              borderRadius: '8px',
+              borderRadius: '10px',
               fontSize: '14px',
               fontWeight: '600',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(102, 126, 234, 0.2)'
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#4f46e5';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.backgroundColor = '#5568d3';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.3)';
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#635BFF';
+              e.currentTarget.style.backgroundColor = '#667eea';
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.2)';
             }}
           >
-            🔗 打开 Stripe 仪表板
+            打开 Stripe 仪表板
           </a>
           <div style={{ 
-            marginTop: '8px', 
-            fontSize: '12px', 
-            color: '#666' 
+            marginTop: '10px', 
+            fontSize: '13px', 
+            color: '#64748b',
+            lineHeight: '1.5'
           }}>
             在 Stripe 仪表板中查看交易记录、提现历史等详细信息
           </div>

@@ -4222,9 +4222,9 @@ const MessagePage: React.FC = () => {
                                           } else {
                                             // 如果没有支付信息，说明可能已经支付成功或使用积分支付
                                             if (activeTaskId) {
-                                              await loadTaskMessages(activeTaskId);
-                                              await loadApplications(activeTaskId);
-                                              await loadTasks();
+                                          await loadTaskMessages(activeTaskId);
+                                          await loadApplications(activeTaskId);
+                                          await loadTasks();
                                             }
                                           }
                                         } catch (error: any) {

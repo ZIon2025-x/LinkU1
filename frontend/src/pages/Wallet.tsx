@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser, getPointsAccount, getPointsTransactions } from '../api';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useStripeConnect } from '../hooks/useStripeConnect';
+import {
+  ConnectComponentsProvider,
+  ConnectPayouts,
+} from '@stripe/react-connect-js';
 
 interface PointsAccount {
   balance: number;  // 积分数量（整数，100积分 = £1.00）
@@ -36,23 +41,17 @@ const Wallet: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);  // 钱包交易记录
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null);  // 积分账户
   const [pointsTransactions, setPointsTransactions] = useState<PointsTransaction[]>([]);  // 积分交易记录
-  const [activeTab, setActiveTab] = useState<'balance' | 'points' | 'stripe'>('balance');  // 当前标签页
+  const [activeTab, setActiveTab] = useState<'balance' | 'points'>('balance');  // 当前标签页
   const [loading, setLoading] = useState(true);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsPage, setPointsPage] = useState(1);
   const [pointsTotal, setPointsTotal] = useState(0);
   
   // Stripe 相关状态
-  const [stripeBalance, setStripeBalance] = useState<{
-    available: number;
-    pending: number;
-    total: number;
-    currency: string;
-  } | null>(null);
-  const [stripeTransactions, setStripeTransactions] = useState<any[]>([]);
-  const [stripeLoading, setStripeLoading] = useState(false);
   const [hasStripeAccount, setHasStripeAccount] = useState(false);
-  const [stripeDashboardUrl, setStripeDashboardUrl] = useState<string | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  // 启用 payouts 组件（用于钱包页面显示余额和提现功能）
+  const stripeConnectInstance = useStripeConnect(stripeAccountId, true);
 
   useEffect(() => {
     // 加载钱包数据
@@ -66,8 +65,6 @@ const Wallet: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'points' && pointsAccount) {
       loadPointsTransactions();
-    } else if (activeTab === 'stripe' && hasStripeAccount) {
-      loadStripeData();
     }
   }, [activeTab, pointsPage]);
 
@@ -120,78 +117,15 @@ const Wallet: React.FC = () => {
       const response = await api.get('/api/stripe/connect/account/status');
       if (response.data && response.data.account_id) {
         setHasStripeAccount(true);
-        // 获取仪表板链接
-        try {
-          const detailsResponse = await api.get('/api/stripe/connect/account/details');
-          if (detailsResponse.data && detailsResponse.data.dashboard_url) {
-            setStripeDashboardUrl(detailsResponse.data.dashboard_url);
-          }
-        } catch (error) {
-          // 获取仪表板链接失败，不影响其他功能
-        }
+        setStripeAccountId(response.data.account_id);
       }
     } catch (error) {
       // 没有账户是正常的
       setHasStripeAccount(false);
+      setStripeAccountId(null);
     }
   };
 
-  // 加载 Stripe 数据
-  const loadStripeData = async () => {
-    if (!hasStripeAccount) {
-      return;
-    }
-    
-    try {
-      setStripeLoading(true);
-      
-      // 加载余额
-      try {
-        const balanceResponse = await api.get('/api/stripe/connect/account/balance');
-        setStripeBalance(balanceResponse.data);
-      } catch (error: any) {
-        if (error.response?.status !== 404) {
-          console.error('Error loading Stripe balance:', error);
-        }
-      }
-      
-      // 加载交易记录
-      try {
-        const transactionsResponse = await api.get('/api/stripe/connect/account/transactions', {
-          params: { limit: 50 }
-        });
-        setStripeTransactions(transactionsResponse.data.transactions || []);
-      } catch (error: any) {
-        if (error.response?.status !== 404) {
-          console.error('Error loading Stripe transactions:', error);
-        }
-      }
-      
-      // 获取仪表板链接（如果还没有）
-      if (!stripeDashboardUrl) {
-        try {
-          const detailsResponse = await api.get('/api/stripe/connect/account/details');
-          if (detailsResponse.data && detailsResponse.data.dashboard_url) {
-            setStripeDashboardUrl(detailsResponse.data.dashboard_url);
-          }
-        } catch (error: any) {
-          // 获取仪表板链接失败，不影响其他功能
-        }
-      }
-    } catch (error) {
-      console.error('Error loading Stripe data:', error);
-    } finally {
-      setStripeLoading(false);
-    }
-  };
-
-  const handleWithdraw = () => {
-    alert(t('wallet.withdrawComingSoon'));
-  };
-
-  const handleRecharge = () => {
-    alert(t('wallet.depositComingSoon'));
-  };
 
   if (loading) {
     return (
@@ -211,22 +145,23 @@ const Wallet: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
+      background: '#f8fafc',
+      padding: isMobile ? '16px' : '24px'
     }}>
       <div style={{ 
-        maxWidth: '800px', 
+        maxWidth: '900px', 
         margin: '0 auto',
         background: '#fff',
-        borderRadius: '16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        borderRadius: '20px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        border: '1px solid #e2e8f0',
         overflow: 'hidden'
       }}>
         {/* 头部 */}
         <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#fff',
-          padding: '30px',
+          padding: isMobile ? '24px 20px' : '32px 30px',
           textAlign: 'center',
           position: 'relative'
         }}>
@@ -234,20 +169,30 @@ const Wallet: React.FC = () => {
             onClick={() => navigate('/')}
             style={{
               position: 'absolute',
-              left: '20px',
-              top: '20px',
-              background: 'rgba(255,255,255,0.2)',
+              left: isMobile ? '16px' : '24px',
+              top: isMobile ? '20px' : '24px',
+              background: 'rgba(255,255,255,0.15)',
               border: 'none',
               color: '#fff',
-              padding: '8px 12px',
-              borderRadius: '20px',
+              padding: '0',
+              borderRadius: '12px',
               cursor: 'pointer',
-              fontSize: '18px',
+              fontSize: '20px',
               width: '40px',
               height: '40px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              backdropFilter: 'blur(10px)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
             ←
@@ -272,23 +217,34 @@ const Wallet: React.FC = () => {
           {/* 标签页切换 */}
           <div style={{
             display: 'flex',
-            gap: '10px',
+            gap: '8px',
             justifyContent: 'center',
-            marginBottom: '20px',
+            marginBottom: '24px',
             flexWrap: 'wrap'
           }}>
             <button
               onClick={() => setActiveTab('balance')}
               style={{
-                background: activeTab === 'balance' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                background: activeTab === 'balance' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
                 border: 'none',
                 color: '#fff',
-                padding: '8px 20px',
-                borderRadius: '20px',
+                padding: '10px 24px',
+                borderRadius: '12px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === 'balance' ? 'bold' : 'normal',
-                transition: 'all 0.3s ease'
+                fontSize: '15px',
+                fontWeight: activeTab === 'balance' ? '600' : '500',
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'balance') {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'balance') {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                }
               }}
             >
               💰 {t('wallet.balance')}
@@ -296,69 +252,62 @@ const Wallet: React.FC = () => {
             <button
               onClick={() => setActiveTab('points')}
               style={{
-                background: activeTab === 'points' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
+                background: activeTab === 'points' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
                 border: 'none',
                 color: '#fff',
-                padding: '8px 20px',
-                borderRadius: '20px',
+                padding: '10px 24px',
+                borderRadius: '12px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === 'points' ? 'bold' : 'normal',
-                transition: 'all 0.3s ease'
+                fontSize: '15px',
+                fontWeight: activeTab === 'points' ? '600' : '500',
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'points') {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'points') {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                }
               }}
             >
               ⭐ {t('wallet.points')}
             </button>
-            {hasStripeAccount && (
-              <button
-                onClick={() => setActiveTab('stripe')}
-                style={{
-                  background: activeTab === 'stripe' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  color: '#fff',
-                  padding: '8px 20px',
-                  borderRadius: '20px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: activeTab === 'stripe' ? 'bold' : 'normal',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                💳 Stripe 账户
-              </button>
-            )}
           </div>
 
           {/* 余额显示 */}
           {activeTab === 'balance' && (
             <>
-              <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
-                £{balance.toFixed(2)}
-              </div>
-              <div style={{ fontSize: '16px', opacity: 0.9 }}>{t('wallet.currentBalance')}</div>
-            </>
-          )}
-
-          {/* Stripe 余额显示 */}
-          {activeTab === 'stripe' && (
-            <>
-              {stripeLoading ? (
-                <div style={{ fontSize: '16px', opacity: 0.9 }}>加载中...</div>
-              ) : stripeBalance ? (
+              {hasStripeAccount && stripeConnectInstance ? (
+                <div style={{ 
+                  fontSize: '15px', 
+                  opacity: 0.95, 
+                  marginBottom: '8px',
+                  fontWeight: '500'
+                }}>
+                  Stripe 账户余额
+                </div>
+              ) : (
                 <>
-                  <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
-                    {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.total.toFixed(2)}
+                  <div style={{ 
+                    fontSize: isMobile ? '40px' : '48px', 
+                    fontWeight: '700', 
+                    marginBottom: '8px',
+                    letterSpacing: '-0.5px'
+                  }}>
+                    £{balance.toFixed(2)}
                   </div>
-                  <div style={{ fontSize: '16px', opacity: 0.9, marginBottom: '8px' }}>
-                    Stripe 账户余额
-                  </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>
-                    可用: {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.available.toFixed(2)} | 
-                    待处理: {stripeBalance.currency === 'GBP' ? '£' : stripeBalance.currency}{stripeBalance.pending.toFixed(2)}
+                  <div style={{ 
+                    fontSize: '15px', 
+                    opacity: 0.9,
+                    fontWeight: '400'
+                  }}>
+                    {t('wallet.currentBalance')}
                   </div>
                 </>
-              ) : (
-                <div style={{ fontSize: '16px', opacity: 0.9 }}>暂无余额信息</div>
               )}
             </>
           )}
@@ -367,16 +316,36 @@ const Wallet: React.FC = () => {
           {activeTab === 'points' && (
             <>
               {pointsLoading ? (
-                <div style={{ fontSize: '16px', opacity: 0.9 }}>{t('common.loading')}</div>
+                <div style={{ 
+                  fontSize: '15px', 
+                  opacity: 0.9,
+                  fontWeight: '400'
+                }}>
+                  {t('common.loading')}
+                </div>
               ) : (
                 <>
-                  <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  <div style={{ 
+                    fontSize: isMobile ? '40px' : '48px', 
+                    fontWeight: '700', 
+                    marginBottom: '8px',
+                    letterSpacing: '-0.5px'
+                  }}>
                     {pointsAccount?.balance.toLocaleString() || 0} 积分
                   </div>
-                  <div style={{ fontSize: '16px', opacity: 0.9, marginBottom: '4px' }}>
+                  <div style={{ 
+                    fontSize: '15px', 
+                    opacity: 0.9, 
+                    marginBottom: '4px',
+                    fontWeight: '400'
+                  }}>
                     {t('wallet.currentPointsBalance')}
                   </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    opacity: 0.8,
+                    fontWeight: '400'
+                  }}>
                     {t('wallet.pointsEquivalent', { amount: pointsAccount?.balance_display || '0.00' })}
                   </div>
                 </>
@@ -385,128 +354,77 @@ const Wallet: React.FC = () => {
           )}
         </div>
 
-        {/* 操作按钮 - 仅余额标签页显示 */}
-        {activeTab === 'balance' && (
+        {/* Stripe Payouts 组件 - 仅余额标签页显示，如果有 Stripe 账户 */}
+        {activeTab === 'balance' && hasStripeAccount && stripeConnectInstance && (
           <div style={{ 
-            padding: '30px',
-            display: 'flex',
-            gap: '20px',
-            justifyContent: 'center'
+            padding: isMobile ? '20px' : '32px',
+            background: '#fafbfc',
+            borderTop: '1px solid #e2e8f0'
           }}>
-            <button
-              onClick={handleRecharge}
-              style={{
-                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                color: '#fff',
-                border: 'none',
-                padding: '15px 30px',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(76, 175, 80, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.3)';
-              }}
-            >
-              💳 {t('wallet.deposit')}
-            </button>
-            <button
-              onClick={handleWithdraw}
-              style={{
-                background: 'linear-gradient(135deg, #FF9800, #F57C00)',
-                color: '#fff',
-                border: 'none',
-                padding: '15px 30px',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 152, 0, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 152, 0, 0.3)';
-              }}
-            >
-              💸 {t('wallet.withdraw')}
-            </button>
-          </div>
-        )}
-
-        {/* Stripe 操作按钮 */}
-        {activeTab === 'stripe' && stripeDashboardUrl && (
-          <div style={{ 
-            padding: '30px',
-            display: 'flex',
-            gap: '20px',
-            justifyContent: 'center'
-          }}>
-            <a
-              href={stripeDashboardUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                background: 'linear-gradient(135deg, #635BFF, #4f46e5)',
-                color: '#fff',
-                border: 'none',
-                padding: '15px 30px',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                textDecoration: 'none',
-                boxShadow: '0 4px 15px rgba(99, 91, 255, 0.3)',
-                transition: 'all 0.3s ease',
-                display: 'inline-block'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 91, 255, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(99, 91, 255, 0.3)';
-              }}
-            >
-              🔗 打开 Stripe 仪表板
-            </a>
+            <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+              <ConnectPayouts />
+            </ConnectComponentsProvider>
           </div>
         )}
 
         {/* 积分统计信息 - 仅积分标签页显示 */}
         {activeTab === 'points' && pointsAccount && (
           <div style={{ 
-            padding: '20px 30px',
+            padding: isMobile ? '20px' : '24px 32px',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: '20px',
-            background: '#f8f9fa',
-            borderBottom: '1px solid #e9ecef'
+            gap: '16px',
+            background: '#fafbfc',
+            borderTop: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0'
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50', marginBottom: '4px' }}>
+            <div style={{ 
+              textAlign: 'center',
+              padding: '16px',
+              background: '#fff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ 
+                fontSize: '22px', 
+                fontWeight: '700', 
+                color: '#10b981', 
+                marginBottom: '6px',
+                letterSpacing: '-0.3px'
+              }}>
                 +{(pointsAccount.total_earned / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>累计获得</div>
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#64748b',
+                fontWeight: '500'
+              }}>
+                累计获得
+              </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FF9800', marginBottom: '4px' }}>
+            <div style={{ 
+              textAlign: 'center',
+              padding: '16px',
+              background: '#fff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ 
+                fontSize: '22px', 
+                fontWeight: '700', 
+                color: '#f59e0b', 
+                marginBottom: '6px',
+                letterSpacing: '-0.3px'
+              }}>
                 -{(pointsAccount.total_spent / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div style={{ fontSize: '14px', color: '#666' }}>累计消费</div>
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#64748b',
+                fontWeight: '500'
+              }}>
+                累计消费
+              </div>
             </div>
           </div>
         )}
@@ -520,14 +438,13 @@ const Wallet: React.FC = () => {
             fontWeight: 'bold'
           }}>
             📊 {
-              activeTab === 'balance' ? '交易记录' : 
-              activeTab === 'points' ? '积分交易记录' : 
-              'Stripe 交易记录'
+              activeTab === 'balance' ? (hasStripeAccount ? 'Stripe 余额与交易' : '交易记录') : 
+              '积分交易记录'
             }
           </h2>
           
-          {/* 余额交易记录 */}
-          {activeTab === 'balance' && (
+          {/* 余额交易记录 - 如果没有 Stripe 账户，显示普通交易记录 */}
+          {activeTab === 'balance' && !hasStripeAccount && (
             <>
               {transactions.length === 0 ? (
                 <div style={{
@@ -544,60 +461,77 @@ const Wallet: React.FC = () => {
                     <div
                       key={transaction.id}
                       style={{
-                        background: '#f8f9fa',
+                        background: '#fff',
                         padding: '16px',
                         borderRadius: '12px',
-                        border: '1px solid #e9ecef',
+                        border: '1px solid #e2e8f0',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '12px',
                           background: transaction.type === 'income' 
-                            ? 'linear-gradient(135deg, #4CAF50, #45a049)' 
-                            : 'linear-gradient(135deg, #FF9800, #F57C00)',
+                            ? 'linear-gradient(135deg, #10b981, #059669)' 
+                            : 'linear-gradient(135deg, #f59e0b, #d97706)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           color: '#fff',
-                          fontSize: '18px'
+                          fontSize: '20px',
+                          flexShrink: 0
                         }}>
                           {transaction.type === 'income' ? '💰' : '💸'}
                         </div>
                         <div>
                           <div style={{ 
-                            fontWeight: 'bold', 
-                            color: '#333',
-                            marginBottom: '4px'
+                            fontWeight: '600', 
+                            color: '#1a202c',
+                            marginBottom: '4px',
+                            fontSize: '15px'
                           }}>
                             {transaction.description}
                           </div>
                           <div style={{ 
-                            fontSize: '14px', 
-                            color: '#666' 
+                            fontSize: '13px', 
+                            color: '#64748b',
+                            fontWeight: '400'
                           }}>
                             {transaction.date}
                           </div>
                         </div>
                       </div>
                       <div style={{
-                        textAlign: 'right'
+                        textAlign: 'right',
+                        flexShrink: 0
                       }}>
                         <div style={{
-                          fontWeight: 'bold',
+                          fontWeight: '700',
                           fontSize: '16px',
-                          color: transaction.type === 'income' ? '#4CAF50' : '#FF9800'
+                          color: transaction.type === 'income' ? '#10b981' : '#f59e0b',
+                          marginBottom: '4px',
+                          letterSpacing: '-0.2px'
                         }}>
                           {transaction.type === 'income' ? '+' : '-'}£{transaction.amount.toFixed(2)}
                         </div>
                         <div style={{
                           fontSize: '12px',
-                          color: '#666',
+                          color: '#94a3b8',
+                          fontWeight: '400',
                           textTransform: 'capitalize'
                         }}>
                           {transaction.status}
@@ -605,130 +539,6 @@ const Wallet: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Stripe 交易记录 */}
-          {activeTab === 'stripe' && (
-            <>
-              {stripeLoading ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  加载中...
-                </div>
-              ) : stripeTransactions.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  暂无 Stripe 交易记录
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {stripeTransactions.map((transaction) => {
-                    const isIncome = transaction.type === 'income';
-                    const color = isIncome ? '#4CAF50' : '#FF9800';
-                    const icon = isIncome ? '💰' : '💸';
-                    const statusColor = transaction.status === 'succeeded' ? '#4CAF50' : 
-                                       transaction.status === 'pending' ? '#FF9800' : '#9E9E9E';
-                    
-                    return (
-                      <div
-                        key={transaction.id}
-                        style={{
-                          background: '#f8f9fa',
-                          padding: '16px',
-                          borderRadius: '12px',
-                          border: '1px solid #e9ecef',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${color}, ${color}dd)`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: '18px'
-                          }}>
-                            {icon}
-                          </div>
-                          <div>
-                            <div style={{ 
-                              fontWeight: 'bold', 
-                              color: '#333',
-                              marginBottom: '4px'
-                            }}>
-                              {transaction.description}
-                            </div>
-                            <div style={{ 
-                              fontSize: '14px', 
-                              color: '#666',
-                              display: 'flex',
-                              gap: '8px',
-                              alignItems: 'center'
-                            }}>
-                              <span>
-                                {new Date(transaction.created_at).toLocaleString('zh-CN', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                              <span style={{
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                backgroundColor: statusColor + '20',
-                                color: statusColor,
-                                fontWeight: '600'
-                              }}>
-                                {transaction.status === 'succeeded' ? '成功' : 
-                                 transaction.status === 'pending' ? '待处理' : 
-                                 transaction.status === 'reversed' ? '已撤销' : transaction.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{
-                          textAlign: 'right'
-                        }}>
-                          <div style={{
-                            fontWeight: 'bold',
-                            fontSize: '16px',
-                            color: color
-                          }}>
-                            {isIncome ? '+' : '-'}{transaction.currency === 'GBP' ? '£' : transaction.currency}{transaction.amount.toFixed(2)}
-                          </div>
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#666',
-                            textTransform: 'capitalize'
-                          }}>
-                            {transaction.source === 'charge' ? '收款' : 
-                             transaction.source === 'transfer' ? '转账' : 
-                             transaction.source === 'payout' ? '提现' : transaction.source}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               )}
             </>
@@ -774,40 +584,56 @@ const Wallet: React.FC = () => {
                         <div
                           key={transaction.id}
                           style={{
-                            background: '#f8f9fa',
+                            background: '#fff',
                             padding: '16px',
                             borderRadius: '12px',
-                            border: '1px solid #e9ecef',
+                            border: '1px solid #e2e8f0',
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#cbd5e1';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.boxShadow = 'none';
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '50%',
-                              background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '12px',
+                              background: color === '#10b981' ? 'linear-gradient(135deg, #10b981, #059669)' :
+                                        color === '#f59e0b' ? 'linear-gradient(135deg, #f59e0b, #d97706)' :
+                                        color === '#3b82f6' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' :
+                                        'linear-gradient(135deg, #94a3b8, #64748b)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               color: '#fff',
-                              fontSize: '18px'
+                              fontSize: '20px',
+                              flexShrink: 0
                             }}>
                               {icon}
                             </div>
                             <div>
                               <div style={{ 
-                                fontWeight: 'bold', 
-                                color: '#333',
-                                marginBottom: '4px'
+                                fontWeight: '600', 
+                                color: '#1a202c',
+                                marginBottom: '4px',
+                                fontSize: '15px'
                               }}>
                                 {transaction.description || `${typeText}积分`}
                               </div>
                               <div style={{ 
-                                fontSize: '14px', 
-                                color: '#666' 
+                                fontSize: '13px', 
+                                color: '#64748b',
+                                fontWeight: '400'
                               }}>
                                 {new Date(transaction.created_at).toLocaleString('zh-CN', {
                                   year: 'numeric',
@@ -820,18 +646,22 @@ const Wallet: React.FC = () => {
                             </div>
                           </div>
                           <div style={{
-                            textAlign: 'right'
+                            textAlign: 'right',
+                            flexShrink: 0
                           }}>
                             <div style={{
-                              fontWeight: 'bold',
+                              fontWeight: '700',
                               fontSize: '16px',
-                              color: color
+                              color: color,
+                              marginBottom: '4px',
+                              letterSpacing: '-0.2px'
                             }}>
                               {isPositive ? '+' : '-'}{Math.abs(transaction.amount).toLocaleString()} 积分
                             </div>
                             <div style={{
                               fontSize: '12px',
-                              color: '#666'
+                              color: '#94a3b8',
+                              fontWeight: '400'
                             }}>
                               余额: {transaction.balance_after.toLocaleString()} 积分
                             </div>
@@ -891,90 +721,129 @@ const Wallet: React.FC = () => {
 
         {/* 说明 */}
         <div style={{
-          background: '#f8f9fa',
-          padding: '20px 30px',
-          borderTop: '1px solid #e9ecef'
+          background: '#fafbfc',
+          padding: isMobile ? '20px' : '24px 30px',
+          borderTop: '1px solid #e2e8f0'
         }}>
           {activeTab === 'balance' ? (
             <>
               <h3 style={{ 
-                color: '#333', 
-                marginBottom: '10px', 
-                fontSize: '16px',
-                fontWeight: 'bold'
+                color: '#1a202c', 
+                marginBottom: '12px', 
+                fontSize: '15px',
+                fontWeight: '600'
               }}>
-                💡 钱包说明
+                {hasStripeAccount ? 'Stripe 账户说明' : '钱包说明'}
               </h3>
               <ul style={{ 
-                color: '#666', 
+                color: '#64748b', 
                 fontSize: '14px', 
-                lineHeight: '1.6',
+                lineHeight: '1.7',
                 margin: 0,
-                paddingLeft: '20px'
+                paddingLeft: '20px',
+                listStyle: 'none'
               }}>
-                <li>完成任务可获得相应报酬</li>
-                <li>发布任务需要支付少量费用</li>
-                <li>余额可用于发布任务或提现</li>
-                <li>所有交易记录都会在此显示</li>
-              </ul>
-            </>
-          ) : activeTab === 'stripe' ? (
-            <>
-              <h3 style={{ 
-                color: '#333', 
-                marginBottom: '10px', 
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}>
-                💡 Stripe 账户说明
-              </h3>
-              <ul style={{ 
-                color: '#666', 
-                fontSize: '14px', 
-                lineHeight: '1.6',
-                margin: 0,
-                paddingLeft: '20px'
-              }}>
-                <li>Stripe 账户用于接收任务奖励和提现</li>
-                <li>可用余额可以立即提现到银行账户</li>
-                <li>待处理余额需要等待 Stripe 处理完成后才能提现</li>
-                <li>所有收入和支出记录都会在此显示</li>
-                <li>点击"打开 Stripe 仪表板"可查看更详细的交易信息</li>
+                {hasStripeAccount ? (
+                  <>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      Stripe 账户用于接收任务奖励
+                    </li>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      可用余额可以立即提现到银行账户
+                    </li>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      待处理余额需要等待 Stripe 处理完成后才能提现
+                    </li>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      所有收入和支出记录都会在此显示
+                    </li>
+                    <li style={{ position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      您可以在余额组件中直接管理提现
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      完成任务可获得相应报酬
+                    </li>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      发布任务需要支付少量费用
+                    </li>
+                    <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      余额可用于发布任务或提现
+                    </li>
+                    <li style={{ position: 'relative', paddingLeft: '20px' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      所有交易记录都会在此显示
+                    </li>
+                  </>
+                )}
               </ul>
             </>
           ) : (
             <>
               <h3 style={{ 
-                color: '#333', 
-                marginBottom: '10px', 
-                fontSize: '16px',
-                fontWeight: 'bold'
+                color: '#1a202c', 
+                marginBottom: '12px', 
+                fontSize: '15px',
+                fontWeight: '600'
               }}>
-                💡 积分说明
+                积分说明
               </h3>
               <div style={{ 
-                color: '#666', 
+                color: '#64748b', 
                 fontSize: '14px', 
-                lineHeight: '1.8',
-                marginBottom: '15px'
+                lineHeight: '1.7'
               }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>积分规则：</strong>100积分 = £1.00（等值参考，积分不是货币）
+                <div style={{ marginBottom: '12px' }}>
+                  <strong style={{ color: '#1a202c' }}>积分规则：</strong>
+                  <span style={{ marginLeft: '4px' }}>100积分 = £1.00（等值参考，积分不是货币）</span>
                 </div>
                 <div style={{ marginBottom: '8px' }}>
-                  <strong>积分用途：</strong>
+                  <strong style={{ color: '#1a202c' }}>积分用途：</strong>
                 </div>
-                <ul style={{ margin: '0 0 8px 20px', padding: 0 }}>
+                <ul style={{ 
+                  margin: '0 0 12px 20px', 
+                  padding: 0,
+                  listStyle: 'none'
+                }}>
                   {pointsAccount?.usage_restrictions.allowed.map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index} style={{ 
+                      marginBottom: '4px',
+                      position: 'relative',
+                      paddingLeft: '20px'
+                    }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
+                      {item}
+                    </li>
                   ))}
                 </ul>
                 <div style={{ marginBottom: '8px' }}>
-                  <strong>积分限制：</strong>
+                  <strong style={{ color: '#1a202c' }}>积分限制：</strong>
                 </div>
-                <ul style={{ margin: '0 0 0 20px', padding: 0 }}>
+                <ul style={{ 
+                  margin: '0 0 0 20px', 
+                  padding: 0,
+                  listStyle: 'none'
+                }}>
                   {pointsAccount?.usage_restrictions.forbidden.map((item, index) => (
-                    <li key={index} style={{ color: '#d32f2f' }}>{item}</li>
+                    <li key={index} style={{ 
+                      color: '#ef4444',
+                      marginBottom: '4px',
+                      position: 'relative',
+                      paddingLeft: '20px'
+                    }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#ef4444' }}>•</span>
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>
