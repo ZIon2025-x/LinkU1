@@ -1697,19 +1697,19 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = account.get("id")
             
             if not account_id:
-            logger.warning(f"{event_type} event missing account ID")
-            return {"status": "success"}
-        
-        # 通过 stripe_account_id 查找用户
-        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-        
-        if user:
-            logger.warning(f"Stripe Connect account (V2) closed for user {user.id}: account_id={account_id}")
-            # 可以选择清除账户ID或保留（取决于业务需求）
-            # user.stripe_account_id = None
-            # db.commit()
-        else:
-            logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
+                logger.warning(f"{event_type} event missing account ID")
+                return {"status": "success"}
+            
+            # 通过 stripe_account_id 查找用户
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+            
+            if user:
+                logger.warning(f"Stripe Connect account (V2) closed for user {user.id}: account_id={account_id}")
+                # 可以选择清除账户ID或保留（取决于业务需求）
+                # user.stripe_account_id = None
+                # db.commit()
+            else:
+                logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
         
         # 处理账户要求更新事件（V2 API）
         elif event_type == "v2.core.account.requirements.updated":
@@ -1717,53 +1717,53 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = account.get("id")
             
             if not account_id:
-            logger.warning(f"{event_type} event missing account ID")
-            return {"status": "success"}
-        
-        # 通过 stripe_account_id 查找用户
-        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-        
-        if user:
-            # V2 API 使用 requirements 字段
-            requirements = account.get("requirements", {})
-            currently_due = requirements.get("currently_due", [])
-            eventually_due = requirements.get("eventually_due", [])
-            past_due = requirements.get("past_due", [])
+                logger.warning(f"{event_type} event missing account ID")
+                return {"status": "success"}
             
-            # 检查是否有最小截止日期状态
-            minimum_deadline = requirements.get("minimum_deadline")
-            deadline_status = minimum_deadline.get("status") if minimum_deadline else None
+            # 通过 stripe_account_id 查找用户
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             
-            # 检查能力状态
-            configuration = account.get("configuration", {})
-            merchant = configuration.get("merchant", {})
-            capabilities = merchant.get("capabilities", {})
-            card_payments = capabilities.get("card_payments", {})
-            charges_enabled = card_payments.get("status") == "active"
-            
-            # 检查状态变化
-            previous_attributes = event.get("data", {}).get("previous_attributes", {})
-            prev_requirements = previous_attributes.get("requirements", {})
-            prev_currently_due = prev_requirements.get("currently_due", [])
-            
-            # 如果账户刚刚完成验证（currently_due 从有到无）
-            if prev_currently_due and len(prev_currently_due) > 0 and len(currently_due) == 0:
-                logger.info(f"Stripe Connect account (V2) verification completed for user {user.id}: account_id={account_id}")
-            
-            # 如果账户有 past_due 要求，记录警告
-            if past_due and len(past_due) > 0:
-                logger.warning(f"Stripe Connect account (V2) has past_due requirements for user {user.id}: account_id={account_id}, past_due={past_due}")
-            
-            # 如果截止日期状态变为 past_due
-            if deadline_status == "past_due":
-                logger.warning(f"Stripe Connect account (V2) deadline status is past_due for user {user.id}: account_id={account_id}")
-            
-            logger.info(
-                f"Account requirements updated (V2) for user {user.id}: account_id={account_id}, "
-                f"currently_due={len(currently_due)}, eventually_due={len(eventually_due)}, "
-                f"past_due={len(past_due)}, charges_enabled={charges_enabled}"
-            )
-        else:
+            if user:
+                # V2 API 使用 requirements 字段
+                requirements = account.get("requirements", {})
+                currently_due = requirements.get("currently_due", [])
+                eventually_due = requirements.get("eventually_due", [])
+                past_due = requirements.get("past_due", [])
+                
+                # 检查是否有最小截止日期状态
+                minimum_deadline = requirements.get("minimum_deadline")
+                deadline_status = minimum_deadline.get("status") if minimum_deadline else None
+                
+                # 检查能力状态
+                configuration = account.get("configuration", {})
+                merchant = configuration.get("merchant", {})
+                capabilities = merchant.get("capabilities", {})
+                card_payments = capabilities.get("card_payments", {})
+                charges_enabled = card_payments.get("status") == "active"
+                
+                # 检查状态变化
+                previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                prev_requirements = previous_attributes.get("requirements", {})
+                prev_currently_due = prev_requirements.get("currently_due", [])
+                
+                # 如果账户刚刚完成验证（currently_due 从有到无）
+                if prev_currently_due and len(prev_currently_due) > 0 and len(currently_due) == 0:
+                    logger.info(f"Stripe Connect account (V2) verification completed for user {user.id}: account_id={account_id}")
+                
+                # 如果账户有 past_due 要求，记录警告
+                if past_due and len(past_due) > 0:
+                    logger.warning(f"Stripe Connect account (V2) has past_due requirements for user {user.id}: account_id={account_id}, past_due={past_due}")
+                
+                # 如果截止日期状态变为 past_due
+                if deadline_status == "past_due":
+                    logger.warning(f"Stripe Connect account (V2) deadline status is past_due for user {user.id}: account_id={account_id}")
+                
+                logger.info(
+                    f"Account requirements updated (V2) for user {user.id}: account_id={account_id}, "
+                    f"currently_due={len(currently_due)}, eventually_due={len(eventually_due)}, "
+                    f"past_due={len(past_due)}, charges_enabled={charges_enabled}"
+                )
+            else:
             # 如果通过 account_id 找不到，尝试通过 metadata
             user_id = account.get("metadata", {}).get("user_id")
             if user_id:
@@ -1784,13 +1784,13 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = capability.get("account")
             
             if account_id:
-            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-            if user:
-                status = capability.get("status")
-                capability_type = capability.get("type")
-                logger.info(f"Capability updated for user {user.id}: account_id={account_id}, type={capability_type}, status={status}")
-            else:
-                logger.warning(f"Capability.updated event for account {account_id}, but no matching user found")
+                user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+                if user:
+                    status = capability.get("status")
+                    capability_type = capability.get("type")
+                    logger.info(f"Capability updated for user {user.id}: account_id={account_id}, type={capability_type}, status={status}")
+                else:
+                    logger.warning(f"Capability.updated event for account {account_id}, but no matching user found")
         
         # 处理外部账户创建事件（银行账户等）
         elif event_type == "account.external_account.created":
@@ -1798,10 +1798,10 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = external_account.get("account")
             
             if account_id:
-            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-            if user:
-                account_type = external_account.get("object")  # "bank_account" or "card"
-                logger.info(f"External account created for user {user.id}: account_id={account_id}, type={account_type}")
+                user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+                if user:
+                    account_type = external_account.get("object")  # "bank_account" or "card"
+                    logger.info(f"External account created for user {user.id}: account_id={account_id}, type={account_type}")
         
         # 处理 V2 API 配置更新事件
         elif event_type in [
@@ -1854,12 +1854,12 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = person.get("account")
             
             if account_id:
-            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-            if user:
-                person_id = person.get("id")
-                logger.info(f"Account person {event_type} (V2) for user {user.id}: account_id={account_id}, person_id={person_id}")
-            else:
-                logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
+                user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+                if user:
+                    person_id = person.get("id")
+                    logger.info(f"Account person {event_type} (V2) for user {user.id}: account_id={account_id}, person_id={person_id}")
+                else:
+                    logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
         
         # 处理账户取消授权事件
         elif event_type == "account.application.deauthorized":
@@ -1867,21 +1867,21 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             account_id = account.get("id")
             
             if account_id:
-            # 通过 stripe_account_id 查找用户
-            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-            if user:
-                user.stripe_account_id = None
-                db.commit()
-                logger.info(f"Account deauthorized for user {user.id}: account_id={account_id}")
-            else:
-                # 尝试通过 metadata
-                user_id = account.get("metadata", {}).get("user_id")
-                if user_id:
-                    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-                    if user:
-                        user.stripe_account_id = None
-                        db.commit()
-                        logger.info(f"Account deauthorized for user {user.id} (found via metadata)")
+                # 通过 stripe_account_id 查找用户
+                user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+                if user:
+                    user.stripe_account_id = None
+                    db.commit()
+                    logger.info(f"Account deauthorized for user {user.id}: account_id={account_id}")
+                else:
+                    # 尝试通过 metadata
+                    user_id = account.get("metadata", {}).get("user_id")
+                    if user_id:
+                        user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                        if user:
+                            user.stripe_account_id = None
+                            db.commit()
+                            logger.info(f"Account deauthorized for user {user.id} (found via metadata)")
         
         # 对于未明确处理的事件，记录日志但返回成功
         if not any([
