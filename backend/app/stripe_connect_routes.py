@@ -1657,25 +1657,25 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     
                     logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
                 else:
-                # V1 API 使用传统字段
-                details_submitted = account.get("details_submitted", False)
-                charges_enabled = account.get("charges_enabled", False)
-                payouts_enabled = account.get("payouts_enabled", False)
-                
-                logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-                
-                # 检查状态变化（对 V1 和 V2 都适用）
-                previous_attributes = event.get("data", {}).get("previous_attributes", {})
-                was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
-                was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
-                
-                # 如果账户刚刚激活，记录日志
-                if not was_charges_enabled and charges_enabled:
-                    logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-                
-                # 如果账户刚刚启用提现，记录日志
-                if not was_payouts_enabled and payouts_enabled:
-                    logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
+                    # V1 API 使用传统字段
+                    details_submitted = account.get("details_submitted", False)
+                    charges_enabled = account.get("charges_enabled", False)
+                    payouts_enabled = account.get("payouts_enabled", False)
+                    
+                    logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+                    
+                    # 检查状态变化（对 V1 和 V2 都适用）
+                    previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                    was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
+                    was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
+                    
+                    # 如果账户刚刚激活，记录日志
+                    if not was_charges_enabled and charges_enabled:
+                        logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+                    
+                    # 如果账户刚刚启用提现，记录日志
+                    if not was_payouts_enabled and payouts_enabled:
+                        logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
             else:
                 # 如果通过 account_id 找不到，尝试通过 metadata
                 user_id = account.get("metadata", {}).get("user_id")
