@@ -232,23 +232,11 @@ def create_account_session_safe(
     # 显式创建 components 配置，确保所有布尔值都是 Python 布尔类型
     components_config = {}
     
-    # 如果启用 account_onboarding，添加 account_onboarding 组件配置
-    if enable_account_onboarding:
-        components_config["account_onboarding"] = {
-            "enabled": bool(True),
-            "features": {}
-        }
-        # 如果禁用 Stripe 用户认证，添加此配置
-        # 注意：这仅适用于 Custom 账户且平台负责收集信息的情况
-        if disable_stripe_user_authentication:
-            components_config["account_onboarding"]["features"]["disable_stripe_user_authentication"] = bool(True)
-        # external_account_collection 默认为 true，如果需要禁用可以添加
-        # components_config["account_onboarding"]["features"]["external_account_collection"] = bool(False)
-    else:
-        # 默认情况下，account_onboarding 总是启用的（用于兼容现有代码）
-        components_config["account_onboarding"] = {
-            "enabled": bool(True)
-        }
+    # 确定 disable_stripe_user_authentication 的值
+    # 如果 payouts 和 account_onboarding 都启用，它们的 disable_stripe_user_authentication 必须相同
+    # 如果 payouts 启用，默认使用 disable_stripe_user_authentication 参数的值
+    # 如果只有 account_onboarding 启用，使用 disable_stripe_user_authentication 参数的值
+    use_disable_auth = disable_stripe_user_authentication
     
     # 如果启用 payouts，添加 payouts 组件配置
     if enable_payouts:
@@ -259,9 +247,42 @@ def create_account_session_safe(
                 "standard_payouts": bool(True),  # 标准提现
                 "edit_payout_schedule": bool(True),  # 编辑提现计划
                 "external_account_collection": bool(True),  # 外部账户收集（银行卡）
-                "disable_stripe_user_authentication": bool(True),  # 禁用 Stripe 用户认证（用于自定义账户）
+                "disable_stripe_user_authentication": bool(use_disable_auth),  # 禁用 Stripe 用户认证（用于自定义账户）
             }
         }
+    
+    # 如果启用 account_onboarding，添加 account_onboarding 组件配置
+    if enable_account_onboarding:
+        components_config["account_onboarding"] = {
+            "enabled": bool(True),
+            "features": {}
+        }
+        # 如果禁用 Stripe 用户认证，添加此配置
+        # 注意：这仅适用于 Custom 账户且平台负责收集信息的情况
+        # 如果 payouts 也启用，必须使用相同的值
+        if use_disable_auth:
+            components_config["account_onboarding"]["features"]["disable_stripe_user_authentication"] = bool(True)
+        # 如果 payouts 也启用，确保 account_onboarding 使用相同的 disable_stripe_user_authentication 值
+        elif enable_payouts:
+            # 如果 payouts 中设置了 disable_stripe_user_authentication，account_onboarding 也必须设置相同的值
+            # 从 payouts 配置中获取值（payouts 已经在上面创建了）
+            if "payouts" in components_config:
+                payouts_features = components_config["payouts"].get("features", {})
+                if payouts_features.get("disable_stripe_user_authentication", False):
+                    components_config["account_onboarding"]["features"]["disable_stripe_user_authentication"] = bool(True)
+        # external_account_collection 默认为 true，如果需要禁用可以添加
+        # components_config["account_onboarding"]["features"]["external_account_collection"] = bool(False)
+    else:
+        # 默认情况下，account_onboarding 总是启用的（用于兼容现有代码）
+        # 但如果 payouts 也启用，需要确保 disable_stripe_user_authentication 一致
+        components_config["account_onboarding"] = {
+            "enabled": bool(True)
+        }
+        # 如果 payouts 启用且设置了 disable_stripe_user_authentication，account_onboarding 也需要设置相同的值
+        if enable_payouts and use_disable_auth:
+            components_config["account_onboarding"]["features"] = {
+                "disable_stripe_user_authentication": bool(True)
+            }
     
     # 如果启用 account_management，添加 account_management 组件配置
     if enable_account_management:
@@ -1765,7 +1786,7 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 )
             else:
                 # 如果通过 account_id 找不到，尝试通过 metadata
-                user_id = account.get("metadata", {}).get("user_id")
+                user_id = account.get("metadata", {}).get("user_id")  # 从 metadata 获取 user_id
                 if user_id:
                     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
                     if user:
