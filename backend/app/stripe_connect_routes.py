@@ -1616,87 +1616,87 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
             else:
                 logger.warning(f"Account.created event for account {account_id}, but no metadata.user_id found")
-    
-    # 处理账户更新事件（V1 和 V2）
-    elif event_type == "account.updated" or event_type == "v2.core.account.updated":
-        account = event_data
-        account_id = account.get("id")
         
-        if not account_id:
-            logger.warning("account.updated event missing account ID")
-            return {"status": "success"}
-        
-        # 通过 stripe_account_id 查找用户（更可靠）
-        user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
-        
-        if user:
-            # 判断是 V1 还是 V2 API 事件
-            is_v2_event = event_type == "v2.core.account.updated"
+        # 处理账户更新事件（V1 和 V2）
+        elif event_type == "account.updated" or event_type == "v2.core.account.updated":
+            account = event_data
+            account_id = account.get("id")
             
-            if is_v2_event:
-                # V2 API 使用 requirements 和 configuration 字段
-                requirements = account.get("requirements", {})
-                summary = requirements.get("summary", {})
-                minimum_deadline = summary.get("minimum_deadline", {})
-                deadline_status = minimum_deadline.get("status")
-                details_submitted = not deadline_status or deadline_status == "eventually_due"
+            if not account_id:
+                logger.warning("account.updated event missing account ID")
+                return {"status": "success"}
+            
+            # 通过 stripe_account_id 查找用户（更可靠）
+            user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
+            
+            if user:
+                # 判断是 V1 还是 V2 API 事件
+                is_v2_event = event_type == "v2.core.account.updated"
                 
-                # 检查 merchant 配置中的 capabilities
-                configuration = account.get("configuration", {})
-                merchant = configuration.get("merchant", {})
-                capabilities = merchant.get("capabilities", {})
-                card_payments = capabilities.get("card_payments", {})
-                charges_enabled = card_payments.get("status") == "active"
-                
-                # 检查 recipient 配置中的 payouts
-                recipient = configuration.get("recipient", {})
-                recipient_capabilities = recipient.get("capabilities", {})
-                stripe_balance = recipient_capabilities.get("stripe_balance", {})
-                payouts = stripe_balance.get("payouts", {})
-                payouts_enabled = payouts.get("status") == "active"
-                
-                logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-            else:
+                if is_v2_event:
+                    # V2 API 使用 requirements 和 configuration 字段
+                    requirements = account.get("requirements", {})
+                    summary = requirements.get("summary", {})
+                    minimum_deadline = summary.get("minimum_deadline", {})
+                    deadline_status = minimum_deadline.get("status")
+                    details_submitted = not deadline_status or deadline_status == "eventually_due"
+                    
+                    # 检查 merchant 配置中的 capabilities
+                    configuration = account.get("configuration", {})
+                    merchant = configuration.get("merchant", {})
+                    capabilities = merchant.get("capabilities", {})
+                    card_payments = capabilities.get("card_payments", {})
+                    charges_enabled = card_payments.get("status") == "active"
+                    
+                    # 检查 recipient 配置中的 payouts
+                    recipient = configuration.get("recipient", {})
+                    recipient_capabilities = recipient.get("capabilities", {})
+                    stripe_balance = recipient_capabilities.get("stripe_balance", {})
+                    payouts = stripe_balance.get("payouts", {})
+                    payouts_enabled = payouts.get("status") == "active"
+                    
+                    logger.info(f"Account updated (V2) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+                else:
                 # V1 API 使用传统字段
                 details_submitted = account.get("details_submitted", False)
                 charges_enabled = account.get("charges_enabled", False)
                 payouts_enabled = account.get("payouts_enabled", False)
                 
                 logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-            
-            # 检查状态变化（对 V1 和 V2 都适用）
-            previous_attributes = event.get("data", {}).get("previous_attributes", {})
-            was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
-            was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
-            
-            # 如果账户刚刚激活，记录日志
-            if not was_charges_enabled and charges_enabled:
-                logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
-            
-            # 如果账户刚刚启用提现，记录日志
-            if not was_payouts_enabled and payouts_enabled:
-                logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
-        else:
-            # 如果通过 account_id 找不到，尝试通过 metadata
-            user_id = account.get("metadata", {}).get("user_id")
-            if user_id:
-                user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-                if user:
-                    # 更新用户的 stripe_account_id（可能之前没有保存）
-                    user.stripe_account_id = account_id
-                    db.commit()
-                    logger.info(f"Updated stripe_account_id for user {user_id} from account.updated webhook")
-                else:
-                    logger.warning(f"Account.updated event for account {account_id} with metadata user_id {user_id}, but user not found")
+                
+                # 检查状态变化（对 V1 和 V2 都适用）
+                previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
+                was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
+                
+                # 如果账户刚刚激活，记录日志
+                if not was_charges_enabled and charges_enabled:
+                    logger.info(f"Stripe Connect account activated for user {user.id}: account_id={account_id}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
+                
+                # 如果账户刚刚启用提现，记录日志
+                if not was_payouts_enabled and payouts_enabled:
+                    logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
             else:
-                logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
-    
-    # 处理账户关闭事件（V2 API）
-    elif event_type == "v2.core.account.closed":
-        account = event_data
-        account_id = account.get("id")
+                # 如果通过 account_id 找不到，尝试通过 metadata
+                user_id = account.get("metadata", {}).get("user_id")
+                if user_id:
+                    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                    if user:
+                        # 更新用户的 stripe_account_id（可能之前没有保存）
+                        user.stripe_account_id = account_id
+                        db.commit()
+                        logger.info(f"Updated stripe_account_id for user {user_id} from account.updated webhook")
+                    else:
+                        logger.warning(f"Account.updated event for account {account_id} with metadata user_id {user_id}, but user not found")
+                else:
+                    logger.warning(f"Account.updated event for account {account_id}, but no matching user found (no metadata.user_id)")
         
-        if not account_id:
+        # 处理账户关闭事件（V2 API）
+        elif event_type == "v2.core.account.closed":
+            account = event_data
+            account_id = account.get("id")
+            
+            if not account_id:
             logger.warning(f"{event_type} event missing account ID")
             return {"status": "success"}
         
@@ -1710,13 +1710,13 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             # db.commit()
         else:
             logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
-    
-    # 处理账户要求更新事件（V2 API）
-    elif event_type == "v2.core.account.requirements.updated":
-        account = event_data
-        account_id = account.get("id")
         
-        if not account_id:
+        # 处理账户要求更新事件（V2 API）
+        elif event_type == "v2.core.account.requirements.updated":
+            account = event_data
+            account_id = account.get("id")
+            
+            if not account_id:
             logger.warning(f"{event_type} event missing account ID")
             return {"status": "success"}
         
@@ -1777,13 +1777,13 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.warning(f"{event_type} event for account {account_id} with metadata user_id {user_id}, but user not found")
             else:
                 logger.warning(f"{event_type} event for account {account_id}, but no matching user found (no metadata.user_id)")
-    
-    # 处理账户能力更新事件（如支付能力、提现能力等）
-    elif event_type == "capability.updated":
-        capability = event_data
-        account_id = capability.get("account")
         
-        if account_id:
+        # 处理账户能力更新事件（如支付能力、提现能力等）
+        elif event_type == "capability.updated":
+            capability = event_data
+            account_id = capability.get("account")
+            
+            if account_id:
             user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             if user:
                 status = capability.get("status")
@@ -1791,29 +1791,29 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Capability updated for user {user.id}: account_id={account_id}, type={capability_type}, status={status}")
             else:
                 logger.warning(f"Capability.updated event for account {account_id}, but no matching user found")
-    
-    # 处理外部账户创建事件（银行账户等）
-    elif event_type == "account.external_account.created":
-        external_account = event_data
-        account_id = external_account.get("account")
         
-        if account_id:
+        # 处理外部账户创建事件（银行账户等）
+        elif event_type == "account.external_account.created":
+            external_account = event_data
+            account_id = external_account.get("account")
+            
+            if account_id:
             user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             if user:
                 account_type = external_account.get("object")  # "bank_account" or "card"
                 logger.info(f"External account created for user {user.id}: account_id={account_id}, type={account_type}")
-    
-    # 处理 V2 API 配置更新事件
-    elif event_type in [
-        "v2.core.account[configuration.merchant].updated",
-        "v2.core.account[configuration.merchant].capability_status_updated",
-        "v2.core.account[configuration.recipient].updated",
-        "v2.core.account[configuration.recipient].capability_status_updated",
-        "v2.core.account[configuration.customer].updated",
-        "v2.core.account[configuration.customer].capability_status_updated",
-        "v2.core.account[defaults].updated",
-        "v2.core.account[identity].updated"
-    ]:
+        
+        # 处理 V2 API 配置更新事件
+        elif event_type in [
+            "v2.core.account[configuration.merchant].updated",
+            "v2.core.account[configuration.merchant].capability_status_updated",
+            "v2.core.account[configuration.recipient].updated",
+            "v2.core.account[configuration.recipient].capability_status_updated",
+            "v2.core.account[configuration.customer].updated",
+            "v2.core.account[configuration.customer].capability_status_updated",
+            "v2.core.account[defaults].updated",
+            "v2.core.account[identity].updated"
+        ]:
         account = event_data
         account_id = account.get("id")
         
@@ -1843,30 +1843,30 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Account configuration updated (V2) for user {user.id}: account_id={account_id}, event={event_type}")
         else:
             logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
-    
-    # 处理账户人员事件（V2 API）
-    elif event_type in [
-        "v2.core.account_person.created",
-        "v2.core.account_person.updated",
-        "v2.core.account_person.deleted"
-    ]:
-        person = event_data
-        account_id = person.get("account")
         
-        if account_id:
+        # 处理账户人员事件（V2 API）
+        elif event_type in [
+            "v2.core.account_person.created",
+            "v2.core.account_person.updated",
+            "v2.core.account_person.deleted"
+        ]:
+            person = event_data
+            account_id = person.get("account")
+            
+            if account_id:
             user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             if user:
                 person_id = person.get("id")
                 logger.info(f"Account person {event_type} (V2) for user {user.id}: account_id={account_id}, person_id={person_id}")
             else:
                 logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
-    
-    # 处理账户取消授权事件
-    elif event_type == "account.application.deauthorized":
-        account = event_data
-        account_id = account.get("id")
         
-        if account_id:
+        # 处理账户取消授权事件
+        elif event_type == "account.application.deauthorized":
+            account = event_data
+            account_id = account.get("id")
+            
+            if account_id:
             # 通过 stripe_account_id 查找用户
             user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             if user:
