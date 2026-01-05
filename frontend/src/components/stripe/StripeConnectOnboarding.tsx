@@ -389,6 +389,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                     
                     // 创建一个持久的 fetchClientSecret 函数
                     const clientSecretValue = clientSecret;
+                    // 将应用语言映射到 Stripe 支持的语言代码
+                    const stripeLocale = language === 'zh' ? 'zh-CN' : 'en';
                     const instance = loadConnectAndInitialize({
                       publishableKey,
                       fetchClientSecret: async () => {
@@ -406,6 +408,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                         // 如果刷新失败，返回缓存的 client_secret
                         return clientSecretValue;
                       },
+                      locale: stripeLocale, // 设置 Stripe Connect 组件的语言
                       appearance: {
                         overlays: "dialog",
                         variables: {

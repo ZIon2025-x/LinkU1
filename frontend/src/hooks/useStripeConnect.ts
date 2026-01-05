@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { loadConnectAndInitialize } from "@stripe/connect-js";
 import api from "../api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 /**
  * Hook for managing Stripe Connect instance
@@ -13,7 +14,11 @@ export const useStripeConnect = (
   enableAccountOnboarding: boolean = false,
   disableStripeUserAuthentication: boolean = false
 ) => {
+  const { language } = useLanguage();
   const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
+  
+  // 将应用语言映射到 Stripe 支持的语言代码
+  const stripeLocale = language === 'zh' ? 'zh-CN' : 'en';
 
   useEffect(() => {
     if (!connectedAccountId) {
@@ -77,6 +82,7 @@ export const useStripeConnect = (
       const instance = loadConnectAndInitialize({
         publishableKey,
         fetchClientSecret,
+        locale: stripeLocale, // 设置 Stripe Connect 组件的语言
         appearance: {
           overlays: "dialog",
           variables: {
@@ -91,7 +97,7 @@ export const useStripeConnect = (
     } catch (error) {
       console.error("Error initializing Stripe Connect:", error);
     }
-  }, [connectedAccountId, enablePayouts, enableAccountManagement, enableAccountOnboarding, disableStripeUserAuthentication]);
+  }, [connectedAccountId, enablePayouts, enableAccountManagement, enableAccountOnboarding, disableStripeUserAuthentication, stripeLocale]);
 
   return stripeConnectInstance;
 };
