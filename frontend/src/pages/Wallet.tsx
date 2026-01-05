@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCurrentUser, getPointsAccount, getPointsTransactions } from '../api';
+import { fetchCurrentUser, getPointsAccount, getPointsTransactions, getStripeAccountTransactions, getStripeAccountBalance, getPaymentHistory } from '../api';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useStripeConnect } from '../hooks/useStripeConnect';
 import {
   ConnectComponentsProvider,
   ConnectPayouts,
+  ConnectPayments,
 } from '@stripe/react-connect-js';
 
 interface PointsAccount {
@@ -36,9 +37,11 @@ interface PointsTransaction {
 
 const Wallet: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [balance, setBalance] = useState(0);  // 钱包余额（金额）
   const [transactions, setTransactions] = useState<any[]>([]);  // 钱包交易记录
+  const [transactionsLoading, setTransactionsLoading] = useState(false);  // 交易记录加载状态
+  const [transactionsTotal, setTransactionsTotal] = useState(0);  // 交易记录总数
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null);  // 积分账户
   const [pointsTransactions, setPointsTransactions] = useState<PointsTransaction[]>([]);  // 积分交易记录
   const [activeTab, setActiveTab] = useState<'balance' | 'points'>('balance');  // 当前标签页
@@ -49,10 +52,10 @@ const Wallet: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   
   // Stripe 相关状态
-  const [hasStripeAccount, setHasStripeAccount] = useState(false);
+  const [hasStripeAccount, setHasStripeAccount] = useState<boolean | null>(null);  // null 表示未检查
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
-  // 启用 payouts 组件（用于钱包页面显示余额和提现功能）
-  const stripeConnectInstance = useStripeConnect(stripeAccountId, true);
+  // 启用 payouts 和 payments 组件（用于钱包页面显示余额、提现和支付列表）
+  const stripeConnectInstance = useStripeConnect(stripeAccountId, true, false, false, true);
 
   // 检测移动端
   useEffect(() => {
@@ -65,33 +68,145 @@ const Wallet: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // 加载钱包数据
-    loadWalletData();
-    // 加载积分数据
-    loadPointsData();
-    // 检查是否有 Stripe 账户
+    // 检查是否有 Stripe 账户（先检查，因为其他加载依赖这个状态）
     checkStripeAccount();
   }, []);
+
+  // 当 Stripe 账户状态确定后，加载数据
+  useEffect(() => {
+    if (hasStripeAccount !== null) {
+      // 加载钱包数据
+      loadWalletData();
+      // 加载积分数据
+      loadPointsData();
+      // 如果当前在余额标签页，加载交易记录
+      if (activeTab === 'balance') {
+        loadWalletTransactions();
+      }
+    }
+  }, [hasStripeAccount, stripeAccountId]);
 
   useEffect(() => {
     if (activeTab === 'points' && pointsAccount) {
       loadPointsTransactions();
+    } else if (activeTab === 'balance') {
+      loadWalletTransactions();
     }
-  }, [activeTab, pointsPage]);
+  }, [activeTab, pointsPage, hasStripeAccount]);
 
   const loadWalletData = async () => {
     try {
-      // TODO: 调用真实的钱包API
-      // const walletData = await getWalletData();
-      // setBalance(walletData.balance);
-      // setTransactions(walletData.transactions);
-      
-      // 暂时显示空数据，等待后端API实现
-      setBalance(0);
-      setTransactions([]);
+      // 如果有 Stripe 账户，获取余额
+      if (hasStripeAccount && stripeAccountId) {
+        try {
+          const balanceData = await getStripeAccountBalance();
+          // Stripe 余额以分为单位，需要转换为元
+          const available = balanceData.available?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+          setBalance(available / 100);
+        } catch (error) {
+          console.error('Error loading Stripe balance:', error);
+          setBalance(0);
+        }
+      } else {
+        // 没有 Stripe 账户时，余额为 0
+        setBalance(0);
+      }
     } catch (error) {
-            setBalance(0);
+      console.error('Error loading wallet data:', error);
+      setBalance(0);
+    }
+  };
+
+  // 加载钱包交易记录
+  const loadWalletTransactions = async () => {
+    try {
+      setTransactionsLoading(true);
+      
+      if (hasStripeAccount && stripeAccountId) {
+        // 如果有 Stripe 账户，加载 Stripe 交易记录
+        try {
+          const result = await getStripeAccountTransactions({ limit: 50 });
+          const formattedTransactions = (result.transactions || []).map((tx: any) => ({
+            id: tx.id,
+            type: tx.type === 'income' ? 'income' : 'expense',
+            amount: tx.amount,
+            currency: tx.currency || 'GBP',
+            description: tx.description || (tx.type === 'income' ? t('wallet.transactionIncome') : t('wallet.transactionExpense')),
+            date: new Date(tx.created_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-GB', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            status: tx.status || 'completed',
+            source: tx.source || 'stripe'
+          }));
+          setTransactions(formattedTransactions);
+          setTransactionsTotal(result.total || formattedTransactions.length);
+        } catch (error: any) {
+          console.error('Error loading Stripe transactions:', error);
+          // 如果加载失败，尝试加载支付历史记录作为备选
+          try {
+            const paymentHistory = await getPaymentHistory({ limit: 50 });
+            const formattedPayments = (paymentHistory.payments || []).map((payment: any) => ({
+              id: payment.id,
+              type: 'expense',
+              amount: payment.final_amount / 100,
+              currency: payment.currency || 'GBP',
+              description: payment.task ? (language === 'zh' ? `支付任务：${payment.task.title}` : `Payment for task: ${payment.task.title}`) : (language === 'zh' ? '支付' : 'Payment'),
+              date: new Date(payment.created_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-GB', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              status: payment.status,
+              source: 'payment'
+            }));
+            setTransactions(formattedPayments);
+            setTransactionsTotal(paymentHistory.total || formattedPayments.length);
+          } catch (paymentError) {
+            console.error('Error loading payment history:', paymentError);
+            setTransactions([]);
+            setTransactionsTotal(0);
+          }
+        }
+      } else {
+        // 没有 Stripe 账户时，加载支付历史记录
+        try {
+          const paymentHistory = await getPaymentHistory({ limit: 50 });
+          const formattedPayments = (paymentHistory.payments || []).map((payment: any) => ({
+            id: payment.id,
+            type: 'expense',
+            amount: payment.final_amount / 100,
+            currency: payment.currency || 'GBP',
+            description: payment.task ? `支付任务：${payment.task.title}` : '支付',
+            date: new Date(payment.created_at).toLocaleString('zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            status: payment.status,
+            source: 'payment'
+          }));
+          setTransactions(formattedPayments);
+          setTransactionsTotal(paymentHistory.total || formattedPayments.length);
+        } catch (error) {
+          console.error('Error loading payment history:', error);
+          setTransactions([]);
+          setTransactionsTotal(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading wallet transactions:', error);
       setTransactions([]);
+      setTransactionsTotal(0);
+    } finally {
+      setTransactionsLoading(false);
     }
   };
 
@@ -129,11 +244,21 @@ const Wallet: React.FC = () => {
       if (response.data && response.data.account_id) {
         setHasStripeAccount(true);
         setStripeAccountId(response.data.account_id);
+      } else {
+        setHasStripeAccount(false);
+        setStripeAccountId(null);
       }
-    } catch (error) {
-      // 没有账户是正常的
-      setHasStripeAccount(false);
-      setStripeAccountId(null);
+    } catch (error: any) {
+      // 404 表示没有账户，这是正常的
+      if (error.response?.status === 404) {
+        setHasStripeAccount(false);
+        setStripeAccountId(null);
+      } else {
+        // 其他错误，也设置为 false，但记录错误
+        console.error('Error checking Stripe account:', error);
+        setHasStripeAccount(false);
+        setStripeAccountId(null);
+      }
     }
   };
 
@@ -409,16 +534,91 @@ const Wallet: React.FC = () => {
           )}
         </div>
 
-        {/* Stripe Payouts 组件 - 仅余额标签页显示，如果有 Stripe 账户 */}
+        {/* Stripe Payouts 和 Payments 组件 - 仅余额标签页显示，如果有 Stripe 账户 */}
         {activeTab === 'balance' && hasStripeAccount && stripeConnectInstance && (
           <div style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
             padding: isMobile ? '24px' : '36px 40px',
             background: 'linear-gradient(to bottom, #f8fafc, #ffffff)',
             borderTop: '1px solid rgba(226, 232, 240, 0.5)'
           }}>
-            <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
-              <ConnectPayouts />
-            </ConnectComponentsProvider>
+            {/* 支付列表 */}
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: isMobile ? '20px' : '24px',
+                borderBottom: '1px solid #e2e8f0',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: '#1a202c',
+                  letterSpacing: '-0.3px'
+                }}>
+                  💳 {language === 'zh' ? '支付记录' : 'Payment History'}
+                </h3>
+                <p style={{
+                  margin: '8px 0 0 0',
+                  fontSize: '14px',
+                  color: '#64748b',
+                  lineHeight: '1.5'
+                }}>
+                  {language === 'zh' ? '查看所有支付交易，包括退款和争议管理' : 'View all payment transactions, including refunds and dispute management'}
+                </p>
+              </div>
+              <div style={{ padding: isMobile ? '16px' : '20px' }}>
+                <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+                  <ConnectPayments />
+                </ConnectComponentsProvider>
+              </div>
+            </div>
+            
+            {/* 提现管理 */}
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: isMobile ? '20px' : '24px',
+                borderBottom: '1px solid #e2e8f0',
+                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  color: '#1a202c',
+                  letterSpacing: '-0.3px'
+                }}>
+                  💰 {language === 'zh' ? '余额与提现' : 'Balance & Payouts'}
+                </h3>
+                <p style={{
+                  margin: '8px 0 0 0',
+                  fontSize: '14px',
+                  color: '#64748b',
+                  lineHeight: '1.5'
+                }}>
+                  {language === 'zh' ? '管理您的账户余额和提现设置' : 'Manage your account balance and payout settings'}
+                </p>
+              </div>
+              <div style={{ padding: isMobile ? '16px' : '20px' }}>
+                <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+                  <ConnectPayouts />
+                </ConnectComponentsProvider>
+              </div>
+            </div>
           </div>
         )}
 
@@ -524,10 +724,20 @@ const Wallet: React.FC = () => {
             }</span>
           </h2>
           
-          {/* 余额交易记录 - 如果没有 Stripe 账户，显示普通交易记录 */}
-          {activeTab === 'balance' && !hasStripeAccount && (
+          {/* 余额交易记录 */}
+          {activeTab === 'balance' && (
             <>
-              {transactions.length === 0 ? (
+              {transactionsLoading ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  color: '#94a3b8',
+                  fontSize: '16px'
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>⏳</div>
+                  <div style={{ fontWeight: '500', color: '#64748b' }}>{t('wallet.transactionLoading')}</div>
+                </div>
+              ) : transactions.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '60px 20px',
@@ -538,8 +748,8 @@ const Wallet: React.FC = () => {
                   border: '2px dashed #e2e8f0'
                 }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📭</div>
-                  <div style={{ fontWeight: '500', color: '#64748b' }}>暂无交易记录</div>
-                  <div style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>您的交易记录将显示在这里</div>
+                  <div style={{ fontWeight: '500', color: '#64748b' }}>{t('wallet.transactionNoRecords')}</div>
+                  <div style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>{t('wallet.transactionNoRecordsDesc')}</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

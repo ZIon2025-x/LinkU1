@@ -1357,6 +1357,11 @@
     "pointsEquivalent": "(Equivalent to approximately £{amount}, for reference only)",
     "depositComingSoon": "Deposit feature is under development...",
     "withdrawComingSoon": "Withdraw feature is under development...",
+    "transactionIncome": "Income",
+    "transactionExpense": "Expense",
+    "transactionLoading": "Loading transactions...",
+    "transactionNoRecords": "No transactions found",
+    "transactionNoRecordsDesc": "Your transaction history will be displayed here",
     "stripe": {
       "paymentAccount": "Payment Account",
       "registerPaymentAccount": "Register Payment Account",

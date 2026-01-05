@@ -1535,6 +1535,7 @@ class StripeConnectAccountSessionRequest(BaseModel):
     enable_payouts: Optional[bool] = False  # 是否启用 payouts 组件
     enable_account_management: Optional[bool] = False  # 是否启用 account_management 组件
     enable_account_onboarding: Optional[bool] = False  # 是否启用 account_onboarding 组件
+    enable_payments: Optional[bool] = False  # 是否启用 payments 组件（用于显示支付列表）
     disable_stripe_user_authentication: Optional[bool] = False  # 是否禁用 Stripe 用户认证（仅适用于 Custom 账户）
 
 

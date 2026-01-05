@@ -1954,6 +1954,32 @@ export const getPointsTransactions = async (params?: {
   return res.data;
 };
 
+// 获取 Stripe Connect 账户交易记录
+export const getStripeAccountTransactions = async (params?: {
+  limit?: number;
+  starting_after?: string;
+}) => {
+  const res = await api.get('/api/stripe/connect/account/transactions', { params });
+  return res.data;
+};
+
+// 获取 Stripe Connect 账户余额
+export const getStripeAccountBalance = async () => {
+  const res = await api.get('/api/stripe/connect/account/balance');
+  return res.data;
+};
+
+// 获取支付历史记录
+export const getPaymentHistory = async (params?: {
+  skip?: number;
+  limit?: number;
+  task_id?: number;
+  status?: string;
+}) => {
+  const res = await api.get('/api/coupon-points/payment-history', { params });
+  return res.data;
+};
+
 // ===========================================
 // 多人任务相关API
 // ===========================================

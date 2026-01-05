@@ -12,6 +12,7 @@ export const useStripeConnect = (
   enablePayouts: boolean = false,
   enableAccountManagement: boolean = false,
   enableAccountOnboarding: boolean = false,
+  enablePayments: boolean = false,
   disableStripeUserAuthentication: boolean = false
 ) => {
   const { language } = useLanguage();
@@ -34,6 +35,7 @@ export const useStripeConnect = (
           enable_payouts: enablePayouts,  // 如果启用 payouts，传递此参数
           enable_account_management: enableAccountManagement,  // 如果启用 account_management，传递此参数
           enable_account_onboarding: enableAccountOnboarding,  // 如果启用 account_onboarding，传递此参数
+          enable_payments: enablePayments,  // 如果启用 payments，传递此参数
           disable_stripe_user_authentication: disableStripeUserAuthentication,  // 如果禁用 Stripe 用户认证，传递此参数
         });
 
@@ -97,7 +99,7 @@ export const useStripeConnect = (
     } catch (error) {
       console.error("Error initializing Stripe Connect:", error);
     }
-  }, [connectedAccountId, enablePayouts, enableAccountManagement, enableAccountOnboarding, disableStripeUserAuthentication, stripeLocale]);
+  }, [connectedAccountId, enablePayouts, enableAccountManagement, enableAccountOnboarding, enablePayments, disableStripeUserAuthentication, stripeLocale]);
 
   return stripeConnectInstance;
 };

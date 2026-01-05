@@ -214,6 +214,7 @@ def create_account_session_safe(
     enable_payouts: bool = False,
     enable_account_management: bool = False,
     enable_account_onboarding: bool = False,
+    enable_payments: bool = False,
     disable_stripe_user_authentication: bool = False
 ) -> stripe.AccountSession:
     """
@@ -227,6 +228,7 @@ def create_account_session_safe(
         enable_payouts: 是否启用 payouts 组件（用于钱包和设置页面）
         enable_account_management: 是否启用 account_management 组件（用于设置页面管理账户信息）
         enable_account_onboarding: 是否启用 account_onboarding 组件（用于账户入驻）
+        enable_payments: 是否启用 payments 组件（用于显示支付列表，支持退款和争议管理）
         disable_stripe_user_authentication: 是否禁用 Stripe 用户认证（仅适用于 Custom 账户且平台负责收集信息）
     """
     # 显式创建 components 配置，确保所有布尔值都是 Python 布尔类型
@@ -293,6 +295,18 @@ def create_account_session_safe(
                 # 注意：disable_stripe_user_authentication 默认值取决于 external_account_collection
                 # 如果 external_account_collection 为 true，则 disable_stripe_user_authentication 默认为 false
                 # 如果需要禁用 Stripe 用户认证，需要明确设置（仅适用于 Custom 账户且平台负责收集信息）
+            }
+        }
+    
+    # 如果启用 payments，添加 payments 组件配置
+    if enable_payments:
+        components_config["payments"] = {
+            "enabled": bool(True),
+            "features": {
+                "refund_management": bool(True),  # 启用退款管理
+                "dispute_management": bool(True),  # 启用争议管理
+                "capture_payments": bool(True),  # 启用支付捕获
+                "destination_on_behalf_of_charge_management": bool(False),  # 默认禁用，如果需要可以启用
             }
         }
     
@@ -1417,6 +1431,7 @@ def create_account_session(
         enable_payouts = getattr(request, 'enable_payouts', False)
         enable_account_management = getattr(request, 'enable_account_management', False)
         enable_account_onboarding = getattr(request, 'enable_account_onboarding', False)
+        enable_payments = getattr(request, 'enable_payments', False)
         disable_stripe_user_authentication = getattr(request, 'disable_stripe_user_authentication', False)
         
         # 验证账户所有权（通过 metadata 中的 user_id）
@@ -1451,6 +1466,7 @@ def create_account_session(
             enable_payouts=enable_payouts,
             enable_account_management=enable_account_management,
             enable_account_onboarding=enable_account_onboarding,
+            enable_payments=enable_payments,
             disable_stripe_user_authentication=disable_stripe_user_authentication
         )
         

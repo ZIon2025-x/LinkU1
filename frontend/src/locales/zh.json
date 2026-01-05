@@ -1303,6 +1303,11 @@
     "pointsEquivalent": "（等值约 £{amount}，仅供参考）",
     "depositComingSoon": "充值功能开发中...",
     "withdrawComingSoon": "提现功能开发中...",
+    "transactionIncome": "收入",
+    "transactionExpense": "支出",
+    "transactionLoading": "加载交易记录中...",
+    "transactionNoRecords": "暂无交易记录",
+    "transactionNoRecordsDesc": "您的交易记录将显示在这里",
     "stripe": {
       "paymentAccount": "收款账户",
       "registerPaymentAccount": "注册收款账户",
