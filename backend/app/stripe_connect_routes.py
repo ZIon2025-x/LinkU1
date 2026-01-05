@@ -1545,77 +1545,77 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
         # 处理账户创建事件（V1 和 V2）
         if event_type == "account.created" or event_type == "v2.core.account.created":
             account = event_data
-        account_id = account.get("id")
-        
-        if not account_id:
-            logger.warning("account.created event missing account ID")
-            return {"status": "success"}
-        
-        # 尝试通过 metadata 查找用户
-        user_id = account.get("metadata", {}).get("user_id")
-        if user_id:
-            user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-            if user:
-                # 如果用户还没有 stripe_account_id，则设置
-                if not user.stripe_account_id:
-                    try:
-                        user.stripe_account_id = account_id
-                        db.add(user)  # 确保对象被添加到会话
-                        db.commit()
-                        db.refresh(user)  # 刷新对象
-                        
-                        # 验证保存是否成功
-                        db_user = db.query(models.User).filter(models.User.id == user.id).first()
-                        if db_user and db_user.stripe_account_id == account_id:
-                            logger.info(f"✅ Webhook verified: Account {account_id} saved to database for user {user.id}")
-                        else:
-                            logger.error(f"❌ Webhook failed to verify: stripe_account_id not saved for user {user.id}")
-                            # 尝试再次保存
-                            if db_user:
-                                db_user.stripe_account_id = account_id
-                                db.commit()
-                                db.refresh(db_user)
-                                logger.info(f"Webhook retry: Account {account_id} saved to database for user {user.id}")
-                    except Exception as e:
-                        # 捕获唯一性约束错误（如果账户ID已被其他用户使用）
-                        db.rollback()
-                        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
-                            logger.warning(f"Account {account_id} already assigned to another user, skipping for user {user.id}")
-                        else:
-                            logger.error(f"Error saving account_id for user {user.id}: {e}", exc_info=True)
-                else:
-                    # 用户已经有账户，检查是否是同一个账户
-                    if user.stripe_account_id == account_id:
-                        logger.info(f"Account created event for user {user.id}, account_id already set: {user.stripe_account_id}")
-                    else:
-                        logger.warning(
-                            f"Account created event for user {user.id}, but user already has different account: "
-                            f"{user.stripe_account_id} (new: {account_id}). "
-                            f"Rejecting new account creation - each user can only have one Stripe Connect account."
-                        )
-                        # 不更新，保持现有账户（每个用户只能有一个账户）
-                        # 验证现有账户的 metadata 确保它属于该用户
+            account_id = account.get("id")
+            
+            if not account_id:
+                logger.warning("account.created event missing account ID")
+                return {"status": "success"}
+            
+            # 尝试通过 metadata 查找用户
+            user_id = account.get("metadata", {}).get("user_id")
+            if user_id:
+                user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+                if user:
+                    # 如果用户还没有 stripe_account_id，则设置
+                    if not user.stripe_account_id:
                         try:
-                            existing_account = stripe.Account.retrieve(user.stripe_account_id)
-                            existing_metadata = getattr(existing_account, 'metadata', {})
-                            if isinstance(existing_metadata, dict):
-                                existing_user_id = existing_metadata.get('user_id')
-                            else:
-                                existing_user_id = getattr(existing_metadata, 'user_id', None)
+                            user.stripe_account_id = account_id
+                            db.add(user)  # 确保对象被添加到会话
+                            db.commit()
+                            db.refresh(user)  # 刷新对象
                             
-                            if existing_user_id and str(existing_user_id) == str(user.id):
-                                logger.info(f"Existing account {user.stripe_account_id} verified to belong to user {user.id}")
+                            # 验证保存是否成功
+                            db_user = db.query(models.User).filter(models.User.id == user.id).first()
+                            if db_user and db_user.stripe_account_id == account_id:
+                                logger.info(f"✅ Webhook verified: Account {account_id} saved to database for user {user.id}")
                             else:
-                                logger.error(
-                                    f"Existing account {user.stripe_account_id} metadata.user_id={existing_user_id} "
-                                    f"doesn't match user.id={user.id}. This is a data inconsistency issue."
-                                )
-                        except stripe.error.StripeError as e:
-                            logger.error(f"Error verifying existing account {user.stripe_account_id}: {e}")
+                                logger.error(f"❌ Webhook failed to verify: stripe_account_id not saved for user {user.id}")
+                                # 尝试再次保存
+                                if db_user:
+                                    db_user.stripe_account_id = account_id
+                                    db.commit()
+                                    db.refresh(db_user)
+                                    logger.info(f"Webhook retry: Account {account_id} saved to database for user {user.id}")
+                        except Exception as e:
+                            # 捕获唯一性约束错误（如果账户ID已被其他用户使用）
+                            db.rollback()
+                            if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                                logger.warning(f"Account {account_id} already assigned to another user, skipping for user {user.id}")
+                            else:
+                                logger.error(f"Error saving account_id for user {user.id}: {e}", exc_info=True)
+                    else:
+                        # 用户已经有账户，检查是否是同一个账户
+                        if user.stripe_account_id == account_id:
+                            logger.info(f"Account created event for user {user.id}, account_id already set: {user.stripe_account_id}")
+                        else:
+                            logger.warning(
+                                f"Account created event for user {user.id}, but user already has different account: "
+                                f"{user.stripe_account_id} (new: {account_id}). "
+                                f"Rejecting new account creation - each user can only have one Stripe Connect account."
+                            )
+                            # 不更新，保持现有账户（每个用户只能有一个账户）
+                            # 验证现有账户的 metadata 确保它属于该用户
+                            try:
+                                existing_account = stripe.Account.retrieve(user.stripe_account_id)
+                                existing_metadata = getattr(existing_account, 'metadata', {})
+                                if isinstance(existing_metadata, dict):
+                                    existing_user_id = existing_metadata.get('user_id')
+                                else:
+                                    existing_user_id = getattr(existing_metadata, 'user_id', None)
+                                
+                                if existing_user_id and str(existing_user_id) == str(user.id):
+                                    logger.info(f"Existing account {user.stripe_account_id} verified to belong to user {user.id}")
+                                else:
+                                    logger.error(
+                                        f"Existing account {user.stripe_account_id} metadata.user_id={existing_user_id} "
+                                        f"doesn't match user.id={user.id}. This is a data inconsistency issue."
+                                    )
+                            except stripe.error.StripeError as e:
+                                logger.error(f"Error verifying existing account {user.stripe_account_id}: {e}")
+                else:
+                    logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
             else:
-                logger.warning(f"Account.created event for account {account_id} with metadata user_id {user_id}, but user not found")
-        else:
-            logger.warning(f"Account.created event for account {account_id}, but no metadata.user_id found")
+                logger.warning(f"Account.created event for account {account_id}, but no metadata.user_id found")
     
     # 处理账户更新事件（V1 和 V2）
     elif event_type == "account.updated" or event_type == "v2.core.account.updated":

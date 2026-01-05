@@ -1802,24 +1802,24 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {/* 提交按钮 */}
           <button
             type="submit"
-            disabled={
+            disabled={Boolean(
               loading || 
               (!isLogin && !agreedToTerms) || 
               (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
               (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
               // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
-              (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && captchaSiteKey && !codeSent && !captchaToken)
-            }
+              (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && !!captchaSiteKey && !codeSent && !captchaToken)
+            )}
             style={{
               width: '100%',
               padding: '14px',
-              backgroundColor: (
+              backgroundColor: Boolean(
                 loading || 
                 (!isLogin && !agreedToTerms) || 
                 (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
                 (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
                 // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
-                (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && captchaSiteKey && !codeSent && !captchaToken)
+                (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && !!captchaSiteKey && !codeSent && !captchaToken)
               ) ? '#ccc' : '#3b82f6',
               color: '#fff',
               border: 'none',
