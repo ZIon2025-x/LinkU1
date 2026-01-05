@@ -619,9 +619,9 @@ const Wallet: React.FC = () => {
                               width: '44px',
                               height: '44px',
                               borderRadius: '12px',
-                              background: color === '#10b981' ? 'linear-gradient(135deg, #10b981, #059669)' :
-                                        color === '#f59e0b' ? 'linear-gradient(135deg, #f59e0b, #d97706)' :
-                                        color === '#3b82f6' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' :
+                              background: color === '#4CAF50' ? 'linear-gradient(135deg, #4CAF50, #45a049)' :
+                                        color === '#FF9800' ? 'linear-gradient(135deg, #FF9800, #f57c00)' :
+                                        color === '#2196F3' ? 'linear-gradient(135deg, #2196F3, #1976d2)' :
                                         'linear-gradient(135deg, #94a3b8, #64748b)',
                               display: 'flex',
                               alignItems: 'center',
