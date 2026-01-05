@@ -297,6 +297,17 @@ const TaskPayment: React.FC = () => {
           // 支付成功，停止轮询
           message.success(language === 'zh' ? '支付已确认！' : 'Payment confirmed!');
           
+          // 设置 localStorage 标记，用于跨标签页通信
+          if (taskId) {
+            localStorage.setItem(`payment_success_${taskId}`, 'true');
+            // 触发 storage 事件（同源页面可以监听）
+            window.dispatchEvent(new StorageEvent('storage', {
+              key: `payment_success_${taskId}`,
+              newValue: 'true',
+              storageArea: localStorage
+            }));
+          }
+          
           // 如果有返回 URL，通知原页面并关闭支付页面
           if (returnUrl && window.opener) {
             window.opener.postMessage({

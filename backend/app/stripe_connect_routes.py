@@ -1281,26 +1281,61 @@ def get_account_transactions(
         
         transactions = []
         
+        # 获取支付记录（PaymentIntents - 支付意图，包含所有支付信息）
+        # 注意：在Stripe Connect中，destination charges和separate charges模式下，
+        # 支付记录可能不会直接显示为Charge，而是需要通过PaymentIntent来获取
+        try:
+            payment_intents = stripe.PaymentIntent.list(
+                limit=limit * 2,  # 获取更多记录，因为后面会去重和合并
+                starting_after=starting_after,
+                stripe_account=current_user.stripe_account_id
+            )
+            for pi in payment_intents.data:
+                # 只处理成功的支付
+                if pi.status == 'succeeded' and pi.amount > 0:
+                    transactions.append({
+                        "id": pi.id,
+                        "type": "income",
+                        "amount": pi.amount / 100,
+                        "currency": pi.currency.upper(),
+                        "description": pi.description or f"支付 #{pi.id[:12]}",
+                        "status": pi.status,
+                        "created": pi.created,
+                        "created_at": datetime.fromtimestamp(pi.created, tz=timezone.utc).isoformat(),
+                        "source": "payment_intent",
+                        "metadata": pi.metadata,
+                        "charge_id": pi.latest_charge if hasattr(pi, 'latest_charge') and pi.latest_charge else None
+                    })
+        except stripe.error.StripeError as e:
+            logger.warning(f"Error retrieving payment intents: {e}")
+        
         # 获取收入记录（Charges - 作为服务者收到的付款）
         try:
             charges = stripe.Charge.list(
-                limit=limit,
+                limit=limit * 2,  # 获取更多记录，因为后面会去重和合并
                 starting_after=starting_after,
                 stripe_account=current_user.stripe_account_id
             )
             for charge in charges.data:
-                transactions.append({
-                    "id": charge.id,
-                    "type": "income",
-                    "amount": charge.amount / 100,
-                    "currency": charge.currency.upper(),
-                    "description": charge.description or f"收款 #{charge.id[:12]}",
-                    "status": charge.status,
-                    "created": charge.created,
-                    "created_at": datetime.fromtimestamp(charge.created, tz=timezone.utc).isoformat(),
-                    "source": "charge",
-                    "metadata": charge.metadata
-                })
+                # 检查是否已经通过PaymentIntent添加过（避免重复）
+                # 如果PaymentIntent已经有对应的charge，就不单独添加charge
+                charge_already_added = any(
+                    tx.get("charge_id") == charge.id or tx.get("id") == charge.id 
+                    for tx in transactions
+                )
+                if not charge_already_added:
+                    transactions.append({
+                        "id": charge.id,
+                        "type": "income",
+                        "amount": charge.amount / 100,
+                        "currency": charge.currency.upper(),
+                        "description": charge.description or f"收款 #{charge.id[:12]}",
+                        "status": charge.status,
+                        "created": charge.created,
+                        "created_at": datetime.fromtimestamp(charge.created, tz=timezone.utc).isoformat(),
+                        "source": "charge",
+                        "metadata": charge.metadata
+                    })
         except stripe.error.StripeError as e:
             logger.warning(f"Error retrieving charges: {e}")
         
@@ -1350,11 +1385,31 @@ def get_account_transactions(
         except stripe.error.StripeError as e:
             logger.warning(f"Error retrieving payouts: {e}")
         
+        # 去重：如果有相同的charge_id或payment_intent_id，只保留一个
+        seen_ids = set()
+        unique_transactions = []
+        for tx in transactions:
+            tx_id = tx.get("id")
+            charge_id = tx.get("charge_id")
+            # 如果这个交易ID已经见过，跳过
+            if tx_id in seen_ids:
+                continue
+            # 如果这个charge_id已经通过其他方式添加过，跳过
+            if charge_id and any(
+                (otx.get("id") == charge_id or otx.get("charge_id") == charge_id) 
+                for otx in unique_transactions
+            ):
+                continue
+            seen_ids.add(tx_id)
+            if charge_id:
+                seen_ids.add(charge_id)
+            unique_transactions.append(tx)
+        
         # 按时间排序（最新的在前）
-        transactions.sort(key=lambda x: x["created"], reverse=True)
+        unique_transactions.sort(key=lambda x: x["created"], reverse=True)
         
         # 限制返回数量
-        transactions = transactions[:limit]
+        transactions = unique_transactions[:limit]
         
         return {
             "transactions": transactions,

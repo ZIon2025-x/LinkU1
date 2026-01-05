@@ -214,6 +214,61 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [isOpen, taskId, loadTaskData]);
 
+  // 监听支付成功消息，刷新任务数据
+  useEffect(() => {
+    const handlePaymentSuccess = (event: MessageEvent) => {
+      // 检查消息类型和任务ID是否匹配
+      if (event.data?.type === 'payment_success' && event.data?.taskId === taskId) {
+        console.log('收到支付成功消息，刷新任务数据:', event.data);
+        // 延迟一下确保后端状态已更新
+        setTimeout(() => {
+          if (taskId) {
+            loadTaskData();
+            loadApplications();
+          }
+        }, 500);
+      }
+    };
+
+    // 只在弹窗打开时监听
+    if (isOpen && taskId) {
+      window.addEventListener('message', handlePaymentSuccess);
+      // 也监听 storage 事件（用于跨标签页通信）
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === `payment_success_${taskId}` && e.newValue === 'true') {
+          console.log('收到支付成功存储事件，刷新任务数据');
+          setTimeout(() => {
+            if (taskId) {
+              loadTaskData();
+              loadApplications();
+            }
+            // 清除标记
+            localStorage.removeItem(`payment_success_${taskId}`);
+          }, 500);
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+      
+      // 检查是否有已存在的支付成功标记
+      const paymentSuccess = localStorage.getItem(`payment_success_${taskId}`);
+      if (paymentSuccess === 'true') {
+        console.log('检测到已存在的支付成功标记，刷新任务数据');
+        setTimeout(() => {
+          if (taskId) {
+            loadTaskData();
+            loadApplications();
+          }
+          localStorage.removeItem(`payment_success_${taskId}`);
+        }, 500);
+      }
+
+      return () => {
+        window.removeEventListener('message', handlePaymentSuccess);
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [isOpen, taskId, loadTaskData, loadApplications]);
+
   // 键盘事件处理（用于图片放大弹窗）
   useEffect(() => {
     if (!enlargedImage || !task || !task.images) return;
@@ -433,15 +488,21 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         const paymentUrl = `/${language}/tasks/${taskId}/payment?${params.toString()}`;
         const paymentWindow = window.open(paymentUrl, '_blank');
         
-        // 监听支付成功消息
+        // 监听支付成功消息（这个监听器会在上面的 useEffect 中统一处理，这里保留作为备用）
         const handlePaymentSuccess = (event: MessageEvent) => {
           if (event.data?.type === 'payment_success' && event.data?.taskId === taskId) {
             // 显示批准成功提示
             message.success(t('taskDetail.approveSuccess') || (language === 'zh' ? '申请已批准！' : 'Application approved!'));
+            // 设置 localStorage 标记，确保即使弹窗关闭也能检测到
+            if (taskId) {
+              localStorage.setItem(`payment_success_${taskId}`, 'true');
+            }
             // 重新加载任务数据
             if (taskId) {
-              loadTaskData();
-              loadApplications();
+              setTimeout(() => {
+                loadTaskData();
+                loadApplications();
+              }, 500);
             }
             window.removeEventListener('message', handlePaymentSuccess);
           }
@@ -628,8 +689,43 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     setActionLoading(true);
     try {
-      await confirmTaskCompletion(taskId!);
-      alert(t('taskDetail.taskConfirmedComplete'));
+      const response = await confirmTaskCompletion(taskId!);
+      const taskData = response.data || response;
+      
+      // 检查是否有转账状态信息
+      if (taskData.transfer_status && taskData.transfer_status !== 'succeeded') {
+        let message = t('taskDetail.taskConfirmedComplete');
+        if (taskData.transfer_status === 'retrying') {
+          const retryInfo = taskData.transfer_retry_info;
+          if (retryInfo && retryInfo.next_retry_at) {
+            const nextRetry = new Date(retryInfo.next_retry_at);
+            const now = new Date();
+            const minutesUntilRetry = Math.ceil((nextRetry.getTime() - now.getTime()) / 60000);
+            message += `\n\n${language === 'zh' 
+              ? `转账处理中，系统将在约 ${minutesUntilRetry} 分钟后自动重试。` 
+              : `Transfer processing, system will automatically retry in approximately ${minutesUntilRetry} minutes.`}`;
+          } else {
+            message += `\n\n${language === 'zh' 
+              ? '转账处理中，系统将自动重试。' 
+              : 'Transfer processing, system will automatically retry.'}`;
+          }
+        } else if (taskData.transfer_status === 'pending') {
+          message += `\n\n${language === 'zh' 
+            ? '转账已提交，等待处理中。' 
+            : 'Transfer submitted, waiting for processing.'}`;
+        } else if (taskData.transfer_status === 'failed') {
+          message += `\n\n${language === 'zh' 
+            ? '转账失败，请联系客服处理。' 
+            : 'Transfer failed, please contact customer service.'}`;
+          if (taskData.transfer_error) {
+            console.error('Transfer error:', taskData.transfer_error);
+          }
+        }
+        alert(message);
+      } else {
+        alert(t('taskDetail.taskConfirmedComplete'));
+      }
+      
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
@@ -637,7 +733,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  }, [user, taskId, t]);
+  }, [user, taskId, t, language]);
 
   const handleApproveTaker = useCallback(async () => {
     if (!user) {
@@ -1382,19 +1478,34 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.rewardLabel')}</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
-              {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
-              {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
-                <span style={{
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  color: '#8b5cf6',
-                  marginLeft: '8px'
-                }}>
-                  +{task.points_reward.toLocaleString()}积分
-                </span>
-              )}
-            </div>
+            {/* 判断是否有议价且已批准 */}
+            {task.agreed_reward && task.agreed_reward !== task.base_reward ? (
+              <div>
+                {/* 显示议价成交金额（最终金额） */}
+                <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669', marginBottom: '4px' }}>
+                  {(task.agreed_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+                </div>
+                {/* 显示原始金额（划掉） */}
+                <div style={{ fontSize: '14px', color: '#94a3b8', textDecoration: 'line-through', marginBottom: '4px' }}>
+                  {language === 'zh' ? '原价' : 'Original'}: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+                </div>
+              </div>
+            ) : (
+              /* 没有议价，显示原始金额 */
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
+                {(task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+              </div>
+            )}
+            {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+              <div style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#8b5cf6',
+                marginTop: '8px'
+              }}>
+                +{task.points_reward.toLocaleString()} {language === 'zh' ? '积分' : 'Points'}
+              </div>
+            )}
             {/* 多人任务：显示奖励类型 */}
             {task.is_multi_participant && task.reward_type && (
               <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
@@ -1426,12 +1537,61 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </div>
               );
             })()}
-            {task.agreed_reward && task.agreed_reward !== task.base_reward && (
-              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                原价: {task.base_reward?.toFixed(2) || '0.00'} {task.currency || 'CNY'}
-              </div>
-            )}
           </div>
+          
+          {/* 款项信息区域 - 仅任务双方可见 */}
+          {(user && (user.id === task.poster_id || user.id === task.taker_id)) && (
+            <div style={{
+              background: '#f0fdf4',
+              padding: '20px',
+              borderRadius: '16px',
+              border: '2px solid #bbf7d0',
+              marginTop: '16px'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#065f46', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                💳 {language === 'zh' ? '款项信息' : 'Payment Information'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', fontSize: '14px' }}>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '任务金额' : 'Task Amount'}</div>
+                  <div style={{ fontWeight: '600', color: '#059669' }}>
+                    {task.agreed_reward && task.agreed_reward !== task.base_reward 
+                      ? `${(task.agreed_reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`
+                      : `${(task.base_reward ?? task.reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`}
+                  </div>
+                  {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', textDecoration: 'line-through', marginTop: '2px' }}>
+                      {language === 'zh' ? '原价' : 'Original'}: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
+                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
+                    {task.is_paid === 1 
+                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
+                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
+                  </div>
+                </div>
+                {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '托管金额' : 'Escrow Amount'}</div>
+                    <div style={{ fontWeight: '600', color: '#2563eb' }}>
+                      £{task.escrow_amount.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+                {task.is_confirmed === 1 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '确认状态' : 'Confirmation'}</div>
+                    <div style={{ fontWeight: '600', color: '#059669' }}>
+                      {language === 'zh' ? '✅ 已确认' : '✅ Confirmed'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           <div style={{
             background: '#f8fafc',
@@ -1610,46 +1770,120 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         {/* 金额显示区域 */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
+          flexDirection: 'column',
+          gap: '8px',
           marginBottom: '24px',
           position: 'relative',
           zIndex: 1
         }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}>
             <div style={{ fontSize: '20px' }}>💰</div>
             <span style={{
               fontSize: '18px',
               fontWeight: '600',
               color: '#1e293b'
             }}>{t('taskDetail.rewardDisplay')}</span>
-            <span style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#059669'
-            }}>
-              {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
-              {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+            {/* 判断是否有议价且已批准 */}
+            {task.agreed_reward && task.agreed_reward !== task.base_reward ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                {/* 显示议价成交金额（最终金额） */}
                 <span style={{
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: '#8b5cf6',
-                  marginLeft: '8px'
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#059669'
                 }}>
-                  +{task.points_reward.toLocaleString()}积分
+                  {(task.agreed_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
                 </span>
-              )}
-            </span>
-            {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+                {/* 显示原始金额（划掉） */}
+                <span style={{
+                  fontSize: '16px',
+                  color: '#94a3b8',
+                  textDecoration: 'line-through'
+                }}>
+                  {language === 'zh' ? '原价' : 'Original'}: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+                </span>
+              </div>
+            ) : (
+              /* 没有议价，显示原始金额 */
               <span style={{
-                fontSize: '14px',
-                color: '#6b7280',
-                marginLeft: '8px',
-                textDecoration: 'line-through'
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#059669'
               }}>
-                原价: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+                {(task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+              </span>
+            )}
+            {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+              <span style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#8b5cf6',
+                marginLeft: '8px'
+              }}>
+                +{task.points_reward.toLocaleString()} {language === 'zh' ? '积分' : 'Points'}
               </span>
             )}
           </div>
+          
+          {/* 款项信息区域 - 仅任务双方可见 */}
+          {user && (user.id === task.poster_id || user.id === task.taker_id) && (
+            <div style={{
+              background: '#f0fdf4',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #bbf7d0',
+              marginTop: '8px'
+            }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#065f46', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                💳 {language === 'zh' ? '款项信息' : 'Payment Information'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', fontSize: '14px' }}>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '任务金额' : 'Task Amount'}</div>
+                  <div style={{ fontWeight: '600', color: '#059669' }}>
+                    {task.agreed_reward && task.agreed_reward !== task.base_reward 
+                      ? `${(task.agreed_reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`
+                      : `${(task.base_reward ?? task.reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`}
+                  </div>
+                  {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', textDecoration: 'line-through', marginTop: '2px' }}>
+                      {language === 'zh' ? '原价' : 'Original'}: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
+                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
+                    {task.is_paid === 1 
+                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
+                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
+                  </div>
+                </div>
+                {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '托管金额' : 'Escrow Amount'}</div>
+                    <div style={{ fontWeight: '600', color: '#2563eb' }}>
+                      £{task.escrow_amount.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+                {task.is_confirmed === 1 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '确认状态' : 'Confirmation'}</div>
+                    <div style={{ fontWeight: '600', color: '#059669' }}>
+                      {language === 'zh' ? '✅ 已确认' : '✅ Confirmed'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         
         {/* 操作按钮区域 */}

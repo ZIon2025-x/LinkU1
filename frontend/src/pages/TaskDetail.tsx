@@ -2251,7 +2251,24 @@ const TaskDetail: React.FC = () => {
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</div>
+            {/* 判断是否有议价且已批准 */}
+            {task.agreed_reward && task.agreed_reward !== task.base_reward ? (
+              <div>
+                {/* 显示议价成交金额（最终金额） */}
+                <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669', marginBottom: '4px' }}>
+                  £{(task.agreed_reward ?? 0).toFixed(2)}
+                </div>
+                {/* 显示原始金额（划掉） */}
+                <div style={{ fontSize: '14px', color: '#94a3b8', textDecoration: 'line-through' }}>
+                  {language === 'zh' ? '原价' : 'Original'}: £{(task.base_reward ?? 0).toFixed(2)}
+                </div>
+              </div>
+            ) : (
+              /* 没有议价，显示原始金额 */
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
+                £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
+              </div>
+            )}
             {/* 多人任务：显示奖励类型 */}
             {task.is_multi_participant && task.reward_type && (
               <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
@@ -2261,6 +2278,60 @@ const TaskDetail: React.FC = () => {
               </div>
             )}
           </div>
+          
+          {/* 款项信息区域 - 仅任务双方可见 */}
+          {user && (user.id === task.poster_id || user.id === task.taker_id) && (
+            <div style={{
+              background: '#f0fdf4',
+              padding: '20px',
+              borderRadius: '16px',
+              border: '2px solid #bbf7d0',
+              marginTop: '16px'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#065f46', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                💳 {language === 'zh' ? '款项信息' : 'Payment Information'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', fontSize: '14px' }}>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '任务金额' : 'Task Amount'}</div>
+                  <div style={{ fontWeight: '600', color: '#059669' }}>
+                    {task.agreed_reward && task.agreed_reward !== task.base_reward 
+                      ? `£${(task.agreed_reward ?? 0).toFixed(2)}`
+                      : `£${(task.base_reward ?? task.reward ?? 0).toFixed(2)}`}
+                  </div>
+                  {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', textDecoration: 'line-through', marginTop: '2px' }}>
+                      {language === 'zh' ? '原价' : 'Original'}: £{(task.base_reward ?? 0).toFixed(2)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
+                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
+                    {task.is_paid === 1 
+                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
+                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
+                  </div>
+                </div>
+                {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '托管金额' : 'Escrow Amount'}</div>
+                    <div style={{ fontWeight: '600', color: '#2563eb' }}>
+                      £{task.escrow_amount.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+                {task.is_confirmed === 1 && (
+                  <div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '确认状态' : 'Confirmation'}</div>
+                    <div style={{ fontWeight: '600', color: '#059669' }}>
+                      {language === 'zh' ? '✅ 已确认' : '✅ Confirmed'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* 多人任务：参与者信息 */}
           {task.is_multi_participant && (

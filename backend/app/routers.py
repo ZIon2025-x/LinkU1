@@ -1694,6 +1694,17 @@ def confirm_task_completion(
                     # 转账失败，但已创建转账记录，定时任务会自动重试
                     logger.warning(f"⚠️ 任务 {task_id} 转账失败: {error_msg}，已创建转账记录，定时任务将自动重试")
                     # 不更新任务状态，等待定时任务重试成功后再更新
+                    # 刷新转账记录以获取最新状态
+                    db.refresh(transfer_record)
+                    # 在任务对象中添加转账状态信息（用于前端显示）
+                    # 注意：这些字段不会保存到数据库，只是临时添加到响应中
+                    task.transfer_status = transfer_record.status
+                    task.transfer_error = transfer_record.last_error
+                    task.transfer_retry_info = {
+                        'retry_count': transfer_record.retry_count,
+                        'max_retries': transfer_record.max_retries,
+                        'next_retry_at': transfer_record.next_retry_at.isoformat() if transfer_record.next_retry_at else None
+                    }
         except Exception as e:
             logger.error(f"转账处理失败 for task {task_id}: {e}", exc_info=True)
             # 转账失败不影响任务完成确认流程
