@@ -1534,9 +1534,17 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
     
     logger.info(f"Received Stripe Connect webhook event: {event_type}")
     
-    # 处理账户创建事件（V1 和 V2）
-    if event_type == "account.created" or event_type == "v2.core.account.created":
-        account = event_data
+    # 处理 ping 事件（用于测试 webhook 端点）
+    # ping 事件不需要任何业务逻辑，只需返回成功响应
+    if event_type == "v2.core.event_destination.ping" or event_type == "ping":
+        logger.info(f"Received ping event, responding with success")
+        return {"status": "success", "message": "pong"}
+    
+    # 使用 try-except 包裹事件处理，确保所有事件都能返回响应
+    try:
+        # 处理账户创建事件（V1 和 V2）
+        if event_type == "account.created" or event_type == "v2.core.account.created":
+            account = event_data
         account_id = account.get("id")
         
         if not account_id:
@@ -1874,5 +1882,39 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                         user.stripe_account_id = None
                         db.commit()
                         logger.info(f"Account deauthorized for user {user.id} (found via metadata)")
+        
+        # 对于未明确处理的事件，记录日志但返回成功
+        if not any([
+            event_type == "account.created" or event_type == "v2.core.account.created",
+            event_type == "account.updated" or event_type == "v2.core.account.updated",
+            event_type == "v2.core.account.closed",
+            event_type == "v2.core.account.requirements.updated",
+            event_type == "capability.updated",
+            event_type == "account.external_account.created",
+            event_type in [
+                "v2.core.account[configuration.merchant].updated",
+                "v2.core.account[configuration.merchant].capability_status_updated",
+                "v2.core.account[configuration.recipient].updated",
+                "v2.core.account[configuration.recipient].capability_status_updated",
+                "v2.core.account[configuration.customer].updated",
+                "v2.core.account[configuration.customer].capability_status_updated",
+                "v2.core.account[defaults].updated",
+                "v2.core.account[identity].updated"
+            ],
+            event_type in [
+                "v2.core.account_person.created",
+                "v2.core.account_person.updated",
+                "v2.core.account_person.deleted"
+            ],
+            event_type == "account.application.deauthorized"
+        ]):
+            logger.info(f"Unhandled event type: {event_type}, returning success")
+    
+    except Exception as e:
+        # 捕获所有异常，记录错误但返回成功响应，避免 Stripe 重试
+        logger.error(f"Error processing webhook event {event_type}: {e}", exc_info=True)
+        # 仍然返回成功，避免 Stripe 不断重试
+        # 如果业务逻辑失败，应该通过其他方式处理（如后台任务重试）
+        return {"status": "success", "error": "Event processing failed but acknowledged"}
     
     return {"status": "success"}

@@ -648,8 +648,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setError('');
 
     try {
-      // 检查 CAPTCHA 验证（交互式验证，用户必须完成）
-      if (captchaEnabled && captchaSiteKey && !codeSent) {
+      // 检查 CAPTCHA 验证（仅验证码登录需要，密码登录不需要）
+      // 只有在验证码登录模式下，且未发送验证码时，才需要 CAPTCHA
+      if (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && captchaSiteKey && !codeSent) {
         if (!captchaToken) {
           setError('请先完成人机验证');
           setLoading(false);
@@ -1806,7 +1807,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
               (!isLogin && !agreedToTerms) || 
               (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
               (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
-              (captchaEnabled && captchaSiteKey && !codeSent && !captchaToken ? true : false)
+              // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
+              (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && captchaSiteKey && !codeSent && !captchaToken)
             }
             style={{
               width: '100%',
@@ -1816,7 +1818,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 (!isLogin && !agreedToTerms) || 
                 (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || 
                 (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6) ||
-                (captchaEnabled && captchaSiteKey && !codeSent && !captchaToken ? true : false)
+                // 只有验证码登录模式在发送验证码前需要 CAPTCHA，密码登录不需要
+                (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && captchaEnabled && captchaSiteKey && !codeSent && !captchaToken)
               ) ? '#ccc' : '#3b82f6',
               color: '#fff',
               border: 'none',
