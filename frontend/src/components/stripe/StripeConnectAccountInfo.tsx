@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface AccountDetails {
   account_id: string;
@@ -31,6 +32,7 @@ interface StripeConnectAccountInfoProps {
  * 显示账户的详细信息和状态
  */
 const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ accountId }) => {
+  const { t } = useLanguage();
   const [accountDetails, setAccountDetails] = useState<AccountDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
         setAccountDetails(response.data);
       } catch (err: any) {
         console.error('Error fetching account details:', err);
-        setError(err.response?.data?.detail || err.message || '获取账户信息失败');
+        setError(err.response?.data?.detail || err.message || t('wallet.stripe.failedToGetAccountInfo'));
       } finally {
         setLoading(false);
       }
@@ -58,7 +60,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>加载账户信息中...</div>
+        <div>{t('wallet.stripe.loadingAccountInfo')}</div>
       </div>
     );
   }
@@ -66,7 +68,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
   if (error) {
     return (
       <div style={{ padding: '20px', color: 'red' }}>
-        错误: {error}
+        {t('wallet.stripe.error')}: {error}
       </div>
     );
   }
@@ -86,17 +88,17 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
         color: enabled ? '#065f46' : '#991b1b',
         display: 'inline-block'
       }}>
-        {enabled ? '✓ 已启用' : '✗ 未启用'}
+        {enabled ? t('wallet.stripe.enabled') : t('wallet.stripe.disabled')}
       </span>
     );
   };
 
   const getCapabilityStatus = (status?: string) => {
-    if (!status) return '未知';
+    if (!status) return t('wallet.stripe.unknown');
     const statusMap: { [key: string]: string } = {
-      'active': '✓ 已激活',
-      'inactive': '✗ 未激活',
-      'pending': '⏳ 待处理'
+      'active': t('wallet.stripe.active'),
+      'inactive': t('wallet.stripe.inactive'),
+      'pending': t('wallet.stripe.pending')
     };
     return statusMap[status] || status;
   };
@@ -117,7 +119,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
         fontWeight: '600',
         letterSpacing: '-0.2px'
       }}>
-        账户信息
+        {t('wallet.stripe.accountInfo')}
       </h3>
 
       {/* 账户基本信息 */}
@@ -134,7 +136,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               marginBottom: '6px',
               fontWeight: '500'
             }}>
-              账户 ID
+              {t('wallet.stripe.accountId')}
             </div>
             <div style={{ 
               fontFamily: 'monospace', 
@@ -155,7 +157,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
                 marginBottom: '6px',
                 fontWeight: '500'
               }}>
-                显示名称
+                {t('wallet.stripe.displayName')}
               </div>
               <div style={{ 
                 fontSize: '14px', 
@@ -175,7 +177,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
                 marginBottom: '6px',
                 fontWeight: '500'
               }}>
-                邮箱
+                {t('wallet.stripe.email')}
               </div>
               <div style={{ 
                 fontSize: '14px', 
@@ -194,7 +196,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               marginBottom: '6px',
               fontWeight: '500'
             }}>
-              国家/地区
+              {t('wallet.stripe.country')}
             </div>
             <div style={{ 
               fontSize: '14px', 
@@ -221,7 +223,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
           color: '#1a202c',
           fontWeight: '600'
         }}>
-          账户状态
+          {t('wallet.stripe.accountStatus')}
         </h4>
         <div style={{ 
           display: 'flex', 
@@ -235,7 +237,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               marginBottom: '6px',
               fontWeight: '500'
             }}>
-              信息提交
+              {t('wallet.stripe.infoSubmitted')}
             </div>
             {getStatusBadge(accountDetails.details_submitted)}
           </div>
@@ -246,7 +248,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               marginBottom: '6px',
               fontWeight: '500'
             }}>
-              收款能力
+              {t('wallet.stripe.paymentCapability')}
             </div>
             {getStatusBadge(accountDetails.charges_enabled)}
           </div>
@@ -257,7 +259,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               marginBottom: '6px',
               fontWeight: '500'
             }}>
-              提现能力
+              {t('wallet.stripe.payoutCapability')}
             </div>
             {getStatusBadge(accountDetails.payouts_enabled)}
           </div>
@@ -279,7 +281,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
             color: '#1a202c',
             fontWeight: '600'
           }}>
-            账户能力
+            {t('wallet.stripe.accountCapabilities')}
           </h4>
           <div style={{ 
             display: 'flex', 
@@ -294,7 +296,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
                   marginBottom: '6px',
                   fontWeight: '500'
                 }}>
-                  卡支付
+                  {t('wallet.stripe.cardPayments')}
                 </div>
                 <div style={{ 
                   fontSize: '14px', 
@@ -313,7 +315,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
                   marginBottom: '6px',
                   fontWeight: '500'
                 }}>
-                  转账
+                  {t('wallet.stripe.transfers')}
                 </div>
                 <div style={{ 
                   fontSize: '14px', 
@@ -358,7 +360,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
               e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.2)';
             }}
           >
-            打开 Stripe 仪表板
+            {t('wallet.stripe.openStripeDashboard')}
           </a>
           <div style={{ 
             marginTop: '10px', 
@@ -366,7 +368,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
             color: '#64748b',
             lineHeight: '1.5'
           }}>
-            在 Stripe 仪表板中查看交易记录、提现历史等详细信息
+            {t('wallet.stripe.dashboardDescription')}
           </div>
         </div>
       )}
@@ -383,12 +385,12 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
             border: '1px solid #ffc107'
           }}>
             <h4 style={{ marginBottom: '12px', fontSize: '14px', color: '#856404' }}>
-              ⚠️ 待完成事项
+              {t('wallet.stripe.pendingItems')}
             </h4>
             {accountDetails.requirements.past_due && accountDetails.requirements.past_due.length > 0 && (
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ fontSize: '12px', color: '#721c24', marginBottom: '4px', fontWeight: '600' }}>
-                  逾期事项：
+                  {t('wallet.stripe.pastDueItems')}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#721c24' }}>
                   {accountDetails.requirements.past_due.map((item, index) => (
@@ -400,7 +402,7 @@ const StripeConnectAccountInfo: React.FC<StripeConnectAccountInfoProps> = ({ acc
             {accountDetails.requirements.currently_due && accountDetails.requirements.currently_due.length > 0 && (
               <div>
                 <div style={{ fontSize: '12px', color: '#856404', marginBottom: '4px', fontWeight: '600' }}>
-                  当前待办：
+                  {t('wallet.stripe.currentlyDueItems')}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: '#856404' }}>
                   {accountDetails.requirements.currently_due.map((item, index) => (

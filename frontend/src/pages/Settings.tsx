@@ -526,7 +526,7 @@ const Settings: React.FC = () => {
   }
 
   const tabs = [
-    { id: 'payment', label: '收款账户', icon: '💳' },
+    { id: 'payment', label: t('wallet.stripe.paymentAccount'), icon: '💳' },
     { id: 'profile', label: t('settings.profile'), icon: '👤' },
     { id: 'preferences', label: t('settings.preferences'), icon: '🎯' },
     { id: 'notifications', label: t('settings.notifications'), icon: '🔔' },
@@ -738,19 +738,19 @@ const Settings: React.FC = () => {
                         color: '#1a202c',
                         marginBottom: '8px'
                       }}>
-                        设置收款账户
+                        {t('wallet.stripe.setupPaymentAccount')}
                       </h3>
                       <p style={{
                         fontSize: '14px',
                         color: '#64748b',
                         lineHeight: '1.6'
                       }}>
-                        完成设置后，您将能够接收任务奖励并提现到银行账户
+                        {t('wallet.stripe.setupCompleteDesc')}
                       </p>
                     </div>
                     <StripeConnectOnboarding
                       onComplete={() => {
-                        message.success('收款账户设置完成！');
+                        message.success(t('wallet.stripe.paymentAccountSetupComplete'));
                         // 重新检查账户状态
                         checkStripeAccount();
                       }}
@@ -1996,41 +1996,43 @@ const Settings: React.FC = () => {
               </div>
             )}
 
-            {/* 保存按钮 */}
-            <div style={{ 
-              marginTop: isMobile ? '20px' : '30px', 
-              paddingTop: isMobile ? '16px' : '20px', 
-              borderTop: '1px solid #e9ecef',
-              textAlign: isMobile ? 'center' : 'right'
-            }}>
-              <button
-                onClick={handleSave}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: isMobile ? '14px 40px' : '12px 30px',
-                  borderRadius: '25px',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '16px' : '16px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                  transition: 'all 0.3s ease',
-                  width: isMobile ? '100%' : 'auto',
-                  maxWidth: isMobile ? 'none' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
-                }}
-              >
-                保存设置
-              </button>
-            </div>
+            {/* 保存按钮 - 收款账户标签页不需要保存按钮（Stripe Connect 组件自动保存） */}
+            {activeTab !== 'payment' && (
+              <div style={{ 
+                marginTop: isMobile ? '20px' : '30px', 
+                paddingTop: isMobile ? '16px' : '20px', 
+                borderTop: '1px solid #e9ecef',
+                textAlign: isMobile ? 'center' : 'right'
+              }}>
+                <button
+                  onClick={handleSave}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: isMobile ? '14px 40px' : '12px 30px',
+                    borderRadius: '25px',
+                    cursor: 'pointer',
+                    fontSize: isMobile ? '16px' : '16px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                    transition: 'all 0.3s ease',
+                    width: isMobile ? '100%' : 'auto',
+                    maxWidth: isMobile ? 'none' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+                  }}
+                >
+                  保存设置
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

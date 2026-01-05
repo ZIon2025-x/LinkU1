@@ -179,7 +179,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       if (err.response?.status === 428) {
         // 这里可以触发父组件显示收款账户注册弹窗
         // 或者直接在这里显示
-        message.warning(err.response?.data?.detail || '请先注册收款账户');
+        message.warning(err.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
         // 可以在这里添加逻辑来显示收款账户注册弹窗
       } else {
         message.error(err.response?.data?.detail || '申请失败');

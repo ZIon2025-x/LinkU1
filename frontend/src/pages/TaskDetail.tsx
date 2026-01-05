@@ -3985,17 +3985,15 @@ const TaskDetail: React.FC = () => {
               ×
             </button>
             <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
-              {language === 'zh' ? '注册收款账户' : 'Register Payment Account'}
+              {t('wallet.stripe.registerPaymentAccount')}
             </h2>
             <p style={{ marginBottom: '20px', color: '#666' }}>
-              {language === 'zh' 
-                ? '申请任务前需要先注册收款账户，以便接收任务奖励。' 
-                : 'You need to register a payment account before applying for tasks to receive rewards.'}
+              {t('wallet.stripe.registerPaymentAccountDesc')}
             </p>
             <StripeConnectOnboarding
               onComplete={() => {
                 setShowStripeConnectModal(false);
-                alert(language === 'zh' ? '收款账户注册成功！现在可以申请任务了。' : 'Payment account registered successfully! You can now apply for tasks.');
+                alert(t('wallet.stripe.paymentAccountRegistered'));
               }}
               onError={(error) => {
                 console.error('Stripe Connect onboarding error:', error);

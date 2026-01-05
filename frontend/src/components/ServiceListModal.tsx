@@ -360,17 +360,15 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
               ×
             </button>
             <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
-              {language === 'zh' ? '注册收款账户' : 'Register Payment Account'}
+              {t('wallet.stripe.registerPaymentAccount')}
             </h2>
             <p style={{ marginBottom: '20px', color: '#666' }}>
-              {language === 'zh' 
-                ? '申请服务前需要先注册收款账户，以便接收任务奖励。' 
-                : 'You need to register a payment account before applying for services to receive rewards.'}
+              {t('wallet.stripe.registerPaymentAccountDescService')}
             </p>
             <StripeConnectOnboarding
               onComplete={() => {
                 setShowStripeConnectModal(false);
-                message.success(language === 'zh' ? '收款账户注册成功！现在可以申请服务了。' : 'Payment account registered successfully! You can now apply for services.');
+                message.success(t('wallet.stripe.paymentAccountRegisteredService'));
               }}
               onError={(error) => {
                 console.error('Stripe Connect onboarding error:', error);

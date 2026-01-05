@@ -7,6 +7,7 @@ import {
 import { loadConnectAndInitialize } from '@stripe/connect-js';
 import api from '../../api';
 import StripeConnectAccountInfo from './StripeConnectAccountInfo';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // 从环境变量获取 Stripe Publishable Key
 const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
@@ -26,6 +27,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
   onComplete,
   onError,
 }) => {
+  const { t } = useLanguage();
   const [accountCreatePending, setAccountCreatePending] = useState(false);
   const [onboardingExited, setOnboardingExited] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           console.log('Blocked navigation to Stripe external page:', link.href);
           // 显示提示信息
           if (onError) {
-            onError('请使用嵌入式组件完成设置，不要跳转到外部页面');
+            onError(t('wallet.stripe.useEmbeddedComponent'));
           }
           return false;
         }
@@ -85,7 +87,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         // 阻止跳转并返回
         window.history.back();
         if (onError) {
-          onError('检测到跳转到外部页面，已阻止。请使用嵌入式组件完成设置。');
+          onError(t('wallet.stripe.blockedExternalNavigation'));
         }
       }
     };
@@ -202,7 +204,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       }
     } catch (err: any) {
       console.error('Error creating account:', err);
-      const errorMessage = err.response?.data?.detail || err.message || '创建账户失败';
+      const errorMessage = err.response?.data?.detail || err.message || t('wallet.stripe.failedToCreateAccount');
       setError(errorMessage);
       if (onError) {
         onError(errorMessage);
@@ -304,14 +306,14 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           textAlign: 'center'
         }}>
           <div style={{ color: 'green', marginBottom: '10px', fontSize: '18px' }}>
-            ✓ 收款账户已设置完成
+            ✓ {t('wallet.stripe.paymentAccountSetupComplete')}
           </div>
           <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-            您可以开始接收任务奖励了
+            {t('wallet.stripe.canStartReceivingRewards')}
           </div>
           {accountStatus.charges_enabled && (
             <div style={{ fontSize: '12px', color: '#28a745' }}>
-              ✓ 收款功能已启用
+              ✓ {t('wallet.stripe.paymentEnabled')}
             </div>
           )}
         </div>
@@ -331,18 +333,18 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     }}>
       {!connectedAccountId && (
         <>
-          <h2 style={{ marginBottom: '10px', color: '#333' }}>准备开始收款</h2>
+          <h2 style={{ marginBottom: '10px', color: '#333' }}>{t('wallet.stripe.readyToReceive')}</h2>
           <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-            设置您的 Stripe 收款账户以接收任务奖励。所有信息将安全地存储在 Stripe 中。
+            {t('wallet.stripe.setupStripeAccount')}
           </p>
         </>
       )}
       
       {connectedAccountId && !stripeConnectInstance && (
         <>
-          <h2 style={{ marginBottom: '10px', color: '#333' }}>添加信息以开始收款</h2>
+          <h2 style={{ marginBottom: '10px', color: '#333' }}>{t('wallet.stripe.addInfoToReceive')}</h2>
           <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
-            正在初始化...
+            {t('wallet.stripe.initializing')}
           </p>
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
             <button
@@ -380,7 +382,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                       (process.env as any).STRIPE_PUBLISHABLE_KEY;
                     
                     if (!publishableKey) {
-                      setError('Stripe Publishable Key 未配置');
+                      setError(t('wallet.stripe.stripePublishableKeyNotConfigured'));
                       setAccountCreatePending(false);
                       return;
                     }
@@ -415,12 +417,12 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                     setManualStripeConnectInstance(instance);
                     setAccountCreatePending(false);
                   } else {
-                    setError('无法获取 client_secret');
+                    setError(t('wallet.stripe.failedToGetClientSecret'));
                     setAccountCreatePending(false);
                   }
                 } catch (err: any) {
                   console.error('Error creating onboarding session:', err);
-                  setError(err.response?.data?.detail || err.message || '创建 onboarding session 失败');
+                  setError(err.response?.data?.detail || err.message || t('wallet.stripe.failedToCreateOnboardingSession'));
                   setAccountCreatePending(false);
                 }
               }}
@@ -445,7 +447,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              添加信息
+              {t('wallet.stripe.addInfo')}
             </button>
           </div>
         </>
@@ -478,14 +480,14 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
               e.currentTarget.style.boxShadow = '0 2px 4px rgba(99, 91, 255, 0.3)';
             }}
           >
-            注册
+            {t('wallet.stripe.register')}
           </button>
         </div>
       )}
 
       {accountCreatePending && (
         <div style={{ textAlign: 'center', padding: '20px' }}>
-          <div>正在创建账户...</div>
+          <div>{t('wallet.stripe.creatingAccount')}</div>
         </div>
       )}
 
@@ -544,7 +546,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           color: '#E61947',
           fontSize: '14px'
         }}>
-          错误: {error}
+          {t('wallet.stripe.error')}: {error}
         </div>
       )}
 
@@ -559,11 +561,11 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         }}>
           {connectedAccountId && (
             <p>
-              您的连接账户 ID: <code style={{ fontWeight: '700', fontSize: '14px' }}>{connectedAccountId}</code>
+              {t('wallet.stripe.connectAccountId')}: <code style={{ fontWeight: '700', fontSize: '14px' }}>{connectedAccountId}</code>
             </p>
           )}
-          {accountCreatePending && <p>正在创建连接账户...</p>}
-          {onboardingExited && <p>账户入驻组件已退出</p>}
+          {accountCreatePending && <p>{t('wallet.stripe.creatingConnectAccount')}</p>}
+          {onboardingExited && <p>{t('wallet.stripe.onboardingExited')}</p>}
         </div>
       )}
     </div>

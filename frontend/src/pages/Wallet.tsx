@@ -156,54 +156,81 @@ const Wallet: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#f8fafc',
-      padding: isMobile ? '16px' : '24px'
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      padding: isMobile ? '16px' : '32px 24px',
+      paddingTop: isMobile ? '20px' : '40px'
     }}>
       <div style={{ 
-        maxWidth: '900px', 
+        maxWidth: '1000px', 
         margin: '0 auto',
         background: '#fff',
-        borderRadius: '20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        border: '1px solid #e2e8f0',
+        borderRadius: '24px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08)',
+        border: 'none',
         overflow: 'hidden'
       }}>
         {/* 头部 */}
         <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#fff',
-          padding: isMobile ? '24px 20px' : '32px 30px',
+          padding: isMobile ? '28px 20px' : '40px 40px 36px',
           textAlign: 'center',
-          position: 'relative'
+          position: 'relative',
+          overflow: 'hidden'
         }}>
+          {/* 装饰性背景元素 */}
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-10%',
+            width: '300px',
+            height: '300px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '50%',
+            filter: 'blur(60px)'
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-30%',
+            left: '-5%',
+            width: '200px',
+            height: '200px',
+            background: 'rgba(255,255,255,0.08)',
+            borderRadius: '50%',
+            filter: 'blur(50px)'
+          }} />
           <button
             onClick={() => navigate('/')}
             style={{
               position: 'absolute',
               left: isMobile ? '16px' : '24px',
               top: isMobile ? '20px' : '24px',
-              background: 'rgba(255,255,255,0.15)',
+              background: 'rgba(255,255,255,0.2)',
               border: 'none',
               color: '#fff',
               padding: '0',
-              borderRadius: '12px',
+              borderRadius: '14px',
               cursor: 'pointer',
-              fontSize: '20px',
-              width: '40px',
-              height: '40px',
+              fontSize: '22px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              backdropFilter: 'blur(10px)'
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 10,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+              e.currentTarget.style.transform = 'scale(1.08) translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.2)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+              e.currentTarget.style.transform = 'scale(1) translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
             }}
           >
             ←
@@ -228,33 +255,39 @@ const Wallet: React.FC = () => {
           {/* 标签页切换 */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '12px',
             justifyContent: 'center',
-            marginBottom: '24px',
-            flexWrap: 'wrap'
+            marginBottom: '32px',
+            flexWrap: 'wrap',
+            position: 'relative',
+            zIndex: 5
           }}>
             <button
               onClick={() => setActiveTab('balance')}
               style={{
-                background: activeTab === 'balance' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                border: 'none',
+                background: activeTab === 'balance' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
+                border: activeTab === 'balance' ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
                 color: '#fff',
-                padding: '10px 24px',
-                borderRadius: '12px',
+                padding: '12px 28px',
+                borderRadius: '16px',
                 cursor: 'pointer',
                 fontSize: '15px',
-                fontWeight: activeTab === 'balance' ? '600' : '500',
-                transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
+                fontWeight: activeTab === 'balance' ? '700' : '500',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: activeTab === 'balance' ? '0 4px 16px rgba(0,0,0,0.2)' : 'none',
+                transform: activeTab === 'balance' ? 'scale(1.05)' : 'scale(1)'
               }}
               onMouseEnter={(e) => {
                 if (activeTab !== 'balance') {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (activeTab !== 'balance') {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.transform = 'scale(1)';
                 }
               }}
             >
@@ -263,25 +296,29 @@ const Wallet: React.FC = () => {
             <button
               onClick={() => setActiveTab('points')}
               style={{
-                background: activeTab === 'points' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                border: 'none',
+                background: activeTab === 'points' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
+                border: activeTab === 'points' ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
                 color: '#fff',
-                padding: '10px 24px',
-                borderRadius: '12px',
+                padding: '12px 28px',
+                borderRadius: '16px',
                 cursor: 'pointer',
                 fontSize: '15px',
-                fontWeight: activeTab === 'points' ? '600' : '500',
-                transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
+                fontWeight: activeTab === 'points' ? '700' : '500',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: activeTab === 'points' ? '0 4px 16px rgba(0,0,0,0.2)' : 'none',
+                transform: activeTab === 'points' ? 'scale(1.05)' : 'scale(1)'
               }}
               onMouseEnter={(e) => {
                 if (activeTab !== 'points') {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (activeTab !== 'points') {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.transform = 'scale(1)';
                 }
               }}
             >
@@ -291,86 +328,93 @@ const Wallet: React.FC = () => {
 
           {/* 余额显示 */}
           {activeTab === 'balance' && (
-            <>
+            <div style={{ position: 'relative', zIndex: 5 }}>
               {hasStripeAccount && stripeConnectInstance ? (
                 <div style={{ 
-                  fontSize: '15px', 
+                  fontSize: '16px', 
                   opacity: 0.95, 
                   marginBottom: '8px',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  letterSpacing: '0.3px'
                 }}>
                   Stripe 账户余额
                 </div>
               ) : (
                 <>
                   <div style={{ 
-                    fontSize: isMobile ? '40px' : '48px', 
-                    fontWeight: '700', 
-                    marginBottom: '8px',
-                    letterSpacing: '-0.5px'
+                    fontSize: isMobile ? '48px' : '56px', 
+                    fontWeight: '800', 
+                    marginBottom: '12px',
+                    letterSpacing: '-1px',
+                    textShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                    lineHeight: '1.1'
                   }}>
                     £{balance.toFixed(2)}
                   </div>
                   <div style={{ 
-                    fontSize: '15px', 
-                    opacity: 0.9,
-                    fontWeight: '400'
+                    fontSize: '16px', 
+                    opacity: 0.95,
+                    fontWeight: '500',
+                    letterSpacing: '0.2px'
                   }}>
                     {t('wallet.currentBalance')}
                   </div>
                 </>
               )}
-            </>
+            </div>
           )}
 
           {/* 积分显示 */}
           {activeTab === 'points' && (
-            <>
+            <div style={{ position: 'relative', zIndex: 5 }}>
               {pointsLoading ? (
                 <div style={{ 
-                  fontSize: '15px', 
-                  opacity: 0.9,
-                  fontWeight: '400'
+                  fontSize: '16px', 
+                  opacity: 0.95,
+                  fontWeight: '500'
                 }}>
                   {t('common.loading')}
                 </div>
               ) : (
                 <>
                   <div style={{ 
-                    fontSize: isMobile ? '40px' : '48px', 
-                    fontWeight: '700', 
-                    marginBottom: '8px',
-                    letterSpacing: '-0.5px'
+                    fontSize: isMobile ? '48px' : '56px', 
+                    fontWeight: '800', 
+                    marginBottom: '12px',
+                    letterSpacing: '-1px',
+                    textShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                    lineHeight: '1.1'
                   }}>
-                    {pointsAccount?.balance.toLocaleString() || 0} 积分
+                    {pointsAccount?.balance.toLocaleString() || 0} <span style={{ fontSize: '32px', fontWeight: '600' }}>积分</span>
                   </div>
                   <div style={{ 
-                    fontSize: '15px', 
-                    opacity: 0.9, 
-                    marginBottom: '4px',
-                    fontWeight: '400'
+                    fontSize: '16px', 
+                    opacity: 0.95, 
+                    marginBottom: '6px',
+                    fontWeight: '500',
+                    letterSpacing: '0.2px'
                   }}>
                     {t('wallet.currentPointsBalance')}
                   </div>
                   <div style={{ 
                     fontSize: '14px', 
-                    opacity: 0.8,
+                    opacity: 0.85,
                     fontWeight: '400'
                   }}>
                     {t('wallet.pointsEquivalent', { amount: pointsAccount?.balance_display || '0.00' })}
                   </div>
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
 
         {/* Stripe Payouts 组件 - 仅余额标签页显示，如果有 Stripe 账户 */}
         {activeTab === 'balance' && hasStripeAccount && stripeConnectInstance && (
           <div style={{ 
-            padding: isMobile ? '20px' : '32px',
-            background: '#fafbfc',
-            borderTop: '1px solid #e2e8f0'
+            padding: isMobile ? '24px' : '36px 40px',
+            background: 'linear-gradient(to bottom, #f8fafc, #ffffff)',
+            borderTop: '1px solid rgba(226, 232, 240, 0.5)'
           }}>
             <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
               <ConnectPayouts />
@@ -381,58 +425,79 @@ const Wallet: React.FC = () => {
         {/* 积分统计信息 - 仅积分标签页显示 */}
         {activeTab === 'points' && pointsAccount && (
           <div style={{ 
-            padding: isMobile ? '20px' : '24px 32px',
+            padding: isMobile ? '24px' : '28px 40px',
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
             gap: '16px',
-            background: '#fafbfc',
-            borderTop: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0'
+            background: 'linear-gradient(to bottom, #f8fafc, #ffffff)',
+            borderTop: '1px solid rgba(226, 232, 240, 0.5)'
           }}>
             <div style={{ 
               textAlign: 'center',
-              padding: '16px',
-              background: '#fff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0'
-            }}>
+              padding: '20px',
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)',
+              borderRadius: '16px',
+              border: '1px solid #dcfce7',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.08)';
+            }}
+            >
               <div style={{ 
-                fontSize: '22px', 
-                fontWeight: '700', 
+                fontSize: '28px', 
+                fontWeight: '800', 
                 color: '#10b981', 
-                marginBottom: '6px',
-                letterSpacing: '-0.3px'
+                marginBottom: '8px',
+                letterSpacing: '-0.5px'
               }}>
                 +{(pointsAccount.total_earned / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ 
-                fontSize: '13px', 
+                fontSize: '14px', 
                 color: '#64748b',
-                fontWeight: '500'
+                fontWeight: '600'
               }}>
                 累计获得
               </div>
             </div>
             <div style={{ 
               textAlign: 'center',
-              padding: '16px',
-              background: '#fff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0'
-            }}>
+              padding: '20px',
+              background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)',
+              borderRadius: '16px',
+              border: '1px solid #fef3c7',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.08)';
+            }}
+            >
               <div style={{ 
-                fontSize: '22px', 
-                fontWeight: '700', 
+                fontSize: '28px', 
+                fontWeight: '800', 
                 color: '#f59e0b', 
-                marginBottom: '6px',
-                letterSpacing: '-0.3px'
+                marginBottom: '8px',
+                letterSpacing: '-0.5px'
               }}>
                 -{(pointsAccount.total_spent / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ 
-                fontSize: '13px', 
+                fontSize: '14px', 
                 color: '#64748b',
-                fontWeight: '500'
+                fontWeight: '600'
               }}>
                 累计消费
               </div>
@@ -441,17 +506,22 @@ const Wallet: React.FC = () => {
         )}
 
         {/* 交易记录 */}
-        <div style={{ padding: '0 30px 30px 30px' }}>
+        <div style={{ padding: isMobile ? '24px 20px' : '36px 40px' }}>
           <h2 style={{ 
-            color: '#333', 
-            marginBottom: '20px', 
-            fontSize: '20px',
-            fontWeight: 'bold'
+            color: '#1a202c', 
+            marginBottom: '24px', 
+            fontSize: '22px',
+            fontWeight: '700',
+            letterSpacing: '-0.3px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
           }}>
-            📊 {
+            <span style={{ fontSize: '24px' }}>📊</span>
+            <span>{
               activeTab === 'balance' ? (hasStripeAccount ? 'Stripe 余额与交易' : '交易记录') : 
               '积分交易记录'
-            }
+            }</span>
           </h2>
           
           {/* 余额交易记录 - 如果没有 Stripe 账户，显示普通交易记录 */}
@@ -460,11 +530,16 @@ const Wallet: React.FC = () => {
               {transactions.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
-                  padding: '40px',
-                  color: '#666',
-                  fontSize: '16px'
+                  padding: '60px 20px',
+                  color: '#94a3b8',
+                  fontSize: '16px',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                  borderRadius: '16px',
+                  border: '2px dashed #e2e8f0'
                 }}>
-                  暂无交易记录
+                  <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📭</div>
+                  <div style={{ fontWeight: '500', color: '#64748b' }}>暂无交易记录</div>
+                  <div style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>您的交易记录将显示在这里</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -473,29 +548,32 @@ const Wallet: React.FC = () => {
                       key={transaction.id}
                       style={{
                         background: '#fff',
-                        padding: '16px',
-                        borderRadius: '12px',
+                        padding: '18px 20px',
+                        borderRadius: '16px',
                         border: '1px solid #e2e8f0',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer'
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+                        e.currentTarget.style.transform = 'translateY(0)';
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '12px',
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '14px',
                           background: transaction.type === 'income' 
                             ? 'linear-gradient(135deg, #10b981, #059669)' 
                             : 'linear-gradient(135deg, #f59e0b, #d97706)',
@@ -503,8 +581,11 @@ const Wallet: React.FC = () => {
                           alignItems: 'center',
                           justifyContent: 'center',
                           color: '#fff',
-                          fontSize: '20px',
-                          flexShrink: 0
+                          fontSize: '22px',
+                          flexShrink: 0,
+                          boxShadow: transaction.type === 'income' 
+                            ? '0 4px 12px rgba(16, 185, 129, 0.3)' 
+                            : '0 4px 12px rgba(245, 158, 11, 0.3)'
                         }}>
                           {transaction.type === 'income' ? '💰' : '💸'}
                         </div>
@@ -570,11 +651,16 @@ const Wallet: React.FC = () => {
               ) : pointsTransactions.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
-                  padding: '40px',
-                  color: '#666',
-                  fontSize: '16px'
+                  padding: '60px 20px',
+                  color: '#94a3b8',
+                  fontSize: '16px',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                  borderRadius: '16px',
+                  border: '2px dashed #e2e8f0'
                 }}>
-                  暂无积分交易记录
+                  <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>⭐</div>
+                  <div style={{ fontWeight: '500', color: '#64748b' }}>暂无积分交易记录</div>
+                  <div style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>您的积分交易记录将显示在这里</div>
                 </div>
               ) : (
                 <>
@@ -596,29 +682,32 @@ const Wallet: React.FC = () => {
                           key={transaction.id}
                           style={{
                             background: '#fff',
-                            padding: '16px',
-                            borderRadius: '12px',
+                            padding: '18px 20px',
+                            borderRadius: '16px',
                             border: '1px solid #e2e8f0',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            transition: 'all 0.2s ease',
-                            cursor: 'pointer'
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = '#cbd5e1';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+                            e.currentTarget.style.transform = 'translateY(0)';
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
-                              width: '44px',
-                              height: '44px',
-                              borderRadius: '12px',
+                              width: '48px',
+                              height: '48px',
+                              borderRadius: '14px',
                               background: color === '#4CAF50' ? 'linear-gradient(135deg, #4CAF50, #45a049)' :
                                         color === '#FF9800' ? 'linear-gradient(135deg, #FF9800, #f57c00)' :
                                         color === '#2196F3' ? 'linear-gradient(135deg, #2196F3, #1976d2)' :
@@ -627,8 +716,9 @@ const Wallet: React.FC = () => {
                               alignItems: 'center',
                               justifyContent: 'center',
                               color: '#fff',
-                              fontSize: '20px',
-                              flexShrink: 0
+                              fontSize: '22px',
+                              flexShrink: 0,
+                              boxShadow: `0 4px 12px ${color}40`
                             }}>
                               {icon}
                             </div>
@@ -732,9 +822,9 @@ const Wallet: React.FC = () => {
 
         {/* 说明 */}
         <div style={{
-          background: '#fafbfc',
-          padding: isMobile ? '20px' : '24px 30px',
-          borderTop: '1px solid #e2e8f0'
+          background: 'linear-gradient(to bottom, #ffffff, #f8fafc)',
+          padding: isMobile ? '24px 20px' : '32px 40px',
+          borderTop: '1px solid rgba(226, 232, 240, 0.5)'
         }}>
           {activeTab === 'balance' ? (
             <>
@@ -762,11 +852,11 @@ const Wallet: React.FC = () => {
                     </li>
                     <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
-                      可用余额可以立即提现到银行账户
+                      {t('wallet.stripe.availableBalanceWithdraw')}
                     </li>
                     <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
-                      待处理余额需要等待 Stripe 处理完成后才能提现
+                      {t('wallet.stripe.pendingBalanceWithdraw')}
                     </li>
                     <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
@@ -774,7 +864,7 @@ const Wallet: React.FC = () => {
                     </li>
                     <li style={{ position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
-                      您可以在余额组件中直接管理提现
+                      {t('wallet.stripe.managePayoutsInComponent')}
                     </li>
                   </>
                 ) : (
@@ -789,7 +879,7 @@ const Wallet: React.FC = () => {
                     </li>
                     <li style={{ marginBottom: '6px', position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
-                      余额可用于发布任务或提现
+                      {t('wallet.stripe.balanceUsage')}
                     </li>
                     <li style={{ position: 'relative', paddingLeft: '20px' }}>
                       <span style={{ position: 'absolute', left: '0', color: '#10b981' }}>•</span>
