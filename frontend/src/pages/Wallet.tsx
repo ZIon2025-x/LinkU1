@@ -46,12 +46,23 @@ const Wallet: React.FC = () => {
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsPage, setPointsPage] = useState(1);
   const [pointsTotal, setPointsTotal] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Stripe 相关状态
   const [hasStripeAccount, setHasStripeAccount] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   // 启用 payouts 组件（用于钱包页面显示余额和提现功能）
   const stripeConnectInstance = useStripeConnect(stripeAccountId, true);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // 加载钱包数据
