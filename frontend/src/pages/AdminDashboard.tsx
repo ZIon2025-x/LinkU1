@@ -4389,7 +4389,7 @@ const AdminDashboard: React.FC = () => {
         </Modal>
       )}
     </div>
-  ), [taskDisputes, disputesLoading, disputesPage, disputesTotal, disputesStatusFilter, selectedDispute, showDisputeDetailModal, showDisputeActionModal, disputeAction, disputeResolutionNote, processingDispute, loadTaskDisputes, handleViewDisputeDetail, handleOpenDisputeAction, handleDisputeAction, t]);
+  ), [taskDisputes, disputesLoading, disputesPage, disputesTotal, disputesStatusFilter, disputesSearchKeyword, selectedDispute, showDisputeDetailModal, showDisputeActionModal, disputeAction, disputeResolutionNote, processingDispute, loadTaskDisputes, handleViewDisputeDetail, handleOpenDisputeAction, handleDisputeAction]);
 
   const renderNotifications = useCallback(() => (
     <div>
