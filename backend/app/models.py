@@ -268,6 +268,30 @@ class TaskHistory(Base):
     remark = Column(Text, nullable=True)
 
 
+class TaskDispute(Base):
+    """任务争议记录表"""
+    __tablename__ = "task_disputes"
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 发布者ID
+    reason = Column(Text, nullable=False)  # 争议原因
+    status = Column(String(20), default="pending")  # pending, resolved, dismissed
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 处理的管理员ID
+    resolution_note = Column(Text, nullable=True)  # 处理备注
+    
+    # 关系
+    task = relationship("Task", backref="disputes")
+    poster = relationship("User", foreign_keys=[poster_id])
+    resolver = relationship("User", foreign_keys=[resolved_by])
+    
+    __table_args__ = (
+        Index("ix_task_disputes_task_id", task_id),
+        Index("ix_task_disputes_status", status),
+    )
+
+
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)

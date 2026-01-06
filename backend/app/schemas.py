@@ -284,7 +284,7 @@ class TaskBase(BaseModel):
     description: str
     deadline: Optional[datetime.datetime] = None  # 允许为 NULL，支持灵活模式任务
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
-    reward: float
+    reward: float = Field(..., ge=1.0, description="任务金额，最小值为1镑")  # 最小值为1镑
     base_reward: Optional[float] = None  # 原始标价
     agreed_reward: Optional[float] = None  # 最终成交价
     currency: Optional[str] = "GBP"  # 货币类型
@@ -552,6 +552,37 @@ class ReviewOut(ReviewBase):
 
     class Config:
         from_attributes = True
+
+
+class TaskDisputeCreate(BaseModel):
+    """创建任务争议"""
+    reason: str = Field(..., min_length=10, max_length=2000, description="争议原因（至少10个字符）")
+
+
+class TaskDisputeOut(BaseModel):
+    """任务争议输出"""
+    id: int
+    task_id: int
+    poster_id: str
+    reason: str
+    status: str
+    created_at: datetime.datetime
+    resolved_at: Optional[datetime.datetime] = None
+    resolved_by: Optional[str] = None
+    resolution_note: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class TaskDisputeResolve(BaseModel):
+    """解决争议"""
+    resolution_note: str = Field(..., min_length=1, max_length=2000, description="处理备注")
+
+
+class TaskDisputeDismiss(BaseModel):
+    """驳回争议"""
+    resolution_note: str = Field(..., min_length=1, max_length=2000, description="驳回理由")
 
 
 class ReviewWithReviewerInfo(ReviewBase):

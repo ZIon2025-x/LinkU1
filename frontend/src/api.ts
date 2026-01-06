@@ -875,6 +875,45 @@ export async function confirmTaskCompletion(taskId: number) {
   return res.data;
 }
 
+// 提交任务争议（未正确完成）
+export async function createTaskDispute(taskId: number, reason: string) {
+  const res = await api.post(`/api/tasks/${taskId}/dispute`, { reason });
+  return res.data;
+}
+
+// 管理员获取任务争议列表
+export async function getAdminTaskDisputes(params?: {
+  skip?: number;
+  limit?: number;
+  status?: string;
+  keyword?: string;
+}) {
+  const res = await api.get('/api/admin/task-disputes', { params });
+  return res.data;
+}
+
+// 管理员获取任务争议详情
+export async function getAdminTaskDisputeDetail(disputeId: number) {
+  const res = await api.get(`/api/admin/task-disputes/${disputeId}`);
+  return res.data;
+}
+
+// 管理员解决争议
+export async function resolveTaskDispute(disputeId: number, resolutionNote: string) {
+  const res = await api.post(`/api/admin/task-disputes/${disputeId}/resolve`, {
+    resolution_note: resolutionNote
+  });
+  return res.data;
+}
+
+// 管理员驳回争议
+export async function dismissTaskDispute(disputeId: number, resolutionNote: string) {
+  const res = await api.post(`/api/admin/task-disputes/${disputeId}/dismiss`, {
+    resolution_note: resolutionNote
+  });
+  return res.data;
+}
+
 // 任务发布者同意接受者
 export async function approveTaskTaker(taskId: number) {
   const res = await api.post(`/api/tasks/${taskId}/approve`);

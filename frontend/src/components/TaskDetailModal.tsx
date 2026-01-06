@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
 import { message } from 'antd';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -71,6 +71,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [messageContent, setMessageContent] = useState('');
   const [messageNegotiatedPrice, setMessageNegotiatedPrice] = useState<number | undefined>();
   const [isMessageNegotiateChecked, setIsMessageNegotiateChecked] = useState(false);
+  // 争议相关状态
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
   // 多人任务相关状态
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
@@ -2895,6 +2898,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           )}
 
           {task.status === 'pending_confirmation' && isTaskPoster && (
+            <>
             <button
               onClick={handleConfirmCompletion}
               disabled={actionLoading}
@@ -2907,11 +2911,33 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 fontWeight: 700,
                 fontSize: 18,
                 cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading ? 0.6 : 1
+                opacity: actionLoading ? 0.6 : 1,
+                marginRight: '16px'
               }}
             >
               {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmCompleteButton')}
             </button>
+            <button
+              onClick={() => {
+                setDisputeReason('');
+                setShowDisputeModal(true);
+              }}
+              disabled={actionLoading}
+              style={{
+                background: '#dc3545',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 32px',
+                fontWeight: 700,
+                fontSize: 18,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                opacity: actionLoading ? 0.6 : 1
+              }}
+            >
+              {t('taskDetail.notCompletedCorrectlyButton')}
+            </button>
+            </>
           )}
 
           {/* 评价按钮 */}
@@ -3754,6 +3780,140 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 }}
               >
                 发送
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 争议模态框 */}
+      {showDisputeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '20px',
+              color: '#333'
+            }}>
+              {t('taskDetail.submitDispute')}
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#666',
+              marginBottom: '20px'
+            }}>
+              {t('taskDetail.disputeReasonHint')}
+            </p>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              placeholder={t('taskDetail.disputeReasonPlaceholder')}
+              style={{
+                width: '100%',
+                minHeight: '150px',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '2px solid #e2e8f0',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                resize: 'vertical',
+                marginBottom: '20px',
+                boxSizing: 'border-box'
+              }}
+              maxLength={2000}
+            />
+            <div style={{
+              fontSize: '12px',
+              color: '#999',
+              marginBottom: '20px',
+              textAlign: 'right'
+            }}>
+              {disputeReason.length}/2000
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowDisputeModal(false);
+                  setDisputeReason('');
+                }}
+                style={{
+                  padding: '10px 24px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!disputeReason.trim()) {
+                    alert(t('taskDetail.disputeReasonRequired'));
+                    return;
+                  }
+                  if (disputeReason.trim().length < 10) {
+                    alert(t('taskDetail.disputeReasonMinLength'));
+                    return;
+                  }
+                  
+                  setActionLoading(true);
+                  try {
+                    await createTaskDispute(taskId!, disputeReason.trim());
+                    alert(t('taskDetail.disputeSubmitted'));
+                    setShowDisputeModal(false);
+                    setDisputeReason('');
+                    // 重新加载任务数据
+                    await loadTaskData();
+                  } catch (error: any) {
+                    alert(getErrorMessage(error));
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading || !disputeReason.trim()}
+                style={{
+                  padding: '10px 24px',
+                  background: actionLoading || !disputeReason.trim() ? '#ccc' : '#dc3545',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: (actionLoading || !disputeReason.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (actionLoading || !disputeReason.trim()) ? 0.6 : 1
+                }}
+              >
+                {actionLoading 
+                  ? t('common.processing')
+                  : t('common.submit')}
               </button>
             </div>
           </div>

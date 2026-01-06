@@ -80,7 +80,11 @@ import api, {
   toggleBannerStatus,
   batchDeleteBanners,
   batchUpdateBannerOrder,
-  uploadBannerImage
+  uploadBannerImage,
+  getAdminTaskDisputes,
+  getAdminTaskDisputeDetail,
+  resolveTaskDispute,
+  dismissTaskDispute
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -232,6 +236,20 @@ const AdminDashboard: React.FC = () => {
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComment, setReviewComment] = useState('');
   
+  // 任务争议管理相关状态
+  const [taskDisputes, setTaskDisputes] = useState<any[]>([]);
+  const [disputesLoading, setDisputesLoading] = useState(false);
+  const [disputesPage, setDisputesPage] = useState(1);
+  const [disputesTotal, setDisputesTotal] = useState(0);
+  const [disputesStatusFilter, setDisputesStatusFilter] = useState<string>('');
+  const [disputesSearchKeyword, setDisputesSearchKeyword] = useState<string>('');
+  const [selectedDispute, setSelectedDispute] = useState<any>(null);
+  const [showDisputeDetailModal, setShowDisputeDetailModal] = useState(false);
+  const [showDisputeActionModal, setShowDisputeActionModal] = useState(false);
+  const [disputeAction, setDisputeAction] = useState<'resolve' | 'dismiss'>('resolve');
+  const [disputeResolutionNote, setDisputeResolutionNote] = useState('');
+  const [processingDispute, setProcessingDispute] = useState(false);
+
   // 信息修改请求审核相关状态
   const [profileUpdateRequests, setProfileUpdateRequests] = useState<any[]>([]);
   const [loadingProfileUpdates, setLoadingProfileUpdates] = useState(false);
@@ -3793,6 +3811,585 @@ const AdminDashboard: React.FC = () => {
       )}
     </div>
   ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates, showTaskExpertModal, taskExpertForm, expertModalTab, expertServices, expertActivities, loadingServices, loadingActivities, editingService, showServiceEditModal, serviceTimeSlotForm, uploadingAvatar, approvedApplications, loadingApprovedApplications, showReviewModal, showProfileUpdateReviewModal, showCreateExpertModal, selectedApplication, selectedProfileUpdate, reviewAction, reviewComment, profileUpdateReviewAction, profileUpdateReviewComment, handleReviewApplication, handleReviewProfileUpdate, loadExpertApplications, loadProfileUpdateRequests]);
+
+  // 加载任务争议列表
+  const loadTaskDisputes = useCallback(async () => {
+    try {
+      setDisputesLoading(true);
+      const response = await getAdminTaskDisputes({
+        skip: (disputesPage - 1) * 20,
+        limit: 20,
+        status: disputesStatusFilter || undefined,
+        keyword: disputesSearchKeyword.trim() || undefined
+      });
+      setTaskDisputes(response.disputes || []);
+      setDisputesTotal(response.total || 0);
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setDisputesLoading(false);
+    }
+  }, [disputesPage, disputesStatusFilter, disputesSearchKeyword]);
+
+  useEffect(() => {
+    if (activeTab === 'task-disputes') {
+      loadTaskDisputes();
+    }
+  }, [activeTab, disputesPage, disputesStatusFilter, disputesSearchKeyword, loadTaskDisputes]);
+
+  // 实时刷新待处理争议列表（每30秒刷新一次）
+  useEffect(() => {
+    if (activeTab === 'task-disputes') {
+      // 只刷新待处理状态的争议
+      const refreshInterval = setInterval(() => {
+        if (!disputesLoading && (!disputesStatusFilter || disputesStatusFilter === 'pending')) {
+          loadTaskDisputes();
+        }
+      }, 30000); // 30秒刷新一次
+
+      return () => clearInterval(refreshInterval);
+    }
+  }, [activeTab, disputesStatusFilter, disputesLoading, loadTaskDisputes]);
+
+  // 处理争议（解决或驳回）
+  const handleDisputeAction = useCallback(async () => {
+    if (!selectedDispute || !disputeResolutionNote.trim()) {
+      message.error('请输入处理备注');
+      return;
+    }
+
+    try {
+      setProcessingDispute(true);
+      if (disputeAction === 'resolve') {
+        await resolveTaskDispute(selectedDispute.id, disputeResolutionNote.trim());
+        message.success('争议已解决');
+      } else {
+        await dismissTaskDispute(selectedDispute.id, disputeResolutionNote.trim());
+        message.success('争议已驳回');
+      }
+      setShowDisputeActionModal(false);
+      setDisputeResolutionNote('');
+      setSelectedDispute(null);
+      await loadTaskDisputes();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setProcessingDispute(false);
+    }
+  }, [selectedDispute, disputeAction, disputeResolutionNote, loadTaskDisputes]);
+
+  // 查看争议详情
+  const handleViewDisputeDetail = useCallback(async (disputeId: number) => {
+    try {
+      const dispute = await getAdminTaskDisputeDetail(disputeId);
+      setSelectedDispute(dispute);
+      setShowDisputeDetailModal(true);
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    }
+  }, []);
+
+  // 打开处理争议弹窗
+  const handleOpenDisputeAction = useCallback((dispute: any, action: 'resolve' | 'dismiss') => {
+    setSelectedDispute(dispute);
+    setDisputeAction(action);
+    setDisputeResolutionNote('');
+    setShowDisputeActionModal(true);
+  }, []);
+
+  const renderTaskDisputes = useCallback(() => (
+    <div>
+      <h2>任务争议管理</h2>
+      
+      {/* 筛选和搜索 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="搜索任务标题、发布者姓名或争议原因..."
+          value={disputesSearchKeyword}
+          onChange={(e) => setDisputesSearchKeyword(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              setDisputesPage(1);
+              loadTaskDisputes();
+            }
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px',
+            flex: '1',
+            minWidth: '250px'
+          }}
+        />
+        <select
+          value={disputesStatusFilter}
+          onChange={(e) => {
+            setDisputesStatusFilter(e.target.value);
+            setDisputesPage(1);
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}
+        >
+          <option value="">全部状态</option>
+          <option value="pending">待处理</option>
+          <option value="resolved">已解决</option>
+          <option value="dismissed">已驳回</option>
+        </select>
+        <button
+          onClick={() => {
+            setDisputesPage(1);
+            loadTaskDisputes();
+          }}
+          style={{
+            padding: '8px 16px',
+            border: 'none',
+            background: '#007bff',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          搜索
+        </button>
+        {disputesSearchKeyword && (
+          <button
+            onClick={() => {
+              setDisputesSearchKeyword('');
+              setDisputesPage(1);
+              // useEffect会自动触发loadTaskDisputes
+            }}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: 'white',
+              color: '#333',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            清除
+          </button>
+        )}
+      </div>
+
+      {/* 争议列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {disputesLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : taskDisputes.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+            {disputesSearchKeyword ? '未找到匹配的争议记录' : '暂无争议记录'}
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>任务</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>发布者</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>争议原因</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>创建时间</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {taskDisputes.map((dispute: any) => (
+                <tr key={dispute.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{dispute.id}</td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {dispute.task_title} (#{dispute.task_id})
+                  </td>
+                  <td style={{ padding: '12px' }}>{dispute.poster_name}</td>
+                  <td style={{ padding: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {dispute.reason}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      background: dispute.status === 'pending' ? '#fff3cd' : dispute.status === 'resolved' ? '#d4edda' : '#f8d7da',
+                      color: dispute.status === 'pending' ? '#856404' : dispute.status === 'resolved' ? '#155724' : '#721c24'
+                    }}>
+                      {dispute.status === 'pending' ? '待处理' : dispute.status === 'resolved' ? '已解决' : '已驳回'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {new Date(dispute.created_at).toLocaleString('zh-CN')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleViewDisputeDetail(dispute.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        查看
+                      </button>
+                      {dispute.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleOpenDisputeAction(dispute, 'resolve')}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#28a745',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            解决
+                          </button>
+                          <button
+                            onClick={() => handleOpenDisputeAction(dispute, 'dismiss')}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#dc3545',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            驳回
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {disputesTotal > 20 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setDisputesPage(prev => Math.max(1, prev - 1))}
+            disabled={disputesPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: disputesPage === 1 ? '#f5f5f5' : 'white',
+              color: disputesPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: disputesPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', lineHeight: '32px' }}>
+            第 {disputesPage} 页，共 {Math.ceil(disputesTotal / 20)} 页
+          </span>
+          <button
+            onClick={() => setDisputesPage(prev => prev + 1)}
+            disabled={disputesPage >= Math.ceil(disputesTotal / 20)}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: disputesPage >= Math.ceil(disputesTotal / 20) ? '#f5f5f5' : 'white',
+              color: disputesPage >= Math.ceil(disputesTotal / 20) ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: disputesPage >= Math.ceil(disputesTotal / 20) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+
+      {/* 争议详情弹窗 */}
+      {showDisputeDetailModal && selectedDispute && (
+        <Modal
+          title={`争议详情 #${selectedDispute.id}`}
+          open={showDisputeDetailModal}
+          onCancel={() => {
+            setShowDisputeDetailModal(false);
+            setSelectedDispute(null);
+          }}
+          footer={null}
+          width={800}
+        >
+          <div style={{ padding: '20px' }}>
+            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>任务信息</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>任务标题：</strong>
+              {selectedDispute.task_title || `任务 #${selectedDispute.task_id}`}
+            </div>
+            {selectedDispute.task_description && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>任务描述：</strong>
+                <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflow: 'auto' }}>
+                  {selectedDispute.task_description}
+                </div>
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <strong>任务状态：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedDispute.task_status === 'completed' ? '#d4edda' : selectedDispute.task_status === 'in_progress' ? '#d1ecf1' : selectedDispute.task_status === 'pending_confirmation' ? '#fff3cd' : '#f8d7da',
+                color: selectedDispute.task_status === 'completed' ? '#155724' : selectedDispute.task_status === 'in_progress' ? '#0c5460' : selectedDispute.task_status === 'pending_confirmation' ? '#856404' : '#721c24',
+                marginLeft: '8px'
+              }}>
+                {selectedDispute.task_status === 'open' ? '开放中' : 
+                 selectedDispute.task_status === 'taken' ? '已接受' : 
+                 selectedDispute.task_status === 'in_progress' ? '进行中' : 
+                 selectedDispute.task_status === 'pending_confirmation' ? '待确认' : 
+                 selectedDispute.task_status === 'completed' ? '已完成' : 
+                 selectedDispute.task_status === 'cancelled' ? '已取消' : 
+                 selectedDispute.task_status || '未知'}
+              </span>
+            </div>
+            {selectedDispute.task_created_at && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>任务创建时间：</strong>
+                {new Date(selectedDispute.task_created_at).toLocaleString('zh-CN')}
+              </div>
+            )}
+            {selectedDispute.task_accepted_at && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>任务接受时间：</strong>
+                {new Date(selectedDispute.task_accepted_at).toLocaleString('zh-CN')}
+              </div>
+            )}
+            {selectedDispute.task_completed_at && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>任务完成时间：</strong>
+                {new Date(selectedDispute.task_completed_at).toLocaleString('zh-CN')}
+              </div>
+            )}
+
+            <h3 style={{ marginBottom: '20px', marginTop: '30px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>参与方信息</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>发布者ID：</strong>
+              {selectedDispute.poster_id}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>发布者姓名：</strong>
+              {selectedDispute.poster_name || '未设置'}
+            </div>
+            {selectedDispute.taker_id && (
+              <>
+                <div style={{ marginBottom: '20px' }}>
+                  <strong>接受者ID：</strong>
+                  {selectedDispute.taker_id}
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <strong>接受者姓名：</strong>
+                  {selectedDispute.taker_name || '未设置'}
+                </div>
+              </>
+            )}
+            {!selectedDispute.taker_id && (
+              <div style={{ marginBottom: '20px', color: '#999' }}>
+                暂无接受者
+              </div>
+            )}
+
+            <h3 style={{ marginBottom: '20px', marginTop: '30px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>支付信息</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>任务金额：</strong>
+              {selectedDispute.task_amount !== null && selectedDispute.task_amount !== undefined ? (
+                <span>
+                  {selectedDispute.currency || 'GBP'} {Number(selectedDispute.task_amount).toFixed(2)}
+                  {selectedDispute.agreed_reward && selectedDispute.base_reward && Number(selectedDispute.agreed_reward) !== Number(selectedDispute.base_reward) && (
+                    <span style={{ marginLeft: '8px', color: '#999', textDecoration: 'line-through' }}>
+                      (原价: {Number(selectedDispute.base_reward).toFixed(2)})
+                    </span>
+                  )}
+                </span>
+              ) : '未设置'}
+            </div>
+            {selectedDispute.base_reward && selectedDispute.agreed_reward && Number(selectedDispute.agreed_reward) !== Number(selectedDispute.base_reward) && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>原始标价：</strong>
+                {selectedDispute.currency || 'GBP'} {Number(selectedDispute.base_reward).toFixed(2)}
+              </div>
+            )}
+            {selectedDispute.agreed_reward && selectedDispute.base_reward && Number(selectedDispute.agreed_reward) !== Number(selectedDispute.base_reward) && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>最终成交价：</strong>
+                {selectedDispute.currency || 'GBP'} {Number(selectedDispute.agreed_reward).toFixed(2)}
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <strong>支付状态：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedDispute.is_paid ? '#d4edda' : '#f8d7da',
+                color: selectedDispute.is_paid ? '#155724' : '#721c24',
+                marginLeft: '8px'
+              }}>
+                {selectedDispute.is_paid ? '✅ 已支付' : '⏳ 未支付'}
+              </span>
+            </div>
+            {selectedDispute.payment_intent_id && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>支付Intent ID：</strong>
+                <code style={{ padding: '4px 8px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                  {selectedDispute.payment_intent_id}
+                </code>
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <strong>托管金额：</strong>
+              {selectedDispute.currency || 'GBP'} {selectedDispute.escrow_amount !== null && selectedDispute.escrow_amount !== undefined ? Number(selectedDispute.escrow_amount).toFixed(2) : '0.00'}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>确认状态：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedDispute.is_confirmed ? '#d4edda' : '#fff3cd',
+                color: selectedDispute.is_confirmed ? '#155724' : '#856404',
+                marginLeft: '8px'
+              }}>
+                {selectedDispute.is_confirmed ? '✅ 已确认' : '⏳ 未确认'}
+              </span>
+            </div>
+            {selectedDispute.paid_to_user_id && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>收款人ID：</strong>
+                {selectedDispute.paid_to_user_id}
+              </div>
+            )}
+
+            <h3 style={{ marginBottom: '20px', marginTop: '30px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>争议信息</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>争议原因：</strong>
+              <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                {selectedDispute.reason}
+              </div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>状态：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedDispute.status === 'pending' ? '#fff3cd' : selectedDispute.status === 'resolved' ? '#d4edda' : '#f8d7da',
+                color: selectedDispute.status === 'pending' ? '#856404' : selectedDispute.status === 'resolved' ? '#155724' : '#721c24'
+              }}>
+                {selectedDispute.status === 'pending' ? '待处理' : selectedDispute.status === 'resolved' ? '已解决' : '已驳回'}
+              </span>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>创建时间：</strong>
+              {new Date(selectedDispute.created_at).toLocaleString('zh-CN')}
+            </div>
+            {selectedDispute.resolved_at && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>处理时间：</strong>
+                {new Date(selectedDispute.resolved_at).toLocaleString('zh-CN')}
+              </div>
+            )}
+            {selectedDispute.resolver_name && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>处理人：</strong>
+                {selectedDispute.resolver_name}
+              </div>
+            )}
+            {selectedDispute.resolution_note && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>处理备注：</strong>
+                <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                  {selectedDispute.resolution_note}
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* 处理争议弹窗 */}
+      {showDisputeActionModal && selectedDispute && (
+        <Modal
+          title={disputeAction === 'resolve' ? '解决争议' : '驳回争议'}
+          open={showDisputeActionModal}
+          onCancel={() => {
+            setShowDisputeActionModal(false);
+            setDisputeResolutionNote('');
+            setSelectedDispute(null);
+          }}
+          onOk={handleDisputeAction}
+          confirmLoading={processingDispute}
+          okText={disputeAction === 'resolve' ? '解决' : '驳回'}
+          cancelText="取消"
+          width={600}
+        >
+          <div style={{ padding: '20px 0' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>任务：</strong>
+              {selectedDispute.task_title || `任务 #${selectedDispute.task_id}`}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>争议原因：</strong>
+              <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                {selectedDispute.reason}
+              </div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                {disputeAction === 'resolve' ? '处理备注' : '驳回理由'}：
+              </label>
+              <textarea
+                value={disputeResolutionNote}
+                onChange={(e) => setDisputeResolutionNote(e.target.value)}
+                placeholder={disputeAction === 'resolve' ? '请输入处理备注...' : '请输入驳回理由...'}
+                rows={6}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  ), [taskDisputes, disputesLoading, disputesPage, disputesTotal, disputesStatusFilter, selectedDispute, showDisputeDetailModal, showDisputeActionModal, disputeAction, disputeResolutionNote, processingDispute, loadTaskDisputes, handleViewDisputeDetail, handleOpenDisputeAction, handleDisputeAction, t]);
 
   const renderNotifications = useCallback(() => (
     <div>
@@ -8802,6 +9399,36 @@ const AdminDashboard: React.FC = () => {
             >
               🚨 举报管理
             </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'task-disputes')}
+              onClick={() => handleTabChange('task-disputes')}
+              style={{ position: 'relative' }}
+            >
+              ⚖️ 任务争议
+              {/* 待处理争议数量提示 */}
+              {taskDisputes.filter((d: any) => d.status === 'pending').length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 5,
+                  right: 8,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#ff4d4f',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {taskDisputes.filter((d: any) => d.status === 'pending').length}
+                </div>
+              )}
+            </button>
           </div>
         </div>
 
@@ -8904,6 +9531,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'forum-categories' && renderForumCategories()}
             {activeTab === 'forum-posts' && renderForumPosts()}
             {activeTab === 'reports' && renderReports()}
+            {activeTab === 'task-disputes' && renderTaskDisputes()}
             {activeTab === 'flea-market-items' && renderFleaMarketItems()}
             {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
             {activeTab === 'leaderboard-review' && renderLeaderboardReview()}

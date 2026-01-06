@@ -561,7 +561,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
       let msg = t('auth.loginError');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
-          msg = err.response.data.detail;
+          const detail = err.response.data.detail;
+          // 检查是否是验证码错误
+          if (detail.includes('验证码错误') || detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期'))) {
+            msg = t('auth.verificationCodeError') || '验证码验证错误';
+          } else {
+            msg = detail;
+          }
         } else if (Array.isArray(err.response.data.detail)) {
           msg = err.response.data.detail.map((item: any) => item.msg).join('；');
         } else if (typeof err.response.data.detail === 'object' && err.response.data.detail.msg) {
@@ -625,7 +631,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
       let msg = t('auth.loginError');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
-          msg = err.response.data.detail;
+          const detail = err.response.data.detail;
+          // 检查是否是验证码错误
+          if (detail.includes('验证码错误') || detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期'))) {
+            msg = t('auth.verificationCodeError') || '验证码验证错误';
+          } else {
+            msg = detail;
+          }
         } else if (Array.isArray(err.response.data.detail)) {
           msg = err.response.data.detail.map((item: any) => item.msg).join('；');
         } else if (typeof err.response.data.detail === 'object' && err.response.data.detail.msg) {
@@ -782,7 +794,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         setPhoneCountryCode('+44'); // 重置国家代码
       }
     } catch (err: any) {
-                  let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
+      let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
       
       // 优先处理HTTP响应错误
       if (err?.response?.data) {
@@ -791,7 +803,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
         // 处理detail字段
         if (responseData.detail) {
           if (typeof responseData.detail === 'string') {
-            msg = responseData.detail;
+            const detail = responseData.detail;
+            // 检查是否是密码错误（仅密码登录时）
+            if (isLogin && loginMethod === 'password' && (detail.includes('密码错误') || detail.includes('用户名或密码错误'))) {
+              msg = t('auth.passwordError') || '账户密码错误';
+            } else {
+              msg = detail;
+            }
           } else if (Array.isArray(responseData.detail)) {
             msg = responseData.detail.map((item: any) => item.msg || item).join('；');
           } else if (typeof responseData.detail === 'object' && responseData.detail.msg) {

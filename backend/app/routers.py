@@ -1506,6 +1506,340 @@ def complete_task(
     return db_task
 
 
+@router.post("/tasks/{task_id}/dispute", response_model=schemas.TaskDisputeOut)
+def create_task_dispute(
+    task_id: int,
+    dispute_data: schemas.TaskDisputeCreate,
+    background_tasks: BackgroundTasks = None,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """任务发布者提交争议（未正确完成）"""
+    task = crud.get_task(db, task_id)
+    if not task or task.poster_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    if task.status != "pending_confirmation":
+        raise HTTPException(status_code=400, detail="Task is not pending confirmation")
+    
+    # 检查是否已经提交过争议
+    existing_dispute = db.query(models.TaskDispute).filter(
+        models.TaskDispute.task_id == task_id,
+        models.TaskDispute.poster_id == current_user.id,
+        models.TaskDispute.status == "pending"
+    ).first()
+    
+    if existing_dispute:
+        raise HTTPException(status_code=400, detail="您已经提交过争议，请等待管理员处理")
+    
+    # 创建争议记录
+    dispute = models.TaskDispute(
+        task_id=task_id,
+        poster_id=current_user.id,
+        reason=dispute_data.reason,
+        status="pending",
+        created_at=get_utc_time()
+    )
+    db.add(dispute)
+    db.flush()
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        poster_name = current_user.name or f"用户{current_user.id}"
+        system_message = Message(
+            sender_id=None,  # 系统消息，sender_id为None
+            receiver_id=None,
+            content=f"{poster_name} 对任务完成状态有异议。",
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({"system_action": "task_dispute_created", "dispute_id": dispute.id}),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+        # 系统消息发送失败不影响争议提交流程
+    
+    # 通知管理员（后台任务）
+    if background_tasks:
+        try:
+            from app.task_notifications import send_dispute_notification_to_admin
+            send_dispute_notification_to_admin(
+                db=db,  # 虽然后台任务会创建新会话，但这里保留参数以保持接口一致性
+                background_tasks=background_tasks,
+                task=task,
+                dispute=dispute,
+                poster=current_user
+            )
+        except Exception as e:
+            logger.error(f"Failed to send dispute notification to admin: {e}")
+    
+    db.commit()
+    db.refresh(dispute)
+    
+    return dispute
+
+
+# ==================== 管理员任务争议管理API ====================
+
+@router.get("/admin/task-disputes", response_model=dict)
+def get_admin_task_disputes(
+    skip: int = 0,
+    limit: int = 20,
+    status: Optional[str] = None,
+    keyword: Optional[str] = None,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员获取任务争议列表"""
+    query = db.query(models.TaskDispute)
+    
+    # 状态筛选
+    if status:
+        query = query.filter(models.TaskDispute.status == status)
+    
+    # 关键词搜索（任务标题、发布者姓名、争议原因）
+    has_keyword_search = keyword and keyword.strip()
+    if has_keyword_search:
+        keyword = keyword.strip()
+        # 使用JOIN查询任务和用户信息
+        from sqlalchemy import or_
+        query = query.join(models.Task, models.TaskDispute.task_id == models.Task.id).join(
+            models.User, models.TaskDispute.poster_id == models.User.id
+        ).filter(
+            or_(
+                models.Task.title.ilike(f'%{keyword}%'),
+                models.User.name.ilike(f'%{keyword}%'),
+                models.TaskDispute.reason.ilike(f'%{keyword}%')
+            )
+        )
+    
+    # 按创建时间倒序
+    query = query.order_by(models.TaskDispute.created_at.desc())
+    
+    # 总数（如果有关键词搜索，需要去重计数）
+    if has_keyword_search:
+        total = query.distinct().count()
+    else:
+        total = query.count()
+    
+    # 分页 - 使用JOIN优化查询，避免N+1问题
+    from sqlalchemy.orm import joinedload
+    
+    # 如果有关键词搜索，已经JOIN了Task和User，需要去重
+    if has_keyword_search:
+        disputes = (
+            query
+            .options(
+                joinedload(models.TaskDispute.task),
+                joinedload(models.TaskDispute.poster),
+                joinedload(models.TaskDispute.resolver)
+            )
+            .distinct()
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+    else:
+        disputes = (
+            query
+            .options(
+                joinedload(models.TaskDispute.task),  # 预加载任务信息
+                joinedload(models.TaskDispute.poster),  # 预加载发布者信息
+                joinedload(models.TaskDispute.resolver)  # 预加载处理人信息
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+    
+    # 构建返回数据（关联数据已预加载，无需额外查询）
+    disputes_with_task = []
+    for dispute in disputes:
+        task = dispute.task  # 已预加载
+        poster = dispute.poster  # 已预加载
+        resolver = dispute.resolver  # 已预加载
+        
+        dispute_dict = {
+            "id": dispute.id,
+            "task_id": dispute.task_id,
+            "task_title": task.title if task else "任务已删除",
+            "poster_id": dispute.poster_id,
+            "poster_name": poster.name if poster else f"用户{dispute.poster_id}",
+            "reason": dispute.reason,
+            "status": dispute.status,
+            "created_at": dispute.created_at,
+            "resolved_at": dispute.resolved_at,
+            "resolved_by": dispute.resolved_by,
+            "resolver_name": resolver.name if resolver else None,
+            "resolution_note": dispute.resolution_note,
+        }
+        disputes_with_task.append(dispute_dict)
+    
+    return {
+        "disputes": disputes_with_task,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+
+@router.get("/admin/task-disputes/{dispute_id}")
+def get_admin_task_dispute_detail(
+    dispute_id: int,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员获取任务争议详情（包含关联信息）"""
+    dispute = db.query(models.TaskDispute).filter(models.TaskDispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    
+    # 获取关联的任务信息
+    task = crud.get_task(db, dispute.task_id)
+    poster = crud.get_user_by_id(db, dispute.poster_id)
+    taker = crud.get_user_by_id(db, task.taker_id) if task and task.taker_id else None
+    resolver = crud.get_user_by_id(db, dispute.resolved_by) if dispute.resolved_by else None
+    
+    # 计算任务金额（优先使用agreed_reward，否则使用base_reward）
+    task_amount = None
+    if task:
+        if task.agreed_reward is not None:
+            task_amount = float(task.agreed_reward)
+        elif task.base_reward is not None:
+            task_amount = float(task.base_reward)
+        else:
+            task_amount = float(task.reward) if task.reward else 0.0
+    
+    return {
+        "id": dispute.id,
+        "task_id": dispute.task_id,
+        "task_title": task.title if task else "任务已删除",
+        "task_status": task.status if task else None,
+        "task_description": task.description if task else None,
+        "task_created_at": task.created_at if task else None,
+        "task_accepted_at": task.accepted_at if task else None,
+        "task_completed_at": task.completed_at if task else None,
+        "poster_id": dispute.poster_id,
+        "poster_name": poster.name if poster else f"用户{dispute.poster_id}",
+        "taker_id": task.taker_id if task else None,
+        "taker_name": taker.name if taker else (f"用户{task.taker_id}" if task and task.taker_id else None),
+        "task_amount": task_amount,
+        "base_reward": float(task.base_reward) if task and task.base_reward else None,
+        "agreed_reward": float(task.agreed_reward) if task and task.agreed_reward else None,
+        "currency": task.currency if task else "GBP",
+        "is_paid": bool(task.is_paid) if task else False,
+        "payment_intent_id": task.payment_intent_id if task else None,
+        "escrow_amount": float(task.escrow_amount) if task and task.escrow_amount else 0.0,
+        "is_confirmed": bool(task.is_confirmed) if task else False,
+        "paid_to_user_id": task.paid_to_user_id if task else None,
+        "reason": dispute.reason,
+        "status": dispute.status,
+        "created_at": dispute.created_at,
+        "resolved_at": dispute.resolved_at,
+        "resolved_by": dispute.resolved_by,
+        "resolver_name": resolver.name if resolver else None,
+        "resolution_note": dispute.resolution_note,
+    }
+
+
+@router.post("/admin/task-disputes/{dispute_id}/resolve", response_model=schemas.TaskDisputeOut)
+def resolve_task_dispute(
+    dispute_id: int,
+    resolve_data: schemas.TaskDisputeResolve,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员解决争议（支持发布者）"""
+    dispute = db.query(models.TaskDispute).filter(models.TaskDispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    
+    if dispute.status != "pending":
+        raise HTTPException(status_code=400, detail="Dispute is not pending")
+    
+    # 更新争议状态
+    dispute.status = "resolved"
+    dispute.resolved_at = get_utc_time()
+    dispute.resolved_by = current_user.id
+    dispute.resolution_note = resolve_data.resolution_note
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        resolver_name = current_user.name or f"管理员{current_user.id}"
+        system_message = Message(
+            sender_id=None,
+            receiver_id=None,
+            content=f"管理员 {resolver_name} 已解决此争议：{resolve_data.resolution_note}",
+            task_id=dispute.task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({"system_action": "task_dispute_resolved", "dispute_id": dispute.id}),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    db.commit()
+    db.refresh(dispute)
+    
+    return dispute
+
+
+@router.post("/admin/task-disputes/{dispute_id}/dismiss", response_model=schemas.TaskDisputeOut)
+def dismiss_task_dispute(
+    dispute_id: int,
+    dismiss_data: schemas.TaskDisputeDismiss,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员驳回争议（不支持发布者）"""
+    dispute = db.query(models.TaskDispute).filter(models.TaskDispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    
+    if dispute.status != "pending":
+        raise HTTPException(status_code=400, detail="Dispute is not pending")
+    
+    # 更新争议状态
+    dispute.status = "dismissed"
+    dispute.resolved_at = get_utc_time()
+    dispute.resolved_by = current_user.id
+    dispute.resolution_note = dismiss_data.resolution_note
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        resolver_name = current_user.name or f"管理员{current_user.id}"
+        system_message = Message(
+            sender_id=None,
+            receiver_id=None,
+            content=f"管理员 {resolver_name} 已驳回此争议：{dismiss_data.resolution_note}",
+            task_id=dispute.task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({"system_action": "task_dispute_dismissed", "dispute_id": dispute.id}),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    db.commit()
+    db.refresh(dispute)
+    
+    return dispute
+
+
 @router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
 def confirm_task_completion(
     task_id: int,

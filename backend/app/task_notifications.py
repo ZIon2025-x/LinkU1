@@ -27,6 +27,62 @@ from app.utils.time_utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 
+def send_dispute_notification_to_admin(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    task: models.Task,
+    dispute: models.TaskDispute,
+    poster: models.User
+):
+    """发送争议通知给管理员（后台任务）"""
+    def _send_notifications():
+        """实际发送通知的函数（在后台任务中执行）"""
+        try:
+            # 创建新的数据库会话（后台任务需要独立的会话）
+            from app.database import SessionLocal
+            db_session = SessionLocal()
+            try:
+                # 获取所有管理员用户（通过 admin_users 表）
+                from app.models import AdminUser
+                admins = db_session.query(AdminUser).filter(AdminUser.is_active == True).all()
+                
+                if not admins:
+                    logger.warning("没有找到活跃的管理员用户")
+                    return
+                
+                poster_name = poster.name or f"用户{poster.id}"
+                notification_content = f"任务「{task.title}」（ID: {task.id}）的发布者 {poster_name} 对任务完成状态有异议。\n争议原因：{dispute.reason}"
+                
+                # 为每个管理员创建通知
+                for admin in admins:
+                    # AdminUser 的 id 字段就是用户ID（字符串格式）
+                    try:
+                        crud.create_notification(
+                            db=db_session,
+                            user_id=admin.id,
+                            type="task_dispute",
+                            title="任务争议",
+                            content=notification_content,
+                            related_id=str(task.id)
+                        )
+                    except Exception as e:
+                        logger.error(f"为管理员 {admin.id} 创建争议通知失败: {e}")
+                
+                db_session.commit()
+                logger.info(f"已向 {len(admins)} 位管理员发送任务争议通知: task_id={task.id}, dispute_id={dispute.id}")
+            finally:
+                db_session.close()
+        except Exception as e:
+            logger.error(f"发送争议通知给管理员失败: {e}")
+    
+    # 将通知发送任务添加到后台任务队列
+    if background_tasks:
+        background_tasks.add_task(_send_notifications)
+    else:
+        # 如果没有 background_tasks，直接执行（不应该发生，但作为后备）
+        _send_notifications()
+
+
 def get_display_reward(task: models.Task) -> float:
     """获取显示价格：agreed_reward 或 base_reward"""
     if task.agreed_reward is not None:

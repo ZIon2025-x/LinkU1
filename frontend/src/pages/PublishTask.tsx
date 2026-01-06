@@ -213,6 +213,13 @@ const PublishTask: React.FC = () => {
       return;
     }
     
+    // 验证任务金额：最小值为1镑
+    const rewardValue = parseFloat(form.reward);
+    if (isNaN(rewardValue) || rewardValue < 1) {
+      setError(t('publishTask.minRewardError') || '任务金额最小值为1镑');
+      return;
+    }
+    
     setLoading(true);
     try {
       await api.post('/api/tasks', {

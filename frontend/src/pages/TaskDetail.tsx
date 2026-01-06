@@ -559,7 +559,14 @@ const TaskDetail: React.FC = () => {
             
             // 如果任务已完成，加载评价
             if (res.data.status === 'completed') {
-              loadTaskReviews();
+              // 直接调用 API，避免依赖 loadTaskReviews 函数
+              getTaskReviews(Number(id))
+                .then(reviewsData => {
+                  setReviews(reviewsData);
+                })
+                .catch(() => {
+                  // 静默失败，不影响用户体验
+                });
             }
           })
           .catch(() => {
@@ -571,7 +578,7 @@ const TaskDetail: React.FC = () => {
     return () => {
       clearInterval(pollInterval);
     };
-  }, [id, task, loadTaskReviews]);
+  }, [id, task]);
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
