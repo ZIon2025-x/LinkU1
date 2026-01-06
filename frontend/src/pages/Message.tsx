@@ -664,6 +664,13 @@ const MessagePage: React.FC = () => {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // 任务完成后禁止上传图片
+      if (activeTask?.status === 'completed') {
+        alert('任务已完成，无法发送图片');
+        event.target.value = ''; // 清空文件选择
+        return;
+      }
+      
       // 检查文件大小（限制为5MB）
       if (file.size > 5 * 1024 * 1024) {
         alert(t('messages.imageTooLarge'));
@@ -698,6 +705,13 @@ const MessagePage: React.FC = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // 任务完成后禁止上传文件
+      if (activeTask?.status === 'completed') {
+        alert('任务已完成，无法发送文件');
+        event.target.value = ''; // 清空文件选择
+        return;
+      }
+      
       // 检查文件大小（限制为10MB）
       if (file.size > 10 * 1024 * 1024) {
         alert(t('messages.fileTooLarge'));
@@ -720,6 +734,12 @@ const MessagePage: React.FC = () => {
   // 发送图片（支持任务聊天和客服聊天）
   const sendImage = async () => {
     if (!selectedImage) return;
+    
+    // 任务完成后禁止发送图片
+    if (activeTask?.status === 'completed') {
+      alert('任务已完成，无法发送图片');
+      return;
+    }
     
     setUploadingImage(true);
     
@@ -866,6 +886,12 @@ const MessagePage: React.FC = () => {
   // 发送文件
   const sendFile = async () => {
     if (!selectedFile) return;
+    
+    // 任务完成后禁止发送文件
+    if (activeTask?.status === 'completed') {
+      alert('任务已完成，无法发送文件');
+      return;
+    }
     
     setUploadingFile(true);
     
@@ -1416,6 +1442,12 @@ const MessagePage: React.FC = () => {
   // 发送任务消息（乐观更新）
   const handleSendTaskMessage = async () => {
     if (!activeTaskId || !input.trim() || isSending) return;
+    
+    // 任务完成后禁止发送消息
+    if (activeTask?.status === 'completed') {
+      showToast('error', '任务已完成，无法发送消息');
+      return;
+    }
     
     const messageContent = input.trim();
     const tempId = Date.now(); // 临时ID
@@ -4340,6 +4372,143 @@ const MessagePage: React.FC = () => {
                   </div>
                 )}
 
+                {/* 已完成任务清理提醒 - 作为系统消息显示在消息列表中 */}
+                {(() => {
+                  const shouldShow = chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed';
+                  
+                  if (!shouldShow) {
+                    return null;
+                  }
+                  
+                  try {
+                    const completedAt = activeTask?.completed_at || new Date().toISOString();
+                    const completedDate = new Date(completedAt);
+                    const now = new Date();
+                    const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
+                    const timeRemaining = cleanupDate.getTime() - now.getTime();
+                    
+                    // 任务一完成就显示提醒，无论是否已到清理时间
+                    if (timeRemaining > 0) {
+                      // 还没到清理时间，显示剩余时间
+                      const totalHours = timeRemaining / (60 * 60 * 1000);
+                      const totalDays = timeRemaining / (24 * 60 * 60 * 1000);
+                      
+                      // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数（向下取整，更准确）
+                      let timeText: string;
+                      if (totalDays >= 1) {
+                        const days = Math.floor(totalDays);
+                        const remainingHours = Math.floor(totalHours % 24);
+                        if (remainingHours > 0 && days < 3) {
+                          // 如果少于3天且有剩余小时，显示"X天X小时"
+                          timeText = `${days} 天 ${remainingHours} 小时`;
+                        } else {
+                          // 否则只显示天数
+                          timeText = `${days} 天`;
+                        }
+                      } else {
+                        // 少于1天，显示小时
+                        const hours = Math.floor(totalHours);
+                        timeText = `${hours} 小时`;
+                      }
+                      
+                      return (
+                        <div
+                          key="cleanup-reminder-system"
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            marginBottom: '12px',
+                            padding: '0 16px'
+                          }}
+                        >
+                          <div style={{
+                            padding: '8px 14px',
+                            borderRadius: '12px',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            fontSize: '13px',
+                            textAlign: 'center',
+                            maxWidth: '80%',
+                            border: '1px solid #60a5fa',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{ fontSize: '14px', flexShrink: 0 }}>ℹ️</span>
+                            <span style={{ lineHeight: '1.4' }}>
+                              将在 <strong>{timeText}</strong> 后清理相关图片与文件
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      // 已经过了清理时间，显示已清理提示
+                      return (
+                        <div
+                          key="cleanup-done-system"
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            marginBottom: '12px',
+                            padding: '0 16px'
+                          }}
+                        >
+                          <div style={{
+                            padding: '8px 14px',
+                            borderRadius: '12px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#6b7280',
+                            fontSize: '13px',
+                            textAlign: 'center',
+                            maxWidth: '80%',
+                            border: '1px solid #d1d5db',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{ fontSize: '14px', flexShrink: 0 }}>✅</span>
+                            <span style={{ lineHeight: '1.4' }}>
+                              已清理相关图片与文件
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (error) {
+                    // 即使计算失败，也显示一个基本提醒
+                    return (
+                      <div
+                        key="cleanup-fallback-system"
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          marginBottom: '12px',
+                          padding: '0 16px'
+                        }}
+                      >
+                        <div style={{
+                          padding: '8px 14px',
+                          borderRadius: '12px',
+                          backgroundColor: '#dbeafe',
+                          color: '#1e40af',
+                          fontSize: '13px',
+                          textAlign: 'center',
+                          maxWidth: '80%',
+                          border: '1px solid #60a5fa',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <span style={{ fontSize: '14px', flexShrink: 0 }}>ℹ️</span>
+                          <span style={{ lineHeight: '1.4' }}>
+                            将在 <strong>3天</strong> 后清理相关图片与文件
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+
                 {taskMessages.map((msg, idx) => {
                   const isOwn = msg.sender_id === user?.id;
                   // 系统消息判断：检查 message_type 或 sender_id 为 null/undefined
@@ -5224,6 +5393,7 @@ const MessagePage: React.FC = () => {
                   data-emoji-button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={
+                    activeTask.status === 'completed' ||
                     (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                     isSending
                   }
@@ -5232,11 +5402,12 @@ const MessagePage: React.FC = () => {
                     background: 'transparent',
                     border: '1px solid #e5e7eb',
                     cursor: (
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending
                     ) ? 'not-allowed' : 'pointer',
                     fontSize: '18px',
-                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    opacity: (activeTask.status === 'completed' || (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id)) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -5245,6 +5416,7 @@ const MessagePage: React.FC = () => {
                   }}
                   onMouseEnter={(e) => {
                     if (!(
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending
                     )) {
@@ -5268,12 +5440,13 @@ const MessagePage: React.FC = () => {
                     background: 'transparent',
                     border: '1px solid #e5e7eb',
                     cursor: (
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingImage
                     ) ? 'not-allowed' : 'pointer',
                     fontSize: '18px',
-                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    opacity: (activeTask.status === 'completed' || (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id)) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -5282,6 +5455,7 @@ const MessagePage: React.FC = () => {
                   }}
                   onMouseEnter={(e) => {
                     if (!(
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingImage
@@ -5301,6 +5475,7 @@ const MessagePage: React.FC = () => {
                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
                     onChange={handleImageSelect}
                     disabled={
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingImage
@@ -5317,12 +5492,13 @@ const MessagePage: React.FC = () => {
                     background: 'transparent',
                     border: '1px solid #e5e7eb',
                     cursor: (
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingFile
                     ) ? 'not-allowed' : 'pointer',
                     fontSize: '18px',
-                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    opacity: (activeTask.status === 'completed' || (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id)) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -5331,6 +5507,7 @@ const MessagePage: React.FC = () => {
                   }}
                   onMouseEnter={(e) => {
                     if (!(
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingFile
@@ -5349,6 +5526,7 @@ const MessagePage: React.FC = () => {
                     type="file"
                     onChange={handleFileSelect}
                     disabled={
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingFile
@@ -5393,128 +5571,6 @@ const MessagePage: React.FC = () => {
                   </button>
                 )}
                 
-                {/* 已完成任务清理提醒 - 显示在功能行右侧 */}
-                {(() => {
-                  // 如果没有completed_at，使用当前时间作为完成时间（向后兼容）
-                  const completedAt = activeTask?.completed_at || new Date().toISOString();
-                  const shouldShow = chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed';
-                  
-                  if (!shouldShow) {
-                    return null;
-                  }
-                  
-                  try {
-                    const completedDate = new Date(completedAt);
-                    const now = new Date();
-                    const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
-                    const timeRemaining = cleanupDate.getTime() - now.getTime();
-                    
-                    // 任务一完成就显示提醒，无论是否已到清理时间
-                    if (timeRemaining > 0) {
-                      // 还没到清理时间，显示剩余时间
-                      const totalHours = timeRemaining / (60 * 60 * 1000);
-                      const totalDays = timeRemaining / (24 * 60 * 60 * 1000);
-                      
-                      // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数（向下取整，更准确）
-                      let timeText: string;
-                      if (totalDays >= 1) {
-                        const days = Math.floor(totalDays);
-                        const remainingHours = Math.floor(totalHours % 24);
-                        if (remainingHours > 0 && days < 3) {
-                          // 如果少于3天且有剩余小时，显示"X天X小时"
-                          timeText = `${days} 天 ${remainingHours} 小时`;
-                        } else {
-                          // 否则只显示天数
-                          timeText = `${days} 天`;
-                        }
-                      } else {
-                        // 少于1天，显示小时
-                        const hours = Math.floor(totalHours);
-                        timeText = `${hours} 小时`;
-                      }
-                      
-                      return (
-                        <div 
-                          key="cleanup-reminder"
-                          style={{
-                            padding: '6px 10px',
-                            background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                            borderRadius: '6px',
-                            fontSize: isMobile ? '10px' : '11px',
-                            color: '#1e40af',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            border: '1px solid #60a5fa',
-                            marginLeft: 'auto',
-                            whiteSpace: 'nowrap',
-                            position: 'relative',
-                            zIndex: 1,
-                            flexShrink: 0
-                          }}>
-                          <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
-                          <span style={{ lineHeight: '1.3' }}>
-                            将在 <strong>{timeText}</strong> 后清理相关图片与文件
-                          </span>
-                        </div>
-                      );
-                    } else {
-                      // 已经过了清理时间，显示已清理提示
-                      return (
-                        <div 
-                          key="cleanup-done"
-                          style={{
-                            padding: '6px 10px',
-                            background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-                            borderRadius: '6px',
-                            fontSize: isMobile ? '10px' : '11px',
-                            color: '#6b7280',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            border: '1px solid #d1d5db',
-                            marginLeft: 'auto',
-                            whiteSpace: 'nowrap',
-                            position: 'relative',
-                            zIndex: 1,
-                            flexShrink: 0
-                          }}>
-                          <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
-                          <span style={{ lineHeight: '1.3' }}>
-                            已清理相关图片与文件
-                          </span>
-                        </div>
-                      );
-                    }
-                  } catch (error) {
-                    // 即使计算失败，也显示一个基本提醒
-                    return (
-                      <div 
-                        key="cleanup-fallback"
-                        style={{
-                          padding: '6px 10px',
-                          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                          borderRadius: '6px',
-                          fontSize: isMobile ? '10px' : '11px',
-                          color: '#1e40af',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: '1px solid #60a5fa',
-                          marginLeft: 'auto',
-                          whiteSpace: 'nowrap',
-                          position: 'relative',
-                          zIndex: 1,
-                          flexShrink: 0
-                        }}>
-                        <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
-                        <span style={{ lineHeight: '1.3' }}>
-                          将在 <strong>3天</strong> 后清理相关图片与文件
-                        </span>
-                      </div>
-                    );
-                  }
-                })()}
               </div>
               
               {/* 输入框和发送按钮 */}
@@ -5530,19 +5586,22 @@ const MessagePage: React.FC = () => {
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      if (!isSending && input.trim()) {
+                      if (!isSending && input.trim() && activeTask.status !== 'completed') {
                         handleSendTaskMessage();
                       }
                     }
                   }}
                   placeholder={
-                    activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id
+                    activeTask.status === 'completed'
+                      ? '任务已完成，无法发送消息'
+                      : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id
                       ? '任务开始后才能发送消息'
                       : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id === user?.id
                       ? '可以发送一些任务相关信息（帮助接收人快速了解任务）'
                       : '输入消息...'
                   }
                   disabled={
+                    activeTask.status === 'completed' ||
                     (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                     isSending
                   }
@@ -5554,7 +5613,7 @@ const MessagePage: React.FC = () => {
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'border-color 0.2s ease',
-                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1
+                    opacity: (activeTask.status === 'completed' || (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id)) ? 0.5 : 1
                   }}
                   onFocus={(e) => {
                     if (!e.target.disabled) {
@@ -5568,6 +5627,7 @@ const MessagePage: React.FC = () => {
                 <button
                   onClick={handleSendTaskMessage}
                   disabled={
+                    activeTask.status === 'completed' ||
                     (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                     !input.trim() ||
                     isSending
@@ -5575,6 +5635,7 @@ const MessagePage: React.FC = () => {
                   style={{
                     padding: '12px 24px',
                     background: (
+                      activeTask.status === 'completed' ||
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       !input.trim() ||
                       isSending

@@ -2470,6 +2470,31 @@ const TaskDetail: React.FC = () => {
           </div>
         </div>
         
+        {/* 进行中任务提示 */}
+        {task.status === 'in_progress' && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+            borderRadius: '12px',
+            border: '2px solid #fbbf24',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.2)'
+          }}>
+            <span style={{ fontSize: '24px', flexShrink: 0 }}>⚠️</span>
+            <span style={{
+              fontSize: '15px',
+              fontWeight: '600',
+              color: '#92400e',
+              lineHeight: '1.5'
+            }}>
+              {language === 'zh' ? '请保留任务完成证据，以免产生纠纷！' : 'Please keep evidence of task completion to avoid disputes!'}
+            </span>
+          </div>
+        )}
+        
         {/* 任务描述 */}
         <div style={{
           background: '#f8fafc',
