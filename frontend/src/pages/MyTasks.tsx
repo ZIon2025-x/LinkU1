@@ -376,6 +376,12 @@ const MyTasks: React.FC = () => {
   };
 
   const handleCompleteTask = async (taskId: number) => {
+    // 确认提示
+    const confirmMessage = t('myTasks.alerts.confirmCompleteTask') || '确定是否已经完成？';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
     setActionLoading(taskId);
     try {
       await completeTask(taskId);

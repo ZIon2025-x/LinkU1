@@ -541,6 +541,38 @@ const TaskDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id, language, seoDescription, setMetaTags]);
 
+  // 轮询刷新任务数据（确保实时更新）
+  useEffect(() => {
+    if (!id || !task) return;
+    
+    // 如果任务已完成或已取消，不需要轮询
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      return;
+    }
+    
+    // 每5秒刷新一次任务数据
+    const pollInterval = setInterval(() => {
+      if (id) {
+        api.get(`/api/tasks/${id}`)
+          .then(res => {
+            setTask(res.data);
+            
+            // 如果任务已完成，加载评价
+            if (res.data.status === 'completed') {
+              loadTaskReviews();
+            }
+          })
+          .catch(() => {
+            // 静默失败，不影响用户体验
+          });
+      }
+    }, 5000);
+    
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [id, task, loadTaskReviews]);
+
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
   // 使用多个延迟执行确保在其他页面的useLayoutEffect之后执行
@@ -1346,6 +1378,13 @@ const TaskDetail: React.FC = () => {
       alert('请先登录');
       return;
     }
+    
+    // 确认提示
+    const confirmMessage = language === 'zh' ? '确定是否已经完成？' : 'Are you sure the task is completed?';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
     setActionLoading(true);
     try {
       // 多人任务完成
@@ -2186,12 +2225,15 @@ const TaskDetail: React.FC = () => {
                 fontWeight: '600',
                 background: (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
+                           task.status === 'pending_confirmation' ? '#e0e7ff' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
                 color: (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
+                       task.status === 'pending_confirmation' ? '#3730a3' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
                 border: `1px solid ${(task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
+                                   task.status === 'pending_confirmation' ? '#6366f1' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
               }}>
                 {getStatusText(task.status)}
@@ -2388,7 +2430,12 @@ const TaskDetail: React.FC = () => {
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>{language === 'zh' ? '平台服务费' : 'Platform Fee'}</span>
+                        <span style={{ color: '#64748b' }}>
+                          {taskAmount < 10 
+                            ? (language === 'zh' ? '微型任务服务费（<10镑）' : 'Micro Task Service Fee (<£10)')
+                            : (language === 'zh' ? '平台服务费' : 'Platform Fee')
+                          }
+                        </span>
                         <span style={{ fontWeight: '600', color: '#dc2626' }}>
                           -{applicationFee.toFixed(2)} {task.currency || 'GBP'}
                         </span>

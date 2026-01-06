@@ -269,6 +269,29 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [isOpen, taskId, loadTaskData, loadApplications]);
 
+  // 轮询刷新任务数据（确保实时更新）
+  useEffect(() => {
+    if (!isOpen || !taskId || !task) return;
+    
+    // 如果任务已完成或已取消，不需要轮询
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      return;
+    }
+    
+    // 每5秒刷新一次任务数据
+    const pollInterval = setInterval(() => {
+      if (isOpen && taskId) {
+        loadTaskData().catch(() => {
+          // 静默失败，不影响用户体验
+        });
+      }
+    }, 5000);
+    
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [isOpen, taskId, task, loadTaskData]);
+
   // 键盘事件处理（用于图片放大弹窗）
   useEffect(() => {
     if (!enlargedImage || !task || !task.images) return;
@@ -669,6 +692,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setShowLoginModal(true);
       return;
     }
+    
+    // 确认提示
+    const confirmMessage = language === 'zh' ? '确定是否已经完成？' : 'Are you sure the task is completed?';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    
     setActionLoading(true);
     try {
       await completeTask(taskId!);
@@ -680,7 +710,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  }, [user, taskId, t]);
+  }, [user, taskId, t, language]);
 
   const handleConfirmCompletion = useCallback(async () => {
     if (!user) {
@@ -1411,14 +1441,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 background: (shouldHideStatus && task.status === 'taken') ? '#d1fae5' :
                            (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
+                           task.status === 'pending_confirmation' ? '#e0e7ff' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
                 color: (shouldHideStatus && task.status === 'taken') ? '#065f46' :
                        (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
+                       task.status === 'pending_confirmation' ? '#3730a3' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
                 border: `1px solid ${(shouldHideStatus && task.status === 'taken') ? '#a7f3d0' :
                                    (task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
+                                   task.status === 'pending_confirmation' ? '#6366f1' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
               }}>
                 {getStatusText(task.status)}
@@ -1911,7 +1944,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#64748b' }}>{language === 'zh' ? '平台服务费' : 'Platform Fee'}</span>
+                        <span style={{ color: '#64748b' }}>
+                          {taskAmount < 10 
+                            ? (language === 'zh' ? '微型任务服务费（<10镑）' : 'Micro Task Service Fee (<£10)')
+                            : (language === 'zh' ? '平台服务费' : 'Platform Fee')
+                          }
+                        </span>
                         <span style={{ fontWeight: '600', color: '#dc2626' }}>
                           -{applicationFee.toFixed(2)} {task.currency || 'GBP'}
                         </span>
