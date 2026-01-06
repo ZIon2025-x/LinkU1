@@ -563,7 +563,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         if (typeof err.response.data.detail === 'string') {
           const detail = err.response.data.detail;
           // 检查是否是验证码错误
-          if (detail.includes('验证码错误') || detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期'))) {
+          if (detail.includes('验证码错误') || (detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期')))) {
             msg = t('auth.verificationCodeError') || '验证码验证错误';
           } else {
             msg = detail;
@@ -633,7 +633,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         if (typeof err.response.data.detail === 'string') {
           const detail = err.response.data.detail;
           // 检查是否是验证码错误
-          if (detail.includes('验证码错误') || detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期'))) {
+          if (detail.includes('验证码错误') || (detail.includes('验证码') && (detail.includes('错误') || detail.includes('过期')))) {
             msg = t('auth.verificationCodeError') || '验证码验证错误';
           } else {
             msg = detail;
