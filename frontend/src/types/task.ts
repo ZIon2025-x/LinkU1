@@ -26,6 +26,9 @@ export interface Task {
   description: string;
   deadline: string;
   reward: number;
+  base_reward?: number;  // 原始标价（发布时的价格）
+  agreed_reward?: number;  // 最终成交价（如果有议价）
+  currency?: string;  // 货币类型
   location: string;
   latitude?: number;  // 纬度（用于地图选点）
   longitude?: number; // 经度（用于地图选点）
