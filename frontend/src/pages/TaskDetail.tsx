@@ -585,7 +585,7 @@ const TaskDetail: React.FC = () => {
     return () => {
       clearInterval(pollInterval);
     };
-  }, [id, task]);
+  }, [id, task]); // 注意：不包含 loadTaskReviews，因为它在后面才声明，且我们已经直接调用 API
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
