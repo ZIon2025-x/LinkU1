@@ -1539,60 +1539,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             })()}
           </div>
           
-          {/* 款项信息区域 - 仅任务双方可见 */}
-          {(user && (user.id === task.poster_id || user.id === task.taker_id)) && (
-            <div style={{
-              background: '#f0fdf4',
-              padding: '20px',
-              borderRadius: '16px',
-              border: '2px solid #bbf7d0',
-              marginTop: '16px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#065f46', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                💳 {language === 'zh' ? '款项信息' : 'Payment Information'}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', fontSize: '14px' }}>
-                <div>
-                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '任务金额' : 'Task Amount'}</div>
-                  <div style={{ fontWeight: '600', color: '#059669' }}>
-                    {task.agreed_reward && task.agreed_reward !== task.base_reward 
-                      ? `${(task.agreed_reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`
-                      : `${(task.base_reward ?? task.reward ?? 0).toFixed(2)} ${task.currency || 'GBP'}`}
-                  </div>
-                  {task.agreed_reward && task.agreed_reward !== task.base_reward && (
-                    <div style={{ fontSize: '12px', color: '#94a3b8', textDecoration: 'line-through', marginTop: '2px' }}>
-                      {language === 'zh' ? '原价' : 'Original'}: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'GBP'}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
-                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
-                    {task.is_paid === 1 
-                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
-                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
-                  </div>
-                </div>
-                {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (
-                  <div>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '托管金额' : 'Escrow Amount'}</div>
-                    <div style={{ fontWeight: '600', color: '#2563eb' }}>
-                      £{task.escrow_amount.toFixed(2)}
-                    </div>
-                  </div>
-                )}
-                {task.is_confirmed === 1 && (
-                  <div>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '确认状态' : 'Confirmation'}</div>
-                    <div style={{ fontWeight: '600', color: '#059669' }}>
-                      {language === 'zh' ? '✅ 已确认' : '✅ Confirmed'}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
           <div style={{
             background: '#f8fafc',
             padding: '20px',
@@ -1858,10 +1804,32 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </div>
                 <div>
                   <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
-                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
-                    {task.is_paid === 1 
-                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
-                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
+                  <div style={{ fontWeight: '600', color: (() => {
+                    // 判断支付状态：结合 is_paid 和 status
+                    if (task.is_paid === 1 || task.is_paid === true) {
+                      return '#059669'; // 已支付 - 绿色
+                    } else if (task.status === 'pending_payment') {
+                      return '#f59e0b'; // 待支付 - 橙色
+                    } else if (task.status === 'in_progress' || task.status === 'pending_confirmation' || task.status === 'completed') {
+                      // 如果任务已在进行中或已完成，但 is_paid 为 0，可能是积分支付或特殊情况
+                      return '#94a3b8'; // 灰色（可能是积分支付或其他方式）
+                    } else {
+                      return '#94a3b8'; // 其他状态 - 灰色
+                    }
+                  })() }}>
+                    {(() => {
+                      // 判断支付状态：结合 is_paid 和 status
+                      if (task.is_paid === 1 || task.is_paid === true) {
+                        return language === 'zh' ? '✅ 已支付' : '✅ Paid';
+                      } else if (task.status === 'pending_payment') {
+                        return language === 'zh' ? '⏳ 待支付' : '⏳ Pending Payment';
+                      } else if (task.status === 'in_progress' || task.status === 'pending_confirmation' || task.status === 'completed') {
+                        // 如果任务已在进行中或已完成，但 is_paid 为 0，可能是积分支付
+                        return language === 'zh' ? '💳 已处理' : '💳 Processed';
+                      } else {
+                        return language === 'zh' ? '⏸️ 未开始' : '⏸️ Not Started';
+                      }
+                    })()}
                   </div>
                 </div>
                 {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (

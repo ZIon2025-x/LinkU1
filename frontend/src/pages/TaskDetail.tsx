@@ -2307,10 +2307,32 @@ const TaskDetail: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
-                  <div style={{ fontWeight: '600', color: task.is_paid === 1 ? '#059669' : '#f59e0b' }}>
-                    {task.is_paid === 1 
-                      ? (language === 'zh' ? '✅ 已支付' : '✅ Paid')
-                      : (language === 'zh' ? '⏳ 待支付' : '⏳ Pending')}
+                  <div style={{ fontWeight: '600', color: (() => {
+                    // 判断支付状态：结合 is_paid 和 status
+                    if (task.is_paid === 1 || task.is_paid === true) {
+                      return '#059669'; // 已支付 - 绿色
+                    } else if (task.status === 'pending_payment') {
+                      return '#f59e0b'; // 待支付 - 橙色
+                    } else if (task.status === 'in_progress' || task.status === 'pending_confirmation' || task.status === 'completed') {
+                      // 如果任务已在进行中或已完成，但 is_paid 为 0，可能是积分支付或特殊情况
+                      return '#94a3b8'; // 灰色（可能是积分支付或其他方式）
+                    } else {
+                      return '#94a3b8'; // 其他状态 - 灰色
+                    }
+                  })() }}>
+                    {(() => {
+                      // 判断支付状态：结合 is_paid 和 status
+                      if (task.is_paid === 1 || task.is_paid === true) {
+                        return language === 'zh' ? '✅ 已支付' : '✅ Paid';
+                      } else if (task.status === 'pending_payment') {
+                        return language === 'zh' ? '⏳ 待支付' : '⏳ Pending Payment';
+                      } else if (task.status === 'in_progress' || task.status === 'pending_confirmation' || task.status === 'completed') {
+                        // 如果任务已在进行中或已完成，但 is_paid 为 0，可能是积分支付
+                        return language === 'zh' ? '💳 已处理' : '💳 Processed';
+                      } else {
+                        return language === 'zh' ? '⏸️ 未开始' : '⏸️ Not Started';
+                      }
+                    })()}
                   </div>
                 </div>
                 {task.escrow_amount !== undefined && task.escrow_amount !== null && task.escrow_amount > 0 && (
