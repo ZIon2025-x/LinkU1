@@ -872,7 +872,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   // P0 优化：使用 useMemo 缓存状态文本转换
   const getStatusText = useCallback((status: string) => {
     // 对非相关用户，taken状态显示为open
-    const actualStatus = shouldHideStatus ? 'open' : status;
+    // 但 in_progress 及之后的状态不应该被隐藏
+    const actualStatus = (shouldHideStatus && status === 'taken') ? 'open' : status;
     
     switch (actualStatus) {
       case 'open': return t('myTasks.taskStatus.open');
@@ -1407,15 +1408,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 borderRadius: '16px',
                 fontSize: '12px',
                 fontWeight: '600',
-                background: shouldHideStatus ? '#d1fae5' :
+                background: (shouldHideStatus && task.status === 'taken') ? '#d1fae5' :
                            (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
-                color: shouldHideStatus ? '#065f46' :
+                color: (shouldHideStatus && task.status === 'taken') ? '#065f46' :
                        (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
-                border: `1px solid ${shouldHideStatus ? '#a7f3d0' :
+                border: `1px solid ${(shouldHideStatus && task.status === 'taken') ? '#a7f3d0' :
                                    (task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
