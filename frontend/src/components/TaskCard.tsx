@@ -223,7 +223,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
         {/* 金额/积分 - 右下角 */}
         {(() => {
-          const moneyReward = (task.base_reward ?? task.reward) || 0;
+          // 显示最终任务金额：如果有议价且已批准，显示议价金额，否则显示原始金额
+          const moneyReward = (task.agreed_reward ?? task.base_reward ?? task.reward) || 0;
           const pointsReward = task.points_reward && task.points_reward > 0 ? task.points_reward : 0;
           const hasMoney = moneyReward > 0;
           const hasPoints = pointsReward > 0;

@@ -2309,7 +2309,10 @@ const TaskDetail: React.FC = () => {
                   <div style={{ color: '#64748b', marginBottom: '4px' }}>{language === 'zh' ? '支付状态' : 'Payment Status'}</div>
                   <div style={{ fontWeight: '600', color: (() => {
                     // 判断支付状态：结合 is_paid 和 status
-                    if (task.is_paid === 1 || task.is_paid === true) {
+                    // 处理各种数据类型：数字 1、字符串 "1"、布尔值 true
+                    const isPaid = task.is_paid === 1 || task.is_paid === true || task.is_paid === '1' || String(task.is_paid) === '1';
+                    
+                    if (isPaid) {
                       return '#059669'; // 已支付 - 绿色
                     } else if (task.status === 'pending_payment') {
                       return '#f59e0b'; // 待支付 - 橙色
@@ -2322,7 +2325,10 @@ const TaskDetail: React.FC = () => {
                   })() }}>
                     {(() => {
                       // 判断支付状态：结合 is_paid 和 status
-                      if (task.is_paid === 1 || task.is_paid === true) {
+                      // 处理各种数据类型：数字 1、字符串 "1"、布尔值 true
+                      const isPaid = task.is_paid === 1 || task.is_paid === true || task.is_paid === '1' || String(task.is_paid) === '1';
+                      
+                      if (isPaid) {
                         return language === 'zh' ? '✅ 已支付' : '✅ Paid';
                       } else if (task.status === 'pending_payment') {
                         return language === 'zh' ? '⏳ 待支付' : '⏳ Pending Payment';
@@ -2352,6 +2358,58 @@ const TaskDetail: React.FC = () => {
                   </div>
                 )}
               </div>
+              
+              {/* 接收者收入明细 - 仅接收者可见 */}
+              {user && task.taker_id && user.id === task.taker_id && (() => {
+                // 计算任务金额（最终成交价或原始标价）
+                const taskAmount = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
+                // 计算平台服务费
+                // 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+                const applicationFee = taskAmount < 10 ? 1.0 : taskAmount * 0.10;
+                // 实际到手金额（escrow_amount 或计算得出）
+                const actualAmount = task.escrow_amount ?? (taskAmount - applicationFee);
+                
+                return (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: '#fef3c7',
+                    borderRadius: '12px',
+                    border: '2px solid #fbbf24'
+                  }}>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#92400e', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      💰 {language === 'zh' ? '您的收入明细' : 'Your Income Details'}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>{language === 'zh' ? '任务金额' : 'Task Amount'}</span>
+                        <span style={{ fontWeight: '600', color: '#1e293b' }}>
+                          {taskAmount.toFixed(2)} {task.currency || 'GBP'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#64748b' }}>{language === 'zh' ? '平台服务费' : 'Platform Fee'}</span>
+                        <span style={{ fontWeight: '600', color: '#dc2626' }}>
+                          -{applicationFee.toFixed(2)} {task.currency || 'GBP'}
+                        </span>
+                      </div>
+                      <div style={{
+                        marginTop: '4px',
+                        paddingTop: '8px',
+                        borderTop: '2px solid #fbbf24',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontWeight: '700', color: '#92400e' }}>{language === 'zh' ? '实际到手金额' : 'Actual Amount Received'}</span>
+                        <span style={{ fontWeight: '700', fontSize: '16px', color: '#059669' }}>
+                          {actualAmount.toFixed(2)} {task.currency || 'GBP'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
           
@@ -3353,35 +3411,47 @@ const TaskDetail: React.FC = () => {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => navigate(`/message?taskId=${id}`)}
+                        title={language === 'zh' ? '联系' : 'Contact'}
                         style={{
                           background: '#007bff',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '6px',
-                          padding: '8px 16px',
+                          padding: '8px 12px',
                           fontWeight: '600',
                           cursor: 'pointer',
-                          fontSize: '14px'
+                          fontSize: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '40px',
+                          height: '36px'
                         }}
                       >
-                        联系
+                        💬
                       </button>
                       <button
                         onClick={() => handleApproveApplication(app.applicant_id)}
                         disabled={actionLoading}
+                        title={actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '批准' : 'Approve')}
                         style={{
                           background: '#28a745',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '6px',
-                          padding: '8px 16px',
+                          padding: '8px 12px',
                           fontWeight: '600',
                           cursor: actionLoading ? 'not-allowed' : 'pointer',
                           opacity: actionLoading ? 0.6 : 1,
-                          fontSize: '14px'
+                          fontSize: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '40px',
+                          height: '36px'
                         }}
                       >
-                        {actionLoading ? '处理中...' : '批准'}
+                        {actionLoading ? '⏳' : '✅'}
                       </button>
                     </div>
                   </div>

@@ -1435,13 +1435,10 @@ async def accept_application(
         
         task_amount_pence = int(task_amount * 100)
         
-        # 计算平台服务费（异步查询系统设置）
-        application_fee_rate_setting_result = await db.execute(
-            select(models.SystemSettings).where(models.SystemSettings.setting_key == "application_fee_rate")
-        )
-        application_fee_rate_setting = application_fee_rate_setting_result.scalar_one_or_none()
-        application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
-        application_fee_pence = int(task_amount_pence * application_fee_rate)
+        # 计算平台服务费
+        # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         # 创建 Stripe Payment Intent
         import stripe

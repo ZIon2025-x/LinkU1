@@ -108,36 +108,48 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
                 <button
                   onClick={() => onApproveApplication(app.id)}
                   disabled={actionLoading || app.status !== 'pending'}
+                  title={actionLoading ? t('taskDetail.processing') : t('taskDetail.approve')}
                   style={{
                     background: app.status !== 'pending' ? '#6c757d' : '#28a745',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
-                    padding: '8px 16px',
+                    padding: '8px 12px',
                     fontWeight: '600',
                     cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
                     opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
-                    fontSize: '14px'
+                    fontSize: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '40px',
+                    height: '36px'
                   }}
                 >
-                  {actionLoading ? t('taskDetail.processing') : t('taskDetail.approve')}
+                  {actionLoading ? '⏳' : '✅'}
                 </button>
                 <button
                   onClick={() => onRejectApplication(app.id)}
                   disabled={actionLoading || app.status !== 'pending'}
+                  title={actionLoading ? t('taskDetail.processing') : t('taskDetail.reject')}
                   style={{
                     background: app.status !== 'pending' ? '#6c757d' : '#dc3545',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
-                    padding: '8px 16px',
+                    padding: '8px 12px',
                     fontWeight: '600',
                     cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
                     opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
-                    fontSize: '14px'
+                    fontSize: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '40px',
+                    height: '36px'
                   }}
                 >
-                  {actionLoading ? t('taskDetail.processing') : t('taskDetail.reject')}
+                  {actionLoading ? '⏳' : '❌'}
                 </button>
               </div>
             </div>

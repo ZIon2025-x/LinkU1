@@ -1340,6 +1340,8 @@ def get_account_transactions(
             logger.warning(f"Error retrieving charges: {e}")
         
         # 获取转账记录（Transfers - 从平台账户转出的资金）
+        # 优先处理 Transfer，因为它们是任务相关的收入记录
+        transfer_task_ids = {}  # 存储 transfer_id -> task_id 的映射
         try:
             transfers = stripe.Transfer.list(
                 limit=limit,
@@ -1347,17 +1349,48 @@ def get_account_transactions(
                 destination=current_user.stripe_account_id
             )
             for transfer in transfers.data:
+                # 从 metadata 中获取 task_id
+                task_id = transfer.metadata.get("task_id") if transfer.metadata else None
+                if task_id:
+                    transfer_task_ids[transfer.id] = task_id
+                
+                # 查询任务标题（如果有 task_id）
+                task_title = None
+                if task_id:
+                    try:
+                        task = db.query(models.Task).filter(models.Task.id == int(task_id)).first()
+                        if task:
+                            task_title = task.title
+                    except (ValueError, Exception) as e:
+                        logger.warning(f"Error fetching task title for task_id {task_id}: {e}")
+                
+                # 构建描述：如果有任务标题，使用任务标题和"收入"，否则使用默认描述
+                if task_title:
+                    description = f"{task_title} - 收入"
+                elif transfer.description and "任务" in transfer.description:
+                    # 如果 description 中包含"任务"，提取任务标题（如果有）
+                    # 格式可能是 "任务 #123 奖励 - 任务标题"
+                    desc_parts = transfer.description.split(" - ")
+                    if len(desc_parts) > 1:
+                        description = f"{desc_parts[1]} - 收入"
+                    else:
+                        # 替换"奖励"为"收入"
+                        description = transfer.description.replace("奖励", "收入")
+                else:
+                    description = transfer.description or f"转账 #{transfer.id[:12]}"
+                
                 transactions.append({
                     "id": transfer.id,
                     "type": "income",
                     "amount": transfer.amount / 100,
                     "currency": transfer.currency.upper(),
-                    "description": transfer.description or f"转账 #{transfer.id[:12]}",
+                    "description": description,
                     "status": "succeeded" if transfer.reversed is False else "reversed",
                     "created": transfer.created,
                     "created_at": datetime.fromtimestamp(transfer.created, tz=timezone.utc).isoformat(),
                     "source": "transfer",
-                    "metadata": transfer.metadata
+                    "metadata": transfer.metadata,
+                    "task_id": task_id  # 保存 task_id 用于去重
                 })
         except stripe.error.StripeError as e:
             logger.warning(f"Error retrieving transfers: {e}")
@@ -1385,21 +1418,47 @@ def get_account_transactions(
         except stripe.error.StripeError as e:
             logger.warning(f"Error retrieving payouts: {e}")
         
-        # 去重：如果有相同的charge_id或payment_intent_id，只保留一个
+        # 去重：优先保留 Transfer 记录（任务相关的收入）
+        # 如果同一个任务有 Transfer 记录，则删除对应的 Charge 和 PaymentIntent 记录
         seen_ids = set()
         unique_transactions = []
+        transfer_task_map = {}  # task_id -> transfer_id 的映射
+        
+        # 第一遍：收集所有 Transfer 记录（任务相关的）
+        for tx in transactions:
+            if tx.get("source") == "transfer" and tx.get("task_id"):
+                task_id = tx.get("task_id")
+                transfer_task_map[task_id] = tx.get("id")
+                seen_ids.add(tx.get("id"))
+                unique_transactions.append(tx)
+        
+        # 第二遍：添加其他记录，但排除与 Transfer 重复的 Charge 和 PaymentIntent
         for tx in transactions:
             tx_id = tx.get("id")
             charge_id = tx.get("charge_id")
+            source = tx.get("source")
+            
             # 如果这个交易ID已经见过，跳过
             if tx_id in seen_ids:
                 continue
-            # 如果这个charge_id已经通过其他方式添加过，跳过
-            if charge_id and any(
-                (otx.get("id") == charge_id or otx.get("charge_id") == charge_id) 
-                for otx in unique_transactions
-            ):
-                continue
+            
+            # 如果是 Charge 或 PaymentIntent，检查是否与 Transfer 重复
+            if source in ["charge", "payment_intent"]:
+                # 检查 metadata 中是否有 task_id，如果有且已经有对应的 Transfer，则跳过
+                metadata = tx.get("metadata", {})
+                if isinstance(metadata, dict):
+                    tx_task_id = metadata.get("task_id")
+                    if tx_task_id and tx_task_id in transfer_task_map:
+                        # 这个 Charge/PaymentIntent 对应的任务已经有 Transfer 记录，跳过
+                        continue
+                
+                # 检查 charge_id 是否已经通过其他方式添加过
+                if charge_id and any(
+                    (otx.get("id") == charge_id or otx.get("charge_id") == charge_id) 
+                    for otx in unique_transactions
+                ):
+                    continue
+            
             seen_ids.add(tx_id)
             if charge_id:
                 seen_ids.add(charge_id)

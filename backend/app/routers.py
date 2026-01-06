@@ -1644,9 +1644,8 @@ def confirm_task_completion(
             if task.escrow_amount <= 0:
                 # 重新计算 escrow_amount
                 task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-                application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
-                application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
-                application_fee = task_amount * application_fee_rate
+                from app.utils.fee_calculator import calculate_application_fee
+                application_fee = calculate_application_fee(task_amount)
                 task.escrow_amount = max(0.0, task_amount - application_fee)
                 logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
             
@@ -3083,11 +3082,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 metadata = payment_intent.get("metadata", {})
                 application_fee_pence = int(metadata.get("application_fee", 0))
                 
-                # 如果没有 metadata，从系统设置重新计算
+                # 如果没有 metadata，重新计算
                 if application_fee_pence == 0:
-                    application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
-                    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
-                    application_fee_pence = int(task_amount * 100 * application_fee_rate)
+                    from app.utils.fee_calculator import calculate_application_fee_pence
+                    task_amount_pence = int(task_amount * 100)
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                 
                 # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
                 application_fee = application_fee_pence / 100.0
@@ -3540,11 +3539,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 metadata = session.get("metadata", {})
                 application_fee_pence = int(metadata.get("application_fee", 0))
                 
-                # 如果没有 metadata，从系统设置重新计算
+                # 如果没有 metadata，重新计算
                 if application_fee_pence == 0:
-                    application_fee_rate_setting = crud.get_system_setting(db, "application_fee_rate")
-                    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
-                    application_fee_pence = int(task_amount * 100 * application_fee_rate)
+                    from app.utils.fee_calculator import calculate_application_fee_pence
+                    task_amount_pence = int(task_amount * 100)
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                 
                 # escrow_amount = 任务金额 - 平台服务费（任务接受人获得的金额）
                 application_fee = application_fee_pence / 100.0
@@ -3762,10 +3761,8 @@ def confirm_task_complete(
         if task.escrow_amount <= 0:
             # 重新计算 escrow_amount
             task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-            from app.crud import get_system_setting
-            application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
-            application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
-            application_fee = task_amount * application_fee_rate
+            from app.utils.fee_calculator import calculate_application_fee
+            application_fee = calculate_application_fee(task_amount)
             task.escrow_amount = max(0.0, task_amount - application_fee)
             logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
         

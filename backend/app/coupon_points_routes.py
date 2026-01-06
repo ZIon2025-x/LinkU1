@@ -360,10 +360,11 @@ def create_task_payment(
     if task.is_paid:
         # 返回已支付的信息，避免重复扣款
         task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-        application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
-        application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10
         task_amount_pence = int(task_amount * 100)
-        application_fee_pence = int(task_amount_pence * application_fee_rate)
+        # 计算平台服务费
+        # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         return {
             "payment_id": None,
@@ -403,11 +404,6 @@ def create_task_payment(
     
     logger.info(f"任务支付检查通过: task_id={task_id}, status={task.status}, taker_id={task.taker_id}")
     
-    # 计算平台服务费（申请费）- 从任务接受人端扣除
-    # 假设平台服务费为任务金额的10%，或从系统设置读取
-    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
-    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10  # 默认10%
-    
     # 获取任务金额（使用最终成交价或原始标价）
     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
     
@@ -420,8 +416,10 @@ def create_task_payment(
     
     task_amount_pence = int(task_amount * 100)  # 转换为最小货币单位
     
-    # 计算平台服务费（从接受人端扣除，包含Stripe服务费）
-    application_fee_pence = int(task_amount_pence * application_fee_rate)
+    # 计算平台服务费（从接受人端扣除）
+    # 规则：小于10镑固定收取1镑，大于等于10镑按10%计算
+    from app.utils.fee_calculator import calculate_application_fee_pence
+    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
     
     # 验证平台服务费必须大于0
     if application_fee_pence <= 0:

@@ -1249,7 +1249,7 @@ const MyTasks: React.FC = () => {
                             <div className={styles.taskCardInfoGrid}>
                         <div className={styles.taskCardInfoItem}>
                           <span className={styles.taskCardInfoIcon}>💰</span>
-                          <span className={styles.taskCardInfoText}>£{((task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
+                          <span className={styles.taskCardInfoText}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
                         </div>
                         <div className={styles.taskCardInfoItem}>
                           <span className={styles.taskCardInfoIcon}>

@@ -60,7 +60,7 @@ const TaskInfoCard: React.FC<TaskInfoCardProps> = ({
           {t('taskDetail.rewardLabel')}
         </div>
         <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
-          £{task.reward.toFixed(2)}
+          £{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}
         </div>
       </div>
       

@@ -1782,7 +1782,7 @@ const Home: React.FC = () => {
                   <div className={styles.taskRewardContainer}>
                     <div className={styles.taskRewardInfo}>
                       <span className={styles.taskRewardAmount}>
-                        £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
+                        £{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}
                       </span>
                       <span className={styles.taskRewardLabel}>
                         {t('home.taskReward')}
