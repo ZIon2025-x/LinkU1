@@ -426,7 +426,14 @@ const TaskDetail: React.FC = () => {
         
         // 如果任务已完成，加载评价
         if (res.data.status === 'completed') {
-          loadTaskReviews();
+          // 直接调用 API，避免依赖 loadTaskReviews 函数
+          getTaskReviews(Number(id))
+            .then(reviewsData => {
+              setReviews(reviewsData);
+            })
+            .catch(() => {
+              // 静默失败，不影响用户体验
+            });
         }
         // 加载推荐任务
         loadRecommendedTasks(res.data);
