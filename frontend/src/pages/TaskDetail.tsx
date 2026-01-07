@@ -408,7 +408,15 @@ const TaskDetail: React.FC = () => {
     // P1 优化：预取用户信息（在任务加载时预取）
     prefetchUserInfo();
     
-    api.get(`/api/tasks/${id}`)
+    // 添加时间戳参数绕过缓存，确保获取最新数据
+    api.get(`/api/tasks/${id}`, {
+      params: { _t: Date.now() },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
       .then(res => {
         setTask(res.data);
         
@@ -557,10 +565,18 @@ const TaskDetail: React.FC = () => {
       return;
     }
     
-    // 每5秒刷新一次任务数据
+    // 每30秒刷新一次任务数据（降低刷新频率，减少服务器压力）
     const pollInterval = setInterval(() => {
       if (id) {
-        api.get(`/api/tasks/${id}`)
+        // 添加时间戳参数绕过缓存，确保获取最新数据
+        api.get(`/api/tasks/${id}`, {
+          params: { _t: Date.now() },
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
           .then(res => {
             setTask(res.data);
             
@@ -580,7 +596,7 @@ const TaskDetail: React.FC = () => {
             // 静默失败，不影响用户体验
           });
       }
-    }, 5000);
+    }, 30000); // 30秒刷新一次
     
     return () => {
       clearInterval(pollInterval);

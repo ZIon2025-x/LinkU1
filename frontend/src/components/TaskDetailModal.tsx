@@ -149,7 +149,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       // P0 优化：并行加载任务数据和用户信息
       const [taskRes, userRes] = await Promise.allSettled([
         api.get(`/api/tasks/${taskId}`, {
-          signal: abortController.signal
+          signal: abortController.signal,
+          params: { _t: Date.now() }, // 添加时间戳参数绕过缓存
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         }),
         fetchCurrentUser().catch(() => null) // 用户信息加载失败不影响任务显示
       ]);
@@ -281,14 +287,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       return;
     }
     
-    // 每5秒刷新一次任务数据
+    // 每30秒刷新一次任务数据（降低刷新频率，减少服务器压力）
     const pollInterval = setInterval(() => {
       if (isOpen && taskId) {
         loadTaskData().catch(() => {
           // 静默失败，不影响用户体验
         });
       }
-    }, 5000);
+    }, 30000); // 30秒刷新一次
     
     return () => {
       clearInterval(pollInterval);

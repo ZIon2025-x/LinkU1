@@ -1,9 +1,15 @@
 import SwiftUI
-import StripeConnect
-import UIKit
+import WebKit
+import Foundation
 import Combine
 
-/// 使用 Stripe Connect 原生 SDK 的 Onboarding 视图
+enum OnboardingViewState {
+    case loading
+    case error(String)
+    case completed
+    case ready(String) // clientSecret
+}
+
 struct StripeConnectOnboardingView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = StripeConnectOnboardingViewModel()
@@ -27,12 +33,6 @@ struct StripeConnectOnboardingView: View {
         } message: {
             Text(errorMessage)
         }
-        .onChange(of: viewModel.error) { newError in
-            if let error = newError {
-                errorMessage = error
-                showError = true
-            }
-        }
     }
     
     @ViewBuilder
@@ -45,8 +45,7 @@ struct StripeConnectOnboardingView: View {
         case .completed:
             completedView
         case .ready(let secret):
-            // 使用原生 AccountOnboardingController
-            AccountOnboardingControllerWrapper(
+            StripeConnectWebView(
                 clientSecret: secret,
                 onComplete: {
                     viewModel.checkAccountStatus()
@@ -129,98 +128,90 @@ struct StripeConnectOnboardingView: View {
     }
 }
 
-/// 将 UIKit 的 AccountOnboardingController 包装为 SwiftUI View
-struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
+struct StripeConnectWebView: UIViewRepresentable {
     let clientSecret: String
     let onComplete: () -> Void
     let onError: (String) -> Void
     
-    // 可选的高级配置
-    // 注意：collectionOptions 的类型取决于 Stripe iOS SDK 的实际实现
-    // 如果 SDK 不支持，可以注释掉或使用正确的类型
-    // var collectionOptions: AccountCollectionOptions? = nil
-    var fullTermsOfServiceURL: URL? = nil
-    var recipientTermsOfServiceURL: URL? = nil
-    var privacyPolicyURL: URL? = nil
-    
-    func makeUIViewController(context: Context) -> ContainerViewController {
-        // 设置 Stripe Publishable Key
-        STPAPIClient.shared.publishableKey = Constants.Stripe.publishableKey
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        // 使用新的 API 替代已弃用的 javaScriptEnabled
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
         
-        // 创建 fetchClientSecret 闭包
-        let fetchClientSecret: () async -> String? = {
-            // 直接返回已有的 clientSecret
-            return clientSecret
-        }
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = context.coordinator
         
-        // 创建 EmbeddedComponentManager
-        let embeddedComponentManager = EmbeddedComponentManager(
-            fetchClientSecret: fetchClientSecret
-        )
+        // 构建包含 Stripe Connect Embedded 的 HTML
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+                body {
+                    margin: 0;
+                    padding: 20px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background-color: #f5f5f5;
+                }
+                #connect-embedded {
+                    width: 100%;
+                    min-height: 600px;
+                }
+            </style>
+            <script src="https://js.stripe.com/v3/"></script>
+        </head>
+        <body>
+            <div id="connect-embedded"></div>
+            <script>
+                const stripe = Stripe('\(getStripePublishableKey())');
+                
+                // 动态加载 Connect Embedded
+                const script = document.createElement('script');
+                script.src = 'https://js.stripe.com/connect-embedded/v1/';
+                script.async = true;
+                script.onload = function() {
+                    if (window.Stripe && window.Stripe.ConnectEmbedded) {
+                        const connectEmbedded = new window.Stripe.ConnectEmbedded({
+                            clientSecret: '\(clientSecret)',
+                            onReady: function() {
+                                console.log('Onboarding ready');
+                            },
+                            onComplete: function() {
+                                console.log('Onboarding completed');
+                                window.webkit.messageHandlers.onboardingComplete.postMessage('completed');
+                            },
+                            onExit: function(event) {
+                                console.log('User exited onboarding', event);
+                            },
+                            onError: function(event) {
+                                console.error('Onboarding error:', event);
+                                const errorMsg = event.error ? event.error.message : '设置过程中发生错误';
+                                window.webkit.messageHandlers.onboardingError.postMessage(errorMsg);
+                            }
+                        });
+                        connectEmbedded.mount('#connect-embedded');
+                    }
+                };
+                document.head.appendChild(script);
+            </script>
+        </body>
+        </html>
+        """
         
-        // 创建 AccountOnboardingController
-        // 根据 Stripe iOS SDK 文档，支持以下可选参数：
-        // - fullTermsOfServiceUrl: 完整服务条款 URL
-        // - recipientTermsOfServiceUrl: 收款方服务条款 URL
-        // - privacyPolicyUrl: 隐私政策 URL
-        // - collectionOptions: 收集选项（字段、未来需求、需求限制等）
-        //
-        // 注意：根据实际 SDK 版本，API 签名可能有所不同
-        // 如果编译错误，请检查 SDK 文档并调整参数
-        
-        // 使用默认的 Terms 和 Privacy URL（如果未提供）
-        let fullTermsURL = fullTermsOfServiceURL ?? Constants.Stripe.ConnectOnboarding.fullTermsOfServiceURL
-        let recipientTermsURL = recipientTermsOfServiceURL ?? Constants.Stripe.ConnectOnboarding.recipientTermsOfServiceURL
-        let privacyURL = privacyPolicyURL ?? Constants.Stripe.ConnectOnboarding.privacyPolicyURL
-        
-        // 创建 controller
-        // 注意：如果 SDK 不支持这些参数，请使用无参数版本：
-        // let controller = embeddedComponentManager.createAccountOnboardingController()
-        let controller = embeddedComponentManager.createAccountOnboardingController(
-            fullTermsOfServiceUrl: fullTermsURL,
-            recipientTermsOfServiceUrl: recipientTermsURL,
-            privacyPolicyUrl: privacyURL
-        )
-        
-        // 如果提供了 collectionOptions，可以通过 controller 的属性设置
-        // 注意：这取决于 SDK 的实际实现
-        // if let collectionOptions = collectionOptions {
-        //     // 根据 SDK 文档设置 collectionOptions
-        // }
-        
-        controller.delegate = context.coordinator
-        controller.title = "设置收款账户"
-        
-        // 创建容器视图控制器来持有和展示 AccountOnboardingController
-        let containerVC = ContainerViewController()
-        containerVC.accountOnboardingController = controller
-        
-        return containerVC
+        webView.loadHTMLString(html, baseURL: nil)
+        return webView
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        // 不需要更新
-    }
+    func updateUIView(_ webView: WKWebView, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
         Coordinator(onComplete: onComplete, onError: onError)
     }
     
-    /// 容器视图控制器，用于展示 AccountOnboardingController
-    class ContainerViewController: UIViewController {
-        var accountOnboardingController: AccountOnboardingController?
-        
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
-            
-            // 在视图出现后展示 AccountOnboardingController
-            if let controller = accountOnboardingController {
-                controller.present(from: self)
-            }
-        }
-    }
-    
-    class Coordinator: NSObject, AccountOnboardingControllerDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate {
         let onComplete: () -> Void
         let onError: (String) -> Void
         
@@ -229,37 +220,36 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
             self.onError = onError
         }
         
-        // MARK: - AccountOnboardingControllerDelegate
-        
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: ConnectAccount) {
-            print("✅ Account onboarding completed")
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // 添加消息处理器
+            let contentController = webView.configuration.userContentController
+            contentController.add(self, name: "onboardingComplete")
+            contentController.add(self, name: "onboardingError")
+        }
+    }
+    
+    private func getStripePublishableKey() -> String {
+        // 使用 Constants 中配置的 Stripe Publishable Key
+        return Constants.Stripe.publishableKey
+    }
+}
+
+extension StripeConnectWebView.Coordinator: WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "onboardingComplete" {
             DispatchQueue.main.async {
                 self.onComplete()
             }
-        }
-        
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: ConnectAccount?) {
-            print("ℹ️ Account onboarding canceled")
-            // 用户取消，不需要处理
-        }
-        
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailWith error: Error) {
-            print("❌ Account onboarding failed: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.onError(error.localizedDescription)
-            }
-        }
-        
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailLoadWithError error: Error) {
-            print("❌ Account onboarding failed to load: \(error.localizedDescription)")
-            DispatchQueue.main.async {
-                self.onError("加载失败: \(error.localizedDescription)")
+        } else if message.name == "onboardingError" {
+            if let error = message.body as? String {
+                DispatchQueue.main.async {
+                    self.onError(error)
+                }
             }
         }
     }
 }
 
-/// ViewModel 保持不变，但可以优化
 class StripeConnectOnboardingViewModel: ObservableObject {
     @Published var clientSecret: String?
     @Published var isLoading = true
@@ -286,6 +276,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
         isLoading = true
         error = nil
         
+        // 使用 APIService 的 request 方法
         struct OnboardingResponse: Codable {
             let account_id: String
             let client_secret: String?
@@ -300,6 +291,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                 receiveCompletion: { [weak self] completion in
                     self?.isLoading = false
                     if case .failure(let apiError) = completion {
+                        // 显示更详细的错误信息
                         var errorMessage = apiError.localizedDescription
                         if case .httpError(let code) = apiError {
                             errorMessage = "请求失败 (HTTP \(code))"
@@ -345,12 +337,5 @@ class StripeConnectOnboardingViewModel: ObservableObject {
     }
     
     private var cancellables = Set<AnyCancellable>()
-}
-
-enum OnboardingViewState {
-    case loading
-    case error(String)
-    case completed
-    case ready(String) // clientSecret
 }
 

@@ -70,6 +70,22 @@ public struct Constants {
             return "pk_live_..." // 👈 生产环境：在这里填入你的生产密钥，或通过环境变量配置
             #endif
         }()
+        
+        // Stripe Connect Onboarding 自定义 URL
+        // 用于在 Stripe Connect 账户入驻流程中显示自定义的服务条款和隐私政策
+        struct ConnectOnboarding {
+            // Full Terms of Service URL（完整服务条款）
+            // 用于商户账户（Full service agreement）
+            static let fullTermsOfServiceURL = URL(string: "\(Frontend.baseURL)/terms")!
+            
+            // Recipient Terms of Service URL（收款方服务条款）
+            // 用于收款账户（Recipient service agreement）
+            // 注意：如果平台没有单独的收款方条款，可以使用与 Full Terms 相同的 URL
+            static let recipientTermsOfServiceURL = URL(string: "\(Frontend.baseURL)/terms")!
+            
+            // Privacy Policy URL（隐私政策）
+            static let privacyPolicyURL = URL(string: "\(Frontend.baseURL)/privacy")!
+        }
     }
 }
 

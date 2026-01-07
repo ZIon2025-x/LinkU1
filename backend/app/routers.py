@@ -3928,6 +3928,30 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         task.paid_to_user_id = transfer_record.taker_id
                         task.escrow_amount = Decimal('0.0')  # 转账后清空托管金额
                         logger.info(f"✅ [WEBHOOK] 任务 {task.id} 转账完成，金额已转给接受人 {transfer_record.taker_id}")
+                        
+                        # 发送通知给任务接收人：任务金已发放
+                        try:
+                            # 格式化金额（从 Decimal 转换为字符串，保留两位小数）
+                            amount_display = f"£{float(transfer_record.amount):.2f}"
+                            task_title = task.title or f"任务 #{task.id}"
+                            
+                            # 创建通知内容：任务金已发放（金额 - 任务标题）
+                            notification_content = f"任务金已发放：{amount_display} - {task_title}"
+                            
+                            # 创建通知
+                            crud.create_notification(
+                                db=db,
+                                user_id=transfer_record.taker_id,
+                                type="task_reward_paid",  # 任务奖励已支付
+                                title="任务金已发放",
+                                content=notification_content,
+                                related_id=str(task.id),  # 关联任务ID，方便前端跳转
+                                auto_commit=False  # 不自动提交，等待下面的 db.commit()
+                            )
+                            logger.info(f"✅ [WEBHOOK] 已发送任务金发放通知给用户 {transfer_record.taker_id}")
+                        except Exception as e:
+                            # 通知发送失败不影响转账流程
+                            logger.error(f"❌ [WEBHOOK] 发送任务金发放通知失败: {e}", exc_info=True)
                     
                     db.commit()
                     logger.info(f"✅ [WEBHOOK] Transfer 记录已更新为成功: transfer_record_id={transfer_record_id}")

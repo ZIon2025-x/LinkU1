@@ -1,0 +1,22 @@
+# Uncomment the next line to define a global platform for your project
+platform :ios, '13.0'
+
+target 'StripePaymentSample' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+
+  # Stripe iOS SDK
+  pod 'StripePaymentSheet', '~> 25.3'
+  pod 'StripeCore', '~> 25.3'
+
+  target 'StripePaymentSampleTests' do
+    inherit! :search_paths
+    # Pods for testing
+  end
+
+  target 'StripePaymentSampleUITests' do
+    # Pods for testing
+  end
+
+end
+

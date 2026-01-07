@@ -135,15 +135,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
     let onComplete: () -> Void
     let onError: (String) -> Void
     
-    // 可选的高级配置
-    // 注意：collectionOptions 的类型取决于 Stripe iOS SDK 的实际实现
-    // 如果 SDK 不支持，可以注释掉或使用正确的类型
-    // var collectionOptions: AccountCollectionOptions? = nil
-    var fullTermsOfServiceURL: URL? = nil
-    var recipientTermsOfServiceURL: URL? = nil
-    var privacyPolicyURL: URL? = nil
-    
-    func makeUIViewController(context: Context) -> ContainerViewController {
+    func makeUIViewController(context: Context) -> UIViewController {
         // 设置 Stripe Publishable Key
         STPAPIClient.shared.publishableKey = Constants.Stripe.publishableKey
         
@@ -159,43 +151,13 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         )
         
         // 创建 AccountOnboardingController
-        // 根据 Stripe iOS SDK 文档，支持以下可选参数：
-        // - fullTermsOfServiceUrl: 完整服务条款 URL
-        // - recipientTermsOfServiceUrl: 收款方服务条款 URL
-        // - privacyPolicyUrl: 隐私政策 URL
-        // - collectionOptions: 收集选项（字段、未来需求、需求限制等）
-        //
-        // 注意：根据实际 SDK 版本，API 签名可能有所不同
-        // 如果编译错误，请检查 SDK 文档并调整参数
-        
-        // 使用默认的 Terms 和 Privacy URL（如果未提供）
-        let fullTermsURL = fullTermsOfServiceURL ?? Constants.Stripe.ConnectOnboarding.fullTermsOfServiceURL
-        let recipientTermsURL = recipientTermsOfServiceURL ?? Constants.Stripe.ConnectOnboarding.recipientTermsOfServiceURL
-        let privacyURL = privacyPolicyURL ?? Constants.Stripe.ConnectOnboarding.privacyPolicyURL
-        
-        // 创建 controller
-        // 注意：如果 SDK 不支持这些参数，请使用无参数版本：
-        // let controller = embeddedComponentManager.createAccountOnboardingController()
-        let controller = embeddedComponentManager.createAccountOnboardingController(
-            fullTermsOfServiceUrl: fullTermsURL,
-            recipientTermsOfServiceUrl: recipientTermsURL,
-            privacyPolicyUrl: privacyURL
-        )
-        
-        // 如果提供了 collectionOptions，可以通过 controller 的属性设置
-        // 注意：这取决于 SDK 的实际实现
-        // if let collectionOptions = collectionOptions {
-        //     // 根据 SDK 文档设置 collectionOptions
-        // }
-        
+        let controller = embeddedComponentManager.createAccountOnboardingController()
         controller.delegate = context.coordinator
         controller.title = "设置收款账户"
         
-        // 创建容器视图控制器来持有和展示 AccountOnboardingController
-        let containerVC = ContainerViewController()
-        containerVC.accountOnboardingController = controller
-        
-        return containerVC
+        // 包装在 UINavigationController 中以便显示
+        let navController = UINavigationController(rootViewController: controller)
+        return navController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
@@ -204,20 +166,6 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
     
     func makeCoordinator() -> Coordinator {
         Coordinator(onComplete: onComplete, onError: onError)
-    }
-    
-    /// 容器视图控制器，用于展示 AccountOnboardingController
-    class ContainerViewController: UIViewController {
-        var accountOnboardingController: AccountOnboardingController?
-        
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
-            
-            // 在视图出现后展示 AccountOnboardingController
-            if let controller = accountOnboardingController {
-                controller.present(from: self)
-            }
-        }
     }
     
     class Coordinator: NSObject, AccountOnboardingControllerDelegate {
@@ -231,14 +179,14 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         
         // MARK: - AccountOnboardingControllerDelegate
         
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: ConnectAccount) {
+        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: STPConnectAccount) {
             print("✅ Account onboarding completed")
             DispatchQueue.main.async {
                 self.onComplete()
             }
         }
         
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: ConnectAccount?) {
+        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: STPConnectAccount?) {
             print("ℹ️ Account onboarding canceled")
             // 用户取消，不需要处理
         }

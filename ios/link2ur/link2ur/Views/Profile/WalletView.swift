@@ -77,7 +77,7 @@ struct WalletView: View {
                         .padding(.top, AppSpacing.md)
                     }
                     
-                    // 钱包余额占位（未来功能）
+                    // 钱包余额和提现功能
                     VStack(spacing: AppSpacing.md) {
                         HStack {
                             Text("钱包余额")
@@ -87,11 +87,26 @@ struct WalletView: View {
                         }
                         .padding(.horizontal, AppSpacing.md)
                         
-                        ComingSoonCard(
-                            icon: "creditcard.fill",
-                            title: "钱包余额功能",
-                            message: "充值、提现等功能即将上线"
-                        )
+                        NavigationLink(destination: StripeConnectPayoutsView()) {
+                            QuickActionCard(
+                                icon: "arrow.up.right.circle.fill",
+                                title: "提现管理",
+                                subtitle: "查看余额、提现记录和管理提现设置",
+                                color: AppColors.primary
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, AppSpacing.md)
+                        
+                        NavigationLink(destination: StripeConnectPaymentsView()) {
+                            QuickActionCard(
+                                icon: "list.bullet.rectangle.fill",
+                                title: "支付记录",
+                                subtitle: "查看所有支付、退款和争议记录",
+                                color: Color.blue
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                         .padding(.horizontal, AppSpacing.md)
                     }
                     .padding(.top, AppSpacing.lg)

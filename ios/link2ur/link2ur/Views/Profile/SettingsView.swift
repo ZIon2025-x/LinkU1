@@ -112,6 +112,22 @@ struct SettingsView: View {
                             Text("设置收款账户")
                         }
                     }
+                    
+                    NavigationLink(destination: StripeConnectPayoutsView()) {
+                        HStack {
+                            Image(systemName: "arrow.up.right.circle.fill")
+                                .foregroundColor(AppColors.success)
+                            Text("提现管理")
+                        }
+                    }
+                    
+                    NavigationLink(destination: StripeConnectPaymentsView()) {
+                        HStack {
+                            Image(systemName: "list.bullet.rectangle.fill")
+                                .foregroundColor(.blue)
+                            Text("支付记录")
+                        }
+                    }
                 }
                 
                 // 账户信息
