@@ -9,6 +9,7 @@ class PaymentViewModel: ObservableObject {
     @Published var paymentSheet: PaymentSheet?
     @Published var errorMessage: String?
     @Published var paymentSuccess = false
+    @Published var paymentResponse: PaymentResponse?
     
     private let apiService: APIService
     private let taskId: Int
@@ -62,6 +63,9 @@ class PaymentViewModel: ObservableObject {
     }
     
     private func handlePaymentResponse(_ response: PaymentResponse) {
+        // 保存支付响应信息
+        paymentResponse = response
+        
         // 如果纯积分支付，直接成功
         if response.finalAmount == 0 {
             paymentSuccess = true

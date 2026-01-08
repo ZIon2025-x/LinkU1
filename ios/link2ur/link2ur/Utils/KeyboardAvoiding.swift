@@ -27,15 +27,21 @@ class KeyboardHeightObserver: ObservableObject {
                 // 计算键盘高度（键盘frame已经是相对于屏幕的）
                 // keyboardFrame.origin.y 是键盘顶部位置，从屏幕底部到键盘顶部的距离就是键盘高度
                 let keyboardHeight = screenHeight - keyboardFrame.origin.y
-                self.keyboardHeight = max(0, keyboardHeight)
                 
                 // 获取动画信息
-                if let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double {
-                    self.keyboardAnimationDuration = duration
-                }
-                if let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
-                   let curve = UIView.AnimationCurve(rawValue: curveValue) {
-                    self.keyboardAnimationCurve = curve
+                let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+                let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int
+                let curve = curveValue.flatMap { UIView.AnimationCurve(rawValue: $0) }
+                
+                // 使用异步方式更新状态，避免在视图更新期间发布变更
+                DispatchQueue.main.async {
+                    self.keyboardHeight = max(0, keyboardHeight)
+                    if let duration = duration {
+                        self.keyboardAnimationDuration = duration
+                    }
+                    if let curve = curve {
+                        self.keyboardAnimationCurve = curve
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -45,15 +51,20 @@ class KeyboardHeightObserver: ObservableObject {
             .sink { [weak self] notification in
                 guard let self = self else { return }
                 
-                self.keyboardHeight = 0
-                
                 // 获取动画信息
-                if let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double {
-                    self.keyboardAnimationDuration = duration
-                }
-                if let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
-                   let curve = UIView.AnimationCurve(rawValue: curveValue) {
-                    self.keyboardAnimationCurve = curve
+                let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+                let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int
+                let curve = curveValue.flatMap { UIView.AnimationCurve(rawValue: $0) }
+                
+                // 使用异步方式更新状态，避免在视图更新期间发布变更
+                DispatchQueue.main.async {
+                    self.keyboardHeight = 0
+                    if let duration = duration {
+                        self.keyboardAnimationDuration = duration
+                    }
+                    if let curve = curve {
+                        self.keyboardAnimationCurve = curve
+                    }
                 }
             }
             .store(in: &cancellables)

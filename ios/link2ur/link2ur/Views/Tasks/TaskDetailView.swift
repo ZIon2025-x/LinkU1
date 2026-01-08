@@ -176,8 +176,8 @@ struct TaskDetailView: View {
             }
             .sheet(isPresented: $showPaymentView) {
                 if let task = viewModel.task {
-                    // 计算需要支付的金额（通常是任务金额的 10% 作为平台服务费）
-                    let paymentAmount = (task.agreedReward ?? task.baseReward ?? task.reward) * 0.1
+                    // 计算需要支付的金额（任务金额，后端会计算最终金额，包括积分和优惠券抵扣）
+                    let paymentAmount = task.agreedReward ?? task.baseReward ?? task.reward
                     StripePaymentView(taskId: taskId, amount: paymentAmount)
                         .onDisappear {
                             // 支付完成后刷新任务详情

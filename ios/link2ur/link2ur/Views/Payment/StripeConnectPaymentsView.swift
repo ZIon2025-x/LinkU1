@@ -1,29 +1,33 @@
 import SwiftUI
-import StripeConnect
-import UIKit
 import Combine
 
-/// 使用 Stripe Connect 原生 SDK 的 Payments（支付列表）视图
+/// 自定义的支付记录视图（不使用嵌入式组件）
 struct StripeConnectPaymentsView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = StripeConnectPaymentsViewModel()
     @State private var showError = false
     @State private var errorMessage = ""
     
-    // 可选的默认过滤器
-    var defaultFilters: EmbeddedComponentManager.PaymentsListDefaultFiltersOptions? = nil
-    
     var body: some View {
         ZStack {
             AppColors.background
                 .ignoresSafeArea()
             
-            stateBasedView
+            if viewModel.isLoading && viewModel.transactions.isEmpty {
+                loadingView
+            } else if let error = viewModel.error {
+                errorView(error: error)
+            } else {
+                transactionsListView
+            }
         }
         .navigationTitle("支付记录")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.loadPaymentsSession()
+            viewModel.loadTransactions()
+        }
+        .refreshable {
+            viewModel.loadTransactions()
         }
         .alert("错误", isPresented: $showError) {
             Button("确定", role: .cancel) { }
@@ -32,28 +36,11 @@ struct StripeConnectPaymentsView: View {
         }
         .onChange(of: viewModel.error) { newError in
             if let error = newError {
-                errorMessage = error
-                showError = true
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var stateBasedView: some View {
-        switch viewModel.viewState {
-        case .loading:
-            loadingView
-        case .error(let message):
-            errorView(error: message)
-        case .ready(let secret):
-            // 使用原生 PaymentsViewController
-            PaymentsViewControllerWrapper(
-                clientSecret: secret,
-                defaultFilters: defaultFilters,
-                onError: { error in
-                    viewModel.error = error
+                DispatchQueue.main.async {
+                    errorMessage = error
+                    showError = true
                 }
-            )
+            }
         }
     }
     
@@ -84,7 +71,7 @@ struct StripeConnectPaymentsView: View {
                 .padding(.horizontal)
             
             Button(action: {
-                viewModel.loadPaymentsSession()
+                viewModel.loadTransactions()
             }) {
                 Text("重试")
                     .font(.headline)
@@ -97,185 +84,231 @@ struct StripeConnectPaymentsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-}
-
-/// 将 UIKit 的 PaymentsViewController 包装为 SwiftUI View
-struct PaymentsViewControllerWrapper: UIViewControllerRepresentable {
-    let clientSecret: String
-    let defaultFilters: EmbeddedComponentManager.PaymentsListDefaultFiltersOptions?
-    let onError: (String) -> Void
     
-    func makeUIViewController(context: Context) -> ContainerViewController {
-        // 设置 Stripe Publishable Key
-        STPAPIClient.shared.publishableKey = Constants.Stripe.publishableKey
-        
-        // 创建 fetchClientSecret 闭包
-        let fetchClientSecret: () async -> String? = {
-            // 直接返回已有的 clientSecret
-            return clientSecret
-        }
-        
-        // 创建 EmbeddedComponentManager
-        let embeddedComponentManager = EmbeddedComponentManager(
-            fetchClientSecret: fetchClientSecret
-        )
-        
-        // 创建 PaymentsViewController，支持可选过滤器
-        let paymentsViewController = embeddedComponentManager.createPaymentsViewController(
-            defaultFilters: defaultFilters
-        )
-        
-        // 创建容器视图控制器来持有和展示 PaymentsViewController
-        let containerVC = ContainerViewController()
-        containerVC.paymentsViewController = paymentsViewController
-        
-        return containerVC
-    }
-    
-    func updateUIViewController(_ uiViewController: ContainerViewController, context: Context) {
-        // 不需要更新
-    }
-    
-    /// 容器视图控制器，用于展示 PaymentsViewController
-    class ContainerViewController: UIViewController {
-        var paymentsViewController: UIViewController?
-        
-        override func viewDidLoad() {
-            super.viewDidLoad()
-            view.backgroundColor = .systemBackground
-        }
-        
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
-            
-            // 在视图出现后展示 PaymentsViewController
-            if let paymentsVC = paymentsViewController {
-                // 将 PaymentsViewController 添加为子视图控制器
-                addChild(paymentsVC)
-                view.addSubview(paymentsVC.view)
-                paymentsVC.view.translatesAutoresizingMaskIntoConstraints = false
-                NSLayoutConstraint.activate([
-                    paymentsVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-                    paymentsVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                    paymentsVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                    paymentsVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-                ])
-                paymentsVC.didMove(toParent: self)
+    private var transactionsListView: some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.sm) {
+                if viewModel.transactions.isEmpty {
+                    EmptyStateView(
+                        icon: "creditcard.fill",
+                        title: "暂无支付记录",
+                        message: "您的支付记录将显示在这里"
+                    )
+                    .padding(.top, 60)
+                } else {
+                    // 只显示收入类型的交易（支付记录）
+                    let paymentTransactions = viewModel.transactions.filter { $0.type == "income" }
+                    
+                    if paymentTransactions.isEmpty {
+                        EmptyStateView(
+                            icon: "creditcard.fill",
+                            title: "暂无支付记录",
+                            message: "您的支付记录将显示在这里"
+                        )
+                        .padding(.top, 60)
+                    } else {
+                        ForEach(paymentTransactions) { transaction in
+                            TransactionRowView(transaction: transaction)
+                        }
+                    }
+                }
             }
-        }
-        
-        override func viewWillDisappear(_ animated: Bool) {
-            super.viewWillDisappear(animated)
-            
-            // 清理子视图控制器
-            if let paymentsVC = paymentsViewController {
-                paymentsVC.willMove(toParent: nil)
-                paymentsVC.view.removeFromSuperview()
-                paymentsVC.removeFromParent()
-            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
         }
     }
 }
 
-/// ViewModel 用于管理 Payments Session
+/// 交易记录行视图
+struct TransactionRowView: View {
+    let transaction: StripeConnectTransaction
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 状态图标
+            ZStack {
+                Circle()
+                    .fill((transaction.type == "income" ? AppColors.success : AppColors.error).opacity(0.1))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: transaction.type == "income" ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(transaction.type == "income" ? AppColors.success : AppColors.error)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(transaction.description)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                HStack(spacing: 8) {
+                    // 状态标签
+                    Text(statusText)
+                        .font(AppTypography.caption2)
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.1))
+                        .cornerRadius(4)
+                    
+                    // 时间
+                    Text(formatDate(transaction.createdAt))
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textQuaternary)
+                }
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(formatAmount(transaction.amount, currency: transaction.currency))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(transaction.type == "income" ? AppColors.success : AppColors.textPrimary)
+                
+                Text(transaction.source.capitalized)
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, 14)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: Color.black.opacity(0.01), radius: 5, x: 0, y: 2)
+    }
+    
+    private var statusText: String {
+        switch transaction.status.lowercased() {
+        case "succeeded", "paid":
+            return "成功"
+        case "pending":
+            return "处理中"
+        case "failed", "canceled":
+            return "失败"
+        case "reversed":
+            return "已撤销"
+        default:
+            return transaction.status.capitalized
+        }
+    }
+    
+    private var statusColor: Color {
+        switch transaction.status.lowercased() {
+        case "succeeded", "paid":
+            return AppColors.success
+        case "pending":
+            return .orange
+        case "failed", "canceled", "reversed":
+            return AppColors.error
+        default:
+            return AppColors.textSecondary
+        }
+    }
+    
+    private func formatAmount(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        
+        let sign = transaction.type == "income" ? "+" : "-"
+        if let formatted = formatter.string(from: NSNumber(value: amount)) {
+            return "\(sign)\(formatted)"
+        }
+        return "\(sign)\(currency) \(String(format: "%.2f", amount))"
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            displayFormatter.locale = Locale(identifier: "zh_CN")
+            return displayFormatter.string(from: date)
+        }
+        
+        return dateString
+    }
+}
+
+/// ViewModel 用于管理支付记录
 class StripeConnectPaymentsViewModel: ObservableObject {
-    @Published var clientSecret: String?
-    @Published var isLoading = true
+    @Published var transactions: [StripeConnectTransaction] = []
+    @Published var isLoading = false
     @Published var error: String?
     
     private let apiService = APIService.shared
+    private var cancellables = Set<AnyCancellable>()
     
-    var viewState: PaymentsViewState {
-        if isLoading {
-            return .loading
-        } else if let error = error {
-            return .error(error)
-        } else if let secret = clientSecret {
-            return .ready(secret)
-        } else {
-            return .loading
-        }
-    }
-    
-    func loadPaymentsSession() {
+    func loadTransactions() {
         isLoading = true
         error = nil
         
-        // 首先获取用户的 Stripe 账户 ID
-        struct AccountStatusResponse: Codable {
-            let account_id: String
-            let details_submitted: Bool
-            let charges_enabled: Bool
-            let payouts_enabled: Bool
-            let needs_onboarding: Bool
+        struct TransactionsResponse: Codable {
+            let transactions: [StripeConnectTransaction]
+            let total: Int
+            let has_more: Bool
         }
         
-        // 先获取账户状态
-        apiService.request(AccountStatusResponse.self, "/api/stripe/connect/account/status", method: "GET")
-            .receive(on: DispatchQueue.main)
-            .flatMap { [weak self] statusResponse -> AnyPublisher<AccountSessionResponse, APIError> in
-                guard let self = self else {
-                    return Fail(error: APIError.unknown).eraseToAnyPublisher()
-                }
-                
-                // 检查账户是否已完成设置
-                guard statusResponse.details_submitted && statusResponse.charges_enabled else {
-                    return Fail(error: APIError.httpError(400))
-                        .eraseToAnyPublisher()
-                }
-                
-                // 创建 payments account session
-                struct AccountSessionRequest: Codable {
-                    let account: String
-                    let enable_payments: Bool
-                }
-                
-                struct AccountSessionResponse: Codable {
-                    let client_secret: String
-                }
-                
-                let request = AccountSessionRequest(
-                    account: statusResponse.account_id,
-                    enable_payments: true
-                )
-                
-                return self.apiService.request(
-                    AccountSessionResponse.self,
-                    "/api/stripe/connect/account_session",
-                    method: "POST",
-                    body: request
-                )
-            }
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    self?.isLoading = false
-                    if case .failure(let apiError) = completion {
-                        var errorMessage = apiError.localizedDescription
-                        if case .httpError(let code) = apiError {
-                            if code == 400 {
-                                errorMessage = "账户尚未完成设置，请先完成账户入驻"
-                            } else {
-                                errorMessage = "请求失败 (HTTP \(code))"
-                            }
+        apiService.request(
+            TransactionsResponse.self,
+            "/api/stripe/connect/account/transactions?limit=100",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoading = false
+                if case .failure(let apiError) = completion {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            errorMessage = "未找到 Stripe Connect 账户，请先完成账户入驻"
+                        } else {
+                            errorMessage = "请求失败 (HTTP \(code))"
                         }
-                        self?.error = errorMessage
-                        print("❌ Stripe Connect Payments 创建失败: \(errorMessage)")
                     }
-                },
-                receiveValue: { [weak self] response in
-                    self?.isLoading = false
-                    self?.clientSecret = response.client_secret
+                    self?.error = errorMessage
+                    print("❌ 获取支付记录失败: \(errorMessage)")
                 }
-            )
-            .store(in: &cancellables)
+            },
+            receiveValue: { [weak self] response in
+                self?.isLoading = false
+                self?.transactions = response.transactions
+                print("✅ 成功加载 \(response.transactions.count) 条交易记录")
+            }
+        )
+        .store(in: &cancellables)
     }
+}
+
+/// Stripe Connect 交易记录模型
+struct StripeConnectTransaction: Identifiable, Codable {
+    let id: String
+    let type: String // "income" 或 "expense"
+    let amount: Double
+    let currency: String
+    let description: String
+    let status: String
+    let created: Int // Unix 时间戳
+    let createdAt: String // ISO 格式时间
+    let source: String // "charge", "transfer", "payout", "payment_intent"
+    let metadata: [String: String]?
     
-    private var cancellables = Set<AnyCancellable>()
+    enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case amount
+        case currency
+        case description
+        case status
+        case created
+        case createdAt = "created_at"
+        case source
+        case metadata
+    }
 }
-
-enum PaymentsViewState {
-    case loading
-    case error(String)
-    case ready(String) // clientSecret
-}
-

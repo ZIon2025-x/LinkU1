@@ -1615,6 +1615,24 @@ class StripeConnectTransactionsResponse(BaseModel):
     has_more: bool
 
 
+class StripeConnectPayoutRequest(BaseModel):
+    """创建提现请求"""
+    amount: float  # 提现金额
+    currency: str = "GBP"  # 货币代码
+    description: Optional[str] = None  # 提现描述
+
+
+class StripeConnectPayoutResponse(BaseModel):
+    """提现响应"""
+    id: str
+    amount: float
+    currency: str
+    status: str
+    created: int
+    created_at: str
+    description: Optional[str] = None
+
+
 # ==================== 任务达人功能 Schema ====================
 
 class TaskExpertApplicationCreate(BaseModel):

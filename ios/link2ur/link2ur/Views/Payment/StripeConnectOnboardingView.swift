@@ -198,7 +198,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         return containerVC
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    func updateUIViewController(_ uiViewController: ContainerViewController, context: Context) {
         // 不需要更新
     }
     
@@ -231,14 +231,14 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         
         // MARK: - AccountOnboardingControllerDelegate
         
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: ConnectAccount) {
+        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: Any) {
             print("✅ Account onboarding completed")
             DispatchQueue.main.async {
                 self.onComplete()
             }
         }
         
-        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: ConnectAccount?) {
+        func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: Any?) {
             print("ℹ️ Account onboarding canceled")
             // 用户取消，不需要处理
         }

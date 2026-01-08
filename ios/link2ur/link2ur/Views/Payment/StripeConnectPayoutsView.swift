@@ -1,55 +1,52 @@
 import SwiftUI
-import StripeConnect
-import UIKit
 import Combine
 
-/// 使用 Stripe Connect 原生 SDK 的 Payouts（提现）视图
+/// 自定义的提现记录视图（不使用嵌入式组件）
 struct StripeConnectPayoutsView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = StripeConnectPayoutsViewModel()
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showPayoutSheet = false
     
     var body: some View {
         ZStack {
             AppColors.background
                 .ignoresSafeArea()
             
-            stateBasedView
+            if viewModel.isLoadingBalance && viewModel.balance == nil {
+                loadingView
+            } else if let error = viewModel.error {
+                errorView(error: error)
+            } else {
+                contentView
+            }
         }
         .navigationTitle("提现管理")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.loadPayoutsSession()
+            viewModel.loadBalance()
+            viewModel.loadTransactions()
+        }
+        .refreshable {
+            viewModel.loadBalance()
+            viewModel.loadTransactions()
         }
         .alert("错误", isPresented: $showError) {
             Button("确定", role: .cancel) { }
         } message: {
             Text(errorMessage)
         }
+        .sheet(isPresented: $showPayoutSheet) {
+            PayoutSheet(viewModel: viewModel, isPresented: $showPayoutSheet)
+        }
         .onChange(of: viewModel.error) { newError in
             if let error = newError {
-                errorMessage = error
-                showError = true
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var stateBasedView: some View {
-        switch viewModel.viewState {
-        case .loading:
-            loadingView
-        case .error(let message):
-            errorView(error: message)
-        case .ready(let secret):
-            // 使用原生 PayoutsViewController
-            PayoutsViewControllerWrapper(
-                clientSecret: secret,
-                onError: { error in
-                    viewModel.error = error
+                DispatchQueue.main.async {
+                    errorMessage = error
+                    showError = true
                 }
-            )
+            }
         }
     }
     
@@ -80,7 +77,8 @@ struct StripeConnectPayoutsView: View {
                 .padding(.horizontal)
             
             Button(action: {
-                viewModel.loadPayoutsSession()
+                viewModel.loadBalance()
+                viewModel.loadTransactions()
             }) {
                 Text("重试")
                     .font(.headline)
@@ -93,183 +91,613 @@ struct StripeConnectPayoutsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+    
+    private var contentView: some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.lg) {
+                // 余额卡片
+                if let balance = viewModel.balance {
+                    BalanceCard(balance: balance)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.top, AppSpacing.md)
+                    
+                    // 提现按钮
+                    if balance.available > 0 {
+                        Button(action: {
+                            showPayoutSheet = true
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 20))
+                                Text("提现")
+                                    .font(AppTypography.headline)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(AppColors.primary)
+                            .cornerRadius(AppCornerRadius.large)
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                    } else {
+                        Text("当前无可提现余额")
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.large)
+                            .padding(.horizontal, AppSpacing.md)
+                    }
+                }
+                
+                // 提现记录标题
+                if !viewModel.transactions.isEmpty {
+                    HStack {
+                        Text("提现记录")
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.top, AppSpacing.md)
+                }
+                
+                // 提现记录列表
+                if viewModel.transactions.isEmpty {
+                    EmptyStateView(
+                        icon: "banknote.fill",
+                        title: "暂无提现记录",
+                        message: "您的提现记录将显示在这里"
+                    )
+                    .padding(.top, 60)
+                } else {
+                    // 只显示支出类型的交易（提现记录）
+                    let payoutTransactions = viewModel.transactions.filter { $0.type == "expense" }
+                    
+                    if payoutTransactions.isEmpty {
+                        EmptyStateView(
+                            icon: "banknote.fill",
+                            title: "暂无提现记录",
+                            message: "您的提现记录将显示在这里"
+                        )
+                        .padding(.top, 60)
+                    } else {
+                        ForEach(payoutTransactions) { transaction in
+                            PayoutTransactionRowView(transaction: transaction)
+                                .padding(.horizontal, AppSpacing.md)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, AppSpacing.sm)
+        }
+    }
 }
 
-/// 将 UIKit 的 PayoutsViewController 包装为 SwiftUI View
-struct PayoutsViewControllerWrapper: UIViewControllerRepresentable {
-    let clientSecret: String
-    let onError: (String) -> Void
+/// 余额卡片
+struct BalanceCard: View {
+    let balance: StripeConnectBalance
     
-    func makeUIViewController(context: Context) -> ContainerViewController {
-        // 设置 Stripe Publishable Key
-        STPAPIClient.shared.publishableKey = Constants.Stripe.publishableKey
-        
-        // 创建 fetchClientSecret 闭包
-        let fetchClientSecret: () async -> String? = {
-            // 直接返回已有的 clientSecret
-            return clientSecret
-        }
-        
-        // 创建 EmbeddedComponentManager
-        let embeddedComponentManager = EmbeddedComponentManager(
-            fetchClientSecret: fetchClientSecret
-        )
-        
-        // 创建 PayoutsViewController
-        let payoutsViewController = embeddedComponentManager.createPayoutsViewController()
-        
-        // 创建容器视图控制器来持有和展示 PayoutsViewController
-        let containerVC = ContainerViewController()
-        containerVC.payoutsViewController = payoutsViewController
-        
-        return containerVC
-    }
-    
-    func updateUIViewController(_ uiViewController: ContainerViewController, context: Context) {
-        // 不需要更新
-    }
-    
-    /// 容器视图控制器，用于展示 PayoutsViewController
-    class ContainerViewController: UIViewController {
-        var payoutsViewController: UIViewController?
-        
-        override func viewDidLoad() {
-            super.viewDidLoad()
-            view.backgroundColor = .systemBackground
-        }
-        
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
+    var body: some View {
+        VStack(spacing: AppSpacing.md) {
+            // 总余额
+            VStack(spacing: 4) {
+                Text("总余额")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                
+                Text(formatAmount(balance.total, currency: balance.currency))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+            }
             
-            // 在视图出现后展示 PayoutsViewController
-            if let payoutsVC = payoutsViewController {
-                // 将 PayoutsViewController 添加为子视图控制器
-                addChild(payoutsVC)
-                view.addSubview(payoutsVC.view)
-                payoutsVC.view.translatesAutoresizingMaskIntoConstraints = false
-                NSLayoutConstraint.activate([
-                    payoutsVC.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-                    payoutsVC.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                    payoutsVC.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                    payoutsVC.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-                ])
-                payoutsVC.didMove(toParent: self)
+            Divider()
+            
+            // 可用余额和待处理余额
+            HStack(spacing: AppSpacing.xl) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("可用余额")
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    Text(formatAmount(balance.available, currency: balance.currency))
+                        .font(AppTypography.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.success)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("待处理")
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    Text(formatAmount(balance.pending, currency: balance.currency))
+                        .font(AppTypography.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.orange)
+                }
             }
         }
+        .padding(AppSpacing.lg)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+    }
+    
+    private func formatAmount(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
         
-        override func viewWillDisappear(_ animated: Bool) {
-            super.viewWillDisappear(animated)
-            
-            // 清理子视图控制器
-            if let payoutsVC = payoutsViewController {
-                payoutsVC.willMove(toParent: nil)
-                payoutsVC.view.removeFromSuperview()
-                payoutsVC.removeFromParent()
-            }
+        if let formatted = formatter.string(from: NSNumber(value: amount)) {
+            return formatted
         }
+        return "\(currency) \(String(format: "%.2f", amount))"
     }
 }
 
-/// ViewModel 用于管理 Payouts Session
+/// 提现弹窗
+struct PayoutSheet: View {
+    @ObservedObject var viewModel: StripeConnectPayoutsViewModel
+    @Binding var isPresented: Bool
+    @State private var amount: String = ""
+    @State private var description: String = ""
+    @FocusState private var isAmountFocused: Bool
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                VStack(spacing: AppSpacing.lg) {
+                    // 可用余额提示
+                    if let balance = viewModel.balance {
+                        VStack(spacing: 8) {
+                            Text("可用余额")
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                            
+                            Text(formatAmount(balance.available, currency: balance.currency))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(AppColors.primary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.medium)
+                    }
+                    
+                    // 提现金额输入
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("提现金额")
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        HStack {
+                            Text(viewModel.balance?.currency ?? "GBP")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textSecondary)
+                                .padding(.trailing, 8)
+                            
+                            TextField("0.00", text: $amount)
+                                .keyboardType(.decimalPad)
+                                .font(AppTypography.title2)
+                                .focused($isAmountFocused)
+                        }
+                        .padding()
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.medium)
+                    }
+                    
+                    // 描述（可选）
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("备注（可选）")
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        TextField("提现备注", text: $description)
+                            .padding()
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
+                    }
+                    
+                    Spacer()
+                    
+                    // 提现按钮
+                    Button(action: {
+                        createPayout()
+                    }) {
+                        HStack {
+                            if viewModel.isCreatingPayout {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 20))
+                                Text("确认提现")
+                                    .font(AppTypography.headline)
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(canCreatePayout ? AppColors.primary : AppColors.textTertiary)
+                        .cornerRadius(AppCornerRadius.large)
+                    }
+                    .disabled(!canCreatePayout || viewModel.isCreatingPayout)
+                    .padding(.bottom, AppSpacing.md)
+                }
+                .padding(AppSpacing.lg)
+            }
+            .navigationTitle("提现")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("取消") {
+                        isPresented = false
+                    }
+                }
+            }
+        }
+        .onAppear {
+            isAmountFocused = true
+        }
+    }
+    
+    private var canCreatePayout: Bool {
+        guard let balance = viewModel.balance,
+              let amountValue = Double(amount) else {
+            return false
+        }
+        return amountValue > 0 && amountValue <= balance.available
+    }
+    
+    private func createPayout() {
+        guard let amountValue = Double(amount),
+              amountValue > 0,
+              let balance = viewModel.balance,
+              amountValue <= balance.available else {
+            return
+        }
+        
+        viewModel.createPayout(
+            amount: amountValue,
+            currency: balance.currency,
+            description: description.isEmpty ? nil : description
+        ) { success in
+            if success {
+                isPresented = false
+                // 刷新余额和交易记录
+                viewModel.loadBalance()
+                viewModel.loadTransactions()
+            }
+        }
+    }
+    
+    private func formatAmount(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        
+        if let formatted = formatter.string(from: NSNumber(value: amount)) {
+            return formatted
+        }
+        return "\(currency) \(String(format: "%.2f", amount))"
+    }
+}
+
+/// 提现交易记录行视图
+struct PayoutTransactionRowView: View {
+    let transaction: StripeConnectTransaction
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            // 状态图标
+            ZStack {
+                Circle()
+                    .fill(statusColor.opacity(0.1))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(statusColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(transaction.description)
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                HStack(spacing: 8) {
+                    // 状态标签
+                    Text(statusText)
+                        .font(AppTypography.caption2)
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.1))
+                        .cornerRadius(4)
+                    
+                    // 时间
+                    Text(formatDate(transaction.createdAt))
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textQuaternary)
+                }
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(formatAmount(transaction.amount, currency: transaction.currency))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text("提现")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, 14)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: Color.black.opacity(0.01), radius: 5, x: 0, y: 2)
+    }
+    
+    private var statusText: String {
+        switch transaction.status.lowercased() {
+        case "paid", "succeeded":
+            return "已到账"
+        case "pending":
+            return "处理中"
+        case "in_transit":
+            return "转账中"
+        case "canceled":
+            return "已取消"
+        case "failed":
+            return "失败"
+        default:
+            return transaction.status.capitalized
+        }
+    }
+    
+    private var statusColor: Color {
+        switch transaction.status.lowercased() {
+        case "paid", "succeeded":
+            return AppColors.success
+        case "pending", "in_transit":
+            return .orange
+        case "canceled", "failed":
+            return AppColors.error
+        default:
+            return AppColors.textSecondary
+        }
+    }
+    
+    private func formatAmount(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        
+        if let formatted = formatter.string(from: NSNumber(value: amount)) {
+            return formatted
+        }
+        return "\(currency) \(String(format: "%.2f", amount))"
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            displayFormatter.locale = Locale(identifier: "zh_CN")
+            return displayFormatter.string(from: date)
+        }
+        
+        return dateString
+    }
+}
+
+/// Stripe Connect 余额模型
+struct StripeConnectBalance: Codable {
+    let available: Double
+    let pending: Double
+    let total: Double
+    let currency: String
+    let availableBreakdown: [BalanceBreakdown]
+    let pendingBreakdown: [BalanceBreakdown]
+    
+    enum CodingKeys: String, CodingKey {
+        case available
+        case pending
+        case total
+        case currency
+        case availableBreakdown = "available_breakdown"
+        case pendingBreakdown = "pending_breakdown"
+    }
+}
+
+struct BalanceBreakdown: Codable {
+    let amount: Double
+    let currency: String
+    let sourceTypes: [String: Int]?
+    
+    enum CodingKeys: String, CodingKey {
+        case amount
+        case currency
+        case sourceTypes = "source_types"
+    }
+}
+
+/// ViewModel 用于管理提现记录和余额
 class StripeConnectPayoutsViewModel: ObservableObject {
-    @Published var clientSecret: String?
-    @Published var isLoading = true
+    @Published var balance: StripeConnectBalance?
+    @Published var transactions: [StripeConnectTransaction] = []
+    @Published var isLoadingBalance = false
+    @Published var isLoadingTransactions = false
+    @Published var isCreatingPayout = false
     @Published var error: String?
     
     private let apiService = APIService.shared
+    private var cancellables = Set<AnyCancellable>()
     
-    var viewState: PayoutsViewState {
-        if isLoading {
-            return .loading
-        } else if let error = error {
-            return .error(error)
-        } else if let secret = clientSecret {
-            return .ready(secret)
-        } else {
-            return .loading
-        }
-    }
-    
-    func loadPayoutsSession() {
-        isLoading = true
+    func loadBalance() {
+        isLoadingBalance = true
         error = nil
         
-        // 首先获取用户的 Stripe 账户 ID
-        struct AccountStatusResponse: Codable {
-            let account_id: String
-            let details_submitted: Bool
-            let charges_enabled: Bool
-            let payouts_enabled: Bool
-            let needs_onboarding: Bool
-        }
-        
-        // 先获取账户状态
-        apiService.request(AccountStatusResponse.self, "/api/stripe/connect/account/status", method: "GET")
-            .receive(on: DispatchQueue.main)
-            .flatMap { [weak self] statusResponse -> AnyPublisher<AccountSessionResponse, APIError> in
-                guard let self = self else {
-                    return Fail(error: APIError.unknown).eraseToAnyPublisher()
-                }
-                
-                // 检查账户是否已完成设置
-                guard statusResponse.details_submitted && statusResponse.charges_enabled else {
-                    // 使用 httpError 来表示业务逻辑错误
-                    return Fail(error: APIError.httpError(400))
-                        .eraseToAnyPublisher()
-                }
-                
-                // 创建 payouts account session
-                struct AccountSessionRequest: Codable {
-                    let account: String
-                    let enable_payouts: Bool
-                }
-                
-                struct AccountSessionResponse: Codable {
-                    let client_secret: String
-                }
-                
-                let request = AccountSessionRequest(
-                    account: statusResponse.account_id,
-                    enable_payouts: true
-                )
-                
-                return self.apiService.request(
-                    AccountSessionResponse.self,
-                    "/api/stripe/connect/account_session",
-                    method: "POST",
-                    body: request
-                )
-            }
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    self?.isLoading = false
-                    if case .failure(let apiError) = completion {
-                        var errorMessage = apiError.localizedDescription
-                        if case .httpError(let code) = apiError {
-                            if code == 400 {
-                                errorMessage = "账户尚未完成设置，请先完成账户入驻"
-                            } else {
-                                errorMessage = "请求失败 (HTTP \(code))"
-                            }
+        apiService.request(
+            StripeConnectBalance.self,
+            "/api/stripe/connect/account/balance",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoadingBalance = false
+                if case .failure(let apiError) = completion {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            errorMessage = "未找到 Stripe Connect 账户，请先完成账户入驻"
+                        } else {
+                            errorMessage = "请求失败 (HTTP \(code))"
                         }
-                        self?.error = errorMessage
-                        print("❌ Stripe Connect Payouts 创建失败: \(errorMessage)")
                     }
-                },
-                receiveValue: { [weak self] response in
-                    self?.isLoading = false
-                    self?.clientSecret = response.client_secret
+                    self?.error = errorMessage
+                    print("❌ 获取余额失败: \(errorMessage)")
                 }
-            )
-            .store(in: &cancellables)
+            },
+            receiveValue: { [weak self] balance in
+                self?.isLoadingBalance = false
+                self?.balance = balance
+                print("✅ 成功加载余额: 可用 \(balance.available) \(balance.currency)")
+            }
+        )
+        .store(in: &cancellables)
     }
     
-    private var cancellables = Set<AnyCancellable>()
-}
-
-enum PayoutsViewState {
-    case loading
-    case error(String)
-    case ready(String) // clientSecret
+    func loadTransactions() {
+        isLoadingTransactions = true
+        error = nil
+        
+        struct TransactionsResponse: Codable {
+            let transactions: [StripeConnectTransaction]
+            let total: Int
+            let has_more: Bool
+        }
+        
+        apiService.request(
+            TransactionsResponse.self,
+            "/api/stripe/connect/account/transactions?limit=100",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoadingTransactions = false
+                if case .failure(let apiError) = completion {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            errorMessage = "未找到 Stripe Connect 账户，请先完成账户入驻"
+                        } else {
+                            errorMessage = "请求失败 (HTTP \(code))"
+                        }
+                    }
+                    self?.error = errorMessage
+                    print("❌ 获取提现记录失败: \(errorMessage)")
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isLoadingTransactions = false
+                self?.transactions = response.transactions
+                print("✅ 成功加载 \(response.transactions.count) 条交易记录")
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    func createPayout(
+        amount: Double,
+        currency: String,
+        description: String?,
+        completion: @escaping (Bool) -> Void
+    ) {
+        isCreatingPayout = true
+        error = nil
+        
+        struct PayoutRequest: Codable {
+            let amount: Double
+            let currency: String
+            let description: String?
+        }
+        
+        struct PayoutResponse: Codable {
+            let id: String
+            let amount: Double
+            let currency: String
+            let status: String
+            let created: Int
+            let createdAt: String
+            let description: String?
+            
+            enum CodingKeys: String, CodingKey {
+                case id
+                case amount
+                case currency
+                case status
+                case created
+                case createdAt = "created_at"
+                case description
+            }
+        }
+        
+        let requestBody: [String: Any] = [
+            "amount": amount,
+            "currency": currency,
+            "description": description as Any
+        ]
+        
+        apiService.request(
+            PayoutResponse.self,
+            "/api/stripe/connect/account/payout",
+            method: "POST",
+            body: requestBody
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completionResult in
+                self?.isCreatingPayout = false
+                if case .failure(let apiError) = completionResult {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        errorMessage = "创建提现失败 (HTTP \(code))"
+                    }
+                    self?.error = errorMessage
+                    print("❌ 创建提现失败: \(errorMessage)")
+                    completion(false)
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isCreatingPayout = false
+                print("✅ 成功创建提现: \(response.id)")
+                completion(true)
+            }
+        )
+        .store(in: &cancellables)
+    }
 }
 

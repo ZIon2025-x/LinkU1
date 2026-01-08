@@ -1252,6 +1252,90 @@ def get_account_balance(
         )
 
 
+@router.post("/account/payout", response_model=schemas.StripeConnectPayoutResponse)
+def create_payout(
+    payout_request: schemas.StripeConnectPayoutRequest,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    创建提现请求
+    
+    从 Stripe Connect 账户提现到银行账户
+    """
+    if not current_user.stripe_account_id:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到 Stripe Connect 账户，请先创建账户"
+        )
+    
+    try:
+        # 验证账户所有权
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
+        # 获取账户余额
+        balance = stripe.Balance.retrieve(
+            stripe_account=current_user.stripe_account_id
+        )
+        
+        # 计算可用余额
+        available_amount = sum([b.amount for b in balance.available]) if balance.available else 0
+        available_amount_decimal = available_amount / 100  # 转换为货币单位
+        
+        # 验证提现金额
+        if payout_request.amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="提现金额必须大于 0"
+            )
+        
+        if payout_request.amount > available_amount_decimal:
+            raise HTTPException(
+                status_code=400,
+                detail=f"提现金额超过可用余额。可用余额: {available_amount_decimal:.2f} {balance.available[0].currency.upper() if balance.available else 'GBP'}"
+            )
+        
+        # 创建提现（转换为便士）
+        amount_pence = int(payout_request.amount * 100)
+        
+        payout = stripe.Payout.create(
+            amount=amount_pence,
+            currency=payout_request.currency.lower(),
+            stripe_account=current_user.stripe_account_id,
+            description=payout_request.description or "提现到银行账户"
+        )
+        
+        return {
+            "id": payout.id,
+            "amount": payout.amount / 100,
+            "currency": payout.currency.upper(),
+            "status": payout.status,
+            "created": payout.created,
+            "created_at": datetime.fromtimestamp(payout.created, tz=timezone.utc).isoformat(),
+            "description": payout.description
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating payout: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"创建提现失败: {str(e)}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating payout: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"服务器错误: {str(e)}"
+        )
+
+
 @router.get("/account/transactions", response_model=schemas.StripeConnectTransactionsResponse)
 def get_account_transactions(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
