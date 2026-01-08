@@ -364,6 +364,16 @@ class TaskOut(TaskBase):
         return self
     
     @staticmethod
+    def _obfuscate_location(obj):
+        """模糊化位置信息，保护用户隐私"""
+        from app.utils.location_utils import obfuscate_location
+        return obfuscate_location(
+            obj.location,
+            float(obj.latitude) if obj.latitude is not None else None,
+            float(obj.longitude) if obj.longitude is not None else None
+        )
+    
+    @staticmethod
     def _calculate_current_participants(obj):
         """计算当前参与者数量（只统计有效状态的参与者）"""
         # 如果不是多人任务，返回数据库字段值
@@ -424,7 +434,7 @@ class TaskOut(TaskBase):
             "base_reward": float(obj.base_reward) if obj.base_reward else None,
             "agreed_reward": float(obj.agreed_reward) if obj.agreed_reward else None,
             "currency": obj.currency,
-            "location": obj.location,
+            "location": cls._obfuscate_location(obj),  # 使用模糊化的位置
             "latitude": float(obj.latitude) if obj.latitude is not None else None,
             "longitude": float(obj.longitude) if obj.longitude is not None else None,
             "task_type": obj.task_type,

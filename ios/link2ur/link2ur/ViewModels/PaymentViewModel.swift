@@ -16,13 +16,34 @@ class PaymentViewModel: ObservableObject {
     private let amount: Double
     private var cancellables = Set<AnyCancellable>()
     
-    init(taskId: Int, amount: Double, apiService: APIService? = nil) {
+    private var initialClientSecret: String?
+    
+    init(taskId: Int, amount: Double, clientSecret: String? = nil, apiService: APIService? = nil) {
         self.taskId = taskId
         self.amount = amount
+        self.initialClientSecret = clientSecret
         self.apiService = apiService ?? APIService.shared
         
         // 初始化 Stripe
         StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
+        
+        // 如果提供了 client_secret，直接创建 Payment Sheet
+        if let clientSecret = clientSecret {
+            setupPaymentSheet(with: clientSecret)
+        }
+    }
+    
+    private func setupPaymentSheet(with clientSecret: String) {
+        // 配置 Payment Sheet
+        var configuration = PaymentSheet.Configuration()
+        configuration.merchantDisplayName = "LinkU"
+        configuration.allowsDelayedPaymentMethods = true
+        
+        // 创建 Payment Sheet
+        paymentSheet = PaymentSheet(
+            paymentIntentClientSecret: clientSecret,
+            configuration: configuration
+        )
     }
     
     func createPaymentIntent(paymentMethod: String = "stripe", pointsAmount: Double? = nil, couponCode: String? = nil) {
@@ -78,16 +99,7 @@ class PaymentViewModel: ObservableObject {
             return
         }
         
-        // 配置 Payment Sheet
-        var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = "LinkU"
-        configuration.allowsDelayedPaymentMethods = true
-        
-        // 创建 Payment Sheet
-        paymentSheet = PaymentSheet(
-            paymentIntentClientSecret: clientSecret,
-            configuration: configuration
-        )
+        setupPaymentSheet(with: clientSecret)
     }
     
     func handlePaymentResult(_ result: PaymentSheetResult) {

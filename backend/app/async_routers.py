@@ -157,6 +157,14 @@ async def get_tasks(
                 except (json.JSONDecodeError, TypeError):
                     images_list = []
             
+            # 使用 obfuscate_location 模糊化位置信息
+            from app.utils.location_utils import obfuscate_location
+            obfuscated_location = obfuscate_location(
+                task.location,
+                float(task.latitude) if task.latitude is not None else None,
+                float(task.longitude) if task.longitude is not None else None
+            )
+            
             task_data = {
                 "id": task.id,
                 "title": task.title,
@@ -167,7 +175,7 @@ async def get_tasks(
                 "base_reward": float(task.base_reward) if task.base_reward else None,
                 "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
                 "currency": task.currency or "GBP",
-                "location": task.location,
+                "location": obfuscated_location,  # 使用模糊化的位置
                 "latitude": float(task.latitude) if task.latitude is not None else None,
                 "longitude": float(task.longitude) if task.longitude is not None else None,
                 "task_type": task.task_type,

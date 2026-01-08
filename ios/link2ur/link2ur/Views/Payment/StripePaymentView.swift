@@ -4,15 +4,17 @@ import StripePaymentSheet
 struct StripePaymentView: View {
     let taskId: Int
     let amount: Double
+    let clientSecret: String?
     
     @StateObject private var viewModel: PaymentViewModel
     @Environment(\.dismiss) var dismiss
     @State private var presentingPaymentSheet = false
     
-    init(taskId: Int, amount: Double) {
+    init(taskId: Int, amount: Double, clientSecret: String? = nil) {
         self.taskId = taskId
         self.amount = amount
-        _viewModel = StateObject(wrappedValue: PaymentViewModel(taskId: taskId, amount: amount))
+        self.clientSecret = clientSecret
+        _viewModel = StateObject(wrappedValue: PaymentViewModel(taskId: taskId, amount: amount, clientSecret: clientSecret))
     }
     
     var body: some View {
@@ -54,7 +56,10 @@ struct StripePaymentView: View {
                 }
             }
             .onAppear {
-                viewModel.createPaymentIntent()
+                // 如果没有提供 client_secret，才调用 API 创建支付意图
+                if clientSecret == nil {
+                    viewModel.createPaymentIntent()
+                }
             }
             .sheet(isPresented: $presentingPaymentSheet) {
                 if let paymentSheet = viewModel.paymentSheet {

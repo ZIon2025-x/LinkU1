@@ -8,37 +8,85 @@ from typing import Optional, Tuple
 def obfuscate_location(location_text: Optional[str], latitude: Optional[float] = None, longitude: Optional[float] = None) -> str:
     """
     模糊显示位置信息，保护用户隐私
+    与前端和 iOS 的实现保持一致
     
-    策略：
-    1. 如果 location_text 存在，优先使用（已经是模糊的文本）
-    2. 如果有坐标但没有文本，可以根据坐标反向地理编码到城市级别
-    3. 对于 "Online"，直接返回
+    规则：
+    - "Online" 保持不变
+    - 移除邮编（如 "B16 9NS"）
+    - 移除街道地址（以数字开头的部分）
+    - 返回最后两个部分（通常是城市和国家）
     
     Args:
-        location_text: 位置文本（如 "London", "Online"）
-        latitude: 纬度（可选）
-        longitude: 经度（可选）
+        location_text: 位置文本（如 "123 High Street, London, UK"）
+        latitude: 纬度（可选，暂未使用）
+        longitude: 经度（可选，暂未使用）
     
     Returns:
         模糊的位置文本（如 "London, UK" 或 "Online"）
     """
+    import re
+    
     # 如果位置文本是 "Online"，直接返回
-    if location_text and location_text.lower() in ["online", "线上", "线上交易"]:
+    if not location_text or location_text.strip() == '':
+        return "位置未指定"
+    
+    trimmed = location_text.strip()
+    
+    # Online 保持不变
+    if trimmed.lower() in ["online", "线上", "线上交易"]:
         return "Online"
     
-    # 如果有位置文本，直接使用（假设已经是模糊的）
-    if location_text:
-        return location_text
+    # 按逗号分隔
+    components = [c.strip() for c in trimmed.split(',')]
     
-    # 如果有坐标但没有文本，可以在这里进行反向地理编码
-    # 但为了性能，建议在创建时就从坐标生成文本
-    # 这里返回一个默认值
-    if latitude is not None and longitude is not None:
-        # 可以根据坐标判断大致区域（英国主要城市）
-        # 这里简化处理，实际可以使用地理编码服务
-        return "UK"  # 默认返回国家级别
+    # 如果只有一个部分，直接返回
+    if len(components) <= 1:
+        return trimmed
     
-    return "位置未指定"
+    # 邮编格式检测（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA）
+    uk_postcode_pattern = re.compile(r'^[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}$', re.IGNORECASE)
+    us_postcode_pattern = re.compile(r'^[0-9]{5}(-[0-9]{4})?$')
+    
+    def is_postcode(component: str) -> bool:
+        return bool(uk_postcode_pattern.match(component) or us_postcode_pattern.match(component))
+    
+    # 检测是否包含门牌号（以数字开头）
+    def has_street_number(component: str) -> bool:
+        return bool(re.match(r'^[0-9]+\s', component))
+    
+    # 过滤掉邮编和街道地址，只保留城市相关的部分
+    filtered_components = []
+    
+    for component in components:
+        # 跳过邮编和街道地址
+        if not is_postcode(component) and not has_street_number(component):
+            filtered_components.append(component)
+    
+    # 如果第一个部分是街道地址，移除它
+    if components and has_street_number(components[0]) and len(components) > 1:
+        # 已经在上面过滤掉了
+        pass
+    
+    # 返回最后两个部分（通常是城市和国家，或区域和城市）
+    if len(filtered_components) >= 2:
+        return ', '.join(filtered_components[-2:])
+    elif len(filtered_components) == 1:
+        # 只有一个部分，直接返回
+        return filtered_components[0]
+    
+    # 如果过滤后没有内容，尝试从原始组件中获取最后两个非邮编、非街道地址的部分
+    valid_components = []
+    for component in reversed(components):
+        if not is_postcode(component) and not has_street_number(component):
+            valid_components.insert(0, component)
+            if len(valid_components) >= 2:
+                break
+    
+    if valid_components:
+        return ', '.join(valid_components)
+    
+    # 如果所有部分都被过滤掉了，返回原始内容
+    return trimmed
 
 
 def validate_coordinates(latitude: Optional[float], longitude: Optional[float]) -> Tuple[bool, Optional[str]]:

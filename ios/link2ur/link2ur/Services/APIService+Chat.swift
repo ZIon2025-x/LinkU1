@@ -193,6 +193,30 @@ struct TokenResponse: Decodable {
     }
 }
 
+struct AcceptApplicationResponse: Decodable {
+    let message: String
+    let applicationId: Int?
+    let taskId: Int?
+    let paymentIntentId: String?
+    let clientSecret: String?
+    let amount: Int?
+    let amountDisplay: String?
+    let currency: String?
+    let isPaid: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case message
+        case applicationId = "application_id"
+        case taskId = "task_id"
+        case paymentIntentId = "payment_intent_id"
+        case clientSecret = "client_secret"
+        case amount
+        case amountDisplay = "amount_display"
+        case currency
+        case isPaid = "is_paid"
+    }
+}
+
 
 // MARK: - APIService Chat & Applications Extension
 
@@ -273,8 +297,8 @@ extension APIService {
     }
     
     /// 接受申请
-    func acceptApplication(taskId: Int, applicationId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, APIEndpoints.Tasks.acceptApplication(taskId, applicationId), method: "POST")
+    func acceptApplication(taskId: Int, applicationId: Int) -> AnyPublisher<AcceptApplicationResponse, APIError> {
+        return request(AcceptApplicationResponse.self, APIEndpoints.Tasks.acceptApplication(taskId, applicationId), method: "POST")
     }
     
     /// 拒绝申请

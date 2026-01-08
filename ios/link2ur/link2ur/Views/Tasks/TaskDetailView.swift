@@ -26,6 +26,7 @@ struct TaskDetailView: View {
     @State private var shareImage: UIImage?
     @State private var showApplySuccessAlert = false
     @State private var showPaymentView = false
+    @State private var paymentClientSecret: String?
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -178,8 +179,10 @@ struct TaskDetailView: View {
                 if let task = viewModel.task {
                     // 计算需要支付的金额（任务金额，后端会计算最终金额，包括积分和优惠券抵扣）
                     let paymentAmount = task.agreedReward ?? task.baseReward ?? task.reward
-                    StripePaymentView(taskId: taskId, amount: paymentAmount)
+                    StripePaymentView(taskId: taskId, amount: paymentAmount, clientSecret: paymentClientSecret)
                         .onDisappear {
+                            // 清除 client_secret
+                            paymentClientSecret = nil
                             // 支付完成后刷新任务详情
                             // 由于后端通过 webhook 异步更新状态，需要延迟刷新以确保状态已更新
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -647,21 +650,29 @@ struct TaskDetailContentView: View {
                             taskTitle: task.title,
                             onApprove: { applicationId in
                                 actionLoading = true
-                                viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success in
+                                viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret in
                                     actionLoading = false
                                     if success {
-                                        // 重新加载任务信息
-                                        viewModel.loadTask(taskId: taskId)
-                                        viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
-                                        
-                                        // 延迟检查是否需要支付（等待任务信息更新）
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                            // 检查任务是否有接受者且需要支付
-                                            if let updatedTask = viewModel.task,
-                                               updatedTask.takerId != nil,
-                                               (updatedTask.status == .pendingPayment || updatedTask.status == .pendingConfirmation) {
-                                                // 任务已接受但未支付，显示支付界面
-                                                showPaymentView = true
+                                        // 如果返回了 client_secret，直接显示支付界面
+                                        if let clientSecret = clientSecret, !clientSecret.isEmpty {
+                                            // 保存 client_secret 并显示支付界面
+                                            paymentClientSecret = clientSecret
+                                            showPaymentView = true
+                                        } else {
+                                            // 没有 client_secret，重新加载任务信息
+                                            paymentClientSecret = nil
+                                            viewModel.loadTask(taskId: taskId)
+                                            viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                            
+                                            // 延迟检查是否需要支付（等待任务信息更新）
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                // 检查任务是否有接受者且需要支付
+                                                if let updatedTask = viewModel.task,
+                                                   updatedTask.takerId != nil,
+                                                   (updatedTask.status == .pendingPayment || updatedTask.status == .pendingConfirmation) {
+                                                    // 任务已接受但未支付，显示支付界面
+                                                    showPaymentView = true
+                                                }
                                             }
                                         }
                                     }

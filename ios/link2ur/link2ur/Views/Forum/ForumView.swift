@@ -308,7 +308,7 @@ struct CategoryCard: View {
                                 .lineLimit(1)
                         }
                         
-                        // 帖子元信息：发布人、回复数、浏览量（不显示时间）
+                        // 帖子元信息：发布人、回复数、浏览量、时间
                         HStack(spacing: AppSpacing.sm) {
                             if let author = latestPost.author {
                                 HStack(spacing: 4) {
@@ -335,6 +335,16 @@ struct CategoryCard: View {
                                     .font(AppTypography.caption2)
                             }
                             .foregroundColor(AppColors.textTertiary)
+                            
+                            if let lastReplyAt = latestPost.lastReplyAt {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock.fill")
+                                        .font(.system(size: 9, weight: .medium))
+                                    Text(formatForumTime(lastReplyAt))
+                                        .font(AppTypography.caption2)
+                                }
+                                .foregroundColor(AppColors.textTertiary)
+                            }
                         }
                     }
                     .padding(.top, AppSpacing.xs)
@@ -355,6 +365,37 @@ struct CategoryCard: View {
         }
         .padding(AppSpacing.md)
         .cardStyle(cornerRadius: AppCornerRadius.large)
+    }
+    
+    /// 格式化论坛时间显示为 "01/Jan" 格式
+    private func formatForumTime(_ timeString: String) -> String {
+        // 使用 DateFormatterHelper 解析日期
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        isoFormatter.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
+        
+        guard let date = isoFormatter.date(from: timeString) else {
+            // 尝试不带小数秒的格式
+            let standardIsoFormatter = ISO8601DateFormatter()
+            standardIsoFormatter.formatOptions = [.withInternetDateTime]
+            standardIsoFormatter.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
+            guard let date = standardIsoFormatter.date(from: timeString) else {
+                return ""
+            }
+            return formatDate(date)
+        }
+        
+        return formatDate(date)
+    }
+    
+    /// 格式化日期为 "01/Jan" 格式
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current // 使用用户系统 locale
+        formatter.timeZone = TimeZone.current // 使用用户本地时区
+        formatter.dateFormat = "dd/MMM" // 格式：01/Jan
+        
+        return formatter.string(from: date)
     }
 }
 
