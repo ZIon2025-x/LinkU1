@@ -108,7 +108,7 @@ struct StripeConnectPaymentsView: View {
                         .padding(.top, 60)
                     } else {
                         ForEach(paymentTransactions) { transaction in
-                            TransactionRowView(transaction: transaction)
+                            StripeTransactionRowView(transaction: transaction)
                         }
                     }
                 }
@@ -119,8 +119,8 @@ struct StripeConnectPaymentsView: View {
     }
 }
 
-/// 交易记录行视图
-struct TransactionRowView: View {
+/// Stripe Connect 交易记录行视图
+struct StripeTransactionRowView: View {
     let transaction: StripeConnectTransaction
     
     var body: some View {
