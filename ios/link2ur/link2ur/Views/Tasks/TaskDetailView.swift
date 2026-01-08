@@ -108,6 +108,7 @@ struct TaskDetailView: View {
                     cancelReason: $cancelReason,
                     showLogin: $showLogin,
                     showPaymentView: $showPaymentView,
+                    paymentClientSecret: $paymentClientSecret,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -608,6 +609,7 @@ struct TaskDetailContentView: View {
     @Binding var cancelReason: String
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
+    @Binding var paymentClientSecret: String?
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool

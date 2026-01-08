@@ -344,7 +344,6 @@ def create_task_payment(
     
     # 使用 SELECT FOR UPDATE 锁定任务，防止并发重复支付
     from sqlalchemy import select
-    from sqlalchemy.orm import with_for_update
     
     task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
     task_result = db.execute(task_query)
