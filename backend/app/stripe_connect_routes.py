@@ -1631,12 +1631,14 @@ def get_account_transactions(
                 stripe_account=current_user.stripe_account_id
             )
             for payout in payouts.data:
+                # 使用 payout.description 如果有，否则使用默认描述
+                payout_description = payout.description if payout.description else f"提现到银行账户 #{payout.id[:12]}"
                 transactions.append({
                     "id": payout.id,
                     "type": "expense",
                     "amount": payout.amount / 100,
                     "currency": payout.currency.upper(),
-                    "description": f"提现到银行账户 #{payout.id[:12]}",
+                    "description": payout_description,
                     "status": payout.status,
                     "created": payout.created,
                     "created_at": datetime.fromtimestamp(payout.created, tz=timezone.utc).isoformat(),

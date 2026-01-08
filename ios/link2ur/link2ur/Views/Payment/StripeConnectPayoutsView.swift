@@ -43,6 +43,11 @@ struct StripeConnectPayoutsView: View {
         .sheet(isPresented: $viewModel.showAccountDetails) {
             AccountDetailsSheet(viewModel: viewModel)
         }
+        .sheet(isPresented: $viewModel.showTransactionDetail) {
+            if let transaction = viewModel.selectedTransaction {
+                TransactionDetailSheet(transaction: transaction)
+            }
+        }
         .onChange(of: viewModel.error) { newError in
             if let error = newError {
                 DispatchQueue.main.async {
@@ -196,6 +201,10 @@ struct StripeConnectPayoutsView: View {
                         ForEach(payoutTransactions) { transaction in
                             PayoutTransactionRowView(transaction: transaction)
                                 .padding(.horizontal, AppSpacing.md)
+                                .onTapGesture {
+                                    viewModel.selectedTransaction = transaction
+                                    viewModel.showTransactionDetail = true
+                                }
                         }
                     }
                 }
@@ -584,6 +593,8 @@ class StripeConnectPayoutsViewModel: ObservableObject {
     @Published var accountDetails: StripeConnectAccountDetails?
     @Published var externalAccounts: [ExternalAccount] = []
     @Published var isLoadingAccountDetails = false
+    @Published var selectedTransaction: StripeConnectTransaction?
+    @Published var showTransactionDetail = false
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -749,6 +760,8 @@ class StripeConnectPayoutsViewModel: ObservableObject {
             let charges_enabled: Bool
             let payouts_enabled: Bool
             let dashboard_url: String?
+            let address: StripeConnectAddress?
+            let individual: StripeConnectIndividual?
         }
         
         apiService.request(
@@ -1087,7 +1100,7 @@ struct AccountInfoSection: View {
                 InfoRow(icon: "arrow.up.circle.fill", label: "提现已启用", value: details.payoutsEnabled ? "是" : "否")
                 
                 // Stripe Dashboard 链接
-                if let dashboardUrl = details.dashboardUrl {
+                if details.dashboardUrl != nil {
                     Button(action: {
                         onOpenDashboard?()
                     }) {
@@ -1189,3 +1202,125 @@ struct ExternalAccountCard: View {
 }
 
 
+
+/// 交易详情弹窗
+struct TransactionDetailSheet: View {
+    let transaction: StripeConnectTransaction
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: AppSpacing.lg) {
+                        // 金额卡片
+                        VStack(spacing: AppSpacing.md) {
+                            Text(transaction.type == "expense" ? "提现金额" : "收入金额")
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                            
+                            Text(formatAmount(transaction.amount, currency: transaction.currency))
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundColor(transaction.type == "expense" ? AppColors.textPrimary : AppColors.success)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppSpacing.xl)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        
+                        // 详细信息
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            Text("详细信息")
+                                .font(AppTypography.title3)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            VStack(spacing: AppSpacing.sm) {
+                                InfoRow(icon: "number", label: "交易ID", value: transaction.id)
+                                InfoRow(icon: "text.alignleft", label: "描述", value: transaction.description)
+                                InfoRow(icon: "clock.fill", label: "时间", value: formatDate(transaction.createdAt))
+                                InfoRow(icon: "checkmark.circle.fill", label: "状态", value: statusText)
+                                InfoRow(icon: "creditcard.fill", label: "类型", value: transaction.type == "expense" ? "提现" : "收入")
+                                InfoRow(icon: "arrow.right.circle.fill", label: "来源", value: sourceText)
+                            }
+                        }
+                        .padding(AppSpacing.lg)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                    }
+                    .padding(AppSpacing.lg)
+                }
+            }
+            .navigationTitle("交易详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private var statusText: String {
+        switch transaction.status.lowercased() {
+        case "paid", "succeeded":
+            return "已到账"
+        case "pending":
+            return "处理中"
+        case "in_transit":
+            return "转账中"
+        case "canceled":
+            return "已取消"
+        case "failed":
+            return "失败"
+        default:
+            return transaction.status.capitalized
+        }
+    }
+    
+    private var sourceText: String {
+        switch transaction.source {
+        case "payout":
+            return "提现"
+        case "transfer":
+            return "转账"
+        case "charge":
+            return "收款"
+        case "payment_intent":
+            return "支付"
+        default:
+            return transaction.source.capitalized
+        }
+    }
+    
+    private func formatAmount(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        
+        if let formatted = formatter.string(from: NSNumber(value: amount)) {
+            return formatted
+        }
+        return "\(currency) \(String(format: "%.2f", amount))"
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            displayFormatter.locale = Locale(identifier: "zh_CN")
+            return displayFormatter.string(from: date)
+        }
+        return dateString
+    }
+}
