@@ -12,10 +12,10 @@ class DateFormatterHelper {
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         isoFormatter.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
         
-        // 显示格式化器：使用用户本地时区
+        // 显示格式化器：使用用户本地时区和系统 locale
         displayFormatter = DateFormatter()
-        displayFormatter.locale = Locale(identifier: "zh_CN")
-        displayFormatter.timeZone = TimeZone.current // 使用用户本地时区
+        displayFormatter.locale = Locale.current // 使用用户系统 locale（根据 iOS 设置）
+        displayFormatter.timeZone = TimeZone.current // 使用用户本地时区（根据 iOS 设置或位置信息）
     }
     
     func formatTime(_ timeString: String) -> String {
@@ -50,9 +50,21 @@ class DateFormatterHelper {
         }
         
         // 超过7天，显示具体日期
-        displayFormatter.dateFormat = "MM月dd日"
-        if Calendar.current.component(.year, from: date) != Calendar.current.component(.year, from: now) {
-            displayFormatter.dateFormat = "yyyy年MM月dd日"
+        // 使用系统 locale 的日期格式
+        let calendar = Calendar.current
+        let userLocale = Locale.current
+        
+        // 根据用户 locale 选择合适的日期格式
+        if userLocale.identifier.hasPrefix("zh") {
+            // 中文格式
+            displayFormatter.dateFormat = "MM月dd日"
+            if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
+                displayFormatter.dateFormat = "yyyy年MM月dd日"
+            }
+        } else {
+            // 英文或其他语言格式 - 使用系统默认格式
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .none
         }
         return displayFormatter.string(from: date)
     }

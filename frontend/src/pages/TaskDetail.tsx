@@ -4023,7 +4023,7 @@ const TaskDetail: React.FC = () => {
                               color: '#3b82f6',
                               fontWeight: '500'
                             }}>
-                              📍 {recommendedTask.location}
+                              📍 {obfuscateLocation(recommendedTask.location)}
                             </span>
                           </div>
                           

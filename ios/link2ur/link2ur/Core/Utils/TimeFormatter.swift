@@ -86,7 +86,8 @@ public struct TimeFormatter {
     public static func weekday(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE"
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = Locale.current // 使用用户系统 locale
+        formatter.timeZone = TimeZone.current // 使用用户本地时区
         return formatter.string(from: date)
     }
 }

@@ -216,7 +216,8 @@ struct StripeTransactionRowView: View {
             let displayFormatter = DateFormatter()
             displayFormatter.dateStyle = .short
             displayFormatter.timeStyle = .short
-            displayFormatter.locale = Locale(identifier: "zh_CN")
+            displayFormatter.locale = Locale.current // 使用用户系统 locale
+            displayFormatter.timeZone = TimeZone.current // 使用用户本地时区
             return displayFormatter.string(from: date)
         }
         

@@ -349,14 +349,23 @@ struct ActivityInfoGrid: View {
     
     private func formatDateString(_ dateString: String) -> String {
         let parser = ISO8601DateFormatter()
-        parser.timeZone = TimeZone(identifier: "UTC")
+        parser.timeZone = TimeZone(identifier: "UTC") // 解析时使用 UTC（数据库存储的是 UTC）
         
         let fallback = DateFormatter()
         fallback.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        fallback.timeZone = TimeZone(identifier: "UTC")
         
         if let date = parser.date(from: dateString) ?? fallback.date(from: dateString) {
             let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy年MM月dd日"
+            formatter.locale = Locale.current // 使用用户系统 locale
+            formatter.timeZone = TimeZone.current // 使用用户本地时区
+            // 根据 locale 选择合适的格式
+            if Locale.current.identifier.hasPrefix("zh") {
+                formatter.dateFormat = "yyyy年MM月dd日"
+            } else {
+                formatter.dateStyle = .long
+                formatter.timeStyle = .none
+            }
             return formatter.string(from: date)
         }
         return dateString
@@ -675,9 +684,11 @@ struct ActivityApplyView: View {
         var grouped: [String: [ServiceTimeSlot]] = [:]
         for slot in viewModel.timeSlots {
             let parser = ISO8601DateFormatter()
-            parser.timeZone = TimeZone(identifier: "UTC")
+            parser.timeZone = TimeZone(identifier: "UTC") // 解析时使用 UTC（数据库存储的是 UTC）
             if let date = parser.date(from: slot.slotStartDatetime) {
                 let formatter = DateFormatter()
+                formatter.locale = Locale.current // 使用用户系统 locale
+                formatter.timeZone = TimeZone.current // 使用用户本地时区
                 formatter.dateFormat = "yyyy-MM-dd"
                 let key = formatter.string(from: date)
                 if grouped[key] == nil { grouped[key] = [] }
@@ -688,11 +699,19 @@ struct ActivityApplyView: View {
     }
     
     private func formatDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        if let date = formatter.date(from: dateString) {
-            formatter.dateFormat = "MM月dd日 EEE"
-            formatter.locale = Locale(identifier: "zh_CN")
+        let parser = DateFormatter()
+        parser.dateFormat = "yyyy-MM-dd"
+        parser.timeZone = TimeZone(identifier: "UTC") // 解析时使用 UTC（数据库存储的是 UTC）
+        if let date = parser.date(from: dateString) {
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current // 使用用户系统 locale
+            formatter.timeZone = TimeZone.current // 使用用户本地时区
+            // 根据 locale 选择合适的格式
+            if Locale.current.identifier.hasPrefix("zh") {
+                formatter.dateFormat = "MM月dd日 EEE"
+            } else {
+                formatter.dateFormat = "MMM dd, EEE"
+            }
             return formatter.string(from: date)
         }
         return dateString
@@ -769,9 +788,11 @@ struct ActivityTimeSlotCard: View {
     
     private func formatTimeRange(_ start: String, end: String) -> String {
         let parser = ISO8601DateFormatter()
-        parser.timeZone = TimeZone(identifier: "UTC")
+        parser.timeZone = TimeZone(identifier: "UTC") // 解析时使用 UTC（数据库存储的是 UTC）
         guard let sDate = parser.date(from: start), let eDate = parser.date(from: end) else { return "" }
         let formatter = DateFormatter()
+        formatter.locale = Locale.current // 使用用户系统 locale
+        formatter.timeZone = TimeZone.current // 使用用户本地时区
         formatter.dateFormat = "HH:mm"
         return "\(formatter.string(from: sDate))-\(formatter.string(from: eDate))"
     }

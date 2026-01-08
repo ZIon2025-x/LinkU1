@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import LazyImage from '../components/LazyImage';
+import { obfuscateLocation } from '../utils/formatUtils';
 
 const { Option } = Select;
 
@@ -467,7 +468,7 @@ const TaskPayment: React.FC = () => {
                       fontSize: '14px',
                       color: '#666'
                     }}>
-                      📍 {taskInfo.location}
+                      📍 {obfuscateLocation(taskInfo.location)}
                     </div>
                   )}
                 </div>

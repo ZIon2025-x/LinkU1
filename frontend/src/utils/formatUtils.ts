@@ -1,5 +1,6 @@
 /**
  * 模糊化位置信息，只显示城市名称，保护用户隐私
+ * 与 iOS 的 obfuscatedLocation 实现保持一致
  * 
  * 规则：
  * - "Online" 保持不变
@@ -27,27 +28,55 @@ export function obfuscateLocation(location: string | null | undefined): string {
     return trimmed;
   }
   
-  // 检测第一个部分是否是邮编（英国邮编格式）
-  const firstComponent = components[0];
-  const isPostcode = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}$/i.test(firstComponent) ||
-                     /^[0-9]{5}(-[0-9]{4})?$/.test(firstComponent);  // 美国邮编
+  // 邮编格式检测（英国邮编格式：字母数字混合，如 B16 9NS, SW1A 1AA, B15 3EN）
+  const postcodePattern = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}$/i;
+  const usPostcodePattern = /^[0-9]{5}(-[0-9]{4})?$/;
+  const isPostcode = (component: string): boolean => {
+    return postcodePattern.test(component) || usPostcodePattern.test(component);
+  };
   
-  // 检测第一个部分是否包含门牌号（以数字开头）
-  const hasStreetNumber = /^[0-9]+\s/.test(firstComponent);
+  // 检测是否包含门牌号（以数字开头）
+  const hasStreetNumber = (component: string): boolean => {
+    return /^[0-9]+\s/.test(component);
+  };
   
-  if (isPostcode || hasStreetNumber) {
-    // 移除第一个部分（邮编或街道地址），返回剩余部分
-    if (components.length >= 2) {
-      return components.slice(1).join(', ');
+  // 过滤掉邮编和街道地址，只保留城市相关的部分
+  let filteredComponents = [...components];
+  
+  // 移除第一个部分（如果是街道地址）
+  if (hasStreetNumber(filteredComponents[0]) && filteredComponents.length > 1) {
+    filteredComponents = filteredComponents.slice(1);
+  }
+  
+  // 移除所有邮编
+  filteredComponents = filteredComponents.filter(component => !isPostcode(component));
+  
+  // 返回最后两个部分（通常是城市和国家，或区域和城市）
+  if (filteredComponents.length >= 2) {
+    const lastTwo = filteredComponents.slice(-2);
+    return lastTwo.join(', ');
+  } else if (filteredComponents.length === 1) {
+    // 只有一个部分，直接返回
+    return filteredComponents[0];
+  }
+  
+  // 如果过滤后没有内容，返回原始内容的最后两个非邮编部分
+  const validComponents: string[] = [];
+  for (let i = components.length - 1; i >= 0; i--) {
+    const component = components[i];
+    if (!isPostcode(component) && !hasStreetNumber(component)) {
+      validComponents.unshift(component);
+      if (validComponents.length >= 2) {
+        break;
+      }
     }
   }
   
-  // 如果有3个或更多部分，取最后两个（通常是城市和国家）
-  if (components.length >= 3) {
-    return components.slice(-2).join(', ');
+  if (validComponents.length > 0) {
+    return validComponents.join(', ');
   }
   
-  // 否则返回原始内容（只有两个部分，可能就是城市和国家）
+  // 如果所有部分都被过滤掉了，返回原始内容
   return trimmed;
 }
 

@@ -308,7 +308,7 @@ struct CategoryCard: View {
                                 .lineLimit(1)
                         }
                         
-                        // 帖子元信息：发布人、时间、回复数、浏览量
+                        // 帖子元信息：发布人、回复数、浏览量（不显示时间）
                         HStack(spacing: AppSpacing.sm) {
                             if let author = latestPost.author {
                                 HStack(spacing: 4) {
@@ -318,16 +318,6 @@ struct CategoryCard: View {
                                         .font(AppTypography.caption2)
                                 }
                                 .foregroundColor(AppColors.textSecondary)
-                            }
-                            
-                            if let lastReplyAt = latestPost.lastReplyAt {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "clock.fill")
-                                        .font(.system(size: 9, weight: .medium))
-                                    Text(formatTime(lastReplyAt))
-                                        .font(AppTypography.caption2)
-                                }
-                                .foregroundColor(AppColors.textTertiary)
                             }
                             
                             HStack(spacing: 4) {
@@ -365,10 +355,6 @@ struct CategoryCard: View {
         }
         .padding(AppSpacing.md)
         .cardStyle(cornerRadius: AppCornerRadius.large)
-    }
-    
-    private func formatTime(_ timeString: String) -> String {
-        return DateFormatterHelper.shared.formatTime(timeString)
     }
 }
 
