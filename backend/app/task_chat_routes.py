@@ -1495,9 +1495,10 @@ async def accept_application(
         if application.negotiated_price is not None:
             locked_task.agreed_reward = application.negotiated_price
         
-        # 不更新申请状态，保持为 pending
-        # 不更新任务状态，保持原状态
-        # 不设置 taker_id，等待支付成功后再设置
+        # 不更新申请状态，保持为 pending（等待支付成功后由 webhook 更新）
+        # 不更新任务状态，保持原状态（等待支付成功后由 webhook 更新）
+        # 不设置 taker_id，等待支付成功后再设置（由 webhook 处理）
+        # 这样确保只有支付成功后才真正批准申请
         
         await db.commit()
         

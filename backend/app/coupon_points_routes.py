@@ -386,7 +386,72 @@ def create_task_payment(
         }
     
     # 检查任务状态：只有 pending_payment 状态的任务需要支付
+    # 但如果任务有 payment_intent_id（批准申请时创建的），说明是待确认的批准，也允许支付
     if task.status != "pending_payment":
+        # 如果任务有 payment_intent_id，说明是批准申请时创建的 PaymentIntent，允许支付
+        if task.payment_intent_id:
+            logger.info(f"任务状态为 {task.status}，但有 payment_intent_id={task.payment_intent_id}，允许支付（待确认的批准）")
+            # 检查 PaymentIntent 状态
+            try:
+                payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                if payment_intent.status == "succeeded":
+                    # 支付已完成，返回已支付信息
+                    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                    task_amount_pence = int(task_amount * 100)
+                    from app.utils.fee_calculator import calculate_application_fee_pence
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                    
+                    return {
+                        "payment_id": None,
+                        "fee_type": "task_amount",
+                        "total_amount": task_amount_pence,
+                        "total_amount_display": f"{task_amount_pence / 100:.2f}",
+                        "points_used": None,
+                        "points_used_display": None,
+                        "coupon_discount": None,
+                        "coupon_discount_display": None,
+                        "stripe_amount": None,
+                        "stripe_amount_display": None,
+                        "currency": "GBP",
+                        "final_amount": 0,
+                        "final_amount_display": "0.00",
+                        "checkout_url": None,
+                        "client_secret": None,
+                        "payment_intent_id": task.payment_intent_id,
+                        "note": "任务已支付"
+                    }
+                elif payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
+                    # PaymentIntent 存在但未完成，返回 client_secret 让用户完成支付
+                    logger.info(f"PaymentIntent 状态为 {payment_intent.status}，返回 client_secret")
+                    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                    task_amount_pence = int(task_amount * 100)
+                    from app.utils.fee_calculator import calculate_application_fee_pence
+                    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+                    
+                    return {
+                        "payment_id": None,
+                        "fee_type": "task_amount",
+                        "total_amount": task_amount_pence,
+                        "total_amount_display": f"{task_amount_pence / 100:.2f}",
+                        "points_used": None,
+                        "points_used_display": None,
+                        "coupon_discount": None,
+                        "coupon_discount_display": None,
+                        "stripe_amount": payment_intent.amount,
+                        "stripe_amount_display": f"{payment_intent.amount / 100:.2f}",
+                        "currency": "GBP",
+                        "final_amount": payment_intent.amount,
+                        "final_amount_display": f"{payment_intent.amount / 100:.2f}",
+                        "checkout_url": None,
+                        "client_secret": payment_intent.client_secret,
+                        "payment_intent_id": payment_intent.id,
+                        "note": "请完成支付以确认批准申请"
+                    }
+            except Exception as e:
+                logger.error(f"获取 PaymentIntent 失败: {e}")
+                # 如果获取失败，继续正常流程（创建新的 PaymentIntent）
+        
+        # 如果没有 payment_intent_id 或获取失败，且状态不是 pending_payment，则报错
         logger.warning(f"任务状态不正确: task_id={task_id}, status={task.status}, expected=pending_payment")
         raise HTTPException(
             status_code=400, 
