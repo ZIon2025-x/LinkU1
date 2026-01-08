@@ -96,20 +96,9 @@ struct StripeConnectPaymentsView: View {
                     )
                     .padding(.top, 60)
                 } else {
-                    // 只显示收入类型的交易（支付记录）
-                    let paymentTransactions = viewModel.transactions.filter { $0.type == "income" }
-                    
-                    if paymentTransactions.isEmpty {
-                        EmptyStateView(
-                            icon: "creditcard.fill",
-                            title: "暂无支付记录",
-                            message: "您的支付记录将显示在这里"
-                        )
-                        .padding(.top, 60)
-                    } else {
-                        ForEach(paymentTransactions) { transaction in
-                            StripeTransactionRowView(transaction: transaction)
-                        }
+                    // 显示所有类型的交易（包括付款和收入）
+                    ForEach(viewModel.transactions) { transaction in
+                        StripeTransactionRowView(transaction: transaction)
                     }
                 }
             }

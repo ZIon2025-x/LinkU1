@@ -153,8 +153,8 @@ enum APIEndpoints {
     
     // MARK: - Points & Coupons (积分和优惠券)
     enum Points {
-        static let account = "/api/points/account"
-        static let transactions = "/api/points/transactions"
+        static let account = "/api/coupon-points/points/account"
+        static let transactions = "/api/coupon-points/points/transactions"
     }
     
     enum Coupons {

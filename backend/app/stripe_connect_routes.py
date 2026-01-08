@@ -1157,6 +1157,50 @@ def get_account_details(
         # 获取账户类型
         account_type = getattr(account, 'type', 'express')
         
+        # 获取地址信息
+        address_info = None
+        business_profile = getattr(account, 'business_profile', None)
+        individual = getattr(account, 'individual', None)
+        
+        # 优先从 business_profile 获取地址，如果没有则从 individual 获取
+        if business_profile and hasattr(business_profile, 'address'):
+            address = business_profile.address
+            if address:
+                address_info = {
+                    "line1": getattr(address, 'line1', None),
+                    "line2": getattr(address, 'line2', None),
+                    "city": getattr(address, 'city', None),
+                    "state": getattr(address, 'state', None),
+                    "postal_code": getattr(address, 'postal_code', None),
+                    "country": getattr(address, 'country', country)
+                }
+        elif individual and hasattr(individual, 'address'):
+            address = individual.address
+            if address:
+                address_info = {
+                    "line1": getattr(address, 'line1', None),
+                    "line2": getattr(address, 'line2', None),
+                    "city": getattr(address, 'city', None),
+                    "state": getattr(address, 'state', None),
+                    "postal_code": getattr(address, 'postal_code', None),
+                    "country": getattr(address, 'country', country)
+                }
+        
+        # 获取个人/企业信息
+        individual_info = None
+        if individual:
+            individual_info = {
+                "first_name": getattr(individual, 'first_name', None),
+                "last_name": getattr(individual, 'last_name', None),
+                "email": getattr(individual, 'email', None),
+                "phone": getattr(individual, 'phone', None),
+                "dob": {
+                    "day": getattr(individual.dob, 'day', None) if hasattr(individual, 'dob') and individual.dob else None,
+                    "month": getattr(individual.dob, 'month', None) if hasattr(individual, 'dob') and individual.dob else None,
+                    "year": getattr(individual.dob, 'year', None) if hasattr(individual, 'dob') and individual.dob else None,
+                } if hasattr(individual, 'dob') and individual.dob else None
+            }
+        
         return {
             "account_id": account.id,
             "display_name": display_name,
@@ -1167,6 +1211,8 @@ def get_account_details(
             "charges_enabled": account.charges_enabled,
             "payouts_enabled": account.payouts_enabled,
             "dashboard_url": dashboard_url,
+            "address": address_info,
+            "individual": individual_info,
             "requirements": {
                 "currently_due": account.requirements.currently_due or [],
                 "eventually_due": account.requirements.eventually_due or [],
@@ -1249,6 +1295,104 @@ def get_account_balance(
         raise HTTPException(
             status_code=400,
             detail=f"获取账户余额失败: {str(e)}"
+        )
+
+
+@router.get("/account/external-accounts")
+def get_external_accounts(
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """
+    获取 Stripe Connect 账户的外部账户（银行卡）信息
+    
+    返回账户关联的银行卡和银行账户列表
+    """
+    if not current_user.stripe_account_id:
+        raise HTTPException(
+            status_code=404,
+            detail="未找到 Stripe Connect 账户，请先创建账户"
+        )
+    
+    try:
+        # 验证账户所有权
+        if not verify_account_ownership(current_user.stripe_account_id, current_user):
+            logger.error(f"Account ownership verification failed for user {current_user.id}, account {current_user.stripe_account_id}")
+            raise HTTPException(
+                status_code=403,
+                detail="账户验证失败：账户不属于当前用户"
+            )
+        
+        # 获取外部账户列表（银行卡和银行账户）
+        try:
+            external_accounts = stripe.Account.list_external_accounts(
+                current_user.stripe_account_id,
+                limit=100
+            )
+        except stripe.error.InvalidRequestError as e:
+            # 如果账户没有外部账户，Stripe 可能返回错误，但我们返回空列表
+            if "No such external_account" in str(e) or "does not have" in str(e).lower():
+                logger.info(f"No external accounts found for account {current_user.stripe_account_id}")
+                return {
+                    "external_accounts": [],
+                    "total": 0
+                }
+            raise
+        
+        accounts_list = []
+        if external_accounts and hasattr(external_accounts, 'data'):
+            for account in external_accounts.data:
+                account_info = {
+                    "id": account.id,
+                    "object": account.object,  # "bank_account" or "card"
+                    "account": account.account if hasattr(account, 'account') else current_user.stripe_account_id,
+                }
+                
+                if account.object == "bank_account":
+                    account_info.update({
+                        "bank_name": getattr(account, 'bank_name', None),
+                        "last4": getattr(account, 'last4', None),
+                        "routing_number": getattr(account, 'routing_number', None),
+                        "currency": getattr(account, 'currency', 'GBP'),
+                        "country": getattr(account, 'country', 'GB'),
+                        "account_holder_name": getattr(account, 'account_holder_name', None),
+                        "account_holder_type": getattr(account, 'account_holder_type', None),
+                        "status": getattr(account, 'status', None),
+                    })
+                elif account.object == "card":
+                    account_info.update({
+                        "brand": getattr(account, 'brand', None),
+                        "last4": getattr(account, 'last4', None),
+                        "exp_month": getattr(account, 'exp_month', None),
+                        "exp_year": getattr(account, 'exp_year', None),
+                        "country": getattr(account, 'country', 'GB'),
+                        "funding": getattr(account, 'funding', None),  # "credit", "debit", etc.
+                    })
+                
+                accounts_list.append(account_info)
+        
+        return {
+            "external_accounts": accounts_list,
+            "total": len(accounts_list)
+        }
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error retrieving external accounts: {e}")
+        # 如果是资源不存在错误，返回空列表而不是错误
+        if hasattr(e, 'code') and e.code == 'resource_missing':
+            return {
+                "external_accounts": [],
+                "total": 0
+            }
+        raise HTTPException(
+            status_code=400,
+            detail=f"获取外部账户信息失败: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving external accounts: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"服务器错误: {str(e)}"
         )
 
 

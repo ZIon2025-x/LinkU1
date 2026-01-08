@@ -9,6 +9,9 @@ struct StripeConnectOnboardingView: View {
     @StateObject private var viewModel = StripeConnectOnboardingViewModel()
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showWebView = false
+    @State private var webViewURL: URL?
+    @State private var webViewTitle: String?
     
     var body: some View {
         ZStack {
@@ -33,6 +36,11 @@ struct StripeConnectOnboardingView: View {
                 showError = true
             }
         }
+        .sheet(isPresented: $showWebView) {
+            if let url = webViewURL {
+                ExternalWebView(url: url, title: webViewTitle)
+            }
+        }
     }
     
     @ViewBuilder
@@ -44,6 +52,8 @@ struct StripeConnectOnboardingView: View {
             errorView(error: message)
         case .completed:
             completedView
+        case .accountDetails(let details):
+            accountDetailsView(details: details)
         case .ready(let secret):
             // 使用原生 AccountOnboardingController
             AccountOnboardingControllerWrapper(
@@ -126,6 +136,100 @@ struct StripeConnectOnboardingView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func accountDetailsView(details: StripeConnectAccountDetails) -> some View {
+        AccountDetailsViewContent(
+            details: details,
+            externalAccounts: viewModel.externalAccounts,
+            onRefresh: {
+                viewModel.loadAccountDetails()
+            },
+            onOpenDashboard: {
+                if let dashboardUrl = details.dashboardUrl, let url = URL(string: dashboardUrl) {
+                    webViewURL = url
+                    webViewTitle = "Stripe 仪表板"
+                    showWebView = true
+                }
+            }
+        )
+    }
+}
+
+/// 账户详情内容视图（可复用）
+struct AccountDetailsViewContent: View {
+    @Environment(\.dismiss) var dismiss
+    let details: StripeConnectAccountDetails
+    let externalAccounts: [ExternalAccount]
+    let onRefresh: () -> Void
+    let onOpenDashboard: () -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: AppSpacing.lg) {
+                // 账户状态提示
+                VStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.green)
+                    
+                    Text("收款账户已设置")
+                        .font(AppTypography.title2)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text("您的账户信息如下")
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding(.top, AppSpacing.xl)
+                
+                // 账户信息卡片
+                AccountInfoSection(details: details, onOpenDashboard: onOpenDashboard)
+                    .padding(.horizontal, AppSpacing.md)
+                
+                // 外部账户（如果有）
+                if !externalAccounts.isEmpty {
+                    ExternalAccountsSection(accounts: externalAccounts)
+                        .padding(.horizontal, AppSpacing.md)
+                }
+                
+                // 操作按钮
+                VStack(spacing: AppSpacing.md) {
+                    Button(action: {
+                        onRefresh()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("刷新账户信息")
+                        }
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                                .stroke(AppColors.primary, lineWidth: 1)
+                        )
+                    }
+                    
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("完成")
+                            .font(AppTypography.body)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(AppColors.primary)
+                            .cornerRadius(AppCornerRadius.large)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.bottom, AppSpacing.lg)
+            }
+        }
     }
 }
 
@@ -265,6 +369,8 @@ class StripeConnectOnboardingViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var error: String?
     @Published var isCompleted = false
+    @Published var accountDetails: StripeConnectAccountDetails?
+    @Published var externalAccounts: [ExternalAccount] = []
     
     private let apiService = APIService.shared
     
@@ -275,6 +381,8 @@ class StripeConnectOnboardingViewModel: ObservableObject {
             return .error(error)
         } else if isCompleted {
             return .completed
+        } else if let details = accountDetails {
+            return .accountDetails(details)
         } else if let secret = clientSecret {
             return .ready(secret)
         } else {
@@ -286,6 +394,39 @@ class StripeConnectOnboardingViewModel: ObservableObject {
         isLoading = true
         error = nil
         
+        // 先检查账户状态
+        struct StatusResponse: Codable {
+            let account_id: String?
+            let details_submitted: Bool
+            let charges_enabled: Bool
+            let payouts_enabled: Bool
+            let needs_onboarding: Bool
+        }
+        
+        apiService.request(StatusResponse.self, "/api/stripe/connect/account/status", method: "GET")
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure = completion {
+                        // 如果获取状态失败，尝试创建账户
+                        self?.createOnboardingSession()
+                    }
+                },
+                receiveValue: { [weak self] statusResponse in
+                    // 如果账户已存在且已完成设置，加载账户详情
+                    if statusResponse.account_id != nil, 
+                       statusResponse.details_submitted && statusResponse.charges_enabled {
+                        self?.loadAccountDetails()
+                    } else {
+                        // 否则创建或获取 onboarding session
+                        self?.createOnboardingSession()
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    private func createOnboardingSession() {
         struct OnboardingResponse: Codable {
             let account_id: String
             let client_secret: String?
@@ -322,6 +463,99 @@ class StripeConnectOnboardingViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    func loadAccountDetails() {
+        struct AccountDetailsResponse: Codable {
+            let account_id: String
+            let display_name: String?
+            let email: String?
+            let country: String
+            let type: String
+            let details_submitted: Bool
+            let charges_enabled: Bool
+            let payouts_enabled: Bool
+            let dashboard_url: String?
+            let address: StripeConnectAddress?
+            let individual: StripeConnectIndividual?
+        }
+        
+        apiService.request(
+            AccountDetailsResponse.self,
+            "/api/stripe/connect/account/details",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoading = false
+                if case .failure(let apiError) = completion {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            // 账户不存在，继续创建流程
+                            return
+                        }
+                        errorMessage = "获取账户详情失败 (HTTP \(code))"
+                    }
+                    self?.error = errorMessage
+                    print("❌ 获取账户详情失败: \(errorMessage)")
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isLoading = false
+                self?.accountDetails = StripeConnectAccountDetails(
+                    accountId: response.account_id,
+                    displayName: response.display_name,
+                    email: response.email,
+                    country: response.country,
+                    type: response.type,
+                    detailsSubmitted: response.details_submitted,
+                    chargesEnabled: response.charges_enabled,
+                    payoutsEnabled: response.payouts_enabled,
+                    dashboardUrl: response.dashboard_url,
+                    address: response.address,
+                    individual: response.individual
+                )
+                self?.loadExternalAccounts()
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    func loadExternalAccounts() {
+        struct ExternalAccountsResponse: Codable {
+            let external_accounts: [ExternalAccount]
+            let total: Int
+        }
+        
+        apiService.request(
+            ExternalAccountsResponse.self,
+            "/api/stripe/connect/account/external-accounts",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                if case .failure(let apiError) = completion {
+                    // 如果是 404 错误，可能是账户没有外部账户，设置为空列表
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            print("ℹ️ 账户没有外部账户，返回空列表")
+                            self?.externalAccounts = []
+                            return
+                        }
+                    }
+                    print("⚠️ 获取外部账户失败: \(apiError.localizedDescription)，继续显示账户详情")
+                    self?.externalAccounts = []
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.externalAccounts = response.external_accounts
+                print("✅ 成功加载 \(response.external_accounts.count) 个外部账户")
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
     func checkAccountStatus() {
         struct StatusResponse: Codable {
             let account_id: String
@@ -351,6 +585,7 @@ enum OnboardingViewState {
     case loading
     case error(String)
     case completed
+    case accountDetails(StripeConnectAccountDetails) // 账户详情
     case ready(String) // clientSecret
 }
 

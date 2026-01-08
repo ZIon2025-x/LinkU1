@@ -1539,6 +1539,25 @@ class StripeConnectAccountStatusResponse(BaseModel):
     requirements: Optional[Dict[str, Any]] = None
 
 
+class StripeConnectAddress(BaseModel):
+    """Stripe Connect 地址信息"""
+    line1: Optional[str] = None
+    line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    country: Optional[str] = None
+
+
+class StripeConnectIndividual(BaseModel):
+    """Stripe Connect 个人信息"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    dob: Optional[Dict[str, Optional[int]]] = None  # {"day": 1, "month": 1, "year": 1990}
+
+
 class StripeConnectAccountDetailsResponse(BaseModel):
     """Stripe Connect 账户详细信息"""
     account_id: str
@@ -1550,6 +1569,8 @@ class StripeConnectAccountDetailsResponse(BaseModel):
     charges_enabled: bool
     payouts_enabled: bool
     dashboard_url: Optional[str] = None  # Stripe 仪表板登录链接
+    address: Optional[StripeConnectAddress] = None  # 地址信息
+    individual: Optional[StripeConnectIndividual] = None  # 个人信息
     requirements: Optional[Dict[str, Any]] = None
     capabilities: Optional[Dict[str, str]] = None
 

@@ -40,6 +40,9 @@ struct StripeConnectPayoutsView: View {
         .sheet(isPresented: $showPayoutSheet) {
             PayoutSheet(viewModel: viewModel, isPresented: $showPayoutSheet)
         }
+        .sheet(isPresented: $viewModel.showAccountDetails) {
+            AccountDetailsSheet(viewModel: viewModel)
+        }
         .onChange(of: viewModel.error) { newError in
             if let error = newError {
                 DispatchQueue.main.async {
@@ -101,25 +104,52 @@ struct StripeConnectPayoutsView: View {
                         .padding(.horizontal, AppSpacing.md)
                         .padding(.top, AppSpacing.md)
                     
-                    // 提现按钮
-                    if balance.available > 0 {
+                    // 按钮组
+                    HStack(spacing: AppSpacing.md) {
+                        // 查看详情按钮
                         Button(action: {
-                            showPayoutSheet = true
+                            viewModel.loadAccountDetails()
+                            viewModel.showAccountDetails = true
                         }) {
                             HStack {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 20))
-                                Text("提现")
-                                    .font(AppTypography.headline)
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 18))
+                                Text("查看详情")
+                                    .font(AppTypography.body)
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(AppColors.primary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(AppColors.primary)
+                            .padding(.vertical, 14)
+                            .background(AppColors.cardBackground)
                             .cornerRadius(AppCornerRadius.large)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                                    .stroke(AppColors.primary, lineWidth: 1)
+                            )
                         }
-                        .padding(.horizontal, AppSpacing.md)
-                    } else {
+                        
+                        // 提现按钮
+                        if balance.available > 0 {
+                            Button(action: {
+                                showPayoutSheet = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text("提现")
+                                        .font(AppTypography.body)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(AppColors.primary)
+                                .cornerRadius(AppCornerRadius.large)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    
+                    if balance.available == 0 {
                         Text("当前无可提现余额")
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
@@ -321,7 +351,7 @@ struct PayoutSheet: View {
                                 Image(systemName: "arrow.up.circle.fill")
                                     .font(.system(size: 20))
                                 Text("确认提现")
-                                    .font(AppTypography.headline)
+                                    .font(AppTypography.title3)
                             }
                         }
                         .foregroundColor(.white)
@@ -550,6 +580,10 @@ class StripeConnectPayoutsViewModel: ObservableObject {
     @Published var isLoadingTransactions = false
     @Published var isCreatingPayout = false
     @Published var error: String?
+    @Published var showAccountDetails = false
+    @Published var accountDetails: StripeConnectAccountDetails?
+    @Published var externalAccounts: [ExternalAccount] = []
+    @Published var isLoadingAccountDetails = false
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -699,5 +733,459 @@ class StripeConnectPayoutsViewModel: ObservableObject {
         )
         .store(in: &cancellables)
     }
+    
+    func loadAccountDetails() {
+        isLoadingAccountDetails = true
+        error = nil
+        
+        // 加载账户详情
+        struct AccountDetailsResponse: Codable {
+            let account_id: String
+            let display_name: String?
+            let email: String?
+            let country: String
+            let type: String
+            let details_submitted: Bool
+            let charges_enabled: Bool
+            let payouts_enabled: Bool
+            let dashboard_url: String?
+        }
+        
+        apiService.request(
+            AccountDetailsResponse.self,
+            "/api/stripe/connect/account/details",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                if case .failure(let apiError) = completion {
+                    var errorMessage = apiError.localizedDescription
+                    if case .httpError(let code) = apiError {
+                        errorMessage = "获取账户详情失败 (HTTP \(code))"
+                    }
+                    self?.error = errorMessage
+                    print("❌ 获取账户详情失败: \(errorMessage)")
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.accountDetails = StripeConnectAccountDetails(
+                    accountId: response.account_id,
+                    displayName: response.display_name,
+                    email: response.email,
+                    country: response.country,
+                    type: response.type,
+                    detailsSubmitted: response.details_submitted,
+                    chargesEnabled: response.charges_enabled,
+                    payoutsEnabled: response.payouts_enabled,
+                    dashboardUrl: response.dashboard_url,
+                    address: response.address,
+                    individual: response.individual
+                )
+                self?.loadExternalAccounts()
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    func loadExternalAccounts() {
+        struct ExternalAccountsResponse: Codable {
+            let external_accounts: [ExternalAccount]
+            let total: Int
+        }
+        
+        apiService.request(
+            ExternalAccountsResponse.self,
+            "/api/stripe/connect/account/external-accounts",
+            method: "GET"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoadingAccountDetails = false
+                if case .failure(let apiError) = completion {
+                    // 如果是 404 错误，可能是账户没有外部账户，设置为空列表而不是显示错误
+                    if case .httpError(let code) = apiError {
+                        if code == 404 {
+                            print("ℹ️ 账户没有外部账户，返回空列表")
+                            self?.externalAccounts = []
+                            return
+                        }
+                    }
+                    // 其他错误只记录，不阻止显示账户详情
+                    print("⚠️ 获取外部账户失败: \(apiError.localizedDescription)，继续显示账户详情")
+                    self?.externalAccounts = []
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isLoadingAccountDetails = false
+                self?.externalAccounts = response.external_accounts
+                print("✅ 成功加载 \(response.external_accounts.count) 个外部账户")
+            }
+        )
+        .store(in: &cancellables)
+    }
 }
+
+/// 账户详情模型
+struct StripeConnectAccountDetails {
+    let accountId: String
+    let displayName: String?
+    let email: String?
+    let country: String
+    let type: String
+    let detailsSubmitted: Bool
+    let chargesEnabled: Bool
+    let payoutsEnabled: Bool
+    let dashboardUrl: String?
+    let address: StripeConnectAddress?
+    let individual: StripeConnectIndividual?
+}
+
+/// 地址信息模型
+struct StripeConnectAddress: Codable {
+    let line1: String?
+    let line2: String?
+    let city: String?
+    let state: String?
+    let postalCode: String?
+    let country: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case line1
+        case line2
+        case city
+        case state
+        case postalCode = "postal_code"
+        case country
+    }
+    
+    var fullAddress: String {
+        var components: [String] = []
+        if let line1 = line1 {
+            components.append(line1)
+        }
+        if let line2 = line2 {
+            components.append(line2)
+        }
+        if let city = city {
+            components.append(city)
+        }
+        if let state = state {
+            components.append(state)
+        }
+        if let postalCode = postalCode {
+            components.append(postalCode)
+        }
+        if let country = country {
+            components.append(country)
+        }
+        return components.joined(separator: ", ")
+    }
+}
+
+/// 个人信息模型
+struct StripeConnectIndividual: Codable {
+    let firstName: String?
+    let lastName: String?
+    let email: String?
+    let phone: String?
+    let dob: DateOfBirth?
+    
+    enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case email
+        case phone
+        case dob
+    }
+    
+    var fullName: String {
+        var components: [String] = []
+        if let firstName = firstName {
+            components.append(firstName)
+        }
+        if let lastName = lastName {
+            components.append(lastName)
+        }
+        return components.isEmpty ? "未设置" : components.joined(separator: " ")
+    }
+}
+
+/// 出生日期模型
+struct DateOfBirth: Codable {
+    let day: Int?
+    let month: Int?
+    let year: Int?
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let dict = try? container.decode([String: Int?].self) {
+            day = dict["day"] ?? nil
+            month = dict["month"] ?? nil
+            year = dict["year"] ?? nil
+        } else {
+            day = nil
+            month = nil
+            year = nil
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        var dict: [String: Int?] = [:]
+        dict["day"] = day
+        dict["month"] = month
+        dict["year"] = year
+        try container.encode(dict)
+    }
+    
+    var displayString: String {
+        if let day = day, let month = month, let year = year {
+            return String(format: "%02d/%02d/%d", day, month, year)
+        }
+        return "未设置"
+    }
+}
+
+/// 外部账户模型
+struct ExternalAccount: Codable, Identifiable {
+    let id: String
+    let object: String // "bank_account" or "card"
+    let account: String?
+    
+    // 银行账户字段
+    let bankName: String?
+    let last4: String?
+    let routingNumber: String?
+    let currency: String?
+    let country: String?
+    let accountHolderName: String?
+    let accountHolderType: String?
+    let status: String?
+    
+    // 银行卡字段
+    let brand: String?
+    let expMonth: Int?
+    let expYear: Int?
+    let funding: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case object
+        case account
+        case bankName = "bank_name"
+        case last4
+        case routingNumber = "routing_number"
+        case currency
+        case country
+        case accountHolderName = "account_holder_name"
+        case accountHolderType = "account_holder_type"
+        case status
+        case brand
+        case expMonth = "exp_month"
+        case expYear = "exp_year"
+        case funding
+    }
+}
+
+/// 账户详情弹窗
+struct AccountDetailsSheet: View {
+    @ObservedObject var viewModel: StripeConnectPayoutsViewModel
+    @Environment(\.dismiss) var dismiss
+    @State private var showWebView = false
+    @State private var webViewURL: URL?
+    @State private var webViewTitle: String?
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                if viewModel.isLoadingAccountDetails {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                        Text("加载中...")
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                } else {
+                    ScrollView {
+                        VStack(spacing: AppSpacing.lg) {
+                            // 账户基本信息
+                            if let details = viewModel.accountDetails {
+                                AccountInfoSection(details: details) {
+                                    if let dashboardUrl = details.dashboardUrl, let url = URL(string: dashboardUrl) {
+                                        webViewURL = url
+                                        webViewTitle = "Stripe 仪表板"
+                                        showWebView = true
+                                    }
+                                }
+                            }
+                            
+                            // 外部账户（银行卡/银行账户）
+                            if !viewModel.externalAccounts.isEmpty {
+                                ExternalAccountsSection(accounts: viewModel.externalAccounts)
+                                    .padding(.top, AppSpacing.md)
+                            } else {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "creditcard")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(AppColors.textTertiary)
+                                    Text("暂无外部账户")
+                                        .font(AppTypography.subheadline)
+                                        .foregroundColor(AppColors.textSecondary)
+                                }
+                                .padding(.vertical, 40)
+                            }
+                        }
+                        .padding(AppSpacing.lg)
+                    }
+                }
+            }
+            .navigationTitle("账户详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showWebView) {
+                if let url = webViewURL {
+                    ExternalWebView(url: url, title: webViewTitle)
+                }
+            }
+        }
+    }
+}
+
+/// 账户信息部分
+struct AccountInfoSection: View {
+    let details: StripeConnectAccountDetails
+    var onOpenDashboard: (() -> Void)?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("账户信息")
+                .font(AppTypography.title3)
+                .foregroundColor(AppColors.textPrimary)
+            
+            VStack(spacing: AppSpacing.sm) {
+                InfoRow(icon: "number", label: "账户ID", value: details.accountId)
+                if let displayName = details.displayName {
+                    InfoRow(icon: "person.fill", label: "显示名称", value: displayName)
+                }
+                if let email = details.email {
+                    InfoRow(icon: "envelope.fill", label: "邮箱", value: email)
+                }
+                InfoRow(icon: "globe", label: "国家", value: details.country)
+                InfoRow(icon: "creditcard.fill", label: "账户类型", value: details.type == "express" ? "Express" : details.type.capitalized)
+                InfoRow(icon: "checkmark.circle.fill", label: "详情已提交", value: details.detailsSubmitted ? "是" : "否")
+                InfoRow(icon: "arrow.down.circle.fill", label: "收款已启用", value: details.chargesEnabled ? "是" : "否")
+                InfoRow(icon: "arrow.up.circle.fill", label: "提现已启用", value: details.payoutsEnabled ? "是" : "否")
+                
+                // Stripe Dashboard 链接
+                if let dashboardUrl = details.dashboardUrl {
+                    Button(action: {
+                        onOpenDashboard?()
+                    }) {
+                        HStack {
+                            Image(systemName: "safari.fill")
+                                .font(.system(size: 16))
+                            Text("打开 Stripe 仪表板")
+                                .font(AppTypography.body)
+                        }
+                        .foregroundColor(AppColors.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(AppColors.primary.opacity(0.1))
+                        .cornerRadius(AppCornerRadius.medium)
+                    }
+                    .padding(.top, AppSpacing.sm)
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+    }
+}
+
+/// 外部账户部分
+struct ExternalAccountsSection: View {
+    let accounts: [ExternalAccount]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("外部账户")
+                .font(AppTypography.title3)
+                .foregroundColor(AppColors.textPrimary)
+            
+            ForEach(accounts) { account in
+                ExternalAccountCard(account: account)
+            }
+        }
+    }
+}
+
+/// 外部账户卡片
+struct ExternalAccountCard: View {
+    let account: ExternalAccount
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Image(systemName: account.object == "bank_account" ? "building.columns.fill" : "creditcard.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(AppColors.primary)
+                
+                Text(account.object == "bank_account" ? "银行账户" : "银行卡")
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Spacer()
+            }
+            
+            if account.object == "bank_account" {
+                if let bankName = account.bankName {
+                    InfoRow(icon: "building.columns.fill", label: "银行名称", value: bankName)
+                }
+                if let last4 = account.last4 {
+                    InfoRow(icon: "number", label: "账户尾号", value: "****\(last4)")
+                }
+                if let routingNumber = account.routingNumber {
+                    InfoRow(icon: "number", label: "路由号码", value: routingNumber)
+                }
+                if let accountHolderName = account.accountHolderName {
+                    InfoRow(icon: "person.fill", label: "账户持有人", value: accountHolderName)
+                }
+                if let accountHolderType = account.accountHolderType {
+                    InfoRow(icon: "person.2.fill", label: "持有人类型", value: accountHolderType == "individual" ? "个人" : "企业")
+                }
+                if let status = account.status {
+                    InfoRow(icon: "info.circle.fill", label: "状态", value: status)
+                }
+            } else if account.object == "card" {
+                if let brand = account.brand {
+                    InfoRow(icon: "creditcard.fill", label: "卡品牌", value: brand.capitalized)
+                }
+                if let last4 = account.last4 {
+                    InfoRow(icon: "number", label: "卡号尾号", value: "****\(last4)")
+                }
+                if let expMonth = account.expMonth, let expYear = account.expYear {
+                    InfoRow(icon: "calendar", label: "有效期", value: String(format: "%02d/%d", expMonth, expYear))
+                }
+                if let funding = account.funding {
+                    InfoRow(icon: "creditcard.fill", label: "类型", value: funding == "credit" ? "信用卡" : "借记卡")
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+    }
+}
+
 
