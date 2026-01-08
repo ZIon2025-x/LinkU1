@@ -501,6 +501,7 @@ struct StatusBadge: View {
         case .completed: return AppColors.textSecondary
         case .cancelled: return AppColors.error
         case .pendingConfirmation: return AppColors.warning
+        case .pendingPayment: return AppColors.warning
         }
     }
 }

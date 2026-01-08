@@ -659,7 +659,7 @@ struct TaskDetailContentView: View {
                                             // 检查任务是否有接受者且需要支付
                                             if let updatedTask = viewModel.task,
                                                updatedTask.takerId != nil,
-                                               updatedTask.status == .pendingConfirmation {
+                                               (updatedTask.status == .pendingPayment || updatedTask.status == .pendingConfirmation) {
                                                 // 任务已接受但未支付，显示支付界面
                                                 showPaymentView = true
                                             }
@@ -1128,9 +1128,9 @@ struct TaskActionButtonsView: View {
             // 支付按钮（发布者已接受申请且任务未支付时显示）
             // 支付条件：
             // 1. 发布者已接受申请（takerId != nil）
-            // 2. 任务状态是 pendingConfirmation（已接受但未支付，等待支付后进入进行中状态）
+            // 2. 任务状态是 pendingPayment 或 pendingConfirmation（已接受但未支付，等待支付后进入进行中状态）
             // 3. 任务有奖励金额需要支付
-            if isPoster && task.takerId != nil && task.status == .pendingConfirmation {
+            if isPoster && task.takerId != nil && (task.status == .pendingPayment || task.status == .pendingConfirmation) {
                 let hasReward = task.agreedReward != nil || task.baseReward != nil || task.reward > 0
                 
                 if hasReward {
@@ -1216,7 +1216,7 @@ struct TaskActionButtonsView: View {
             }
             
             // 沟通按钮
-            if (task.status == .inProgress || task.status == .pendingConfirmation) && (isPoster || isTaker) {
+            if (task.status == .inProgress || task.status == .pendingConfirmation || task.status == .pendingPayment) && (isPoster || isTaker) {
                 NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: task.title)) {
                     Label(isPoster ? LocalizationKey.actionsContactRecipient.localized : LocalizationKey.actionsContactPoster.localized, systemImage: "message.fill")
                         .font(AppTypography.bodyBold)

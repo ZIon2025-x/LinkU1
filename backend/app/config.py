@@ -139,7 +139,10 @@ class Config:
         "Accept",
         "Origin",
         "X-Session-ID",  # 移动端会话ID
-        "X-User-ID"      # 移动端用户ID
+        "X-User-ID",     # 移动端用户ID
+        "Cache-Control", # 缓存控制
+        "Pragma",        # 缓存控制
+        "Expires"        # 过期时间（缓存控制）
     ]
     
     # 暴露的响应头（前端可以访问）

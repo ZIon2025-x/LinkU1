@@ -94,6 +94,7 @@ enum TaskStatus: String, Codable {
     case completed = "completed"
     case cancelled = "cancelled"
     case pendingConfirmation = "pending_confirmation"
+    case pendingPayment = "pending_payment"
     
     var displayText: String {
         switch self {
@@ -102,6 +103,7 @@ enum TaskStatus: String, Codable {
         case .completed: return "已完成"
         case .cancelled: return "已取消"
         case .pendingConfirmation: return "待确认"
+        case .pendingPayment: return "待支付"
         }
     }
 }
