@@ -152,8 +152,8 @@ class MyPostsViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 // 优化：在主线程更新UI，但数据处理在后台线程
-                DispatchQueue.main.async {
-                    self.sellingItems = response.items
+                DispatchQueue.main.async { [weak self] in
+                    self?.sellingItems = response.items
                 }
             })
             .store(in: &cancellables)
@@ -188,8 +188,8 @@ class MyPostsViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
-                DispatchQueue.main.async {
-                    self.purchasedItems = response.items
+                DispatchQueue.main.async { [weak self] in
+                    self?.purchasedItems = response.items
                 }
             })
             .store(in: &cancellables)
@@ -224,8 +224,8 @@ class MyPostsViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
-                DispatchQueue.main.async {
-                    self.favoriteItems = response.items
+                DispatchQueue.main.async { [weak self] in
+                    self?.favoriteItems = response.items
                 }
             })
             .store(in: &cancellables)
@@ -260,8 +260,8 @@ class MyPostsViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
-                DispatchQueue.main.async {
-                    self.soldItems = response.items
+                DispatchQueue.main.async { [weak self] in
+                    self?.soldItems = response.items
                 }
             })
             .store(in: &cancellables)

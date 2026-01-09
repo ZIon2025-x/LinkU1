@@ -12,21 +12,14 @@ struct MessageView: View {
                     .ignoresSafeArea()
                 
                 if viewModel.isLoading && viewModel.taskChats.isEmpty {
-                    ProgressView()
+                    LoadingView()
                 } else if let error = viewModel.errorMessage, viewModel.taskChats.isEmpty {
-                    VStack(spacing: AppSpacing.lg) {
-                        IconStyle.icon("exclamationmark.triangle", size: 48)
-                            .foregroundColor(AppColors.textSecondary)
-                        Text(error)
-                            .font(AppTypography.body)
-                            .foregroundColor(AppColors.textSecondary)
-                            .multilineTextAlignment(.center)
-                        Button(LocalizationKey.commonRetry.localized) {
+                    ErrorStateView(
+                        message: error,
+                        retryAction: {
                             viewModel.loadTaskChats()
                         }
-                        .buttonStyle(PrimaryButtonStyle())
-                    }
-                    .padding(AppSpacing.xl)
+                    )
                 } else {
                     ScrollView {
                         LazyVStack(spacing: AppSpacing.md) {

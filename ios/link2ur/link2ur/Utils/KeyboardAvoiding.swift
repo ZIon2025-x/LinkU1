@@ -89,12 +89,16 @@ class KeyboardHeightObserver: ObservableObject {
     }
 }
 
-/// 键盘避让修饰符（优化版 - 使用系统级键盘处理）
+/// 键盘避让修饰符（已弃用 - 可能导致约束冲突）
+/// 建议使用 KeyboardHeightObserver 手动处理键盘避让
+/// 或使用 KeyboardAvoidingScrollView 组件
 struct KeyboardAvoidingModifier: ViewModifier {
     var extraPadding: CGFloat = 0
     
     func body(content: Content) -> some View {
         content
+            // ⚠️ 注意：此方法可能导致 Auto Layout 约束冲突
+            // 建议使用 KeyboardHeightObserver 手动处理键盘避让
             .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }

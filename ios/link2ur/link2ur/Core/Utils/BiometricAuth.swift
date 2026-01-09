@@ -246,7 +246,7 @@ public class BiometricAuth {
         ]
         
         var result: AnyObject?
-        var error: Unmanaged<CFError>?
+        var _: Unmanaged<CFError>?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
         // 状态码说明：

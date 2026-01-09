@@ -97,8 +97,7 @@ struct TasksView: View {
                     
                     // 内容区域
                     if viewModel.isLoading && viewModel.tasks.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        LoadingView()
                     } else if let error = viewModel.errorMessage, viewModel.tasks.isEmpty {
                         // 使用统一的错误状态组件
                         ErrorStateView(
@@ -140,7 +139,7 @@ struct TasksView: View {
                                 if viewModel.isLoadingMore {
                                     HStack {
                                         Spacer()
-                                        ProgressView()
+                                        CompactLoadingView()
                                             .padding()
                                         Spacer()
                                     }

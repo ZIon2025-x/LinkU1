@@ -71,6 +71,32 @@ public struct Constants {
             #endif
         }()
         
+        // Apple Pay Merchant ID
+        // 
+        // 配置方式（推荐顺序）：
+        // 1. 通过 Xcode Scheme 配置（推荐）：
+        //    - Product → Scheme → Edit Scheme...
+        //    - Run → Arguments → Environment Variables
+        //    - 添加：Name = APPLE_PAY_MERCHANT_ID, Value = merchant.com.yourcompany
+        //
+        // 2. 直接修改下面的默认值（快速测试，不推荐用于生产）
+        //
+        // 详细说明请查看：stripe-sample-code/ios/APPLE_PAY_SETUP.md
+        static let applePayMerchantIdentifier: String? = {
+            // 优先从环境变量读取
+            if let merchantId = ProcessInfo.processInfo.environment["APPLE_PAY_MERCHANT_ID"], !merchantId.isEmpty {
+                return merchantId
+            }
+            
+            // 如果没有环境变量，返回 nil（Apple Pay 将不可用）
+            // ⚠️ 请通过 Xcode Scheme 配置环境变量，或在这里填入你的 Merchant ID
+            #if DEBUG
+            return nil // 👈 测试环境：在这里填入你的 Merchant ID，或通过环境变量配置
+            #else
+            return nil // 👈 生产环境：在这里填入你的 Merchant ID，或通过环境变量配置
+            #endif
+        }()
+        
         // Stripe Connect Onboarding 自定义 URL
         // 用于在 Stripe Connect 账户入驻流程中显示自定义的服务条款和隐私政策
         struct ConnectOnboarding {

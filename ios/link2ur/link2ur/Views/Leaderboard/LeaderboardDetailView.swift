@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct LeaderboardDetailView: View {
     let leaderboardId: Int
@@ -473,6 +474,7 @@ struct LeaderboardShareView: View {
     @Environment(\.dismiss) var dismiss
     @State private var shareImage: UIImage?
     @State private var isLoadingImage = false
+    @State private var imageCancellable: AnyCancellable?
     
     // 使用 API 域名，后端会为爬虫返回正确的 meta 标签，普通用户会被重定向到前端
     private var shareUrl: URL? {
@@ -573,19 +575,25 @@ struct LeaderboardShareView: View {
     }
     
     private func loadCoverImage() {
-        guard let coverUrl = leaderboard.coverImage, !coverUrl.isEmpty,
-              let url = URL(string: coverUrl) else { return }
+        guard let coverUrl = leaderboard.coverImage, !coverUrl.isEmpty else { return }
+        
+        // 取消之前的加载
+        imageCancellable?.cancel()
         
         isLoadingImage = true
         
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            DispatchQueue.main.async {
-                isLoadingImage = false
-                if let data = data, let image = UIImage(data: data) {
+        // 使用 ImageCache 加载图片，支持缓存和优化
+        imageCancellable = ImageCache.shared.loadImage(from: coverUrl)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in
+                    isLoadingImage = false
+                },
+                receiveValue: { image in
+                    isLoadingImage = false
                     shareImage = image
                 }
-            }
-        }.resume()
+            )
     }
     
     private func shareContent() {

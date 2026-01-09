@@ -125,7 +125,8 @@ class ActivityViewModel: ObservableObject {
                     receiveValue: { [weak self] activities in
                         guard let self = self else { return }
                         // 优化：将数据处理移到后台线程
-                        DispatchQueue.global(qos: .userInitiated).async {
+                        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                            guard let self = self else { return }
                             // 保存到缓存（仅在没有筛选条件时）
                             if expertId == nil && status == nil && !includeEnded {
                                 CacheManager.shared.saveActivities(activities)
@@ -133,7 +134,8 @@ class ActivityViewModel: ObservableObject {
                             }
                             
                             // 回到主线程更新UI
-                            DispatchQueue.main.async {
+                            DispatchQueue.main.async { [weak self] in
+                                guard let self = self else { return }
                                 self.activities = activities
                                 self.isLoading = false
                                 // 加载收藏列表
@@ -176,7 +178,8 @@ class ActivityViewModel: ObservableObject {
                     receiveValue: { [weak self] activities in
                         guard let self = self else { return }
                         // 优化：将数据处理移到后台线程
-                        DispatchQueue.global(qos: .userInitiated).async {
+                        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                            guard let self = self else { return }
                             // 保存到缓存（仅在没有筛选条件时）
                             if expertId == nil && status == nil && !includeEnded {
                                 CacheManager.shared.saveActivities(activities)
@@ -184,7 +187,8 @@ class ActivityViewModel: ObservableObject {
                             }
                             
                             // 回到主线程更新UI
-                            DispatchQueue.main.async {
+                            DispatchQueue.main.async { [weak self] in
+                                guard let self = self else { return }
                                 self.activities = activities
                                 self.isLoading = false
                                 // 加载收藏列表
@@ -223,6 +227,12 @@ class ActivityViewModel: ObservableObject {
     // MARK: - Load Activity Detail
     
     func loadActivityDetail(activityId: Int) {
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.debug("活动详情请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         expert = nil // 重置达人信息

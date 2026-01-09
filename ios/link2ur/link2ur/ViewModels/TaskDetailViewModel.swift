@@ -25,6 +25,12 @@ class TaskDetailViewModel: ObservableObject {
     }
     
     func loadTask(taskId: Int) {
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.debug("任务详情请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         let startTime = Date()
         let endpoint = "/api/tasks/\(taskId)"
         
@@ -55,6 +61,8 @@ class TaskDetailViewModel: ObservableObject {
                 }
             }, receiveValue: { [weak self] task in
                 self?.task = task
+                // 发送任务更新通知
+                NotificationCenter.default.post(name: .taskUpdated, object: task)
             })
             .store(in: &cancellables)
     }
@@ -134,13 +142,18 @@ class TaskDetailViewModel: ObservableObject {
     
     func approveApplication(taskId: Int, applicationId: Int, completion: @escaping (Bool, String?) -> Void) {
         apiService.acceptApplication(taskId: taskId, applicationId: applicationId)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
                     completion(false, nil)
+                } else {
+                    // 重新加载任务以获取最新状态
+                    self?.loadTask(taskId: taskId)
                 }
-            }, receiveValue: { response in
+            }, receiveValue: { [weak self] response in
                 // 如果返回了 client_secret，说明需要支付
                 completion(true, response.clientSecret)
+                // 重新加载任务以获取最新状态
+                self?.loadTask(taskId: taskId)
             })
             .store(in: &cancellables)
     }
@@ -161,42 +174,56 @@ class TaskDetailViewModel: ObservableObject {
     
     func completeTask(taskId: Int, completion: @escaping (Bool) -> Void) {
         apiService.completeTask(taskId: taskId)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
                     completion(false)
                 } else {
                     completion(true)
+                    // 重新加载任务以获取最新状态
+                    self?.loadTask(taskId: taskId)
                 }
-            }, receiveValue: { _ in
+            }, receiveValue: { [weak self] _ in
                 completion(true)
+                // 重新加载任务以获取最新状态
+                self?.loadTask(taskId: taskId)
             })
             .store(in: &cancellables)
     }
     
     func confirmTaskCompletion(taskId: Int, completion: @escaping (Bool) -> Void) {
         apiService.confirmTaskCompletion(taskId: taskId)
-            .sink(receiveCompletion: { result in
-                if case .failure = result {
+            .sink(receiveCompletion: { [weak self] result in
+                if case .failure(let error) = result {
+                    // 使用 ErrorHandler 统一处理错误，显示友好的错误信息
+                    ErrorHandler.shared.handle(error, context: "确认任务完成")
                     completion(false)
                 } else {
                     completion(true)
+                    // 重新加载任务以获取最新状态
+                    self?.loadTask(taskId: taskId)
                 }
-            }, receiveValue: { _ in
+            }, receiveValue: { [weak self] _ in
                 completion(true)
+                // 重新加载任务以获取最新状态
+                self?.loadTask(taskId: taskId)
             })
             .store(in: &cancellables)
     }
     
     func cancelTask(taskId: Int, reason: String?, completion: @escaping (Bool) -> Void) {
         apiService.cancelTask(taskId: taskId, reason: reason)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
                     completion(false)
                 } else {
                     completion(true)
+                    // 重新加载任务以获取最新状态
+                    self?.loadTask(taskId: taskId)
                 }
-            }, receiveValue: { _ in
+            }, receiveValue: { [weak self] _ in
                 completion(true)
+                // 重新加载任务以获取最新状态
+                self?.loadTask(taskId: taskId)
             })
             .store(in: &cancellables)
     }

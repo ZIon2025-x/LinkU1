@@ -176,6 +176,12 @@ class ForumPostDetailViewModel: ObservableObject {
     }
     
     func loadPost(postId: Int) {
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.debug("帖子详情请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         isLoading = true
         apiService.request(ForumPost.self, "/api/forum/posts/\(postId)", method: "GET")
             .sink(receiveCompletion: { [weak self] result in

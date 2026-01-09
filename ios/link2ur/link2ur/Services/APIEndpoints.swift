@@ -168,6 +168,7 @@ enum APIEndpoints {
         static func createTaskPayment(_ taskId: Int) -> String {
             "/api/coupon-points/tasks/\(taskId)/payment"
         }
+        static let paymentHistory = "/api/coupon-points/payment-history"
     }
     
     // MARK: - Check-in (签到)

@@ -1481,21 +1481,26 @@ def complete_task(
         # 系统消息发送失败不影响任务完成流程
 
     # 发送任务完成通知和邮件给发布者
-    if background_tasks:
-        try:
-            from app.task_notifications import send_task_completion_notification
-            
-            # 获取发布者信息
-            poster = crud.get_user_by_id(db, db_task.poster_id)
-            if poster:
-                send_task_completion_notification(
-                    db=db,
-                    background_tasks=background_tasks,
-                    task=db_task,
-                    taker=current_user
-                )
-        except Exception as e:
-            print(f"Failed to send task completion notification: {e}")
+    try:
+        from app.task_notifications import send_task_completion_notification
+        from fastapi import BackgroundTasks
+        
+        # 确保 background_tasks 存在，如果为 None 则创建新实例
+        if background_tasks is None:
+            background_tasks = BackgroundTasks()
+        
+        # 获取发布者信息
+        poster = crud.get_user_by_id(db, db_task.poster_id)
+        if poster:
+            send_task_completion_notification(
+                db=db,
+                background_tasks=background_tasks,
+                task=db_task,
+                taker=current_user
+            )
+    except Exception as e:
+        print(f"Failed to send task completion notification: {e}")
+        # 通知发送失败不影响任务完成流程
 
     # 检查任务接受者是否满足VIP晋升条件
     try:
@@ -1851,8 +1856,20 @@ def confirm_task_completion(
     task = crud.get_task(db, task_id)
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
+    
+    # 检查任务状态：允许 pending_confirmation 状态，也允许已支付但状态异常的情况
     if task.status != "pending_confirmation":
-        raise HTTPException(status_code=400, detail="Task is not pending confirmation")
+        # 如果任务已支付且有接受者，但状态不是 pending_confirmation，记录日志并允许确认
+        if task.is_paid == 1 and task.taker_id and task.status in ["in_progress", "pending_payment"]:
+            logger.warning(f"任务 {task_id} 状态为 {task.status}，但已支付且有接受者，允许确认完成")
+            # 将状态更新为 pending_confirmation 以便后续处理
+            task.status = "pending_confirmation"
+            db.commit()
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Task is not pending confirmation. Current status: {task.status}, is_paid: {task.is_paid}"
+            )
 
     # 将任务状态改为已完成
     task.status = "completed"

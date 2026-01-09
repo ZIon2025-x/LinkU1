@@ -254,7 +254,7 @@ struct NearbyTasksView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.tasks.isEmpty {
-                ProgressView()
+                LoadingView()
             } else if viewModel.tasks.isEmpty {
                 EmptyStateView(
                     icon: "mappin.circle.fill",
@@ -281,7 +281,7 @@ struct NearbyTasksView: View {
                         if viewModel.isLoadingMore {
                             HStack {
                                 Spacer()
-                                ProgressView()
+                                CompactLoadingView()
                                     .padding()
                                 Spacer()
                             }
@@ -536,11 +536,7 @@ struct TaskExpertListContentView: View {
                 // 内容区域
                 Group {
                     if viewModel.isLoading && viewModel.experts.isEmpty {
-                        VStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
+                        LoadingView()
                     } else if viewModel.experts.isEmpty {
                         VStack {
                             Spacer()
@@ -1408,7 +1404,7 @@ struct RecentActivitiesSection: View {
                 if viewModel.isLoadingMore {
                     HStack {
                         Spacer()
-                        ProgressView()
+                        CompactLoadingView()
                             .padding()
                         Spacer()
                     }

@@ -11,84 +11,13 @@ struct MyTasksView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 标签页（参考 frontend）
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: AppSpacing.sm) {
-                        ForEach(TaskTab.allCases, id: \.self) { tab in
-                            MyTasksTabButton(
-                                tab: tab,
-                                count: getTabCount(for: tab),
-                                isSelected: selectedTab == tab
-                            ) {
-                                selectedTab = tab
-                                viewModel.currentTab = tab
-                            }
-                        }
-                    }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
-                }
-                .background(AppColors.cardBackground)
+                // 标签页
+                tabBarView
                 
                 Divider()
                 
-                // 任务列表 - 可刷新的区域
-                if viewModel.isLoading && viewModel.tasks.isEmpty && selectedTab != .pending {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                } else if selectedTab == .pending {
-                    // 待处理申请列表
-                    if viewModel.getPendingApplications().isEmpty {
-                        Spacer()
-                        EmptyStateView(
-                            icon: "clock.fill",
-                            title: "暂无待处理申请",
-                            message: "您还没有待处理的申请记录"
-                        )
-                        Spacer()
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: AppSpacing.md) {
-                                ForEach(viewModel.getPendingApplications()) { application in
-                                    MyTasksApplicationCard(application: application)
-                                }
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.sm)
-                        }
-                        .refreshable {
-                            viewModel.loadTasks()
-                        }
-                    }
-                } else if viewModel.getFilteredTasks().isEmpty {
-                    Spacer()
-                    EmptyStateView(
-                        icon: "doc.text.fill",
-                        title: "暂无任务",
-                        message: getEmptyMessage()
-                    )
-                    Spacer()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(viewModel.getFilteredTasks()) { task in
-                                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                    EnhancedTaskCard(task: task, currentUserId: viewModel.currentUserId)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .onAppear {
-                                    print("🔍 [MyTasksView] 任务卡片出现: \(task.id), 标题: \(task.title)")
-                                }
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
-                    }
-                    .refreshable {
-                        viewModel.loadTasks()
-                    }
-                }
+                // 任务列表内容
+                tasksContentView
             }
         }
         .navigationTitle("我的任务")
@@ -102,11 +31,20 @@ struct MyTasksView: View {
             if let userId = appState.currentUser?.id {
                 viewModel.currentUserId = userId
             }
+            
+            // 先尝试从缓存加载（立即显示）
+            if viewModel.tasks.isEmpty {
+                viewModel.loadTasksFromCache()
+            }
+            
             // 延迟加载数据，避免在页面出现时立即加载导致卡顿
-            if viewModel.tasks.isEmpty && !viewModel.isLoading {
+            if !viewModel.isLoading {
                 // 延迟100ms加载，让页面先渲染完成
                 try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000)
-                viewModel.loadTasks()
+                // 后台刷新数据（不强制刷新，使用缓存优先策略）
+                viewModel.loadTasks(forceRefresh: false)
+                // 预加载已完成的任务，这样用户点击"已完成"标签页时就能立即看到
+                viewModel.loadCompletedTasks()
             }
         }
         .onChange(of: appState.currentUser?.id) { newUserId in
@@ -114,6 +52,158 @@ struct MyTasksView: View {
             viewModel.currentUserId = newUserId
         }
     }
+    
+    // MARK: - 子视图
+    
+    // 标签页视图
+    private var tabBarView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(TaskTab.allCases, id: \.self) { tab in
+                    MyTasksTabButton(
+                        tab: tab,
+                        count: getTabCount(for: tab),
+                        isSelected: selectedTab == tab
+                    ) {
+                        let previousTab = selectedTab
+                        selectedTab = tab
+                        viewModel.currentTab = tab
+                        // 切换标签页时，如果是"已完成"标签页，立即加载已完成的任务
+                        if tab == .completed && previousTab != .completed {
+                            viewModel.loadCompletedTasks()
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+        }
+        .background(AppColors.cardBackground)
+    }
+    
+    // 任务列表内容视图
+    @ViewBuilder
+    private var tasksContentView: some View {
+        if selectedTab == .completed && viewModel.isLoadingCompletedTasks && viewModel.getFilteredTasks().isEmpty {
+            completedTasksLoadingView
+        } else if viewModel.isOffline && viewModel.tasks.isEmpty {
+            offlineView
+        } else if viewModel.isLoading && viewModel.tasks.isEmpty && selectedTab != .pending {
+            loadingView
+        } else if selectedTab == .pending {
+            pendingApplicationsView
+        } else if viewModel.getFilteredTasks().isEmpty {
+            emptyTasksView
+        } else {
+            tasksListView
+        }
+    }
+    
+    // 已完成任务加载视图
+    private var completedTasksLoadingView: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: AppSpacing.md) {
+                ProgressView()
+                Text("正在加载已完成的任务...")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            Spacer()
+        }
+    }
+    
+    // 离线视图
+    private var offlineView: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: AppSpacing.md) {
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 48))
+                    .foregroundColor(AppColors.textTertiary)
+                Text("网络不可用")
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
+                Text("请检查网络连接后重试")
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            Spacer()
+        }
+    }
+    
+    // 加载视图
+    private var loadingView: some View {
+        VStack {
+            Spacer()
+            ProgressView()
+            Spacer()
+        }
+    }
+    
+    // 待处理申请视图
+    @ViewBuilder
+    private var pendingApplicationsView: some View {
+        if viewModel.getPendingApplications().isEmpty {
+            Spacer()
+            EmptyStateView(
+                icon: "clock.fill",
+                title: "暂无待处理申请",
+                message: "您还没有待处理的申请记录"
+            )
+            Spacer()
+        } else {
+            ScrollView {
+                LazyVStack(spacing: AppSpacing.md) {
+                    ForEach(viewModel.getPendingApplications()) { application in
+                        MyTasksApplicationCard(application: application)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+            }
+            .refreshable {
+                viewModel.loadTasks(forceRefresh: true)
+            }
+        }
+    }
+    
+    // 空任务视图
+    private var emptyTasksView: some View {
+        VStack {
+            Spacer()
+            EmptyStateView(
+                icon: "doc.text.fill",
+                title: "暂无任务",
+                message: getEmptyMessage()
+            )
+            Spacer()
+        }
+    }
+    
+    // 任务列表视图
+    private var tasksListView: some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.md) {
+                ForEach(viewModel.getFilteredTasks()) { task in
+                    NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                        EnhancedTaskCard(task: task, currentUserId: viewModel.currentUserId)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .onAppear {
+                        print("🔍 [MyTasksView] 任务卡片出现: \(task.id), 标题: \(task.title)")
+                    }
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+        }
+        .refreshable {
+            viewModel.loadTasks(forceRefresh: true)
+        }
+    }
+    
+    // MARK: - 辅助方法
     
     private func getTabCount(for tab: TaskTab) -> Int {
         switch tab {

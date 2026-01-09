@@ -78,6 +78,27 @@ class DateFormatterHelper {
         return displayFormatter.string(from: date)
     }
     
+    /// 格式化日期时间（短格式，包含日期和时间）
+    /// 使用用户本地时区和系统 locale
+    func formatShortDateTime(_ timeString: String) -> String {
+        guard let date = parseDate(timeString) else {
+            return timeString
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        formatter.locale = Locale.current // 使用用户系统 locale
+        formatter.timeZone = TimeZone.current // 使用用户本地时区
+        return formatter.string(from: date)
+    }
+    
+    /// 解析日期字符串（公开方法）
+    /// 从 UTC 时区解析，返回 Date 对象
+    func parseDatePublic(_ dateString: String) -> Date? {
+        return parseDate(dateString)
+    }
+    
     func formatDeadline(_ deadlineString: String) -> String {
         guard let deadline = parseDate(deadlineString) else {
             return "截止时间未知"

@@ -27,15 +27,7 @@ struct CustomerServiceView: View {
                     // 消息列表
                     if viewModel.isLoading && viewModel.messages.isEmpty && viewModel.chat != nil {
                         // 加载状态（仅在已连接时显示）
-                        VStack(spacing: AppSpacing.md) {
-                            ProgressView()
-                                .scaleEffect(1.2)
-                                .tint(AppColors.primary)
-                            Text("加载消息中...")
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        LoadingView(message: "加载消息中...")
                     } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty && viewModel.chat != nil {
                         // 使用统一的错误状态组件（仅在已连接时显示）
                         ErrorStateView(

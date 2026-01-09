@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import SwiftUI
+import UIKit
 import StripePaymentSheet
 import StripeCore
 
@@ -10,6 +12,9 @@ class PaymentViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var paymentSuccess = false
     @Published var paymentResponse: PaymentResponse?
+    @Published var availableCoupons: [UserCoupon] = []
+    @Published var isLoadingCoupons = false
+    @Published var selectedCoupon: UserCoupon?
     
     private let apiService: APIService
     private let taskId: Int
@@ -17,6 +22,7 @@ class PaymentViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     private var initialClientSecret: String?
+    private var isCreatingPaymentIntent = false // 防止重复创建支付意图
     
     init(taskId: Int, amount: Double, clientSecret: String? = nil, apiService: APIService? = nil) {
         self.taskId = taskId
@@ -29,24 +35,109 @@ class PaymentViewModel: ObservableObject {
         
         // 如果提供了 client_secret，直接创建 Payment Sheet
         if let clientSecret = clientSecret {
-            setupPaymentSheet(with: clientSecret)
+            setupPaymentElement(with: clientSecret)
         }
+        
+        // 加载可用优惠券
+        loadAvailableCoupons()
     }
     
-    private func setupPaymentSheet(with clientSecret: String) {
+    /// 加载可用优惠券（状态为 active 的优惠券）
+    func loadAvailableCoupons() {
+        isLoadingCoupons = true
+        apiService.getMyCoupons(status: "active")
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    self?.isLoadingCoupons = false
+                    if case .failure(let error) = completion {
+                        // 加载优惠券失败不影响支付流程，只记录错误
+                        Logger.warning("加载优惠券失败: \(error.localizedDescription)", category: .network)
+                    }
+                },
+                receiveValue: { [weak self] response in
+                    self?.availableCoupons = response.data
+                    self?.isLoadingCoupons = false
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    /// 选择优惠券并重新创建支付意图
+    func selectCoupon(_ coupon: UserCoupon?) {
+        selectedCoupon = coupon
+        // 重新创建支付意图，应用优惠券
+        createPaymentIntent(couponCode: coupon?.coupon.code)
+    }
+    
+    /// 移除优惠券并重新创建支付意图
+    func removeCoupon() {
+        selectedCoupon = nil
+        // 重新创建支付意图，不应用优惠券
+        createPaymentIntent()
+    }
+    
+    private func setupPaymentElement(with clientSecret: String) {
         // 配置 Payment Sheet
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = "LinkU"
         configuration.allowsDelayedPaymentMethods = true
         
-        // 创建 Payment Sheet
-        paymentSheet = PaymentSheet(
+        // 配置 Apple Pay（如果 Merchant ID 已配置）
+        if let merchantId = Constants.Stripe.applePayMerchantIdentifier {
+            configuration.applePay = .init(
+                merchantId: merchantId,
+                merchantCountryCode: "GB" // 英国，根据你的业务所在国家修改
+            )
+        }
+        
+        // 自定义外观以匹配应用设计
+        var appearance = PaymentSheet.Appearance()
+        
+        // 颜色配置
+        appearance.colors.primary = UIColor(AppColors.primary)
+        appearance.colors.background = UIColor(AppColors.cardBackground)
+        appearance.colors.componentBackground = UIColor(AppColors.surface)
+        appearance.colors.componentBorder = UIColor(AppColors.separator)
+        appearance.colors.componentDivider = UIColor(AppColors.separator)
+        appearance.colors.text = UIColor(AppColors.textPrimary)
+        appearance.colors.textSecondary = UIColor(AppColors.textSecondary)
+        appearance.colors.danger = UIColor(AppColors.error)
+        
+        // 字体配置
+        appearance.font.base = UIFont.preferredFont(forTextStyle: .body)
+        appearance.font.sizeScaleFactor = 1.0
+        
+        // 边框和圆角
+        appearance.cornerRadius = AppCornerRadius.medium
+        appearance.borderWidth = 1.0
+        
+        // 阴影
+        appearance.shadow = PaymentSheet.Appearance.Shadow(
+            color: UIColor.black.withAlphaComponent(0.05),
+            opacity: 1.0,
+            offset: CGSize(width: 0, height: 2),
+            radius: 4
+        )
+        
+        configuration.appearance = appearance
+        
+        // 创建 Payment Sheet（弹出式）
+        let paymentSheet = PaymentSheet(
             paymentIntentClientSecret: clientSecret,
             configuration: configuration
         )
+        
+        self.paymentSheet = paymentSheet
     }
     
     func createPaymentIntent(paymentMethod: String = "stripe", pointsAmount: Double? = nil, couponCode: String? = nil) {
+        // 防止重复请求
+        guard !isCreatingPaymentIntent else {
+            Logger.debug("支付意图创建中，跳过重复请求", category: .network)
+            return
+        }
+        
+        isCreatingPaymentIntent = true
         isLoading = true
         errorMessage = nil
         
@@ -58,8 +149,10 @@ class PaymentViewModel: ObservableObject {
             requestBody["points_amount"] = Int(pointsAmount * 100) // 转换为便士
         }
         
-        if let couponCode = couponCode {
-            requestBody["coupon_code"] = couponCode.uppercased()
+        // 优先使用传入的 couponCode，否则使用已选择的优惠券
+        let finalCouponCode = couponCode ?? selectedCoupon?.coupon.code
+        if let finalCouponCode = finalCouponCode {
+            requestBody["coupon_code"] = finalCouponCode.uppercased()
         }
         
         // 调用 API - 使用 Combine Publisher
@@ -71,12 +164,14 @@ class PaymentViewModel: ObservableObject {
         )
         .sink(
             receiveCompletion: { [weak self] completion in
+                self?.isCreatingPaymentIntent = false
                 self?.isLoading = false
                 if case .failure(let error) = completion {
                     self?.errorMessage = error.userFriendlyMessage
                 }
             },
             receiveValue: { [weak self] response in
+                self?.isCreatingPaymentIntent = false
                 self?.handlePaymentResponse(response)
             }
         )
@@ -99,9 +194,31 @@ class PaymentViewModel: ObservableObject {
             return
         }
         
-        setupPaymentSheet(with: clientSecret)
+        setupPaymentElement(with: clientSecret)
     }
     
+    // 不再需要 confirmPayment 方法，直接使用 PaymentSheet.present()
+    
+    private func formatPaymentError(_ error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        // 常见错误的中文化
+        if errorDescription.contains("card") && errorDescription.contains("declined") {
+            return "银行卡被拒绝，请尝试其他支付方式"
+        } else if errorDescription.contains("insufficient") {
+            return "余额不足，请检查您的账户"
+        } else if errorDescription.contains("expired") {
+            return "支付方式已过期，请更新"
+        } else if errorDescription.contains("network") || errorDescription.contains("connection") {
+            return "网络连接失败，请检查网络后重试"
+        } else if errorDescription.contains("timeout") {
+            return "请求超时，请重试"
+        } else {
+            return "支付失败: \(error.localizedDescription)"
+        }
+    }
+    
+    // 保留用于兼容性（如果需要弹出式 Payment Sheet）
     func handlePaymentResult(_ result: PaymentSheetResult) {
         switch result {
         case .completed:
@@ -155,4 +272,3 @@ struct PaymentResponse: Codable {
         case note
     }
 }
-

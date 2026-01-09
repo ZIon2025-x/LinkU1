@@ -245,6 +245,12 @@ class LeaderboardDetailViewModel: ObservableObject {
     }
     
     func loadLeaderboard(leaderboardId: Int, preserveLeaderboard: Bool = false) {
+        // 防止重复请求
+        guard !isLoading else {
+            Logger.debug("排行榜详情请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
         // 如果 preserveLeaderboard 为 true，在加载时保持现有 leaderboard，避免视图消失
         if !preserveLeaderboard {
             isLoading = true
@@ -288,8 +294,8 @@ class LeaderboardDetailViewModel: ObservableObject {
                     self.sortItemsByDistanceAndViewCount(items: response.items)
                 } else {
                     // 直接使用后端返回的排序结果
-                    DispatchQueue.main.async {
-                        self.items = response.items
+                    DispatchQueue.main.async { [weak self] in
+                        self?.items = response.items
                     }
                 }
             })

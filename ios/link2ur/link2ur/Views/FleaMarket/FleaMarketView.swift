@@ -13,7 +13,7 @@ struct FleaMarketView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.items.isEmpty {
-                ProgressView()
+                LoadingView()
             } else if viewModel.items.isEmpty {
             EmptyStateView(
                 icon: "cart.fill",

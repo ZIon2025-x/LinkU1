@@ -27,6 +27,8 @@ struct TaskDetailView: View {
     @State private var showApplySuccessAlert = false
     @State private var showPaymentView = false
     @State private var paymentClientSecret: String?
+    @State private var approvedApplicantName: String?
+    @State private var shareImageCancellable: AnyCancellable?
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -109,6 +111,7 @@ struct TaskDetailView: View {
                     showLogin: $showLogin,
                     showPaymentView: $showPaymentView,
                     paymentClientSecret: $paymentClientSecret,
+                    approvedApplicantName: $approvedApplicantName,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -141,23 +144,7 @@ struct TaskDetailView: View {
             .toolbarBackground(AppColors.background, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button {
-                            showShareSheet = true
-                        } label: {
-                            Label(LocalizationKey.taskDetailShare.localized, systemImage: "square.and.arrow.up")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 20))
-                            .foregroundColor(AppColors.primary)
-                            .frame(width: 44, height: 44) // 增大点击区域
-                            .contentShape(Rectangle())
-                    }
-                    .menuStyle(.automatic)
-                    .menuIndicator(.hidden)
-                }
+                toolbarContent
             }
             .enableSwipeBack()
             .fullScreenCover(isPresented: $showFullScreenImage) {
@@ -170,27 +157,10 @@ struct TaskDetailView: View {
                 reviewModal
             }
             .sheet(isPresented: $showShareSheet) {
-                if let task = viewModel.task {
-                    TaskShareSheet(task: task, taskId: taskId, shareImage: shareImage)
-                        .presentationDetents([.medium, .large])
-                        .presentationDragIndicator(.visible)
-                }
+                shareSheetContent
             }
             .sheet(isPresented: $showPaymentView) {
-                if let task = viewModel.task {
-                    // 计算需要支付的金额（任务金额，后端会计算最终金额，包括积分和优惠券抵扣）
-                    let paymentAmount = task.agreedReward ?? task.baseReward ?? task.reward
-                    StripePaymentView(taskId: taskId, amount: paymentAmount, clientSecret: paymentClientSecret)
-                        .onDisappear {
-                            // 清除 client_secret
-                            paymentClientSecret = nil
-                            // 支付完成后刷新任务详情
-                            // 由于后端通过 webhook 异步更新状态，需要延迟刷新以确保状态已更新
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                viewModel.loadTask(taskId: taskId)
-                            }
-                        }
-                }
+                paymentSheetContent
             }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
@@ -239,6 +209,68 @@ struct TaskDetailView: View {
             .onChange(of: appState.currentUser?.id) { userId in
                 print("🔍 [TaskDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
             }
+    }
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Menu {
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Label(LocalizationKey.taskDetailShare.localized, systemImage: "square.and.arrow.up")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(AppColors.primary)
+                    .frame(width: 44, height: 44) // 增大点击区域
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.automatic)
+            .menuIndicator(.hidden)
+        }
+    }
+    
+    @ViewBuilder
+    private var shareSheetContent: some View {
+        if let task = viewModel.task {
+            TaskShareSheet(task: task, taskId: taskId, shareImage: shareImage)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+    
+    @ViewBuilder
+    private var paymentSheetContent: some View {
+        if let task = viewModel.task {
+            // 计算需要支付的金额（任务金额，后端会计算最终金额，包括积分和优惠券抵扣）
+            let paymentAmount = task.agreedReward ?? task.baseReward ?? task.reward
+            let applicantName = approvedApplicantName ?? viewModel.applications.first { $0.status == "approved" }?.applicantName
+            
+            StripePaymentView(
+                taskId: taskId,
+                amount: paymentAmount,
+                clientSecret: paymentClientSecret,
+                taskTitle: task.title,
+                applicantName: applicantName,
+                onPaymentSuccess: {
+                    // 支付成功后的回调
+                    // 清除 client_secret 和申请者名字
+                    paymentClientSecret = nil
+                    approvedApplicantName = nil
+                    // 关闭支付视图
+                    showPaymentView = false
+                    // 刷新任务详情（带重试机制）
+                    refreshTaskWithRetry(attempt: 1, maxAttempts: 5)
+                }
+            )
+            .onDisappear {
+                // 清除 client_secret 和申请者名字（如果还没清除）
+                paymentClientSecret = nil
+                approvedApplicantName = nil
+            }
+        }
     }
     
     @ViewBuilder
@@ -356,16 +388,53 @@ struct TaskDetailView: View {
         guard let task = viewModel.task,
               let images = task.images,
               let firstImage = images.first,
-              !firstImage.isEmpty,
-              let url = URL(string: firstImage) else { return }
+              !firstImage.isEmpty else { return }
         
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
+        // 取消之前的加载
+        shareImageCancellable?.cancel()
+        
+        // 使用 ImageCache 加载图片，支持缓存和优化
+        shareImageCancellable = ImageCache.shared.loadImage(from: firstImage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { image in
                     self.shareImage = image
                 }
+            )
+    }
+    
+    /// 刷新任务详情，带重试机制
+    /// 由于 webhook 是异步处理的，可能需要多次尝试才能获取到更新后的状态
+    private func refreshTaskWithRetry(attempt: Int, maxAttempts: Int) {
+        guard attempt <= maxAttempts else {
+            print("⚠️ [TaskDetailView] 刷新任务详情达到最大重试次数，停止重试")
+            return
+        }
+        
+        // 延迟时间递增：第1次1秒，第2次2秒，第3次3秒...
+        let delay = Double(attempt)
+        let currentTaskId = taskId
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            print("🔄 [TaskDetailView] 刷新任务详情 - 第 \(attempt) 次尝试")
+            self.viewModel.loadTask(taskId: currentTaskId)
+            
+            // 检查任务状态是否已更新为 in_progress
+            if let task = self.viewModel.task, task.status == .inProgress {
+                print("✅ [TaskDetailView] 任务状态已更新为 in_progress，停止重试")
+                // 同时刷新申请列表
+                self.viewModel.loadApplications(taskId: currentTaskId, currentUserId: self.appState.currentUser?.id)
+                return
             }
-        }.resume()
+            
+            // 如果还没更新，继续重试
+            if attempt < maxAttempts {
+                self.refreshTaskWithRetry(attempt: attempt + 1, maxAttempts: maxAttempts)
+            } else {
+                print("⚠️ [TaskDetailView] 任务状态仍未更新，可能 webhook 处理较慢")
+            }
+        }
     }
 }
 
@@ -610,6 +679,7 @@ struct TaskDetailContentView: View {
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
     @Binding var paymentClientSecret: String?
+    @Binding var approvedApplicantName: String?
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -652,9 +722,16 @@ struct TaskDetailContentView: View {
                             taskTitle: task.title,
                             onApprove: { applicationId in
                                 actionLoading = true
+                                // 获取申请者名字（在批准前保存）
+                                let application = viewModel.applications.first { $0.id == applicationId }
+                                let applicantName = application?.applicantName
+                                
                                 viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret in
                                     actionLoading = false
                                     if success {
+                                        // 保存申请者名字
+                                        approvedApplicantName = applicantName
+                                        
                                         // 如果返回了 client_secret，直接显示支付界面
                                         if let clientSecret = clientSecret, !clientSecret.isEmpty {
                                             // 保存 client_secret 并显示支付界面
@@ -669,9 +746,10 @@ struct TaskDetailContentView: View {
                                             // 延迟检查是否需要支付（等待任务信息更新）
                                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                                 // 检查任务是否有接受者且需要支付
+                                                // 注意：pendingConfirmation 状态不应该显示支付界面，因为任务已经支付过了
                                                 if let updatedTask = viewModel.task,
                                                    updatedTask.takerId != nil,
-                                                   (updatedTask.status == .pendingPayment || updatedTask.status == .pendingConfirmation) {
+                                                   updatedTask.status == .pendingPayment {
                                                     // 任务已接受但未支付，显示支付界面
                                                     showPaymentView = true
                                                 }
@@ -1141,9 +1219,10 @@ struct TaskActionButtonsView: View {
             // 支付按钮（发布者已接受申请且任务未支付时显示）
             // 支付条件：
             // 1. 发布者已接受申请（takerId != nil）
-            // 2. 任务状态是 pendingPayment 或 pendingConfirmation（已接受但未支付，等待支付后进入进行中状态）
+            // 2. 任务状态是 pendingPayment（已接受但未支付，等待支付后进入进行中状态）
             // 3. 任务有奖励金额需要支付
-            if isPoster && task.takerId != nil && (task.status == .pendingPayment || task.status == .pendingConfirmation) {
+            // 注意：pendingConfirmation 状态不应该显示支付按钮，因为任务已经支付过了
+            if isPoster && task.takerId != nil && task.status == .pendingPayment {
                 let hasReward = task.agreedReward != nil || task.baseReward != nil || task.reward > 0
                 
                 if hasReward {

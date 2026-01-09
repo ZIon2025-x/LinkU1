@@ -39,16 +39,7 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 // 消息列表
                 if viewModel.isLoading && viewModel.messages.isEmpty {
-                    // 加载状态
-                    VStack(spacing: AppSpacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(AppColors.primary)
-                        Text(LocalizationKey.messagesLoadingMessages.localized)
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    LoadingView(message: LocalizationKey.messagesLoadingMessages.localized)
                 } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
                     // 使用统一的错误状态组件
                     ErrorStateView(
@@ -68,8 +59,7 @@ struct ChatView: View {
                                     }) {
                                         HStack(spacing: 8) {
                                             if viewModel.isLoadingMore {
-                                                ProgressView()
-                                                    .scaleEffect(0.8)
+                                                CompactLoadingView()
                                             } else {
                                                 Image(systemName: "arrow.up.circle")
                                                     .font(.system(size: 14))
@@ -232,8 +222,8 @@ struct ChatView: View {
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.sm)
                     .background(AppColors.cardBackground)
-                    // 使用系统级键盘处理，避免约束冲突
-                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                    // 使用手动键盘避让，避免系统约束冲突
+                    // 键盘避让已通过 ScrollView 的 padding 处理（见第 107 行的 keyboardPadding）
                 }
             }
         }

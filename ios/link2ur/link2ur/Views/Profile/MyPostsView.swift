@@ -207,15 +207,9 @@ struct CategoryContentView: View {
     }
     
     var body: some View {
-        let _ = print("🔍 [CategoryContentView] body 渲染 - category: \(category), items.count: \(items.count), 时间: \(Date())")
         Group {
             if isLoading && items.isEmpty {
-                VStack {
-                    Spacer()
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Spacer()
-                }
+                LoadingView()
             } else if items.isEmpty {
                 EmptyStateView(
                     icon: category.icon,
@@ -232,9 +226,6 @@ struct CategoryContentView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                             .id(item.id) // 确保稳定的id，优化视图复用
-                            .onAppear {
-                                print("🔍 [MyPostsView] 商品卡片出现: \(item.id), 分类: \(category)")
-                            }
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)

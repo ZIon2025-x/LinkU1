@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 // 用户任务申请记录（用于"我的任务"页面的待处理申请标签页）
-struct UserTaskApplication: Decodable, Identifiable {
+struct UserTaskApplication: Codable, Identifiable {
     let id: Int
     let taskId: Int
     let taskTitle: String
@@ -76,13 +76,27 @@ enum TaskTab: String, CaseIterable {
     }
 }
 
+// 任务更新通知
+extension Notification.Name {
+    static let taskStatusUpdated = Notification.Name("taskStatusUpdated")
+    static let taskUpdated = Notification.Name("taskUpdated")
+}
+
 class MyTasksViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
+    private let cacheManager = CacheManager.shared
+    private let reachability = Reachability.shared
     
     @Published var tasks: [Task] = []
     @Published var isLoading = false
+    @Published var isLoadingCompletedTasks = false // 单独跟踪已完成任务的加载状态
     @Published var errorMessage: String?
     @Published var applications: [UserTaskApplication] = [] // 申请记录
+    @Published var isOffline = false // 网络状态
+    
+    // 缓存统计
+    private var cacheHits = 0
+    private var cacheMisses = 0
     
     var filterType: TaskFilterType = .all
     var statusFilter: TaskStatusFilter = .all
@@ -93,13 +107,76 @@ class MyTasksViewModel: ObservableObject {
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     
+    // 缓存键（统一使用 all，因为"全部"标签页包含所有任务）
+    private var cacheKey: String {
+        guard let userId = currentUserId else { return "my_tasks_all" }
+        // 使用统一的缓存键，因为"全部"标签页包含所有状态的任务
+        // 其他标签页只是过滤显示，不需要单独的缓存
+        return "my_tasks_\(userId)_all"
+    }
+    
+    private var applicationsCacheKey: String {
+        guard let userId = currentUserId else { return "my_applications" }
+        return "my_applications_\(userId)"
+    }
+    
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+        setupObservers()
     }
     
     deinit {
         cancellables.removeAll()
+        NotificationCenter.default.removeObserver(self)
     }
+    
+    // 设置观察者
+    private func setupObservers() {
+        // 监听网络状态变化
+        reachability.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isConnected in
+                self?.isOffline = !isConnected
+                if isConnected {
+                    // 网络恢复时，后台刷新数据
+                    self?.refreshIfNeeded()
+                }
+            }
+            .store(in: &cancellables)
+        
+        // 监听任务状态更新通知
+        NotificationCenter.default.publisher(for: .taskStatusUpdated)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                if let task = notification.object as? Task {
+                    self?.updateTask(task)
+                }
+            }
+            .store(in: &cancellables)
+        
+        // 监听任务更新通知
+        NotificationCenter.default.publisher(for: .taskUpdated)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                if let task = notification.object as? Task {
+                    self?.updateTask(task)
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    // 网络恢复时刷新数据（如果需要）
+    private func refreshIfNeeded() {
+        // 如果数据为空或超过5分钟，刷新
+        if tasks.isEmpty {
+            loadTasks(forceRefresh: false)
+        } else if let lastUpdate = lastUpdateTime, Date().timeIntervalSince(lastUpdate) > 300 {
+            loadTasks(forceRefresh: false)
+        }
+    }
+    
+    // 记录最后更新时间
+    private var lastUpdateTime: Date?
     
     // 缓存统计数据，避免重复计算
     private var cachedStats: (total: Int, posted: Int, taken: Int, completed: Int, pending: Int)?
@@ -231,7 +308,12 @@ class MyTasksViewModel: ObservableObject {
         return filtered
     }
     
-    func loadTasks() {
+    func loadTasks(forceRefresh: Bool = false) {
+        // 如果不强制刷新，先尝试从缓存加载
+        if !forceRefresh {
+            loadTasksFromCache()
+        }
+        
         // 防止重复请求
         guard !isLoading else {
             Logger.warning("我的任务请求已在进行中，跳过重复请求", category: .api)
@@ -240,6 +322,12 @@ class MyTasksViewModel: ObservableObject {
         
         isLoading = true
         errorMessage = nil
+        
+        // 如果当前标签页是"全部"，并行加载所有状态的任务
+        if currentTab == .all {
+            loadAllTasksInParallel(forceRefresh: forceRefresh)
+            return
+        }
         
         var endpoint = "/api/users/my-tasks?limit=100"
         
@@ -254,12 +342,15 @@ class MyTasksViewModel: ObservableObject {
         }
         
         // 根据状态筛选添加参数
-        if let statusValue = statusFilter.apiValue {
+        // 如果当前标签页是"已完成"，明确请求已完成的任务
+        if currentTab == .completed {
+            endpoint += "&status=completed"
+        } else if let statusValue = statusFilter.apiValue {
             endpoint += "&status=\(statusValue)"
         }
         
         // 加载任务列表
-        apiService.request([Task].self, endpoint, method: "GET")
+        let mainRequest = apiService.request([Task].self, endpoint, method: "GET")
             .sink(receiveCompletion: { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let error) = completion {
@@ -316,23 +407,425 @@ class MyTasksViewModel: ObservableObject {
                 }
                 
                 self.tasks = filteredTasks
+                self.lastUpdateTime = Date()
+                
                 // 清除缓存，触发重新计算
                 self.cachedStats = nil
                 self.cachedFilteredTasks = nil
+                
+                // 保存到缓存
+                self.saveTasksToCache()
+            })
+        
+        mainRequest.store(in: &cancellables)
+        
+        // 并行加载申请记录（失败不影响任务列表显示）
+        loadApplications()
+    }
+    
+    // 从缓存加载任务（公开方法，供 View 调用）
+    func loadTasksFromCache() {
+        // 加载任务缓存
+        if let cachedTasks: [Task] = cacheManager.load([Task].self, forKey: cacheKey) {
+            if !cachedTasks.isEmpty {
+                self.tasks = cachedTasks
+                self.cachedStats = nil
+                self.cachedFilteredTasks = nil
+                cacheHits += 1
+                Logger.debug("✅ 缓存命中：从缓存加载了 \(cachedTasks.count) 条任务", category: .cache)
+                return
+            }
+        }
+        cacheMisses += 1
+        
+        // 加载申请记录缓存
+        if let cachedApplications: [UserTaskApplication] = cacheManager.load([UserTaskApplication].self, forKey: applicationsCacheKey) {
+            if !cachedApplications.isEmpty {
+                self.applications = cachedApplications
+                Logger.debug("从缓存加载了 \(cachedApplications.count) 条申请记录", category: .cache)
+            }
+        }
+    }
+    
+    // 获取缓存统计信息
+    var cacheStats: (hits: Int, misses: Int, hitRate: Double) {
+        let total = cacheHits + cacheMisses
+        let hitRate = total > 0 ? Double(cacheHits) / Double(total) : 0.0
+        return (cacheHits, cacheMisses, hitRate)
+    }
+    
+    // 保存任务到缓存
+    private func saveTasksToCache() {
+        // 只缓存最近的任务，避免内存占用过大（最多缓存200条）
+        let tasksToCache = Array(tasks.prefix(200))
+        if !tasksToCache.isEmpty {
+            do {
+                try cacheManager.setDiskCache(tasksToCache, forKey: cacheKey, expiration: 300) // 5分钟过期
+                Logger.debug("已缓存 \(tasksToCache.count) 条任务", category: .cache)
+            } catch {
+                Logger.error("缓存保存失败: \(error.localizedDescription)", category: .cache)
+            }
+        }
+        
+        if !applications.isEmpty {
+            do {
+                try cacheManager.setDiskCache(applications, forKey: applicationsCacheKey, expiration: 300) // 5分钟过期
+                Logger.debug("已缓存 \(applications.count) 条申请记录", category: .cache)
+            } catch {
+                Logger.error("申请记录缓存保存失败: \(error.localizedDescription)", category: .cache)
+            }
+        }
+    }
+    
+    // 清除缓存（当任务状态在其他地方更新时调用）
+    func clearCache() {
+        cacheManager.clearCache(forKey: cacheKey)
+        cacheManager.clearCache(forKey: applicationsCacheKey)
+        Logger.debug("已清除我的任务缓存", category: .cache)
+    }
+    
+    // 更新单个任务（当任务状态在其他页面更新时调用）
+    func updateTask(_ updatedTask: Task) {
+        if let index = tasks.firstIndex(where: { $0.id == updatedTask.id }) {
+            tasks[index] = updatedTask
+            cachedStats = nil
+            cachedFilteredTasks = nil
+            lastUpdateTime = Date()
+            // 更新缓存
+            saveTasksToCache()
+            Logger.debug("已更新任务 #\(updatedTask.id) 的状态为 \(updatedTask.status.rawValue)", category: .cache)
+        } else {
+            // 如果任务不在列表中，可能是新任务，尝试添加到列表
+            // 检查是否与当前用户相关
+            if let userId = currentUserId {
+                let isUserRelated = (updatedTask.posterId != nil && String(updatedTask.posterId!) == userId) ||
+                                   (updatedTask.takerId != nil && String(updatedTask.takerId!) == userId)
+                if isUserRelated {
+                    tasks.append(updatedTask)
+                    tasks.sort { $0.createdAt > $1.createdAt }
+                    cachedStats = nil
+                    cachedFilteredTasks = nil
+                    saveTasksToCache()
+                    Logger.debug("已添加新任务 #\(updatedTask.id) 到列表", category: .cache)
+                }
+            }
+        }
+    }
+    
+    // 并行加载所有状态的任务（用于"全部"标签页）
+    private func loadAllTasksInParallel(forceRefresh: Bool = false) {
+        guard let userId = currentUserId else {
+            isLoading = false
+            return
+        }
+        
+        let group = DispatchGroup()
+        var allTasks: [Task] = []
+        var completedTasks: [Task] = []
+        var hasError = false
+        let lock = NSLock() // 保护共享数据
+        
+        // 1. 加载非已完成的任务（从 /api/users/my-tasks）
+        group.enter()
+        var endpoint = "/api/users/my-tasks?limit=100"
+        switch filterType {
+        case .posted:
+            endpoint += "&role=poster"
+        case .accepted:
+            endpoint += "&role=taker"
+        case .all:
+            break
+        }
+        
+        apiService.request([Task].self, endpoint, method: "GET")
+            .sink(receiveCompletion: { completion in
+                defer { group.leave() }
+                if case .failure(let error) = completion {
+                    ErrorHandler.shared.handle(error, context: "加载我的任务")
+                    hasError = true
+                }
+            }, receiveValue: { tasks in
+                lock.lock()
+                // 过滤与用户相关的任务，并排除已完成的任务（已完成的任务会从另一个API加载）
+                let userTasks = tasks.filter { task in
+                    // 先检查是否与用户相关
+                    let isUserRelated = (task.posterId != nil && String(task.posterId!) == userId) ||
+                                       (task.takerId != nil && String(task.takerId!) == userId)
+                    // 排除已完成的任务（已完成的任务会从另一个API加载）
+                    return isUserRelated && task.status != .completed
+                }
+                allTasks.append(contentsOf: userTasks)
+                lock.unlock()
             })
             .store(in: &cancellables)
         
-        // 并行加载申请记录（失败不影响任务列表显示）
+        // 2. 并行加载已完成的任务
+        group.enter()
+        loadCompletedTasksForAllTab { tasks in
+            lock.lock()
+            completedTasks = tasks
+            lock.unlock()
+            group.leave()
+        }
+        
+        // 3. 等待所有请求完成，然后一次性合并显示
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            // 合并所有任务，去重
+            var mergedTasks: [Task] = []
+            var seenTaskIds = Set<Int>()
+            
+            // 先添加非已完成的任务
+            for task in allTasks {
+                if !seenTaskIds.contains(task.id) {
+                    mergedTasks.append(task)
+                    seenTaskIds.insert(task.id)
+                }
+            }
+            
+            // 再添加已完成的任务
+            for task in completedTasks {
+                if !seenTaskIds.contains(task.id) {
+                    mergedTasks.append(task)
+                    seenTaskIds.insert(task.id)
+                } else {
+                    // 如果任务已存在，更新它（已完成的任务信息可能更完整）
+                    if let index = mergedTasks.firstIndex(where: { $0.id == task.id }) {
+                        mergedTasks[index] = task
+                    }
+                }
+            }
+            
+            // 按创建时间倒序排序
+            mergedTasks.sort { $0.createdAt > $1.createdAt }
+            
+            // 一次性设置所有任务，避免分步显示
+            self.tasks = mergedTasks
+            self.cachedStats = nil
+            self.cachedFilteredTasks = nil
+            self.lastUpdateTime = Date()
+            
+            // 保存到缓存
+            self.saveTasksToCache()
+            
+            if hasError && mergedTasks.isEmpty {
+                self.errorMessage = "加载任务失败，请稍后重试"
+            }
+        }
+    }
+    
+    // 加载已完成的任务（用于"全部"标签页）
+    private func loadCompletedTasksForAllTab(completion: @escaping ([Task]) -> Void) {
+        guard let userId = currentUserId else {
+            completion([])
+            return
+        }
+        
+        let endpoint = "/api/messages/tasks?limit=100&offset=0"
+        
+        apiService.request(TaskChatListResponse.self, endpoint, method: "GET")
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.error("加载已完成任务失败: \(error.localizedDescription)", category: .api)
+                    completion([])
+                }
+            }, receiveValue: { [weak self] response in
+                guard let self = self else {
+                    completion([])
+                    return
+                }
+                
+                // 筛选已完成的任务
+                let completedTaskChats = response.taskChats.filter { taskChat in
+                    if let status = taskChat.taskStatus ?? taskChat.status {
+                        return status.lowercased() == "completed"
+                    }
+                    return false
+                }
+                
+                // 筛选与用户相关的任务
+                let userRelatedTasks = completedTaskChats.filter { taskChat in
+                    if let posterId = taskChat.posterId, String(posterId) == userId {
+                        return true
+                    }
+                    if let takerId = taskChat.takerId, String(takerId) == userId {
+                        return true
+                    }
+                    return false
+                }
+                
+                let completedTaskIds = Array(Set(userRelatedTasks.map { $0.id }))
+                
+                if completedTaskIds.isEmpty {
+                    completion([])
+                    return
+                }
+                
+                // 加载任务详情
+                self.loadTaskDetailsForIds(completedTaskIds) { loadedTasks in
+                    completion(loadedTasks)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    // 加载申请记录
+    private func loadApplications() {
         apiService.request([UserTaskApplication].self, "/api/my-applications", method: "GET")
             .sink(receiveCompletion: { _ in
                 // 静默处理错误，不影响主任务列表
             }, receiveValue: { [weak self] applications in
                 guard let self = self else { return }
                 self.applications = applications
-                // 清除缓存，触发重新计算
-                self.cachedStats = nil
+                // 保存申请记录到缓存
+                self.saveTasksToCache()
             })
             .store(in: &cancellables)
+    }
+    
+    // 加载已完成的任务（公开方法，供View调用）
+    // 使用 /api/messages/tasks API 来获取已完成的任务，因为这个API会返回所有状态的任务
+    func loadCompletedTasks() {
+        loadCompletedTasksIfNeeded()
+    }
+    
+    // 加载已完成的任务（如果需要）
+    // 使用 /api/messages/tasks API 来获取已完成的任务，因为这个API会返回所有状态的任务
+    private func loadCompletedTasksIfNeeded() {
+        guard let userId = currentUserId else { return }
+        
+        // 使用消息页面的API来获取已完成的任务
+        let endpoint = "/api/messages/tasks?limit=100&offset=0"
+        
+        apiService.request(TaskChatListResponse.self, endpoint, method: "GET")
+            .sink(receiveCompletion: { [weak self] completion in
+                DispatchQueue.main.async {
+                    self?.isLoadingCompletedTasks = false
+                }
+                if case .failure(let error) = completion {
+                    Logger.error("加载已完成任务失败: \(error.localizedDescription)", category: .api)
+                }
+            }, receiveValue: { [weak self] response in
+                guard let self = self else { return }
+                
+                // 从 TaskChatItem 中筛选已完成的任务
+                let completedTaskChats = response.taskChats.filter { taskChat in
+                    // 检查任务状态是否为 completed
+                    if let status = taskChat.taskStatus ?? taskChat.status {
+                        return status.lowercased() == "completed"
+                    }
+                    return false
+                }
+                
+                // 检查是否是当前用户相关的任务
+                let userRelatedCompletedTasks = completedTaskChats.filter { taskChat in
+                    if let posterId = taskChat.posterId, String(posterId) == userId {
+                        return true
+                    }
+                    if let takerId = taskChat.takerId, String(takerId) == userId {
+                        return true
+                    }
+                    return false
+                }
+                
+                // 获取已完成任务的ID列表
+                let completedTaskIds = Set(userRelatedCompletedTasks.map { $0.id })
+                
+                // 检查现有任务列表中是否已有这些任务
+                let existingTaskIds = Set(self.tasks.map { $0.id })
+                let missingTaskIds = completedTaskIds.subtracting(existingTaskIds)
+                
+                if !missingTaskIds.isEmpty {
+                    // 为每个缺失的任务ID请求完整的任务详情
+                    self.loadTaskDetailsForIds(Array(missingTaskIds))
+                } else {
+                    // 如果没有缺失的任务，直接设置加载完成
+                    DispatchQueue.main.async {
+                        self.isLoadingCompletedTasks = false
+                    }
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    // 根据任务ID列表加载任务详情（优化版：批量加载，减少并发请求）
+    private func loadTaskDetailsForIds(_ taskIds: [Int], completion: (([Task]) -> Void)? = nil) {
+        guard !taskIds.isEmpty else {
+            completion?([])
+            return
+        }
+        
+        // 限制并发数量，避免同时发起过多请求（最多5个并发）
+        let batchSize = 5
+        let batches = taskIds.chunked(into: batchSize)
+        var allLoadedTasks: [Task] = []
+        var completedBatches = 0
+        let totalBatches = batches.count
+        let lock = NSLock()
+        let group = DispatchGroup()
+        
+        for batch in batches {
+            group.enter()
+            var batchTasks: [Task] = []
+            var batchCompleted = 0
+            let batchCount = batch.count
+            
+            for taskId in batch {
+                apiService.request(Task.self, "/api/tasks/\(taskId)", method: "GET")
+                    .sink(receiveCompletion: { result in
+                        lock.lock()
+                        batchCompleted += 1
+                        let isBatchComplete = batchCompleted == batchCount
+                        lock.unlock()
+                        
+                        if isBatchComplete {
+                            lock.lock()
+                            allLoadedTasks.append(contentsOf: batchTasks)
+                            completedBatches += 1
+                            let allComplete = completedBatches == totalBatches
+                            lock.unlock()
+                            
+                            group.leave()
+                            
+                            // 当所有批次完成时
+                            if allComplete {
+                                DispatchQueue.main.async { [weak self] in
+                                    guard let self = self else { return }
+                                    
+                                    if let completion = completion {
+                                        // 如果有回调，直接返回结果
+                                        completion(allLoadedTasks)
+                                    } else {
+                                        // 否则合并到现有任务列表中
+                                        guard !allLoadedTasks.isEmpty else { return }
+                                        
+                                        let existingTaskIds = Set(self.tasks.map { $0.id })
+                                        let newTasks = allLoadedTasks.filter { !existingTaskIds.contains($0.id) }
+                                        
+                                        if !newTasks.isEmpty {
+                                            self.tasks.append(contentsOf: newTasks)
+                                            // 清除缓存，触发重新计算
+                                            self.cachedStats = nil
+                                            self.cachedFilteredTasks = nil
+                                            self.isLoadingCompletedTasks = false
+                                            // 更新缓存
+                                            self.saveTasksToCache()
+                                            Logger.debug("已加载 \(newTasks.count) 个已完成的任务详情", category: .api)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }, receiveValue: { task in
+                        lock.lock()
+                        batchTasks.append(task)
+                        lock.unlock()
+                    })
+                    .store(in: &cancellables)
+            }
+        }
     }
 }
 

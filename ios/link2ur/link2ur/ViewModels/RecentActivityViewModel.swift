@@ -167,7 +167,8 @@ class RecentActivityViewModel: ObservableObject {
                 let (postsResponse, itemsResponse, leaderboardsResponse) = otherData
                 
                 // 优化：将数据处理移到后台线程，避免阻塞主线程
-                DispatchQueue.global(qos: .userInitiated).async {
+                DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                    guard let self = self else { return }
                     // 检查是否还有更多数据
                     let hasMoreForum = postsResponse.posts.count >= self.fetchSize
                     let hasMoreFlea = itemsResponse.items.count >= self.fetchSize
@@ -209,7 +210,8 @@ class RecentActivityViewModel: ObservableObject {
                     let sortedActivities = updatedActivities.sorted { $0.createdAt > $1.createdAt }
                     
                     // 回到主线程更新UI
-                    DispatchQueue.main.async {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
                         self.hasMoreFromServer = hasMoreForum || hasMoreFlea || hasMoreLeaderboard
                         
                         // 增加页码
