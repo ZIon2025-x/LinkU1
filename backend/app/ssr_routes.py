@@ -20,48 +20,70 @@ logger = logging.getLogger(__name__)
 
 ssr_router = APIRouter(tags=["SSR"])
 
-# 社交媒体爬虫和AI爬虫的 User-Agent 特征
-CRAWLER_PATTERNS = [
-    # 社交媒体爬虫
-    r'MicroMessenger',      # 微信
+# 不执行JavaScript的爬虫（需要SSR）
+# 这些爬虫通常只读取HTML，不执行JavaScript
+NON_JS_CRAWLERS = [
+    r'MicroMessenger',      # 微信（不执行JS）
     r'WeChat',              # 微信
     r'Weixin',              # 微信
-    r'facebookexternalhit', # Facebook
+    r'facebookexternalhit', # Facebook（不执行JS）
     r'Facebot',             # Facebook
-    r'Twitterbot',          # Twitter
-    r'LinkedInBot',         # LinkedIn
-    r'Slackbot',            # Slack
-    r'TelegramBot',         # Telegram
-    r'WhatsApp',            # WhatsApp
-    r'Discordbot',          # Discord
-    r'Pinterest',           # Pinterest
-    # 搜索引擎爬虫
-    r'Googlebot',           # Google
-    r'bingbot',             # Bing
-    r'Baiduspider',         # 百度
-    r'YandexBot',           # Yandex
-    r'DuckDuckBot',         # DuckDuckGo
-    # AI 爬虫 - 让AI能够访问和推荐网站
-    r'GPTBot',              # ChatGPT (OpenAI)
-    r'anthropic-ai',        # Claude (Anthropic)
-    r'Google-Extended',     # Google Bard / Gemini
-    r'PerplexityBot',       # Perplexity AI
-    r'CCBot',               # Common Crawl (被很多AI使用)
-    r'Applebot-Extended',   # Apple AI
-    r'FacebookBot',         # Meta AI
-    r'Bytespider',          # 字节跳动AI
-    r'Diffbot',             # Diffbot (AI数据提取)
-    r'BingPreview',         # Bing AI预览
+    r'Twitterbot',          # Twitter（不执行JS）
+    r'LinkedInBot',         # LinkedIn（不执行JS）
+    r'Slackbot',            # Slack（不执行JS）
+    r'TelegramBot',         # Telegram（不执行JS）
+    r'WhatsApp',            # WhatsApp（不执行JS）
+    r'Discordbot',          # Discord（不执行JS）
+    r'Pinterest',           # Pinterest（不执行JS）
+    r'Baiduspider',         # 百度（部分不执行JS）
+    r'YandexBot',           # Yandex（部分不执行JS）
+    r'CCBot',               # Common Crawl（不执行JS）
 ]
 
-def is_crawler(user_agent: str) -> bool:
-    """检测是否是社交媒体爬虫"""
+# 执行JavaScript的现代爬虫（让它们直接执行JS，不需要SSR）
+# 这些爬虫可以执行JavaScript，直接访问前端SPA即可
+JS_CAPABLE_CRAWLERS = [
+    r'Googlebot',           # Google（执行JS）
+    r'bingbot',             # Bing（执行JS）
+    r'GPTBot',              # ChatGPT (OpenAI) - 执行JS
+    r'anthropic-ai',        # Claude (Anthropic) - 执行JS
+    r'Google-Extended',     # Google Bard / Gemini - 执行JS
+    r'PerplexityBot',       # Perplexity AI - 执行JS
+    r'Applebot-Extended',   # Apple AI - 执行JS
+    r'FacebookBot',         # Meta AI - 执行JS
+    r'Bytespider',          # 字节跳动AI - 执行JS
+    r'Diffbot',             # Diffbot - 执行JS
+    r'BingPreview',         # Bing AI预览 - 执行JS
+    r'DuckDuckBot',         # DuckDuckGo - 执行JS
+]
+
+def is_non_js_crawler(user_agent: str) -> bool:
+    """
+    检测是否是不执行JavaScript的爬虫（需要SSR）
+    这些爬虫只读取HTML，不执行JavaScript，所以需要服务端渲染
+    """
     if not user_agent:
         return False
-    for pattern in CRAWLER_PATTERNS:
+    for pattern in NON_JS_CRAWLERS:
         if re.search(pattern, user_agent, re.IGNORECASE):
             return True
     return False
+
+def is_js_capable_crawler(user_agent: str) -> bool:
+    """
+    检测是否是能执行JavaScript的现代爬虫
+    这些爬虫可以执行JavaScript，直接访问前端SPA即可，不需要SSR
+    """
+    if not user_agent:
+        return False
+    for pattern in JS_CAPABLE_CRAWLERS:
+        if re.search(pattern, user_agent, re.IGNORECASE):
+            return True
+    return False
+
+def is_crawler(user_agent: str) -> bool:
+    """检测是否是任何类型的爬虫（兼容旧代码）"""
+    return is_non_js_crawler(user_agent) or is_js_capable_crawler(user_agent)
 
 
 def generate_html(
@@ -69,9 +91,14 @@ def generate_html(
     description: str,
     image_url: str,
     page_url: str,
-    site_name: str = "Link²Ur"
+    site_name: str = "Link²Ur",
+    body_content: str = "",
+    structured_data: Optional[dict] = None
 ) -> str:
-    """生成包含 Open Graph meta 标签的 HTML"""
+    """
+    生成包含完整内容的 HTML（供AI爬虫和搜索引擎使用）
+    不仅包含meta标签，还包含实际页面内容
+    """
     
     # 确保图片 URL 是完整的
     if image_url and not image_url.startswith('http'):
@@ -86,13 +113,33 @@ def generate_html(
     if not image_url:
         image_url = 'https://www.link2ur.com/static/favicon.png'
     
-    # 截断描述
-    if description and len(description) > 200:
-        description = description[:200] + '...'
+    # 清理描述（用于meta标签）
+    meta_description = description
+    if meta_description and len(meta_description) > 200:
+        meta_description = meta_description[:200] + '...'
     
-    # 清理 HTML 标签
-    if description:
-        description = re.sub(r'<[^>]+>', '', description)
+    # 清理 HTML 标签（用于meta标签）
+    if meta_description:
+        meta_description = re.sub(r'<[^>]+>', '', meta_description)
+    
+    # 生成结构化数据JSON
+    structured_data_json = ""
+    if structured_data:
+        import json
+        structured_data_json = f'<script type="application/ld+json">{json.dumps(structured_data, ensure_ascii=False)}</script>'
+    
+    # 如果没有提供body内容，生成默认内容
+    if not body_content:
+        body_content = f'''
+    <main>
+        <article>
+            <h1>{title}</h1>
+            <div class="content">
+                <p>{description[:500] if len(description) > 500 else description}</p>
+            </div>
+            <p><a href="{page_url}">查看完整内容</a></p>
+        </article>
+    </main>'''
     
     html = f'''<!DOCTYPE html>
 <html lang="zh">
@@ -102,57 +149,231 @@ def generate_html(
     <title>{title}</title>
     
     <!-- 基本 Meta -->
-    <meta name="description" content="{description}">
+    <meta name="description" content="{meta_description}">
+    <meta name="robots" content="index, follow">
+    
+    <!-- AI友好的meta标签 -->
+    <meta name="summary" content="{meta_description}">
+    <meta name="content-type" content="website">
+    <meta name="geo.region" content="GB">
+    <meta name="geo.placename" content="United Kingdom">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{page_url}">
     <meta property="og:title" content="{title}">
-    <meta property="og:description" content="{description}">
+    <meta property="og:description" content="{meta_description}">
     <meta property="og:image" content="{image_url}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:site_name" content="{site_name}">
+    <meta property="og:locale" content="zh_CN">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="{page_url}">
     <meta name="twitter:title" content="{title}">
-    <meta name="twitter:description" content="{description}">
+    <meta name="twitter:description" content="{meta_description}">
     <meta name="twitter:image" content="{image_url}">
     
     <!-- 微信分享 -->
     <meta name="weixin:title" content="{title}">
-    <meta name="weixin:description" content="{description}">
+    <meta name="weixin:description" content="{meta_description}">
     <meta name="weixin:image" content="{image_url}">
     
-    <!-- 重定向到实际页面（对于普通浏览器） -->
-    <meta http-equiv="refresh" content="0; url={page_url}">
+    <!-- 结构化数据 -->
+    {structured_data_json}
+    
+    <!-- 对于普通浏览器，延迟重定向（给爬虫时间抓取内容） -->
+    <script>
+        // 检测是否是爬虫（不执行JavaScript的爬虫不会执行这段代码）
+        setTimeout(function() {{
+            // 只有普通浏览器才会执行重定向
+            if (document.referrer === '' || !navigator.userAgent.match(/bot|crawler|spider|crawling/i)) {{
+                window.location.href = "{page_url}";
+            }}
+        }}, 100);
+    </script>
     
     <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        * {{
             margin: 0;
-            background: #f5f5f5;
+            padding: 0;
+            box-sizing: border-box;
         }}
-        .loading {{
-            text-align: center;
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        header {{
+            border-bottom: 2px solid #1890ff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        h1 {{
+            font-size: 2em;
+            color: #1890ff;
+            margin-bottom: 10px;
+        }}
+        main {{
+            margin: 20px 0;
+        }}
+        article {{
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .content {{
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin: 20px 0;
+        }}
+        .content p {{
+            margin-bottom: 15px;
+        }}
+        .meta-info {{
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
             color: #666;
+            font-size: 0.9em;
+        }}
+        a {{
+            color: #1890ff;
+            text-decoration: none;
+        }}
+        a:hover {{
+            text-decoration: underline;
+        }}
+        img {{
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 20px 0;
+        }}
+        footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #999;
+            font-size: 0.9em;
         }}
     </style>
 </head>
 <body>
-    <div class="loading">
-        <p>正在跳转到 {site_name}...</p>
-        <p><a href="{page_url}">点击这里</a>如果没有自动跳转</p>
-    </div>
+    <header>
+        <h1>{site_name}</h1>
+        <p>专业任务发布与技能匹配平台</p>
+    </header>
+    {body_content}
+    <footer>
+        <p>访问 <a href="{page_url}">{page_url}</a> 查看完整内容和交互功能</p>
+        <p>需要JavaScript支持以获得最佳体验</p>
+    </footer>
+    <noscript>
+        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p><strong>提示：</strong>此页面需要JavaScript才能完整显示。以下是页面主要内容：</p>
+            <h2>{title}</h2>
+            <p>{description[:1000] if len(description) > 1000 else description}</p>
+            <p><a href="{page_url}">点击访问完整页面</a></p>
+        </div>
+    </noscript>
 </body>
 </html>'''
     return html
+
+
+# ==================== 主页 SSR ====================
+
+@ssr_router.get("/")
+@ssr_router.get("/zh")
+@ssr_router.get("/en")
+async def ssr_home(request: Request):
+    """
+    主页 SSR
+    为AI爬虫提供主页的完整内容
+    """
+    user_agent = request.headers.get("User-Agent", "")
+    
+    # 如果不是爬虫，重定向到前端
+    if not is_crawler(user_agent):
+        path = request.url.path
+        if path == "/zh" or path.startswith("/zh/"):
+            return RedirectResponse(url="https://www.link2ur.com/zh", status_code=302)
+        elif path == "/en" or path.startswith("/en/"):
+            return RedirectResponse(url="https://www.link2ur.com/en", status_code=302)
+        else:
+            return RedirectResponse(url="https://www.link2ur.com/zh", status_code=302)
+    
+    # 构建主页内容
+    title = "Link²Ur - 专业任务发布与技能匹配平台"
+    description = "Link²Ur 是一个专业的任务发布与技能匹配平台，连接有技能的人与需要帮助的人。我们提供任务发布、技能匹配、跳蚤市场、社区论坛等功能，主要服务于英国的学生和专业人士。"
+    
+    body_content = '''
+    <main>
+        <article>
+            <h1>欢迎来到 Link²Ur</h1>
+            <div class="content">
+                <p><strong>Link²Ur</strong> 是一个专业的任务发布与技能匹配平台，连接有技能的人与需要帮助的人。</p>
+                
+                <h2>主要功能</h2>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li><strong>任务发布：</strong>发布任务，找到有技能的人来完成。支持一次性项目和持续职位。</li>
+                    <li><strong>技能匹配：</strong>连接任务发布者与技能服务提供者，让价值创造更高效。</li>
+                    <li><strong>跳蚤市场：</strong>在社区中买卖物品，支持二手交易。</li>
+                    <li><strong>社区论坛：</strong>参与讨论，分享经验，获取帮助。</li>
+                    <li><strong>自定义榜单：</strong>创建和参与各种主题的排行榜。</li>
+                </ul>
+                
+                <h2>服务对象</h2>
+                <p>主要服务于英国的学生和专业人士，包括：</p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>在英国的学生</li>
+                    <li>寻求自由职业的专业人士</li>
+                    <li>需要服务的人群</li>
+                    <li>社区成员</li>
+                </ul>
+                
+                <h2>服务地区</h2>
+                <p>主要服务地区：<strong>英国（United Kingdom）</strong></p>
+                <p>主要城市：伦敦、伯明翰、曼彻斯特、爱丁堡、格拉斯哥等</p>
+            </div>
+            <div class="meta-info">
+                <p><a href="https://www.link2ur.com">访问 Link²Ur 开始使用</a></p>
+            </div>
+        </article>
+    </main>'''
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Link²Ur",
+        "url": "https://www.link2ur.com",
+        "description": description,
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.link2ur.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    
+    return HTMLResponse(
+        content=generate_html(
+            title=title,
+            description=description,
+            image_url="https://www.link2ur.com/static/favicon.png",
+            page_url="https://www.link2ur.com",
+            body_content=body_content,
+            structured_data=structured_data
+        )
+    )
 
 
 # ==================== 任务详情页 SSR ====================
@@ -172,9 +393,19 @@ async def ssr_task_detail(
     """
     user_agent = request.headers.get("User-Agent", "")
     
-    # 如果不是爬虫，重定向到前端
-    if not is_crawler(user_agent):
-        # 提取语言前缀
+    # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
+    if is_js_capable_crawler(user_agent):
+        path = request.url.path
+        if path.startswith("/zh/"):
+            frontend_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
+        elif path.startswith("/en/"):
+            frontend_url = f"https://www.link2ur.com/en/tasks/{task_id}"
+        else:
+            frontend_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
+        return RedirectResponse(url=frontend_url, status_code=302)
+    
+    # 如果不是不执行JS的爬虫，重定向到前端
+    if not is_non_js_crawler(user_agent):
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
@@ -207,6 +438,9 @@ async def ssr_task_detail(
         title = f"{task.title} - Link²Ur任务平台"
         description = task.description or "在 Link²Ur 查看任务详情"
         
+        # 清理描述中的HTML标签（用于显示）
+        clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
+        
         # 获取任务图片
         image_url = ""
         if task.images and len(task.images) > 0:
@@ -214,14 +448,82 @@ async def ssr_task_detail(
         
         page_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
         
+        # 获取奖励信息
+        reward = task.agreed_reward or task.base_reward or task.reward or 0
+        reward_text = f"£{reward}" if reward > 0 else "面议"
+        
+        # 构建完整的HTML内容
+        body_content = f'''
+    <main>
+        <article>
+            <h1>{task.title}</h1>
+            {f'<img src="{image_url}" alt="{task.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <div class="content">
+                <p><strong>任务类型：</strong>{task.task_type or "未指定"}</p>
+                <p><strong>分类：</strong>{task.category or "未分类"}</p>
+                <p><strong>位置：</strong>{task.location or "未指定"}</p>
+                <p><strong>奖励：</strong>{reward_text}</p>
+                {f'<p><strong>截止时间：</strong>{task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "未指定"}</p>' if task.deadline else ''}
+                <div style="margin-top: 30px;">
+                    <h2>任务描述</h2>
+                    <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                </div>
+            </div>
+            <div class="meta-info">
+                <p>任务ID: {task.id} | 创建时间: {task.created_at.strftime("%Y-%m-%d") if task.created_at else "未知"}</p>
+                <p><a href="{page_url}">查看完整任务详情并申请</a></p>
+            </div>
+        </article>
+    </main>'''
+        
+        # 构建结构化数据
+        structured_data = {
+            "@context": "https://schema.org",
+            "@type": "JobPosting",
+            "title": task.title,
+            "description": clean_description[:1000],
+            "identifier": {
+                "@type": "PropertyValue",
+                "name": "Link²Ur",
+                "value": f"task-{task.id}"
+            },
+            "datePosted": task.created_at.isoformat() if task.created_at else None,
+            "validThrough": task.deadline.isoformat() if task.deadline else None,
+            "employmentType": "CONTRACTOR" if task.task_type == "one-off" else "PART_TIME",
+            "hiringOrganization": {
+                "@type": "Organization",
+                "name": "Link²Ur",
+                "sameAs": "https://www.link2ur.com"
+            },
+            "jobLocation": {
+                "@type": "Place",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": task.location or "London",
+                    "addressCountry": "GB"
+                }
+            },
+            "baseSalary": {
+                "@type": "MonetaryAmount",
+                "currency": "GBP",
+                "value": {
+                    "@type": "QuantitativeValue",
+                    "value": reward,
+                    "unitText": "ONE_TIME" if task.task_type == "one-off" else "HOUR"
+                }
+            } if reward > 0 else None
+        }
+        
         logger.info(f"SSR 任务详情: task_id={task_id}, title={task.title}, image={image_url}")
         
         return HTMLResponse(
             content=generate_html(
                 title=title,
-                description=description,
+                description=clean_description,
                 image_url=image_url,
-                page_url=page_url
+                page_url=page_url,
+                body_content=body_content,
+                structured_data=structured_data
             )
         )
         
@@ -254,8 +556,19 @@ async def ssr_leaderboard_detail(
     """
     user_agent = request.headers.get("User-Agent", "")
     
-    # 如果不是爬虫，重定向到前端
-    if not is_crawler(user_agent):
+    # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
+    if is_js_capable_crawler(user_agent):
+        path = request.url.path
+        if path.startswith("/zh/"):
+            frontend_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+        elif path.startswith("/en/"):
+            frontend_url = f"https://www.link2ur.com/en/leaderboard/custom/{leaderboard_id}"
+        else:
+            frontend_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+        return RedirectResponse(url=frontend_url, status_code=302)
+    
+    # 如果不是不执行JS的爬虫，重定向到前端
+    if not is_non_js_crawler(user_agent):
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
@@ -286,17 +599,37 @@ async def ssr_leaderboard_detail(
         # 构建分享信息
         title = f"{leaderboard.name} - Link²Ur榜单"
         description = leaderboard.description or f"来 Link²Ur 看看这个排行榜，共有 {leaderboard.item_count} 个竞品"
+        clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
         image_url = leaderboard.cover_image or ""
         page_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
+        
+        # 构建完整的HTML内容
+        body_content = f'''
+    <main>
+        <article>
+            <h1>{leaderboard.name}</h1>
+            {f'<img src="{image_url}" alt="{leaderboard.name}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <div class="content">
+                <p><strong>榜单描述：</strong></p>
+                <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                <p><strong>项目数量：</strong>{leaderboard.item_count or 0}</p>
+            </div>
+            <div class="meta-info">
+                <p>榜单ID: {leaderboard.id} | 创建时间: {leaderboard.created_at.strftime("%Y-%m-%d") if leaderboard.created_at else "未知"}</p>
+                <p><a href="{page_url}">查看完整榜单并参与投票</a></p>
+            </div>
+        </article>
+    </main>'''
         
         logger.info(f"SSR 排行榜详情: id={leaderboard_id}, name={leaderboard.name}, image={image_url}")
         
         return HTMLResponse(
             content=generate_html(
                 title=title,
-                description=description,
+                description=clean_description,
                 image_url=image_url,
-                page_url=page_url
+                page_url=page_url,
+                body_content=body_content
             )
         )
         
@@ -327,7 +660,19 @@ async def ssr_forum_post_detail(
     """
     user_agent = request.headers.get("User-Agent", "")
     
-    if not is_crawler(user_agent):
+    # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
+    if is_js_capable_crawler(user_agent):
+        path = request.url.path
+        if path.startswith("/zh/"):
+            frontend_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
+        elif path.startswith("/en/"):
+            frontend_url = f"https://www.link2ur.com/en/forum/post/{post_id}"
+        else:
+            frontend_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
+        return RedirectResponse(url=frontend_url, status_code=302)
+    
+    # 如果不是不执行JS的爬虫，重定向到前端
+    if not is_non_js_crawler(user_agent):
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
@@ -356,7 +701,7 @@ async def ssr_forum_post_detail(
         
         title = f"{post.title} - Link²Ur论坛"
         # 清理 HTML 内容
-        description = re.sub(r'<[^>]+>', '', post.content or "")
+        clean_description = re.sub(r'<[^>]+>', '', post.content or "")
         
         # 尝试从内容中提取第一张图片
         image_url = ""
@@ -366,12 +711,29 @@ async def ssr_forum_post_detail(
         
         page_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
         
+        # 构建完整的HTML内容
+        body_content = f'''
+    <main>
+        <article>
+            <h1>{post.title}</h1>
+            {f'<img src="{image_url}" alt="{post.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <div class="content">
+                <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+            </div>
+            <div class="meta-info">
+                <p>帖子ID: {post.id} | 创建时间: {post.created_at.strftime("%Y-%m-%d") if post.created_at else "未知"}</p>
+                <p><a href="{page_url}">查看完整帖子并参与讨论</a></p>
+            </div>
+        </article>
+    </main>'''
+        
         return HTMLResponse(
             content=generate_html(
                 title=title,
-                description=description,
+                description=clean_description,
                 image_url=image_url,
-                page_url=page_url
+                page_url=page_url,
+                body_content=body_content
             )
         )
         
