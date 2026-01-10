@@ -1622,6 +1622,21 @@ async def websocket_chat(
                         logger.info(
                             f"Notification created for user {msg['receiver_id']}"
                         )
+                        
+                        # 发送推送通知
+                        try:
+                            from app.push_notification_service import send_push_notification
+                            send_push_notification(
+                                db=db,
+                                user_id=msg["receiver_id"],
+                                title="新消息",
+                                body=notification_content,
+                                notification_type="message",
+                                data={"sender_id": user_id}
+                            )
+                        except Exception as e:
+                            logger.error(f"发送私信推送通知失败: {e}")
+                            # 推送通知失败不影响主流程
                     else:
                         logger.info(
                             f"Notification already exists for user {msg['receiver_id']}"

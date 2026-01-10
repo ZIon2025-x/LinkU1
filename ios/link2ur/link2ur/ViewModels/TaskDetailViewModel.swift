@@ -60,9 +60,15 @@ class TaskDetailViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] task in
-                self?.task = task
-                // 发送任务更新通知
-                NotificationCenter.default.post(name: .taskUpdated, object: task)
+                DispatchQueue.main.async {
+                    self?.task = task
+                    // 发送任务更新通知，让其他页面（如"我的任务"）也更新
+                    NotificationCenter.default.post(name: .taskUpdated, object: task)
+                    // 如果任务状态变为已完成，也发送状态更新通知
+                    if task.status == .completed {
+                        NotificationCenter.default.post(name: .taskStatusUpdated, object: task)
+                    }
+                }
             })
             .store(in: &cancellables)
     }
@@ -199,13 +205,17 @@ class TaskDetailViewModel: ObservableObject {
                     completion(false)
                 } else {
                     completion(true)
-                    // 重新加载任务以获取最新状态
+                    // 立即重新加载任务以获取最新状态
+                    DispatchQueue.main.async {
+                        self?.loadTask(taskId: taskId)
+                    }
+                }
+            }, receiveValue: { [weak self] response in
+                completion(true)
+                // 立即重新加载任务以获取最新状态
+                DispatchQueue.main.async {
                     self?.loadTask(taskId: taskId)
                 }
-            }, receiveValue: { [weak self] _ in
-                completion(true)
-                // 重新加载任务以获取最新状态
-                self?.loadTask(taskId: taskId)
             })
             .store(in: &cancellables)
     }

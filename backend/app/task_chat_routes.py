@@ -1626,6 +1626,28 @@ async def reject_application(
             )
             db.add(new_notification)
             await db.commit()
+            
+            # 发送推送通知
+            try:
+                from app.push_notification_service import send_push_notification
+                from app.database import SessionLocal
+                
+                # 创建同步数据库会话用于推送通知
+                sync_db = SessionLocal()
+                try:
+                    send_push_notification(
+                        db=sync_db,
+                        user_id=application.applicant_id,
+                        title="您的申请已被拒绝",
+                        body=content,
+                        notification_type="application_rejected",
+                        data={"task_id": task_id, "application_id": application_id}
+                    )
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                logger.error(f"发送申请拒绝推送通知失败: {e}")
+                # 推送通知失败不影响主流程
         except Exception as e:
             logger.error(f"发送拒绝申请通知失败: {e}")
             # 通知失败不影响主流程
@@ -1741,6 +1763,28 @@ async def withdraw_application(
             )
             db.add(new_notification)
             await db.commit()
+            
+            # 发送推送通知
+            try:
+                from app.push_notification_service import send_push_notification
+                from app.database import SessionLocal
+                
+                # 创建同步数据库会话用于推送通知
+                sync_db = SessionLocal()
+                try:
+                    send_push_notification(
+                        db=sync_db,
+                        user_id=task.poster_id,
+                        title="有申请者撤回了申请",
+                        body=content,
+                        notification_type="application_withdrawn",
+                        data={"task_id": task_id, "application_id": application_id}
+                    )
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                logger.error(f"发送申请撤回推送通知失败: {e}")
+                # 推送通知失败不影响主流程
         except Exception as e:
             logger.error(f"发送撤回申请通知失败: {e}")
             # 通知失败不影响主流程
@@ -2281,6 +2325,31 @@ async def respond_negotiation(
                 )
                 db.add(new_notification)
                 # 注意：通知会在下面的 await db.commit() 中一起提交
+                
+                # 发送推送通知
+                try:
+                    from app.push_notification_service import send_push_notification
+                    from app.database import SessionLocal
+                    
+                    # 创建同步数据库会话用于推送通知
+                    sync_db = SessionLocal()
+                    try:
+                        send_push_notification(
+                            db=sync_db,
+                            user_id=task.poster_id,
+                            title="申请者已拒绝您的议价",
+                            body=f"申请者已拒绝您对任务「{task.title}」的议价",
+                            notification_type="negotiation_rejected",
+                            data={
+                                "task_id": task_id,
+                                "application_id": application_id
+                            }
+                        )
+                    finally:
+                        sync_db.close()
+                except Exception as e:
+                    logger.error(f"发送议价拒绝推送通知失败: {e}")
+                    # 推送通知失败不影响主流程
             except Exception as e:
                 logger.error(f"发送拒绝议价通知失败: {e}")
                 # 通知失败不影响主流程
@@ -2479,6 +2548,33 @@ async def send_application_message(
             db.add(new_notification)
             await db.flush()
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            from app.database import SessionLocal
+            
+            # 创建同步数据库会话用于推送通知
+            sync_db = SessionLocal()
+            try:
+                title = "新的留言" if notification_type == "application_message" else "新的议价提议"
+                send_push_notification(
+                    db=sync_db,
+                    user_id=application.applicant_id,
+                    title=title,
+                    body=content,
+                    notification_type=notification_type,
+                    data={
+                        "task_id": task_id,
+                        "application_id": application_id,
+                        "notification_id": new_notification.id
+                    }
+                )
+            finally:
+                sync_db.close()
+        except Exception as e:
+            logger.error(f"发送申请留言/议价推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         # 如果包含议价，更新token payload添加notification_id
         if request.negotiated_price is not None and token_accept:
             notification_id = new_notification.id
@@ -2637,6 +2733,32 @@ async def reply_application_message(
         db.add(reply_notification)
         
         await db.commit()
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            from app.database import SessionLocal
+            
+            # 创建同步数据库会话用于推送通知
+            sync_db = SessionLocal()
+            try:
+                send_push_notification(
+                    db=sync_db,
+                    user_id=task.poster_id,
+                    title="申请者回复了您的留言",
+                    body=content,
+                    notification_type="application_message_reply",
+                    data={
+                        "task_id": task_id,
+                        "application_id": application_id,
+                        "notification_id": request.notification_id
+                    }
+                )
+            finally:
+                sync_db.close()
+        except Exception as e:
+            logger.error(f"发送申请留言回复推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         return {
             "message": "回复已发送",

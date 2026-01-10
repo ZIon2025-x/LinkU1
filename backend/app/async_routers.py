@@ -1349,6 +1349,11 @@ async def confirm_task_completion_async(
                     # 发送通知和邮件
                     from app.task_notifications import send_task_confirmation_notification
                     from app.database import get_db
+                    from fastapi import BackgroundTasks
+                    
+                    # 确保 background_tasks 存在，如果为 None 则创建新实例
+                    if background_tasks is None:
+                        background_tasks = BackgroundTasks()
                     
                     # 创建同步数据库会话用于通知
                     sync_db = next(get_db())

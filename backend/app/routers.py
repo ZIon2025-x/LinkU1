@@ -1306,6 +1306,20 @@ def reject_task_taker(
                 f"您的任务申请 '{db_task.title}' 已被发布者拒绝，任务已重新开放",
                 current_user.id,
             )
+            
+            # 发送推送通知
+            try:
+                from app.push_notification_service import send_push_notification
+                send_push_notification(
+                    db=db,
+                    user_id=rejected_taker_id,
+                    title="任务申请被拒绝",
+                    body=f"您的任务申请 '{db_task.title}' 已被发布者拒绝，任务已重新开放",
+                    notification_type="task_rejected",
+                    data={"task_id": task_id}
+                )
+            except Exception as e:
+                logger.error(f"发送任务拒绝推送通知失败: {e}")
         except Exception as e:
             print(f"Failed to create notification: {e}")
 
@@ -1900,9 +1914,14 @@ def confirm_task_completion(
         # 系统消息发送失败不影响任务确认流程
 
     # 发送任务确认完成通知和邮件给接收者
-    if task.taker_id and background_tasks:
+    if task.taker_id:
         try:
             from app.task_notifications import send_task_confirmation_notification
+            from fastapi import BackgroundTasks
+            
+            # 确保 background_tasks 存在，如果为 None 则创建新实例
+            if background_tasks is None:
+                background_tasks = BackgroundTasks()
             
             # 获取接收者信息
             taker = crud.get_user_by_id(db, task.taker_id)
@@ -1915,6 +1934,7 @@ def confirm_task_completion(
                 )
         except Exception as e:
             print(f"Failed to send task confirmation notification: {e}")
+            # 通知发送失败不影响任务确认流程
 
     # 自动更新相关用户的统计信息
     crud.update_user_statistics(db, task.poster_id)
@@ -3200,6 +3220,80 @@ def mark_notification_read_api(
     return crud.mark_notification_read(db, notification_id, current_user.id)
 
 
+@router.post("/users/device-token")
+def register_device_token(
+    device_token_data: dict = Body(...),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """注册或更新设备推送令牌"""
+    device_token = device_token_data.get("device_token")
+    platform = device_token_data.get("platform", "ios")
+    device_id = device_token_data.get("device_id")
+    app_version = device_token_data.get("app_version")
+    
+    if not device_token:
+        raise HTTPException(status_code=400, detail="device_token is required")
+    
+    # 查找是否已存在该设备令牌
+    existing_token = db.query(models.DeviceToken).filter(
+        models.DeviceToken.user_id == current_user.id,
+        models.DeviceToken.device_token == device_token
+    ).first()
+    
+    if existing_token:
+        # 更新现有令牌
+        existing_token.is_active = True
+        existing_token.platform = platform
+        existing_token.device_id = device_id
+        existing_token.app_version = app_version
+        existing_token.updated_at = get_utc_time()
+        existing_token.last_used_at = get_utc_time()
+        db.commit()
+        return {"message": "Device token updated", "token_id": existing_token.id}
+    else:
+        # 创建新令牌
+        new_token = models.DeviceToken(
+            user_id=current_user.id,
+            device_token=device_token,
+            platform=platform,
+            device_id=device_id,
+            app_version=app_version,
+            is_active=True,
+            last_used_at=get_utc_time()
+        )
+        db.add(new_token)
+        db.commit()
+        db.refresh(new_token)
+        return {"message": "Device token registered", "token_id": new_token.id}
+
+
+@router.delete("/users/device-token")
+def unregister_device_token(
+    device_token_data: dict = Body(...),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """注销设备推送令牌"""
+    device_token = device_token_data.get("device_token")
+    
+    if not device_token:
+        raise HTTPException(status_code=400, detail="device_token is required")
+    
+    # 查找并删除令牌
+    token = db.query(models.DeviceToken).filter(
+        models.DeviceToken.user_id == current_user.id,
+        models.DeviceToken.device_token == device_token
+    ).first()
+    
+    if token:
+        db.delete(token)
+        db.commit()
+        return {"message": "Device token unregistered"}
+    else:
+        raise HTTPException(status_code=404, detail="Device token not found")
+
+
 @router.post("/notifications/read-all")
 def mark_all_notifications_read_api(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
@@ -3965,6 +4059,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 related_id=str(task.id),  # 关联任务ID，方便前端跳转
                                 auto_commit=False  # 不自动提交，等待下面的 db.commit()
                             )
+                            
+                            # 发送推送通知
+                            try:
+                                from app.push_notification_service import send_push_notification
+                                send_push_notification(
+                                    db=db,
+                                    user_id=transfer_record.taker_id,
+                                    title="任务金已发放",
+                                    body=notification_content,
+                                    notification_type="task_reward_paid",
+                                    data={"task_id": task.id, "amount": str(transfer_record.amount)}
+                                )
+                            except Exception as e:
+                                logger.error(f"发送任务金发放推送通知失败: {e}")
+                            
                             logger.info(f"✅ [WEBHOOK] 已发送任务金发放通知给用户 {transfer_record.taker_id}")
                         except Exception as e:
                             # 通知发送失败不影响转账流程

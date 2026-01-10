@@ -146,6 +146,46 @@ public struct ContentView: View {
             timer?.invalidate()
             timer = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PushNotificationTapped"))) { notification in
+            // 处理推送通知点击
+            handlePushNotificationTap(userInfo: notification.userInfo)
+        }
+    }
+    
+    // 处理推送通知点击
+    private func handlePushNotificationTap(userInfo: [AnyHashable: Any]?) {
+        guard let userInfo = userInfo,
+              let notificationType = userInfo["type"] as? String else {
+            return
+        }
+        
+        // 根据通知类型进行跳转
+        switch notificationType {
+        case "task_application", "task_completed", "task_confirmed":
+            // 跳转到任务详情
+            if let taskIdString = userInfo["task_id"] as? String,
+               let taskId = Int(taskIdString) {
+                // TODO: 实现跳转到任务详情页
+                print("跳转到任务详情: \(taskId)")
+            }
+        case "forum_reply":
+            // 跳转到论坛帖子
+            if let postIdString = userInfo["post_id"] as? String,
+               let postId = Int(postIdString) {
+                // TODO: 实现跳转到论坛帖子详情页
+                print("跳转到论坛帖子: \(postId)")
+            }
+        case "application_message_reply":
+            // 跳转到任务聊天
+            if let taskIdString = userInfo["task_id"] as? String,
+               let taskId = Int(taskIdString) {
+                // TODO: 实现跳转到任务聊天页
+                print("跳转到任务聊天: \(taskId)")
+            }
+        default:
+            // 其他通知类型，跳转到通知列表
+            print("跳转到通知列表")
+        }
     }
     
     public init() {}

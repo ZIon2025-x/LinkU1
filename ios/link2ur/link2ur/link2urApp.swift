@@ -41,7 +41,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // 配置推送通知
         UNUserNotificationCenter.current().delegate = self
+        
+        // 请求推送通知权限
+        requestNotificationPermission()
+        
+        // 注册远程推送
+        application.registerForRemoteNotifications()
+        
         return true
+    }
+    
+    // 请求推送通知权限
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if let error = error {
+                print("推送通知权限请求失败: \(error)")
+            } else if granted {
+                print("推送通知权限已授予")
+                // 权限授予后，注册远程推送
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            } else {
+                print("推送通知权限被拒绝")
+            }
+        }
     }
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -64,5 +88,38 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("Failed to register for remote notifications: \(error)")
+    }
+    
+    // MARK: - UNUserNotificationCenterDelegate
+    
+    // 前台收到通知时的处理
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // 即使在前台也显示通知
+        completionHandler([.banner, .sound, .badge])
+    }
+    
+    // 用户点击通知时的处理
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        
+        // 处理通知点击
+        handleNotificationTap(userInfo: userInfo)
+        
+        completionHandler()
+    }
+    
+    // 处理通知点击
+    func handleNotificationTap(userInfo: [AnyHashable: Any]) {
+        // 获取通知类型和数据
+        guard let notificationType = userInfo["type"] as? String else {
+            return
+        }
+        
+        // 发送通知，让应用处理跳转
+        NotificationCenter.default.post(
+            name: NSNotification.Name("PushNotificationTapped"),
+            object: nil,
+            userInfo: userInfo
+        )
     }
 }

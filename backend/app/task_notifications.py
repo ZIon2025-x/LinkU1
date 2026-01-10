@@ -135,31 +135,47 @@ def send_task_application_notification(
         )
         print(f"DEBUG: 通知创建结果: {notification}")
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=task.poster_id,
+                title="新任务申请",
+                body=f"{applicant_name} 申请了任务「{task.title}」",
+                notification_type="task_application",
+                data={"task_id": task.id, "application_id": application_id}
+            )
+        except Exception as e:
+            logger.error(f"发送任务申请推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         # 获取发布者信息
         poster = crud.get_user_by_id(db, task.poster_id)
-        if poster and poster.email:
-            # 检查是否为临时邮箱
-            from app.email_utils import is_temp_email, notify_user_to_update_email
-            if is_temp_email(poster.email):
-                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                language = get_user_language(poster)
-                notify_user_to_update_email(db, poster.id, language)
-                logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
-            else:
-                # 根据用户语言偏好获取邮件模板
-                language = get_user_language(poster)
-                email_subject, email_body = get_task_application_email(
-                    language=language,
-                    task_title=task.title,
-                    task_description=task.description,
-                    reward=get_display_reward(task),
-                    applicant_name=applicant.name or f"用户{applicant.id}",
-                    application_message=application_message,
-                    negotiated_price=negotiated_price,
-                    currency=currency
-                )
-                background_tasks.add_task(send_email, poster.email, email_subject, email_body)
-        logger.info(f"任务申请通知已发送给发布者 {task.poster_id}")
+        # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
+        # if poster and poster.email:
+        #     # 检查是否为临时邮箱
+        #     from app.email_utils import is_temp_email, notify_user_to_update_email
+        #     if is_temp_email(poster.email):
+        #         # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        #         language = get_user_language(poster)
+        #         notify_user_to_update_email(db, poster.id, language)
+        #         logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
+        #     else:
+        #         # 根据用户语言偏好获取邮件模板
+        #         language = get_user_language(poster)
+        #         email_subject, email_body = get_task_application_email(
+        #             language=language,
+        #             task_title=task.title,
+        #             task_description=task.description,
+        #             reward=get_display_reward(task),
+        #             applicant_name=applicant.name or f"用户{applicant.id}",
+        #             application_message=application_message,
+        #             negotiated_price=negotiated_price,
+        #             currency=currency
+        #         )
+        #         background_tasks.add_task(send_email, poster.email, email_subject, email_body)
+        logger.info(f"任务申请通知已发送给发布者 {task.poster_id}（邮件发送已暂时禁用）")
         
     except Exception as e:
         logger.error(f"发送任务申请通知失败: {e}")
@@ -173,6 +189,20 @@ def send_task_approval_notification(
 ):
     """发送任务申请同意通知和邮件给接收者"""
     try:
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=applicant.id,
+                title="您的申请已被接受",
+                body=f"您的任务申请已被接受：{task.title}",
+                notification_type="application_accepted",
+                data={"task_id": task.id}
+            )
+        except Exception as e:
+            logger.error(f"发送任务申请接受推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         # 创建通知
         notification_content = f"您的任务申请已被同意！任务：{task.title}"
         
@@ -185,25 +215,26 @@ def send_task_approval_notification(
             related_id=str(task.id)
         )
         
+        # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
         # 根据用户语言偏好获取邮件模板
-        language = get_user_language(applicant)
-        email_subject, email_body = get_task_approval_email(
-            language=language,
-            task_title=task.title,
-            task_description=task.description,
-            reward=get_display_reward(task)
-        )
-        
-        if applicant.email:
-            # 检查是否为临时邮箱
-            from app.email_utils import is_temp_email, notify_user_to_update_email
-            if is_temp_email(applicant.email):
-                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                notify_user_to_update_email(db, applicant.id, language)
-                logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
-            else:
-                background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
-        logger.info(f"任务同意通知已发送给接收者 {applicant.id}")
+        # language = get_user_language(applicant)
+        # email_subject, email_body = get_task_approval_email(
+        #     language=language,
+        #     task_title=task.title,
+        #     task_description=task.description,
+        #     reward=get_display_reward(task)
+        # )
+        # 
+        # if applicant.email:
+        #     # 检查是否为临时邮箱
+        #     from app.email_utils import is_temp_email, notify_user_to_update_email
+        #     if is_temp_email(applicant.email):
+        #         # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        #         notify_user_to_update_email(db, applicant.id, language)
+        #         logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
+        #     else:
+        #         background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
+        logger.info(f"任务同意通知已发送给接收者 {applicant.id}（邮件发送已暂时禁用）")
         
     except Exception as e:
         logger.error(f"发送任务同意通知失败: {e}")
@@ -229,28 +260,29 @@ def send_task_completion_notification(
             related_id=str(task.id)
         )
         
+        # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
         # 获取发布者信息
-        poster = crud.get_user_by_id(db, task.poster_id)
-        if poster and poster.email:
-            # 检查是否为临时邮箱
-            from app.email_utils import is_temp_email, notify_user_to_update_email
-            if is_temp_email(poster.email):
-                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                language = get_user_language(poster)
-                notify_user_to_update_email(db, poster.id, language)
-                logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
-            else:
-                # 根据用户语言偏好获取邮件模板
-                language = get_user_language(poster)
-                email_subject, email_body = get_task_completion_email(
-                    language=language,
-                    task_title=task.title,
-                    task_description=task.description,
-                    reward=get_display_reward(task),
-                    taker_name=taker.name or f"用户{taker.id}"
-                )
-                background_tasks.add_task(send_email, poster.email, email_subject, email_body)
-        logger.info(f"任务完成通知已发送给发布者 {task.poster_id}")
+        # poster = crud.get_user_by_id(db, task.poster_id)
+        # if poster and poster.email:
+        #     # 检查是否为临时邮箱
+        #     from app.email_utils import is_temp_email, notify_user_to_update_email
+        #     if is_temp_email(poster.email):
+        #         # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        #         language = get_user_language(poster)
+        #         notify_user_to_update_email(db, poster.id, language)
+        #         logger.info(f"检测到发布者使用临时邮箱，已创建邮箱更新提醒通知: user_id={poster.id}")
+        #     else:
+        #         # 根据用户语言偏好获取邮件模板
+        #         language = get_user_language(poster)
+        #         email_subject, email_body = get_task_completion_email(
+        #             language=language,
+        #             task_title=task.title,
+        #             task_description=task.description,
+        #             reward=get_display_reward(task),
+        #             taker_name=taker.name or f"用户{taker.id}"
+        #         )
+        #         background_tasks.add_task(send_email, poster.email, email_subject, email_body)
+        logger.info(f"任务完成通知已发送给发布者 {task.poster_id}（邮件发送已暂时禁用）")
         
     except Exception as e:
         logger.error(f"发送任务完成通知失败: {e}")
@@ -276,25 +308,41 @@ def send_task_confirmation_notification(
             related_id=str(task.id)
         )
         
-        # 根据用户语言偏好获取邮件模板
-        language = get_user_language(taker)
-        email_subject, email_body = get_task_confirmation_email(
-            language=language,
-            task_title=task.title,
-            task_description=task.description,
-            reward=get_display_reward(task)
-        )
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=taker.id,
+                title="任务已确认完成",
+                body=f"任务已完成并确认！奖励已发放：{task.title}",
+                notification_type="task_confirmed",
+                data={"task_id": task.id}
+            )
+        except Exception as e:
+            logger.error(f"发送任务确认推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
-        if taker.email:
-            # 检查是否为临时邮箱
-            from app.email_utils import is_temp_email, notify_user_to_update_email
-            if is_temp_email(taker.email):
-                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                notify_user_to_update_email(db, taker.id, language)
-                logger.info(f"检测到接收者使用临时邮箱，已创建邮箱更新提醒通知: user_id={taker.id}")
-            else:
-                background_tasks.add_task(send_email, taker.email, email_subject, email_body)
-        logger.info(f"任务确认通知已发送给接收者 {taker.id}")
+        # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
+        # 根据用户语言偏好获取邮件模板
+        # language = get_user_language(taker)
+        # email_subject, email_body = get_task_confirmation_email(
+        #     language=language,
+        #     task_title=task.title,
+        #     task_description=task.description,
+        #     reward=get_display_reward(task)
+        # )
+        # 
+        # if taker.email:
+        #     # 检查是否为临时邮箱
+        #     from app.email_utils import is_temp_email, notify_user_to_update_email
+        #     if is_temp_email(taker.email):
+        #         # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        #         notify_user_to_update_email(db, taker.id, language)
+        #         logger.info(f"检测到接收者使用临时邮箱，已创建邮箱更新提醒通知: user_id={taker.id}")
+        #     else:
+        #         background_tasks.add_task(send_email, taker.email, email_subject, email_body)
+        logger.info(f"任务确认通知已发送给接收者 {taker.id}（邮件发送已暂时禁用）")
         
     except Exception as e:
         logger.error(f"发送任务确认通知失败: {e}")
@@ -320,25 +368,41 @@ def send_task_rejection_notification(
             related_id=str(task.id)
         )
         
-        # 根据用户语言偏好获取邮件模板
-        language = get_user_language(applicant)
-        email_subject, email_body = get_task_rejection_email(
-            language=language,
-            task_title=task.title,
-            task_description=task.description,
-            reward=get_display_reward(task)
-        )
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=applicant.id,
+                title="任务申请被拒绝",
+                body=notification_content,
+                notification_type="task_rejected",
+                data={"task_id": task.id}
+            )
+        except Exception as e:
+            logger.error(f"发送任务拒绝推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
-        if applicant.email:
-            # 检查是否为临时邮箱
-            from app.email_utils import is_temp_email, notify_user_to_update_email
-            if is_temp_email(applicant.email):
-                # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
-                notify_user_to_update_email(db, applicant.id, language)
-                logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
-            else:
-                background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
-        logger.info(f"任务拒绝通知已发送给申请者 {applicant.id}")
+        # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
+        # 根据用户语言偏好获取邮件模板
+        # language = get_user_language(applicant)
+        # email_subject, email_body = get_task_rejection_email(
+        #     language=language,
+        #     task_title=task.title,
+        #     task_description=task.description,
+        #     reward=get_display_reward(task)
+        # )
+        # 
+        # if applicant.email:
+        #     # 检查是否为临时邮箱
+        #     from app.email_utils import is_temp_email, notify_user_to_update_email
+        #     if is_temp_email(applicant.email):
+        #         # 临时邮箱无法接收邮件，创建通知提醒用户更新邮箱
+        #         notify_user_to_update_email(db, applicant.id, language)
+        #         logger.info(f"检测到申请者使用临时邮箱，已创建邮箱更新提醒通知: user_id={applicant.id}")
+        #     else:
+        #         background_tasks.add_task(send_email, applicant.email, email_subject, email_body)
+        logger.info(f"任务拒绝通知已发送给申请者 {applicant.id}（邮件发送已暂时禁用）")
         
     except Exception as e:
         logger.error(f"发送任务拒绝通知失败: {e}")

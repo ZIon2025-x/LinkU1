@@ -1048,6 +1048,20 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
         f'您的任务"{task.title}"已被取消',
         task.id,
     )
+    
+    # 发送推送通知给发布者
+    try:
+        from app.push_notification_service import send_push_notification
+        send_push_notification(
+            db=db,
+            user_id=task.poster_id,
+            title="任务已取消",
+            body=f'您的任务"{task.title}"已被取消',
+            notification_type="task_cancelled",
+            data={"task_id": task.id}
+        )
+    except Exception as e:
+        logger.error(f"发送任务取消推送通知失败（发布者）: {e}")
 
     # 如果任务有接受者，也通知接受者
     if task.taker_id and task.taker_id != task.poster_id:
@@ -1059,6 +1073,20 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
             f'您接受的任务"{task.title}"已被取消',
             task.id,
         )
+        
+        # 发送推送通知给接受者
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=task.taker_id,
+                title="任务已取消",
+                body=f'您接受的任务"{task.title}"已被取消',
+                notification_type="task_cancelled",
+                data={"task_id": task.id}
+            )
+        except Exception as e:
+            logger.error(f"发送任务取消推送通知失败（接受者）: {e}")
 
     db.commit()
     db.refresh(task)
@@ -1956,6 +1984,20 @@ def cancel_expired_tasks(db: Session):
                     task.id,
                     auto_commit=False,
                 )
+                
+                # 发送推送通知给发布者
+                try:
+                    from app.push_notification_service import send_push_notification
+                    send_push_notification(
+                        db=db,
+                        user_id=task.poster_id,
+                        title="任务自动取消",
+                        body=f'您的任务"{task.title}"因超过截止日期已自动取消',
+                        notification_type="task_cancelled",
+                        data={"task_id": task.id}
+                    )
+                except Exception as e:
+                    logger.warning(f"发送任务自动取消推送通知失败（发布者）: {e}")
 
                 # 通知所有参与者
                 for user_id in participant_user_ids:
@@ -1970,6 +2012,20 @@ def cancel_expired_tasks(db: Session):
                                 task.id,
                                 auto_commit=False,
                             )
+                            
+                            # 发送推送通知给参与者
+                            try:
+                                from app.push_notification_service import send_push_notification
+                                send_push_notification(
+                                    db=db,
+                                    user_id=user_id,
+                                    title="任务自动取消",
+                                    body=f'您申请的任务"{task.title}"因超过截止日期已自动取消',
+                                    notification_type="task_cancelled",
+                                    data={"task_id": task.id}
+                                )
+                            except Exception as e:
+                                logger.warning(f"发送任务自动取消推送通知失败（参与者 {user_id}）: {e}")
                         except Exception as e:
                             logger.warning(f"通知参与者 {user_id} 任务 {task.id} 取消时出错: {e}")
 

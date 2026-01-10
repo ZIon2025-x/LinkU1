@@ -1159,7 +1159,6 @@ class AdminReward(Base):
         ),
     )
 
-
 class AdminRewardDetail(Base):
     """管理员发放详情表"""
     __tablename__ = "admin_reward_details"
@@ -1204,6 +1203,29 @@ class DeviceFingerprint(Base):
         Index("ix_device_fingerprints_fp", fingerprint),
         Index("ix_device_fingerprints_user", user_id),
         Index("ix_device_fingerprints_risk", risk_score),
+    )
+
+
+class DeviceToken(Base):
+    """设备推送令牌表"""
+    __tablename__ = "device_tokens"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    device_token = Column(String(255), nullable=False, index=True)  # APNs 设备令牌
+    platform = Column(String(20), nullable=False, default="ios")  # ios, android
+    device_id = Column(String(255), nullable=True)  # 设备唯一标识（可选）
+    app_version = Column(String(20), nullable=True)  # 应用版本
+    is_active = Column(Boolean, default=True)  # 是否激活
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)  # 最后使用时间
+    
+    __table_args__ = (
+        Index("ix_device_tokens_user", user_id),
+        Index("ix_device_tokens_token", device_token),
+        Index("ix_device_tokens_user_active", user_id, is_active),
+        UniqueConstraint("user_id", "device_token", name="uq_user_device_token"),  # 同一用户同一设备只能有一个 token
     )
 
 

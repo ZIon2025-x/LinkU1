@@ -29,6 +29,7 @@ struct TaskDetailView: View {
     @State private var paymentClientSecret: String?
     @State private var approvedApplicantName: String?
     @State private var shareImageCancellable: AnyCancellable?
+    @State private var showConfirmCompletionSuccess = false // 确认完成成功提示
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -171,6 +172,13 @@ struct TaskDetailView: View {
                 Button(LocalizationKey.commonOk.localized) {
                     showApplySuccessAlert = false
                 }
+            }
+            .alert("任务已确认完成", isPresented: $showConfirmCompletionSuccess) {
+                Button("确定", role: .cancel) {
+                    showConfirmCompletionSuccess = false
+                }
+            } message: {
+                Text("任务状态已更新为已完成。奖励将自动转给任务接受者。")
             } message: {
                 Text(LocalizationKey.taskDetailApplicationSuccessMessage.localized)
             }
@@ -1285,9 +1293,17 @@ struct TaskActionButtonsView: View {
             if task.status == .pendingConfirmation && isPoster {
                 Button(action: {
                     actionLoading = true
+                    
                     viewModel.confirmTaskCompletion(taskId: taskId) { success in
                         actionLoading = false
                         if success {
+                            // 触觉反馈：成功
+                            HapticFeedback.success()
+                            
+                            // 显示成功提示
+                            showConfirmCompletionSuccess = true
+                            
+                            // 立即刷新任务详情以获取最新状态
                             viewModel.loadTask(taskId: taskId)
                         }
                     }
