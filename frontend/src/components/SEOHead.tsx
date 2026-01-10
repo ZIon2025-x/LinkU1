@@ -211,6 +211,18 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     // 添加微信友好的Open Graph标签
     updateMetaTag('og:site_name', 'Link²Ur', true);
     updateMetaTag('og:locale', 'zh_CN', true);
+    
+    // AI友好的额外meta标签
+    if (description) {
+      // 添加AI理解的内容摘要
+      updateMetaTag('summary', description);
+      // 添加内容类型
+      updateMetaTag('content-type', 'website');
+    }
+    
+    // 添加地理位置信息（如果页面有相关内容）
+    updateMetaTag('geo.region', 'GB');
+    updateMetaTag('geo.placename', 'United Kingdom');
 
     // 更新 hreflang 标签 - 基于当前路径生成不同语言版本的 URL
     const currentPath = location.pathname;

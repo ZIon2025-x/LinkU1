@@ -42,11 +42,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // 配置推送通知
         UNUserNotificationCenter.current().delegate = self
         
-        // 请求推送通知权限
-        requestNotificationPermission()
-        
-        // 注册远程推送
-        application.registerForRemoteNotifications()
+        // 注意：不在这里请求通知权限，而是在视频播放完成后、进入app后再请求
+        // 这样可以避免在启动视频播放时弹出权限请求对话框
         
         return true
     }

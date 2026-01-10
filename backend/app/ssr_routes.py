@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 ssr_router = APIRouter(tags=["SSR"])
 
-# 社交媒体爬虫的 User-Agent 特征
+# 社交媒体爬虫和AI爬虫的 User-Agent 特征
 CRAWLER_PATTERNS = [
+    # 社交媒体爬虫
     r'MicroMessenger',      # 微信
     r'WeChat',              # 微信
     r'Weixin',              # 微信
@@ -34,11 +35,23 @@ CRAWLER_PATTERNS = [
     r'WhatsApp',            # WhatsApp
     r'Discordbot',          # Discord
     r'Pinterest',           # Pinterest
+    # 搜索引擎爬虫
     r'Googlebot',           # Google
     r'bingbot',             # Bing
     r'Baiduspider',         # 百度
     r'YandexBot',           # Yandex
     r'DuckDuckBot',         # DuckDuckGo
+    # AI 爬虫 - 让AI能够访问和推荐网站
+    r'GPTBot',              # ChatGPT (OpenAI)
+    r'anthropic-ai',        # Claude (Anthropic)
+    r'Google-Extended',     # Google Bard / Gemini
+    r'PerplexityBot',       # Perplexity AI
+    r'CCBot',               # Common Crawl (被很多AI使用)
+    r'Applebot-Extended',   # Apple AI
+    r'FacebookBot',         # Meta AI
+    r'Bytespider',          # 字节跳动AI
+    r'Diffbot',             # Diffbot (AI数据提取)
+    r'BingPreview',         # Bing AI预览
 ]
 
 def is_crawler(user_agent: str) -> bool:

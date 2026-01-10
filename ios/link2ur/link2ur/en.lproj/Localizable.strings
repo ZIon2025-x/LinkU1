@@ -98,7 +98,7 @@
 "home.latest_activity" = "Latest Activity";
 "home.no_activity" = "No activity";
 "home.no_activity_message" = "No latest activity yet";
-"home.no_more_activity" = "No more activity";
+"home.no_more_activity" = "Above are the latest activities";
 "home.hot_events" = "Hot Events";
 "home.no_events" = "No events";
 "home.no_events_message" = "No events at the moment, stay tuned...";

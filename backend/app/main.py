@@ -259,6 +259,10 @@ app.include_router(time_validation_router, tags=["时间验证"])
 # 添加sitemap路由（不需要/api前缀，直接访问/sitemap.xml）
 app.include_router(sitemap_router, tags=["SEO"])
 
+# 添加 AI 友好路由（为AI爬虫和AI助手提供结构化数据）
+from app.ai_friendly_routes import ai_router
+app.include_router(ai_router, prefix="/api", tags=["AI友好端点"])
+
 # 添加 SSR 路由（为社交媒体爬虫提供正确的 Open Graph meta 标签）
 from app.ssr_routes import ssr_router
 app.include_router(ssr_router, tags=["SSR"])

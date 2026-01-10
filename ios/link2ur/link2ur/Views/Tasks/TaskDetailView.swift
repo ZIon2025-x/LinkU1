@@ -185,36 +185,24 @@ struct TaskDetailView: View {
                 LoginView()
             }
             .onAppear {
-                print("🔍 [TaskDetailView] onAppear - taskId: \(taskId), 时间: \(Date())")
-                print("🔍 [TaskDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
-                viewModel.loadTask(taskId: taskId)
-            }
-            .onDisappear {
-                print("🔍 [TaskDetailView] onDisappear - taskId: \(taskId), 时间: \(Date())")
-                print("🔍 [TaskDetailView] 视图消失原因追踪")
-            }
-            .onChange(of: viewModel.task?.id) { newTaskId in
-                print("🔍 [TaskDetailView] task.id 变化: \(newTaskId?.description ?? "nil"), 时间: \(Date())")
-                // 当任务加载完成或任务ID变化时，加载申请列表和评价
-                if newTaskId != nil {
-                    handleTaskChange()
-                    // 加载分享用的图片
-                    loadShareImage()
+                // 优化：只在首次加载或任务ID变化时加载
+                if viewModel.task?.id != taskId {
+                    viewModel.loadTask(taskId: taskId)
                 }
             }
-            .onChange(of: viewModel.task?.status) { newStatus in
-                print("🔍 [TaskDetailView] task.status 变化: \(newStatus?.rawValue ?? "nil"), 时间: \(Date())")
-                // 当任务状态变化时，重新加载申请列表（例如从 open 变为 inProgress）
+            .onChange(of: viewModel.task?.id) { newTaskId in
+                // 优化：只在任务ID确实变化且不为nil时处理
+                guard let newTaskId = newTaskId, newTaskId == taskId else { return }
                 handleTaskChange()
+                loadShareImage()
             }
-            .onChange(of: appState.shouldResetHomeView) { shouldReset in
-                print("🔍 [TaskDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
-            }
-            .onChange(of: appState.isAuthenticated) { isAuthenticated in
-                print("🔍 [TaskDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
-            }
-            .onChange(of: appState.currentUser?.id) { userId in
-                print("🔍 [TaskDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
+            .onChange(of: viewModel.task?.status) { newStatus in
+                // 优化：只在状态确实变化时处理
+                guard newStatus != nil else { return }
+                // 只在特定状态变化时重新加载申请列表
+                if newStatus == .open || newStatus == .inProgress {
+                    handleTaskChange()
+                }
             }
     }
     
@@ -373,22 +361,21 @@ struct TaskDetailView: View {
     }
     
     private func handleTaskChange() {
-        // 当任务加载完成后，加载申请列表和评价
+        // 优化：当任务加载完成后，加载申请列表和评价
         guard let task = viewModel.task else { return }
         
-        // 加载申请列表：
-        // 1. 如果是发布者且任务状态是 open，需要查看所有申请
-        // 2. 如果用户已登录（非发布者），需要查看自己的申请状态
-        if isPoster && task.status == .open {
-            // 发布者查看所有申请
-            viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
-        } else if appState.currentUser != nil {
-            // 非发布者查看自己的申请状态
+        // 优化：避免重复加载，检查是否已有数据
+        let shouldLoadApplications = (isPoster && task.status == .open) || 
+                                     (appState.currentUser != nil && viewModel.applications.isEmpty)
+        
+        if shouldLoadApplications {
             viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
         }
         
-        // 加载评价
-        viewModel.loadReviews(taskId: taskId)
+        // 优化：只在评价列表为空时加载
+        if viewModel.reviews.isEmpty {
+            viewModel.loadReviews(taskId: taskId)
+        }
     }
     
     private func loadShareImage() {
@@ -411,26 +398,26 @@ struct TaskDetailView: View {
             )
     }
     
-    /// 刷新任务详情，带重试机制
+    /// 刷新任务详情，带重试机制（优化版）
     /// 由于 webhook 是异步处理的，可能需要多次尝试才能获取到更新后的状态
     private func refreshTaskWithRetry(attempt: Int, maxAttempts: Int) {
         guard attempt <= maxAttempts else {
-            print("⚠️ [TaskDetailView] 刷新任务详情达到最大重试次数，停止重试")
             return
         }
         
-        // 延迟时间递增：第1次1秒，第2次2秒，第3次3秒...
-        let delay = Double(attempt)
+        // 优化：使用指数退避策略，减少不必要的请求
+        let delay = min(Double(attempt * attempt), 10.0) // 最大延迟10秒
         let currentTaskId = taskId
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            print("🔄 [TaskDetailView] 刷新任务详情 - 第 \(attempt) 次尝试")
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self = self else { return }
+            
             self.viewModel.loadTask(taskId: currentTaskId)
             
-            // 检查任务状态是否已更新为 in_progress
-            if let task = self.viewModel.task, task.status == .inProgress {
-                print("✅ [TaskDetailView] 任务状态已更新为 in_progress，停止重试")
-                // 同时刷新申请列表
+            // 检查任务状态是否已更新
+            if let task = self.viewModel.task, 
+               task.status == .inProgress || task.status == .pendingConfirmation {
+                // 状态已更新，停止重试
                 self.viewModel.loadApplications(taskId: currentTaskId, currentUserId: self.appState.currentUser?.id)
                 return
             }
@@ -438,8 +425,6 @@ struct TaskDetailView: View {
             // 如果还没更新，继续重试
             if attempt < maxAttempts {
                 self.refreshTaskWithRetry(attempt: attempt + 1, maxAttempts: maxAttempts)
-            } else {
-                print("⚠️ [TaskDetailView] 任务状态仍未更新，可能 webhook 处理较慢")
             }
         }
     }
@@ -793,6 +778,7 @@ struct TaskDetailContentView: View {
                         showCancelConfirm: $showCancelConfirm,
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
+                        showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                         taskId: taskId,
                         viewModel: viewModel
                     )
@@ -1218,6 +1204,7 @@ struct TaskActionButtonsView: View {
     @Binding var showCancelConfirm: Bool
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
+    @Binding var showConfirmCompletionSuccess: Bool
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
@@ -1295,16 +1282,18 @@ struct TaskActionButtonsView: View {
                     actionLoading = true
                     
                     viewModel.confirmTaskCompletion(taskId: taskId) { success in
-                        actionLoading = false
-                        if success {
-                            // 触觉反馈：成功
-                            HapticFeedback.success()
-                            
-                            // 显示成功提示
-                            showConfirmCompletionSuccess = true
-                            
-                            // 立即刷新任务详情以获取最新状态
-                            viewModel.loadTask(taskId: taskId)
+                        DispatchQueue.main.async {
+                            actionLoading = false
+                            if success {
+                                // 触觉反馈：成功
+                                HapticFeedback.success()
+                                
+                                // 显示成功提示
+                                showConfirmCompletionSuccess = true
+                                
+                                // 立即刷新任务详情以获取最新状态
+                                viewModel.loadTask(taskId: taskId)
+                            }
                         }
                     }
                 }) {
@@ -1751,47 +1740,75 @@ struct ApplicationItemCard: View {
                     .cornerRadius(AppCornerRadius.small)
             }
             
-            // 操作按钮
+            // 操作按钮（优化：使用图标按钮，更美观）
             if application.status == "pending" {
-                HStack(spacing: AppSpacing.sm) {
-                    Button(action: onApprove) {
-                        Text(LocalizationKey.actionsApprove.localized)
-                            .font(AppTypography.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(AppColors.success)
-                            .cornerRadius(AppCornerRadius.small)
-                    }
-                    .buttonStyle(ScaleButtonStyle())
-                    
-                    Button(action: onReject) {
-                        Text(LocalizationKey.actionsReject.localized)
-                            .font(AppTypography.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(AppColors.error)
-                            .cornerRadius(AppCornerRadius.small)
-                    }
-                    .buttonStyle(ScaleButtonStyle())
-                    
+                HStack(spacing: AppSpacing.md) {
+                    // 批准按钮 - 图标样式
                     Button(action: {
+                        HapticFeedback.success()
+                        onApprove()
+                    }) {
+                        IconStyle.icon("checkmark.circle.fill", size: 24)
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [AppColors.success, AppColors.success.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(Circle())
+                            .shadow(color: AppColors.success.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                    
+                    // 拒绝按钮 - 图标样式
+                    Button(action: {
+                        HapticFeedback.warning()
+                        onReject()
+                    }) {
+                        IconStyle.icon("xmark.circle.fill", size: 24)
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [AppColors.error, AppColors.error.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(Circle())
+                            .shadow(color: AppColors.error.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                    
+                    Spacer()
+                    
+                    // 留言按钮 - 保持文字样式，但优化设计
+                    Button(action: {
+                        HapticFeedback.light()
                         showMessageSheet = true
                     }) {
-                        Text("留言")
-                            .font(AppTypography.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(AppColors.primary)
-                            .cornerRadius(AppCornerRadius.small)
+                        HStack(spacing: 6) {
+                            IconStyle.icon("message.fill", size: 16)
+                            Text("留言")
+                                .font(AppTypography.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(AppColors.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(AppColors.primaryLight.opacity(0.3))
+                        .cornerRadius(AppCornerRadius.medium)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                .stroke(AppColors.primary.opacity(0.3), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }
+                .padding(.top, AppSpacing.xs)
             }
         }
         .padding(AppSpacing.md)
@@ -2171,5 +2188,3 @@ struct ReviewModal: View {
         }
     }
 }
-
-

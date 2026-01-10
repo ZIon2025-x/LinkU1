@@ -76,6 +76,22 @@
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
     <meta name="bingbot" content="index, follow" />
+    
+    <!-- AI爬虫友好标签 - 明确允许AI访问和索引 -->
+    <meta name="GPTBot" content="index, follow" />
+    <meta name="anthropic-ai" content="index, follow" />
+    <meta name="Google-Extended" content="index, follow" />
+    <meta name="PerplexityBot" content="index, follow" />
+    <meta name="CCBot" content="index, follow" />
+    
+    <!-- AI友好的内容描述 - 帮助AI理解网站用途 -->
+    <meta name="application-name" content="Link²Ur - Task & Service Platform" />
+    <meta name="apple-mobile-web-app-title" content="Link²Ur" />
+    
+    <!-- 地理位置信息 - 帮助AI理解服务区域 -->
+    <meta name="geo.region" content="GB" />
+    <meta name="geo.placename" content="United Kingdom" />
+    <meta name="ICBM" content="51.5074, -0.1278" />
     <meta name="msvalidate.01" content="" />
     <!-- Canonical 链接将由 CanonicalLink 组件动态添加 -->
     
@@ -341,6 +357,40 @@
       "sameAs": [
         "https://www.link2ur.com/"
       ]
+    }
+    </script>
+    
+    <!-- AI友好的结构化数据 - 帮助AI理解网站内容和功能 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Link²Ur",
+      "description": "Link²Ur is a professional task publishing and skill matching platform that connects skilled people with those who need help. Users can publish tasks, find services, buy and sell items in the flea market, and participate in community forums. Perfect for students and professionals in the UK.",
+      "url": "https://www.link2ur.com",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "GBP"
+      },
+      "featureList": [
+        "Task Publishing",
+        "Skill Matching",
+        "Flea Market",
+        "Community Forum",
+        "Student Services",
+        "UK Local Services"
+      ],
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "Students, Professionals, Service Providers"
+      },
+      "areaServed": {
+        "@type": "Country",
+        "name": "United Kingdom"
+      }
     }
     </script>
     

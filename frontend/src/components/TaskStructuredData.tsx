@@ -36,11 +36,16 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
     }
   };
 
+  // 清理描述文本，移除HTML标签，保留更多内容供AI理解
+  const cleanDescription = task.description?.replace(/<[^>]*>/g, '').trim() || '';
+  const descriptionForAI = cleanDescription.length > 1500 ? cleanDescription.slice(0, 1500) + '...' : cleanDescription;
+  
+  // 构建AI友好的结构化数据
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     "title": task.title,
-    "description": task.description?.replace(/<[^>]*>/g, '').slice(0, 1000) || '',
+    "description": descriptionForAI || `Task available on Link²Ur platform. ${task.task_type === 'one-off' ? 'One-time project' : 'Ongoing position'}.`,
     "identifier": {
       "@type": "PropertyValue",
       "name": "Link²Ur",
@@ -78,7 +83,13 @@ const TaskStructuredData: React.FC<TaskStructuredDataProps> = ({ task, language 
         "value": reward,
         "unitText": task.task_type === 'one-off' ? "ONE_TIME" : "HOUR"
       }
-    } : undefined
+    } : undefined,
+    // AI友好的额外信息
+    "workHours": task.task_type === 'one-off' ? undefined : "PART_TIME",
+    "jobLocationType": isOnline ? "TELECOMMUTE" : "ONSITE",
+    "url": `https://www.link2ur.com/${language}/tasks/${task.id}`,
+    // 添加关键词帮助AI理解任务类型
+    "keywords": task.category ? `${task.category}, ${task.task_type}, UK, ${isOnline ? 'remote' : 'local'}` : undefined
   };
 
   // 移除 undefined 字段

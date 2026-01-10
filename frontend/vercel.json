@@ -213,6 +213,10 @@
       "destination": "/robots.txt"
     },
     {
+      "source": "/.well-known/ai.txt",
+      "destination": "/.well-known/ai.txt"
+    },
+    {
       "source": "/baidu_verify_codeva-N1G3JdDSeL.html",
       "destination": "/baidu_verify_codeva-N1G3JdDSeL.html"
     },

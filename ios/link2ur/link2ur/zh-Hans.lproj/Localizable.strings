@@ -98,7 +98,7 @@
 "home.latest_activity" = "最新动态";
 "home.no_activity" = "暂无动态";
 "home.no_activity_message" = "还没有最新动态";
-"home.no_more_activity" = "没有更多动态了";
+"home.no_more_activity" = "以上为最新动态";
 "home.hot_events" = "热门活动";
 "home.no_events" = "暂无活动";
 "home.no_events_message" = "目前还没有活动，敬请期待...";
