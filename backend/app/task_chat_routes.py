@@ -2717,9 +2717,9 @@ async def reply_application_message(
                     "notification_id": request.notification_id
                 }
             )
-            except Exception as e:
-                logger.warning(f"发送申请留言回复推送通知失败: {e}")
-                # 推送通知失败不影响主流程
+        except Exception as e:
+            logger.warning(f"发送申请留言回复推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         return {
             "message": "回复已发送",
