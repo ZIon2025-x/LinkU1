@@ -3519,9 +3519,9 @@ async def create_reply(
                         "reply_id": db_reply.id
                     }
                 )
-                except Exception as e:
-                    logger.warning(f"发送论坛回复推送通知失败: {e}")
-                    # 推送通知失败不影响主流程
+            except Exception as e:
+                logger.warning(f"发送论坛回复推送通知失败: {e}")
+                # 推送通知失败不影响主流程
     
     return schemas.ForumReplyOut(
         id=db_reply.id,
