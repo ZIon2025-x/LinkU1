@@ -31,6 +31,7 @@ from app.rate_limiting import rate_limit
 from app.deps import get_current_user_secure_sync_csrf
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
+from app.push_notification_service import send_push_notification
 
 logger = logging.getLogger(__name__)
 import os
@@ -1309,7 +1310,6 @@ def reject_task_taker(
             
             # 发送推送通知
             try:
-                from app.push_notification_service import send_push_notification
                 send_push_notification(
                     db=db,
                     user_id=rejected_taker_id,
@@ -1319,7 +1319,8 @@ def reject_task_taker(
                     data={"task_id": task_id}
                 )
             except Exception as e:
-                logger.error(f"发送任务拒绝推送通知失败: {e}")
+                logger.warning(f"发送任务拒绝推送通知失败: {e}")
+                # 推送通知失败不影响主流程
         except Exception as e:
             print(f"Failed to create notification: {e}")
 
@@ -4062,7 +4063,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             
                             # 发送推送通知
                             try:
-                                from app.push_notification_service import send_push_notification
                                 send_push_notification(
                                     db=db,
                                     user_id=transfer_record.taker_id,
@@ -4072,7 +4072,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     data={"task_id": task.id, "amount": str(transfer_record.amount)}
                                 )
                             except Exception as e:
-                                logger.error(f"发送任务金发放推送通知失败: {e}")
+                                logger.warning(f"发送任务金发放推送通知失败: {e}")
+                                # 推送通知失败不影响主流程
                             
                             logger.info(f"✅ [WEBHOOK] 已发送任务金发放通知给用户 {transfer_record.taker_id}")
                         except Exception as e:
@@ -4996,6 +4997,20 @@ def admin_review_cancel_request(
                 f'您的任务 "{task.title}" 取消请求已通过审核',
                 task.id,
             )
+            
+            # 发送推送通知给请求者
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    title="取消请求已通过",
+                    body=f'您的任务 "{task.title}" 取消请求已通过审核',
+                    notification_type="cancel_request_approved",
+                    data={"task_id": task.id}
+                )
+            except Exception as e:
+                logger.warning(f"发送取消请求通过推送通知失败: {e}")
+                # 推送通知失败不影响主流程
 
             # 通知另一方（发布者或接受者）
             other_user_id = (
@@ -5012,6 +5027,20 @@ def admin_review_cancel_request(
                     f'任务 "{task.title}" 已被取消',
                     task.id,
                 )
+                
+                # 发送推送通知给另一方
+                try:
+                    send_push_notification(
+                        db=db,
+                        user_id=other_user_id,
+                        title="任务已取消",
+                        body=f'任务 "{task.title}" 已被取消',
+                        notification_type="task_cancelled",
+                        data={"task_id": task.id}
+                    )
+                except Exception as e:
+                    logger.warning(f"发送任务取消推送通知失败: {e}")
+                    # 推送通知失败不影响主流程
 
     elif review.status == "rejected":
         # 通知请求者
@@ -5025,6 +5054,20 @@ def admin_review_cancel_request(
                 f'您的任务 "{task.title}" 取消请求被拒绝，原因：{review.admin_comment or "无"}',
                 task.id,
             )
+            
+            # 发送推送通知给请求者
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    title="取消请求被拒绝",
+                    body=f'您的任务 "{task.title}" 取消请求被拒绝，原因：{review.admin_comment or "无"}',
+                    notification_type="cancel_request_rejected",
+                    data={"task_id": task.id}
+                )
+            except Exception as e:
+                logger.warning(f"发送取消请求拒绝推送通知失败: {e}")
+                # 推送通知失败不影响主流程
 
     return {"message": f"Cancel request {review.status}", "request": updated_request}
 
@@ -6062,6 +6105,20 @@ def cs_review_cancel_request(
                 f'您的任务 "{task.title}" 取消请求已通过审核',
                 task.id,
             )
+            
+            # 发送推送通知给请求者
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    title="取消请求已通过",
+                    body=f'您的任务 "{task.title}" 取消请求已通过审核',
+                    notification_type="cancel_request_approved",
+                    data={"task_id": task.id}
+                )
+            except Exception as e:
+                logger.warning(f"发送取消请求通过推送通知失败: {e}")
+                # 推送通知失败不影响主流程
 
             # 通知另一方（发布者或接受者）
             other_user_id = (
@@ -6078,6 +6135,20 @@ def cs_review_cancel_request(
                     f'任务 "{task.title}" 已被取消',
                     task.id,
                 )
+                
+                # 发送推送通知给另一方
+                try:
+                    send_push_notification(
+                        db=db,
+                        user_id=other_user_id,
+                        title="任务已取消",
+                        body=f'任务 "{task.title}" 已被取消',
+                        notification_type="task_cancelled",
+                        data={"task_id": task.id}
+                    )
+                except Exception as e:
+                    logger.warning(f"发送任务取消推送通知失败: {e}")
+                    # 推送通知失败不影响主流程
 
     elif review.status == "rejected":
         # 通知请求者
@@ -6091,6 +6162,20 @@ def cs_review_cancel_request(
                 f'您的任务 "{task.title}" 取消请求被拒绝，原因：{review.admin_comment or "无"}',
                 task.id,
             )
+            
+            # 发送推送通知给请求者
+            try:
+                send_push_notification(
+                    db=db,
+                    user_id=cancel_request.requester_id,
+                    title="取消请求被拒绝",
+                    body=f'您的任务 "{task.title}" 取消请求被拒绝，原因：{review.admin_comment or "无"}',
+                    notification_type="cancel_request_rejected",
+                    data={"task_id": task.id}
+                )
+            except Exception as e:
+                logger.warning(f"发送取消请求拒绝推送通知失败: {e}")
+                # 推送通知失败不影响主流程
 
     return {"message": f"Cancel request {review.status}", "request": updated_request}
 

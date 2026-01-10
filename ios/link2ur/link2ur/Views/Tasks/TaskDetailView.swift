@@ -113,6 +113,7 @@ struct TaskDetailView: View {
                     showPaymentView: $showPaymentView,
                     paymentClientSecret: $paymentClientSecret,
                     approvedApplicantName: $approvedApplicantName,
+                    showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -179,8 +180,6 @@ struct TaskDetailView: View {
                 }
             } message: {
                 Text("任务状态已更新为已完成。奖励将自动转给任务接受者。")
-            } message: {
-                Text(LocalizationKey.taskDetailApplicationSuccessMessage.localized)
             }
             .sheet(isPresented: $showLogin) {
                 LoginView()
@@ -688,6 +687,7 @@ struct TaskDetailContentView: View {
     @Binding var showPaymentView: Bool
     @Binding var paymentClientSecret: String?
     @Binding var approvedApplicantName: String?
+    @Binding var showConfirmCompletionSuccess: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool

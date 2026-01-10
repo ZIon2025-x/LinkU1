@@ -110,8 +110,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // 处理通知点击
     func handleNotificationTap(userInfo: [AnyHashable: Any]) {
-        // 获取通知类型和数据
-        guard let notificationType = userInfo["type"] as? String else {
+        // 检查是否有通知类型
+        guard userInfo["type"] != nil else {
             return
         }
         

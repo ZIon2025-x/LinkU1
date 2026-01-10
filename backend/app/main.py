@@ -1635,7 +1635,7 @@ async def websocket_chat(
                                 data={"sender_id": user_id}
                             )
                         except Exception as e:
-                            logger.error(f"发送私信推送通知失败: {e}")
+                            logger.warning(f"发送私信推送通知失败: {e}")
                             # 推送通知失败不影响主流程
                     else:
                         logger.info(

@@ -19,6 +19,7 @@ from app.deps import get_async_db_dependency
 from app.utils.time_utils import get_utc_time
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
+from app.push_notification_service import send_push_notification_async_safe
 
 logger = logging.getLogger(__name__)
 
@@ -3494,42 +3495,33 @@ async def create_reply(
         await db.commit()
         
         # 发送推送通知
-        try:
-            from app.push_notification_service import send_push_notification
-            from app.database import SessionLocal
+        for notification in notifications_to_create:
+            # 获取通知类型对应的标题和内容
+            if notification.notification_type == "reply_post":
+                title = "有人回复了您的帖子"
+                body = f"{current_user.name if current_user else '用户'} 回复了您的帖子"
+            elif notification.notification_type == "reply_reply":
+                title = "有人回复了您的评论"
+                body = f"{current_user.name if current_user else '用户'} 回复了您的评论"
+            else:
+                title = "新通知"
+                body = "您有新的论坛通知"
             
-            # 创建同步数据库会话用于推送通知
-            sync_db = SessionLocal()
             try:
-                for notification in notifications_to_create:
-                    # 获取通知类型对应的标题和内容
-                    if notification.notification_type == "reply_post":
-                        title = "有人回复了您的帖子"
-                        body = f"{current_user.name if current_user else '用户'} 回复了您的帖子"
-                    elif notification.notification_type == "reply_reply":
-                        title = "有人回复了您的评论"
-                        body = f"{current_user.name if current_user else '用户'} 回复了您的评论"
-                    else:
-                        title = "新通知"
-                        body = "您有新的论坛通知"
-                    
-                    send_push_notification(
-                        db=sync_db,
-                        user_id=notification.to_user_id,
-                        title=title,
-                        body=body,
-                        notification_type="forum_reply",
-                        data={
-                            "post_id": post_id,
-                            "reply_id": db_reply.id,
-                            "notification_type": notification.notification_type
-                        }
-                    )
-            finally:
-                sync_db.close()
-        except Exception as e:
-            logger.error(f"发送论坛回复推送通知失败: {e}")
-            # 推送通知失败不影响主流程
+                send_push_notification_async_safe(
+                    async_db=db,
+                    user_id=notification.to_user_id,
+                    title=title,
+                    body=body,
+                    notification_type=notification.notification_type,
+                    data={
+                        "post_id": post_id,
+                        "reply_id": db_reply.id
+                    }
+                )
+                except Exception as e:
+                    logger.warning(f"发送论坛回复推送通知失败: {e}")
+                    # 推送通知失败不影响主流程
     
     return schemas.ForumReplyOut(
         id=db_reply.id,

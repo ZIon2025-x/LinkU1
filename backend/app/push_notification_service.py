@@ -58,6 +58,9 @@ def send_push_notification(
             return False
         
         success_count = 0
+        failed_tokens = []
+        from app.utils.time_utils import get_utc_time
+        
         for device_token in device_tokens:
             try:
                 if device_token.platform == "ios":
@@ -82,16 +85,22 @@ def send_push_notification(
                     success_count += 1
                     # 更新最后使用时间
                     device_token.last_used_at = get_utc_time()
-                    db.commit()
                 else:
                     # 如果推送失败，可能是 token 失效，标记为不活跃
                     logger.warning(f"推送失败，标记设备令牌为不活跃: {device_token.id}")
-                    device_token.is_active = False
-                    db.commit()
+                    failed_tokens.append(device_token)
                     
             except Exception as e:
-                logger.error(f"发送推送通知到设备 {device_token.device_token[:20]}... 失败: {e}")
+                logger.warning(f"发送推送通知到设备 {device_token.device_token[:20]}... 失败: {e}")
+                failed_tokens.append(device_token)
                 continue
+        
+        # 批量更新失败令牌和提交（性能优化：只提交一次）
+        if failed_tokens:
+            for token in failed_tokens:
+                token.is_active = False
+        if success_count > 0 or failed_tokens:
+            db.commit()
         
         logger.info(f"向用户 {user_id} 发送推送通知: {success_count}/{len(device_tokens)} 成功")
         return success_count > 0
@@ -177,6 +186,48 @@ def send_apns_notification(
         return False
 
 
+def send_push_notification_async_safe(
+    async_db,
+    user_id: str,
+    title: str,
+    body: str,
+    notification_type: str = "general",
+    data: Optional[Dict[str, Any]] = None
+) -> bool:
+    """
+    在异步环境中安全地发送推送通知
+    自动处理同步/异步数据库会话转换
+    
+    Args:
+        async_db: 异步数据库会话（AsyncSession，实际不使用，仅为类型提示）
+        user_id: 用户ID
+        title: 通知标题
+        body: 通知内容
+        notification_type: 通知类型
+        data: 额外的通知数据
+        
+    Returns:
+        bool: 是否成功发送
+    """
+    try:
+        from app.database import SessionLocal
+        sync_db = SessionLocal()
+        try:
+            return send_push_notification(
+                db=sync_db,
+                user_id=user_id,
+                title=title,
+                body=body,
+                notification_type=notification_type,
+                data=data
+            )
+        finally:
+            sync_db.close()
+    except Exception as e:
+        logger.error(f"发送推送通知失败（异步环境）: {e}")
+        return False
+
+
 def send_batch_push_notifications(
     db: Session,
     user_ids: List[str],
@@ -188,13 +239,36 @@ def send_batch_push_notifications(
     """
     批量发送推送通知给多个用户
     
+    Args:
+        db: 数据库会话
+        user_ids: 用户ID列表
+        title: 通知标题
+        body: 通知内容
+        notification_type: 通知类型
+        data: 额外的通知数据
+        
     Returns:
         int: 成功发送的数量
     """
+    if not user_ids:
+        return 0
+    
     success_count = 0
+    failed_count = 0
+    
     for user_id in user_ids:
-        if send_push_notification(db, user_id, title, body, notification_type, data):
-            success_count += 1
+        try:
+            if send_push_notification(db, user_id, title, body, notification_type, data):
+                success_count += 1
+            else:
+                failed_count += 1
+        except Exception as e:
+            logger.warning(f"批量推送通知失败（用户 {user_id}）: {e}")
+            failed_count += 1
+    
+    if failed_count > 0:
+        logger.warning(f"批量推送通知部分失败: {success_count}/{len(user_ids)} 成功")
+    
     return success_count
 
 

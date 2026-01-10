@@ -147,7 +147,7 @@ def send_task_application_notification(
                 data={"task_id": task.id, "application_id": application_id}
             )
         except Exception as e:
-            logger.error(f"发送任务申请推送通知失败: {e}")
+            logger.warning(f"发送任务申请推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
         # 获取发布者信息
@@ -201,7 +201,7 @@ def send_task_approval_notification(
                 data={"task_id": task.id}
             )
         except Exception as e:
-            logger.error(f"发送任务申请接受推送通知失败: {e}")
+            logger.warning(f"发送任务申请接受推送通知失败: {e}")
             # 推送通知失败不影响主流程
         # 创建通知
         notification_content = f"您的任务申请已被同意！任务：{task.title}"
@@ -320,7 +320,7 @@ def send_task_confirmation_notification(
                 data={"task_id": task.id}
             )
         except Exception as e:
-            logger.error(f"发送任务确认推送通知失败: {e}")
+            logger.warning(f"发送任务确认推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
         # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
@@ -380,7 +380,7 @@ def send_task_rejection_notification(
                 data={"task_id": task.id}
             )
         except Exception as e:
-            logger.error(f"发送任务拒绝推送通知失败: {e}")
+            logger.warning(f"发送任务拒绝推送通知失败: {e}")
             # 推送通知失败不影响主流程
         
         # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
