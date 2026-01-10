@@ -32,8 +32,8 @@ struct StripeConnectPayoutsView: View {
             viewModel.loadBalance()
             viewModel.loadTransactions()
         }
-        .alert("错误", isPresented: $showError) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
             Text(errorMessage)
         }

@@ -192,7 +192,7 @@ struct StudentVerificationView: View {
                     }
                 } // end else (已登录)
             }
-            .navigationTitle("学生认证")
+            .navigationTitle(LocalizationKey.studentVerificationStudentVerification.localized)
             .navigationBarTitleDisplayMode(.large)
             .enableSwipeBack()
             .refreshable {
@@ -212,8 +212,8 @@ struct StudentVerificationView: View {
             .sheet(isPresented: $showingChangeEmailSheet) {
                 ChangeEmailView(viewModel: viewModel)
             }
-            .alert("错误", isPresented: .constant(viewModel.errorMessage != nil)) {
-                Button("确定", role: .cancel) {
+            .alert(LocalizationKey.errorError.localized, isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     viewModel.errorMessage = nil
                 }
             } message: {
@@ -422,16 +422,16 @@ struct SubmitVerificationView: View {
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("错误", isPresented: Binding(
+            .alert(LocalizationKey.errorError.localized, isPresented: Binding(
                 get: { submitError != nil },
                 set: { if !$0 { submitError = nil } }
             )) {
-                Button("确定", role: .cancel) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     submitError = nil
                 }
             } message: {
@@ -539,16 +539,16 @@ struct RenewVerificationView: View {
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("错误", isPresented: Binding(
+            .alert(LocalizationKey.errorError.localized, isPresented: Binding(
                 get: { renewError != nil },
                 set: { if !$0 { renewError = nil } }
             )) {
-                Button("确定", role: .cancel) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     renewError = nil
                 }
             } message: {
@@ -656,16 +656,16 @@ struct ChangeEmailView: View {
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("错误", isPresented: Binding(
+            .alert(LocalizationKey.errorError.localized, isPresented: Binding(
                 get: { changeError != nil },
                 set: { if !$0 { changeError = nil } }
             )) {
-                Button("确定", role: .cancel) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     changeError = nil
                 }
             } message: {

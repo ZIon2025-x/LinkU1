@@ -21,7 +21,7 @@ struct StripeConnectPaymentsView: View {
                 transactionsListView
             }
         }
-        .navigationTitle("支付记录")
+        .navigationTitle(LocalizationKey.paymentRecordsPaymentRecords.localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.loadTransactions()
@@ -29,8 +29,8 @@ struct StripeConnectPaymentsView: View {
         .refreshable {
             viewModel.loadTransactions()
         }
-        .alert("错误", isPresented: $showError) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
             Text(errorMessage)
         }
@@ -48,7 +48,7 @@ struct StripeConnectPaymentsView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("加载中...")
+            Text(LocalizationKey.paymentRecordsLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,7 +60,7 @@ struct StripeConnectPaymentsView: View {
                 .font(.system(size: 50))
                 .foregroundColor(.orange)
             
-            Text("加载失败")
+            Text(LocalizationKey.paymentRecordsLoadFailed.localized)
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
             
@@ -73,7 +73,7 @@ struct StripeConnectPaymentsView: View {
             Button(action: {
                 viewModel.loadTransactions()
             }) {
-                Text("重试")
+                Text(LocalizationKey.commonRetry.localized)
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -91,8 +91,8 @@ struct StripeConnectPaymentsView: View {
                 if viewModel.allPaymentRecords.isEmpty {
                     EmptyStateView(
                         icon: "creditcard.fill",
-                        title: "暂无支付记录",
-                        message: "您的支付记录将显示在这里"
+                        title: LocalizationKey.emptyNoPaymentRecords.localized,
+                        message: LocalizationKey.emptyNoPaymentRecordsMessage.localized
                     )
                     .padding(.top, 60)
                 } else {
@@ -174,13 +174,13 @@ struct StripeTransactionRowView: View {
     private var statusText: String {
         switch transaction.status.lowercased() {
         case "succeeded", "paid":
-            return "成功"
+            return LocalizationKey.paymentStatusSuccess.localized
         case "pending":
-            return "处理中"
+            return LocalizationKey.paymentStatusProcessing.localized
         case "failed", "canceled":
-            return "失败"
+            return LocalizationKey.paymentStatusFailed.localized
         case "reversed":
-            return "已撤销"
+            return LocalizationKey.paymentStatusCanceled.localized
         default:
             return transaction.status.capitalized
         }
@@ -469,7 +469,7 @@ struct TaskPaymentRowView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 // 任务标题或描述
-                Text(payment.task?.title ?? "任务 #\(payment.taskId)")
+                Text(payment.task?.title ?? String(format: LocalizationKey.paymentTaskNumber.localized, payment.taskId))
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -485,7 +485,7 @@ struct TaskPaymentRowView: View {
                     
                     // 支付方式
                     if let pointsUsed = payment.pointsUsed, pointsUsed > 0 {
-                        Text("积分+支付")
+                        Text(LocalizationKey.pointsPointsAndPayment.localized)
                             .font(AppTypography.caption2)
                             .foregroundColor(AppColors.textTertiary)
                     } else {
@@ -510,7 +510,7 @@ struct TaskPaymentRowView: View {
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.error)
                 
-                Text("任务付款")
+                Text(LocalizationKey.paymentStatusTaskPayment.localized)
                     .font(.system(size: 11))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -525,11 +525,11 @@ struct TaskPaymentRowView: View {
     private var statusText: String {
         switch payment.status.lowercased() {
         case "succeeded", "paid":
-            return "成功"
+            return LocalizationKey.paymentStatusSuccess.localized
         case "pending":
-            return "处理中"
+            return LocalizationKey.paymentStatusProcessing.localized
         case "failed", "canceled":
-            return "失败"
+            return LocalizationKey.paymentStatusFailed.localized
         default:
             return payment.status.capitalized
         }
@@ -553,9 +553,9 @@ struct TaskPaymentRowView: View {
         case "stripe":
             return "Stripe"
         case "points":
-            return "积分"
+            return LocalizationKey.pointsPoints.localized
         case "mixed":
-            return "混合"
+            return LocalizationKey.paymentMixed.localized
         default:
             return payment.paymentMethod.capitalized
         }

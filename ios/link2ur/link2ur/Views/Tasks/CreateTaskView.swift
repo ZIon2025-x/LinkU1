@@ -214,7 +214,7 @@ struct CreateTaskView: View {
                                 } else {
                                     IconStyle.icon("paperplane.fill", size: 18)
                                 }
-                                Text(viewModel.isLoading ? "正在发布..." : "立即发布任务")
+                                Text(viewModel.isLoading ? LocalizationKey.createTaskPublishing.localized : LocalizationKey.createTaskPublishNow.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -228,12 +228,12 @@ struct CreateTaskView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("发布任务")
+            .navigationTitle(LocalizationKey.createTaskPublishTask.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }

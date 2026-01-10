@@ -40,7 +40,7 @@ struct NotificationCenterView: View {
                         .cornerRadius(20)
                         
                         if !searchText.isEmpty {
-                            Button("搜索") {
+                            Button(LocalizationKey.commonSearch.localized) {
                                 // 执行搜索
                             }
                             .font(.system(size: 15, weight: .medium))
@@ -124,11 +124,11 @@ struct SystemMessageCard: View {
                 
                 // 中间文字
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("系统消息")
+                    Text(LocalizationKey.notificationSystemMessages.localized)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                     
-                    Text("查看全部通知消息")
+                    Text(LocalizationKey.notificationViewAllNotifications.localized)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -191,8 +191,8 @@ struct SystemMessageView: View {
             } else if viewModel.notifications.isEmpty {
                 EmptyStateView(
                     icon: "bell.fill",
-                    title: "暂无通知",
-                    message: "还没有收到任何通知消息"
+                    title: LocalizationKey.emptyNoNotifications.localized,
+                    message: LocalizationKey.emptyNoNotificationsMessage.localized
                 )
             } else {
                 ScrollView {
@@ -236,7 +236,7 @@ struct SystemMessageView: View {
                 }
             }
         }
-        .navigationTitle("系统消息")
+        .navigationTitle(LocalizationKey.notificationSystemMessages.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .refreshable {
@@ -282,13 +282,22 @@ struct SystemMessageView: View {
         }
         
         // 对于 task_application 类型，优先使用 taskId，如果没有则使用 relatedId（应该是 task_id）
-        // 但为了安全，如果 relatedId 存在且看起来合理，可以使用它
         if lowercasedType == "task_application" {
-            // 如果后端没有设置 taskId，尝试使用 relatedId（应该是 task_id）
-            // 但要注意：某些旧数据可能 relatedId 是 application_id，所以优先使用 taskId
             return notification.relatedId
-        } else if lowercasedType.contains("task") {
-            // 其他任务相关通知，related_id 应该是 task_id
+        }
+        
+        // task_approved, task_completed, task_confirmed, task_cancelled, task_reward_paid 等类型
+        // related_id 就是 task_id（后端已统一）
+        if lowercasedType == "task_approved" || 
+           lowercasedType == "task_completed" || 
+           lowercasedType == "task_confirmed" || 
+           lowercasedType == "task_cancelled" ||
+           lowercasedType == "task_reward_paid" {
+            return notification.relatedId
+        }
+        
+        // 其他包含 "task" 的通知类型，尝试使用 relatedId
+        if lowercasedType.contains("task") {
             return notification.relatedId
         }
         

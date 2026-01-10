@@ -51,7 +51,7 @@ struct CouponPointsView: View {
                     // Custom Tab Selector (Modern Design)
                     HStack(spacing: 0) {
                         TabSelectorButton(
-                            title: "积分",
+                            title: LocalizationKey.pointsPoints.localized,
                             isSelected: selectedTab == 0,
                             icon: "star.fill"
                         ) {
@@ -59,7 +59,7 @@ struct CouponPointsView: View {
                         }
                         
                         TabSelectorButton(
-                            title: "优惠券",
+                            title: LocalizationKey.couponCoupons.localized,
                             isSelected: selectedTab == 1,
                             icon: "ticket.fill"
                         ) {
@@ -67,7 +67,7 @@ struct CouponPointsView: View {
                         }
                         
                         TabSelectorButton(
-                            title: "签到",
+                            title: LocalizationKey.couponCheckIn.localized,
                             isSelected: selectedTab == 2,
                             icon: "calendar.badge.plus"
                         ) {
@@ -94,7 +94,7 @@ struct CouponPointsView: View {
                 }
             } // end else (已登录)
         }
-        .navigationTitle("积分与优惠券")
+        .navigationTitle(LocalizationKey.pointsAndCoupons.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -170,7 +170,7 @@ struct PointsView: View {
                     
                     // Usage Instructions
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "使用说明", icon: "info.circle.fill")
+                        SectionHeader(title: LocalizationKey.couponUsageInstructions.localized, icon: "info.circle.fill")
                         
                         VStack(spacing: AppSpacing.md) {
                             // Allowed
@@ -224,10 +224,10 @@ struct PointsView: View {
                 // Transactions
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
                     HStack {
-                        SectionHeader(title: "交易记录", icon: "clock.arrow.2.circlepath")
+                        SectionHeader(title: LocalizationKey.couponTransactionHistory.localized, icon: "clock.arrow.2.circlepath")
                         Spacer()
                         if !viewModel.transactions.isEmpty {
-                            Text("仅显示最近记录")
+                            Text(LocalizationKey.pointsShowRecentOnly.localized)
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textQuaternary)
                         }
@@ -237,8 +237,8 @@ struct PointsView: View {
                     if viewModel.transactions.isEmpty {
                         EmptyStateView(
                             icon: "tray.fill",
-                            title: "暂无交易记录",
-                            message: "您的积分变动记录将显示在这里"
+                            title: LocalizationKey.pointsNoTransactionHistory.localized,
+                            message: LocalizationKey.pointsTransactionHistory.localized
                         )
                         .padding(.top, AppSpacing.xl)
                     } else {
@@ -450,14 +450,14 @@ struct CouponsView: View {
         VStack(spacing: 0) {
             // Tab Toggle
             HStack(spacing: 0) {
-                CouponTabButton(title: "可领取的", isSelected: showingAvailable) {
+                CouponTabButton(title: LocalizationKey.couponAvailable.localized, isSelected: showingAvailable) {
                     withAnimation(.spring(response: 0.3)) {
                         showingAvailable = true
                         HapticFeedback.light()
                     }
                 }
                 
-                CouponTabButton(title: "我的卡券", isSelected: !showingAvailable) {
+                CouponTabButton(title: LocalizationKey.couponMyCoupons.localized, isSelected: !showingAvailable) {
                     withAnimation(.spring(response: 0.3)) {
                         showingAvailable = false
                         HapticFeedback.light()
@@ -474,8 +474,8 @@ struct CouponsView: View {
                         if viewModel.availableCoupons.isEmpty {
                             EmptyStateView(
                                 icon: "ticket",
-                                title: "暂无可用优惠券",
-                                message: "目前没有可领取的优惠券，关注活动哦"
+                                title: LocalizationKey.couponNoAvailableCoupons.localized,
+                                message: LocalizationKey.couponNoAvailableCouponsMessage.localized
                             )
                             .padding(.top, 60)
                         } else {
@@ -487,8 +487,8 @@ struct CouponsView: View {
                         if viewModel.myCoupons.isEmpty {
                             EmptyStateView(
                                 icon: "ticket.fill",
-                                title: "您还没有优惠券",
-                                message: "领取的优惠券将出现在这里"
+                                title: LocalizationKey.couponNoMyCoupons.localized,
+                                message: LocalizationKey.couponNoMyCouponsMessage.localized
                             )
                             .padding(.top, 60)
                         } else {
@@ -554,7 +554,7 @@ struct CouponCardView: View {
                 }
                 .foregroundColor(.white)
                 
-                Text(coupon.minAmount > 0 ? "满£\(coupon.minAmount/100)可用" : "无门槛")
+                Text(coupon.minAmount > 0 ? String(format: LocalizationKey.couponMinAmountAvailable.localized, "£\(coupon.minAmount/100)") : LocalizationKey.couponNoThreshold.localized)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.white.opacity(0.9))
                     .padding(.horizontal, 6)
@@ -608,7 +608,7 @@ struct CouponCardView: View {
                             if isClaiming {
                                 ProgressView().tint(AppColors.primary)
                             } else {
-                                Text("立即领取")
+                                Text(LocalizationKey.couponClaimNow.localized)
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(AppColors.primary)
                                     .padding(.horizontal, 10)
@@ -632,7 +632,7 @@ struct CouponCardView: View {
                     
                     Spacer()
                     
-                    Text("有效期至: \(formatDate(coupon.validUntil))")
+                    Text(String(format: LocalizationKey.couponValidUntil.localized, formatDate(coupon.validUntil)))
                         .font(.system(size: 10))
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -741,7 +741,7 @@ struct CheckInView: View {
                 
                 // Rewards List
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    SectionHeader(title: "签到奖励", icon: "gift.fill")
+                    SectionHeader(title: LocalizationKey.couponCheckInReward.localized, icon: "gift.fill")
                         .padding(.horizontal, AppSpacing.md)
                     
                     VStack(spacing: AppSpacing.sm) {
@@ -761,7 +761,7 @@ struct CheckInView: View {
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Text("• 每日签到可获得积分奖励\n• 连续签到天数越多，奖励越丰厚\n• 签到中断后，连续天数将重新计算")
+                    Text(LocalizationKey.pointsCheckInDescription.localized)
                         .font(AppTypography.caption2)
                         .foregroundColor(AppColors.textQuaternary)
                         .lineSpacing(4)
@@ -779,8 +779,8 @@ struct CheckInView: View {
             viewModel.loadCheckInStatus()
             viewModel.loadCheckInRewards()
         }
-        .alert("签到成功", isPresented: $showingResult) {
-            Button("太棒了", role: .cancel) {
+        .alert(LocalizationKey.couponCheckInSuccess.localized, isPresented: $showingResult) {
+            Button(LocalizationKey.couponAwesome.localized, role: .cancel) {
                 checkInResult = nil
                 viewModel.loadCheckInStatus()
             }
@@ -834,7 +834,7 @@ struct CheckInStatusCard: View {
                     .foregroundColor(status.todayChecked ? AppColors.success : AppColors.primary)
                     
                     if status.consecutiveDays > 0 {
-                        Text("\(status.consecutiveDays)天")
+                        Text(String(format: LocalizationKey.couponDays.localized, status.consecutiveDays))
                             .font(.system(size: 14, weight: .bold, design: .rounded))
                             .foregroundColor(status.todayChecked ? AppColors.success : AppColors.primary)
                             .padding(.horizontal, 8)
@@ -847,19 +847,19 @@ struct CheckInStatusCard: View {
             .padding(.top, 10)
             
             VStack(spacing: AppSpacing.xs) {
-                Text(status.todayChecked ? "今日已签到" : "签到领积分")
+                Text(status.todayChecked ? LocalizationKey.pointsCheckedInToday.localized : LocalizationKey.pointsCheckInReward.localized)
                     .font(AppTypography.title2)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text(status.todayChecked ? "明天也要记得来哦" : "连续签到奖励更丰富")
+                Text(status.todayChecked ? LocalizationKey.couponRememberTomorrow.localized : LocalizationKey.couponConsecutiveReward.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
             }
             
             if !status.todayChecked {
                 Button(action: onCheckIn) {
-                    Text("立即签到")
+                    Text(LocalizationKey.couponCheckInNow.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -878,7 +878,7 @@ struct CheckInStatusCard: View {
             } else {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkles")
-                    Text("已连续签到 \(status.consecutiveDays) 天")
+                    Text(String(format: LocalizationKey.couponConsecutiveDays.localized, status.consecutiveDays))
                 }
                 .font(AppTypography.caption)
                 .fontWeight(.bold)
@@ -926,7 +926,7 @@ struct RewardRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(reward.consecutiveDays)天连续签到")
+                Text(String(format: LocalizationKey.couponConsecutiveCheckIn.localized, reward.consecutiveDays))
                     .font(AppTypography.bodyBold)
                     .foregroundColor(isCompleted ? AppColors.textPrimary : AppColors.textSecondary)
                 

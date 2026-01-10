@@ -30,39 +30,39 @@ extension APIError {
     var userFriendlyMessage: String {
         switch self {
         case .invalidURL:
-            return "请求地址无效，请稍后重试"
+            return LocalizationKey.errorInvalidURL.localized
         case .requestFailed(let error):
             if (error as NSError).code == NSURLErrorNotConnectedToInternet {
-                return "网络连接失败，请检查网络设置"
+                return LocalizationKey.errorNetworkConnectionFailed.localized
             } else if (error as NSError).code == NSURLErrorTimedOut {
-                return "请求超时，请稍后重试"
+                return LocalizationKey.errorRequestTimeout.localized
             }
-            return "网络请求失败，请稍后重试"
+            return LocalizationKey.errorNetworkRequestFailed.localized
         case .invalidResponse:
-            return "服务器响应异常，请稍后重试"
+            return LocalizationKey.errorInvalidResponse.localized
         case .httpError(let code):
             switch code {
             case 400:
-                return "请求参数错误"
+                return LocalizationKey.errorBadRequest.localized
             case 401:
-                return "登录已过期，请重新登录"
+                return LocalizationKey.errorUnauthorized.localized
             case 403:
-                return "没有权限执行此操作"
+                return LocalizationKey.errorForbidden.localized
             case 404:
-                return "请求的资源不存在"
+                return LocalizationKey.errorNotFound.localized
             case 429:
-                return "请求过于频繁，请稍后重试"
+                return LocalizationKey.errorTooManyRequests.localized
             case 500...599:
-                return "服务器错误，请稍后重试"
+                return LocalizationKey.errorServerError.localized
             default:
-                return "请求失败 (错误代码: \(code))"
+                return String(format: LocalizationKey.errorRequestFailed.localized, code)
             }
         case .decodingError:
-            return "数据解析失败，请稍后重试"
+            return LocalizationKey.errorDecodingError.localized
         case .unauthorized:
-            return "登录已过期，请重新登录"
+            return LocalizationKey.errorUnauthorized.localized
         case .unknown:
-            return "发生未知错误，请稍后重试"
+            return LocalizationKey.errorUnknown.localized
         }
     }
 }

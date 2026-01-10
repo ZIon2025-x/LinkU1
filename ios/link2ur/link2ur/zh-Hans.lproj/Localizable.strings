@@ -25,6 +25,7 @@
 "common.share" = "分享";
 "common.more" = "更多";
 "common.view_all" = "查看全部";
+"common.loading_image" = "加载图片中...";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -184,6 +185,14 @@
 "notifications.no_notifications" = "暂无通知";
 "notifications.mark_all_read" = "全部标记为已读";
 
+// MARK: - Notification Permission
+"notification.enable_notification" = "开启通知";
+"notification.enable_notification_title" = "开启通知";
+"notification.enable_notification_message" = "及时接收任务更新、消息提醒";
+"notification.enable_notification_description" = "不错过任何重要信息";
+"notification.allow_notification" = "允许通知";
+"notification.not_now" = "稍后提醒";
+
 // MARK: - Student Verification
 "student_verification.verification" = "学生认证";
 "student_verification.submit" = "提交认证";
@@ -230,6 +239,19 @@
 "points.balance_after" = "余额";
 "points.amount_format" = "%d 积分";
 "points.balance_format" = "余额: %d 积分";
+"points.points" = "积分";
+"points.points_and_payment" = "积分+支付";
+"points.points_deduction" = "积分抵扣";
+"points.check_in" = "签到";
+"points.checked_in_today" = "今日已签到";
+"points.check_in_reward" = "签到领积分";
+"points.check_in_description" = "• 每日签到可获得积分奖励\n• 连续签到天数越多，奖励越丰厚\n• 签到中断后，连续天数将重新计算";
+"points.transaction_history" = "您的积分变动记录将显示在这里";
+"points.no_transaction_history" = "暂无交易记录";
+"points.points_and_coupons" = "积分与优惠券";
+"points.show_recent_only" = "仅显示最近记录";
+"coupon.coupons" = "优惠券";
+"coupon.check_in" = "签到";
 
 // MARK: - Time
 "time.just_now" = "刚刚";
@@ -344,6 +366,8 @@
 "task_detail.application_success" = "申请成功";
 "task_detail.application_success_message" = "您已成功申请此任务，请等待发布者审核。";
 "task_detail.task_completed_message" = "恭喜！您已完成任务，请等待发布者确认。";
+"task_detail.confirm_completion_success" = "任务已确认完成";
+"task_detail.confirm_completion_success_message" = "任务状态已更新为已完成。奖励将自动转给任务接受者。";
 "task_detail.application_approved_message" = "恭喜！您的申请已通过，可以开始执行任务了。";
 "task_detail.application_rejected_message" = "很抱歉，您的申请未通过审核。";
 "task_detail.pending_review" = "待审核";
@@ -424,6 +448,156 @@
 "rating.comment" = "评论（可选）";
 "rating.anonymous" = "匿名评价";
 "rating.submit" = "提交评价";
+"rating.anonymous_rating" = "匿名评价";
+"rating.submit_rating" = "提交评价";
+
+// MARK: - Task Application
+"task_application.apply_task" = "申请任务";
+"task_application.i_want_to_negotiate_price" = "我想要协商价格";
+"task_application.expected_amount" = "期望金额";
+"task_application.negotiate_price_hint" = "提示: 协商价格可能会影响发布者的选择哦。";
+"task_application.submit_application" = "提交申请";
+"task_application.message" = "留言";
+"task_application.message_to_applicant" = "给申请者留言...";
+"task_application.is_negotiate_price" = "是否议价";
+"task_application.negotiate_amount" = "议价金额";
+"task_application.send_message" = "发送留言";
+"task_application.unknown_user" = "未知用户";
+
+// MARK: - Empty States
+"empty.no_tasks" = "暂无任务";
+"empty.no_tasks_message" = "还没有任务发布，快来发布第一个任务吧！";
+"empty.no_notifications" = "暂无通知";
+"empty.no_notifications_message" = "还没有收到任何通知消息";
+"empty.no_payment_records" = "暂无支付记录";
+"empty.no_payment_records_message" = "您的支付记录将显示在这里";
+
+// MARK: - Payment Status
+"payment_status.success" = "成功";
+"payment_status.processing" = "处理中";
+"payment_status.failed" = "失败";
+"payment_status.canceled" = "已撤销";
+"payment_status.task_payment" = "任务付款";
+"payment.task_number" = "任务 #%d";
+
+// MARK: - Notification
+"notification.system_messages" = "系统消息";
+"notification.view_all_notifications" = "查看全部通知消息";
+
+// MARK: - Customer Service (Extended)
+"customer_service.queue_position" = "排队位置: 第 %d 位";
+"customer_service.estimated_wait" = "预计等待时间: %d 秒";
+"customer_service.conversation_ended_message" = "对话已结束，如需帮助请重新发起对话";
+"customer_service.new_conversation" = "新对话";
+"customer_service.connecting" = "正在连接客服...";
+"customer_service.end_conversation" = "结束对话";
+"customer_service.history" = "历史";
+"customer_service.connected" = "👋 已连接到客服 %@";
+"customer_service.start_new_conversation" = "开始新的对话吧！";
+"customer_service.total_messages" = "%d 条消息";
+"customer_service.rate_service" = "评价客服";
+"customer_service.skip" = "跳过";
+
+// MARK: - Payment Records
+"payment_records.payment_records" = "支付记录";
+"payment_records.loading" = "加载中...";
+"payment_records.load_failed" = "加载失败";
+
+// MARK: - Coupon
+"coupon.min_amount_available" = "满%@可用";
+"coupon.available" = "可领取的";
+"coupon.my_coupons" = "我的卡券";
+"coupon.no_threshold" = "无门槛";
+"coupon.claim_now" = "立即领取";
+"coupon.valid_until" = "有效期至: %@";
+"coupon.no_available_coupons" = "暂无可用优惠券";
+"coupon.no_available_coupons_message" = "目前没有可领取的优惠券，关注活动哦";
+"coupon.no_my_coupons" = "您还没有优惠券";
+"coupon.no_my_coupons_message" = "领取的优惠券将出现在这里";
+"coupon.usage_instructions" = "使用说明";
+"coupon.transaction_history" = "交易记录";
+"coupon.check_in_reward" = "签到奖励";
+"coupon.check_in_success" = "签到成功";
+"coupon.awesome" = "太棒了";
+"coupon.days" = "%d天";
+"coupon.remember_tomorrow" = "明天也要记得来哦";
+"coupon.consecutive_reward" = "连续签到奖励更丰富";
+"coupon.check_in_now" = "立即签到";
+"coupon.consecutive_days" = "已连续签到 %d 天";
+"coupon.consecutive_check_in" = "%d天连续签到";
+
+// MARK: - Task Application (Extended)
+"task_application.apply_info" = "申请信息";
+"task_application.overall_rating" = "整体评价";
+"task_application.rating_tags" = "评价标签";
+"task_application.rating_content" = "评价内容";
+
+// MARK: - Create Task
+"create_task.publishing" = "正在发布...";
+"create_task.publish_now" = "立即发布任务";
+"create_task.publish_task" = "发布任务";
+
+// MARK: - Student Verification
+"student_verification.student_verification" = "学生认证";
+
+// MARK: - Stripe Connect
+"stripe_connect.setup_account" = "设置收款账户";
+
+// MARK: - Activity
+"activity.load_failed" = "加载失败";
+"activity.please_retry" = "请重试";
+"activity.description" = "活动描述";
+"activity.details" = "详细信息";
+"activity.select_time_slot" = "选择时间段";
+"activity.no_available_time" = "暂无可用时间";
+"activity.no_available_time_message" = "目前没有可选的时间段";
+"activity.participate_time" = "参与时间";
+"activity.by_appointment" = "预约制";
+"activity.participants" = "参与者";
+"activity.remaining_slots" = "剩余名额";
+"activity.status" = "状态";
+"activity.ended" = "已结束";
+"activity.full" = "已满";
+"activity.hot_recruiting" = "热招中";
+"activity.location" = "具体地点";
+"activity.type" = "活动类型";
+"activity.time_arrangement" = "时间安排";
+"activity.multiple_time_slots" = "支持多个时间段预约";
+"activity.deadline" = "截止日期";
+"activity.exclusive_discount" = "专享折扣";
+"activity.filter" = "筛选";
+"activity.all" = "全部";
+"activity.active" = "进行中";
+"activity.ended" = "已结束";
+"activity.activities" = "活动";
+"activity.no_ended_activities" = "暂无已结束的活动";
+"activity.no_ended_activities_message" = "没有已结束的活动记录";
+"activity.no_activities" = "暂无活动";
+"activity.no_activities_message" = "目前还没有活动，敬请期待...";
+"activity.full_capacity" = "已满员";
+
+// MARK: - Task Type
+"task_type.super_task" = "超级任务";
+"task_type.vip_task" = "VIP任务";
+
+// MARK: - Error
+"error.error" = "错误";
+"error.retry" = "重试";
+"error.something_went_wrong" = "出错了";
+"error.invalid_url" = "请求地址无效，请稍后重试";
+"error.network_connection_failed" = "网络连接失败，请检查网络设置";
+"error.request_timeout" = "请求超时，请稍后重试";
+"error.network_request_failed" = "网络请求失败，请稍后重试";
+"error.invalid_response" = "服务器响应异常，请稍后重试";
+"error.bad_request" = "请求参数错误";
+"error.unauthorized" = "登录已过期，请重新登录";
+"error.forbidden" = "没有权限执行此操作";
+"error.not_found" = "请求的资源不存在";
+"error.too_many_requests" = "请求过于频繁，请稍后重试";
+"error.server_error" = "服务器错误，请稍后重试";
+"error.request_failed" = "请求失败 (错误代码: %d)";
+"error.decoding_error" = "数据解析失败，请稍后重试";
+"error.unknown" = "发生未知错误，请稍后重试";
 
 // MARK: - Menu
 "menu.menu" = "菜单";
@@ -531,3 +705,54 @@
 "info.privacy_policy" = "隐私政策";
 "info.last_updated" = "最后更新：2024年1月1日";
 
+// MARK: - Share
+"share.wechat" = "微信";
+"share.wechat_moments" = "朋友圈";
+"share.qq" = "QQ";
+"share.qzone" = "QQ空间";
+"share.weibo" = "微博";
+"share.sms" = "短信";
+"share.copy_link" = "复制链接";
+"share.generate_image" = "生成分享图";
+"share.share_to" = "分享到";
+"share.generating_image" = "正在生成分享图...";
+"share.image" = "分享图";
+"share.share_image" = "分享图片";
+"share.save_to_photos" = "保存到相册";
+
+// MARK: - Wallet
+"wallet.quick_actions" = "快速操作";
+"wallet.recent_transactions" = "最近交易";
+"wallet.balance" = "钱包余额";
+"wallet.my_wallet" = "我的钱包";
+
+// MARK: - Payment
+"payment.loading_form" = "正在加载支付表单...";
+"payment.preparing" = "准备支付...";
+"payment.success" = "支付成功！";
+"payment.success_message" = "任务已成功支付，正在更新状态...";
+"payment.error" = "支付错误";
+"payment.task_info" = "任务信息";
+"payment.task_title" = "任务标题";
+"payment.applicant" = "申请者";
+"payment.tip" = "提示";
+"payment.confirm_payment" = "确认支付";
+"payment.preparing_payment" = "正在准备支付...";
+"payment.payment" = "支付";
+"payment.cancel" = "取消";
+"payment.retry" = "重试";
+"payment.retry_payment" = "重试支付";
+"payment.coupons" = "优惠券";
+"payment.coupon_discount" = "优惠券折扣";
+"payment.no_available_coupons" = "暂无可用优惠券";
+"payment.total_amount" = "总金额";
+"payment.final_payment" = "最终支付";
+"payment.mixed" = "混合";
+"coupon.discount" = "优惠: %@";
+
+// MARK: - Payment (Extended)
+"payment.payment" = "支付";
+"payment.cancel" = "取消";
+"payment.retry" = "重试";
+"payment.retry_payment" = "重试支付";
+"payment.coupons" = "优惠券";

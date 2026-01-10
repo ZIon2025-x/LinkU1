@@ -616,27 +616,16 @@ struct LeaderboardShareView: View {
         )
         shareItems.append(shareItem)
         
-        // 显示系统分享面板
-        let activityVC = UIActivityViewController(
-            activityItems: shareItems,
-            applicationActivities: nil
-        )
-        
-        activityVC.excludedActivityTypes = [
-            .assignToContact,
-            .addToReadingList,
-            .openInIBooks
-        ]
-        
-        // 获取当前的 UIViewController 并弹出分享面板
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            var topVC = rootVC
-            while let presented = topVC.presentedViewController {
-                topVC = presented
+        // 使用统一的分享工具类显示分享面板
+        ShareHelper.presentShareSheet(
+            items: shareItems,
+            completion: { activityType, completed, returnedItems, error in
+                if completed {
+                    // 可以在这里添加分享统计或分析
+                    // Analytics.track("leaderboard_shared", parameters: ["leaderboard_id": leaderboardId, "platform": activityType?.rawValue ?? "unknown"])
+                }
             }
-            topVC.present(activityVC, animated: true)
-        }
+        )
     }
 }
 
@@ -683,8 +672,13 @@ class LeaderboardShareItem: NSObject, UIActivityItemSource {
     // 提供富链接预览元数据（用于 iMessage 等原生 App）
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
         let metadata = LPLinkMetadata()
-        metadata.originalURL = url
-        metadata.url = url
+        
+        // 重要：不设置 url 或 originalURL，避免系统尝试自动获取元数据
+        // 设置这些属性会导致系统尝试访问URL获取元数据，从而触发沙盒扩展错误
+        // 系统会自动从 activityViewController 返回的 URL 中识别链接信息
+        // 我们只提供手动设置的元数据（title 和 image），避免网络请求
+        
+        // 设置标题
         metadata.title = title
         
         // 如果有图片，设置为预览图

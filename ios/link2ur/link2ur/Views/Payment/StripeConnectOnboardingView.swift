@@ -20,13 +20,13 @@ struct StripeConnectOnboardingView: View {
             
             stateBasedView
         }
-        .navigationTitle("设置收款账户")
+        .navigationTitle(LocalizationKey.stripeConnectSetupAccount.localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.loadOnboardingSession()
         }
-        .alert("错误", isPresented: $showError) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
             Text(errorMessage)
         }

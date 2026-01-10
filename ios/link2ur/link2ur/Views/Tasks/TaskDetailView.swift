@@ -29,6 +29,7 @@ struct TaskDetailView: View {
     @State private var paymentClientSecret: String?
     @State private var approvedApplicantName: String?
     @State private var shareImageCancellable: AnyCancellable?
+    @State private var isShareImageLoading = false // 分享图片加载状态
     @State private var showConfirmCompletionSuccess = false // 确认完成成功提示
     
     // 判断当前用户是否是任务发布者
@@ -70,8 +71,9 @@ struct TaskDetailView: View {
         guard let currentUserId = appState.currentUser?.id else {
             return false
         }
+        // reviewerId 和 currentUserId 都是 String 类型，直接比较
         return viewModel.reviews.contains { review in
-            String(review.reviewerId) == currentUserId
+            review.reviewerId == currentUserId
         }
     }
     
@@ -174,12 +176,12 @@ struct TaskDetailView: View {
                     showApplySuccessAlert = false
                 }
             }
-            .alert("任务已确认完成", isPresented: $showConfirmCompletionSuccess) {
-                Button("确定", role: .cancel) {
+            .alert(LocalizationKey.taskDetailConfirmCompletionSuccess.localized, isPresented: $showConfirmCompletionSuccess) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     showConfirmCompletionSuccess = false
                 }
             } message: {
-                Text("任务状态已更新为已完成。奖励将自动转给任务接受者。")
+                Text(LocalizationKey.taskDetailConfirmCompletionSuccessMessage.localized)
             }
             .sheet(isPresented: $showLogin) {
                 LoginView()
@@ -194,7 +196,8 @@ struct TaskDetailView: View {
                 // 优化：只在任务ID确实变化且不为nil时处理
                 guard let newTaskId = newTaskId, newTaskId == taskId else { return }
                 handleTaskChange()
-                loadShareImage()
+                // 优化：不在任务加载时立即加载分享图片，延迟到用户点击分享时再加载
+                // loadShareImage() // 延迟加载
             }
             .onChange(of: viewModel.task?.status) { newStatus in
                 // 优化：只在状态确实变化时处理
@@ -230,9 +233,20 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var shareSheetContent: some View {
         if let task = viewModel.task {
-            TaskShareSheet(task: task, taskId: taskId, shareImage: shareImage)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+            TaskShareSheet(
+                task: task,
+                taskId: taskId,
+                shareImage: shareImage,
+                isShareImageLoading: isShareImageLoading
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .onAppear {
+                // 当分享面板出现时，开始加载图片（如果还没有加载）
+                if shareImage == nil && !isShareImageLoading {
+                    loadShareImage()
+                }
+            }
         }
     }
     
@@ -333,8 +347,12 @@ struct TaskDetailView: View {
                         reviewComment = ""
                         isAnonymousReview = false
                         selectedReviewTags = []
-                        // 重新加载评价列表，以更新 hasReviewed 状态并隐藏评价按钮
-                        viewModel.loadReviews(taskId: taskId)
+                        // 立即重新加载评价列表，以更新 hasReviewed 状态并隐藏评价按钮
+                        DispatchQueue.main.async {
+                            viewModel.loadReviews(taskId: taskId)
+                            // 也重新加载任务详情，确保状态同步
+                            viewModel.loadTask(taskId: taskId)
+                        }
                         HapticFeedback.success()
                     }
                 }
@@ -378,25 +396,44 @@ struct TaskDetailView: View {
         }
     }
     
+    // 优化：延迟加载分享图片，只在需要时加载
     private func loadShareImage() {
         guard let task = viewModel.task,
               let images = task.images,
               let firstImage = images.first,
-              !firstImage.isEmpty else { return }
+              !firstImage.isEmpty else {
+            shareImage = nil
+            isShareImageLoading = false
+            return
+        }
+        
+        // 如果图片已经加载，不需要重新加载
+        if shareImage != nil {
+            return
+        }
         
         // 取消之前的加载
         shareImageCancellable?.cancel()
+        isShareImageLoading = true
         
         // 使用 ImageCache 加载图片，支持缓存和优化
         shareImageCancellable = ImageCache.shared.loadImage(from: firstImage)
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { _ in },
+                receiveCompletion: { completion in
+                    self.isShareImageLoading = false
+                    if case .failure = completion {
+                        // 图片加载失败，不影响分享功能
+                        self.shareImage = nil
+                    }
+                },
                 receiveValue: { image in
                     self.shareImage = image
+                    self.isShareImageLoading = false
                 }
             )
     }
+    
     
     /// 刷新任务详情，带重试机制（优化版）
     /// 由于 webhook 是异步处理的，可能需要多次尝试才能获取到更新后的状态
@@ -409,9 +446,7 @@ struct TaskDetailView: View {
         let delay = min(Double(attempt * attempt), 10.0) // 最大延迟10秒
         let currentTaskId = taskId
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            guard let self = self else { return }
-            
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             self.viewModel.loadTask(taskId: currentTaskId)
             
             // 检查任务状态是否已更新
@@ -435,11 +470,20 @@ struct TaskShareSheet: View {
     let task: Task
     let taskId: Int
     let shareImage: UIImage?
+    let isShareImageLoading: Bool
     @Environment(\.dismiss) var dismiss
     
-    // 使用 API 域名，后端会为爬虫返回正确的 meta 标签，普通用户会被重定向到前端
+    // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签（weixin:title, weixin:description, weixin:image）
+    // 前端页面已经设置了这些标签，微信会直接抓取
     private var shareUrl: URL {
-        URL(string: "https://api.link2ur.com/zh/tasks/\(taskId)") ?? URL(string: "https://www.link2ur.com")!
+        // 使用前端域名，确保微信能抓取到正确的 meta 标签
+        // 使用固定版本号而不是时间戳，避免每次分享都生成新URL导致系统多次尝试获取元数据
+        let urlString = "https://www.link2ur.com/zh/tasks/\(taskId)?v=2"
+        if let url = URL(string: urlString) {
+            return url
+        }
+        // 如果URL构建失败，返回默认URL
+        return URL(string: "https://www.link2ur.com")!
     }
     
     var body: some View {
@@ -461,6 +505,21 @@ struct TaskShareSheet: View {
                         .frame(height: 150)
                         .clipped()
                         .cornerRadius(AppCornerRadius.medium)
+                } else if isShareImageLoading {
+                    // 图片加载中
+                    ZStack {
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .fill(AppColors.cardBackground)
+                            .frame(height: 150)
+                        
+                        VStack(spacing: AppSpacing.sm) {
+                            ProgressView()
+                                .tint(AppColors.primary)
+                            Text(LocalizationKey.commonLoadingImage.localized)
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
                 } else {
                     RoundedRectangle(cornerRadius: AppCornerRadius.medium)
                         .fill(
@@ -479,16 +538,20 @@ struct TaskShareSheet: View {
                 
                 // 标题和描述
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(task.title)
-                        .font(AppTypography.bodyBold)
-                        .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(2)
+                    TranslatableText(
+                        task.title,
+                        font: AppTypography.bodyBold,
+                        foregroundColor: AppColors.textPrimary,
+                        lineLimit: 2
+                    )
                     
                     if !task.description.isEmpty {
-                        Text(task.description)
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                            .lineLimit(2)
+                        TranslatableText(
+                            task.description,
+                            font: AppTypography.caption,
+                            foregroundColor: AppColors.textSecondary,
+                            lineLimit: 2
+                        )
                     }
                     
                     // 任务信息
@@ -506,66 +569,27 @@ struct TaskShareSheet: View {
             .cornerRadius(AppCornerRadius.large)
             .padding(.horizontal, AppSpacing.md)
             
-            Spacer()
-            
-            // 分享按钮
-            Button(action: shareContent) {
-                HStack {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("分享到...")
+            // 自定义分享面板（类似小红书）
+            CustomSharePanel(
+                title: task.title,
+                description: task.description,
+                url: shareUrl,
+                image: shareImage,
+                taskType: task.taskType,
+                location: task.location.lowercased() == "online" 
+                    ? (LocalizationHelper.currentLanguage.hasPrefix("zh") ? "线上" : "Online")
+                    : task.location.obfuscatedLocation,
+                reward: {
+                    let currencySymbol = task.currency == "GBP" ? "£" : "¥"
+                    return "\(currencySymbol)\(String(format: "%.0f", task.reward))"
+                }(),
+                onDismiss: {
+                    dismiss()
                 }
-                .font(AppTypography.bodyBold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppColors.primary)
-                .cornerRadius(AppCornerRadius.large)
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.bottom, AppSpacing.lg)
+            )
+            .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
-    }
-    
-    private func shareContent() {
-        // 构建分享项目
-        var shareItems: [Any] = []
-        
-        // 如果有图片，添加图片分享项（放在前面，微信会优先使用）
-        if let image = shareImage {
-            shareItems.append(TaskImageShareItem(image: image))
-        }
-        
-        // 添加链接分享项
-        let shareItem = TaskShareItem(
-            url: shareUrl,
-            title: task.title,
-            description: task.description,
-            image: shareImage
-        )
-        shareItems.append(shareItem)
-        
-        // 显示系统分享面板
-        let activityVC = UIActivityViewController(
-            activityItems: shareItems,
-            applicationActivities: nil
-        )
-        
-        activityVC.excludedActivityTypes = [
-            .assignToContact,
-            .addToReadingList,
-            .openInIBooks
-        ]
-        
-        // 获取当前的 UIViewController 并弹出分享面板
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            var topVC = rootVC
-            while let presented = topVC.presentedViewController {
-                topVC = presented
-            }
-            topVC.present(activityVC, animated: true)
-        }
     }
 }
 
@@ -574,54 +598,90 @@ class TaskShareItem: NSObject, UIActivityItemSource {
     let url: URL
     let title: String
     let descriptionText: String
+    let taskType: String
+    let location: String
+    let reward: String
     let image: UIImage?
     
-    init(url: URL, title: String, description: String, image: UIImage?) {
+    init(url: URL, title: String, description: String, taskType: String, location: String, reward: String, image: UIImage?) {
         self.url = url
         self.title = title
         self.descriptionText = description
+        self.taskType = taskType
+        self.location = location
+        self.reward = reward
         self.image = image
         super.init()
     }
     
-    // 占位符 - 返回图片（如果有）让微信识别为图片分享
+    // 占位符 - 返回URL，让微信知道这是一个链接分享
+    // 微信会尝试抓取这个URL的meta标签（weixin:title, weixin:description, weixin:image等）
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
-        // 返回 URL，让系统知道这是链接分享
         return url
     }
     
-    // 实际分享的内容 - 根据分享目标返回不同内容
+    // 实际分享的内容 - 参考小红书做法：主要返回URL，让微信抓取网页的meta标签
     func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
-        // 对于微信等不支持 LPLinkMetadata 的 App，返回包含链接的文本
-        // 这样用户可以看到完整的信息
+        // 检测是否是微信（使用统一的工具方法）
+        if ShareHelper.isWeChatShare(activityType) {
+            // 微信分享：返回URL，让微信自动抓取网页的 weixin:title, weixin:description, weixin:image 等标签
+            // 前端已经设置好了这些标签，微信会生成漂亮的分享卡片
+            return url
+        }
+        
+        // 对于邮件应用，返回 URL 以便显示为链接
+        // 邮件应用支持 LPLinkMetadata，会调用 activityViewControllerLinkMetadata 获取富媒体预览
+        if activityType == .mail {
+            return url
+        }
+        
+        // 对于其他支持 LPLinkMetadata 的应用（如 iMessage），返回 URL
+        // 系统会调用 activityViewControllerLinkMetadata 获取富媒体预览
+        if activityType == nil {
+            // nil 通常表示 iMessage 等原生应用
+            return url
+        }
+        
+        // 对于不支持 LPLinkMetadata 的应用（如复制、短信等），返回包含完整详情的文本
+        let descriptionPreview = descriptionText.prefix(100)
+        let descriptionSuffix = descriptionText.count > 100 ? "..." : ""
         let shareText = """
         \(title)
         
-        \(descriptionText.prefix(100))\(descriptionText.count > 100 ? "..." : "")
+        \(descriptionPreview)\(descriptionSuffix)
         
-        👉 查看详情: \(url.absoluteString)
+        任务类型: \(taskType)
+        地点: \(location)
+        金额: \(reward)
+        
+        立即查看: \(url.absoluteString)
         """
-        
-        // 如果是复制或短信等，返回纯文本
-        if activityType == .copyToPasteboard || activityType == .message {
-            return shareText
-        }
-        
-        // 其他情况返回 URL
-        return url
+        return shareText
     }
     
     // 提供富链接预览元数据（用于 iMessage 等原生 App）
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        // 注意：此方法无法直接检测分享目标类型
+        // 微信不支持 LPLinkMetadata，会直接使用 activityViewController 返回的 URL
+        // 对于支持 LPLinkMetadata 的应用（如 iMessage、邮件等），返回元数据
         let metadata = LPLinkMetadata()
-        metadata.originalURL = url
-        metadata.url = url
+        
+        // 重要：不设置 url 或 originalURL，避免系统尝试自动获取元数据
+        // 设置这些属性会导致系统尝试访问URL获取元数据，从而触发沙盒扩展错误
+        // 系统会自动从 activityViewController 返回的 URL 中识别链接信息
+        // 我们只提供手动设置的元数据（title 和 image），避免网络请求
+        
+        // 设置标题（这是最重要的，会显示在链接预览中）
         metadata.title = title
         
-        // 如果有图片，设置为预览图
+        // 注意：LPLinkMetadata 在 iOS 16.3+ 中移除了 summary 属性
+        // 描述信息会通过网页的 Open Graph 标签提供，或者通过 activityViewController 方法中的文本分享
+        
+        // 如果有图片，设置为预览图（重要：这会让分享显示图片）
         if let image = image {
-            metadata.imageProvider = NSItemProvider(object: image)
-            metadata.iconProvider = NSItemProvider(object: image)
+            let imageProvider = NSItemProvider(object: image)
+            metadata.imageProvider = imageProvider
+            metadata.iconProvider = imageProvider
         }
         
         return metadata
@@ -633,13 +693,46 @@ class TaskShareItem: NSObject, UIActivityItemSource {
     }
 }
 
+// MARK: - 任务文本分享项（确保微信能正确读取文本信息）
+class TaskTextShareItem: NSObject, UIActivityItemSource {
+    let text: String
+    
+    init(text: String) {
+        self.text = text
+        super.init()
+    }
+    
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return text
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        // 对于所有应用，都返回包含完整信息的文本
+        return text
+    }
+}
+
 // MARK: - 任务图片分享项（用于微信等需要图片的场景）
 class TaskImageShareItem: NSObject, UIActivityItemSource {
     let image: UIImage
     
     init(image: UIImage) {
-        self.image = image
+        // 优化：压缩图片以减少内存占用和分享大小
+        // 微信等平台对图片大小有限制，压缩后可以更快分享
+        // 使用同步压缩（在初始化时），因为图片已经在内存中，压缩很快
+        // 如果图片很大，可以考虑使用异步压缩，但会增加复杂度
+        if let compressedImage = image.compressedForSharing() {
+            self.image = compressedImage
+        } else {
+            // 如果压缩失败，使用原图（不应该发生，但作为后备）
+            self.image = image
+        }
         super.init()
+    }
+    
+    deinit {
+        // 确保图片在释放时及时清理内存
+        // UIImage 会自动管理内存，但显式清理可以更快释放
     }
     
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
@@ -648,6 +741,78 @@ class TaskImageShareItem: NSObject, UIActivityItemSource {
     
     func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
         return image
+    }
+}
+
+// MARK: - UIImage 扩展：图片压缩优化
+extension UIImage {
+    /// 压缩图片用于分享（优化内存和文件大小）
+    /// - Parameters:
+    ///   - maxSize: 最大尺寸（默认1200px，适合大多数分享平台）
+    ///   - quality: 压缩质量（0.0-1.0，默认0.8，平衡质量和文件大小）
+    /// - Returns: 压缩后的图片，如果压缩失败则返回 nil
+    /// - Note: 此方法在主线程执行，对于大图片（>5MB）可能需要几毫秒
+    ///         如果需要在后台压缩，使用 compressedForSharingAsync
+    func compressedForSharing(maxSize: CGFloat = 1200, quality: CGFloat = 0.8) -> UIImage? {
+        // 使用 autoreleasepool 确保及时释放中间对象
+        return autoreleasepool {
+            // 计算缩放比例
+            let ratio = min(maxSize / size.width, maxSize / size.height)
+            
+            // 如果图片已经小于最大尺寸，直接压缩质量
+            if ratio >= 1.0 {
+                return compressed(quality: quality)
+            }
+            
+            // 先缩放尺寸（减少内存占用）
+            let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+            defer { UIGraphicsEndImageContext() }
+            
+            draw(in: CGRect(origin: .zero, size: newSize))
+            guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext() else {
+                return nil
+            }
+            
+            // 再压缩质量（减少文件大小）
+            return resizedImage.compressed(quality: quality)
+        }
+    }
+    
+    /// 异步压缩图片用于分享（在后台队列执行）
+    /// - Parameters:
+    ///   - maxSize: 最大尺寸（默认1200px）
+    ///   - quality: 压缩质量（0.0-1.0，默认0.8）
+    ///   - completion: 完成回调，在主线程执行
+    /// - Note: 适用于大图片（>5MB）或需要避免阻塞主线程的场景
+    func compressedForSharingAsync(maxSize: CGFloat = 1200, quality: CGFloat = 0.8, completion: @escaping (UIImage?) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let compressed = self.compressedForSharing(maxSize: maxSize, quality: quality)
+            DispatchQueue.main.async {
+                completion(compressed)
+            }
+        }
+    }
+    
+    /// 压缩图片质量（JPEG压缩）
+    /// - Parameter quality: 压缩质量（0.0-1.0）
+    /// - Returns: 压缩后的图片，如果压缩失败则返回 nil
+    private func compressed(quality: CGFloat) -> UIImage? {
+        guard let imageData = jpegData(compressionQuality: quality) else {
+            return nil
+        }
+        // 限制最大文件大小为 5MB（微信等平台限制）
+        let maxDataSize = 5 * 1024 * 1024 // 5MB
+        if imageData.count > maxDataSize {
+            // 如果仍然太大，降低质量重试
+            let adjustedQuality = quality * 0.7
+            return jpegData(compressionQuality: adjustedQuality).flatMap { UIImage(data: $0) }
+        }
+        return UIImage(data: imageData)
     }
 }
 
@@ -915,11 +1080,13 @@ struct TaskHeaderCard: View {
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text(task.title)
-                    .font(AppTypography.title)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                TranslatableText(
+                    task.title,
+                    font: AppTypography.title,
+                    foregroundColor: AppColors.textPrimary,
+                    lineLimit: 3
+                )
+                .fixedSize(horizontal: false, vertical: true)
                 
                 // 价格和积分
                 TaskRewardView(task: task)
@@ -973,7 +1140,7 @@ struct TaskRewardView: View {
             if let pointsReward = task.pointsReward, pointsReward > 0 {
                 HStack(spacing: 4) {
                     IconStyle.icon("star.circle.fill", size: 16)
-                    Text("\(pointsReward) 积分")
+                    Text(String(format: LocalizationKey.pointsAmountFormat.localized, pointsReward))
                         .font(AppTypography.bodyBold)
                 }
                 .foregroundColor(.orange)
@@ -1007,11 +1174,13 @@ struct TaskInfoCard: View {
                         .foregroundColor(AppColors.textPrimary)
                 }
                 
-                Text(task.description)
-                    .font(AppTypography.body)
-                    .foregroundColor(AppColors.textSecondary)
-                    .lineSpacing(6)
-                    .fixedSize(horizontal: false, vertical: true)
+                TranslatableText(
+                    task.description,
+                    font: AppTypography.body,
+                    foregroundColor: AppColors.textSecondary,
+                    lineSpacing: 6
+                )
+                .fixedSize(horizontal: false, vertical: true)
             }
             
             Divider()
@@ -1445,7 +1614,7 @@ struct ApplyTaskSheet: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 申请信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "申请信息", icon: "pencil.line")
+                            SectionHeader(title: LocalizationKey.taskApplicationApplyInfo.localized, icon: "pencil.line")
                             
                             EnhancedTextEditor(
                                 title: nil,
@@ -1463,11 +1632,11 @@ struct ApplyTaskSheet: View {
                         // 2. 价格协商
                         if let task = task, task.isMultiParticipant != true {
                             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                                SectionHeader(title: "价格协商", icon: "dollarsign.circle.fill")
+                                SectionHeader(title: LocalizationKey.taskDetailPriceNegotiation.localized, icon: "dollarsign.circle.fill")
                                 
                                 Toggle(isOn: $showNegotiatePrice) {
                                     HStack {
-                                        Text("我想要协商价格")
+                                        Text(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized)
                                             .font(AppTypography.body)
                                             .foregroundColor(AppColors.textPrimary)
                                         Spacer()
@@ -1485,7 +1654,7 @@ struct ApplyTaskSheet: View {
                                 
                                 if showNegotiatePrice {
                                     EnhancedNumberField(
-                                        title: "期望金额",
+                                        title: LocalizationKey.taskApplicationExpectedAmount.localized,
                                         placeholder: "0.00",
                                         value: $negotiatedPrice,
                                         prefix: "£",
@@ -1493,7 +1662,7 @@ struct ApplyTaskSheet: View {
                                     )
                                     .transition(.opacity.combined(with: .move(edge: .top)))
                                     
-                                    Text("提示: 协商价格可能会影响发布者的选择哦。")
+                                    Text(LocalizationKey.taskApplicationNegotiatePriceHint.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textTertiary)
                                         .padding(.horizontal, 4)
@@ -1512,7 +1681,7 @@ struct ApplyTaskSheet: View {
                         }) {
                             HStack(spacing: 8) {
                                 IconStyle.icon("hand.raised.fill", size: 18)
-                                Text("提交申请")
+                                Text(LocalizationKey.taskApplicationSubmitApplication.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -1522,11 +1691,11 @@ struct ApplyTaskSheet: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("申请任务")
+            .navigationTitle(LocalizationKey.taskApplicationApplyTask.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
@@ -1707,7 +1876,7 @@ struct ApplicationItemCard: View {
                 .clipShape(Circle())
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(application.applicantName ?? "未知用户")
+                    Text(application.applicantName ?? LocalizationKey.taskApplicationUnknownUser.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -1792,7 +1961,7 @@ struct ApplicationItemCard: View {
                     }) {
                         HStack(spacing: 6) {
                             IconStyle.icon("message.fill", size: 16)
-                            Text("留言")
+                            Text(LocalizationKey.taskApplicationMessage.localized)
                                 .font(AppTypography.caption)
                                 .fontWeight(.semibold)
                         }
@@ -1868,7 +2037,7 @@ struct ApplicationMessageSheet: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 留言输入
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "留言内容", icon: "message.fill")
+                            SectionHeader(title: LocalizationKey.taskApplicationMessage.localized, icon: "message.fill")
                             
                             TextEditor(text: $message)
                                 .font(AppTypography.body)
@@ -1879,7 +2048,7 @@ struct ApplicationMessageSheet: View {
                                 .overlay(
                                     Group {
                                         if message.isEmpty {
-                                            Text("给申请者留言...")
+                                            Text(LocalizationKey.taskApplicationMessageToApplicant.localized)
                                                 .font(AppTypography.body)
                                                 .foregroundColor(AppColors.textTertiary)
                                                 .padding(.leading, 16)
@@ -1900,7 +2069,7 @@ struct ApplicationMessageSheet: View {
                                 HStack {
                                     IconStyle.icon("poundsign.circle.fill", size: 18)
                                         .foregroundColor(AppColors.primary)
-                                    Text("是否议价")
+                                    Text(LocalizationKey.taskApplicationIsNegotiatePrice.localized)
                                         .font(AppTypography.bodyBold)
                                         .foregroundColor(AppColors.textPrimary)
                                 }
@@ -1909,7 +2078,7 @@ struct ApplicationMessageSheet: View {
                             
                             if showNegotiatePrice {
                                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                    Text("议价金额")
+                                    Text(LocalizationKey.taskApplicationNegotiateAmount.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                     
@@ -1939,7 +2108,7 @@ struct ApplicationMessageSheet: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Text("发送留言")
+                                Text(LocalizationKey.taskApplicationSendMessage.localized)
                                     .font(AppTypography.bodyBold)
                                     .foregroundColor(.white)
                             }
@@ -1960,17 +2129,17 @@ struct ApplicationMessageSheet: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("给申请者留言")
+            .navigationTitle(LocalizationKey.taskApplicationMessageToApplicant.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("发送失败", isPresented: $showError) {
-                Button("确定", role: .cancel) {}
+            .alert(LocalizationKey.errorUnknownError.localized, isPresented: $showError) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }
@@ -2040,11 +2209,11 @@ struct ReviewModal: View {
     
     private var ratingText: String {
         switch rating {
-        case 1: return "非常差"
-        case 2: return "差"
-        case 3: return "一般"
-        case 4: return "好"
-        case 5: return "极好"
+        case 1: return LocalizationKey.ratingVeryPoor.localized
+        case 2: return LocalizationKey.ratingPoor.localized
+        case 3: return LocalizationKey.ratingAverage.localized
+        case 4: return LocalizationKey.ratingGood.localized
+        case 5: return LocalizationKey.ratingExcellent.localized
         default: return ""
         }
     }
@@ -2059,7 +2228,7 @@ struct ReviewModal: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 评分
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "整体评价", icon: "star.fill")
+                            SectionHeader(title: LocalizationKey.taskApplicationOverallRating.localized, icon: "star.fill")
                             
                             VStack(spacing: AppSpacing.sm) {
                                 HStack(spacing: AppSpacing.md) {
@@ -2088,7 +2257,7 @@ struct ReviewModal: View {
                         
                         // 2. 标签
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "评价标签", icon: "tag.fill")
+                            SectionHeader(title: LocalizationKey.taskApplicationRatingTags.localized, icon: "tag.fill")
                             
                             LazyVGrid(columns: [
                                 GridItem(.flexible()),
@@ -2126,7 +2295,7 @@ struct ReviewModal: View {
                         
                         // 3. 评价内容
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "评价内容", icon: "square.and.pencil")
+                            SectionHeader(title: LocalizationKey.taskApplicationRatingContent.localized, icon: "square.and.pencil")
                             
                             EnhancedTextEditor(
                                 title: nil,
@@ -2137,7 +2306,7 @@ struct ReviewModal: View {
                             )
                             
                             Toggle(isOn: $isAnonymous) {
-                                Text("匿名评价")
+                                Text(LocalizationKey.ratingAnonymous.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                             }
@@ -2165,7 +2334,7 @@ struct ReviewModal: View {
                         }) {
                             HStack(spacing: 8) {
                                 IconStyle.icon("checkmark.circle.fill", size: 18)
-                                Text("提交评价")
+                                Text(LocalizationKey.ratingSubmit.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -2176,11 +2345,11 @@ struct ReviewModal: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("评价任务")
+            .navigationTitle(LocalizationKey.actionsRateTask.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }

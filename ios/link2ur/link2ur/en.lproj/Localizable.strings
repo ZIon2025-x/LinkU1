@@ -25,6 +25,7 @@
 "common.share" = "Share";
 "common.more" = "More";
 "common.view_all" = "View All";
+"common.loading_image" = "Loading image...";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -184,6 +185,14 @@
 "notifications.no_notifications" = "No notifications";
 "notifications.mark_all_read" = "Mark All as Read";
 
+// MARK: - Notification Permission
+"notification.enable_notification" = "Enable Notifications";
+"notification.enable_notification_title" = "Enable Notifications";
+"notification.enable_notification_message" = "Receive task updates and message reminders in time";
+"notification.enable_notification_description" = "Don't miss any important information";
+"notification.allow_notification" = "Allow Notifications";
+"notification.not_now" = "Not Now";
+
 // MARK: - Student Verification
 "student_verification.verification" = "Student Verification";
 "student_verification.submit" = "Submit Verification";
@@ -212,6 +221,23 @@
 "error.invalid_input" = "Invalid Input";
 "error.login_failed" = "Login Failed";
 "error.register_failed" = "Registration Failed";
+"error.error" = "Error";
+"error.retry" = "Retry";
+"error.something_went_wrong" = "Something went wrong";
+"error.invalid_url" = "Invalid request URL, please try again later";
+"error.network_connection_failed" = "Network connection failed, please check your network settings";
+"error.request_timeout" = "Request timeout, please try again later";
+"error.network_request_failed" = "Network request failed, please try again later";
+"error.invalid_response" = "Server response error, please try again later";
+"error.bad_request" = "Invalid request parameters";
+"error.unauthorized" = "Login expired, please login again";
+"error.forbidden" = "No permission to perform this operation";
+"error.not_found" = "Requested resource does not exist";
+"error.too_many_requests" = "Too many requests, please try again later";
+"error.server_error" = "Server error, please try again later";
+"error.request_failed" = "Request failed (Error code: %d)";
+"error.decoding_error" = "Data parsing failed, please try again later";
+"error.unknown" = "Unknown error occurred, please try again later";
 
 // MARK: - Success
 "success.operation_success" = "Operation Successful";
@@ -230,6 +256,19 @@
 "points.balance_after" = "Balance";
 "points.amount_format" = "%d Points";
 "points.balance_format" = "Balance: %d Points";
+"points.points" = "Points";
+"points.points_and_payment" = "Points + Payment";
+"points.points_deduction" = "Points Deduction";
+"points.check_in" = "Check In";
+"points.checked_in_today" = "Checked In Today";
+"points.check_in_reward" = "Check In for Points";
+"points.check_in_description" = "• Daily check-in rewards points\n• More consecutive days, more rewards\n• Consecutive days reset after interruption";
+"points.transaction_history" = "Your point transaction history will be displayed here";
+"points.no_transaction_history" = "No transaction history";
+"points.points_and_coupons" = "Points & Coupons";
+"points.show_recent_only" = "Show recent records only";
+"coupon.coupons" = "Coupons";
+"coupon.check_in" = "Check In";
 
 // MARK: - Time
 "time.just_now" = "Just now";
@@ -344,6 +383,8 @@
 "task_detail.application_success" = "Application Successful";
 "task_detail.application_success_message" = "You have successfully applied for this task. Please wait for the publisher to review.";
 "task_detail.task_completed_message" = "Congratulations! You have completed the task. Please wait for the publisher to confirm.";
+"task_detail.confirm_completion_success" = "Task Completion Confirmed";
+"task_detail.confirm_completion_success_message" = "Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.";
 "task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
 "task_detail.application_rejected_message" = "Sorry, your application was not approved.";
 "task_detail.pending_review" = "Pending Review";
@@ -424,6 +465,142 @@
 "rating.comment" = "Comment (Optional)";
 "rating.anonymous" = "Anonymous Rating";
 "rating.submit" = "Submit Rating";
+"rating.anonymous_rating" = "Anonymous Rating";
+"rating.submit_rating" = "Submit Rating";
+
+// MARK: - Task Application
+"task_application.apply_task" = "Apply for Task";
+"task_application.i_want_to_negotiate_price" = "I want to negotiate price";
+"task_application.expected_amount" = "Expected Amount";
+"task_application.negotiate_price_hint" = "Tip: Negotiating price may affect the publisher's choice.";
+"task_application.submit_application" = "Submit Application";
+"task_application.message" = "Message";
+"task_application.message_to_applicant" = "Message to applicant...";
+"task_application.is_negotiate_price" = "Is Negotiate Price";
+"task_application.negotiate_amount" = "Negotiate Amount";
+"task_application.send_message" = "Send Message";
+"task_application.unknown_user" = "Unknown User";
+
+// MARK: - Empty States
+"empty.no_tasks" = "No Tasks";
+"empty.no_tasks_message" = "No tasks have been posted yet. Be the first to post one!";
+"empty.no_notifications" = "No Notifications";
+"empty.no_notifications_message" = "No notification messages received yet";
+"empty.no_payment_records" = "No Payment Records";
+"empty.no_payment_records_message" = "Your payment records will be displayed here";
+
+// MARK: - Payment Status
+"payment_status.success" = "Success";
+"payment_status.processing" = "Processing";
+"payment_status.failed" = "Failed";
+"payment_status.canceled" = "Canceled";
+"payment_status.task_payment" = "Task Payment";
+"payment.task_number" = "Task #%d";
+
+// MARK: - Notification
+"notification.system_messages" = "System Messages";
+"notification.view_all_notifications" = "View All Notifications";
+
+// MARK: - Customer Service (Extended)
+"customer_service.queue_position" = "Queue Position: No. %d";
+"customer_service.estimated_wait" = "Estimated Wait Time: %d seconds";
+"customer_service.conversation_ended_message" = "Conversation ended. Please start a new conversation if you need help.";
+"customer_service.new_conversation" = "New Conversation";
+"customer_service.connecting" = "Connecting to customer service...";
+"customer_service.end_conversation" = "End Conversation";
+"customer_service.history" = "History";
+"customer_service.connected" = "👋 Connected to customer service %@";
+"customer_service.start_new_conversation" = "Start a new conversation!";
+"customer_service.total_messages" = "%d messages";
+"customer_service.rate_service" = "Rate Service";
+"customer_service.skip" = "Skip";
+
+// MARK: - Payment Records
+"payment_records.payment_records" = "Payment Records";
+"payment_records.loading" = "Loading...";
+"payment_records.load_failed" = "Load Failed";
+
+// MARK: - Coupon
+"coupon.min_amount_available" = "Available for %@ or more";
+"coupon.available" = "Available";
+"coupon.my_coupons" = "My Coupons";
+"coupon.no_threshold" = "No Threshold";
+"coupon.claim_now" = "Claim Now";
+"coupon.valid_until" = "Valid Until: %@";
+"coupon.no_available_coupons" = "No Available Coupons";
+"coupon.no_available_coupons_message" = "No coupons available to claim, stay tuned for events";
+"coupon.no_my_coupons" = "You have no coupons yet";
+"coupon.no_my_coupons_message" = "Claimed coupons will appear here";
+"coupon.usage_instructions" = "Usage Instructions";
+"coupon.transaction_history" = "Transaction History";
+"coupon.check_in_reward" = "Check-in Rewards";
+"coupon.check_in_success" = "Check-in Successful";
+"coupon.awesome" = "Awesome";
+"coupon.days" = "%d days";
+"coupon.remember_tomorrow" = "Remember to come back tomorrow";
+"coupon.consecutive_reward" = "More consecutive days, more rewards";
+"coupon.check_in_now" = "Check In Now";
+"coupon.consecutive_days" = "Consecutive check-in for %d days";
+"coupon.consecutive_check_in" = "%d days consecutive check-in";
+
+// MARK: - Task Application (Extended)
+"task_application.apply_info" = "Application Info";
+"task_application.overall_rating" = "Overall Rating";
+"task_application.rating_tags" = "Rating Tags";
+"task_application.rating_content" = "Rating Content";
+
+// MARK: - Create Task
+"create_task.publishing" = "Publishing...";
+"create_task.publish_now" = "Publish Task Now";
+"create_task.publish_task" = "Publish Task";
+
+// MARK: - Student Verification
+"student_verification.student_verification" = "Student Verification";
+
+// MARK: - Stripe Connect
+"stripe_connect.setup_account" = "Setup Payment Account";
+
+// MARK: - Activity
+"activity.load_failed" = "Load Failed";
+"activity.please_retry" = "Please retry";
+"activity.description" = "Activity Description";
+"activity.details" = "Details";
+"activity.select_time_slot" = "Select Time Slot";
+"activity.no_available_time" = "No Available Time";
+"activity.no_available_time_message" = "No available time slots at the moment";
+"activity.participate_time" = "Participate Time";
+"activity.by_appointment" = "By Appointment";
+"activity.participants" = "Participants";
+"activity.remaining_slots" = "Remaining Slots";
+"activity.status" = "Status";
+"activity.ended" = "Ended";
+"activity.full" = "Full";
+"activity.hot_recruiting" = "Hot Recruiting";
+"activity.location" = "Location";
+"activity.type" = "Activity Type";
+"activity.time_arrangement" = "Time Arrangement";
+"activity.multiple_time_slots" = "Supports multiple time slot bookings";
+"activity.deadline" = "Deadline";
+"activity.exclusive_discount" = "Exclusive Discount";
+"activity.filter" = "Filter";
+"activity.all" = "All";
+"activity.active" = "Active";
+"activity.ended" = "Ended";
+"activity.activities" = "Activities";
+"activity.no_ended_activities" = "No Ended Activities";
+"activity.no_ended_activities_message" = "No ended activity records";
+"activity.no_activities" = "No Activities";
+"activity.no_activities_message" = "No activities yet, stay tuned...";
+"activity.full_capacity" = "Full Capacity";
+
+// MARK: - Task Type
+"task_type.super_task" = "Super Task";
+"task_type.vip_task" = "VIP Task";
+
+// MARK: - Error
+"error.error" = "Error";
+"error.retry" = "Retry";
+"error.something_went_wrong" = "Something went wrong";
 
 // MARK: - Menu
 "menu.menu" = "Menu";
@@ -532,3 +709,46 @@
 "info.privacy_policy" = "Privacy Policy";
 "info.last_updated" = "Last Updated: January 1, 2024";
 
+// MARK: - Wallet
+"wallet.quick_actions" = "Quick Actions";
+"wallet.recent_transactions" = "Recent Transactions";
+"wallet.balance" = "Wallet Balance";
+"wallet.my_wallet" = "My Wallet";
+
+// MARK: - Payment
+"payment.loading_form" = "Loading payment form...";
+"payment.preparing" = "Preparing...";
+"payment.success" = "Payment Successful!";
+"payment.success_message" = "Task payment successful, updating status...";
+"payment.error" = "Payment Error";
+"payment.task_info" = "Task Information";
+"payment.task_title" = "Task Title";
+"payment.applicant" = "Applicant";
+"payment.tip" = "Tip";
+"payment.confirm_payment" = "Confirm Payment";
+"payment.preparing_payment" = "Preparing payment...";
+"payment.payment" = "Payment";
+"payment.cancel" = "Cancel";
+"payment.retry" = "Retry";
+"payment.retry_payment" = "Retry Payment";
+"payment.coupons" = "Coupons";
+"payment.coupon_discount" = "Coupon Discount";
+"payment.no_available_coupons" = "No available coupons";
+"payment.total_amount" = "Total Amount";
+"payment.final_payment" = "Final Payment";
+"payment.mixed" = "Mixed";
+
+// MARK: - Share
+"share.wechat" = "WeChat";
+"share.wechat_moments" = "Moments";
+"share.qq" = "QQ";
+"share.qzone" = "QZone";
+"share.weibo" = "Weibo";
+"share.sms" = "SMS";
+"share.copy_link" = "Copy Link";
+"share.generate_image" = "Generate Share Image";
+"share.share_to" = "Share To";
+"share.generating_image" = "Generating share image...";
+"share.image" = "Share Image";
+"share.share_image" = "Share Image";
+"share.save_to_photos" = "Save to Photos";

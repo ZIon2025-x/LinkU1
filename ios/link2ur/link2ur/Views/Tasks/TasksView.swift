@@ -52,7 +52,7 @@ struct TasksView: View {
                         )
                         
                         if !searchText.isEmpty {
-                            Button("搜索") {
+                            Button(LocalizationKey.commonSearch.localized) {
                                 // 执行搜索，只搜索开放中的任务
                                 viewModel.loadTasks(status: "open", keyword: searchText)
                             }
@@ -110,8 +110,8 @@ struct TasksView: View {
                     } else if viewModel.tasks.isEmpty {
                         EmptyStateView(
                             icon: "doc.text.magnifyingglass",
-                            title: "暂无任务",
-                            message: "还没有任务发布，快来发布第一个任务吧！"
+                            title: LocalizationKey.emptyNoTasks.localized,
+                            message: LocalizationKey.emptyNoTasksMessage.localized
                         )
                     } else {
                         ScrollView {
@@ -255,9 +255,9 @@ struct TaskCard: View {
         guard let level = level else { return "" }
         switch level {
         case "super":
-            return "超级任务"
+            return LocalizationKey.taskTypeSuperTask.localized
         case "vip":
-            return "VIP任务"
+            return LocalizationKey.taskTypeVipTask.localized
         default:
             return ""
         }
@@ -345,13 +345,14 @@ struct TaskCard: View {
             
             // 内容区域（符合 HIG，使用系统背景）
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                // 标题（使用系统字体）
-                Text(task.title)
-                    .font(AppTypography.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                // 标题（使用系统字体，支持翻译）
+                TranslatableText(
+                    task.title,
+                    font: AppTypography.body,
+                    foregroundColor: AppColors.textPrimary,
+                    lineLimit: 2
+                )
+                .multilineTextAlignment(.leading)
                 
                 // 底部信息栏
                 HStack(spacing: AppSpacing.sm) {

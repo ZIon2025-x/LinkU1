@@ -32,7 +32,7 @@ struct WalletView: View {
                     
                     // 快速操作
                     VStack(spacing: AppSpacing.md) {
-                        Text("快速操作")
+                        Text(LocalizationKey.walletQuickActions.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,8 +41,8 @@ struct WalletView: View {
                         NavigationLink(destination: CouponPointsView()) {
                             QuickActionCard(
                                 icon: "star.fill",
-                                title: "积分与优惠券",
-                                subtitle: "查看积分详情、优惠券和签到",
+                                title: LocalizationKey.pointsAndCoupons.localized,
+                                subtitle: LocalizationKey.profilePointsCouponsSubtitle.localized,
                                 color: Color.orange
                             )
                         }
@@ -55,14 +55,14 @@ struct WalletView: View {
                     if !viewModel.recentTransactions.isEmpty {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
-                                Text("最近交易")
+                                Text(LocalizationKey.walletRecentTransactions.localized)
                                     .font(AppTypography.title3)
                                     .foregroundColor(AppColors.textPrimary)
                                 
                                 Spacer()
                                 
                                 NavigationLink(destination: CouponPointsView()) {
-                                    Text("查看全部")
+                                    Text(LocalizationKey.commonViewAll.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.primary)
                                 }
@@ -80,7 +80,7 @@ struct WalletView: View {
                     // 钱包余额和提现功能
                     VStack(spacing: AppSpacing.md) {
                         HStack {
-                            Text("钱包余额")
+                            Text(LocalizationKey.walletBalance.localized)
                                 .font(AppTypography.title3)
                                 .foregroundColor(AppColors.textPrimary)
                             Spacer()
@@ -114,7 +114,7 @@ struct WalletView: View {
                 .padding(.bottom, AppSpacing.xl)
             }
         }
-        .navigationTitle("我的钱包")
+        .navigationTitle(LocalizationKey.walletMyWallet.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)

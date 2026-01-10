@@ -1,0 +1,758 @@
+/* 
+  Localizable.strings
+  link2ur
+  
+  繁体中文本地化
+*/
+
+// MARK: - Common
+"common.ok" = "確定";
+"common.cancel" = "取消";
+"common.confirm" = "確認";
+"common.delete" = "刪除";
+"common.save" = "儲存";
+"common.edit" = "編輯";
+"common.close" = "關閉";
+"common.retry" = "重試";
+"common.loading" = "載入中...";
+"common.search" = "搜尋";
+"common.clear" = "清空";
+"common.submit" = "提交";
+"common.back" = "返回";
+"common.next" = "下一步";
+"common.finish" = "完成";
+"common.done" = "完成";
+"common.share" = "分享";
+"common.more" = "更多";
+"common.view_all" = "查看全部";
+"common.loading_image" = "載入圖片中...";
+
+// MARK: - App
+"app.name" = "Link²Ur";
+"app.tagline" = "連接你我，創造價值";
+"app.user" = "Link²Ur用戶";
+
+// MARK: - Auth
+"auth.login" = "登錄";
+"auth.register" = "註冊";
+"auth.logout" = "登出";
+"auth.email" = "郵箱";
+"auth.email_or_id" = "郵箱/ID";
+"auth.password" = "密碼";
+"auth.phone" = "手機號";
+"auth.verification_code" = "驗證碼";
+"auth.login_later" = "稍後登錄";
+
+// MARK: - Login Required
+"login.required" = "需要登錄";
+"login.required_for_points" = "請登錄後查看積分與優惠券";
+"login.required_for_verification" = "請登錄後進行學生認證";
+"login.login_now" = "立即登錄";
+"auth.send_code" = "發送驗證碼";
+"auth.resend_code" = "重新發送";
+"auth.login_method" = "登錄方式";
+"auth.email_password" = "郵箱/ID密碼";
+"auth.email_code" = "郵箱驗證碼";
+"auth.phone_code" = "手機驗證碼";
+"auth.enter_email" = "請輸入郵箱";
+"auth.enter_email_or_id" = "請輸入郵箱或ID";
+"auth.enter_password" = "請輸入密碼";
+"auth.enter_phone" = "請輸入手機號";
+"auth.enter_code" = "請輸入驗證碼";
+"auth.no_account" = "還沒有帳號？";
+"auth.has_account" = "已有帳戶？";
+"auth.register_now" = "立即註冊";
+"auth.login_now" = "立即登錄";
+"auth.no_account_use_code" = "驗證碼登錄即可";
+"auth.register_success" = "註冊成功";
+"auth.captcha_title" = "人機驗證";
+"auth.captcha_message" = "請完成人機驗證";
+"auth.captcha_error" = "無法載入驗證碼，請稍後重試";
+"auth.username" = "用戶名";
+"auth.enter_username" = "請輸入用戶名";
+"auth.password_hint" = "至少8個字符，包含字母和數字";
+"auth.phone_optional" = "手機號（可選）";
+"auth.agree_to_terms" = "我已閱讀並同意";
+"auth.terms_of_service" = "《用戶協議》";
+"auth.privacy_policy" = "《隱私政策》";
+
+// MARK: - Home
+"home.experts" = "達人";
+"home.recommended" = "推薦";
+"home.nearby" = "附近";
+"home.greeting" = "你好，%@";
+"home.what_to_do" = "今天想做點什麼？";
+"home.menu" = "選單";
+"home.search_experts" = "搜尋達人";
+"home.search" = "搜尋";
+"home.no_results" = "沒有找到相關結果";
+"home.try_other_keywords" = "試試其他關鍵詞";
+"home.search_history" = "搜尋歷史";
+"home.hot_searches" = "熱門搜尋";
+"home.no_nearby_tasks" = "附近暫無任務";
+"home.no_nearby_tasks_message" = "附近還沒有任務發布，快來發布第一個任務吧！";
+"home.no_experts" = "暫無任務達人";
+"home.no_experts_message" = "還沒有任務達人，敬請期待...";
+"home.recommended_tasks" = "推薦任務";
+"home.no_recommended_tasks" = "暫無推薦任務";
+"home.no_recommended_tasks_message" = "還沒有推薦任務，快去任務大廳看看吧！";
+"home.latest_activity" = "最新動態";
+"home.no_activity" = "暫無動態";
+"home.no_activity_message" = "還沒有最新動態";
+"home.no_more_activity" = "以上為最新動態";
+"home.hot_events" = "熱門活動";
+"home.no_events" = "暫無活動";
+"home.no_events_message" = "目前還沒有活動，敬請期待...";
+"home.view_event" = "查看活動";
+"home.tap_to_view_events" = "點擊查看最新活動";
+"home.multiple_people" = "多人";
+"home.view" = "查看";
+
+// MARK: - Tasks
+"tasks.task_detail" = "任務詳情";
+"tasks.load_failed" = "載入失敗";
+"tasks.cancel_task" = "取消任務";
+"tasks.cancel_task_confirm" = "確定要取消這個任務嗎？";
+"tasks.apply" = "申請";
+"tasks.apply_task" = "申請任務";
+"tasks.apply_message" = "留言（可選）";
+"tasks.apply_info" = "申請資訊";
+"tasks.price_negotiation" = "價格協商";
+"tasks.apply_hint" = "向發布者說明你的申請理由，有助於提高申請成功率";
+"tasks.submit_application" = "提交申請";
+"tasks.no_applicants" = "暫無申請者";
+"tasks.applicants_list" = "申請者列表 (%d)";
+"tasks.message_label" = "留言: %@";
+"tasks.task_description" = "任務描述";
+"tasks.time_info" = "時間資訊";
+"tasks.publish_time" = "發布時間";
+"tasks.deadline" = "截止時間";
+"tasks.publisher" = "發布者";
+"tasks.your_task" = "這是您發布的任務";
+"tasks.manage_task" = "您可以在下方查看申請者並管理任務";
+"tasks.reviews" = "評價 (%d)";
+"tasks.no_task_images" = "暫無任務圖片";
+"tasks.points_reward" = "%d 積分";
+"tasks.share_to" = "分享到...";
+"tasks.task" = "任務";
+"tasks.tasks" = "任務";
+
+// MARK: - Task Experts
+"experts.experts" = "任務達人";
+"experts.become_expert" = "成為達人";
+"experts.search_experts" = "搜尋任務達人";
+"experts.apply_now" = "立即申請";
+"experts.login_to_apply" = "登錄後申請";
+
+// MARK: - Forum
+"forum.forum" = "論壇";
+"forum.all_posts" = "全部帖子";
+"forum.no_posts" = "暫無帖子";
+"forum.no_posts_message" = "這個板塊還沒有帖子，快來發布第一個吧！";
+"forum.search_posts" = "搜尋帖子";
+"forum.posts" = "帖子";
+
+// MARK: - Flea Market
+"flea_market.flea_market" = "跳蚤市場";
+"flea_market.no_items" = "暫無商品";
+"flea_market.no_items_message" = "跳蚤市場還沒有商品，快來發布第一個吧！";
+"flea_market.search_items" = "搜尋商品";
+"flea_market.items" = "商品";
+
+// MARK: - Profile
+"profile.profile" = "個人中心";
+"profile.my_tasks" = "我的任務";
+"profile.my_posts" = "我的閒置";
+"profile.settings" = "設定";
+"profile.about" = "關於";
+"profile.logout" = "登出";
+"profile.logout_confirm" = "確定要登出嗎？";
+
+// MARK: - Messages
+"messages.messages" = "訊息";
+"messages.chat" = "聊天";
+"messages.send" = "發送";
+"messages.enter_message" = "輸入訊息";
+
+// MARK: - Leaderboard
+"leaderboard.leaderboard" = "排行榜";
+"leaderboard.rank" = "排名";
+"leaderboard.points" = "積分";
+"leaderboard.user" = "用戶";
+
+// MARK: - Notifications
+"notifications.notifications" = "通知";
+"notifications.no_notifications" = "暫無通知";
+"notifications.mark_all_read" = "全部標記為已讀";
+
+// MARK: - Notification Permission
+"notification.enable_notification" = "開啟通知";
+"notification.enable_notification_title" = "開啟通知";
+"notification.enable_notification_message" = "及時接收任務更新、訊息提醒";
+"notification.enable_notification_description" = "不錯過任何重要資訊";
+"notification.allow_notification" = "允許通知";
+"notification.not_now" = "稍後提醒";
+
+// MARK: - Student Verification
+"student_verification.verification" = "學生認證";
+"student_verification.submit" = "提交認證";
+"student_verification.upload_document" = "上傳證件";
+
+// MARK: - Customer Service
+"customer_service.customer_service" = "客服中心";
+"customer_service.chat_with_service" = "聯繫客服";
+
+// MARK: - Activity
+"activity.activity" = "動態";
+"activity.recent_activity" = "最近動態";
+"activity.ended" = "活動已結束";
+"activity.full" = "已滿員";
+"activity.apply" = "申請參加";
+
+// MARK: - Search
+"search.search" = "搜尋";
+"search.results" = "結果";
+"search.no_results" = "沒有找到相關結果";
+"search.try_other_keywords" = "試試其他關鍵詞";
+
+// MARK: - Errors
+"error.network_error" = "網路錯誤";
+"error.unknown_error" = "未知錯誤";
+"error.invalid_input" = "輸入無效";
+"error.login_failed" = "登錄失敗";
+"error.register_failed" = "註冊失敗";
+
+// MARK: - Success
+"success.operation_success" = "操作成功";
+"success.saved" = "已儲存";
+"success.deleted" = "已刪除";
+
+// MARK: - Currency
+"currency.pound" = "£";
+"currency.points" = "積分";
+
+// MARK: - Points
+"points.balance" = "積分餘額";
+"points.unit" = "積分";
+"points.total_earned" = "累計獲得";
+"points.total_spent" = "累計消費";
+"points.balance_after" = "餘額";
+"points.amount_format" = "%d 積分";
+"points.balance_format" = "餘額: %d 積分";
+"points.points" = "積分";
+"points.points_and_payment" = "積分+支付";
+"points.points_deduction" = "積分抵扣";
+"points.check_in" = "簽到";
+"points.checked_in_today" = "今日已簽到";
+"points.check_in_reward" = "簽到領積分";
+"points.check_in_description" = "• 每日簽到可獲得積分獎勵\n• 連續簽到天數越多，獎勵越豐厚\n• 簽到中斷後，連續天數將重新計算";
+"points.transaction_history" = "您的積分變動記錄將顯示在這裡";
+"points.no_transaction_history" = "暫無交易記錄";
+"points.points_and_coupons" = "積分與優惠券";
+"points.show_recent_only" = "僅顯示最近記錄";
+"coupon.coupons" = "優惠券";
+"coupon.check_in" = "簽到";
+
+// MARK: - Time
+"time.just_now" = "剛剛";
+"time.minutes_ago" = "%d分鐘前";
+"time.hours_ago" = "%d小時前";
+"time.days_ago" = "%d天前";
+"time.weeks_ago" = "%d週前";
+"time.months_ago" = "%d個月前";
+"time.years_ago" = "%d年前";
+
+// MARK: - Tabs
+"tabs.home" = "首頁";
+"tabs.community" = "社群";
+"tabs.create" = "發布";
+"tabs.messages" = "訊息";
+"tabs.profile" = "我的";
+
+// MARK: - Community
+"community.forum" = "論壇";
+"community.leaderboard" = "排行榜";
+
+// MARK: - Post
+"post.pinned" = "置頂";
+"post.featured" = "精華";
+"post.official" = "官方";
+"post.all" = "全部";
+
+// MARK: - Actions
+"actions.approve" = "批准";
+"actions.reject" = "拒絕";
+"actions.chat" = "聊天";
+"actions.share" = "分享";
+"actions.cancel" = "取消";
+"actions.confirm" = "確定";
+"actions.submit" = "提交";
+"actions.loading_messages" = "載入訊息中...";
+"actions.no_messages_yet" = "還沒有訊息";
+"actions.start_conversation" = "開始對話吧！";
+"actions.enter_message" = "輸入訊息...";
+"actions.private_message" = "私訊";
+"actions.processing" = "處理中...";
+"actions.mark_complete" = "標記任務完成";
+"actions.confirm_complete" = "確認任務完成";
+"actions.contact_recipient" = "聯繫接受者";
+"actions.contact_poster" = "聯繫發布者";
+"actions.rate_task" = "評價任務";
+"actions.cancel_task" = "取消任務";
+"actions.apply_for_task" = "申請參與任務";
+"actions.optional_message" = "留言（可選）";
+"actions.negotiate_price" = "想要協商價格";
+"actions.apply_reason_hint" = "向發布者說明你的申請理由，有助於提高申請成功率";
+"actions.submit_application" = "提交申請";
+"actions.cancel_reason" = "取消原因（可選）";
+"actions.share_to" = "分享到...";
+
+// MARK: - Profile
+"profile.user" = "用戶";
+"profile.my_tasks" = "我的任務";
+"profile.my_tasks_subtitle" = "查看我發布和接取的任務";
+"profile.my_posts" = "我的閒置";
+"profile.my_posts_subtitle" = "管理我的閒置物品";
+"profile.my_wallet" = "我的錢包";
+"profile.my_wallet_subtitle" = "查看餘額和交易記錄";
+"profile.my_applications" = "我的活動";
+"profile.my_applications_subtitle" = "查看申請和收藏的活動";
+"profile.points_coupons" = "積分與優惠券";
+"profile.points_coupons_subtitle" = "查看積分、優惠券和簽到";
+"profile.student_verification" = "學生認證";
+"profile.student_verification_subtitle" = "驗證學生身份享受優惠";
+"profile.activity" = "活動";
+"profile.activity_subtitle" = "查看和參加活動";
+"profile.settings" = "設定";
+"profile.settings_subtitle" = "應用設定和偏好";
+"profile.logout" = "登出";
+"profile.welcome" = "歡迎使用 Link²Ur";
+"profile.login_prompt" = "登錄後即可使用全部功能";
+"profile.confirm_logout" = "確認登出";
+"profile.logout_message" = "確定要登出嗎？";
+
+// MARK: - Task Detail
+"task_detail.task_detail" = "任務詳情";
+"task_detail.share" = "分享";
+"task_detail.cancel_task" = "取消任務";
+"task_detail.cancel_task_confirm" = "確定要取消這個任務嗎？";
+"task_detail.no_task_images" = "暫無任務圖片";
+"task_detail.vip_task" = "VIP任務";
+"task_detail.super_task" = "超級任務";
+"task_detail.task_description" = "任務描述";
+"task_detail.time_info" = "時間資訊";
+"task_detail.publish_time" = "發布時間";
+"task_detail.deadline" = "截止時間";
+"task_detail.publisher" = "發布者";
+"task_detail.email_not_provided" = "未提供郵箱";
+"task_detail.your_task" = "這是您發布的任務";
+"task_detail.manage_task" = "您可以在下方查看申請者並管理任務";
+"task_detail.reviews" = "評價 (%d)";
+"task_detail.my_reviews" = "我的評價";
+"task_detail.anonymous_user" = "匿名用戶";
+"task_detail.unknown_user" = "未知用戶";
+"task_detail.apply_info" = "申請資訊";
+"task_detail.price_negotiation" = "價格協商";
+"task_detail.apply_reason_hint" = "向發布者說明你的申請理由，有助於提高申請成功率";
+"task_detail.submit_application" = "提交申請";
+"task_detail.applicants_list" = "申請者列表 (%d)";
+"task_detail.no_applicants" = "暫無申請者";
+"task_detail.message_label" = "留言: %@";
+"task_detail.waiting_review" = "等待發布者審核";
+"task_detail.task_completed" = "任務已完成";
+"task_detail.application_approved" = "申請已通過";
+"task_detail.application_rejected" = "申請被拒絕";
+"task_detail.unknown_status" = "未知狀態";
+"task_detail.application_success" = "申請成功";
+"task_detail.application_success_message" = "您已成功申請此任務，請等待發布者審核。";
+"task_detail.task_completed_message" = "恭喜！您已完成任務，請等待發布者確認。";
+"task_detail.confirm_completion_success" = "任務已確認完成";
+"task_detail.confirm_completion_success_message" = "任務狀態已更新為已完成。獎勵將自動轉給任務接受者。";
+"task_detail.application_approved_message" = "恭喜！您的申請已通過，可以開始執行任務了。";
+"task_detail.application_rejected_message" = "很抱歉，您的申請未通過審核。";
+"task_detail.pending_review" = "待審核";
+"task_detail.approved" = "已通過";
+"task_detail.rejected" = "已拒絕";
+"task_detail.unknown" = "未知";
+"task_detail.quality_good" = "工作質量好";
+"task_detail.on_time" = "準時";
+"task_detail.responsible" = "負責任";
+"task_detail.good_attitude" = "態度好";
+"task_detail.skilled" = "技能熟練";
+"task_detail.trustworthy" = "值得信賴";
+"task_detail.recommended" = "推薦";
+"task_detail.excellent" = "優秀";
+"task_detail.task_clear" = "任務清晰";
+"task_detail.communication_timely" = "溝通及時";
+"task_detail.payment_timely" = "付款及時";
+"task_detail.reasonable_requirements" = "要求合理";
+"task_detail.pleasant_cooperation" = "合作愉快";
+"task_detail.professional_efficient" = "專業高效";
+
+// MARK: - Messages
+"messages.loading_messages" = "載入訊息中...";
+"messages.no_messages_yet" = "還沒有訊息";
+"messages.start_conversation" = "開始對話吧！";
+"messages.enter_message" = "輸入訊息...";
+"messages.no_task_chats" = "暫無任務聊天";
+"messages.no_task_chats_message" = "還沒有任務相關的聊天記錄";
+"messages.customer_service" = "客服中心";
+"messages.contact_service" = "聯繫客服獲取幫助";
+"messages.interaction_info" = "互動資訊";
+"messages.view_forum_interactions" = "查看論壇互動訊息";
+"messages.no_interactions" = "暫無互動訊息";
+"messages.no_interactions_message" = "還沒有收到任何互動通知";
+"messages.click_to_view" = "點擊查看訊息";
+
+// MARK: - Permissions
+"permission.location_usage_description" = "我們需要獲取您的位置資訊，以便為您提供更精準的服務和任務推薦";
+
+// MARK: - Customer Service
+"customer_service.welcome" = "歡迎使用客服中心";
+"customer_service.start_conversation" = "點擊下方連接按鈕開始與客服對話";
+"customer_service.loading_messages" = "載入訊息中...";
+"customer_service.queue_position" = "排隊位置: 第 %d 位";
+"customer_service.estimated_wait" = "預計等待時間: %d 秒";
+"customer_service.conversation_ended" = "對話已結束，如需幫助請重新發起對話";
+"customer_service.new_conversation" = "新對話";
+"customer_service.enter_message" = "輸入訊息...";
+"customer_service.connecting" = "正在連接客服...";
+"customer_service.end_conversation" = "結束對話";
+"customer_service.history" = "歷史";
+"customer_service.login_required" = "請先登錄後再使用客服功能";
+"customer_service.conversation_ended" = "對話已結束";
+"customer_service.what_can_help" = "有什麼可以幫助您的嗎？";
+"customer_service.no_chat_history" = "暫無對話歷史";
+"customer_service.start_new_conversation" = "開始新的對話吧！";
+"customer_service.chat_history" = "對話歷史";
+"customer_service.done" = "完成";
+"customer_service.service_chat" = "客服對話";
+"customer_service.ended" = "已結束";
+"customer_service.in_progress" = "進行中";
+"customer_service.rate_service" = "評價客服";
+"customer_service.satisfaction_question" = "您對 %@ 的服務滿意嗎？";
+"customer_service.select_rating" = "請選擇評分";
+"customer_service.rating_content" = "評價內容（可選）";
+"customer_service.submit_rating" = "提交評價";
+"customer_service.rate_service_title" = "評價客服";
+"customer_service.skip" = "跳過";
+
+// MARK: - Rating
+"rating.very_poor" = "非常差";
+"rating.poor" = "差";
+"rating.average" = "一般";
+"rating.good" = "好";
+"rating.excellent" = "非常好";
+"rating.rating" = "評分";
+"rating.select_tags" = "選擇標籤（可選）";
+"rating.comment" = "評論（可選）";
+"rating.anonymous" = "匿名評價";
+"rating.submit" = "提交評價";
+"rating.anonymous_rating" = "匿名評價";
+"rating.submit_rating" = "提交評價";
+
+// MARK: - Task Application
+"task_application.apply_task" = "申請任務";
+"task_application.i_want_to_negotiate_price" = "我想要協商價格";
+"task_application.expected_amount" = "期望金額";
+"task_application.negotiate_price_hint" = "提示: 協商價格可能會影響發布者的選擇哦。";
+"task_application.submit_application" = "提交申請";
+"task_application.message" = "留言";
+"task_application.message_to_applicant" = "給申請者留言...";
+"task_application.is_negotiate_price" = "是否議價";
+"task_application.negotiate_amount" = "議價金額";
+"task_application.send_message" = "發送留言";
+"task_application.unknown_user" = "未知用戶";
+
+// MARK: - Empty States
+"empty.no_tasks" = "暫無任務";
+"empty.no_tasks_message" = "還沒有任務發布，快來發布第一個任務吧！";
+"empty.no_notifications" = "暫無通知";
+"empty.no_notifications_message" = "還沒有收到任何通知訊息";
+"empty.no_payment_records" = "暫無支付記錄";
+"empty.no_payment_records_message" = "您的支付記錄將顯示在這裡";
+
+// MARK: - Payment Status
+"payment_status.success" = "成功";
+"payment_status.processing" = "處理中";
+"payment_status.failed" = "失敗";
+"payment_status.canceled" = "已撤銷";
+"payment_status.task_payment" = "任務付款";
+"payment.task_number" = "任務 #%d";
+
+// MARK: - Notification
+"notification.system_messages" = "系統訊息";
+"notification.view_all_notifications" = "查看全部通知訊息";
+
+// MARK: - Customer Service (Extended)
+"customer_service.queue_position" = "排隊位置: 第 %d 位";
+"customer_service.estimated_wait" = "預計等待時間: %d 秒";
+"customer_service.conversation_ended_message" = "對話已結束，如需幫助請重新發起對話";
+"customer_service.new_conversation" = "新對話";
+"customer_service.connecting" = "正在連接客服...";
+"customer_service.end_conversation" = "結束對話";
+"customer_service.history" = "歷史";
+"customer_service.connected" = "👋 已連接到客服 %@";
+"customer_service.start_new_conversation" = "開始新的對話吧！";
+"customer_service.total_messages" = "%d 條訊息";
+"customer_service.rate_service" = "評價客服";
+"customer_service.skip" = "跳過";
+
+// MARK: - Payment Records
+"payment_records.payment_records" = "支付記錄";
+"payment_records.loading" = "載入中...";
+"payment_records.load_failed" = "載入失敗";
+
+// MARK: - Coupon
+"coupon.min_amount_available" = "滿%@可用";
+"coupon.available" = "可領取的";
+"coupon.my_coupons" = "我的卡券";
+"coupon.no_threshold" = "無門檻";
+"coupon.claim_now" = "立即領取";
+"coupon.valid_until" = "有效期至: %@";
+"coupon.no_available_coupons" = "暫無可用優惠券";
+"coupon.no_available_coupons_message" = "目前沒有可領取的優惠券，關注活動哦";
+"coupon.no_my_coupons" = "您還沒有優惠券";
+"coupon.no_my_coupons_message" = "領取的優惠券將出現在這裡";
+"coupon.usage_instructions" = "使用說明";
+"coupon.transaction_history" = "交易記錄";
+"coupon.check_in_reward" = "簽到獎勵";
+"coupon.check_in_success" = "簽到成功";
+"coupon.awesome" = "太棒了";
+"coupon.days" = "%d天";
+"coupon.remember_tomorrow" = "明天也要記得來哦";
+"coupon.consecutive_reward" = "連續簽到獎勵更豐富";
+"coupon.check_in_now" = "立即簽到";
+"coupon.consecutive_days" = "已連續簽到 %d 天";
+"coupon.consecutive_check_in" = "%d天連續簽到";
+
+// MARK: - Task Application (Extended)
+"task_application.apply_info" = "申請資訊";
+"task_application.overall_rating" = "整體評價";
+"task_application.rating_tags" = "評價標籤";
+"task_application.rating_content" = "評價內容";
+
+// MARK: - Create Task
+"create_task.publishing" = "正在發布...";
+"create_task.publish_now" = "立即發布任務";
+"create_task.publish_task" = "發布任務";
+
+// MARK: - Student Verification
+"student_verification.student_verification" = "學生認證";
+
+// MARK: - Stripe Connect
+"stripe_connect.setup_account" = "設置收款帳戶";
+
+// MARK: - Activity
+"activity.load_failed" = "載入失敗";
+"activity.please_retry" = "請重試";
+"activity.description" = "活動描述";
+"activity.details" = "詳細資訊";
+"activity.select_time_slot" = "選擇時間段";
+"activity.no_available_time" = "暫無可用時間";
+"activity.no_available_time_message" = "目前沒有可選的時間段";
+"activity.participate_time" = "參與時間";
+"activity.by_appointment" = "預約制";
+"activity.participants" = "參與者";
+"activity.remaining_slots" = "剩餘名額";
+"activity.status" = "狀態";
+"activity.ended" = "已結束";
+"activity.full" = "已滿";
+"activity.hot_recruiting" = "熱招中";
+"activity.location" = "具體地點";
+"activity.type" = "活動類型";
+"activity.time_arrangement" = "時間安排";
+"activity.multiple_time_slots" = "支持多個時間段預約";
+"activity.deadline" = "截止日期";
+"activity.exclusive_discount" = "專享折扣";
+"activity.filter" = "篩選";
+"activity.all" = "全部";
+"activity.active" = "進行中";
+"activity.ended" = "已結束";
+"activity.activities" = "活動";
+"activity.no_ended_activities" = "暫無已結束的活動";
+"activity.no_ended_activities_message" = "沒有已結束的活動記錄";
+"activity.no_activities" = "暫無活動";
+"activity.no_activities_message" = "目前還沒有活動，敬請期待...";
+"activity.full_capacity" = "已滿員";
+
+// MARK: - Task Type
+"task_type.super_task" = "超級任務";
+"task_type.vip_task" = "VIP任務";
+
+// MARK: - Error
+"error.error" = "錯誤";
+"error.retry" = "重試";
+"error.something_went_wrong" = "出錯了";
+"error.invalid_url" = "請求地址無效，請稍後重試";
+"error.network_connection_failed" = "網路連接失敗，請檢查網路設定";
+"error.request_timeout" = "請求超時，請稍後重試";
+"error.network_request_failed" = "網路請求失敗，請稍後重試";
+"error.invalid_response" = "伺服器響應異常，請稍後重試";
+"error.bad_request" = "請求參數錯誤";
+"error.unauthorized" = "登錄已過期，請重新登錄";
+"error.forbidden" = "沒有權限執行此操作";
+"error.not_found" = "請求的資源不存在";
+"error.too_many_requests" = "請求過於頻繁，請稍後重試";
+"error.server_error" = "伺服器錯誤，請稍後重試";
+"error.request_failed" = "請求失敗 (錯誤代碼: %d)";
+"error.decoding_error" = "數據解析失敗，請稍後重試";
+"error.unknown" = "發生未知錯誤，請稍後重試";
+
+// MARK: - Menu
+"menu.menu" = "選單";
+"menu.my" = "我的";
+"menu.task_hall" = "任務大廳";
+"menu.task_experts" = "任務達人";
+"menu.forum" = "論壇";
+"menu.leaderboard" = "排行榜";
+"menu.flea_market" = "跳蚤市場";
+"menu.activity" = "活動";
+"menu.points_coupons" = "積分與優惠券";
+"menu.student_verification" = "學生認證";
+"menu.settings" = "設定";
+"menu.close" = "關閉";
+
+// MARK: - Task Categories
+"task_category.all" = "全部";
+"task_category.housekeeping" = "清潔家政";
+"task_category.campus_life" = "校園生活";
+"task_category.secondhand_rental" = "二手租賃";
+"task_category.errand_running" = "跑腿代購";
+"task_category.skill_service" = "技能服務";
+"task_category.social_help" = "社交互助";
+"task_category.transportation" = "交通用車";
+"task_category.pet_care" = "寵物寄養";
+"task_category.life_convenience" = "生活便利";
+"task_category.other" = "其他";
+
+// MARK: - Expert Categories
+"expert_category.all" = "全部";
+"expert_category.programming" = "程式設計";
+"expert_category.translation" = "翻譯";
+"expert_category.tutoring" = "輔導";
+"expert_category.food" = "食品";
+"expert_category.beverage" = "飲料";
+"expert_category.cake" = "蛋糕";
+"expert_category.errand_transport" = "跑腿/交通";
+"expert_category.social_entertainment" = "社交/娛樂";
+"expert_category.beauty_skincare" = "美容/護膚";
+"expert_category.handicraft" = "手工藝";
+
+// MARK: - Create Task
+"create_task.basic_info" = "基本資訊";
+"create_task.reward_location" = "報酬與地點";
+"create_task.currency" = "貨幣";
+"create_task.task_type" = "任務類型";
+"create_task.images" = "圖片";
+"create_task.add_images" = "添加圖片";
+
+// MARK: - Task Expert
+"task_expert.become_expert" = "成為達人";
+"task_expert.become_expert_title" = "成為任務達人";
+"task_expert.showcase_skills" = "展示您的專業技能，獲得更多任務機會";
+"task_expert.benefits" = "成為達人的好處";
+"task_expert.how_to_apply" = "如何申請？";
+"task_expert.apply_now" = "立即申請";
+"task_expert.login_to_apply" = "登錄後申請";
+"task_expert.application_info" = "申請資訊";
+"task_expert.application_hint" = "請介紹您的專業技能、經驗和優勢，這將幫助平台更好地了解您。";
+"task_expert.submit_application" = "提交申請";
+"task_expert.application_submitted" = "您的申請已提交，我們將在3-5個工作日內完成審核。";
+"task_expert.no_intro" = "暫無簡介";
+"task_expert.service_menu" = "服務選單";
+"task_expert.optional_time_slots" = "可選時間段";
+"task_expert.no_available_slots" = "暫無可用時間段";
+"task_expert.apply_service" = "申請服務";
+"task_expert.optional" = "可選";
+"task_expert.full" = "已滿";
+"task_expert.application_message" = "申請留言";
+"task_expert.negotiate_price" = "議價金額";
+"task_expert.expert_negotiate_price" = "任務達人提出議價：";
+"task_expert.view_task" = "查看任務";
+"task_expert.task_details" = "任務詳情: %@";
+"task_expert.clear" = "清除";
+
+// MARK: - Forum
+"forum.need_login" = "需要登錄";
+"forum.community_login_message" = "社群功能僅對已登錄且完成學生認證的用戶開放";
+"forum.login_now" = "立即登錄";
+"forum.need_student_verification" = "需要學生認證";
+"forum.verification_pending" = "您的學生認證申請正在審核中，請耐心等待";
+"forum.verification_rejected" = "您的學生認證申請未通過，請重新提交";
+"forum.complete_verification" = "請完成學生認證以訪問社群功能";
+"forum.go_verify" = "去認證";
+"forum.no_posts" = "暫無帖子";
+"forum.official" = "官方";
+"forum.replies" = "回覆 (%@)";
+"forum.load_replies_failed" = "載入回覆失敗: %@";
+"forum.no_replies" = "暫無回覆";
+"forum.reply" = "回覆";
+"forum.post_reply" = "發布回覆";
+"forum.select_section" = "選擇板塊";
+"forum.please_select_section" = "請選擇板塊";
+"forum.publish" = "發布";
+
+// MARK: - Info
+"info.connect_platform" = "連接你我的任務平台";
+"info.contact_us" = "聯繫我們";
+"info.member_benefits" = "會員權益";
+"info.faq" = "常見問題";
+"info.need_help" = "需要幫助？";
+"info.contact_admin" = "聯繫管理員了解更多會員資訊";
+"info.contact_service" = "聯繫客服";
+"info.terms_of_service" = "服務條款";
+"info.privacy_policy" = "隱私政策";
+"info.last_updated" = "最後更新：2024年1月1日";
+
+// MARK: - Share
+"share.wechat" = "微信";
+"share.wechat_moments" = "朋友圈";
+"share.qq" = "QQ";
+"share.qzone" = "QQ空間";
+"share.weibo" = "微博";
+"share.sms" = "簡訊";
+"share.copy_link" = "複製連結";
+"share.generate_image" = "生成分享圖";
+"share.share_to" = "分享到";
+"share.generating_image" = "正在生成分享圖...";
+"share.image" = "分享圖";
+"share.share_image" = "分享圖片";
+"share.save_to_photos" = "儲存到相簿";
+
+// MARK: - Wallet
+"wallet.quick_actions" = "快速操作";
+"wallet.recent_transactions" = "最近交易";
+"wallet.balance" = "錢包餘額";
+"wallet.my_wallet" = "我的錢包";
+
+// MARK: - Payment
+"payment.loading_form" = "正在載入支付表單...";
+"payment.preparing" = "準備支付...";
+"payment.success" = "支付成功！";
+"payment.success_message" = "任務已成功支付，正在更新狀態...";
+"payment.error" = "支付錯誤";
+"payment.task_info" = "任務資訊";
+"payment.task_title" = "任務標題";
+"payment.applicant" = "申請者";
+"payment.tip" = "提示";
+"payment.confirm_payment" = "確認支付";
+"payment.preparing_payment" = "正在準備支付...";
+"payment.payment" = "支付";
+"payment.cancel" = "取消";
+"payment.retry" = "重試";
+"payment.retry_payment" = "重試支付";
+"payment.coupons" = "優惠券";
+"payment.coupon_discount" = "優惠券折扣";
+"payment.no_available_coupons" = "暫無可用優惠券";
+"payment.total_amount" = "總金額";
+"payment.final_payment" = "最終支付";
+"payment.mixed" = "混合";
+"coupon.discount" = "優惠: %@";
+
+// MARK: - Payment (Extended)
+"payment.payment" = "支付";
+"payment.cancel" = "取消";
+"payment.retry" = "重試";
+"payment.retry_payment" = "重試支付";
+"payment.coupons" = "優惠券";

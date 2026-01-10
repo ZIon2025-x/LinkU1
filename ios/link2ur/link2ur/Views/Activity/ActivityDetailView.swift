@@ -1,5 +1,7 @@
 import SwiftUI
 import Combine
+import UIKit
+import LinkPresentation
 
 struct ActivityDetailView: View {
     let activityId: Int
@@ -10,6 +12,10 @@ struct ActivityDetailView: View {
     @State private var showLogin = false
     @State private var currentImageIndex = 0
     @State private var isHeaderVisible = false
+    @State private var showShareSheet = false
+    @State private var shareImage: UIImage?
+    @State private var shareImageCancellable: AnyCancellable?
+    @State private var isShareImageLoading = false // 分享图片加载状态
     
     var body: some View {
         ZStack {
@@ -80,7 +86,7 @@ struct ActivityDetailView: View {
             } else if viewModel.isLoading {
                 LoadingView()
             } else {
-                ErrorStateView(title: "加载失败", message: viewModel.errorMessage ?? "请重试") {
+                ErrorStateView(title: LocalizationKey.activityLoadFailed.localized, message: viewModel.errorMessage ?? LocalizationKey.activityPleaseRetry.localized) {
                     viewModel.loadActivityDetail(activityId: activityId)
                 }
             }
@@ -93,7 +99,9 @@ struct ActivityDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
                     // 分享按钮
-                    ShareLink(item: "查看这个活动: \(viewModel.selectedActivity?.title ?? "")") {
+                    Button {
+                        showShareSheet = true
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
@@ -137,9 +145,73 @@ struct ActivityDetailView: View {
         .sheet(isPresented: $showingApplySheet) {
             ActivityApplyView(activityId: activityId, viewModel: viewModel)
         }
+        .sheet(isPresented: $showShareSheet) {
+            if let activity = viewModel.selectedActivity {
+                ActivityShareSheet(
+                    activity: activity,
+                    activityId: activityId,
+                    shareImage: shareImage,
+                    isShareImageLoading: isShareImageLoading
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .onAppear {
+                    // 当分享面板出现时，开始加载图片（如果还没有加载）
+                    if shareImage == nil && !isShareImageLoading {
+                        loadShareImage()
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showLogin) {
             LoginView()
         }
+        .onAppear {
+            viewModel.loadActivityDetail(activityId: activityId)
+        }
+        .onChange(of: viewModel.selectedActivity?.id) { newActivityId in
+            guard let newActivityId = newActivityId, newActivityId == activityId else { return }
+            // 优化：不在活动加载时立即加载分享图片，延迟到用户点击分享时再加载
+            // loadShareImage() // 延迟加载
+        }
+    }
+    
+    // 优化：延迟加载分享图片，只在需要时加载
+    private func loadShareImage() {
+        guard let activity = viewModel.selectedActivity,
+              let images = activity.images,
+              let firstImage = images.first,
+              !firstImage.isEmpty else {
+            shareImage = nil
+            isShareImageLoading = false
+            return
+        }
+        
+        // 如果图片已经加载，不需要重新加载
+        if shareImage != nil {
+            return
+        }
+        
+        // 取消之前的加载
+        shareImageCancellable?.cancel()
+        isShareImageLoading = true
+        
+        // 使用 ImageCache 加载图片，支持缓存和优化
+        shareImageCancellable = ImageCache.shared.loadImage(from: firstImage)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { completion in
+                    self.isShareImageLoading = false
+                    if case .failure = completion {
+                        // 图片加载失败，不影响分享功能
+                        self.shareImage = nil
+                    }
+                },
+                receiveValue: { image in
+                    self.shareImage = image
+                    self.isShareImageLoading = false
+                }
+            )
     }
 }
 
@@ -217,9 +289,11 @@ struct ActivityHeaderCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
-                Text(activity.title)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(AppColors.textPrimary)
+                TranslatableText(
+                    activity.title,
+                    font: .system(size: 24, weight: .bold),
+                    foregroundColor: AppColors.textPrimary
+                )
                 
                 Spacer()
                 
@@ -233,7 +307,7 @@ struct ActivityHeaderCard: View {
             HStack(spacing: AppSpacing.sm) {
                 BadgeView(text: activity.taskType, icon: "tag.fill", color: .blue)
                 if activity.hasTimeSlots {
-                    BadgeView(text: "预约制", icon: "clock.fill", color: .orange)
+                    BadgeView(text: LocalizationKey.activityByAppointment.localized, icon: "clock.fill", color: .orange)
                 }
                 BadgeView(text: activity.location, icon: "mappin.circle.fill", color: .red)
             }
@@ -276,7 +350,7 @@ struct ActivityStatsBar: View {
     var body: some View {
         HStack {
             StatItem(
-                label: "参与者",
+                label: LocalizationKey.activityParticipants.localized,
                 value: "\(activity.currentParticipants)/\(activity.maxParticipants)",
                 color: .blue
             )
@@ -284,7 +358,7 @@ struct ActivityStatsBar: View {
             Divider().frame(height: 30)
             
             StatItem(
-                label: "剩余名额",
+                label: LocalizationKey.activityRemainingSlots.localized,
                 value: "\(activity.maxParticipants - activity.currentParticipants)",
                 color: .green
             )
@@ -292,8 +366,8 @@ struct ActivityStatsBar: View {
             Divider().frame(height: 30)
             
             StatItem(
-                label: "状态",
-                value: activity.isEnded ? "已结束" : (activity.isFull ? "已满" : "热招中"),
+                label: LocalizationKey.activityStatus.localized,
+                value: activity.isEnded ? LocalizationKey.activityEnded.localized : (activity.isFull ? LocalizationKey.activityFull.localized : LocalizationKey.activityHotRecruiting.localized),
                 color: activity.isEnded ? .secondary : (activity.isFull ? .red : .orange)
             )
         }
@@ -309,12 +383,14 @@ struct ActivityDescriptionCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            SectionHeader(title: "活动描述", icon: "doc.text.fill")
+            SectionHeader(title: LocalizationKey.activityDescription.localized, icon: "doc.text.fill")
             
-            Text(description)
-                .font(AppTypography.body)
-                .foregroundColor(AppColors.textSecondary)
-                .lineSpacing(6)
+            TranslatableText(
+                description,
+                font: AppTypography.body,
+                foregroundColor: AppColors.textSecondary,
+                lineSpacing: 6
+            )
         }
         .padding(AppSpacing.md)
         .cardStyle(useMaterial: true)
@@ -326,20 +402,20 @@ struct ActivityInfoGrid: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            SectionHeader(title: "详细信息", icon: "info.circle.fill")
+            SectionHeader(title: LocalizationKey.activityDetails.localized, icon: "info.circle.fill")
             
             VStack(spacing: AppSpacing.sm) {
-                InfoRow(icon: "mappin.and.ellipse", label: "具体地点", value: activity.location)
-                InfoRow(icon: "tag", label: "活动类型", value: activity.taskType)
+                InfoRow(icon: "mappin.and.ellipse", label: LocalizationKey.activityLocation.localized, value: activity.location)
+                InfoRow(icon: "tag", label: LocalizationKey.activityType.localized, value: activity.taskType)
                 
                 if activity.hasTimeSlots {
-                    InfoRow(icon: "calendar.badge.clock", label: "时间安排", value: "支持多个时间段预约")
+                    InfoRow(icon: "calendar.badge.clock", label: LocalizationKey.activityTimeArrangement.localized, value: LocalizationKey.activityMultipleTimeSlots.localized)
                 } else if let deadline = activity.deadline {
-                    InfoRow(icon: "calendar", label: "截止日期", value: formatDateString(deadline))
+                    InfoRow(icon: "calendar", label: LocalizationKey.activityDeadline.localized, value: formatDateString(deadline))
                 }
                 
                 if let discount = activity.discountPercentage {
-                    InfoRow(icon: "gift", label: "专享折扣", value: "\(Int(discount))% OFF")
+                    InfoRow(icon: "gift", label: LocalizationKey.activityExclusiveDiscount.localized, value: "\(Int(discount))% OFF")
                 }
             }
         }
@@ -571,7 +647,7 @@ struct ActivityApplyView: View {
                 VStack(spacing: AppSpacing.lg) {
                     if hasTimeSlots {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "选择时间段", icon: "clock.fill")
+                            SectionHeader(title: LocalizationKey.activitySelectTimeSlot.localized, icon: "clock.fill")
                             
                             if viewModel.isLoadingTimeSlots {
                                 HStack {
@@ -581,7 +657,7 @@ struct ActivityApplyView: View {
                                 }
                                 .padding(.vertical, 40)
                             } else if viewModel.timeSlots.isEmpty {
-                                EmptyStateView(icon: "calendar.badge.exclamationmark", title: "暂无可用时间", message: "目前没有可选的时间段")
+                                EmptyStateView(icon: "calendar.badge.exclamationmark", title: LocalizationKey.activityNoAvailableTime.localized, message: LocalizationKey.activityNoAvailableTimeMessage.localized)
                             } else {
                                 ForEach(groupedTimeSlots.keys.sorted(), id: \.self) { date in
                                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -611,7 +687,7 @@ struct ActivityApplyView: View {
                         .cardStyle(useMaterial: true)
                     } else {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "参与时间", icon: "calendar")
+                            SectionHeader(title: LocalizationKey.activityParticipateTime.localized, icon: "calendar")
                             
                             Toggle(isOn: $isFlexibleTime) {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -667,7 +743,7 @@ struct ActivityApplyView: View {
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(LocalizationKey.commonCancel.localized) { dismiss() }
                 }
             }
             .enableSwipeBack()
@@ -798,4 +874,234 @@ struct ActivityTimeSlotCard: View {
     }
 }
 
+// MARK: - 活动分享视图
+struct ActivityShareSheet: View {
+    let activity: Activity
+    let activityId: Int
+    let shareImage: UIImage?
+    let isShareImageLoading: Bool
+    @Environment(\.dismiss) var dismiss
+    
+    // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签（weixin:title, weixin:description, weixin:image）
+    // 前端页面已经设置了这些标签，微信会直接抓取
+    private var shareUrl: URL {
+        // 使用前端域名，确保微信能抓取到正确的 meta 标签
+        // 使用固定版本号而不是时间戳，避免每次分享都生成新URL导致系统多次尝试获取元数据
+        let urlString = "https://www.link2ur.com/zh/activities/\(activityId)?v=2"
+        if let url = URL(string: urlString) {
+            return url
+        }
+        // 如果URL构建失败，返回默认URL
+        return URL(string: "https://www.link2ur.com")!
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // 顶部拖动指示器
+            Capsule()
+                .fill(AppColors.separator)
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+            
+            // 预览卡片
+            VStack(spacing: AppSpacing.md) {
+                // 封面图
+                if let image = shareImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 150)
+                        .clipped()
+                        .cornerRadius(AppCornerRadius.medium)
+                } else if isShareImageLoading {
+                    // 图片加载中
+                    ZStack {
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .fill(AppColors.cardBackground)
+                            .frame(height: 150)
+                        
+                        VStack(spacing: AppSpacing.sm) {
+                            ProgressView()
+                                .tint(AppColors.primary)
+                            Text(LocalizationKey.commonLoadingImage.localized)
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [AppColors.primary.opacity(0.6), AppColors.primary]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(height: 150)
+                        .overlay(
+                            IconStyle.icon("calendar.badge.plus", size: 40)
+                                .foregroundColor(.white.opacity(0.8))
+                        )
+                }
+                
+                // 标题和描述
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    TranslatableText(
+                        activity.title,
+                        font: AppTypography.bodyBold,
+                        foregroundColor: AppColors.textPrimary,
+                        lineLimit: 2
+                    )
+                    
+                    if !activity.description.isEmpty {
+                        TranslatableText(
+                            activity.description,
+                            font: AppTypography.caption,
+                            foregroundColor: AppColors.textSecondary,
+                            lineLimit: 2
+                        )
+                    }
+                    
+                    // 活动信息
+                    HStack(spacing: AppSpacing.md) {
+                        Label("£\(String(format: "%.0f", activity.discountedPricePerParticipant ?? activity.originalPricePerParticipant))", systemImage: "sterlingsign.circle")
+                        Label(activity.location, systemImage: "mappin.circle")
+                    }
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(AppSpacing.md)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .padding(.horizontal, AppSpacing.md)
+            
+            // 自定义分享面板（类似小红书）
+            CustomSharePanel(
+                title: activity.title,
+                description: activity.description,
+                url: shareUrl,
+                image: shareImage,
+                taskType: nil,
+                location: activity.location,
+                reward: {
+                    let price = activity.discountedPricePerParticipant ?? activity.originalPricePerParticipant
+                    return "£\(String(format: "%.0f", price))"
+                }(),
+                onDismiss: {
+                    dismiss()
+                }
+            )
+            .padding(.top, AppSpacing.md)
+        }
+        .background(AppColors.background)
+    }
+    
+}
+
+// MARK: - 活动分享内容提供者
+class ActivityShareItem: NSObject, UIActivityItemSource {
+    let url: URL
+    let title: String
+    let descriptionText: String
+    let image: UIImage?
+    
+    init(url: URL, title: String, description: String, image: UIImage?) {
+        self.url = url
+        self.title = title
+        self.descriptionText = description
+        self.image = image
+        super.init()
+    }
+    
+    // 占位符 - 返回 URL，让系统知道这是链接分享
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return url
+    }
+    
+    // 实际分享的内容 - 根据分享目标返回不同内容
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        // 构建包含详情的分享文本（包含标题、描述和链接）
+        let shareText = """
+        \(title)
+        
+        \(descriptionText.prefix(200))\(descriptionText.count > 200 ? "..." : "")
+        
+        👉 查看详情: \(url.absoluteString)
+        """
+        
+        // 对于支持 LPLinkMetadata 的应用（iMessage、邮件等），返回 URL
+        // 这样系统会调用 activityViewControllerLinkMetadata 获取富媒体预览（包含图片和描述）
+        if activityType == .mail || activityType == nil {
+            // nil 通常表示 iMessage 等原生应用
+            return url
+        }
+        
+        // 对于不支持 LPLinkMetadata 的应用（微信、QQ、复制、短信等），返回包含详情的文本
+        // 这样用户可以看到完整信息
+        if activityType == .copyToPasteboard || 
+           activityType == .message ||
+           activityType == .postToWeibo ||
+           activityType == .postToTencentWeibo {
+            return shareText
+        }
+        
+        // 其他情况也返回 URL，让系统尝试使用 LPLinkMetadata
+        return url
+    }
+    
+    // 提供富链接预览元数据（用于 iMessage 等原生 App）
+    func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        // 手动构建元数据，避免系统自动获取URL元数据导致的沙盒扩展错误
+        let metadata = LPLinkMetadata()
+        
+        // 重要：不设置 url 或 originalURL，避免系统尝试自动获取元数据
+        // 设置这些属性会导致系统尝试访问URL获取元数据，从而触发沙盒扩展错误
+        // 系统会自动从 activityViewController 返回的 URL 中识别链接信息
+        // 我们只提供手动设置的元数据（title 和 image），避免网络请求
+        
+        // 设置标题
+        metadata.title = title
+        
+        // 如果有图片，设置为预览图（重要：这会让分享显示图片）
+        if let image = image {
+            let imageProvider = NSItemProvider(object: image)
+            metadata.imageProvider = imageProvider
+            metadata.iconProvider = imageProvider
+        }
+        
+        return metadata
+    }
+    
+    // 分享主题
+    func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return title
+    }
+}
+
+// MARK: - 活动图片分享项（用于微信等需要图片的场景）
+class ActivityImageShareItem: NSObject, UIActivityItemSource {
+    let image: UIImage
+    
+    init(image: UIImage) {
+        // 优化：压缩图片以减少内存占用和分享大小
+        // 微信等平台对图片大小有限制，压缩后可以更快分享
+        if let compressedImage = image.compressedForSharing() {
+            self.image = compressedImage
+        } else {
+            self.image = image
+        }
+        super.init()
+    }
+    
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return image
+    }
+    
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        return image
+    }
+}
 

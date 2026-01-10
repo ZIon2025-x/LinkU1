@@ -46,7 +46,7 @@ struct NotificationPermissionView: View {
                 .opacity(isAnimating ? 1.0 : 0.0)
                 
                 // 标题
-                Text("开启通知")
+                Text(LocalizationKey.notificationEnableNotificationTitle.localized)
                     .font(AppTypography.title2)
                     .foregroundColor(AppColors.textPrimary)
                     .padding(.bottom, AppSpacing.sm)
@@ -54,12 +54,12 @@ struct NotificationPermissionView: View {
                 
                 // 描述文字
                 VStack(spacing: AppSpacing.sm) {
-                    Text("及时接收任务更新、消息提醒")
+                    Text(LocalizationKey.notificationEnableNotificationMessage.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
                     
-                    Text("不错过任何重要信息")
+                    Text(LocalizationKey.notificationEnableNotificationDescription.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
@@ -82,7 +82,7 @@ struct NotificationPermissionView: View {
                     }) {
                         HStack {
                             Spacer()
-                            Text("允许通知")
+                            Text(LocalizationKey.notificationAllowNotification.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(.white)
                             Spacer()
@@ -111,7 +111,7 @@ struct NotificationPermissionView: View {
                             dismiss()
                         }
                     }) {
-                        Text("稍后提醒")
+                        Text(LocalizationKey.notificationNotNow.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                             .frame(height: 50)

@@ -1096,6 +1096,10 @@ async def get_notifications(
             except Exception as e:
                 logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
         
+        # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
+        elif notification.type in ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"] and notification.related_id:
+            notification_dict["task_id"] = notification.related_id
+        
         result.append(schemas.NotificationOut(**notification_dict))
     
     return result

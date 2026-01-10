@@ -6,7 +6,7 @@ struct ErrorStateView: View {
     let message: String
     let retryAction: (() -> Void)?
     
-    init(title: String = "出错了", message: String, retryAction: (() -> Void)? = nil) {
+    init(title: String = LocalizationKey.errorSomethingWentWrong.localized, message: String, retryAction: (() -> Void)? = nil) {
         self.title = title
         self.message = message
         self.retryAction = retryAction
@@ -43,7 +43,7 @@ struct ErrorStateView: View {
                     HStack(spacing: AppSpacing.sm) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("重试")
+                        Text(LocalizationKey.errorRetry.localized)
                             .font(AppTypography.bodyBold)
                     }
                 }

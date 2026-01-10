@@ -27,7 +27,7 @@ struct CustomerServiceView: View {
                     // 消息列表
                     if viewModel.isLoading && viewModel.messages.isEmpty && viewModel.chat != nil {
                         // 加载状态（仅在已连接时显示）
-                        LoadingView(message: "加载消息中...")
+                        LoadingView(message: LocalizationKey.messagesLoadingMessages.localized)
                     } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty && viewModel.chat != nil {
                         // 使用统一的错误状态组件（仅在已连接时显示）
                         ErrorStateView(
@@ -62,12 +62,12 @@ struct CustomerServiceView: View {
                                             if let queueStatus = viewModel.queueStatus {
                                                 VStack(spacing: AppSpacing.sm) {
                                                     if let position = queueStatus.position {
-                                                        Text("排队位置: 第 \(position) 位")
+                                                        Text(String(format: LocalizationKey.customerServiceQueuePosition.localized, position))
                                                             .font(AppTypography.body)
                                                             .foregroundColor(AppColors.textSecondary)
                                                     }
                                                     if let waitTime = queueStatus.estimatedWaitTime {
-                                                        Text("预计等待时间: \(waitTime) 秒")
+                                                        Text(String(format: LocalizationKey.customerServiceEstimatedWait.localized, waitTime))
                                                             .font(AppTypography.caption)
                                                             .foregroundColor(AppColors.textTertiary)
                                                     }
@@ -142,7 +142,7 @@ struct CustomerServiceView: View {
                                 .font(.system(size: 16))
                                 .foregroundColor(AppColors.textTertiary)
                             
-                            Text("对话已结束，如需帮助请重新发起对话")
+                            Text(LocalizationKey.customerServiceConversationEndedMessage.localized)
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textTertiary)
                             
@@ -155,7 +155,7 @@ struct CustomerServiceView: View {
                                 viewModel.messages = []
                                 viewModel.service = nil
                             }) {
-                                Text("新对话")
+                                Text(LocalizationKey.customerServiceNewConversation.localized)
                                     .font(AppTypography.caption)
                                     .fontWeight(.medium)
                                     .foregroundColor(.white)
@@ -234,7 +234,7 @@ struct CustomerServiceView: View {
                         ProgressView()
                             .scaleEffect(1.2)
                             .tint(.white)
-                        Text("正在连接客服...")
+                        Text(LocalizationKey.customerServiceConnecting.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(.white)
                     }
@@ -244,7 +244,7 @@ struct CustomerServiceView: View {
                 }
             }
             .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
-            .navigationTitle("客服中心")
+            .navigationTitle(LocalizationKey.customerServiceCustomerService.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if viewModel.chat != nil {
@@ -260,7 +260,7 @@ struct CustomerServiceView: View {
                     // 仅当对话未结束时显示"结束对话"按钮
                     if viewModel.chat?.isEnded != 1 {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("结束对话") {
+                            Button(LocalizationKey.customerServiceEndConversation.localized) {
                                 viewModel.endChat { success in
                                     if success {
                                         messageText = ""
@@ -276,7 +276,7 @@ struct CustomerServiceView: View {
                         Button(action: {
                             showChatHistory = true
                         }) {
-                            Text("历史")
+                            Text(LocalizationKey.customerServiceHistory.localized)
                                 .font(AppTypography.subheadline)
                                 .foregroundColor(AppColors.primary)
                         }
@@ -409,7 +409,7 @@ struct WelcomeMessageBubble: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text("👋 已连接到客服 \(serviceName)")
+                Text(String(format: LocalizationKey.customerServiceConnected.localized, serviceName))
                     .font(AppTypography.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textPrimary)
@@ -543,7 +543,7 @@ struct ChatHistoryView: View {
                         Text(LocalizationKey.customerServiceNoChatHistory.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textSecondary)
-                        Text("开始新的对话吧！")
+                        Text(LocalizationKey.customerServiceStartNewConversation.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textTertiary)
                     }
@@ -565,7 +565,7 @@ struct ChatHistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(LocalizationKey.commonDone.localized) {
                         dismiss()
                     }
                 }
@@ -624,7 +624,7 @@ struct ChatHistoryRow: View {
                     }
                     
                     if let totalMessages = chat.totalMessages {
-                        Text("\(totalMessages) 条消息")
+                        Text(String(format: LocalizationKey.customerServiceTotalMessages.localized, totalMessages))
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textTertiary)
                     }
@@ -731,11 +731,11 @@ struct RatingSheetView: View {
                 .padding(.bottom, AppSpacing.lg)
             }
             .background(AppColors.background)
-            .navigationTitle("评价客服")
+            .navigationTitle(LocalizationKey.customerServiceRateService.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("跳过") {
+                    Button(LocalizationKey.customerServiceSkip.localized) {
                         viewModel.hasRated = true
                         dismiss()
                     }

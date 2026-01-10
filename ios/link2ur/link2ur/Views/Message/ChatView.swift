@@ -362,6 +362,13 @@ struct MessageBubble: View {
     @State private var selectedImageIndex: Int = 0
     @State private var showUserProfile = false
     
+    // 翻译相关状态
+    @State private var translatedText: String?
+    @State private var isTranslating = false
+    @State private var showOriginal = false
+    @State private var needsTranslation = false
+    @State private var hasCheckedTranslation = false // 是否已检查过是否需要翻译
+    
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
             if isFromCurrentUser {
@@ -427,29 +434,81 @@ struct MessageBubble: View {
                 
                 // 消息内容（如果不是纯图片消息）
                 if let content = message.content, !content.isEmpty, content != "[图片]" {
-                    Text(content)
-                        .font(AppTypography.body)
-                        .foregroundColor(isFromCurrentUser ? .white : AppColors.textPrimary)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, 10)
-                        .background(
-                            Group {
-                                if isFromCurrentUser {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                } else {
-                                    AppColors.cardBackground
+                    VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
+                        // 显示翻译后的文本或原文（支持文本选择，用户可以使用系统翻译功能）
+                        Text(showOriginal && !isFromCurrentUser ? content : (translatedText ?? content))
+                            .font(AppTypography.body)
+                            .foregroundColor(isFromCurrentUser ? .white : AppColors.textPrimary)
+                            .textSelection(.enabled) // 启用文本选择，用户可以选择文本并使用系统翻译
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, 10)
+                            .background(
+                                Group {
+                                    if isFromCurrentUser {
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    } else {
+                                        AppColors.cardBackground
+                                    }
+                                }
+                            )
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: isFromCurrentUser ? AppColors.primary.opacity(0.2) : AppShadow.small.color, 
+                                   radius: isFromCurrentUser ? 8 : AppShadow.small.radius, 
+                                   x: 0, 
+                                   y: isFromCurrentUser ? 4 : AppShadow.small.y)
+                        
+                        // 翻译按钮和状态（仅非当前用户的消息）
+                        if !isFromCurrentUser {
+                            HStack(spacing: 6) {
+                                if isTranslating {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                    Text("翻译中...")
+                                        .font(AppTypography.caption2)
+                                        .foregroundColor(AppColors.textTertiary)
+                                } else if let translated = translatedText, translated != content {
+                                    // 已翻译，显示切换按钮
+                                    Button(action: {
+                                        showOriginal.toggle()
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: showOriginal ? "arrow.uturn.backward" : "text.bubble")
+                                                .font(.system(size: 10))
+                                            Text(showOriginal ? "显示翻译" : "显示原文")
+                                                .font(AppTypography.caption2)
+                                        }
+                                        .foregroundColor(AppColors.primary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppColors.primaryLight.opacity(0.3))
+                                        .cornerRadius(AppCornerRadius.small)
+                                    }
+                                } else if needsTranslation {
+                                    // 需要翻译但未翻译，显示翻译按钮
+                                    Button(action: {
+                                        translateMessage(content: content)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "text.bubble")
+                                                .font(.system(size: 10))
+                                            Text("翻译")
+                                                .font(AppTypography.caption2)
+                                        }
+                                        .foregroundColor(AppColors.primary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppColors.primaryLight.opacity(0.3))
+                                        .cornerRadius(AppCornerRadius.small)
+                                    }
                                 }
                             }
-                        )
-                        .cornerRadius(AppCornerRadius.large)
-                        .shadow(color: isFromCurrentUser ? AppColors.primary.opacity(0.2) : AppShadow.small.color, 
-                               radius: isFromCurrentUser ? 8 : AppShadow.small.radius, 
-                               x: 0, 
-                               y: isFromCurrentUser ? 4 : AppShadow.small.y)
+                            .padding(.horizontal, AppSpacing.xs)
+                        }
+                    }
                 }
                 
                 // 时间戳（在消息气泡下方）
@@ -489,10 +548,47 @@ struct MessageBubble: View {
                 FullScreenImageView(images: [imageUrl], selectedIndex: $selectedImageIndex, isPresented: $showFullImage)
             }
         }
+        .onAppear {
+            // 检查是否需要翻译（仅对非当前用户的消息，但不自动翻译）
+            if !isFromCurrentUser, !hasCheckedTranslation, let content = message.content, !content.isEmpty, content != "[图片]" {
+                checkIfNeedsTranslation(content: content)
+            }
+        }
     }
     
     private func formatTime(_ timeString: String) -> String {
         return DateFormatterHelper.shared.formatTime(timeString)
+    }
+    
+    /// 检查是否需要翻译（不自动翻译）
+    private func checkIfNeedsTranslation(content: String) {
+        hasCheckedTranslation = true
+        // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
+        _Concurrency.Task { @MainActor in
+            // 检查是否需要翻译
+            let needs = TranslationService.shared.needsTranslation(content)
+            needsTranslation = needs
+        }
+    }
+    
+    /// 手动翻译消息内容
+    private func translateMessage(content: String) {
+        // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
+        _Concurrency.Task { @MainActor in
+            // 执行翻译
+            isTranslating = true
+            do {
+                let translated = try await TranslationService.shared.translate(content)
+                translatedText = translated
+                // 默认显示翻译后的文本
+                showOriginal = false
+            } catch {
+                Logger.error("翻译失败: \(error.localizedDescription)", category: .ui)
+                // 翻译失败时显示原文
+                translatedText = nil
+            }
+            isTranslating = false
+        }
     }
 }
 

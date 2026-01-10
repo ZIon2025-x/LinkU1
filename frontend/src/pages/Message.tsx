@@ -4555,7 +4555,7 @@ const MessagePage: React.FC = () => {
                     >
                       {!isOwn && showAvatar && (
                         <LazyImage
-                          src={msg.sender_avatar || '/default-avatar.png'}
+                          src={msg.sender_avatar || '/static/avatar1.png'}
                           alt={msg.sender_name || '用户'}
                           onClick={() => {
                             if (msg.sender_id) {
@@ -4570,6 +4570,13 @@ const MessagePage: React.FC = () => {
                             objectFit: 'cover',
                             cursor: 'pointer',
                             transition: 'transform 0.2s'
+                          }}
+                          onError={(e) => {
+                            // 如果头像加载失败，使用默认头像
+                            const img = e.currentTarget as HTMLImageElement;
+                            if (img && img.src !== '/static/avatar1.png') {
+                              img.src = '/static/avatar1.png';
+                            }
                           }}
                           onMouseEnter={(e) => {
                             (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)';

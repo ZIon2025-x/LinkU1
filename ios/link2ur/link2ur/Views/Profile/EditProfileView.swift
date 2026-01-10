@@ -269,8 +269,8 @@ struct EditProfileView: View {
             .navigationTitle("编辑个人资料")
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
-            .alert("保存成功", isPresented: $viewModel.showSuccessAlert) {
-                Button("确定") {
+            .alert(LocalizationKey.successSaved.localized, isPresented: $viewModel.showSuccessAlert) {
+                Button(LocalizationKey.commonOk.localized) {
                     dismiss()
                 }
             } message: {

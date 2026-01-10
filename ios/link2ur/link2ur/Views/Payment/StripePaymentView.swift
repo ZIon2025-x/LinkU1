@@ -31,7 +31,7 @@ struct StripePaymentView: View {
                         VStack(spacing: 16) {
                             ProgressView()
                                 .scaleEffect(1.5)
-                            Text("正在加载支付表单...")
+                            Text(LocalizationKey.paymentLoadingForm.localized)
                                 .foregroundColor(AppColors.textSecondary)
                         }
                         .frame(maxWidth: .infinity, minHeight: 400)
@@ -44,7 +44,7 @@ struct StripePaymentView: View {
                     } else {
                         VStack(spacing: 16) {
                             ProgressView()
-                            Text("准备支付...")
+                            Text(LocalizationKey.paymentPreparing.localized)
                                 .foregroundColor(AppColors.textSecondary)
                         }
                         .frame(maxWidth: .infinity, minHeight: 400)
@@ -52,11 +52,11 @@ struct StripePaymentView: View {
                 }
                 .padding()
             }
-            .navigationTitle("支付")
+            .navigationTitle(LocalizationKey.paymentPayment.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.paymentCancel.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)
@@ -68,12 +68,12 @@ struct StripePaymentView: View {
                     viewModel.createPaymentIntent()
                 }
             }
-            .alert("支付错误", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
-                Button("确定", role: .cancel) {
+            .alert(LocalizationKey.paymentError.localized, isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {
                     viewModel.errorMessage = nil
                 }
                 if viewModel.paymentSheet != nil {
-                    Button("重试") {
+                    Button(LocalizationKey.paymentRetry.localized) {
                         viewModel.errorMessage = nil
                         // 获取当前视图控制器并弹出 PaymentSheet
                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -105,12 +105,12 @@ struct StripePaymentView: View {
                 .font(.system(size: 60))
                 .foregroundColor(AppColors.success)
             
-            Text("支付成功！")
+            Text(LocalizationKey.paymentSuccess.localized)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(AppColors.textPrimary)
             
-            Text("任务已成功支付，正在更新状态...")
+            Text(LocalizationKey.paymentSuccessMessage.localized)
                 .font(.subheadline)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -133,7 +133,7 @@ struct StripePaymentView: View {
                     .font(.system(size: 60))
                     .foregroundColor(AppColors.error)
                 
-                Text("支付错误")
+                Text(LocalizationKey.paymentError.localized)
                     .font(AppTypography.title2)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -150,7 +150,7 @@ struct StripePaymentView: View {
             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
             
             VStack(spacing: 12) {
-                Button("重试支付") {
+                Button(LocalizationKey.paymentRetryPayment.localized) {
                     if viewModel.paymentSheet != nil {
                         viewModel.errorMessage = nil
                         // 获取当前视图控制器并弹出 PaymentSheet
@@ -175,7 +175,7 @@ struct StripePaymentView: View {
                 .controlSize(.large)
                 .frame(maxWidth: .infinity)
                 
-                Button("返回") {
+                Button(LocalizationKey.commonBack.localized) {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
@@ -198,7 +198,7 @@ struct StripePaymentView: View {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(AppColors.primary)
                             .font(.system(size: 18))
-                        Text("任务信息")
+                        Text(LocalizationKey.paymentTaskInfo.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textPrimary)
                         Spacer()
@@ -213,7 +213,7 @@ struct StripePaymentView: View {
                                 Image(systemName: "list.bullet.rectangle")
                                     .foregroundColor(AppColors.textSecondary)
                                     .font(.system(size: 14))
-                                Text("任务标题")
+                                Text(LocalizationKey.paymentTaskTitle.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                             }
@@ -236,7 +236,7 @@ struct StripePaymentView: View {
                                 Image(systemName: "person.fill")
                                     .foregroundColor(AppColors.textSecondary)
                                     .font(.system(size: 14))
-                                Text("申请者")
+                                Text(LocalizationKey.paymentApplicant.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                             }
@@ -261,7 +261,7 @@ struct StripePaymentView: View {
             VStack(spacing: 16) {
                 // 总金额
                 PaymentInfoRow(
-                    label: "总金额",
+                    label: LocalizationKey.paymentTotalAmount.localized,
                     value: paymentResponse.totalAmountDisplay,
                     currency: paymentResponse.currency,
                     isHighlighted: false
@@ -271,7 +271,7 @@ struct StripePaymentView: View {
                 if let pointsUsed = paymentResponse.pointsUsedDisplay, !pointsUsed.isEmpty {
                     Divider()
                     PaymentInfoRow(
-                        label: "积分抵扣",
+                        label: LocalizationKey.pointsPointsDeduction.localized,
                         value: "-\(pointsUsed)",
                         currency: paymentResponse.currency,
                         isHighlighted: true,
@@ -284,7 +284,7 @@ struct StripePaymentView: View {
                 if let couponDiscount = paymentResponse.couponDiscountDisplay, !couponDiscount.isEmpty {
                     Divider()
                     PaymentInfoRow(
-                        label: "优惠券折扣",
+                        label: LocalizationKey.paymentCouponDiscount.localized,
                         value: "-\(couponDiscount)",
                         currency: paymentResponse.currency,
                         isHighlighted: true,
@@ -296,7 +296,7 @@ struct StripePaymentView: View {
                 // 最终支付金额
                 Divider()
                 PaymentInfoRow(
-                    label: "最终支付",
+                    label: LocalizationKey.paymentFinalPayment.localized,
                     value: paymentResponse.finalAmountDisplay,
                     currency: paymentResponse.currency,
                     isHighlighted: true,
@@ -314,7 +314,7 @@ struct StripePaymentView: View {
                     HStack {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(AppColors.primary)
-                        Text("提示")
+                        Text(LocalizationKey.paymentTip.localized)
                             .font(AppTypography.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(AppColors.textPrimary)
@@ -352,7 +352,7 @@ struct StripePaymentView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(size: 18))
-                        Text("确认支付")
+                        Text(LocalizationKey.paymentConfirmPayment.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
                     }
@@ -375,7 +375,7 @@ struct StripePaymentView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text("正在准备支付...")
+                    Text(LocalizationKey.paymentPreparingPayment.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -395,7 +395,7 @@ struct StripePaymentView: View {
                 Image(systemName: "tag.fill")
                     .foregroundColor(AppColors.primary)
                     .font(.system(size: 18))
-                Text("优惠券")
+                Text(LocalizationKey.paymentCoupons.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
                 Spacer()
@@ -417,7 +417,7 @@ struct StripePaymentView: View {
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("优惠: \(selectedCoupon.coupon.discountValueDisplay)")
+                            Text(String(format: LocalizationKey.couponDiscount.localized, selectedCoupon.coupon.discountValueDisplay))
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.success)
                         }
@@ -442,7 +442,7 @@ struct StripePaymentView: View {
                     HStack {
                         Image(systemName: "tag.slash")
                             .foregroundColor(AppColors.textTertiary)
-                        Text("暂无可用优惠券")
+                        Text(LocalizationKey.paymentNoAvailableCoupons.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -505,7 +505,7 @@ struct CouponCard: View {
                 
                 if let minAmount = Int(coupon.coupon.minAmountDisplay.replacingOccurrences(of: "£", with: "").replacingOccurrences(of: ",", with: "")),
                    minAmount > 0 {
-                    Text("满\(coupon.coupon.minAmountDisplay)可用")
+                    Text(String(format: LocalizationKey.couponMinAmountAvailable.localized, coupon.coupon.minAmountDisplay))
                         .font(AppTypography.caption2)
                         .foregroundColor(isSelected ? .white.opacity(0.8) : AppColors.textSecondary)
                 }

@@ -1,0 +1,10 @@
+/* 
+  InfoPlist.strings
+  link2ur
+
+  Localized permission descriptions for Info.plist
+*/
+
+"NSLocationWhenInUseUsageDescription" = "我們需要獲取您的位置資訊，以便在地圖上選擇任務/商品位置，或使用您當前位置。您也可以選擇手動輸入位置。";
+
+"NSFaceIDUsageDescription" = "我們使用 Face ID 來安全地驗證您的身份並登錄您的帳戶。這為您提供了一種快速且安全的方式來訪問您的帳戶，無需輸入密碼。";

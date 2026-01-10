@@ -7,9 +7,9 @@ struct ActivityListView: View {
     @State private var filterOption: ActivityFilterOption = .all
     
     enum ActivityFilterOption: String, CaseIterable {
-        case all = "全部"
-        case active = "进行中"
-        case ended = "已结束"
+        case all = "activity.all"
+        case active = "activity.active"
+        case ended = "activity.ended"
         
         var status: String? {
             switch self {
@@ -31,9 +31,9 @@ struct ActivityListView: View {
             
             VStack(spacing: 0) {
                 // 筛选器
-                Picker("筛选", selection: $filterOption) {
+                Picker(LocalizationKey.activityFilter.localized, selection: $filterOption) {
                     ForEach(ActivityFilterOption.allCases, id: \.self) { option in
-                        Text(option.rawValue).tag(option)
+                        Text(LocalizationHelper.localized(option.rawValue)).tag(option)
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
@@ -54,8 +54,8 @@ struct ActivityListView: View {
                 } else if viewModel.activities.isEmpty {
                     EmptyStateView(
                         icon: "calendar.badge.plus",
-                        title: filterOption == .ended ? "暂无已结束的活动" : "暂无活动",
-                        message: filterOption == .ended ? "没有已结束的活动记录" : "目前还没有活动，敬请期待..."
+                        title: filterOption == .ended ? LocalizationKey.activityNoEndedActivities.localized : LocalizationKey.activityNoActivities.localized,
+                        message: filterOption == .ended ? LocalizationKey.activityNoEndedActivitiesMessage.localized : LocalizationKey.activityNoActivitiesMessage.localized
                     )
                 } else {
                     ScrollView {
@@ -77,7 +77,7 @@ struct ActivityListView: View {
                 }
             }
         }
-        .navigationTitle("活动")
+        .navigationTitle(LocalizationKey.activityActivities.localized)
         .navigationBarTitleDisplayMode(.large)
         .enableSwipeBack()
         .refreshable {
@@ -99,8 +99,8 @@ struct ActivityListView: View {
             // 加载收藏列表
             viewModel.loadFavoriteActivityIds()
         }
-        .alert("错误", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("确定", role: .cancel) {
+        .alert(LocalizationKey.errorError.localized, isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {
                 viewModel.errorMessage = nil
             }
         } message: {
@@ -148,7 +148,7 @@ struct ActivityCardView: View {
                 // 状态标签（如果已收藏，放在左上角；否则放在右上角）
                 VStack(alignment: isFavorited ? .leading : .trailing, spacing: 4) {
                     if showEndedBadge && activity.isEnded {
-                        Text("已结束")
+                        Text(LocalizationKey.activityEnded.localized)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
@@ -156,7 +156,7 @@ struct ActivityCardView: View {
                             .background(Color.black.opacity(0.6))
                             .clipShape(Capsule())
                     } else if activity.isFull {
-                        Text("已满员")
+                        Text(LocalizationKey.activityFullCapacity.localized)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
@@ -170,10 +170,12 @@ struct ActivityCardView: View {
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text(activity.title)
-                    .font(AppTypography.bodyBold)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(1)
+                TranslatableText(
+                    activity.title,
+                    font: AppTypography.bodyBold,
+                    foregroundColor: AppColors.textPrimary,
+                    lineLimit: 1
+                )
                 
                 HStack {
                     // 价格
@@ -205,7 +207,7 @@ struct ActivityCardView: View {
                     Spacer()
                     
                     if activity.hasTimeSlots {
-                        Text("预约制")
+                        Text(LocalizationKey.activityByAppointment.localized)
                             .font(.system(size: 10, weight: .bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
