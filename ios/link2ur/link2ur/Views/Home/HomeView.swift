@@ -4,10 +4,13 @@ import Combine
 
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var deepLinkHandler = DeepLinkHandler.shared
     @State private var selectedTab = 1 // 0: 达人, 1: 推荐, 2: 附近
     @State private var showMenu = false
     @State private var showSearch = false
     @State private var navigationPath = NavigationPath() // 使用 NavigationPath 管理导航状态
+    @State private var navigateToActivityId: Int? = nil // 用于深度链接导航到活动详情
+    @State private var showActivityDetail = false // 控制是否显示活动详情页
     
     // 监听重置通知
     private let resetNotification = NotificationCenter.default.publisher(for: .resetHomeView)
@@ -130,6 +133,42 @@ struct HomeView: View {
             .onChange(of: navigationPath.count) { count in
                 print("🔍 [HomeView] navigationPath.count 变化: \(count), 时间: \(Date())")
             }
+            .onChange(of: deepLinkHandler.currentLink) { link in
+                // 处理深度链接
+                if let link = link {
+                    handleDeepLink(link)
+                }
+            }
+            .navigationDestination(isPresented: $showActivityDetail) {
+                if let activityId = navigateToActivityId {
+                    ActivityDetailView(activityId: activityId)
+                }
+            }
+        }
+    }
+    
+    /// 处理深度链接
+    private func handleDeepLink(_ link: DeepLinkHandler.DeepLink) {
+        switch link {
+        case .activity(let id):
+            // 导航到活动详情页
+            print("🔗 [HomeView] 处理活动深度链接: \(id)")
+            navigateToActivityId = id
+            showActivityDetail = true
+        case .task(let id):
+            // 导航到任务详情页（使用NavigationLink，这里暂时不处理）
+            print("🔗 [HomeView] 收到任务深度链接: \(id)")
+        case .post(let id):
+            // 导航到论坛帖子详情页（使用NavigationLink，这里暂时不处理）
+            print("🔗 [HomeView] 收到帖子深度链接: \(id)")
+        default:
+            // 其他类型的链接暂时不处理
+            break
+        }
+        
+        // 处理完后清空链接，避免重复处理
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            deepLinkHandler.currentLink = nil
         }
     }
 }

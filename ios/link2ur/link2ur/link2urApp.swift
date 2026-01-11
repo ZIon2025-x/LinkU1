@@ -32,6 +32,11 @@ struct link2urApp: App {
                     // 初始化 Stripe
                     StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
                 }
+                .onOpenURL { url in
+                    // 处理Universal Links和深度链接
+                    print("🔗 [App] 收到URL: \(url.absoluteString)")
+                    DeepLinkHandler.shared.handle(url)
+                }
         }
     }
 }

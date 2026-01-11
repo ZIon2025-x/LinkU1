@@ -228,6 +228,7 @@ def apply_to_activity(
     
     # 对于多人任务且有时间段的情况，检查是否已经有任务关联到这个时间段
     # 如果有，让新用户加入现有任务，而不是创建新任务
+    # 注意：非时间段的多人活动，每个用户申请时创建独立任务，不需要群聊
     existing_task = None
     if is_multi_participant and db_activity.has_time_slots and request.time_slot_id:
         logger.info(f"查找多人任务现有任务: activity_id={activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={is_multi_participant}")
@@ -280,7 +281,7 @@ def apply_to_activity(
             logger.info(f"未找到现有任务，将创建新任务")
     
     # 对于非多人任务或没有时间段的情况，检查用户是否已为此活动创建过任务
-    # 注意：多人任务不应该检查 originating_user_id，因为多人任务允许多个用户申请
+    # 注意：非时间段的多人活动，每个用户申请时创建独立任务，所以这里只检查用户自己是否已申请过
     if not existing_task and not (is_multi_participant and db_activity.has_time_slots):
         existing_task = db.query(Task).filter(
             and_(

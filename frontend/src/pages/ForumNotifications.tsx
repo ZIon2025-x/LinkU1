@@ -195,12 +195,12 @@ const ForumNotifications: React.FC = () => {
       if (postId) {
         navigate(`/${lang}/forum/post/${postId}`);
       }
-    } else if (notification.related_id && notification.type === 'task_application') {
-      // 如果是任务申请通知，跳转到任务详情页
-      navigate(`/${lang}/task/${notification.related_id}`);
-    } else if (notification.related_id) {
-      // 其他任务通知，跳转到任务详情页
-      navigate(`/${lang}/task/${notification.related_id}`);
+    } else {
+      // 任务相关通知：优先使用 task_id 字段，如果没有则使用 related_id
+      const taskId = (notification as any).task_id || notification.related_id;
+      if (taskId) {
+        navigate(`/${lang}/task/${taskId}`);
+      }
     }
   };
 

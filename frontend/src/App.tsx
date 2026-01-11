@@ -104,6 +104,7 @@ const ForumLeaderboard = lazyWithRetry(() => import('./pages/ForumLeaderboard'))
 const CustomLeaderboardDetail = lazyWithRetry(() => import('./pages/CustomLeaderboardDetail'));
 const LeaderboardItemDetail = lazyWithRetry(() => import('./pages/LeaderboardItemDetail'));
 const FleaMarketItemDetail = lazyWithRetry(() => import('./pages/FleaMarketItemDetail'));
+const ActivityDetail = lazyWithRetry(() => import('./pages/ActivityDetail'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
@@ -230,6 +231,7 @@ const LanguageRoutes: React.FC = () => {
             </ProtectedRoute>
           } />
           <Route path={`/${lang}/tasks/:id`} element={<TaskDetail />} />
+          <Route path={`/${lang}/activities/:id`} element={<ActivityDetail />} />
           <Route path={`/${lang}/tasks/:taskId/payment`} element={
             <ProtectedRoute>
               <TaskPayment />
@@ -327,6 +329,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/profile" element={<Navigate to={`/${DEFAULT_LANGUAGE}/profile`} replace />} />
       <Route path="/message" element={<Navigate to={`/${DEFAULT_LANGUAGE}/message`} replace />} />
       <Route path="/tasks/:id" element={<ParamRedirect basePath="/tasks/:id" />} />
+      <Route path="/activities/:id" element={<ParamRedirect basePath="/activities/:id" />} />
       <Route path="/my-tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/my-tasks`} replace />} />
       <Route path="/user/:userId" element={<UserProfileRedirect />} />
       <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />

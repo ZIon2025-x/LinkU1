@@ -63,8 +63,7 @@ public class AppState: ObservableObject {
         
         NotificationCenter.default.publisher(for: .userDidLogout)
             .sink { [weak self] _ in
-                // 登出时断开WebSocket连接
-                WebSocketService.shared.disconnect()
+                // 登出时调用 logout()，它会处理 WebSocket 断开和清除
                 self?.logout()
             }
             .store(in: &cancellables)
@@ -396,8 +395,8 @@ public class AppState: ObservableObject {
         // 停止定期刷新
         stopPeriodicRefresh()
         
-        // 断开WebSocket连接
-        WebSocketService.shared.disconnect()
+        // 断开WebSocket连接并清除用户信息
+        WebSocketService.shared.disconnectAndClear()
         
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)

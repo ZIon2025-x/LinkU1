@@ -72,11 +72,18 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     
     func disconnect() {
         connectionQueue.async { [weak self] in
-            self?.forceDisconnect()
+            self?.forceDisconnect(clearUserInfo: false)
         }
     }
     
-    private func forceDisconnect() {
+    /// 完全断开连接并清除用户信息（用于登出等场景）
+    func disconnectAndClear() {
+        connectionQueue.async { [weak self] in
+            self?.forceDisconnect(clearUserInfo: true)
+        }
+    }
+    
+    private func forceDisconnect(clearUserInfo: Bool = false) {
         // 取消正在进行的重连
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
@@ -87,10 +94,17 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
         
         isConnected = false
         isConnecting = false
-        currentUserId = nil
         reconnectAttempts = 0
-        // 清除存储的userId
-        UserDefaults.standard.removeObject(forKey: "current_user_id")
+        
+        // 根据参数决定是否清除用户信息
+        if clearUserInfo {
+            currentUserId = nil
+            UserDefaults.standard.removeObject(forKey: "current_user_id")
+            print("🧹 WebSocket 已断开并清除用户信息")
+        } else {
+            // ⚠️ 保留 currentUserId 和 UserDefaults 中的 userId，以便重连时使用
+            print("🔌 WebSocket 已断开（保留用户信息以便重连）")
+        }
     }
     
     private func receiveMessage() {
@@ -239,26 +253,39 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
                     return
                 }
                 
-                // 确保旧连接已完全关闭
+                // 确保旧连接已完全关闭（但不清除 userId）
                 if self.webSocketTask != nil {
                     print("🧹 清理旧的 WebSocket 连接")
-                    self.forceDisconnect()
+                    // 只清理连接，不清除 userId
+                    self.reconnectWorkItem?.cancel()
+                    self.reconnectWorkItem = nil
+                    self.webSocketTask?.cancel(with: .goingAway, reason: nil)
+                    self.webSocketTask = nil
+                    self.isConnected = false
+                    self.isConnecting = false
                     Thread.sleep(forTimeInterval: 0.5)
                 }
                 
                 // 从存储的userId和Keychain获取token
-                if let userId = self.currentUserId,
-                   let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                    self.connect(token: token, userId: userId)
-                } else if let storedUserId = UserDefaults.standard.string(forKey: "current_user_id"),
-                          let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
-                    // 使用存储的userId
-                    self.connect(token: token, userId: storedUserId)
-                } else {
-                    print("❌ WebSocket 重连失败：无法获取用户ID或token")
+                // 优先使用 currentUserId，如果为空则从 UserDefaults 获取
+                let userId = self.currentUserId ?? UserDefaults.standard.string(forKey: "current_user_id")
+                
+                guard let finalUserId = userId, !finalUserId.isEmpty else {
+                    print("❌ WebSocket 重连失败：无法获取用户ID")
                     // 如果无法获取用户信息，停止重连
                     self.reconnectAttempts = self.maxReconnectAttempts
+                    return
                 }
+                
+                guard let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty else {
+                    print("❌ WebSocket 重连失败：无法获取token")
+                    // 如果无法获取token，停止重连
+                    self.reconnectAttempts = self.maxReconnectAttempts
+                    return
+                }
+                
+                print("✅ WebSocket 重连：找到用户ID和token，开始连接")
+                self.connect(token: token, userId: finalUserId)
             }
             
             self.reconnectWorkItem = workItem
@@ -289,16 +316,23 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             // 根据关闭代码决定是否重连
             // .goingAway (1001) = 正常关闭，不需要重连
             // .normalClosure (1000) = 正常关闭，不需要重连
-            // 4001 = 认证失败，需要检查token有效性
+            // 4001 = 心跳超时（后端定义），需要重连
+            // 1008 = 认证失败（协议错误），需要检查token有效性
             // 其他代码 = 异常关闭，需要重连
             switch closeCode {
             case .goingAway, .normalClosure:
                 print("🔌 WebSocket 正常关闭，不重连")
                 self.reconnectAttempts = 0
             default:
-                // 处理 4001 错误代码（认证失败）
+                // 处理 4001 错误代码（心跳超时）
                 if closeCodeValue == 4001 {
-                    print("⚠️ WebSocket 关闭代码 4001（认证失败）")
+                    print("⚠️ WebSocket 关闭代码 4001（心跳超时），尝试重连")
+                    // 心跳超时，直接重连（不需要等待token刷新）
+                    self.reconnect()
+                }
+                // 处理 1008 错误代码（认证失败）
+                else if closeCodeValue == 1008 {
+                    print("⚠️ WebSocket 关闭代码 1008（认证失败）")
                     // 检查token是否存在
                     if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty {
                         print("⚠️ Token 存在，但认证失败，可能是token已过期。延迟重连（等待token刷新）")

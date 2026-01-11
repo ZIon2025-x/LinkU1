@@ -12,6 +12,7 @@ interface Notification {
   created_at: string;
   type?: string;
   related_id?: number;
+  task_id?: number; // 任务ID（后端已添加，优先使用此字段）
   // 论坛通知字段
   notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
   target_type?: 'post' | 'reply';
@@ -392,6 +393,30 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
     }
   };
 
+  const handleTaskNotificationClick = async (notification: Notification) => {
+    // 优先使用 task_id 字段，如果没有则使用 related_id
+    const taskId = notification.task_id || notification.related_id;
+    if (taskId) {
+      navigate(`/${lang}/task/${taskId}`);
+      onClose();
+    }
+  };
+
+  // 判断是否是任务相关通知
+  const isTaskRelatedNotification = (notification: Notification): boolean => {
+    if (notification.is_forum) return false;
+    const type = notification.type?.toLowerCase() || '';
+    return type.includes('task') || 
+           type === 'task_approved' || 
+           type === 'task_application' || 
+           type === 'task_completed' || 
+           type === 'task_confirmed' || 
+           type === 'task_cancelled' ||
+           type === 'task_reward_paid' ||
+           type === 'application_accepted' ||
+           type === 'application_rejected';
+  };
+
   const getNotificationColor = (type?: string) => {
     switch (type) {
       case 'success':
@@ -499,14 +524,34 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
             暂无通知
           </div>
         ) : (
-          validNotifications.map((notification, index) => (
+          validNotifications.map((notification, index) => {
+            const isTaskRelated = isTaskRelatedNotification(notification);
+            return (
             <div
               key={`${notification.is_forum ? 'forum' : 'task'}-${notification.id}-${notification.created_at}`}
+              onClick={() => {
+                // 如果是任务相关通知，点击后跳转到任务详情
+                if (isTaskRelated) {
+                  handleTaskNotificationClick(notification);
+                }
+              }}
               style={{
                 padding: '12px 16px',
                 borderBottom: index < validNotifications.length - 1 ? '1px solid #f5f5f5' : 'none',
                 backgroundColor: notification.is_read === 0 ? '#f0f8ff' : '#ffffff',
-                position: 'relative'
+                position: 'relative',
+                cursor: isTaskRelated ? 'pointer' : 'default',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (isTaskRelated) {
+                  e.currentTarget.style.backgroundColor = '#e8f4f8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isTaskRelated) {
+                  e.currentTarget.style.backgroundColor = notification.is_read === 0 ? '#f0f8ff' : '#ffffff';
+                }
               }}
             >
               {/* 未读指示器 */}
@@ -1180,7 +1225,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 </div>
               </div>
             </div>
-          ))
+            );
+          }))
         )}
       </div>
       

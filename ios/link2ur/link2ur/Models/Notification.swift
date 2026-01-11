@@ -9,7 +9,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
     let type: String?
     let isRead: Int?
     let createdAt: String
-    let relatedId: Int?  // 后端返回 related_id
+    let relatedId: Int?  // 后端返回 related_id（可能是字符串或整数）
     let link: String?  // iOS 扩展字段，可能为空
     let taskId: Int?  // 对于 application_message 和 negotiation_offer 类型，存储 task_id
     
@@ -22,6 +22,56 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         case relatedId = "related_id"
         case link  // 可选字段，如果后端不返回则为 nil
         case taskId = "task_id"  // 可选字段，后端可能返回
+    }
+    
+    // 显式成员初始化器（因为添加了自定义解码器，需要手动提供）
+    init(
+        id: Int,
+        userId: String?,
+        title: String,
+        content: String,
+        type: String?,
+        isRead: Int?,
+        createdAt: String,
+        relatedId: Int?,
+        link: String?,
+        taskId: Int?
+    ) {
+        self.id = id
+        self.userId = userId
+        self.title = title
+        self.content = content
+        self.type = type
+        self.isRead = isRead
+        self.createdAt = createdAt
+        self.relatedId = relatedId
+        self.link = link
+        self.taskId = taskId
+    }
+    
+    // 自定义解码，处理 related_id 可能是字符串或整数的情况
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(Int.self, forKey: .id)
+        userId = try container.decodeIfPresent(String.self, forKey: .userId)
+        title = try container.decode(String.self, forKey: .title)
+        content = try container.decode(String.self, forKey: .content)
+        type = try container.decodeIfPresent(String.self, forKey: .type)
+        isRead = try container.decodeIfPresent(Int.self, forKey: .isRead)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        link = try container.decodeIfPresent(String.self, forKey: .link)
+        taskId = try container.decodeIfPresent(Int.self, forKey: .taskId)
+        
+        // 处理 related_id：可能是字符串或整数
+        if let relatedIdInt = try? container.decode(Int.self, forKey: .relatedId) {
+            relatedId = relatedIdInt
+        } else if let relatedIdString = try? container.decode(String.self, forKey: .relatedId),
+                  let relatedIdInt = Int(relatedIdString) {
+            relatedId = relatedIdInt
+        } else {
+            relatedId = nil
+        }
     }
     
     // 创建一个标记为已读的新实例

@@ -1,0 +1,424 @@
+.container {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.spinner {
+  font-size: 48px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.backButton {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.backButton:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #3b82f6;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.imageSection {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.activityImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%);
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.activityBadge {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 24px 0;
+  line-height: 1.3;
+}
+
+.infoCard {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.infoItem {
+  flex: 1;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: #0369a1;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.price {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.priceWithDiscount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.originalPrice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+  font-size: 18px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.discountBadge {
+  font-size: 12px;
+  color: #ef4444;
+  font-weight: 600;
+  background: #fee2e2;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.currentPrice {
+  color: #0284c7;
+}
+
+.perPerson {
+  font-size: 14px;
+  font-weight: 400;
+  color: #0369a1;
+}
+
+.infoDivider {
+  width: 1px;
+  background: #bae6fd;
+}
+
+.participants {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.participantCount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.availableSpots {
+  font-size: 11px;
+  color: #0369a1;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.description {
+  margin: 0;
+  font-size: 14px;
+  color: #4a5568;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.loadingSlots,
+.emptySlots {
+  text-align: center;
+  padding: 20px;
+  color: #718096;
+}
+
+.timeSlotsContainer {
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dateGroup {
+  margin-bottom: 12px;
+}
+
+.dateHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.slotCard {
+  padding: 10px;
+  border: 2px solid #cbd5e0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slotCard:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.slotCardSelected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.slotCardDisabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.slotTime {
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selectedBadge {
+  font-size: 11px;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.expiredBadge {
+  margin-left: 4px;
+  font-size: 11px;
+  color: #ef4444;
+}
+
+.slotPrice {
+  font-size: 12px;
+  color: #059669;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.slotParticipants {
+  font-size: 11px;
+}
+
+.fullBadge {
+  color: #e53e3e;
+}
+
+.availableBadge {
+  color: #48bb78;
+}
+
+.deadline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #1a202c;
+  font-weight: 500;
+}
+
+.deadlineDivider {
+  color: #cbd5e0;
+}
+
+.actions {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+}
+
+.applyButton {
+  flex: 1;
+  padding: 14px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.applyButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.applyButton:disabled,
+.applyButtonDisabled {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .main {
+    padding: 16px;
+  }
+
+  .imageSection {
+    height: 250px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .infoCard {
+    flex-direction: column;
+  }
+
+  .infoDivider {
+    display: none;
+  }
+
+  .slotsGrid {
+    grid-template-columns: 1fr;
+  }
+}
