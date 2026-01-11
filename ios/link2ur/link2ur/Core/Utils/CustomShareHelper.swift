@@ -9,7 +9,7 @@ public enum SharePlatform: String, CaseIterable {
     case qzone = "qzone"             // QQ空间
     case instagram = "instagram"     // Instagram
     case facebook = "facebook"        // Facebook
-    case twitter = "twitter"          // Twitter
+    case twitter = "twitter"          // X (formerly Twitter)
     case weibo = "weibo"             // 微博
     case sms = "sms"                 // 短信
     case copyLink = "copyLink"       // 复制链接
@@ -24,7 +24,7 @@ public enum SharePlatform: String, CaseIterable {
         case .qzone: return LocalizationKey.shareQZone.localized
         case .instagram: return "Instagram"
         case .facebook: return "Facebook"
-        case .twitter: return "Twitter"
+        case .twitter: return "X"
         case .weibo: return LocalizationKey.shareWeibo.localized
         case .sms: return LocalizationKey.shareSMS.localized
         case .copyLink: return LocalizationKey.shareCopyLink.localized
@@ -289,13 +289,13 @@ public class CustomShareHelper {
         }
     }
     
-    // MARK: - Twitter分享
+    // MARK: - X分享（原 Twitter）
     
     private static func shareToTwitter(text: String, url: URL) {
         let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedURL = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
-        // 先尝试使用 Twitter App
+        // 先尝试使用 X App（X 应用可能仍支持 twitter:// URL scheme）
         if let twitterURL = URL(string: "twitter://post?message=\(encodedText)%20\(encodedURL)") {
             if UIApplication.shared.canOpenURL(twitterURL) {
                 UIApplication.shared.open(twitterURL) { success in
@@ -307,8 +307,8 @@ public class CustomShareHelper {
             }
         }
         
-        // 如果 Twitter App 未安装，使用网页
-        if let webURL = URL(string: "https://twitter.com/intent/tweet?text=\(encodedText)&url=\(encodedURL)") {
+        // 如果 X App 未安装，使用网页（X 支持 twitter.com 和 x.com）
+        if let webURL = URL(string: "https://x.com/intent/tweet?text=\(encodedText)&url=\(encodedURL)") {
             UIApplication.shared.open(webURL) { success in
                 if success {
                     HapticFeedback.success()

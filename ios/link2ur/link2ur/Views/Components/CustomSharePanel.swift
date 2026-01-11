@@ -174,10 +174,20 @@ struct SharePlatformButton: View {
                         .fill(platform.color.opacity(0.1))
                         .frame(width: 60, height: 60)
                     
-                    // 使用系统图标或自定义图标
-                    Image(systemName: getSystemIconName(for: platform))
-                        .font(.system(size: 28))
-                        .foregroundColor(platform.color)
+                    // 优先使用真实logo，如果没有则使用系统图标
+                    if let customImageName = getCustomImageName(for: platform),
+                       UIImage(named: customImageName) != nil {
+                        // 使用自定义logo图片
+                        Image(customImageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                    } else {
+                        // 使用系统图标作为后备
+                        Image(systemName: getSystemIconName(for: platform))
+                            .font(.system(size: 28))
+                            .foregroundColor(platform.color)
+                    }
                 }
                 
                 // 平台名称
@@ -191,6 +201,30 @@ struct SharePlatformButton: View {
             .opacity(isInstalled ? 1.0 : 0.6)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+    
+    /// 获取自定义图片资源名称（如果存在）
+    private func getCustomImageName(for platform: SharePlatform) -> String? {
+        switch platform {
+        case .wechat:
+            return "WeChatLogo"
+        case .wechatMoments:
+            return "WeChatMomentsLogo"
+        case .qq:
+            return "QQLogo"
+        case .qzone:
+            return "QZoneLogo"
+        case .instagram:
+            return "InstagramLogo"
+        case .facebook:
+            return "FacebookLogo"
+        case .twitter:
+            return "XLogo"
+        case .weibo:
+            return "WeiboLogo"
+        default:
+            return nil
+        }
     }
     
     private func getSystemIconName(for platform: SharePlatform) -> String {

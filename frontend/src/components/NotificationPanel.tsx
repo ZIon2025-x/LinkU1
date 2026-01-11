@@ -1226,7 +1226,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
               </div>
             </div>
             );
-          }))
+          })
         )}
       </div>
       
