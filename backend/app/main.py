@@ -880,8 +880,26 @@ async def startup_event():
         
         logger.info("正在创建数据库表...")
         # 使用 checkfirst=True 避免重复创建已存在的对象
-        Base.metadata.create_all(bind=sync_engine, checkfirst=True)
-        logger.info("数据库表创建完成！")
+        # 注意：对于索引，checkfirst 可能不够完善，如果索引已存在会报错但不影响应用运行
+        try:
+            Base.metadata.create_all(bind=sync_engine, checkfirst=True)
+            logger.info("数据库表创建完成！")
+        except Exception as e:
+            # 如果是索引/表重复错误，记录警告但不阻止应用启动
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in [
+                "already exists", 
+                "duplicatetable", 
+                "duplicate", 
+                "relation.*already exists"
+            ]):
+                logger.warning(f"数据库表/索引可能已存在（这是正常的，不影响应用运行）: {str(e)[:200]}")
+            else:
+                logger.error(f"数据库初始化失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 对于非重复错误，仍然抛出异常
+                raise
         
         # 验证表是否创建成功
         from sqlalchemy import inspect

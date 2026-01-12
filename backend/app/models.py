@@ -297,9 +297,9 @@ class RecommendationFeedback(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
     recommendation_id = Column(String(100), nullable=True)  # 推荐批次ID
-    feedback_type = Column(String(20), nullable=False, index=True)  # like, dislike, not_interested, helpful
-    feedback_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
-    algorithm = Column(String(50), nullable=True, index=True)  # 使用的推荐算法
+    feedback_type = Column(String(20), nullable=False)  # like, dislike, not_interested, helpful（索引在__table_args__中定义）
+    feedback_time = Column(DateTime(timezone=True), default=get_utc_time)  # 索引在__table_args__中定义
+    algorithm = Column(String(50), nullable=True)  # 使用的推荐算法（索引在__table_args__中定义）
     match_score = Column(Float, nullable=True)  # 推荐时的匹配分数
     feedback_metadata = Column("metadata", JSONB, nullable=True)  # 额外信息，数据库列名保持为metadata
     
