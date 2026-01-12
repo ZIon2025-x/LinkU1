@@ -268,6 +268,49 @@ class TaskHistory(Base):
     remark = Column(Text, nullable=True)
 
 
+class UserTaskInteraction(Base):
+    """用户任务交互表（用于推荐系统）"""
+    __tablename__ = "user_task_interactions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    interaction_type = Column(String(20), nullable=False, index=True)  # view, click, apply, accept, complete, skip
+    interaction_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
+    duration_seconds = Column(Integer, nullable=True)  # 浏览时长（秒）
+    device_type = Column(String(20), nullable=True)  # mobile, desktop, tablet
+    metadata = Column(JSONB, nullable=True)  # 额外信息（如来源页面、推荐原因等）
+    
+    __table_args__ = (
+        Index("ix_user_task_interactions_user_time", user_id, interaction_time.desc()),
+        Index("ix_user_task_interactions_task", task_id),
+        Index("ix_user_task_interactions_type", interaction_type),
+        Index("ix_user_task_interactions_user_task", user_id, task_id),
+    )
+
+
+class RecommendationFeedback(Base):
+    """推荐反馈表"""
+    __tablename__ = "recommendation_feedback"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    recommendation_id = Column(String(100), nullable=True)  # 推荐批次ID
+    feedback_type = Column(String(20), nullable=False, index=True)  # like, dislike, not_interested, helpful
+    feedback_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
+    algorithm = Column(String(50), nullable=True, index=True)  # 使用的推荐算法
+    match_score = Column(Float, nullable=True)  # 推荐时的匹配分数
+    metadata = Column(JSONB, nullable=True)  # 额外信息
+    
+    __table_args__ = (
+        Index("ix_recommendation_feedback_user_time", user_id, feedback_time.desc()),
+        Index("ix_recommendation_feedback_task", task_id),
+        Index("ix_recommendation_feedback_type", feedback_type),
+        Index("ix_recommendation_feedback_algorithm", algorithm),
+    )
+
+
 class TaskDispute(Base):
     """任务争议记录表"""
     __tablename__ = "task_disputes"

@@ -9,6 +9,7 @@ struct ForumPostDetailView: View {
     @State private var likeCount = 0
     @State private var favoriteCount = 0
     @State private var showLogin = false
+    @State private var showShareSheet = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -62,12 +63,17 @@ struct ForumPostDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
-                    ShareLink(item: "看看这篇帖子: \(viewModel.post?.title ?? "")") {
+                    // 分享按钮
+                    Button(action: {
+                        showShareSheet = true
+                        HapticFeedback.light()
+                    }) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
                     }
                     
+                    // 收藏按钮
                     Button(action: {
                         if appState.isAuthenticated {
                             viewModel.toggleFavorite(postId: postId) { favorited in
@@ -89,6 +95,16 @@ struct ForumPostDetailView: View {
                             .foregroundColor(isFavorited ? AppColors.warning : AppColors.textPrimary)
                     }
                 }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let post = viewModel.post {
+                ForumPostShareSheet(
+                    post: post,
+                    postId: postId
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showLogin) {
@@ -604,5 +620,137 @@ struct ReplySheet: View {
             from: nil,
             for: nil
         )
+    }
+}
+
+// MARK: - 帖子分享视图
+struct ForumPostShareSheet: View {
+    let post: ForumPost
+    let postId: Int
+    @Environment(\.dismiss) var dismiss
+    
+    // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签
+    private var shareUrl: URL {
+        let urlString = "https://www.link2ur.com/zh/forum/posts/\(postId)?v=2"
+        if let url = URL(string: urlString) {
+            return url
+        }
+        return URL(string: "https://www.link2ur.com")!
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // 顶部拖动指示器
+            Capsule()
+                .fill(AppColors.separator)
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+            
+            // 预览卡片
+            VStack(spacing: AppSpacing.md) {
+                // 占位图
+                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [AppColors.primary.opacity(0.6), AppColors.primary]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(height: 150)
+                    .overlay(
+                        IconStyle.icon("doc.text.fill", size: 40)
+                            .foregroundColor(.white.opacity(0.8))
+                    )
+                
+                // 标题和描述
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(post.title)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
+                    
+                    if let content = post.content, !content.isEmpty {
+                        Text(content)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(2)
+                    } else if let preview = post.contentPreview, !preview.isEmpty {
+                        Text(preview)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(2)
+                    }
+                    
+                    // 帖子信息
+                    HStack(spacing: AppSpacing.md) {
+                        Label("\(post.viewCount) 浏览", systemImage: "eye")
+                        Label("\(post.replyCount) 回复", systemImage: "bubble.left")
+                        if let category = post.category {
+                            Label(category.name, systemImage: "tag")
+                        }
+                    }
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(AppSpacing.md)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .padding(.horizontal, AppSpacing.md)
+            
+            // 自定义分享面板
+            CustomSharePanel(
+                title: getShareTitle(for: post),
+                description: getShareDescription(for: post),
+                url: shareUrl,
+                image: nil,
+                taskType: nil,
+                location: nil,
+                reward: nil,
+                onDismiss: {
+                    dismiss()
+                }
+            )
+            .padding(.top, AppSpacing.md)
+        }
+        .background(AppColors.background)
+    }
+    
+    /// 获取分享标题
+    private func getShareTitle(for post: ForumPost) -> String {
+        let trimmedTitle = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedTitle.isEmpty {
+            return "看看这篇帖子"
+        }
+        return trimmedTitle
+    }
+    
+    /// 获取分享描述
+    private func getShareDescription(for post: ForumPost) -> String {
+        // 优先使用content，如果没有则使用contentPreview
+        let description: String
+        if let content = post.content, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            description = content
+        } else if let preview = post.contentPreview, !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            description = preview
+        } else {
+            // 如果没有内容，使用帖子信息构建描述
+            let categoryText = post.category?.name ?? ""
+            let statsText = "\(post.viewCount) 浏览 · \(post.replyCount) 回复"
+            if !categoryText.isEmpty {
+                return "\(categoryText) | \(statsText)"
+            }
+            return statsText
+        }
+        
+        // 限制长度
+        let maxLength = 200
+        if description.count > maxLength {
+            return String(description.prefix(maxLength)) + "..."
+        }
+        return description
     }
 }

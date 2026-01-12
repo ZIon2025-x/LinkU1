@@ -885,9 +885,11 @@ struct ActivityShareSheet: View {
     // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签（weixin:title, weixin:description, weixin:image）
     // 前端页面已经设置了这些标签，微信会直接抓取
     private var shareUrl: URL {
+        // 确保使用正确的activity ID（优先使用activity.id，如果匹配则使用activityId）
+        let idToUse = (activity.id == activityId) ? activity.id : activityId
         // 使用前端域名，确保微信能抓取到正确的 meta 标签
         // 使用固定版本号而不是时间戳，避免每次分享都生成新URL导致系统多次尝试获取元数据
-        let urlString = "https://www.link2ur.com/zh/activities/\(activityId)?v=2"
+        let urlString = "https://www.link2ur.com/zh/activities/\(idToUse)?v=2"
         if let url = URL(string: urlString) {
             return url
         }
@@ -979,9 +981,13 @@ struct ActivityShareSheet: View {
             .padding(.horizontal, AppSpacing.md)
             
             // 自定义分享面板（类似小红书）
+            // 确保使用正确的activity数据
+            let shareTitle = getShareTitle(for: activity)
+            let shareDescription = getShareDescription(for: activity)
+            
             CustomSharePanel(
-                title: activity.title,
-                description: activity.description,
+                title: shareTitle,
+                description: shareDescription,
                 url: shareUrl,
                 image: shareImage,
                 taskType: nil,
@@ -994,9 +1000,72 @@ struct ActivityShareSheet: View {
                     dismiss()
                 }
             )
+            .onAppear {
+                // 调试日志
+                Logger.debug("分享活动 - ID: \(activity.id), Title: \(shareTitle), Description: \(shareDescription.prefix(50))...", category: .ui)
+            }
             .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
+    }
+    
+    /// 获取分享标题（如果title是默认值，使用其他信息构建）
+    private func getShareTitle(for activity: Activity) -> String {
+        // 验证activity ID是否匹配
+        if activity.id != activityId {
+            Logger.warning("Activity ID不匹配: activity.id=\(activity.id), activityId=\(activityId)", category: .ui)
+        }
+        
+        // 检查是否是默认值或空值
+        let defaultTitles = ["Activity Title", "活动标题", "活动", "Default Title"]
+        let trimmedTitle = activity.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if defaultTitles.contains(trimmedTitle) || trimmedTitle.isEmpty {
+            // 使用任务类型和位置构建标题
+            let taskTypeText = activity.taskType
+            let locationText = activity.location.lowercased() == "online" 
+                ? (LocalizationHelper.currentLanguage.hasPrefix("zh") ? "线上" : "Online")
+                : activity.location
+            return "\(taskTypeText) - \(locationText)"
+        }
+        
+        // 返回实际的标题
+        return trimmedTitle
+    }
+    
+    /// 获取分享描述（如果description是默认值，使用其他信息构建）
+    private func getShareDescription(for activity: Activity) -> String {
+        // 验证activity ID是否匹配
+        if activity.id != activityId {
+            Logger.warning("Activity ID不匹配: activity.id=\(activity.id), activityId=\(activityId)", category: .ui)
+        }
+        
+        // 检查是否是默认值或空值
+        let defaultDescriptions = ["Activity Description", "活动描述", "活动详情", "Default Description"]
+        let trimmedDescription = activity.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if defaultDescriptions.contains(trimmedDescription) || trimmedDescription.isEmpty {
+            // 使用活动信息构建描述
+            let price = activity.discountedPricePerParticipant ?? activity.originalPricePerParticipant
+            let currencySymbol = activity.currency == "GBP" ? "£" : "¥"
+            let participants = "\(activity.currentParticipants)/\(activity.maxParticipants)"
+            let locationText = activity.location.lowercased() == "online" 
+                ? (LocalizationHelper.currentLanguage.hasPrefix("zh") ? "线上" : "Online")
+                : activity.location
+            
+            if LocalizationHelper.currentLanguage.hasPrefix("zh") {
+                return "\(activity.taskType) | \(locationText) | \(currencySymbol)\(String(format: "%.0f", price)) | 参与者: \(participants)"
+            } else {
+                return "\(activity.taskType) | \(locationText) | \(currencySymbol)\(String(format: "%.0f", price)) | Participants: \(participants)"
+            }
+        }
+        
+        // 返回实际的描述（限制长度，避免过长）
+        let maxLength = 200
+        if trimmedDescription.count > maxLength {
+            return String(trimmedDescription.prefix(maxLength)) + "..."
+        }
+        return trimmedDescription
     }
     
 }

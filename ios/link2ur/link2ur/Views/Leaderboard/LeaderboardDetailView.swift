@@ -148,7 +148,8 @@ struct LeaderboardDetailView: View {
         .sheet(isPresented: $showShareSheet) {
             if let leaderboard = viewModel.leaderboard {
                 LeaderboardShareView(leaderboard: leaderboard, leaderboardId: leaderboardId)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showLogin) {
@@ -476,9 +477,13 @@ struct LeaderboardShareView: View {
     @State private var isLoadingImage = false
     @State private var imageCancellable: AnyCancellable?
     
-    // 使用 API 域名，后端会为爬虫返回正确的 meta 标签，普通用户会被重定向到前端
-    private var shareUrl: URL? {
-        URL(string: "https://api.link2ur.com/zh/leaderboard/custom/\(leaderboardId)")
+    // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签
+    private var shareUrl: URL {
+        let urlString = "https://www.link2ur.com/zh/leaderboard/custom/\(leaderboardId)?v=2"
+        if let url = URL(string: urlString) {
+            return url
+        }
+        return URL(string: "https://www.link2ur.com")!
     }
     
     var body: some View {
@@ -550,23 +555,20 @@ struct LeaderboardShareView: View {
             .cornerRadius(AppCornerRadius.large)
             .padding(.horizontal, AppSpacing.md)
             
-            Spacer()
-            
-            // 分享按钮
-            Button(action: shareContent) {
-                HStack {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("分享到...")
+            // 自定义分享面板
+            CustomSharePanel(
+                title: getShareTitle(for: leaderboard),
+                description: getShareDescription(for: leaderboard),
+                url: shareUrl,
+                image: shareImage,
+                taskType: nil,
+                location: leaderboard.location,
+                reward: nil,
+                onDismiss: {
+                    dismiss()
                 }
-                .font(AppTypography.bodyBold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppColors.primary)
-                .cornerRadius(AppCornerRadius.large)
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.bottom, AppSpacing.lg)
+            )
+            .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
         .onAppear {
@@ -596,36 +598,32 @@ struct LeaderboardShareView: View {
             )
     }
     
-    private func shareContent() {
-        guard let url = shareUrl else { return }
-        
-        // 构建分享项目
-        var shareItems: [Any] = []
-        
-        // 如果有图片，添加图片分享项（放在前面，微信会优先使用）
-        if let image = shareImage {
-            shareItems.append(LeaderboardImageShareItem(image: image))
+    /// 获取分享标题
+    private func getShareTitle(for leaderboard: CustomLeaderboard) -> String {
+        let trimmedName = leaderboard.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty {
+            return "排行榜"
         }
-        
-        // 添加链接分享项
-        let shareItem = LeaderboardShareItem(
-            url: url,
-            title: leaderboard.name,
-            description: leaderboard.description ?? "来 Link²Ur 看看这个排行榜",
-            image: shareImage
-        )
-        shareItems.append(shareItem)
-        
-        // 使用统一的分享工具类显示分享面板
-        ShareHelper.presentShareSheet(
-            items: shareItems,
-            completion: { activityType, completed, returnedItems, error in
-                if completed {
-                    // 可以在这里添加分享统计或分析
-                    // Analytics.track("leaderboard_shared", parameters: ["leaderboard_id": leaderboardId, "platform": activityType?.rawValue ?? "unknown"])
-                }
+        return trimmedName
+    }
+    
+    /// 获取分享描述
+    private func getShareDescription(for leaderboard: CustomLeaderboard) -> String {
+        if let description = leaderboard.description, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // 限制长度
+            let maxLength = 200
+            if description.count > maxLength {
+                return String(description.prefix(maxLength)) + "..."
             }
-        )
+            return description
+        } else {
+            // 如果没有描述，使用统计信息构建
+            let statsText = "\(leaderboard.itemCount) 竞品 · \(leaderboard.voteCount) 投票"
+            if let location = leaderboard.location, !location.isEmpty {
+                return "\(location) | \(statsText)"
+            }
+            return "来 Link²Ur 看看这个排行榜 | \(statsText)"
+        }
     }
 }
 

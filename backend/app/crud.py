@@ -643,6 +643,32 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
             deleted = redis_cache.delete_pattern(pattern)
             if deleted > 0:
                 print(f"DEBUG: 清除模式 {pattern}，删除了 {deleted} 个键")
+        
+        # 清除推荐缓存，确保新任务能立即被推荐
+        # 清除所有用户的推荐缓存（因为新任务可能对所有用户都有价值）
+        recommendation_patterns = [
+            "recommendations:*",  # 清除所有推荐缓存
+            "popular_tasks:*",    # 清除热门任务缓存
+        ]
+        for pattern in recommendation_patterns:
+            try:
+                deleted = redis_cache.delete_pattern(pattern)
+                if deleted > 0:
+                    logger.info(f"清除推荐缓存模式 {pattern}，删除了 {deleted} 个键")
+            except Exception as e:
+                logger.warning(f"清除推荐缓存失败 {pattern}: {e}")
+        
+        # 如果是新用户发布的任务，触发异步推荐更新
+        from datetime import timedelta
+        user_created_at = user.created_at if user.created_at else get_utc_time()
+        is_new_user = (get_utc_time() - user_created_at).days <= 7 if hasattr(user_created_at, 'days') else False
+        
+        if is_new_user:
+            try:
+                from app.recommendation_tasks import update_popular_tasks_async
+                update_popular_tasks_async()  # 异步更新热门任务列表
+            except Exception as e:
+                logger.warning(f"异步更新热门任务失败: {e}")
     except Exception as e:
         print(f"清除缓存失败: {e}")
 
@@ -736,9 +762,21 @@ def list_tasks(
             )
         )
     
-    # 在数据库层面完成排序
+    # 在数据库层面完成排序（支持新任务优先）
+    from datetime import timedelta
+    from sqlalchemy import case
+    
     if sort_by == "latest":
-        query = query.order_by(Task.created_at.desc())
+        # 优先显示新任务（24小时内）
+        recent_24h = now_utc - timedelta(hours=24)
+        sort_weight = case(
+            (Task.created_at >= recent_24h, 2),  # 新任务权重=2
+            else_=1  # 普通任务权重=1
+        )
+        query = query.order_by(
+            sort_weight.desc(),  # 先按权重排序（新任务在前）
+            Task.created_at.desc()  # 再按创建时间排序
+        )
     elif sort_by == "reward_asc":
         query = query.order_by(Task.base_reward.asc())
     elif sort_by == "reward_desc":
@@ -748,18 +786,42 @@ def list_tasks(
     elif sort_by == "deadline_desc":
         query = query.order_by(Task.deadline.desc())
     else:
-        # 默认按创建时间降序
-        query = query.order_by(Task.created_at.desc())
+        # 默认按创建时间降序（也支持新任务优先）
+        recent_24h = now_utc - timedelta(hours=24)
+        sort_weight = case(
+            (Task.created_at >= recent_24h, 2),
+            else_=1
+        )
+        query = query.order_by(sort_weight.desc(), Task.created_at.desc())
 
     # 执行分页和查询
     tasks = query.offset(skip).limit(limit).all()
 
-    # 为每个任务添加发布者时区信息（poster已经预加载，无需额外查询）
+    # 为每个任务添加发布者时区信息，并标记新任务
+    recent_24h = now_utc - timedelta(hours=24)
+    recent_7d = now_utc - timedelta(days=7)
+    
     for task in tasks:
         if task.poster:
             task.poster_timezone = task.poster.timezone if task.poster.timezone else "UTC"
+            
+            # 标记是否为新任务和新用户发布的任务
+            task_hours_old = (now_utc - task.created_at).total_seconds() / 3600 if hasattr(task.created_at, 'total_seconds') else 999
+            user_days_old = (now_utc - task.poster.created_at).days if hasattr(task.poster.created_at, 'days') else 999
+            
+            task.is_new_task = task_hours_old <= 24
+            task.is_new_user_task = task_hours_old <= 24 and user_days_old <= 7
         else:
             task.poster_timezone = "UTC"
+            task.is_new_task = False
+            task.is_new_user_task = False
+
+    # 二次排序：确保新用户发布的新任务在最前面
+    tasks.sort(key=lambda t: (
+        -1 if (hasattr(t, 'is_new_user_task') and t.is_new_user_task) else 0,  # 新用户新任务最优先
+        -1 if (hasattr(t, 'is_new_task') and t.is_new_task) else 0,  # 新任务其次
+        t.created_at if t.created_at else datetime.min.replace(tzinfo=timezone.utc)  # 最后按时间
+    ), reverse=True)
 
     return tasks
 

@@ -51,7 +51,10 @@ struct CustomSharePanel: View {
                             platform: platform,
                             isInstalled: CustomShareHelper.isAppInstalled(platform),
                             onTap: {
-                                shareToPlatform(platform)
+                                // 使用主线程执行，确保UI响应流畅
+                                DispatchQueue.main.async {
+                                    shareToPlatform(platform)
+                                }
                             }
                         )
                     }
@@ -95,11 +98,17 @@ struct CustomSharePanel: View {
     }
     
     private func loadAvailablePlatforms() {
-        // 获取可用的分享平台
-        availablePlatforms = CustomShareHelper.getAvailablePlatforms()
+        // 优化：在后台线程加载平台列表，避免阻塞UI
+        DispatchQueue.global(qos: .userInitiated).async {
+            let platforms = CustomShareHelper.getAvailablePlatforms()
+            DispatchQueue.main.async {
+                availablePlatforms = platforms
+            }
+        }
     }
     
     private func shareToPlatform(_ platform: SharePlatform) {
+        // 防止重复点击
         guard !isSharing else { return }
         
         // 生成分享图功能特殊处理
@@ -111,19 +120,39 @@ struct CustomSharePanel: View {
         isSharing = true
         HapticFeedback.selection()
         
-        CustomShareHelper.shareToPlatform(
-            platform,
-            title: title,
-            description: description,
-            url: url,
-            image: image
-        )
-        
-        // 延迟关闭，让用户看到反馈
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            isSharing = false
-            if platform != .more {
-                // 除了"更多"选项，其他平台分享后关闭面板
+        // 对于"更多"选项，先关闭面板，然后显示系统分享面板
+        if platform == .more {
+            // 立即关闭面板，给用户反馈
+            onDismiss()
+            
+            // 延迟显示系统分享面板，确保sheet完全关闭
+            // 使用稍长的延迟，确保动画完成
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                CustomShareHelper.shareToPlatform(
+                    platform,
+                    title: title,
+                    description: description,
+                    url: url,
+                    image: image
+                )
+                // 延迟重置状态，避免在分享面板显示前被重置
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isSharing = false
+                }
+            }
+        } else {
+            // 其他平台：立即执行分享，然后关闭面板
+            CustomShareHelper.shareToPlatform(
+                platform,
+                title: title,
+                description: description,
+                url: url,
+                image: image
+            )
+            
+            // 延迟关闭，让用户看到反馈
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isSharing = false
                 onDismiss()
             }
         }
@@ -177,11 +206,12 @@ struct SharePlatformButton: View {
                     // 优先使用真实logo，如果没有则使用系统图标
                     if let customImageName = getCustomImageName(for: platform),
                        UIImage(named: customImageName) != nil {
-                        // 使用自定义logo图片
+                        // 使用自定义logo图片，根据平台调整大小
                         Image(customImageName)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 40, height: 40)
+                            .frame(width: getLogoSize(for: platform).width, 
+                                   height: getLogoSize(for: platform).height)
                     } else {
                         // 使用系统图标作为后备
                         Image(systemName: getSystemIconName(for: platform))
@@ -224,6 +254,36 @@ struct SharePlatformButton: View {
             return "WeiboLogo"
         default:
             return nil
+        }
+    }
+    
+    /// 获取不同平台的logo显示大小（根据实际logo设计调整）
+    private func getLogoSize(for platform: SharePlatform) -> CGSize {
+        switch platform {
+        case .wechat:
+            // 微信logo通常较小，需要放大一些
+            return CGSize(width: 48, height: 48)
+        case .wechatMoments:
+            // 朋友圈保持原大小
+            return CGSize(width: 40, height: 40)
+        case .qq, .qzone:
+            // QQ logo也需要放大
+            return CGSize(width: 48, height: 48)
+        case .instagram:
+            // Instagram logo需要放大
+            return CGSize(width: 48, height: 48)
+        case .facebook:
+            // Facebook logo需要放大
+            return CGSize(width: 48, height: 48)
+        case .weibo:
+            // 微博logo需要放大
+            return CGSize(width: 48, height: 48)
+        case .twitter:
+            // X logo太大，需要缩小
+            return CGSize(width: 32, height: 32)
+        default:
+            // 默认大小
+            return CGSize(width: 40, height: 40)
         }
     }
     

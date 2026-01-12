@@ -430,7 +430,18 @@ class AsyncTaskCRUD:
             # 排序（如果关键词搜索已经设置了排序，则跳过）
             if not has_keyword_sort:
                 if sort_by == "latest":
-                    query = query.order_by(models.Task.created_at.desc())
+                    # 优先显示新任务（24小时内）
+                    from datetime import timedelta
+                    from sqlalchemy import case
+                    recent_24h = now_utc - timedelta(hours=24)
+                    sort_weight = case(
+                        (models.Task.created_at >= recent_24h, 2),  # 新任务权重=2
+                        else_=1  # 普通任务权重=1
+                    )
+                    query = query.order_by(
+                        sort_weight.desc(),  # 先按权重排序（新任务在前）
+                        models.Task.created_at.desc()  # 再按创建时间排序
+                    )
                 elif sort_by == "oldest":
                     query = query.order_by(models.Task.created_at.asc())
                 elif sort_by == "reward_high" or sort_by == "reward_desc":
@@ -444,7 +455,15 @@ class AsyncTaskCRUD:
                 elif sort_by == "deadline_desc":
                     query = query.order_by(models.Task.deadline.desc())
                 else:
-                    query = query.order_by(models.Task.created_at.desc())
+                    # 默认也支持新任务优先
+                    from datetime import timedelta
+                    from sqlalchemy import case
+                    recent_24h = now_utc - timedelta(hours=24)
+                    sort_weight = case(
+                        (models.Task.created_at >= recent_24h, 2),
+                        else_=1
+                    )
+                    query = query.order_by(sort_weight.desc(), models.Task.created_at.desc())
 
             result = await db.execute(
                 query.offset(skip).limit(limit)
@@ -723,8 +742,18 @@ class AsyncTaskCRUD:
                 max_fetch_for_distance = min(limit * 10, 500)  # 最多500条
                 list_query = list_query.limit(max_fetch_for_distance)
             elif sort_by == "latest":
+                # 优先显示新任务（24小时内）
+                from datetime import timedelta
+                from sqlalchemy import case
+                recent_24h = now_utc - timedelta(hours=24)
+                sort_weight = case(
+                    (models.Task.created_at >= recent_24h, 2),  # 新任务权重=2
+                    else_=1  # 普通任务权重=1
+                )
                 list_query = list_query.order_by(
-                    models.Task.created_at.desc(), models.Task.id.desc()
+                    sort_weight.desc(),  # 先按权重排序
+                    models.Task.created_at.desc(),  # 再按创建时间
+                    models.Task.id.desc()  # 最后按ID
                 )
             elif sort_by == "oldest":
                 list_query = list_query.order_by(

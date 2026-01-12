@@ -40,7 +40,7 @@ public class ShareHelper {
         .openInIBooks
     ]
     
-    /// 显示分享面板（统一方法）
+    /// 显示分享面板（统一方法）- 优化版本
     /// - Parameters:
     ///   - items: 分享项目数组
     ///   - excludedTypes: 排除的分享类型（默认排除联系人、阅读列表、iBooks）
@@ -50,6 +50,7 @@ public class ShareHelper {
         excludedTypes: [UIActivity.ActivityType]? = defaultExcludedTypes,
         completion: ShareCompletionHandler? = nil
     ) {
+        // 优化：在主线程创建分享控制器，避免延迟
         let activityVC = UIActivityViewController(
             activityItems: items,
             applicationActivities: nil
@@ -72,37 +73,82 @@ public class ShareHelper {
                         HapticFeedback.success()
                     } else if let error = error {
                         HapticFeedback.error()
-                        print("分享失败: \(error.localizedDescription)")
+                        Logger.warning("分享失败: \(error.localizedDescription)", category: .ui)
                     }
                 }
             }
         }
         
-        // 获取当前的 UIViewController
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootVC = windowScene.windows.first?.rootViewController else {
-            print("无法获取当前视图控制器")
+        // 确保在主线程执行
+        if Thread.isMainThread {
+            presentShareSheetOnMainThread(activityVC)
+        } else {
+            DispatchQueue.main.async {
+                presentShareSheetOnMainThread(activityVC)
+            }
+        }
+    }
+    
+    /// 在主线程显示分享面板（优化版本）
+    private static func presentShareSheetOnMainThread(_ activityVC: UIActivityViewController, retryCount: Int = 0) {
+        // 限制重试次数，避免无限循环
+        guard retryCount < 3 else {
+            Logger.error("分享面板显示失败：超过最大重试次数", category: .ui)
             return
         }
         
-        var topVC = rootVC
-        while let presented = topVC.presentedViewController {
-            topVC = presented
+        // 使用RunLoop确保在下一个循环显示，更可靠
+        DispatchQueue.main.async {
+            // 获取当前的 UIViewController - 使用更可靠的方法
+            guard let windowScene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive }),
+                  let window = windowScene.windows.first(where: { $0.isKeyWindow && $0.isHidden == false }),
+                  let rootVC = window.rootViewController else {
+                // 如果获取失败，延迟重试
+                if retryCount < 2 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        presentShareSheetOnMainThread(activityVC, retryCount: retryCount + 1)
+                    }
+                }
+                return
+            }
+            
+            // 找到最顶层的视图控制器
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            
+            // 检查视图是否在窗口层次结构中且可见
+            guard topVC.view.window != nil,
+                  topVC.view.superview != nil,
+                  !topVC.isBeingDismissed,
+                  !topVC.isBeingPresented else {
+                // 视图还没准备好，延迟重试
+                if retryCount < 2 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        presentShareSheetOnMainThread(activityVC, retryCount: retryCount + 1)
+                    }
+                }
+                return
+            }
+            
+            // iPad 支持：配置 popover
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                activityVC.popoverPresentationController?.sourceView = topVC.view
+                activityVC.popoverPresentationController?.sourceRect = CGRect(
+                    x: topVC.view.bounds.midX,
+                    y: topVC.view.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                activityVC.popoverPresentationController?.permittedArrowDirections = []
+            }
+            
+            // 显示分享面板
+            topVC.present(activityVC, animated: true, completion: nil)
         }
-        
-        // iPad 支持：配置 popover
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            activityVC.popoverPresentationController?.sourceView = topVC.view
-            activityVC.popoverPresentationController?.sourceRect = CGRect(
-                x: topVC.view.bounds.midX,
-                y: topVC.view.bounds.midY,
-                width: 0,
-                height: 0
-            )
-            activityVC.popoverPresentationController?.permittedArrowDirections = []
-        }
-        
-        topVC.present(activityVC, animated: true)
     }
     
     /// 分享文本

@@ -50,7 +50,48 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // 注意：不在这里请求通知权限，而是在视频播放完成后、进入app后再请求
         // 这样可以避免在启动视频播放时弹出权限请求对话框
         
+        // 初始化微信和QQ SDK（如果已集成）
+        #if canImport(WechatOpenSDK)
+        // 注意：需要替换为实际的微信AppID和Universal Link
+        // WXApi.registerApp("YOUR_WECHAT_APPID", universalLink: "https://yourdomain.com/wechat/")
+        #endif
+        
         return true
+    }
+    
+    // MARK: - URL处理（微信和QQ回调）
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        // 处理微信回调
+        #if canImport(WechatOpenSDK)
+        if WXApi.handleOpen(url, delegate: WeChatShareManager.shared) {
+            return true
+        }
+        #endif
+        
+        // 处理QQ回调
+        #if canImport(TencentOpenAPI)
+        if TencentOAuth.handleOpen(url) {
+            return true
+        }
+        #endif
+        
+        return false
+    }
+    
+    // MARK: - Universal Link处理（微信）
+    
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        // 处理Universal Link（微信）
+        #if canImport(WechatOpenSDK)
+        if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+           let url = userActivity.webpageURL,
+           WXApi.handleOpenUniversalLink(userActivity, delegate: WeChatShareManager.shared) {
+            return true
+        }
+        #endif
+        
+        return false
     }
     
     // 请求推送通知权限

@@ -19,7 +19,8 @@ celery_app = Celery(
     include=[
         'app.customer_service_tasks',
         'app.celery_tasks',
-        'app.celery_tasks_expiry'
+        'app.celery_tasks_expiry',
+        'app.recommendation_tasks'
     ]
 )
 
@@ -99,6 +100,33 @@ celery_app.conf.beat_schedule = {
         'schedule': 900.0,  # 15分钟
     },
     
+    # ========== 推荐系统相关任务 ==========
+    
+    # 预计算推荐 - 每小时执行一次（优化版：批量处理）
+    'precompute-recommendations-hourly': {
+        'task': 'app.recommendation_tasks.precompute_recommendations_for_active_users_task',
+        'schedule': 3600.0,  # 1小时
+        'args': (100, 10)  # 预计算前100个活跃用户，每批10个
+    },
+    
+    # 推荐数据清理 - 每天执行一次（凌晨2点）
+    'cleanup-recommendation-data': {
+        'task': 'app.recommendation_tasks.cleanup_recommendation_data_task',
+        'schedule': crontab(hour=2, minute=0),  # 每天凌晨2点
+    },
+    
+    # 数据匿名化 - 每周执行一次（周日凌晨3点）
+    'anonymize-old-data': {
+        'task': 'app.recommendation_tasks.anonymize_old_data_task',
+        'schedule': crontab(day_of_week=0, hour=3, minute=0),  # 每周日凌晨3点
+    },
+    
+    # 推荐系统优化 - 每天执行一次（凌晨4点）
+    'optimize-recommendation-system': {
+        'task': 'app.recommendation_tasks.optimize_recommendation_system_task',
+        'schedule': crontab(hour=4, minute=0),  # 每天凌晨4点
+    },
+    
     # 检查过期积分 - 每1小时执行一次（降低频率，积分过期对实时性要求不高）
     'check-expired-points': {
         'task': 'app.celery_tasks.check_expired_points_task',
@@ -157,6 +185,14 @@ celery_app.conf.beat_schedule = {
     'sync-leaderboard-view-counts': {
         'task': 'app.celery_tasks.sync_leaderboard_view_counts_task',
         'schedule': 300.0,  # 5分钟
+    },
+    
+    # ========== 推荐系统任务 ==========
+    
+    # 更新热门任务列表 - 每30分钟执行一次
+    'update-popular-tasks': {
+        'task': 'app.recommendation_tasks.update_popular_tasks_task',
+        'schedule': 1800.0,  # 30分钟
     },
     
     # ========== 低频任务（每10分钟）==========

@@ -441,6 +441,144 @@ api.interceptors.response.use(
 // 防抖计时器映射
 const fetchTasksDebounceTimers = new Map<string, NodeJS.Timeout>();
 
+// ==================== 任务推荐API ====================
+
+/**
+ * 获取个性化任务推荐（支持筛选条件）
+ * @param limit 返回任务数量（1-50）
+ * @param algorithm 推荐算法类型：content_based, collaborative, hybrid
+ * @param taskType 任务类型筛选
+ * @param location 地点筛选
+ * @param keyword 关键词筛选
+ */
+export async function getTaskRecommendations(
+  limit: number = 20, 
+  algorithm: string = 'hybrid',
+  taskType?: string,
+  location?: string,
+  keyword?: string
+) {
+  try {
+    const params: any = { limit, algorithm };
+    if (taskType && taskType !== 'all') params.task_type = taskType;
+    if (location && location !== 'all') params.location = location;
+    if (keyword) params.keyword = keyword;
+    
+    const response = await api.get('/recommendations', { params });
+    return response.data;
+  } catch (error: any) {
+    console.error('获取推荐失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取任务匹配分数
+ * @param taskId 任务ID
+ */
+export async function getTaskMatchScore(taskId: number) {
+  try {
+    const response = await api.get(`/tasks/${taskId}/match-score`);
+    return response.data;
+  } catch (error: any) {
+    console.error('获取匹配分数失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 记录用户任务交互行为
+ * @param taskId 任务ID
+ * @param interactionType 交互类型：view, click, apply, skip
+ * @param durationSeconds 浏览时长（秒），仅用于view类型
+ * @param deviceType 设备类型：mobile, desktop, tablet（可选，不提供则自动检测）
+ * @param isRecommended 是否为推荐任务
+ * @param metadata 额外元数据（可选）
+ */
+export async function recordTaskInteraction(
+  taskId: number,
+  interactionType: 'view' | 'click' | 'apply' | 'skip',
+  durationSeconds?: number,
+  deviceType?: string,
+  isRecommended?: boolean,
+  metadata?: Record<string, any>
+) {
+  try {
+    // 如果没有提供设备类型，自动检测
+    if (!deviceType) {
+      const { getDeviceType } = await import('./utils/deviceDetector');
+      deviceType = getDeviceType();
+    }
+    
+    // 构建请求数据
+    const requestData: any = {
+      interaction_type: interactionType,
+      device_type: deviceType,
+      is_recommended: isRecommended || false
+    };
+    
+    if (durationSeconds !== undefined) {
+      requestData.duration_seconds = durationSeconds;
+    }
+    
+    // 添加设备详细信息到metadata
+    if (!metadata) {
+      metadata = {};
+    }
+    
+    // 获取完整设备信息
+    try {
+      const { getDeviceInfo } = await import('./utils/deviceDetector');
+      const deviceInfo = getDeviceInfo();
+      metadata.device_info = {
+        os: deviceInfo.os,
+        os_version: deviceInfo.osVersion,
+        browser: deviceInfo.browser,
+        browser_version: deviceInfo.browserVersion,
+        screen_width: deviceInfo.screenWidth,
+        screen_height: deviceInfo.screenHeight,
+        is_touch_device: deviceInfo.isTouchDevice
+      };
+    } catch (e) {
+      // 如果获取设备信息失败，不影响主流程
+      console.warn('获取设备信息失败:', e);
+    }
+    
+    if (Object.keys(metadata).length > 0) {
+      requestData.metadata = metadata;
+    }
+    
+    await api.post(`/tasks/${taskId}/interaction`, requestData);
+  } catch (error: any) {
+    // 静默失败，不影响用户体验
+    console.warn('记录交互失败:', error);
+  }
+}
+
+/**
+ * 提交推荐反馈
+ * @param taskId 任务ID
+ * @param feedbackType 反馈类型：like, dislike, not_interested, helpful
+ * @param recommendationId 推荐批次ID（可选）
+ */
+export async function submitRecommendationFeedback(
+  taskId: number,
+  feedbackType: 'like' | 'dislike' | 'not_interested' | 'helpful',
+  recommendationId?: string
+) {
+  try {
+    await api.post(`/recommendations/${taskId}/feedback`, {
+      feedback_type: feedbackType,
+      recommendation_id: recommendationId
+    });
+  } catch (error: any) {
+    // 静默失败，不影响用户体验
+    console.warn('提交推荐反馈失败:', error);
+  }
+}
+
+// ==================== 任务列表API ====================
+
 export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10, sort_by }: {
   type?: string;
   city?: string;

@@ -1,0 +1,152 @@
+.recommended-tasks-container {
+  width: 100%;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.recommended-tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.recommended-tasks-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1890ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommended-tasks-count {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.recommended-tasks-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.recommended-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recommended-task-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e8e8e8;
+}
+
+.recommended-task-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.recommended-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.recommended-task-title-section {
+  flex: 1;
+}
+
+.recommended-task-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #262626;
+}
+
+.recommended-task-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recommended-task-reward {
+  text-align: right;
+}
+
+.reward-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #52c41a;
+}
+
+.recommended-task-description {
+  color: #595959;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.recommended-task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.recommended-task-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.task-location,
+.task-deadline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recommendation-reason {
+  font-size: 12px;
+  color: #1890ff;
+  cursor: help;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .recommended-tasks-container {
+    padding: 12px;
+  }
+
+  .recommended-task-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .recommended-task-reward {
+    text-align: left;
+  }
+
+  .recommended-task-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .recommendation-reason {
+    max-width: 100%;
+  }
+}

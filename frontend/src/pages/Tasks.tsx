@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead, getTaskRecommendations, recordTaskInteraction } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
@@ -425,6 +425,56 @@ const Tasks: React.FC = () => {
       // 使用传入的排序值，如果没有则使用 ref 中的最新值（避免闭包问题）
       const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortByRef.current || 'latest');
       
+      let recommendedTaskIds: Set<number> = new Set();
+      let recommendedTasksMap: Map<number, any> = new Map();
+      
+      // 如果用户已登录且不是加载更多，先获取推荐任务
+      if (user && !isLoadMore && currentPage === 1) {
+        try {
+          const taskType = filters.type !== 'all' ? filters.type : undefined;
+          const location = filters.city !== 'all' ? filters.city : undefined;
+          
+          // 使用Promise.race确保推荐请求不会阻塞太久
+          const recommendationsPromise = getTaskRecommendations(
+            pageSize * 2, // 获取更多推荐任务，确保有足够的选择
+            'hybrid',
+            taskType,
+            location,
+            searchKeyword
+          );
+          
+          // 设置超时（3秒），避免推荐请求阻塞正常任务加载
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('推荐请求超时')), 3000)
+          );
+          
+          try {
+            const recommendations = await Promise.race([
+              recommendationsPromise,
+              timeoutPromise
+            ]) as any;
+            
+            if (recommendations && recommendations.recommendations) {
+              recommendations.recommendations.forEach((rec: any) => {
+                recommendedTaskIds.add(rec.task_id);
+                // 添加推荐标记和匹配分数
+                recommendedTasksMap.set(rec.task_id, {
+                  is_recommended: true,
+                  match_score: rec.match_score,
+                  recommendation_reason: rec.recommendation_reason
+                });
+              });
+            }
+          } catch (timeoutError) {
+            // 超时或失败不影响正常任务加载
+            console.warn('获取推荐任务超时或失败，继续加载普通任务:', timeoutError);
+          }
+        } catch (error) {
+          // 推荐失败不影响正常任务加载
+          console.warn('获取推荐任务失败:', error);
+        }
+      }
+      
       const data = await fetchTasks({
         type: filters.type !== 'all' ? filters.type : undefined,
         city: filters.city !== 'all' ? filters.city : undefined,
@@ -450,18 +500,62 @@ const Tasks: React.FC = () => {
         } else {
           task.images = [];
         }
+        
+        // 如果是推荐任务，添加推荐标记
+        if (recommendedTaskIds.has(task.id)) {
+          const recInfo = recommendedTasksMap.get(task.id);
+          task.is_recommended = true;
+          task.match_score = recInfo?.match_score;
+          task.recommendation_reason = recInfo?.recommendation_reason;
+        }
+        
         return task;
       });
       
-      if (isLoadMore) {
+      // 如果不是加载更多，优先显示推荐任务
+      if (!isLoadMore && currentPage === 1) {
+        const recommendedTasks = tasksList.filter((t: any) => t.is_recommended);
+        const normalTasks = tasksList.filter((t: any) => !t.is_recommended);
+        
+        // 推荐任务按匹配分数排序
+        recommendedTasks.sort((a: any, b: any) => 
+          (b.match_score || 0) - (a.match_score || 0)
+        );
+        
+        // 合并：推荐任务在前，普通任务在后
+        const sortedTasks = [...recommendedTasks, ...normalTasks];
+        
+        setTasks(sortedTasks);
+        setPage(1);
+      } else if (isLoadMore) {
         // 追加任务
         setTasks(prev => [...prev, ...tasksList]);
-        // 更新页码
         setPage(currentPage);
       } else {
-        // 替换任务列表
         setTasks(tasksList);
         setPage(1);
+      }
+      
+      // 记录用户浏览任务列表的行为
+      if (user && !isLoadMore && currentPage === 1) {
+        // 异步记录，不阻塞UI
+        setTimeout(() => {
+          tasksList.slice(0, 10).forEach((task: any) => {
+            recordTaskInteraction(
+              task.id,
+              'view',
+              undefined,
+              undefined, // 自动检测设备类型
+              task.is_recommended,
+              {
+                recommendation_algorithm: task.recommendation_algorithm,
+                match_score: task.match_score,
+                source_page: 'tasks_page',
+                list_position: tasksList.indexOf(task) + 1 // 记录在列表中的位置
+              }
+            ).catch(err => console.warn('记录浏览失败:', err));
+          });
+        }, 100);
       }
       
       setTotal(data.total || 0);
@@ -482,7 +576,7 @@ const Tasks: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [page, pageSize, filters.type, filters.city, filters.debouncedKeyword, filters.keyword]);
+  }, [page, pageSize, filters.type, filters.city, filters.debouncedKeyword, filters.keyword, user]);
   
   // 使用排序 hook
   const sorting = useTaskSorting(loadTasks);
@@ -1551,10 +1645,31 @@ const Tasks: React.FC = () => {
       navigate(`/${language}/flea-market`);
       return;
     }
+    
+    // 记录点击行为（如果是推荐任务）
+    if (user && typeof taskId === 'number') {
+      const task = tasks.find((t: any) => t.id === taskId);
+      if (task) {
+        // 使用设备检测工具自动检测设备类型
+        recordTaskInteraction(
+          taskId,
+          'click',
+          undefined,
+          undefined, // 自动检测
+          task.is_recommended,
+          {
+            recommendation_algorithm: task.recommendation_algorithm,
+            match_score: task.match_score,
+            source_page: 'tasks_page'
+          }
+        ).catch(err => console.warn('记录点击失败:', err));
+      }
+    }
+    
     // 普通任务，显示详情
     setSelectedTaskId(taskId as number);
     setShowTaskDetailModal(true);
-  }, [language, navigate]);
+  }, [language, navigate, user, tasks]);
 
   // 处理活动详情查看（达人发布的多人活动）
   const handleViewActivity = useCallback(async (activity: any) => {

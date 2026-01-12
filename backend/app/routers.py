@@ -32,6 +32,9 @@ from app.deps import get_current_user_secure_sync_csrf
 from app.performance_monitor import measure_api_performance
 from app.cache import cache_response
 from app.push_notification_service import send_push_notification
+from app.task_recommendation import get_task_recommendations, calculate_task_match_score
+from app.user_behavior_tracker import UserBehaviorTracker, record_task_view, record_task_click
+from app.recommendation_monitor import get_recommendation_metrics, RecommendationMonitor
 
 logger = logging.getLogger(__name__)
 import os
@@ -1059,6 +1062,7 @@ def update_timezone(
 @router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 def get_task_detail(
     task_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
@@ -1112,7 +1116,352 @@ def get_task_detail(
         if not is_poster and not is_taker and not is_participant and not is_applicant:
             raise HTTPException(status_code=403, detail="无权限查看此任务")
     
+    # 记录用户浏览行为（异步记录，不阻塞响应）
+    if current_user:
+        try:
+            from app.user_behavior_tracker import UserBehaviorTracker
+            tracker = UserBehaviorTracker(db)
+            # 简单判断设备类型
+            device_type = None
+            if hasattr(request, 'headers'):
+                ua = request.headers.get("User-Agent", "").lower()
+                if "mobile" in ua or "android" in ua or "iphone" in ua:
+                    device_type = "mobile"
+                elif "tablet" in ua or "ipad" in ua:
+                    device_type = "tablet"
+                else:
+                    device_type = "desktop"
+            tracker.record_view(
+                user_id=current_user.id,
+                task_id=task_id,
+                device_type=device_type
+            )
+        except Exception as e:
+            logger.warning(f"记录用户浏览行为失败: {e}")
+    
     return TaskService.get_task_cached(task_id=task_id, db=db)
+
+
+@router.get("/recommendations")
+def get_recommendations(
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    limit: int = Query(20, ge=1, le=50),
+    algorithm: str = Query("hybrid", regex="^(content_based|collaborative|hybrid)$"),
+    task_type: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    keyword: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    获取个性化任务推荐（支持筛选条件）
+    
+    Args:
+        limit: 返回任务数量（1-50）
+        algorithm: 推荐算法类型
+            - content_based: 基于内容的推荐
+            - collaborative: 协同过滤推荐
+            - hybrid: 混合推荐（推荐）
+        task_type: 任务类型筛选
+        location: 地点筛选
+        keyword: 关键词筛选
+    """
+    try:
+        recommendations = get_task_recommendations(
+            db=db,
+            user_id=current_user.id,
+            limit=limit,
+            algorithm=algorithm,
+            task_type=task_type,
+            location=location,
+            keyword=keyword
+        )
+        
+        # 转换为响应格式
+        result = []
+        for item in recommendations:
+            task = item["task"]
+            result.append({
+                "task_id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "task_type": task.task_type,
+                "location": task.location,
+                "reward": float(task.reward) if task.reward else 0.0,
+                "deadline": task.deadline.isoformat() if task.deadline else None,
+                "task_level": task.task_level,
+                "match_score": round(item["score"], 3),
+                "recommendation_reason": item["reason"],
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+            })
+        
+        return {
+            "recommendations": result,
+            "total": len(result),
+            "algorithm": algorithm
+        }
+    except Exception as e:
+        logger.error(f"获取推荐失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取推荐失败")
+
+
+@router.get("/tasks/{task_id}/match-score")
+def get_task_match_score(
+    task_id: int,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    获取任务对当前用户的匹配分数
+    
+    用于在任务详情页显示匹配度
+    """
+    try:
+        score = calculate_task_match_score(
+            db=db,
+            user_id=current_user.id,
+            task_id=task_id
+        )
+        
+        return {
+            "task_id": task_id,
+            "match_score": round(score, 3),
+            "match_percentage": round(score * 100, 1)
+        }
+    except Exception as e:
+        logger.error(f"计算匹配分数失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="计算匹配分数失败")
+
+
+@router.post("/tasks/{task_id}/interaction")
+def record_task_interaction(
+    task_id: int,
+    interaction_type: str = Body(..., regex="^(view|click|apply|skip)$"),
+    duration_seconds: Optional[int] = Body(None),
+    device_type: Optional[str] = Body(None),
+    is_recommended: Optional[bool] = Body(None),
+    metadata: Optional[dict] = Body(None),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    记录用户对任务的交互行为
+    
+    Args:
+        interaction_type: 交互类型 (view, click, apply, skip)
+        duration_seconds: 浏览时长（秒），仅用于view类型
+        device_type: 设备类型 (mobile, desktop, tablet)
+        is_recommended: 是否为推荐任务
+        metadata: 额外元数据（设备信息、推荐信息等）
+    """
+    try:
+        tracker = UserBehaviorTracker(db)
+        is_rec = is_recommended if is_recommended is not None else False
+        
+        # 合并metadata，确保包含推荐信息
+        final_metadata = metadata or {}
+        final_metadata["is_recommended"] = is_rec
+        
+        if interaction_type == "view":
+            tracker.record_interaction(
+                user_id=current_user.id,
+                task_id=task_id,
+                interaction_type="view",
+                duration_seconds=duration_seconds,
+                device_type=device_type,
+                metadata=final_metadata,
+                is_recommended=is_rec
+            )
+        elif interaction_type == "click":
+            tracker.record_interaction(
+                user_id=current_user.id,
+                task_id=task_id,
+                interaction_type="click",
+                device_type=device_type,
+                metadata=final_metadata,
+                is_recommended=is_rec
+            )
+        elif interaction_type == "apply":
+            tracker.record_interaction(
+                user_id=current_user.id,
+                task_id=task_id,
+                interaction_type="apply",
+                device_type=device_type,
+                metadata=final_metadata
+            )
+        elif interaction_type == "skip":
+            tracker.record_interaction(
+                user_id=current_user.id,
+                task_id=task_id,
+                interaction_type="skip",
+                device_type=device_type,
+                metadata=final_metadata
+            )
+        
+        # 记录Prometheus指标
+        try:
+            from app.recommendation_metrics import record_user_interaction
+            record_user_interaction(interaction_type, is_rec)
+        except Exception:
+            pass
+        
+        return {"status": "success", "message": "交互记录成功"}
+    except Exception as e:
+        logger.error(f"记录交互失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="记录交互失败")
+
+
+@router.get("/admin/recommendation-metrics")
+def get_recommendation_metrics_endpoint(
+    days: int = Query(7, ge=1, le=30),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    获取推荐系统性能指标（管理员）
+    
+    Args:
+        days: 统计天数（1-30）
+    """
+    try:
+        monitor = RecommendationMonitor(db)
+        metrics = monitor.get_recommendation_metrics(days=days)
+        return metrics
+    except Exception as e:
+        logger.error(f"获取推荐指标失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取推荐指标失败")
+
+
+@router.get("/user/recommendation-stats")
+def get_user_recommendation_stats(
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """获取当前用户的推荐统计"""
+    try:
+        monitor = RecommendationMonitor(db)
+        stats = monitor.get_user_recommendation_stats(current_user.id)
+        return stats
+    except Exception as e:
+        logger.error(f"获取用户推荐统计失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取用户推荐统计失败")
+
+
+@router.get("/admin/recommendation-analytics")
+def get_recommendation_analytics_endpoint(
+    days: int = Query(7, ge=1, le=30),
+    algorithm: Optional[str] = Query(None),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    获取推荐系统深度分析（管理员）
+    
+    Args:
+        days: 统计天数（1-30）
+        algorithm: 算法类型（可选）
+    """
+    try:
+        from app.recommendation_analytics import get_recommendation_analytics
+        analytics = get_recommendation_analytics(db, days, algorithm)
+        return analytics
+    except Exception as e:
+        logger.error(f"获取推荐分析失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取推荐分析失败")
+
+
+@router.get("/admin/top-recommended-tasks")
+def get_top_recommended_tasks(
+    days: int = Query(7, ge=1, le=30),
+    limit: int = Query(10, ge=1, le=50),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取最受欢迎的推荐任务（管理员）"""
+    try:
+        from app.recommendation_analytics import RecommendationAnalytics
+        analytics = RecommendationAnalytics(db)
+        top_tasks = analytics.get_top_recommended_tasks(days, limit)
+        return {"top_tasks": top_tasks, "period_days": days}
+    except Exception as e:
+        logger.error(f"获取热门推荐任务失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取热门推荐任务失败")
+
+
+@router.get("/admin/recommendation-health")
+def get_recommendation_health(
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取推荐系统健康状态（管理员）"""
+    try:
+        from app.recommendation_health import check_recommendation_health
+        health = check_recommendation_health(db)
+        
+        # 更新Prometheus健康指标
+        try:
+            from app.recommendation_metrics import update_recommendation_health
+            for component, check in health.get("checks", {}).items():
+                is_healthy = check.get("status") in ["healthy", "degraded"]
+                update_recommendation_health(component, is_healthy)
+        except Exception:
+            pass
+        
+        return health
+    except Exception as e:
+        logger.error(f"检查推荐系统健康失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="检查推荐系统健康失败")
+
+
+@router.get("/admin/recommendation-optimization")
+def get_recommendation_optimization(
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取推荐系统优化建议（管理员）"""
+    try:
+        from app.recommendation_optimizer import optimize_recommendation_system
+        result = optimize_recommendation_system(db)
+        return result
+    except Exception as e:
+        logger.error(f"获取推荐优化建议失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取推荐优化建议失败")
+
+
+@router.post("/recommendations/{task_id}/feedback")
+def submit_recommendation_feedback(
+    task_id: int,
+    feedback_type: str = Body(..., regex="^(like|dislike|not_interested|helpful)$"),
+    recommendation_id: Optional[str] = Body(None),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    提交推荐反馈
+    
+    Args:
+        feedback_type: 反馈类型 (like, dislike, not_interested, helpful)
+        recommendation_id: 推荐批次ID（可选）
+    """
+    try:
+        from app.recommendation_feedback import RecommendationFeedbackManager
+        manager = RecommendationFeedbackManager(db)
+        
+        # 获取任务的推荐信息（如果有）
+        task = crud.get_task(db, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        manager.record_feedback(
+            user_id=current_user.id,
+            task_id=task_id,
+            feedback_type=feedback_type,
+            recommendation_id=recommendation_id
+        )
+        
+        return {"status": "success", "message": "反馈已记录"}
+    except Exception as e:
+        logger.error(f"记录推荐反馈失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="记录推荐反馈失败")
 
 
 @router.post("/tasks/{task_id}/accept", response_model=schemas.TaskOut)

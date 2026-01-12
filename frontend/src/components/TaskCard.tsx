@@ -167,11 +167,50 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
           pointerEvents: 'none'
         }} />
 
-        {/* 地点 - 左上角 */}
+        {/* 推荐标记 - 左上角 */}
+        {task.is_recommended && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: isMobile ? '8px' : '12px',
+              left: isMobile ? '8px' : '12px',
+              background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+              backdropFilter: 'blur(4px)',
+              color: '#fff',
+              padding: isMobile ? '4px 8px' : '6px 12px',
+              borderRadius: '20px',
+              fontSize: isMobile ? '10px' : '12px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              zIndex: 4,
+              boxShadow: '0 2px 8px rgba(255, 107, 107, 0.4)',
+              animation: 'pulse 2s ease-in-out infinite',
+              cursor: 'pointer'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // 可以在这里添加反馈功能
+            }}
+            title={task.recommendation_reason || (language === 'zh' ? '推荐任务' : 'Recommended task')}
+          >
+            <span>⭐</span>
+            <span>{language === 'zh' ? '推荐' : 'Recommended'}</span>
+            {task.match_score && (
+              <span style={{ opacity: 0.9, fontSize: isMobile ? '9px' : '11px' }}>
+                {Math.round(task.match_score * 100)}%
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 地点 - 左上角（如果没有推荐标记）或右上角 */}
         <div style={{
           position: 'absolute',
           top: isMobile ? '8px' : '12px',
-          left: isMobile ? '8px' : '12px',
+          left: task.is_recommended ? 'auto' : (isMobile ? '8px' : '12px'),
+          right: task.is_recommended ? (isMobile ? '8px' : '12px') : 'auto',
           background: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(4px)',
           color: '#fff',

@@ -49,24 +49,24 @@ public class ShareImageGenerator {
         let padding: CGFloat = 36
         let cornerRadius: CGFloat = 24
         
-        UIGraphicsBeginImageContextWithOptions(CGSize(width: cardWidth, height: cardHeight), false, 2.0)
-        defer { UIGraphicsEndImageContext() }
+        // 使用 UIGraphicsImageRenderer，更高效且自动管理内存
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: cardWidth, height: cardHeight))
+        return renderer.image { rendererContext in
+            let context = rendererContext.cgContext
         
-        guard let context = UIGraphicsGetCurrentContext() else { return nil }
-        
-        // 绘制渐变背景（从浅蓝到白色，带径向渐变装饰）
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        
-        // 主渐变背景
-        let mainColors = [
-            UIColor(red: 0.96, green: 0.97, blue: 1.0, alpha: 1.0).cgColor,
-            UIColor(red: 0.98, green: 0.99, blue: 1.0, alpha: 1.0).cgColor,
-            UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0).cgColor
-        ]
-        guard let mainGradient = CGGradient(colorsSpace: colorSpace, colors: mainColors as CFArray, locations: [0.0, 0.5, 1.0]) else {
-            return nil
+            // 绘制渐变背景（从浅蓝到白色，带径向渐变装饰）
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            
+            // 主渐变背景
+            let mainColors = [
+                UIColor(red: 0.96, green: 0.97, blue: 1.0, alpha: 1.0).cgColor,
+                UIColor(red: 0.98, green: 0.99, blue: 1.0, alpha: 1.0).cgColor,
+                UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0).cgColor
+            ]
+            guard let mainGradient = CGGradient(colorsSpace: colorSpace, colors: mainColors as CFArray, locations: [0.0, 0.5, 1.0]) else {
+            return
         }
-        context.drawLinearGradient(
+            context.drawLinearGradient(
             mainGradient,
             start: CGPoint(x: 0, y: 0),
             end: CGPoint(x: 0, y: cardHeight),
@@ -79,7 +79,7 @@ public class ShareImageGenerator {
             UIColor.clear.cgColor
         ]
         guard let radialGradient = CGGradient(colorsSpace: colorSpace, colors: radialColors as CFArray, locations: [0.0, 1.0]) else {
-            return nil
+            return
         }
         let radialCenter = CGPoint(x: cardWidth * 0.85, y: cardHeight * 0.15)
         let radialRadius: CGFloat = cardWidth * 0.4
@@ -116,7 +116,7 @@ public class ShareImageGenerator {
             UIColor.systemBlue.withAlphaComponent(0.6).cgColor
         ]
         guard let barGradient = CGGradient(colorsSpace: colorSpace, colors: barGradientColors as CFArray, locations: [0.0, 1.0]) else {
-            return nil
+            return
         }
         let barPath = UIBezierPath(roundedRect: topBarRect, cornerRadius: topBarHeight / 2)
         context.addPath(barPath.cgPath)
@@ -163,7 +163,7 @@ public class ShareImageGenerator {
             UIColor(red: 0.99, green: 0.99, blue: 1.0, alpha: 1.0).cgColor
         ]
         guard let cardGradient = CGGradient(colorsSpace: colorSpace, colors: cardGradientColors as CFArray, locations: [0.0, 1.0]) else {
-            return nil
+            return
         }
         context.addPath(logoCardPath.cgPath)
         context.clip()
@@ -211,7 +211,7 @@ public class ShareImageGenerator {
                 UIColor.systemBlue.withAlphaComponent(0.08).cgColor
             ]
             guard let logoBgGradient = CGGradient(colorsSpace: colorSpace, colors: logoBgGradientColors as CFArray, locations: [0.0, 1.0]) else {
-                return nil
+                return
             }
             let logoBgPath = UIBezierPath(ovalIn: logoBgRect)
             context.addPath(logoBgPath.cgPath)
@@ -379,7 +379,7 @@ public class ShareImageGenerator {
                 UIColor(red: 0.95, green: 0.96, blue: 1.0, alpha: 1.0).cgColor
             ]
             guard let infoCardGradient = CGGradient(colorsSpace: colorSpace, colors: infoCardGradientColors as CFArray, locations: [0.0, 1.0]) else {
-                return nil
+                return
             }
             context.addPath(infoCardPath.cgPath)
             context.clip()
@@ -449,7 +449,7 @@ public class ShareImageGenerator {
             UIColor(red: 0.99, green: 0.99, blue: 1.0, alpha: 1.0).cgColor
         ]
         guard let qrCardGradient = CGGradient(colorsSpace: colorSpace, colors: qrCardGradientColors as CFArray, locations: [0.0, 1.0]) else {
-            return nil
+            return
         }
         context.addPath(qrCardPath.cgPath)
         context.clip()
@@ -492,7 +492,7 @@ public class ShareImageGenerator {
             UIColor.systemBlue.withAlphaComponent(0.05).cgColor
         ]
         guard let qrOuterGradient = CGGradient(colorsSpace: colorSpace, colors: qrOuterGradientColors as CFArray, locations: [0.0, 1.0]) else {
-            return nil
+            return
         }
         context.addPath(qrOuterPath.cgPath)
         context.clip()
@@ -574,7 +574,7 @@ public class ShareImageGenerator {
             UIColor.clear.cgColor
         ]
         guard let dividerGradient = CGGradient(colorsSpace: colorSpace, colors: dividerGradientColors as CFArray, locations: [0.0, 0.3, 0.7, 1.0]) else {
-            return nil
+            return
         }
         context.addPath(dividerPath.cgPath)
         context.clip()
@@ -599,9 +599,8 @@ public class ShareImageGenerator {
             width: footerSize.width,
             height: footerSize.height
         )
-        (footerText as NSString).draw(in: footerRect, withAttributes: footerAttributes)
-        
-        return UIGraphicsGetImageFromCurrentImageContext()
+            (footerText as NSString).draw(in: footerRect, withAttributes: footerAttributes)
+        }
     }
     
     /// 生成活动分享图

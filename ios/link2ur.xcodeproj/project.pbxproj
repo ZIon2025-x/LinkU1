@@ -21,6 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		14817E332F14324D00620BCA /* Link-Ur-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Link-Ur-Info.plist"; sourceTree = "<group>"; };
 		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Link²Ur.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -57,6 +58,7 @@
 		1491C68C2EDF90BC0054DEAA = {
 			isa = PBXGroup;
 			children = (
+				14817E332F14324D00620BCA /* Link-Ur-Info.plist */,
 				1491C6972EDF90BC0054DEAA /* link2ur */,
 				1491C6962EDF90BC0054DEAA /* Products */,
 			);
@@ -296,6 +298,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Link-Ur-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
 				INFOPLIST_KEY_NSCameraUsageDescription = "该应用程序将使用相机拍摄您的身份证件照片。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
@@ -331,6 +334,7 @@
 				DEVELOPMENT_TEAM = W2WB7KNHTP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Link-Ur-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
 				INFOPLIST_KEY_NSCameraUsageDescription = "该应用程序将使用相机拍摄您的身份证件照片。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
