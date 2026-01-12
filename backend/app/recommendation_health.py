@@ -86,8 +86,8 @@ class RecommendationHealthChecker:
             recommended_interactions = self.db.query(func.count(UserTaskInteraction.id)).filter(
                 and_(
                     UserTaskInteraction.interaction_time >= recent_time,
-                    UserTaskInteraction.metadata.isnot(None),
-                    UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                    UserTaskInteraction.interaction_metadata.isnot(None),
+                    UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
                 )
             ).scalar() or 0
             
@@ -232,8 +232,8 @@ class RecommendationHealthChecker:
                 and_(
                     UserTaskInteraction.interaction_type == "view",
                     UserTaskInteraction.interaction_time >= recent_time,
-                    UserTaskInteraction.metadata.isnot(None),
-                    UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                    UserTaskInteraction.interaction_metadata.isnot(None),
+                    UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
                 )
             ).scalar() or 0
             
@@ -241,8 +241,8 @@ class RecommendationHealthChecker:
                 and_(
                     UserTaskInteraction.interaction_type == "click",
                     UserTaskInteraction.interaction_time >= recent_time,
-                    UserTaskInteraction.metadata.isnot(None),
-                    UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                    UserTaskInteraction.interaction_metadata.isnot(None),
+                    UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
                 )
             ).scalar() or 0
             

@@ -11,31 +11,10 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Ind
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import func, and_, desc
 
-from app.models import Base, get_utc_time
+from app.models import Base, RecommendationFeedback, get_utc_time
 from app.redis_cache import redis_cache
 
 logger = logging.getLogger(__name__)
-
-
-class RecommendationFeedback(Base):
-    """推荐反馈模型"""
-    __tablename__ = "recommendation_feedback"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    recommendation_id = Column(String(100), nullable=True)  # 推荐批次ID
-    feedback_type = Column(String(20), nullable=False, index=True)  # like, dislike, not_interested, helpful
-    feedback_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
-    algorithm = Column(String(50), nullable=True, index=True)  # 使用的推荐算法
-    match_score = Column(Float, nullable=True)  # 推荐时的匹配分数
-    metadata = Column(JSONB, nullable=True)  # 额外信息
-    
-    __table_args__ = (
-        Index("ix_recommendation_feedback_user_time", user_id, feedback_time.desc()),
-        Index("ix_recommendation_feedback_task", task_id),
-        Index("ix_recommendation_feedback_type", feedback_type),
-    )
 
 
 class RecommendationFeedbackManager:
@@ -79,7 +58,7 @@ class RecommendationFeedbackManager:
             if existing:
                 # 更新现有记录
                 if metadata:
-                    existing.metadata = metadata
+                    existing.feedback_metadata = metadata
                 self.db.commit()
                 return
             
@@ -91,7 +70,7 @@ class RecommendationFeedbackManager:
                 feedback_type=feedback_type,
                 algorithm=algorithm,
                 match_score=match_score,
-                metadata=metadata
+                feedback_metadata=metadata
             )
             
             self.db.add(feedback)

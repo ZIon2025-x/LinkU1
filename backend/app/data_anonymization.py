@@ -180,7 +180,7 @@ def anonymize_old_interactions(db: Session, days_old: int = 90) -> int:
         # 获取需要匿名化的交互记录
         interactions = db.query(UserTaskInteraction).filter(
             UserTaskInteraction.interaction_time < cutoff_date,
-            UserTaskInteraction.metadata.isnot(None)
+            UserTaskInteraction.interaction_metadata.isnot(None)
         ).all()
         
         anonymized_count = 0
@@ -188,15 +188,15 @@ def anonymize_old_interactions(db: Session, days_old: int = 90) -> int:
         
         for interaction in interactions:
             try:
-                if interaction.metadata:
+                if interaction.interaction_metadata:
                     # 匿名化metadata
                     anonymized_metadata = DataAnonymizer.anonymize_interaction_metadata(
-                        interaction.metadata,
+                        interaction.interaction_metadata,
                         interaction.user_id
                     )
                     
                     # 更新metadata
-                    interaction.metadata = anonymized_metadata
+                    interaction.interaction_metadata = anonymized_metadata
                     anonymized_count += 1
             except Exception as e:
                 logger.warning(f"匿名化交互记录 {interaction.id} 失败: {e}")
@@ -230,24 +230,24 @@ def anonymize_old_feedback(db: Session, days_old: int = 90) -> int:
         # 获取需要匿名化的反馈记录
         feedbacks = db.query(RecommendationFeedback).filter(
             RecommendationFeedback.feedback_time < cutoff_date,
-            RecommendationFeedback.metadata.isnot(None)
+            RecommendationFeedback.feedback_metadata.isnot(None)
         ).all()
         
         anonymized_count = 0
         
         for feedback in feedbacks:
             try:
-                if feedback.metadata:
+                if feedback.feedback_metadata:
                     # 匿名化metadata（移除可识别信息）
                     anonymized_metadata = {}
                     
                     # 只保留统计相关信息
-                    if "device_info" in feedback.metadata:
+                    if "device_info" in feedback.feedback_metadata:
                         anonymized_metadata["device_info"] = DataAnonymizer.anonymize_device_info(
-                            feedback.metadata["device_info"]
+                            feedback.feedback_metadata["device_info"]
                         )
                     
-                    feedback.metadata = anonymized_metadata
+                    feedback.feedback_metadata = anonymized_metadata
                     anonymized_count += 1
             except Exception as e:
                 logger.warning(f"匿名化反馈记录 {feedback.id} 失败: {e}")

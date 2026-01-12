@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from './useTranslation';
 import { Language } from '../contexts/LanguageContext';
 import { getTranslationCache, setTranslationCache } from '../utils/translationCache';
@@ -20,7 +20,7 @@ interface UseAutoTranslateReturn {
 }
 
 /**
- * 自动翻译hook - 根据语言环境自动翻译文本
+ * 自动翻译hook - 根据语言环境自动翻译文本（优化版：防抖、去重、缓存）
  * 只在文本语言和当前界面语言不同时才翻译
  * @param text 原始文本
  * @param language 当前语言环境
@@ -35,20 +35,39 @@ export const useAutoTranslate = (
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  
+  // 使用ref跟踪当前翻译请求，防止重复请求
+  const currentRequestRef = useRef<Promise<string> | null>(null);
+  const lastTextRef = useRef<string>('');
+  const lastLanguageRef = useRef<Language>(language);
 
   // 执行翻译
   const performTranslation = useCallback(async () => {
-    if (!text || !text.trim()) {
+    const trimmedText = text?.trim() || '';
+    
+    if (!trimmedText) {
       setTranslatedText(null);
+      currentRequestRef.current = null;
       return;
     }
 
     // 检测文本语言
-    const detectedLang = detectLanguage(text);
+    const detectedLang = detectLanguage(trimmedText);
     
     // 如果文本语言和当前界面语言相同，不需要翻译
     if (detectedLang === language) {
       setTranslatedText(null);
+      currentRequestRef.current = null;
+      lastTextRef.current = trimmedText;
+      lastLanguageRef.current = language;
+      return;
+    }
+
+    // 如果文本和语言都没有变化，不需要重新翻译（避免重复请求）
+    if (
+      trimmedText === lastTextRef.current &&
+      language === lastLanguageRef.current
+    ) {
       return;
     }
 
@@ -56,36 +75,69 @@ export const useAutoTranslate = (
     const targetLang = language;
 
     // 检查持久化缓存（sessionStorage）
-    const cached = getTranslationCache(text, targetLang, detectedLang);
+    const cached = getTranslationCache(trimmedText, targetLang, detectedLang);
     if (cached) {
       setTranslatedText(cached);
+      lastTextRef.current = trimmedText;
+      lastLanguageRef.current = language;
+      currentRequestRef.current = null;
       return;
     }
 
-    setIsTranslating(true);
-    try {
-      // 传递源语言，帮助后端更准确翻译
-      const translated = await translate(text, targetLang, detectedLang);
-      setTranslatedText(translated);
-      // 保存到持久化缓存（sessionStorage）
-      setTranslationCache(text, translated, targetLang, detectedLang);
-    } catch (error) {
-            setTranslatedText(null);
-    } finally {
-      setIsTranslating(false);
+    // 如果已有正在进行的相同请求，等待它完成
+    if (currentRequestRef.current) {
+      try {
+        const result = await currentRequestRef.current;
+        setTranslatedText(result);
+        lastTextRef.current = trimmedText;
+        lastLanguageRef.current = language;
+      } catch (error) {
+        // 请求失败，继续执行新的翻译
+      }
+      return;
     }
+
+    // 创建新的翻译请求
+    setIsTranslating(true);
+    const translationPromise = (async () => {
+      try {
+        // 传递源语言，帮助后端更准确翻译
+        const translated = await translate(trimmedText, targetLang, detectedLang);
+        setTranslatedText(translated);
+        // 保存到持久化缓存（sessionStorage）
+        setTranslationCache(trimmedText, translated, targetLang, detectedLang);
+        lastTextRef.current = trimmedText;
+        lastLanguageRef.current = language;
+        return translated;
+      } catch (error) {
+        setTranslatedText(null);
+        throw error;
+      } finally {
+        setIsTranslating(false);
+        currentRequestRef.current = null;
+      }
+    })();
+
+    currentRequestRef.current = translationPromise;
   }, [text, language, translate]);
 
-  // 当文本或语言改变时自动翻译
+  // 当文本或语言改变时自动翻译（优化防抖：300ms）
   useEffect(() => {
     if (autoTranslate && !showOriginal) {
-      // 延迟执行翻译，避免在快速切换时频繁请求
+      // 延迟执行翻译，避免在快速切换时频繁请求（从100ms增加到300ms）
       const timer = setTimeout(() => {
         performTranslation();
-      }, 100);
-      return () => clearTimeout(timer);
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+        // 如果组件卸载或依赖变化，取消正在进行的请求
+        if (currentRequestRef.current) {
+          currentRequestRef.current = null;
+        }
+      };
     } else {
       setTranslatedText(null);
+      currentRequestRef.current = null;
     }
   }, [text, language, autoTranslate, showOriginal, performTranslation]);
 
@@ -98,6 +150,8 @@ export const useAutoTranslate = (
   const clearTranslation = useCallback(() => {
     setTranslatedText(null);
     setShowOriginal(false);
+    currentRequestRef.current = null;
+    lastTextRef.current = '';
   }, []);
 
   return {

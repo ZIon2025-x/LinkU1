@@ -80,7 +80,7 @@ class UserBehaviorTracker:
                     if duration_seconds:
                         existing.duration_seconds = duration_seconds
                     if metadata:
-                        existing.metadata = metadata
+                        existing.interaction_metadata = metadata
                     self.db.commit()
                     return
             
@@ -91,7 +91,7 @@ class UserBehaviorTracker:
                 interaction_type=interaction_type,
                 duration_seconds=duration_seconds,
                 device_type=device_type,
-                metadata=metadata
+                interaction_metadata=metadata
             )
             
             self.db.add(interaction)

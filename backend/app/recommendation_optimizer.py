@@ -44,9 +44,9 @@ class RecommendationOptimizer:
                     and_(
                         UserTaskInteraction.interaction_type == "view",
                         UserTaskInteraction.interaction_time >= start_date,
-                        UserTaskInteraction.metadata.isnot(None),
-                        UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true',
-                        UserTaskInteraction.metadata.op('->>')('recommendation_algorithm') == algo
+                        UserTaskInteraction.interaction_metadata.isnot(None),
+                        UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true',
+                        UserTaskInteraction.interaction_metadata.op('->>')('recommendation_algorithm') == algo
                     )
                 ).scalar() or 0
                 
@@ -54,9 +54,9 @@ class RecommendationOptimizer:
                     and_(
                         UserTaskInteraction.interaction_type == "click",
                         UserTaskInteraction.interaction_time >= start_date,
-                        UserTaskInteraction.metadata.isnot(None),
-                        UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true',
-                        UserTaskInteraction.metadata.op('->>')('recommendation_algorithm') == algo
+                        UserTaskInteraction.interaction_metadata.isnot(None),
+                        UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true',
+                        UserTaskInteraction.interaction_metadata.op('->>')('recommendation_algorithm') == algo
                     )
                 ).scalar() or 0
                 
@@ -67,9 +67,9 @@ class RecommendationOptimizer:
                     and_(
                         UserTaskInteraction.interaction_type == "apply",
                         UserTaskInteraction.interaction_time >= start_date,
-                        UserTaskInteraction.metadata.isnot(None),
-                        UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true',
-                        UserTaskInteraction.metadata.op('->>')('recommendation_algorithm') == algo
+                        UserTaskInteraction.interaction_metadata.isnot(None),
+                        UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true',
+                        UserTaskInteraction.interaction_metadata.op('->>')('recommendation_algorithm') == algo
                     )
                 ).scalar() or 0
                 
@@ -157,8 +157,8 @@ class RecommendationOptimizer:
                 and_(
                     UserTaskInteraction.interaction_type == "click",
                     UserTaskInteraction.interaction_time >= start_date,
-                    UserTaskInteraction.metadata.isnot(None),
-                    UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                    UserTaskInteraction.interaction_metadata.isnot(None),
+                    UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
                 )
             ).all()
             

@@ -279,7 +279,7 @@ class UserTaskInteraction(Base):
     interaction_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
     duration_seconds = Column(Integer, nullable=True)  # 浏览时长（秒）
     device_type = Column(String(20), nullable=True)  # mobile, desktop, tablet
-    metadata = Column(JSONB, nullable=True)  # 额外信息（如来源页面、推荐原因等）
+    interaction_metadata = Column("metadata", JSONB, nullable=True)  # 额外信息（如来源页面、推荐原因等），数据库列名保持为metadata
     
     __table_args__ = (
         Index("ix_user_task_interactions_user_time", user_id, interaction_time.desc()),
@@ -301,7 +301,7 @@ class RecommendationFeedback(Base):
     feedback_time = Column(DateTime(timezone=True), default=get_utc_time, index=True)
     algorithm = Column(String(50), nullable=True, index=True)  # 使用的推荐算法
     match_score = Column(Float, nullable=True)  # 推荐时的匹配分数
-    metadata = Column(JSONB, nullable=True)  # 额外信息
+    feedback_metadata = Column("metadata", JSONB, nullable=True)  # 额外信息，数据库列名保持为metadata
     
     __table_args__ = (
         Index("ix_recommendation_feedback_user_time", user_id, feedback_time.desc()),

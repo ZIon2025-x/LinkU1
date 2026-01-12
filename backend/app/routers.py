@@ -9695,7 +9695,7 @@ async def translate_text(
     request: Request,
 ):
     """
-    翻译文本
+    翻译文本（优化版：支持缓存、去重、文本预处理）
     
     参数:
     - text: 要翻译的文本
@@ -9706,12 +9706,16 @@ async def translate_text(
     - translated_text: 翻译后的文本
     - source_language: 检测到的源语言
     """
+    import hashlib
+    import asyncio
+    import time
+    from app.redis_cache import redis_cache
+    
     try:
         # 获取请求体
         body = await request.json()
-        logger.info(f"翻译请求收到: {body}")
         
-        text = body.get('text', '')
+        text = body.get('text', '').strip()
         target_language = body.get('target_language', 'en')
         source_language = body.get('source_language')
         
@@ -9719,14 +9723,6 @@ async def translate_text(
             raise HTTPException(status_code=400, detail="缺少text参数")
         if not target_language:
             raise HTTPException(status_code=400, detail="缺少target_language参数")
-        try:
-            from deep_translator import GoogleTranslator
-        except ImportError:
-            logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
-            raise HTTPException(
-                status_code=503, 
-                detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
-            )
         
         # 转换语言代码格式 (zh -> zh-CN, en -> en)
         lang_map = {
@@ -9738,26 +9734,120 @@ async def translate_text(
         target_lang = lang_map.get(target_language.lower(), target_language)
         source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
         
-        logger.info(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
+        # 如果源语言和目标语言相同，直接返回原文
+        if source_lang != 'auto' and source_lang == target_lang:
+            return {
+                "translated_text": text,
+                "source_language": source_lang,
+                "target_language": target_lang,
+                "original_text": text,
+                "cached": False
+            }
         
-        # 使用GoogleTranslator进行翻译
-        if source_language and source_lang != 'auto':
-            translator = GoogleTranslator(source=source_lang, target=target_lang)
-        else:
-            translator = GoogleTranslator(target=target_lang)
+        # 生成缓存键（使用文本内容、源语言、目标语言）
+        cache_key_data = f"{text}|{source_lang}|{target_lang}"
+        cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
+        cache_key = f"translation:{cache_key_hash}"
         
-        translated_text = translator.translate(text)
-        logger.info(f"翻译完成: {translated_text[:50]}...")
+        # 1. 先检查Redis缓存
+        if redis_cache and redis_cache.enabled:
+            cached_result = redis_cache.get(cache_key)
+            if cached_result:
+                logger.debug(f"翻译缓存命中: {text[:30]}...")
+                return {
+                    "translated_text": cached_result.get("translated_text"),
+                    "source_language": cached_result.get("source_language", source_lang),
+                    "target_language": target_lang,
+                    "original_text": text,
+                    "cached": True
+                }
         
-        # 检测源语言（如果未提供）
-        detected_source = source_lang if source_lang != 'auto' else 'auto'
+        # 2. 检查是否有正在进行的翻译请求（防止重复翻译）
+        lock_key = f"translation_lock:{cache_key_hash}"
+        if redis_cache and redis_cache.enabled:
+            # 尝试获取锁（5秒过期，防止死锁）
+            lock_acquired = False
+            try:
+                # 使用SET NX EX实现分布式锁
+                lock_value = str(time.time())
+                lock_acquired = redis_cache.redis_client.set(
+                    lock_key, 
+                    lock_value.encode('utf-8'),
+                    ex=5,  # 5秒过期
+                    nx=True  # 只在不存在时设置
+                )
+                
+                if not lock_acquired:
+                    # 有其他请求正在翻译，等待并重试缓存
+                    await asyncio.sleep(0.5)  # 等待500ms
+                    cached_result = redis_cache.get(cache_key)
+                    if cached_result:
+                        logger.debug(f"翻译缓存命中（等待后）: {text[:30]}...")
+                        return {
+                            "translated_text": cached_result.get("translated_text"),
+                            "source_language": cached_result.get("source_language", source_lang),
+                            "target_language": target_lang,
+                            "original_text": text,
+                            "cached": True
+                        }
+            except Exception as e:
+                logger.warning(f"获取翻译锁失败: {e}")
         
-        return {
-            "translated_text": translated_text,
-            "source_language": detected_source,
-            "target_language": target_lang,
-            "original_text": text
-        }
+        try:
+            # 3. 执行翻译
+            try:
+                from deep_translator import GoogleTranslator
+            except ImportError:
+                logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
+                raise HTTPException(
+                    status_code=503, 
+                    detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
+                )
+            
+            logger.debug(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
+            
+            # 使用GoogleTranslator进行翻译
+            if source_lang != 'auto':
+                translator = GoogleTranslator(source=source_lang, target=target_lang)
+            else:
+                translator = GoogleTranslator(target=target_lang)
+            
+            translated_text = translator.translate(text)
+            logger.debug(f"翻译完成: {translated_text[:50]}...")
+            
+            # 检测源语言（如果未提供）
+            detected_source = source_lang if source_lang != 'auto' else 'auto'
+            
+            result = {
+                "translated_text": translated_text,
+                "source_language": detected_source,
+                "target_language": target_lang,
+                "original_text": text,
+                "cached": False
+            }
+            
+            # 4. 保存到Redis缓存（7天过期）
+            if redis_cache and redis_cache.enabled:
+                try:
+                    cache_data = {
+                        "translated_text": translated_text,
+                        "source_language": detected_source,
+                        "target_language": target_lang
+                    }
+                    redis_cache.set(cache_key, cache_data, ttl=7 * 24 * 60 * 60)  # 7天
+                except Exception as e:
+                    logger.warning(f"保存翻译缓存失败: {e}")
+            
+            return result
+            
+        finally:
+            # 释放锁
+            if lock_acquired and redis_cache and redis_cache.enabled:
+                try:
+                    redis_cache.redis_client.delete(lock_key)
+                except Exception as e:
+                    logger.warning(f"释放翻译锁失败: {e}")
+                    
     except HTTPException:
         raise
     except Exception as e:
@@ -9770,7 +9860,7 @@ async def translate_batch(
     request: Request,
 ):
     """
-    批量翻译文本
+    批量翻译文本（优化版：支持缓存、去重、复用translator实例）
     
     参数:
     - texts: 要翻译的文本列表
@@ -9780,10 +9870,12 @@ async def translate_batch(
     返回:
     - translations: 翻译结果列表
     """
+    import hashlib
+    from app.redis_cache import redis_cache
+    
     try:
         # 获取请求体
         body = await request.json()
-        logger.info(f"批量翻译请求收到: texts数量={len(body.get('texts', []))}")
         
         texts = body.get('texts', [])
         target_language = body.get('target_language', 'en')
@@ -9794,10 +9886,23 @@ async def translate_batch(
         if not target_language:
             raise HTTPException(status_code=400, detail="缺少target_language参数")
         
+        # 预处理：去除空白、去重
+        processed_texts = []
+        text_to_index = {}  # 用于去重，保留第一个出现的索引
+        for i, text in enumerate(texts):
+            cleaned_text = text.strip() if isinstance(text, str) else str(text).strip()
+            if cleaned_text and cleaned_text not in text_to_index:
+                text_to_index[cleaned_text] = len(processed_texts)
+                processed_texts.append(cleaned_text)
+        
+        if not processed_texts:
+            return {
+                "translations": [{"original_text": t, "translated_text": t, "source_language": "auto"} for t in texts],
+                "target_language": target_language
+            }
+        
         try:
             from deep_translator import GoogleTranslator
-            from app.utils.time_utils import get_utc_time
-            from zoneinfo import ZoneInfo
         except ImportError:
             logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
             raise HTTPException(
@@ -9815,33 +9920,92 @@ async def translate_batch(
         target_lang = lang_map.get(target_language.lower(), target_language)
         source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
         
-        translations = []
+        # 如果源语言和目标语言相同，直接返回原文
+        if source_lang != 'auto' and source_lang == target_lang:
+            return {
+                "translations": [{"original_text": t, "translated_text": t, "source_language": source_lang} for t in texts],
+                "target_language": target_lang
+            }
         
-        for text in texts:
-            try:
-                if source_language and source_lang != 'auto':
-                    translator = GoogleTranslator(source=source_lang, target=target_lang)
-                else:
-                    translator = GoogleTranslator(target=target_lang)
-                
-                translated_text = translator.translate(text)
-                
-                translations.append({
-                    "original_text": text,
-                    "translated_text": translated_text,
-                    "source_language": source_lang if source_lang != 'auto' else 'auto',
-                })
-            except Exception as e:
-                logger.error(f"翻译文本失败: {text[:50]}... - {e}")
-                translations.append({
-                    "original_text": text,
-                    "translated_text": text,  # 翻译失败时返回原文
-                    "source_language": "unknown",
-                    "error": str(e)
-                })
+        # 创建translator实例（复用，提高效率）
+        if source_lang != 'auto':
+            translator = GoogleTranslator(source=source_lang, target=target_lang)
+        else:
+            translator = GoogleTranslator(target=target_lang)
+        
+        # 批量处理：先检查缓存，再翻译未缓存的文本
+        translations_map = {}  # 存储翻译结果
+        texts_to_translate = []  # 需要翻译的文本列表
+        text_indices = []  # 对应的索引
+        
+        for i, text in enumerate(processed_texts):
+            # 生成缓存键
+            cache_key_data = f"{text}|{source_lang}|{target_lang}"
+            cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
+            cache_key = f"translation:{cache_key_hash}"
+            
+            # 检查缓存
+            cached_result = None
+            if redis_cache and redis_cache.enabled:
+                cached_result = redis_cache.get(cache_key)
+            
+            if cached_result:
+                translations_map[text] = cached_result.get("translated_text")
+            else:
+                texts_to_translate.append(text)
+                text_indices.append(i)
+        
+        # 批量翻译未缓存的文本
+        if texts_to_translate:
+            logger.debug(f"批量翻译: {len(texts_to_translate)}个文本需要翻译")
+            
+            for text in texts_to_translate:
+                try:
+                    # 生成缓存键
+                    cache_key_data = f"{text}|{source_lang}|{target_lang}"
+                    cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
+                    cache_key = f"translation:{cache_key_hash}"
+                    
+                    # 执行翻译（复用translator实例）
+                    translated_text = translator.translate(text)
+                    translations_map[text] = translated_text
+                    
+                    # 保存到缓存
+                    if redis_cache and redis_cache.enabled:
+                        try:
+                            cache_data = {
+                                "translated_text": translated_text,
+                                "source_language": source_lang if source_lang != 'auto' else 'auto',
+                                "target_language": target_lang
+                            }
+                            redis_cache.set(cache_key, cache_data, ttl=7 * 24 * 60 * 60)  # 7天
+                        except Exception as e:
+                            logger.warning(f"保存翻译缓存失败: {e}")
+                            
+                except Exception as e:
+                    logger.error(f"翻译文本失败: {text[:50]}... - {e}")
+                    translations_map[text] = text  # 翻译失败时返回原文
+        
+        # 构建返回结果（保持原始顺序和重复）
+        result_translations = []
+        for original_text in texts:
+            cleaned_text = original_text.strip() if isinstance(original_text, str) else str(original_text).strip()
+            if cleaned_text in translations_map:
+                translated = translations_map[cleaned_text]
+            else:
+                # 如果不在map中（可能是空文本），返回原文
+                translated = original_text
+            
+            result_translations.append({
+                "original_text": original_text,
+                "translated_text": translated,
+                "source_language": source_lang if source_lang != 'auto' else 'auto',
+            })
+        
+        logger.debug(f"批量翻译完成: 总数={len(texts)}, 缓存命中={len(processed_texts) - len(texts_to_translate)}, 新翻译={len(texts_to_translate)}")
         
         return {
-            "translations": translations,
+            "translations": result_translations,
             "target_language": target_lang
         }
     except HTTPException:

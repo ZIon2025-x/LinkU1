@@ -90,8 +90,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.interaction_type == "view",
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         return count
@@ -103,8 +103,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.interaction_type == "view",
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -113,8 +113,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.interaction_type == "click",
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -130,8 +130,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.interaction_type == "click",
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -173,8 +173,8 @@ class RecommendationMonitor:
         ).filter(
             and_(
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -182,8 +182,8 @@ class RecommendationMonitor:
         total_interactions = self.db.query(func.count(UserTaskInteraction.id)).filter(
             and_(
                 UserTaskInteraction.interaction_time >= start_date,
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -201,8 +201,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.user_id == user_id,
                 UserTaskInteraction.interaction_type == "view",
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
@@ -211,8 +211,8 @@ class RecommendationMonitor:
             and_(
                 UserTaskInteraction.user_id == user_id,
                 UserTaskInteraction.interaction_type == "click",
-                UserTaskInteraction.metadata.isnot(None),
-                UserTaskInteraction.metadata.op('->>')('is_recommended') == 'true'
+                UserTaskInteraction.interaction_metadata.isnot(None),
+                UserTaskInteraction.interaction_metadata.op('->>')('is_recommended') == 'true'
             )
         ).scalar() or 0
         
