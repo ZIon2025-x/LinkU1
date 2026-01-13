@@ -2736,3 +2736,30 @@ class Banner(Base):
         Index('idx_banners_is_active', 'is_active'),
         Index('idx_banners_active_order', 'is_active', 'order'),
     )
+
+
+# ==================== 任务翻译表 ====================
+
+class TaskTranslation(Base):
+    """任务翻译表 - 存储任务标题和描述的翻译，供所有用户共享使用"""
+    __tablename__ = "task_translations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)  # 关联的任务ID
+    field_type = Column(String(20), nullable=False)  # 'title' 或 'description'
+    original_text = Column(Text, nullable=False)  # 原始文本
+    translated_text = Column(Text, nullable=False)  # 翻译后的文本
+    source_language = Column(String(10), nullable=False, default='auto')  # 源语言
+    target_language = Column(String(10), nullable=False)  # 目标语言
+    content_hash = Column(String(64), nullable=True, index=True)  # 原始文本的SHA256哈希值，用于快速检测翻译是否过期
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    __table_args__ = (
+        # 唯一约束：同一任务的同一字段的同一语言翻译只能有一条记录
+        UniqueConstraint('task_id', 'field_type', 'target_language', name='uq_task_translation'),
+        Index('idx_task_translations_task', 'task_id'),
+        Index('idx_task_translations_field', 'field_type'),
+        Index('idx_task_translations_target_lang', 'target_language'),
+        Index('idx_task_translations_lookup', 'task_id', 'field_type', 'target_language'),
+    )

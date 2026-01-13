@@ -49,6 +49,7 @@ from app.error_handlers import (
     business_exception_handler,
     general_exception_handler
 )
+from app.utils.check_dependencies import check_translation_dependencies
 from app.error_handlers import SecurityError, ValidationError, BusinessError
 
 # 设置日志
@@ -872,6 +873,72 @@ async def startup_event():
     logger.info(f"调试模式: {debug_mode}")
     logger.info(f"使用Redis: {use_redis}")
     logger.info(f"Cookie安全模式: {cookie_secure}")
+    
+    # 翻译缓存预热（后台任务，不阻塞启动）
+    if use_redis and environment == "production":
+        try:
+            import threading
+            from app.utils.translation_cache_warmup import warmup_hot_tasks
+            from app.deps import get_db
+            
+            def warmup_cache():
+                try:
+                    # 等待数据库连接就绪
+                    import time
+                    time.sleep(5)
+                    
+                    db = next(get_db())
+                    stats = warmup_hot_tasks(db, limit=100)
+                    logger.info(f"翻译缓存预热完成: {stats}")
+                except Exception as e:
+                    logger.warning(f"翻译缓存预热失败: {e}")
+            
+            # 在后台线程中执行预热
+            warmup_thread = threading.Thread(target=warmup_cache, daemon=True)
+            warmup_thread.start()
+            logger.info("翻译缓存预热任务已启动（后台）")
+        except Exception as e:
+            logger.warning(f"启动翻译缓存预热失败: {e}")
+    
+    # 检查翻译服务依赖
+    try:
+        dep_result = check_translation_dependencies()
+        if not dep_result["all_installed"]:
+            logger.warning("⚠️  部分翻译服务依赖缺失，某些翻译功能可能不可用")
+            logger.warning("   建议运行以下命令安装缺失的依赖:")
+            if "deep-translator" in dep_result["missing"]:
+                logger.warning("     pip install deep-translator")
+            if "google-cloud-translate" in dep_result["missing"]:
+                logger.warning("     pip install google-cloud-translate")
+            logger.warning("   或安装所有翻译依赖: pip install -r requirements.txt")
+        else:
+            logger.info(f"✅ 翻译服务依赖检查通过，可用服务: {', '.join(dep_result['available'])}")
+    except Exception as e:
+        logger.warning(f"检查翻译服务依赖时出错: {e}")
+    
+    # 启动缓存清理定时任务（定期淘汰过期缓存）
+    if use_redis:
+        try:
+            import threading
+            from app.utils.cache_eviction import evict_old_cache
+            
+            def cache_cleanup_task():
+                """定期清理过期缓存"""
+                import time
+                while True:
+                    try:
+                        time.sleep(3600)  # 每小时执行一次
+                        evict_old_cache('task_translation', max_age_seconds=7 * 24 * 60 * 60)
+                        evict_old_cache('batch_query', max_age_seconds=60 * 60)
+                        evict_old_cache('general_translation', max_age_seconds=7 * 24 * 60 * 60)
+                    except Exception as e:
+                        logger.warning(f"缓存清理任务失败: {e}")
+            
+            cleanup_thread = threading.Thread(target=cache_cleanup_task, daemon=True)
+            cleanup_thread.start()
+            logger.info("缓存清理定时任务已启动（每小时执行一次）")
+        except Exception as e:
+            logger.warning(f"启动缓存清理任务失败: {e}")
     
     # 初始化数据库表
     try:

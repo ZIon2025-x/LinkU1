@@ -58,6 +58,11 @@ public class AppState: ObservableObject {
                 
                 // 登录成功后，请求位置权限并获取位置
                 self?.requestLocationAfterLogin()
+                
+                // 登录成功后，智能预加载推荐任务
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self?.preloadRecommendedTasksIfNeeded()
+                }
             }
             .store(in: &cancellables)
         
@@ -302,27 +307,32 @@ public class AppState: ObservableObject {
         preloadActivityCompleted = false
         
         // 预加载推荐任务（首页最重要的数据）
-        apiService.getTasks(page: 1, pageSize: 20, type: nil, location: nil, keyword: nil, sortBy: nil, userLatitude: nil, userLongitude: nil)
+        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil)
             .sink(receiveCompletion: { [weak self] result in
                 guard let self = self else { return }
-                self.preloadTaskCompleted = true
                 if case .failure(let error) = result {
-                    Logger.warning("预加载推荐任务失败: \(error.localizedDescription)", category: .api)
+                    Logger.warning("预加载推荐任务失败: \(error.localizedDescription)，回退到普通任务", category: .api)
+                    // 如果推荐任务加载失败，回退到普通任务
+                    self.preloadNormalTasks()
                 } else {
                     Logger.success("预加载推荐任务成功", category: .api)
                 }
+                self.preloadTaskCompleted = true
                 // 如果两个请求都完成了，重置标志
                 if self.preloadTaskCompleted && self.preloadActivityCompleted {
                     self.isPreloadingHomeData = false
                 }
             }, receiveValue: { [weak self] response in
-                guard self != nil else { return }
-                // 将数据保存到缓存，这样首页加载时可以直接使用
-                let openTasks = response.tasks.filter { $0.status == .open }
-                CacheManager.shared.saveTasks(openTasks, category: nil, city: nil)
-                Logger.success("已预加载并缓存 \(openTasks.count) 个任务", category: .cache)
+                guard let self = self else { return }
+                // 将推荐任务保存到专用缓存
+                let openRecommendedTasks = response.tasks.filter { $0.status == .open }
+                CacheManager.shared.saveTasks(openRecommendedTasks, category: nil, city: nil, isRecommended: true)
+                Logger.success("已预加载并缓存 \(openRecommendedTasks.count) 个推荐任务", category: .cache)
             })
             .store(in: &cancellables)
+        
+        // 同时预加载普通任务（作为后备和补充）
+        preloadNormalTasks()
         
         // 预加载 Banner（延迟一点，避免同时发起太多请求）
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
@@ -365,6 +375,24 @@ public class AppState: ObservableObject {
                 })
                 .store(in: &self.cancellables)
         }
+    }
+    
+    /// 预加载普通任务（作为推荐任务的后备）
+    private func preloadNormalTasks() {
+        apiService.getTasks(page: 1, pageSize: 20, type: nil, location: nil, keyword: nil, sortBy: nil, userLatitude: nil, userLongitude: nil)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.warning("预加载普通任务失败: \(error.localizedDescription)", category: .api)
+                } else {
+                    Logger.success("预加载普通任务成功", category: .api)
+                }
+            }, receiveValue: { response in
+                // 将普通任务保存到缓存
+                let openTasks = response.tasks.filter { $0.status == .open }
+                CacheManager.shared.saveTasks(openTasks, category: nil, city: nil, isRecommended: false)
+                Logger.success("已预加载并缓存 \(openTasks.count) 个普通任务", category: .cache)
+            })
+            .store(in: &cancellables)
     }
     
     /// 登录后请求位置权限并获取位置

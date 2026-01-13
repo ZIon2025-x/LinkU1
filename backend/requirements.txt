@@ -49,6 +49,8 @@ prometheus-client>=0.19.0,<1.0.0
 
 # 翻译服务
 deep-translator>=1.11.4
+# Google Cloud Translation API (官方API，每月前50万字符免费)
+google-cloud-translate>=3.15.0
 
 # 学生认证系统性能优化（可选，推荐安装）
 # 用于大学匹配缓存优化，使用Aho-Corasick算法提升性能10倍+

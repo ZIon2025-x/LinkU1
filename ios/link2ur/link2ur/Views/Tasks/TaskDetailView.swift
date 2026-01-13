@@ -31,6 +31,9 @@ struct TaskDetailView: View {
     @State private var shareImageCancellable: AnyCancellable?
     @State private var isShareImageLoading = false // 分享图片加载状态
     @State private var showConfirmCompletionSuccess = false // 确认完成成功提示
+    @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
+    @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
+    @State private var lastInteractionTime: Date? = nil  // 上次交互时间
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -191,6 +194,9 @@ struct TaskDetailView: View {
                 if viewModel.task?.id != taskId {
                     viewModel.loadTask(taskId: taskId)
                 }
+                
+                // 记录任务查看交互（用于推荐系统）
+                recordTaskInteraction(type: "view")
             }
             .onChange(of: viewModel.task?.id) { newTaskId in
                 // 优化：只在任务ID确实变化且不为nil时处理
@@ -312,6 +318,10 @@ struct TaskDetailView: View {
                             applyMessage = ""
                             negotiatedPrice = nil
                             showNegotiatePrice = false
+                            // 记录申请交互（用于推荐系统）
+                            recordTaskInteraction(type: "apply")
+                            // 发送任务更新通知，触发推荐任务实时刷新
+                            NotificationCenter.default.post(name: .taskUpdated, object: viewModel.task)
                             // 重新加载任务和申请列表
                             viewModel.loadTask(taskId: taskId)
                             viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
@@ -375,6 +385,68 @@ struct TaskDetailView: View {
         }
         Button(LocalizationKey.commonCancel.localized, role: .cancel) {
             cancelReason = ""
+        }
+    }
+    
+    /// 记录任务交互（用于推荐系统，带防抖和异步优化）
+    private func recordTaskInteraction(type: String) {
+        guard appState.isAuthenticated else { return }
+        
+        // 防抖：相同类型的交互在1秒内只记录一次
+        let now = Date()
+        if let lastType = lastInteractionType,
+           let lastTime = lastInteractionTime,
+           lastType == type,
+           now.timeIntervalSince(lastTime) < 1.0 {
+            Logger.debug("跳过重复交互记录: type=\(type)", category: .api)
+            return
+        }
+        
+        lastInteractionType = type
+        lastInteractionTime = now
+        
+        let task = viewModel.task
+        let isRecommended = task?.isRecommended == true
+        
+        // 获取设备类型
+        let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
+        
+        // 构建 metadata
+        var metadata: [String: Any] = [
+            "source": "task_detail",
+            "list_position": 0  // 详情页没有位置概念
+        ]
+        
+        if let matchScore = task?.matchScore {
+            metadata["match_score"] = matchScore
+        }
+        if let recommendationReason = task?.recommendationReason {
+            metadata["recommendation_reason"] = recommendationReason
+        }
+        
+        // 异步非阻塞方式记录交互（不等待结果，不影响用户体验）
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            
+            // 调用 API 记录交互
+            APIService.shared.recordTaskInteraction(
+                taskId: self.taskId,
+                interactionType: type,
+                deviceType: deviceType,
+                isRecommended: isRecommended,
+                metadata: metadata
+            )
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("记录任务交互失败: \(error.localizedDescription)", category: .api)
+                    }
+                },
+                receiveValue: { _ in
+                    Logger.debug("已记录任务交互: type=\(type), taskId=\(self.taskId)", category: .api)
+                }
+            )
+            .store(in: &self.interactionCancellables)
         }
     }
     

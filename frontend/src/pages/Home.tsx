@@ -24,6 +24,7 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
 import LazyImage from '../components/LazyImage';
+import { loadTaskTranslationsBatch } from '../utils/taskTranslationBatch';
 import styles from './Home.module.css';
 
 // 配置dayjs插件
@@ -675,12 +676,21 @@ const Home: React.FC = () => {
           .slice(0, 3); // 只取前3个
         
         setTasks(sortedTasks);
+        
+        // 批量预加载任务翻译（优化性能）
+        if (sortedTasks.length > 0) {
+          const taskIds = sortedTasks.map((t: any) => t.id);
+          loadTaskTranslationsBatch(taskIds, language, 'title').catch(err => {
+            // 静默失败，不影响主流程
+            console.debug('批量预加载任务翻译失败:', err);
+          });
+        }
       })
       .catch(error => {
                 setTasks([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [language]);  // 添加language依赖，语言切换时重新加载
 
   // 获取热门榜单数据 - 显示前3个
   useEffect(() => {
@@ -1717,6 +1727,7 @@ const Home: React.FC = () => {
                       <TaskTitle
                         title={task.title}
                         language={language}
+                        taskId={task.id}  // 传递任务ID，使用任务翻译持久化
                         style={{
                           fontSize: 'inherit',
                           fontWeight: 'inherit',

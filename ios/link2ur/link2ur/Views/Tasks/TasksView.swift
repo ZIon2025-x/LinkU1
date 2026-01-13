@@ -2,10 +2,12 @@ import SwiftUI
 
 struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
+    @StateObject private var recommendedViewModel = TasksViewModel()  // 推荐任务 ViewModel
     @State private var searchText = ""
     @State private var showFilter = false
     @State private var selectedCategory: String?
     @State private var selectedCity: String? // 新增城市筛选状态
+    @State private var allTasks: [Task] = []  // 合并后的任务列表（推荐任务优先）
     
     // 任务分类映射 (显示名称 -> 后端值)
     let categories: [(name: String, value: String)] = [
@@ -107,7 +109,7 @@ struct TasksView: View {
                                 viewModel.loadTasks(status: "open")
                             }
                         )
-                    } else if viewModel.tasks.isEmpty {
+                    } else if allTasks.isEmpty {
                         EmptyStateView(
                             icon: "doc.text.magnifyingglass",
                             title: LocalizationKey.emptyNoTasks.localized,
@@ -119,16 +121,16 @@ struct TasksView: View {
                                 GridItem(.flexible(), spacing: AppSpacing.md),
                                 GridItem(.flexible(), spacing: AppSpacing.md)
                             ], spacing: AppSpacing.md) {
-                                ForEach(viewModel.tasks, id: \.id) { task in
+                                ForEach(allTasks, id: \.id) { task in
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                        TaskCard(task: task)
+                                        TaskCard(task: task, isRecommended: task.isRecommended == true)
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     .id(task.id) // 确保稳定的id，优化视图复用
                                     .onAppear {
                                         // 性能优化：只在接近最后一个任务时加载更多（提前3个）
-                                        let threshold = max(0, viewModel.tasks.count - 3)
-                                        if let index = viewModel.tasks.firstIndex(where: { $0.id == task.id }),
+                                        let threshold = max(0, allTasks.count - 3)
+                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
                                            index >= threshold {
                                             viewModel.loadMoreTasks()
                                         }
@@ -136,7 +138,7 @@ struct TasksView: View {
                                 }
                                 
                                 // 加载更多指示器
-                                if viewModel.isLoadingMore {
+                                if viewModel.isLoadingMore || recommendedViewModel.isLoadingMore {
                                     HStack {
                                         Spacer()
                                         CompactLoadingView()
@@ -165,14 +167,56 @@ struct TasksView: View {
                 applyFiltersWithDebounce()
             }
             .refreshable {
-                // 强制刷新，清除缓存并重新加载
-                viewModel.loadTasks(status: "open", forceRefresh: true)
+                // 强制刷新，清除缓存并重新加载推荐任务和普通任务
+                recommendedViewModel.loadRecommendedTasks(
+                    limit: 20,
+                    algorithm: "hybrid",
+                    taskType: selectedCategory,
+                    location: selectedCity,
+                    keyword: searchText.isEmpty ? nil : searchText,
+                    forceRefresh: true
+                )
+                viewModel.loadTasks(
+                    category: selectedCategory,
+                    city: selectedCity,
+                    status: "open",
+                    keyword: searchText.isEmpty ? nil : searchText,
+                    forceRefresh: true
+                )
             }
             .task {
                 // 使用 task 替代 onAppear，避免重复加载
-                if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                    // 默认只加载开放中的任务
-                    viewModel.loadTasks(status: "open")
+                if allTasks.isEmpty && !viewModel.isLoading && !recommendedViewModel.isLoading {
+                    // 加载推荐任务和普通任务
+                    loadTasksWithRecommendations()
+                }
+            }
+            .onChange(of: viewModel.tasks) { _ in
+                updateMergedTasks()
+            }
+            .onChange(of: recommendedViewModel.tasks) { _ in
+                updateMergedTasks()
+            }
+            .onChange(of: recommendedViewModel.isOffline) { isOffline in
+                // 离线状态变化时，更新UI提示
+                if isOffline && allTasks.isEmpty {
+                    // 离线且无缓存数据时的处理已在 ViewModel 中完成
+                }
+            }
+            // 监听任务更新通知，实时刷新推荐任务
+            .onReceive(NotificationCenter.default.publisher(for: .taskUpdated)) { notification in
+                // 用户交互后，延迟刷新推荐任务（避免频繁请求）
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    if !recommendedViewModel.isLoading {
+                        recommendedViewModel.loadRecommendedTasks(
+                            limit: 20,
+                            algorithm: "hybrid",
+                            taskType: selectedCategory,
+                            location: selectedCity,
+                            keyword: searchText.isEmpty ? nil : searchText,
+                            forceRefresh: false
+                        )
+                    }
                 }
             }
         }
@@ -195,13 +239,117 @@ struct TasksView: View {
     
     private func applyFilters() {
         // 重新加载任务，应用筛选条件（只显示开放中的任务）
-        viewModel.loadTasks(category: selectedCategory, city: selectedCity, status: "open")
+        // 同时加载推荐任务和普通任务，推荐任务优先显示
+        loadTasksWithRecommendations()
+    }
+    
+    /// 加载任务（推荐任务优先）
+    private func loadTasksWithRecommendations() {
+        // 先加载推荐任务
+        recommendedViewModel.loadRecommendedTasks(
+            limit: 20,
+            algorithm: "hybrid",
+            taskType: selectedCategory,
+            location: selectedCity,
+            keyword: searchText.isEmpty ? nil : searchText,
+            forceRefresh: false
+        )
+        
+        // 然后加载普通任务
+        viewModel.loadTasks(
+            category: selectedCategory,
+            city: selectedCity,
+            status: "open",
+            keyword: searchText.isEmpty ? nil : searchText,
+            forceRefresh: false
+        )
+        
+        // 监听两个 ViewModel 的变化，合并任务列表
+        updateMergedTasks()
+    }
+    
+    /// 更新合并后的任务列表（推荐任务优先）
+    private func updateMergedTasks() {
+        // 性能优化：如果两个列表都没有变化，跳过合并
+        let recommendedCount = recommendedViewModel.tasks.count
+        let normalCount = viewModel.tasks.count
+        let currentCount = allTasks.count
+        
+        // 如果推荐任务和普通任务都为空，且当前列表也为空，直接返回
+        if recommendedCount == 0 && normalCount == 0 && currentCount == 0 {
+            return
+        }
+        
+        // 使用 Set 去重，推荐任务优先
+        var taskMap: [Int: Task] = [:]
+        
+        // 先添加推荐任务
+        for task in recommendedViewModel.tasks {
+            taskMap[task.id] = task
+        }
+        
+        // 再添加普通任务（如果不在推荐列表中）
+        for task in viewModel.tasks {
+            if taskMap[task.id] == nil {
+                taskMap[task.id] = task
+            }
+        }
+        
+        // 性能优化：如果任务数量没有变化且ID相同，可能不需要重新排序
+        let newTaskIds = Set(taskMap.keys)
+        let currentTaskIds = Set(allTasks.map { $0.id })
+        
+        // 如果任务ID集合相同，只更新数据，不重新排序
+        if newTaskIds == currentTaskIds && newTaskIds.count == currentCount {
+            // 只更新任务数据，保持顺序
+            var updatedTasks: [Task] = []
+            for currentTask in allTasks {
+                if let updatedTask = taskMap[currentTask.id] {
+                    updatedTasks.append(updatedTask)
+                }
+            }
+            // 添加新任务（如果有）
+            for (taskId, task) in taskMap {
+                if !currentTaskIds.contains(taskId) {
+                    updatedTasks.append(task)
+                }
+            }
+            allTasks = updatedTasks
+            return
+        }
+        
+        // 转换为数组，推荐任务在前
+        let recommendedIds = Set(recommendedViewModel.tasks.map { $0.id })
+        allTasks = taskMap.values.sorted { task1, task2 in
+            let isRecommended1 = recommendedIds.contains(task1.id)
+            let isRecommended2 = recommendedIds.contains(task2.id)
+            
+            // 推荐任务优先
+            if isRecommended1 && !isRecommended2 {
+                return true
+            } else if !isRecommended1 && isRecommended2 {
+                return false
+            }
+            
+            // 如果都是推荐任务，按匹配分数排序（如果有）
+            if isRecommended1 && isRecommended2 {
+                let score1 = task1.matchScore ?? 0
+                let score2 = task2.matchScore ?? 0
+                if score1 != score2 {
+                    return score1 > score2
+                }
+            }
+            
+            // 按创建时间排序
+            return task1.createdAt > task2.createdAt
+        }
     }
 }
 
 // 任务卡片组件 - Web风格（垂直布局）
 struct TaskCard: View {
     let task: Task
+    var isRecommended: Bool = false  // 是否为推荐任务
     
     // 任务类型 SF Symbols 映射（符合 Apple HIG）
     private let taskTypeIcons: [String: String] = [
@@ -383,19 +531,60 @@ struct TaskCard: View {
         .compositingGroup() // 组合渲染，确保圆角边缘干净
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
         .overlay(alignment: .topTrailing) {
-            // 任务等级标签（VIP/Super）- 右上角
-            if let taskLevel = task.taskLevel, taskLevel != "normal" {
-                Text(getTaskLevelLabel(taskLevel))
-                    .font(AppTypography.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.vertical, 4)
-                    .background(getTaskLevelColor(taskLevel))
-                    .clipShape(Capsule())
-                    .shadow(color: getTaskLevelColor(taskLevel).opacity(0.5), radius: 4, x: 0, y: 2)
+            VStack(alignment: .trailing, spacing: AppSpacing.xs) {
+                // 推荐标签 - 左上角
+                if isRecommended || task.isRecommended == true {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text("推荐")
+                                .font(AppTypography.caption2)
+                                .fontWeight(.bold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 4)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color(red: 0.961, green: 0.620, blue: 0.043), Color(red: 0.545, green: 0.361, blue: 0.965)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(Capsule())
+                        .shadow(color: Color(red: 0.545, green: 0.361, blue: 0.965).opacity(0.5), radius: 4, x: 0, y: 2)
+                        
+                        // 推荐理由（如果有）
+                        if let reason = task.recommendationReason, !reason.isEmpty {
+                            Text(reason)
+                                .font(AppTypography.caption2)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, AppSpacing.sm)
+                                .padding(.vertical, 2)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                                .lineLimit(1)
+                        }
+                    }
                     .padding(.top, AppSpacing.sm)
                     .padding(.trailing, AppSpacing.sm)
+                }
+                
+                // 任务等级标签（VIP/Super）- 右上角
+                if let taskLevel = task.taskLevel, taskLevel != "normal" {
+                    Text(getTaskLevelLabel(taskLevel))
+                        .font(AppTypography.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 4)
+                        .background(getTaskLevelColor(taskLevel))
+                        .clipShape(Capsule())
+                        .shadow(color: getTaskLevelColor(taskLevel).opacity(0.5), radius: 4, x: 0, y: 2)
+                        .padding(.top, isRecommended || task.isRecommended == true ? 0 : AppSpacing.sm)
+                        .padding(.trailing, AppSpacing.sm)
+                }
             }
         }
     }

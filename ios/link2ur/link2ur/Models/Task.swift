@@ -28,6 +28,9 @@ struct Task: Codable, Identifiable {
     let minParticipants: Int?
     let currentParticipants: Int?
     let poster: User?  // 后端可能返回 poster 对象
+    let isRecommended: Bool?  // 是否为推荐任务
+    let matchScore: Double?  // 推荐匹配分数
+    let recommendationReason: String?  // 推荐原因
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
@@ -49,6 +52,9 @@ struct Task: Codable, Identifiable {
         case minParticipants = "min_participants"
         case currentParticipants = "current_participants"
         case poster
+        case isRecommended = "is_recommended"
+        case matchScore = "match_score"
+        case recommendationReason = "recommendation_reason"
     }
     
     // 兼容旧代码的 computed properties

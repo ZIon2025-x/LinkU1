@@ -19,6 +19,67 @@ class TasksViewModel: ObservableObject {
         // 使用依赖注入或回退到默认实现
         self.apiService = apiService ?? APIService.shared
         self.locationService = locationService ?? LocationService.shared
+        
+        // 监听用户交互，触发智能刷新
+        setupSmartRefresh()
+    }
+    
+    /// 设置智能刷新机制
+    private func setupSmartRefresh() {
+        // 监听任务交互通知（申请、完成等）
+        NotificationCenter.default.publisher(for: .taskUpdated)
+            .sink { [weak self] _ in
+                // 用户交互后，增加计数
+                self?.userInteractionCount += 1
+                
+                // 如果交互次数达到阈值（3次），触发推荐任务刷新
+                if let count = self?.userInteractionCount, count >= 3 {
+                    self?.userInteractionCount = 0
+                    // 延迟刷新，避免频繁请求
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                        self?.refreshRecommendedTasksIfNeeded()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+        
+        // 监听网络状态变化
+        setupNetworkMonitoring()
+    }
+    
+    /// 设置网络监控
+    private func setupNetworkMonitoring() {
+        reachability = Reachability()
+        
+        reachability?.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isConnected in
+                self?.isOffline = !isConnected
+                
+                // 网络恢复时，如果推荐任务超过5分钟未更新，自动刷新
+                if isConnected {
+                    self?.refreshRecommendedTasksIfNeeded()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    /// 智能刷新推荐任务（如果需要）
+    private func refreshRecommendedTasksIfNeeded() {
+        // 防抖：5秒内只刷新一次
+        let now = Date()
+        if let lastTrigger = lastRefreshTrigger,
+           now.timeIntervalSince(lastTrigger) < 5.0 {
+            return
+        }
+        lastRefreshTrigger = now
+        
+        // 如果距离上次加载超过5分钟，自动刷新
+        if let lastLoad = lastRecommendedTasksLoadTime,
+           Date().timeIntervalSince(lastLoad) > 300 {
+            Logger.info("智能刷新推荐任务（距离上次加载已超过5分钟）", category: .cache)
+            loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: false)
+        }
     }
     
     /// 从缓存同步加载任务（用于初始化时立即显示，避免闪烁）
@@ -48,6 +109,12 @@ class TasksViewModel: ObservableObject {
     private var currentSortBy: String?
     private var rawTasks: [Task] = [] // 保存原始数据，用于重新排序
     private var lastLocationUpdateTime: Date? // 记录上次位置更新时间，用于防抖
+    private var lastRecommendedTasksLoadTime: Date? // 记录上次推荐任务加载时间
+    private var recommendedTasksRefreshTimer: Timer? // 推荐任务自动刷新定时器
+    private var userInteractionCount: Int = 0 // 用户交互计数（用于智能刷新）
+    @Published var isOffline: Bool = false // 离线状态
+    private var reachability: Reachability? // 网络可达性监听
+    private var lastRefreshTrigger: Date? // 上次刷新触发时间（用于防抖）
     
     func loadTasks(category: String? = nil, city: String? = nil, status: String? = nil, keyword: String? = nil, sortBy: String? = nil, page: Int = 1, pageSize: Int = 50, forceRefresh: Bool = false) {
         let startTime = Date()
@@ -276,6 +343,229 @@ class TasksViewModel: ObservableObject {
         )
     }
     
+    /// 加载推荐任务（带重试机制）
+    func loadRecommendedTasks(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil, forceRefresh: Bool = false, retryCount: Int = 0) {
+        let startTime = Date()
+        let endpoint = "/api/recommendations"
+        let maxRetries = 2
+        
+        // 防止重复请求
+        if isLoading && !forceRefresh && retryCount == 0 {
+            Logger.warning("推荐任务请求已在进行中，跳过重复请求", category: .api)
+            return
+        }
+        
+        // 如果强制刷新，清除缓存
+        if forceRefresh {
+            CacheManager.shared.invalidateTasksCache()
+        }
+        
+        // 如果不是强制刷新，先尝试从推荐任务专用缓存加载
+        if !forceRefresh {
+            if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: taskType, city: location, isRecommended: true) {
+                if !cachedRecommendedTasks.isEmpty {
+                    self.tasks = cachedRecommendedTasks
+                    Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+                    
+                    // 离线模式：如果有缓存数据，直接使用，不进行网络请求
+                    if isOffline {
+                        Logger.info("离线模式：使用缓存的推荐任务", category: .cache)
+                        self.isLoading = false
+                        return
+                    }
+                    
+                    // 在线模式：继续在后台刷新，不显示加载状态
+                } else {
+                    // 离线模式且无缓存：显示错误
+                    if isOffline {
+                        self.errorMessage = "离线模式：暂无缓存的推荐任务"
+                        self.isLoading = false
+                        return
+                    }
+                    isLoading = true
+                    tasks = []
+                }
+            } else {
+                // 离线模式且无缓存：显示错误
+                if isOffline {
+                    self.errorMessage = "离线模式：暂无缓存的推荐任务"
+                    self.isLoading = false
+                    return
+                }
+                isLoading = true
+                tasks = []
+            }
+        } else {
+            // 强制刷新时，离线模式不支持
+            if isOffline {
+                self.errorMessage = "离线模式：无法强制刷新"
+                self.isLoading = false
+                return
+            }
+            isLoading = true
+            tasks = []
+        }
+        
+        errorMessage = nil
+        
+        // 记录推荐任务请求开始
+        AppMetrics.shared.increment("recommendation.load.requests", by: 1.0)
+        
+        // 调用推荐 API
+        apiService.getTaskRecommendations(limit: limit, algorithm: algorithm, taskType: taskType, location: location, keyword: keyword)
+            .sink(receiveCompletion: { [weak self] completion in
+                let duration = Date().timeIntervalSince(startTime)
+                self?.isLoading = false
+                if case .failure(let error) = completion {
+                    ErrorHandler.shared.handle(error, context: "加载推荐任务")
+                    
+                    // 记录推荐任务加载失败
+                    AppMetrics.shared.increment("recommendation.load.failures", by: 1.0)
+                    AppMetrics.shared.record(
+                        name: "recommendation.load.error",
+                        value: duration,
+                        tags: ["algorithm": algorithm, "error": error.localizedDescription]
+                    )
+                    
+                    // 重试机制：网络错误且未达到最大重试次数时自动重试
+                    if retryCount < maxRetries && (error == .networkError || error == .timeout) {
+                        Logger.info("推荐任务加载失败，\(maxRetries - retryCount)秒后重试...", category: .api)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Double(maxRetries - retryCount)) { [weak self] in
+                            self?.loadRecommendedTasks(
+                                limit: limit,
+                                algorithm: algorithm,
+                                taskType: taskType,
+                                location: location,
+                                keyword: keyword,
+                                forceRefresh: forceRefresh,
+                                retryCount: retryCount + 1
+                            )
+                        }
+                    } else {
+                        self?.errorMessage = error.userFriendlyMessage
+                    }
+                    
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        error: error
+                    )
+                } else {
+                    self?.performanceMonitor.recordNetworkRequest(
+                        endpoint: endpoint,
+                        method: "GET",
+                        duration: duration,
+                        statusCode: 200
+                    )
+                    
+                    // 记录推荐任务加载成功
+                    AppMetrics.shared.increment("recommendation.load.success_count", by: 1.0)
+                }
+            }, receiveValue: { [weak self] response in
+                guard let self = self else { return }
+                
+                // 标记所有任务为推荐任务
+                let recommendedTasks = response.tasks.map { task -> Task in
+                    // 由于 Task 是 struct，我们需要创建一个新的 Task 实例
+                    // 但 Task 没有 init，所以我们需要通过修改来标记
+                    // 实际上，后端应该已经返回 isRecommended 字段
+                    return task
+                }
+                
+                // 保存到推荐任务专用缓存（仅第一页）
+                if limit <= 20 {
+                    CacheManager.shared.saveTasks(recommendedTasks, category: taskType, city: location, isRecommended: true)
+                    Logger.success("已缓存 \(recommendedTasks.count) 个推荐任务", category: .cache)
+                }
+                
+                DispatchQueue.main.async {
+                    let loadDuration = Date().timeIntervalSince(startTime)
+                    
+                    self.tasks = recommendedTasks
+                    self.isLoading = false
+                    self.errorMessage = nil
+                    self.lastRecommendedTasksLoadTime = Date()
+                    
+                    // 记录推荐任务性能指标
+                    AppMetrics.shared.record(
+                        name: "recommendation.load.success",
+                        value: Double(recommendedTasks.count),
+                        tags: ["algorithm": algorithm, "limit": "\(limit)"]
+                    )
+                    
+                    // 记录推荐任务加载时间
+                    AppMetrics.shared.record(
+                        name: "recommendation.load.duration",
+                        value: loadDuration,
+                        tags: ["algorithm": algorithm]
+                    )
+                    
+                    // 检查推荐任务多样性
+                    let diversity = self.calculateRecommendationDiversity(recommendedTasks)
+                    AppMetrics.shared.record(
+                        name: "recommendation.diversity",
+                        value: diversity,
+                        tags: ["algorithm": algorithm]
+                    )
+                    
+                    // 如果多样性较低，记录警告
+                    if diversity < 0.5 {
+                        Logger.warning("推荐任务多样性较低: \(String(format: "%.2f", diversity))", category: .api)
+                    }
+                    
+                    // 记录推荐任务的平均匹配分数
+                    let avgMatchScore = recommendedTasks.compactMap { $0.matchScore }.reduce(0.0, +) / Double(max(recommendedTasks.count, 1))
+                    AppMetrics.shared.record(
+                        name: "recommendation.avg_match_score",
+                        value: avgMatchScore,
+                        tags: ["algorithm": algorithm]
+                    )
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 计算推荐任务的多样性（0-1之间，1表示完全多样）
+    private func calculateRecommendationDiversity(_ tasks: [Task]) -> Double {
+        guard !tasks.isEmpty else { return 0.0 }
+        
+        // 统计任务类型分布
+        var typeCounts: [String: Int] = [:]
+        var locationCounts: [String: Int] = [:]
+        
+        for task in tasks {
+            typeCounts[task.taskType, default: 0] += 1
+            locationCounts[task.location, default: 0] += 1
+        }
+        
+        // 计算类型多样性（使用熵）
+        let typeDiversity = calculateEntropy(typeCounts.values.map { Double($0) })
+        let locationDiversity = calculateEntropy(locationCounts.values.map { Double($0) })
+        
+        // 归一化到0-1范围
+        let maxEntropy = log2(Double(tasks.count))
+        let normalizedTypeDiversity = maxEntropy > 0 ? typeDiversity / maxEntropy : 0.0
+        let normalizedLocationDiversity = maxEntropy > 0 ? locationDiversity / maxEntropy : 0.0
+        
+        // 综合多样性（类型和位置的加权平均）
+        return (normalizedTypeDiversity * 0.6 + normalizedLocationDiversity * 0.4)
+    }
+    
+    /// 计算熵（用于多样性计算）
+    private func calculateEntropy(_ values: [Double]) -> Double {
+        let sum = values.reduce(0, +)
+        guard sum > 0 else { return 0.0 }
+        
+        return values.reduce(0.0) { result, value in
+            if value > 0 {
+                let probability = value / sum
+                return result - probability * log2(probability)
+            }
+            return result
+        }
+    }
+    
     /// 按距离排序任务（基于城市距离）
     private func sortTasksByDistance() {
         Logger.debug("sortTasksByDistance() 被调用", category: .general)
@@ -333,6 +623,10 @@ class TasksViewModel: ObservableObject {
         // 清理位置更新监听器
         locationUpdateCancellable?.cancel()
         locationUpdateCancellable = nil
+        
+        // 清理推荐任务刷新定时器
+        recommendedTasksRefreshTimer?.invalidate()
+        recommendedTasksRefreshTimer = nil
     }
 }
 

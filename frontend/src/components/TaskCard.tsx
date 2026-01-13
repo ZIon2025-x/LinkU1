@@ -394,6 +394,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
         <TaskTitle
           title={task.title}
           language={language}
+          taskId={task.id}  // 传递任务ID，使用任务翻译持久化
           style={{
             fontSize: 'inherit',
             fontWeight: 'inherit',

@@ -1839,7 +1839,7 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  // 翻译标题
+  // 翻译标题（使用任务翻译API，保存到数据库供所有用户共享）
   const handleTranslateTitle = async () => {
     if (!task || !task.title) return;
     
@@ -1853,23 +1853,39 @@ const TaskDetail: React.FC = () => {
     try {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.title);
-      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
         setTranslatedTitle(null);
         return;
       }
-      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      // 目标语言就是当前界面语言
       const targetLang = language;
-      const translated = await translate(task.title, targetLang, textLang);
-      setTranslatedTitle(translated);
+      
+      // 先尝试从数据库获取已有翻译
+      try {
+        const { getTaskTranslation, translateAndSaveTask } = await import('../api');
+        const existing = await getTaskTranslation(task.id, 'title', targetLang);
+        if (existing.exists && existing.translated_text) {
+          setTranslatedTitle(existing.translated_text);
+          return;
+        }
+        
+        // 如果不存在，翻译并保存
+        const result = await translateAndSaveTask(task.id, 'title', targetLang, textLang);
+        setTranslatedTitle(result.translated_text);
+      } catch (apiError) {
+        // 如果新API失败，降级到旧API
+        const translated = await translate(task.title, targetLang, textLang);
+        setTranslatedTitle(translated);
+      }
     } catch (error) {
-            alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingTitle(false);
     }
   };
 
-  // 翻译描述
+  // 翻译描述（使用任务翻译API，保存到数据库供所有用户共享）
   const handleTranslateDescription = async () => {
     if (!task || !task.description) return;
     
@@ -1883,17 +1899,33 @@ const TaskDetail: React.FC = () => {
     try {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.description);
-      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
         setTranslatedDescription(null);
         return;
       }
-      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      // 目标语言就是当前界面语言
       const targetLang = language;
-      const translated = await translate(task.description, targetLang, textLang);
-      setTranslatedDescription(translated);
+      
+      // 先尝试从数据库获取已有翻译
+      try {
+        const { getTaskTranslation, translateAndSaveTask } = await import('../api');
+        const existing = await getTaskTranslation(task.id, 'description', targetLang);
+        if (existing.exists && existing.translated_text) {
+          setTranslatedDescription(existing.translated_text);
+          return;
+        }
+        
+        // 如果不存在，翻译并保存
+        const result = await translateAndSaveTask(task.id, 'description', targetLang, textLang);
+        setTranslatedDescription(result.translated_text);
+      } catch (apiError) {
+        // 如果新API失败，降级到旧API
+        const translated = await translate(task.description, targetLang, textLang);
+        setTranslatedDescription(translated);
+      }
     } catch (error) {
-            alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingDescription(false);
     }

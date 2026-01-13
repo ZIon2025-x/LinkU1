@@ -480,14 +480,14 @@ public class CacheManager {
     // MARK: - 特定数据类型的缓存方法
     
     /// 保存任务列表
-    func saveTasks(_ tasks: [Task], category: String? = nil, city: String? = nil) {
-        let key = cacheKeyForTasks(category: category, city: city)
+    func saveTasks(_ tasks: [Task], category: String? = nil, city: String? = nil, isRecommended: Bool = false) {
+        let key = cacheKeyForTasks(category: category, city: city, isRecommended: isRecommended)
         save(tasks, forKey: key)
     }
     
     /// 加载任务列表
-    func loadTasks(category: String? = nil, city: String? = nil) -> [Task]? {
-        let key = cacheKeyForTasks(category: category, city: city)
+    func loadTasks(category: String? = nil, city: String? = nil, isRecommended: Bool = false) -> [Task]? {
+        let key = cacheKeyForTasks(category: category, city: city, isRecommended: isRecommended)
         return load([Task].self, forKey: key)
     }
     
@@ -561,8 +561,8 @@ public class CacheManager {
     
     // MARK: - 缓存键生成
     
-    private func cacheKeyForTasks(category: String?, city: String?) -> String {
-        var key = "tasks"
+    private func cacheKeyForTasks(category: String?, city: String?, isRecommended: Bool = false) -> String {
+        var key = isRecommended ? "recommended_tasks" : "tasks"
         if let category = category {
             key += "_cat_\(category)"
         }

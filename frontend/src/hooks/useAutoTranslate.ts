@@ -25,11 +25,15 @@ interface UseAutoTranslateReturn {
  * @param text 原始文本
  * @param language 当前语言环境
  * @param autoTranslate 是否自动翻译（默认true）
+ * @param taskId 任务ID（可选，如果提供则优先使用任务翻译持久化）
+ * @param fieldType 字段类型（可选，'title' 或 'description'，需要配合 taskId 使用）
  */
 export const useAutoTranslate = (
   text: string,
   language: Language,
-  autoTranslate: boolean = true
+  autoTranslate: boolean = true,
+  taskId?: number,
+  fieldType?: 'title' | 'description'
 ): UseAutoTranslateReturn => {
   const { translate } = useTranslation();
   const [translatedText, setTranslatedText] = useState<string | null>(null);
@@ -74,6 +78,23 @@ export const useAutoTranslate = (
     // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
     const targetLang = language;
 
+    // 如果提供了 taskId 和 fieldType，优先从数据库获取任务翻译
+    if (taskId && fieldType) {
+      try {
+        const { getTaskTranslation } = await import('../api');
+        const existing = await getTaskTranslation(taskId, fieldType, targetLang);
+        if (existing.exists && existing.translated_text) {
+          setTranslatedText(existing.translated_text);
+          lastTextRef.current = trimmedText;
+          lastLanguageRef.current = language;
+          currentRequestRef.current = null;
+          return;
+        }
+      } catch (error) {
+        // 如果任务翻译API失败，降级到普通翻译（静默失败，不影响用户体验）
+      }
+    }
+    
     // 检查持久化缓存（sessionStorage）
     const cached = getTranslationCache(trimmedText, targetLang, detectedLang);
     if (cached) {
@@ -101,8 +122,23 @@ export const useAutoTranslate = (
     setIsTranslating(true);
     const translationPromise = (async () => {
       try {
-        // 传递源语言，帮助后端更准确翻译
-        const translated = await translate(trimmedText, targetLang, detectedLang);
+        let translated: string;
+        
+        // 如果提供了 taskId 和 fieldType，使用任务翻译API（会保存到数据库）
+        if (taskId && fieldType) {
+          try {
+            const { translateAndSaveTask } = await import('../api');
+            const result = await translateAndSaveTask(taskId, fieldType, targetLang, detectedLang);
+            translated = result.translated_text;
+          } catch (error) {
+            // 如果任务翻译API失败，降级到普通翻译
+            translated = await translate(trimmedText, targetLang, detectedLang);
+          }
+        } else {
+          // 普通翻译
+          translated = await translate(trimmedText, targetLang, detectedLang);
+        }
+        
         setTranslatedText(translated);
         // 保存到持久化缓存（sessionStorage）
         setTranslationCache(trimmedText, translated, targetLang, detectedLang);

@@ -74,6 +74,9 @@ enum APIEndpoints {
         static func apply(_ id: Int) -> String {
             "/api/tasks/\(id)/apply"
         }
+        static func interaction(_ id: Int) -> String {
+            "/api/tasks/\(id)/interaction"
+        }
         static func applyString(_ id: String) -> String {
             "/api/tasks/\(id)/apply"
         }
@@ -303,6 +306,14 @@ enum APIEndpoints {
     enum UserPreferences {
         static let get = "/api/user-preferences"
         static let update = "/api/user-preferences"
+    }
+    
+    // MARK: - Recommendations (推荐)
+    enum Recommendations {
+        static let list = "/api/recommendations"
+        static func feedback(_ taskId: Int) -> String {
+            "/api/recommendations/\(taskId)/feedback"
+        }
     }
     
     // MARK: - Public Endpoints (不需要认证的端点)

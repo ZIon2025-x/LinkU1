@@ -342,6 +342,37 @@ extension APIService {
         return request(EmptyResponse.self, APIEndpoints.Tasks.delete(taskId), method: "DELETE")
     }
     
+    /// 记录任务交互（用于推荐系统）
+    func recordTaskInteraction(taskId: Int, interactionType: String, durationSeconds: Int? = nil, deviceType: String? = nil, isRecommended: Bool = false, metadata: [String: Any]? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+        var body: [String: Any] = ["interaction_type": interactionType]
+        if let durationSeconds = durationSeconds {
+            body["duration_seconds"] = durationSeconds
+        }
+        if let deviceType = deviceType {
+            body["device_type"] = deviceType
+        }
+        
+        // 构建完整的 metadata
+        var fullMetadata: [String: Any] = metadata ?? [:]
+        fullMetadata["is_recommended"] = isRecommended
+        
+        // 添加设备信息
+        let deviceInfo: [String: Any] = [
+            "type": deviceType ?? "mobile",
+            "os": "iOS",
+            "os_version": DeviceInfo.systemVersion,
+            "app_version": DeviceInfo.appVersion,
+            "screen_width": Int(DeviceInfo.screenWidth),
+            "screen_height": Int(DeviceInfo.screenHeight),
+            "device_model": DeviceInfo.model
+        ]
+        fullMetadata["device_info"] = deviceInfo
+        
+        body["metadata"] = fullMetadata
+        
+        return request(EmptyResponse.self, APIEndpoints.Tasks.interaction(taskId), method: "POST", body: body)
+    }
+    
     // MARK: - Flea Market (跳蚤市场)
     
     /// 获取商品列表
@@ -919,6 +950,39 @@ extension APIService {
             "description": description ?? ""
         ]
         return request(EmptyResponse.self, APIEndpoints.FleaMarket.report(itemId), method: "POST", body: body)
+    }
+    
+    // MARK: - Recommendations (推荐)
+    
+    /// 获取推荐任务列表
+    func getTaskRecommendations(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil) -> AnyPublisher<TaskListResponse, APIError> {
+        var queryParams: [String: String?] = [
+            "limit": "\(limit)",
+            "algorithm": algorithm
+        ]
+        if let taskType = taskType, taskType != "all" {
+            queryParams["task_type"] = taskType
+        }
+        if let location = location, location != "all" {
+            queryParams["location"] = location
+        }
+        if let keyword = keyword, !keyword.isEmpty {
+            queryParams["keyword"] = keyword
+        }
+        
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Recommendations.list)?\(queryString)"
+        
+        return request(TaskListResponse.self, endpoint)
+    }
+    
+    /// 提交推荐反馈
+    func submitRecommendationFeedback(taskId: Int, feedbackType: String, recommendationId: String? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+        var body: [String: Any] = ["feedback_type": feedbackType]
+        if let recommendationId = recommendationId {
+            body["recommendation_id"] = recommendationId
+        }
+        return request(EmptyResponse.self, APIEndpoints.Recommendations.feedback(taskId), method: "POST", body: body)
     }
 }
 

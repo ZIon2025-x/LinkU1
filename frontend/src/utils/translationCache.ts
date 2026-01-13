@@ -139,7 +139,7 @@ function getCache(): Map<string, CacheEntry> {
 }
 
 /**
- * 获取翻译缓存
+ * 获取翻译缓存（优化版：更新访问时间，实现LRU）
  */
 export function getTranslationCache(
   text: string,
@@ -153,6 +153,9 @@ export function getTranslationCache(
   if (entry) {
     const now = Date.now();
     if (now - entry.timestamp < CACHE_EXPIRY_MS) {
+      // 更新访问时间（LRU策略：最近使用的条目保留）
+      entry.timestamp = now;
+      cache.set(key, entry);
       return entry.translated;
     } else {
       // 过期，删除
@@ -164,7 +167,7 @@ export function getTranslationCache(
 }
 
 /**
- * 设置翻译缓存
+ * 设置翻译缓存（优化版：LRU淘汰策略）
  */
 export function setTranslationCache(
   text: string,
@@ -175,6 +178,25 @@ export function setTranslationCache(
   const cache = getCache();
   const key = generateCacheKey(text, targetLang, sourceLang);
   
+  // 如果缓存已满，删除最旧的条目（LRU策略）
+  if (cache.size >= MAX_CACHE_SIZE && !cache.has(key)) {
+    // 找到最旧的条目
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+    
+    for (const [k, entry] of cache.entries()) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = k;
+      }
+    }
+    
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+  
+  // 更新或添加缓存条目（更新访问时间）
   cache.set(key, {
     translated,
     timestamp: Date.now(),
@@ -183,8 +205,8 @@ export function setTranslationCache(
   });
   
   // 异步保存到 sessionStorage（避免阻塞）
-  if (cache.size % 10 === 0) {
-    // 每 10 个条目保存一次，减少 I/O
+  // 优化：减少保存频率，每20个条目保存一次
+  if (cache.size % 20 === 0) {
     saveCacheToStorage(cache);
   }
 }

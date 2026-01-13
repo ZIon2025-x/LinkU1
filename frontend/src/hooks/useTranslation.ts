@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { translateText, translateBatch } from '../api';
 import { getTranslationCache, setTranslationCache } from '../utils/translationCache';
+import { translationQueue } from '../utils/translationQueue';
 
 interface TranslationResult {
   translatedText: string;
@@ -57,15 +58,23 @@ export const useTranslation = (): UseTranslationReturn => {
       return pendingRequest;
     }
 
-    // 3. 创建新的翻译请求
+    // 3. 创建新的翻译请求（使用队列管理）
     const translationPromise = (async () => {
       setIsTranslating(true);
       setError(null);
       activeRequestsRef.current.add(requestKey);
 
       try {
-        const result = await translateText(trimmedText, targetLang, sourceLang);
-        const translated = result.translated_text || trimmedText;
+        // 使用队列管理器，限制并发请求
+        const translated = await translationQueue.enqueue(
+          trimmedText,
+          targetLang,
+          sourceLang,
+          async (text: string, tLang: string, sLang?: string) => {
+            const result = await translateText(text, tLang, sLang);
+            return result.translated_text || text;
+          }
+        );
         
         // 保存到本地缓存
         setTranslationCache(trimmedText, translated, targetLang, sourceLang);

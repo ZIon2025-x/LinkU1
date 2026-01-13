@@ -536,6 +536,16 @@ const Tasks: React.FC = () => {
         setPage(1);
       }
       
+      // 批量预加载任务翻译（优化性能）
+      if (tasksList.length > 0) {
+        const { loadTaskTranslationsBatch } = await import('../utils/taskTranslationBatch');
+        const taskIds = tasksList.map((t: any) => t.id);
+        loadTaskTranslationsBatch(taskIds, language, 'title').catch(err => {
+          // 静默失败，不影响主流程
+          console.debug('批量预加载任务翻译失败:', err);
+        });
+      }
+      
       // 记录用户浏览任务列表的行为
       if (user && !isLoadMore && currentPage === 1) {
         // 异步记录，不阻塞UI

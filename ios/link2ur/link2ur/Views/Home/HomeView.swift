@@ -1330,6 +1330,48 @@ struct RecommendedTasksSection: View {
         vm.loadTasksFromCache(status: "open")
         return vm
     }()
+    @EnvironmentObject var appState: AppState
+    @State private var interactionCancellables = Set<AnyCancellable>()
+    @State private var recordedViews: Set<Int> = []  // 已记录的查看交互（防重复）
+    
+    /// 记录推荐任务的查看交互
+    private func recordRecommendedTaskView(taskId: Int, position: Int) {
+        // 防重复：同一个任务只记录一次查看
+        guard !recordedViews.contains(taskId) else { return }
+        recordedViews.insert(taskId)
+        
+        guard appState.isAuthenticated else { return }
+        
+        // 异步非阻塞方式记录交互
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            
+            let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
+            let metadata: [String: Any] = [
+                "source": "home_recommended",
+                "list_position": position
+            ]
+            
+            APIService.shared.recordTaskInteraction(
+                taskId: taskId,
+                interactionType: "view",
+                deviceType: deviceType,
+                isRecommended: true,
+                metadata: metadata
+            )
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("记录推荐任务查看失败: \(error.localizedDescription)", category: .api)
+                    }
+                },
+                receiveValue: { _ in
+                    Logger.debug("已记录推荐任务查看: taskId=\(taskId), position=\(position)", category: .api)
+                }
+            )
+            .store(in: &self.interactionCancellables)
+        }
+    }
     
     var body: some View {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -1371,14 +1413,20 @@ struct RecommendedTasksSection: View {
                     HStack(spacing: AppSpacing.md) {
                         // 性能优化：缓存 prefix 结果，避免重复计算，并确保稳定的 id
                         let displayedTasks = Array(viewModel.tasks.prefix(10))
-                        ForEach(displayedTasks, id: \.id) { task in
+                        ForEach(Array(displayedTasks.enumerated()), id: \.element.id) { index, task in
                             NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                TaskCard(task: task)
+                                TaskCard(task: task, isRecommended: task.isRecommended == true)
                                     .frame(width: 200)
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .drawingGroup() // 优化复杂视图的渲染性能
                             .id(task.id) // 确保稳定的视图标识
+                            .onAppear {
+                                // 记录推荐任务的查看交互（用于推荐系统优化）
+                                if task.isRecommended == true {
+                                    recordRecommendedTaskView(taskId: task.id, position: index)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
@@ -1387,14 +1435,21 @@ struct RecommendedTasksSection: View {
             }
         }
         .task {
-            // 使用 task 替代 onAppear，避免重复加载
-            // 如果初始化时已从缓存加载了数据，只需要在后台刷新
-            // 如果还没有数据，才需要加载
+            // 使用推荐 API 加载推荐任务
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                viewModel.loadTasks(status: "open")
+                viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid")
             } else if !viewModel.tasks.isEmpty {
                 // 已经有缓存数据，在后台静默刷新（不显示加载状态）
-                viewModel.loadTasks(status: "open", forceRefresh: false)
+                viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: false)
+            }
+        }
+        // 监听任务更新通知，实时刷新推荐任务
+        .onReceive(NotificationCenter.default.publisher(for: .taskUpdated)) { _ in
+            // 用户交互后，延迟刷新推荐任务（避免频繁请求）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                if !viewModel.isLoading {
+                    viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: false)
+                }
             }
         }
     }

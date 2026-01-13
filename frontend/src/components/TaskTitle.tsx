@@ -9,6 +9,7 @@ interface TaskTitleProps {
   style?: React.CSSProperties;
   showOriginalButton?: boolean;
   autoTranslate?: boolean;
+  taskId?: number;  // 任务ID（可选，如果提供则使用任务翻译持久化）
 }
 
 /**
@@ -20,13 +21,16 @@ const TaskTitle: React.FC<TaskTitleProps> = ({
   className,
   style,
   showOriginalButton = false,  // 默认不显示按钮，任务卡片上不需要
-  autoTranslate = true  // 自动翻译，但会检测文本语言，只在需要时翻译
+  autoTranslate = true,  // 自动翻译，但会检测文本语言，只在需要时翻译
+  taskId  // 任务ID（可选，如果提供则使用任务翻译持久化）
 }) => {
   const { t } = useLanguage();
   const { translatedText, isTranslating, showOriginal, toggleOriginal } = useAutoTranslate(
     title,
     language,
-    autoTranslate
+    autoTranslate,
+    taskId,  // 传递 taskId
+    'title'  // 字段类型为 title
   );
 
   // 显示的文字：如果有翻译且不显示原文，则显示翻译；否则显示原文

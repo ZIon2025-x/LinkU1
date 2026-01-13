@@ -185,6 +185,29 @@ class Config:
     BASE_URL = os.getenv("BASE_URL", "https://api.link2ur.com")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
     
+    # 翻译服务配置
+    # 翻译服务优先级（用逗号分隔，按优先级排序）
+    # 可选值: google_cloud, google, mymemory, baidu, youdao, deepl, microsoft
+    # google_cloud: Google Cloud Translation API（官方API，每月前50万字符免费）
+    # google: deep-translator的Google翻译（免费但可能有限制）
+    TRANSLATION_SERVICES = os.getenv("TRANSLATION_SERVICES", "google_cloud,google,mymemory").split(",")
+    
+    # Google Cloud Translation API配置（官方API，推荐使用）
+    # 方式1: 使用API密钥（简单）
+    GOOGLE_CLOUD_TRANSLATE_API_KEY = os.getenv("GOOGLE_CLOUD_TRANSLATE_API_KEY", "")
+    # 方式2: 使用服务账号JSON文件路径（更安全，推荐生产环境）
+    GOOGLE_CLOUD_TRANSLATE_CREDENTIALS_PATH = os.getenv("GOOGLE_CLOUD_TRANSLATE_CREDENTIALS_PATH", "")
+    # 方式3: 使用环境变量GOOGLE_APPLICATION_CREDENTIALS（Google Cloud默认方式）
+    # 如果设置了GOOGLE_APPLICATION_CREDENTIALS环境变量，会自动使用
+    
+    # 其他翻译服务API密钥（如果需要）
+    BAIDU_TRANSLATE_APPID = os.getenv("BAIDU_TRANSLATE_APPID", "")
+    BAIDU_TRANSLATE_SECRET = os.getenv("BAIDU_TRANSLATE_SECRET", "")
+    YOUDAO_TRANSLATE_APPID = os.getenv("YOUDAO_TRANSLATE_APPID", "")
+    YOUDAO_TRANSLATE_SECRET = os.getenv("YOUDAO_TRANSLATE_SECRET", "")
+    DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
+    MICROSOFT_TRANSLATE_KEY = os.getenv("MICROSOFT_TRANSLATE_KEY", "")
+    
     # 安全配置
     SECURITY_HEADERS = {
         "X-Content-Type-Options": "nosniff",

@@ -936,7 +936,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [t]);
 
-  // P0 优化：翻译标题 - 使用 useCallback 和 useTransition
+  // P0 优化：翻译标题 - 使用任务翻译API，保存到数据库供所有用户共享
   const handleTranslateTitle = useCallback(async () => {
     if (!task || !task.title) {
       return;
@@ -951,7 +951,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setIsTranslatingTitle(true);
     
     // P0 优化：使用 startTransition 包装非关键操作
-    startTransition(() => {
+    startTransition(async () => {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.title);
       // 如果文本语言和界面语言相同，不需要翻译
@@ -962,20 +962,35 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       }
       // 目标语言就是当前界面语言
       const targetLang = language;
-      translate(task.title, targetLang, textLang)
-        .then(translated => {
-          setTranslatedTitle(translated);
-        })
-        .catch((error: any) => {
-          alert('翻译失败: ' + getErrorMessage(error));
-        })
-        .finally(() => {
+      
+      try {
+        // 先尝试从数据库获取已有翻译
+        const { getTaskTranslation, translateAndSaveTask } = await import('../api');
+        const existing = await getTaskTranslation(task.id, 'title', targetLang);
+        if (existing.exists && existing.translated_text) {
+          setTranslatedTitle(existing.translated_text);
           setIsTranslatingTitle(false);
-        });
+          return;
+        }
+        
+        // 如果不存在，翻译并保存
+        const result = await translateAndSaveTask(task.id, 'title', targetLang, textLang);
+        setTranslatedTitle(result.translated_text);
+      } catch (apiError) {
+        // 如果新API失败，降级到旧API
+        try {
+          const translated = await translate(task.title, targetLang, textLang);
+          setTranslatedTitle(translated);
+        } catch (error: any) {
+          alert('翻译失败: ' + getErrorMessage(error));
+        }
+      } finally {
+        setIsTranslatingTitle(false);
+      }
     });
   }, [task, translatedTitle, language, translate]);
 
-  // P0 优化：翻译描述 - 使用 useCallback 和 useTransition
+  // P0 优化：翻译描述 - 使用任务翻译API，保存到数据库供所有用户共享
   const handleTranslateDescription = useCallback(async () => {
     if (!task || !task.description) {
       return;
@@ -990,7 +1005,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setIsTranslatingDescription(true);
     
     // P0 优化：使用 startTransition 包装非关键操作
-    startTransition(() => {
+    startTransition(async () => {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.description);
       // 如果文本语言和界面语言相同，不需要翻译
@@ -1001,16 +1016,31 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       }
       // 目标语言就是当前界面语言
       const targetLang = language;
-      translate(task.description, targetLang, textLang)
-        .then(translated => {
-          setTranslatedDescription(translated);
-        })
-        .catch((error: any) => {
-          alert('翻译失败: ' + getErrorMessage(error));
-        })
-        .finally(() => {
+      
+      try {
+        // 先尝试从数据库获取已有翻译
+        const { getTaskTranslation, translateAndSaveTask } = await import('../api');
+        const existing = await getTaskTranslation(task.id, 'description', targetLang);
+        if (existing.exists && existing.translated_text) {
+          setTranslatedDescription(existing.translated_text);
           setIsTranslatingDescription(false);
-        });
+          return;
+        }
+        
+        // 如果不存在，翻译并保存
+        const result = await translateAndSaveTask(task.id, 'description', targetLang, textLang);
+        setTranslatedDescription(result.translated_text);
+      } catch (apiError) {
+        // 如果新API失败，降级到旧API
+        try {
+          const translated = await translate(task.description, targetLang, textLang);
+          setTranslatedDescription(translated);
+        } catch (error: any) {
+          alert('翻译失败: ' + getErrorMessage(error));
+        }
+      } finally {
+        setIsTranslatingDescription(false);
+      }
     });
   }, [task, translatedDescription, language, translate]);
 

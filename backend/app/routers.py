@@ -9744,6 +9744,96 @@ async def translate_text(
                 "cached": False
             }
         
+        # 长文本优化：如果文本超过5000字符，分段翻译（提高翻译质量和速度）
+        MAX_TEXT_LENGTH = 5000
+        if len(text) > MAX_TEXT_LENGTH:
+            # 使用翻译管理器（支持多个服务自动降级）
+            from app.translation_manager import get_translation_manager
+            
+            # 按句子分段（优先按句号、问号、感叹号分段）
+            import re
+            sentences = re.split(r'([.!?。！？]\s*)', text)
+            # 重新组合句子，保持标点
+            segments = []
+            current_segment = ""
+            
+            for i in range(0, len(sentences), 2):
+                sentence = sentences[i] + (sentences[i+1] if i+1 < len(sentences) else "")
+                if len(current_segment) + len(sentence) > MAX_TEXT_LENGTH and current_segment:
+                    segments.append(current_segment)
+                    current_segment = sentence
+                else:
+                    current_segment += sentence
+            
+            if current_segment:
+                segments.append(current_segment)
+            
+            # 如果分段后仍然有超长段，按字符数强制分段
+            final_segments = []
+            for seg in segments:
+                if len(seg) > MAX_TEXT_LENGTH:
+                    # 按字符数强制分段
+                    for i in range(0, len(seg), MAX_TEXT_LENGTH):
+                        final_segments.append(seg[i:i+MAX_TEXT_LENGTH])
+                else:
+                    final_segments.append(seg)
+            
+            # 检查分段后的缓存
+            segment_cache_key = f"translation_segments:{hashlib.md5(f'{text}|{source_lang}|{target_lang}'.encode('utf-8')).hexdigest()}"
+            if redis_cache and redis_cache.enabled:
+                cached_segments = redis_cache.get(segment_cache_key)
+                if cached_segments and isinstance(cached_segments, list) and len(cached_segments) == len(final_segments):
+                    logger.debug(f"长文本分段翻译缓存命中: {len(final_segments)}段")
+                    return {
+                        "translated_text": "".join(cached_segments),
+                        "source_language": source_lang if source_lang != 'auto' else 'auto',
+                        "target_language": target_lang,
+                        "original_text": text,
+                        "cached": True
+                    }
+            
+            # 分段翻译（使用翻译管理器）
+            from app.translation_manager import get_translation_manager
+            translation_manager = get_translation_manager()
+            
+            translated_segments = []
+            for i, segment in enumerate(final_segments):
+                try:
+                    # 使用翻译管理器，自动降级
+                    translated_seg = translation_manager.translate(
+                        text=segment,
+                        target_lang=target_lang,
+                        source_lang=source_lang,
+                        max_retries=2
+                    )
+                    
+                    # 如果翻译失败，使用原文
+                    translated_segments.append(translated_seg or segment)
+                    
+                    # 段之间添加小延迟，避免触发限流
+                    if i < len(final_segments) - 1:
+                        await asyncio.sleep(0.1)
+                except Exception as e:
+                    logger.error(f"分段翻译异常: {e}")
+                    translated_segments.append(segment)
+            
+            translated_text = "".join(translated_segments)
+            
+            # 缓存分段翻译结果
+            if redis_cache and redis_cache.enabled:
+                try:
+                    redis_cache.set(segment_cache_key, translated_segments, ttl=7 * 24 * 60 * 60)
+                except Exception as e:
+                    logger.warning(f"保存分段翻译缓存失败: {e}")
+            
+            return {
+                "translated_text": translated_text,
+                "source_language": source_lang if source_lang != 'auto' else 'auto',
+                "target_language": target_lang,
+                "original_text": text,
+                "cached": False
+            }
+        
         # 生成缓存键（使用文本内容、源语言、目标语言）
         cache_key_data = f"{text}|{source_lang}|{target_lang}"
         cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
@@ -9794,25 +9884,22 @@ async def translate_text(
                 logger.warning(f"获取翻译锁失败: {e}")
         
         try:
-            # 3. 执行翻译
-            try:
-                from deep_translator import GoogleTranslator
-            except ImportError:
-                logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
-                raise HTTPException(
-                    status_code=503, 
-                    detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
-                )
+            # 3. 执行翻译（使用翻译管理器，支持多个服务自动降级）
+            from app.translation_manager import get_translation_manager
             
             logger.debug(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
             
-            # 使用GoogleTranslator进行翻译
-            if source_lang != 'auto':
-                translator = GoogleTranslator(source=source_lang, target=target_lang)
-            else:
-                translator = GoogleTranslator(target=target_lang)
+            translation_manager = get_translation_manager()
+            translated_text = translation_manager.translate(
+                text=text,
+                target_lang=target_lang,
+                source_lang=source_lang,
+                max_retries=3
+            )
             
-            translated_text = translator.translate(text)
+            if translated_text is None:
+                raise Exception("所有翻译服务都失败，无法翻译文本")
+            
             logger.debug(f"翻译完成: {translated_text[:50]}...")
             
             # 检测源语言（如果未提供）
@@ -9901,15 +9988,6 @@ async def translate_batch(
                 "target_language": target_language
             }
         
-        try:
-            from deep_translator import GoogleTranslator
-        except ImportError:
-            logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
-            raise HTTPException(
-                status_code=503, 
-                detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
-            )
-        
         # 转换语言代码格式
         lang_map = {
             'zh': 'zh-CN',
@@ -9927,11 +10005,9 @@ async def translate_batch(
                 "target_language": target_lang
             }
         
-        # 创建translator实例（复用，提高效率）
-        if source_lang != 'auto':
-            translator = GoogleTranslator(source=source_lang, target=target_lang)
-        else:
-            translator = GoogleTranslator(target=target_lang)
+        # 使用翻译管理器（支持多个服务自动降级）
+        from app.translation_manager import get_translation_manager
+        translation_manager = get_translation_manager()
         
         # 批量处理：先检查缓存，再翻译未缓存的文本
         translations_map = {}  # 存储翻译结果
@@ -9955,36 +10031,55 @@ async def translate_batch(
                 texts_to_translate.append(text)
                 text_indices.append(i)
         
-        # 批量翻译未缓存的文本
+        # 批量翻译未缓存的文本（分批处理，每批最多50个，避免API限制）
         if texts_to_translate:
             logger.debug(f"批量翻译: {len(texts_to_translate)}个文本需要翻译")
             
-            for text in texts_to_translate:
-                try:
-                    # 生成缓存键
-                    cache_key_data = f"{text}|{source_lang}|{target_lang}"
-                    cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
-                    cache_key = f"translation:{cache_key_hash}"
-                    
-                    # 执行翻译（复用translator实例）
-                    translated_text = translator.translate(text)
-                    translations_map[text] = translated_text
-                    
-                    # 保存到缓存
-                    if redis_cache and redis_cache.enabled:
-                        try:
-                            cache_data = {
-                                "translated_text": translated_text,
-                                "source_language": source_lang if source_lang != 'auto' else 'auto',
-                                "target_language": target_lang
-                            }
-                            redis_cache.set(cache_key, cache_data, ttl=7 * 24 * 60 * 60)  # 7天
-                        except Exception as e:
-                            logger.warning(f"保存翻译缓存失败: {e}")
+            batch_size = 50  # 每批最多50个文本
+            for batch_start in range(0, len(texts_to_translate), batch_size):
+                batch_texts = texts_to_translate[batch_start:batch_start + batch_size]
+                
+                for text in batch_texts:
+                    try:
+                        # 生成缓存键
+                        cache_key_data = f"{text}|{source_lang}|{target_lang}"
+                        cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
+                        cache_key = f"translation:{cache_key_hash}"
+                        
+                        # 使用翻译管理器执行翻译（自动降级）
+                        translated_text = translation_manager.translate(
+                            text=text,
+                            target_lang=target_lang,
+                            source_lang=source_lang,
+                            max_retries=2  # 批量翻译时减少重试次数
+                        )
+                        
+                        if translated_text:
+                            translations_map[text] = translated_text
                             
-                except Exception as e:
-                    logger.error(f"翻译文本失败: {text[:50]}... - {e}")
-                    translations_map[text] = text  # 翻译失败时返回原文
+                            # 保存到缓存
+                            if redis_cache and redis_cache.enabled:
+                                try:
+                                    cache_data = {
+                                        "translated_text": translated_text,
+                                        "source_language": source_lang if source_lang != 'auto' else 'auto',
+                                        "target_language": target_lang
+                                    }
+                                    redis_cache.set(cache_key, cache_data, ttl=7 * 24 * 60 * 60)  # 7天
+                                except Exception as e:
+                                    logger.warning(f"保存翻译缓存失败: {e}")
+                        else:
+                            # 翻译失败时返回原文
+                            logger.error(f"翻译文本失败: {text[:50]}...")
+                            translations_map[text] = text
+                        
+                        # 批量处理时添加小延迟，避免API限流
+                        if len(batch_texts) > 10:
+                            await asyncio.sleep(0.1)
+                            
+                    except Exception as e:
+                        logger.error(f"翻译文本失败: {text[:50]}... - {e}")
+                        translations_map[text] = text  # 翻译失败时返回原文
         
         # 构建返回结果（保持原始顺序和重复）
         result_translations = []
@@ -10013,6 +10108,501 @@ async def translate_batch(
     except Exception as e:
         logger.error(f"批量翻译失败: {e}")
         raise HTTPException(status_code=500, detail=f"批量翻译失败: {str(e)}")
+
+
+# 任务翻译API - 获取或创建任务翻译
+@router.get("/translate/task/{task_id}")
+def get_task_translation(
+    task_id: int,
+    field_type: str = Query(..., description="字段类型：title 或 description"),
+    target_language: str = Query(..., description="目标语言代码"),
+    db: Session = Depends(get_db),
+):
+    """
+    获取任务翻译（如果存在）
+    
+    参数:
+    - task_id: 任务ID
+    - field_type: 字段类型（title 或 description）
+    - target_language: 目标语言代码
+    
+    返回:
+    - translated_text: 翻译后的文本（如果存在）
+    - exists: 是否存在翻译
+    """
+    try:
+        from app import crud
+        
+        # 验证字段类型
+        if field_type not in ['title', 'description']:
+            raise HTTPException(status_code=400, detail="field_type必须是'title'或'description'")
+        
+        # 检查任务是否存在
+        task = crud.get_task(db, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        
+        # 获取翻译
+        translation = crud.get_task_translation(db, task_id, field_type, target_language)
+        
+        if translation:
+            return {
+                "translated_text": translation.translated_text,
+                "exists": True,
+                "source_language": translation.source_language,
+                "target_language": translation.target_language
+            }
+        else:
+            return {
+                "translated_text": None,
+                "exists": False
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务翻译失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取任务翻译失败: {str(e)}")
+
+
+@router.post("/translate/task/{task_id}")
+async def translate_and_save_task(
+    task_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    翻译任务内容并保存到数据库（供所有用户共享使用）
+    
+    参数:
+    - task_id: 任务ID
+    - field_type: 字段类型（title 或 description）
+    - target_language: 目标语言代码
+    - source_language: 源语言代码（可选）
+    
+    返回:
+    - translated_text: 翻译后的文本
+    - saved: 是否保存到数据库
+    """
+    import hashlib
+    import asyncio
+    import time
+    from app import crud
+    from app.redis_cache import redis_cache
+    
+    try:
+        # 获取请求体
+        body = await request.json()
+        
+        field_type = body.get('field_type')
+        target_language = body.get('target_language', 'en')
+        source_language = body.get('source_language')
+        
+        if not field_type:
+            raise HTTPException(status_code=400, detail="缺少field_type参数")
+        if field_type not in ['title', 'description']:
+            raise HTTPException(status_code=400, detail="field_type必须是'title'或'description'")
+        if not target_language:
+            raise HTTPException(status_code=400, detail="缺少target_language参数")
+        
+        # 检查任务是否存在
+        task = crud.get_task(db, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        
+        # 获取原始文本
+        if field_type == 'title':
+            original_text = task.title
+        else:
+            original_text = task.description
+        
+        if not original_text:
+            raise HTTPException(status_code=400, detail=f"任务的{field_type}为空")
+        
+        # 转换语言代码格式
+        lang_map = {
+            'zh': 'zh-CN',
+            'zh-cn': 'zh-CN',
+            'zh-tw': 'zh-TW',
+            'en': 'en'
+        }
+        target_lang = lang_map.get(target_language.lower(), target_language)
+        source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
+        
+        # 如果源语言和目标语言相同，直接返回原文
+        if source_lang != 'auto' and source_lang == target_lang:
+            return {
+                "translated_text": original_text,
+                "saved": False,
+                "source_language": source_lang,
+                "target_language": target_lang
+            }
+        
+        # 1. 先检查任务翻译专用缓存（优先级最高）
+        from app.utils.task_translation_cache import (
+            get_cached_task_translation,
+            cache_task_translation
+        )
+        
+        cached_translation = get_cached_task_translation(task_id, field_type, target_lang)
+        if cached_translation:
+            logger.debug(f"任务翻译缓存命中: task_id={task_id}, field={field_type}, lang={target_lang}")
+            return {
+                "translated_text": cached_translation.get("translated_text"),
+                "saved": True,
+                "source_language": cached_translation.get("source_language", source_lang),
+                "target_language": cached_translation.get("target_language", target_lang),
+                "from_cache": True
+            }
+        
+        # 2. 检查数据库中是否已有翻译
+        existing_translation = crud.get_task_translation(db, task_id, field_type, target_lang, validate=True)
+        if existing_translation:
+            logger.debug(f"任务翻译数据库命中: task_id={task_id}, field={field_type}, lang={target_lang}")
+            # 缓存到Redis
+            cache_task_translation(
+                task_id, field_type, target_lang,
+                existing_translation.translated_text,
+                existing_translation.source_language
+            )
+            return {
+                "translated_text": existing_translation.translated_text,
+                "saved": True,
+                "source_language": existing_translation.source_language,
+                "target_language": existing_translation.target_language,
+                "from_cache": False
+            }
+        
+        # 3. 检查通用翻译缓存（基于文本内容）
+        cache_key_data = f"{original_text}|{source_lang}|{target_lang}"
+        cache_key_hash = hashlib.md5(cache_key_data.encode('utf-8')).hexdigest()
+        cache_key = f"translation:{cache_key_hash}"
+        
+        cached_result = None
+        if redis_cache and redis_cache.enabled:
+            cached_result = redis_cache.get(cache_key)
+        
+        if cached_result:
+            translated_text = cached_result.get("translated_text")
+            # 保存到数据库
+            crud.create_or_update_task_translation(
+                db, task_id, field_type, original_text, translated_text, 
+                cached_result.get("source_language", source_lang), target_lang
+            )
+            # 缓存到任务翻译专用缓存
+            cache_task_translation(
+                task_id, field_type, target_lang,
+                translated_text,
+                cached_result.get("source_language", source_lang)
+            )
+            logger.debug(f"任务翻译保存到数据库: task_id={task_id}, field={field_type}")
+            return {
+                "translated_text": translated_text,
+                "saved": True,
+                "source_language": cached_result.get("source_language", source_lang),
+                "target_language": target_lang,
+                "from_cache": True
+            }
+        
+        # 3. 执行翻译（使用翻译管理器，支持多个服务自动降级）
+        from app.translation_manager import get_translation_manager
+        
+        logger.debug(f"开始翻译任务内容: task_id={task_id}, field={field_type}, target={target_lang}")
+        
+        translation_manager = get_translation_manager()
+        with TranslationTimer('task_translation', source_lang, target_lang, cached=False):
+            translated_text = translation_manager.translate(
+                text=original_text,
+                target_lang=target_lang,
+                source_lang=source_lang,
+                max_retries=3
+            )
+        
+        if translated_text is None:
+            raise Exception("所有翻译服务都失败，无法翻译文本")
+        
+        logger.debug(f"翻译完成: {translated_text[:50]}...")
+        
+        detected_source = source_lang if source_lang != 'auto' else 'auto'
+        
+        # 4. 保存到数据库
+        crud.create_or_update_task_translation(
+            db, task_id, field_type, original_text, translated_text, 
+            detected_source, target_lang
+        )
+        logger.debug(f"任务翻译已保存到数据库: task_id={task_id}, field={field_type}")
+        
+        # 5. 保存到缓存（任务翻译专用缓存 + 通用翻译缓存）
+        # 5.1 任务翻译专用缓存
+        cache_task_translation(
+            task_id, field_type, target_lang,
+            translated_text, detected_source
+        )
+        
+        # 5.2 通用翻译缓存（基于文本内容）
+        if redis_cache and redis_cache.enabled:
+            try:
+                cache_data = {
+                    "translated_text": translated_text,
+                    "source_language": detected_source,
+                    "target_language": target_lang
+                }
+                redis_cache.set(cache_key, cache_data, ttl=7 * 24 * 60 * 60)  # 7天
+            except Exception as e:
+                logger.warning(f"保存通用翻译缓存失败: {e}")
+        
+        return {
+            "translated_text": translated_text,
+            "saved": True,
+            "source_language": detected_source,
+            "target_language": target_lang,
+            "from_cache": False
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"翻译并保存任务失败: {e}")
+        raise HTTPException(status_code=500, detail=f"翻译并保存任务失败: {str(e)}")
+
+
+# 批量获取任务翻译API
+@router.post("/translate/tasks/batch")
+async def get_task_translations_batch(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    批量获取任务翻译（用于优化任务列表加载）
+    
+    参数:
+    - task_ids: 任务ID列表
+    - field_type: 字段类型（title 或 description）
+    - target_language: 目标语言代码
+    
+    返回:
+    - translations: 翻译结果字典 {task_id: translated_text}
+    """
+    try:
+        from app import crud
+        
+        body = await request.json()
+        task_ids = body.get('task_ids', [])
+        field_type = body.get('field_type')
+        target_language = body.get('target_language', 'en')
+        
+        if not task_ids:
+            return {"translations": {}}
+        
+        if not field_type:
+            raise HTTPException(status_code=400, detail="缺少field_type参数")
+        if field_type not in ['title', 'description']:
+            raise HTTPException(status_code=400, detail="field_type必须是'title'或'description'")
+        if not target_language:
+            raise HTTPException(status_code=400, detail="缺少target_language参数")
+        
+        # 转换语言代码格式
+        lang_map = {
+            'zh': 'zh-CN',
+            'zh-cn': 'zh-CN',
+            'zh-tw': 'zh-TW',
+            'en': 'en'
+        }
+        target_lang = lang_map.get(target_language.lower(), target_language)
+        
+        # 1. 先检查批量查询缓存
+        from app.utils.task_translation_cache import (
+            get_cached_batch_translations,
+            cache_batch_translations
+        )
+        
+        cached_batch = get_cached_batch_translations(task_ids, field_type, target_lang)
+        if cached_batch:
+            logger.debug(f"批量翻译查询缓存命中: {len(cached_batch)} 条")
+            return {
+                "translations": cached_batch,
+                "target_language": target_lang,
+                "from_cache": True
+            }
+        
+        # 2. 从数据库批量获取翻译（优化：分批查询，限制最大数量）
+        # 限制最大查询数量，避免性能问题
+        MAX_BATCH_SIZE = 1000
+        if len(task_ids) > MAX_BATCH_SIZE:
+            logger.warning(f"批量查询任务翻译数量过大: {len(task_ids)}，限制为{MAX_BATCH_SIZE}")
+            task_ids = task_ids[:MAX_BATCH_SIZE]
+        
+        translations_dict = crud.get_task_translations_batch(db, task_ids, field_type, target_lang)
+        
+        # 3. 转换为响应格式并填充缓存
+        result = {}
+        for task_id, translation in translations_dict.items():
+            result[task_id] = {
+                "translated_text": translation.translated_text,
+                "source_language": translation.source_language,
+                "target_language": translation.target_language
+            }
+        
+        # 4. 缓存批量查询结果
+        if result:
+            cache_batch_translations(task_ids, field_type, target_lang, result)
+        
+        logger.debug(f"批量获取任务翻译: 请求{len(task_ids)}个，返回{len(result)}个")
+        
+        return {
+            "translations": result,
+            "target_language": target_lang,
+            "from_cache": False
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批量获取任务翻译失败: {e}")
+        raise HTTPException(status_code=500, detail=f"批量获取任务翻译失败: {str(e)}")
+
+
+# 翻译性能指标API
+@router.get("/translate/metrics")
+def get_translation_metrics():
+    """
+    获取翻译性能指标
+    
+    返回:
+    - metrics: 性能指标摘要
+    - cache_stats: 缓存统计信息
+    """
+    try:
+        from app.utils.translation_metrics import get_metrics_summary
+        from app.utils.cache_eviction import get_cache_stats
+        
+        metrics = get_metrics_summary()
+        cache_stats = get_cache_stats()
+        
+        return {
+            "metrics": metrics,
+            "cache_stats": cache_stats,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"获取翻译性能指标失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取翻译性能指标失败: {str(e)}")
+
+
+# 翻译服务状态API
+@router.get("/translate/services/status")
+def get_translation_services_status():
+    """
+    获取翻译服务状态
+    
+    返回:
+    - available_services: 可用服务列表
+    - failed_services: 失败服务列表
+    - stats: 服务统计信息
+    """
+    try:
+        from app.translation_manager import get_translation_manager
+        
+        manager = get_translation_manager()
+        available = manager.get_available_services()
+        all_services = manager.get_all_services()
+        stats = manager.get_service_stats()
+        failed = [s.value for s in manager.failed_services]
+        
+        # 构建统计信息
+        stats_result = {}
+        for service_name in all_services:
+            # 找到对应的服务枚举
+            service_enum = None
+            for s, _ in manager.services:
+                if s.value == service_name:
+                    service_enum = s
+                    break
+            
+            if service_enum:
+                stats_result[service_name] = {
+                    "success": stats.get(service_enum, {}).get('success', 0),
+                    "failure": stats.get(service_enum, {}).get('failure', 0),
+                    "is_available": service_name in available
+                }
+        
+        return {
+            "available_services": available,
+            "failed_services": failed,
+            "all_services": all_services,
+            "stats": stats_result
+        }
+    except Exception as e:
+        logger.error(f"获取翻译服务状态失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取翻译服务状态失败: {str(e)}")
+
+
+# 重置翻译服务状态API
+@router.post("/translate/services/reset")
+def reset_translation_services(
+    service_name: Optional[str] = Query(None, description="要重置的服务名称，如果为空则重置所有")
+):
+    """
+    重置翻译服务失败记录
+    
+    参数:
+    - service_name: 要重置的服务名称（可选），如果为空则重置所有
+    
+    返回:
+    - success: 是否成功
+    - message: 消息
+    """
+    try:
+        from app.translation_manager import get_translation_manager, TranslationService
+        
+        manager = get_translation_manager()
+        
+        if service_name:
+            # 重置指定服务
+            try:
+                service = TranslationService(service_name.lower())
+                manager.reset_failed_service(service)
+                return {
+                    "success": True,
+                    "message": f"翻译服务 {service_name} 的失败记录已重置"
+                }
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"无效的服务名称: {service_name}")
+        else:
+            # 重置所有服务
+            manager.reset_failed_services()
+            return {
+                "success": True,
+                "message": "所有翻译服务失败记录已重置"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"重置翻译服务状态失败: {e}")
+        raise HTTPException(status_code=500, detail=f"重置翻译服务状态失败: {str(e)}")
+
+
+# 获取失败服务信息API
+@router.get("/translate/services/failed")
+def get_failed_services_info():
+    """
+    获取失败服务的详细信息
+    
+    返回:
+    - failed_services: 失败服务信息
+    """
+    try:
+        from app.translation_manager import get_translation_manager
+        
+        manager = get_translation_manager()
+        failed_info = manager.get_failed_services_info()
+        
+        return {
+            "failed_services": failed_info,
+            "count": len(failed_info)
+        }
+    except Exception as e:
+        logger.error(f"获取失败服务信息失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取失败服务信息失败: {str(e)}")
 
 
 @router.post("/admin/cleanup/completed-tasks")

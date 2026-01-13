@@ -130,6 +130,9 @@ class CleanupTasks:
             # 清理过期时间段（每天检查一次）
             await self._cleanup_expired_time_slots()
             
+            # 清理过期翻译（每天检查一次）
+            await self._cleanup_stale_task_translations()
+            
             # 自动生成未来时间段（每天检查一次）
             # ⚠️ 已禁用：不需要每天新增时间段服务的下一个时间段
             # await self._auto_generate_future_time_slots()
@@ -970,6 +973,36 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理过期时间段失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_stale_task_translations(self):
+        """清理过期的任务翻译（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_stale_task_translations:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理过期翻译：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from app.deps import get_sync_db
+            from app.crud import cleanup_stale_task_translations
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用清理函数（每批处理100条，避免一次性处理太多）
+                cleaned_count = cleanup_stale_task_translations(db, batch_size=100)
+                if cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 条过期翻译")
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"清理过期翻译失败: {e}")
         finally:
             # 释放锁
             release_redis_distributed_lock(lock_key)

@@ -2058,6 +2058,50 @@ export const translateBatch = async (
   return res.data;
 };
 
+// 任务翻译API - 获取任务翻译（如果存在）
+export const getTaskTranslation = async (
+  taskId: number,
+  fieldType: 'title' | 'description',
+  targetLanguage: string
+) => {
+  const res = await api.get(`/api/translate/task/${taskId}`, {
+    params: {
+      field_type: fieldType,
+      target_language: targetLanguage
+    }
+  });
+  return res.data;
+};
+
+// 任务翻译API - 翻译并保存任务内容
+export const translateAndSaveTask = async (
+  taskId: number,
+  fieldType: 'title' | 'description',
+  targetLanguage: string,
+  sourceLanguage?: string
+) => {
+  const res = await api.post(`/api/translate/task/${taskId}`, {
+    field_type: fieldType,
+    target_language: targetLanguage,
+    ...(sourceLanguage && { source_language: sourceLanguage })
+  });
+  return res.data;
+};
+
+// 任务翻译API - 批量获取任务翻译
+export const getTaskTranslationsBatch = async (
+  taskIds: number[],
+  fieldType: 'title' | 'description',
+  targetLanguage: string
+) => {
+  const res = await api.post('/api/translate/tasks/batch', {
+    task_ids: taskIds,
+    field_type: fieldType,
+    target_language: targetLanguage
+  });
+  return res.data;
+};
+
 // ==================== 邀请码管理 API ====================
 
 // 创建邀请码
