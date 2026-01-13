@@ -1,6 +1,6 @@
 import Foundation
 
-public struct User: Codable, Identifiable {
+public struct User: Codable, Identifiable, Equatable {
     public let id: String  // 后端返回的是字符串（8位数字）
     public let name: String
     public let email: String?  // 改为可选，因为某些场景（如排行榜的 applicant）可能不包含 email

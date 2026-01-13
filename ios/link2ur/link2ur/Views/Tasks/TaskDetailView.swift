@@ -425,12 +425,12 @@ struct TaskDetailView: View {
         }
         
         // 异步非阻塞方式记录交互（不等待结果，不影响用户体验）
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            
+        // 注意：TaskDetailView 是 struct，不需要 weak 引用
+        let currentTaskId = taskId
+        DispatchQueue.global(qos: .utility).async {
             // 调用 API 记录交互
-            APIService.shared.recordTaskInteraction(
-                taskId: self.taskId,
+            let cancellable = APIService.shared.recordTaskInteraction(
+                taskId: currentTaskId,
                 interactionType: type,
                 deviceType: deviceType,
                 isRecommended: isRecommended,
@@ -443,10 +443,13 @@ struct TaskDetailView: View {
                     }
                 },
                 receiveValue: { _ in
-                    Logger.debug("已记录任务交互: type=\(type), taskId=\(self.taskId)", category: .api)
+                    Logger.debug("已记录任务交互: type=\(type), taskId=\(currentTaskId)", category: .api)
                 }
             )
-            .store(in: &self.interactionCancellables)
+            // 在主线程上存储 cancellable
+            DispatchQueue.main.async {
+                interactionCancellables.insert(cancellable)
+            }
         }
     }
     

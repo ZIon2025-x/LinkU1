@@ -434,7 +434,9 @@ class TaskRecommendationEngine:
                 Task.description.ilike(f"%{keyword_clean}%")
             ))
         
-        tasks = query.all()
+        # 限制最大任务数量，防止内存溢出（最多加载500个任务）
+        MAX_TASKS = 500
+        tasks = query.limit(MAX_TASKS).all()
         
         scored_tasks = []
         for task in tasks:
@@ -1085,13 +1087,13 @@ class TaskRecommendationEngine:
         from app.models import UserTaskInteraction
         from sqlalchemy import func
         
-        # 获取所有有交互记录的用户ID
+        # 获取所有有交互记录的用户ID（限制最多100个，防止内存溢出）
         active_user_ids = self.db.query(
             func.distinct(UserTaskInteraction.user_id)
         ).filter(
             UserTaskInteraction.user_id != user_id,
             UserTaskInteraction.task_id.in_(list(user_interactions))
-        ).all()
+        ).limit(100).all()
         
         if not active_user_ids:
             return []
@@ -1120,10 +1122,11 @@ class TaskRecommendationEngine:
     
     def _get_user_liked_tasks(self, user_id: str) -> set:
         """获取用户喜欢的任务（接受或完成的任务）"""
+        # 限制最多1000条历史记录，防止内存溢出
         history = self.db.query(TaskHistory).filter(
             TaskHistory.user_id == user_id,
             TaskHistory.action.in_(["accepted", "completed"])
-        ).all()
+        ).order_by(desc(TaskHistory.timestamp)).limit(1000).all()
         return {h.task_id for h in history}
     
     def _has_enough_data(self, user_id: str) -> bool:

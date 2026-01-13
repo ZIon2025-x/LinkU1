@@ -11,9 +11,9 @@ public final class ImageCache: ObservableObject {
     private let cacheDirectory: URL
     
     private init() {
-        // 配置内存缓存（优化：减少内存占用）
-        cache.countLimit = 50  // 减少缓存数量
-        cache.totalCostLimit = 30 * 1024 * 1024 // 30MB（减少内存占用）
+        // 配置内存缓存（优化：减少内存占用，防止内存溢出）
+        cache.countLimit = 30  // 进一步减少缓存数量（从50降到30）
+        cache.totalCostLimit = 20 * 1024 * 1024 // 20MB（从30MB降到20MB，防止内存溢出）
         
         // 创建磁盘缓存目录
         let urls = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)
@@ -22,6 +22,24 @@ public final class ImageCache: ObservableObject {
         if !fileManager.fileExists(atPath: cacheDirectory.path) {
             try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         }
+        
+        // 监听内存警告
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMemoryWarning),
+            name: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func handleMemoryWarning() {
+        // 收到内存警告时，清理部分缓存
+        Logger.warning("收到内存警告，清理图片缓存", category: .general)
+        cache.removeAllObjects()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - 图片加载
@@ -51,9 +69,14 @@ public final class ImageCache: ObservableObject {
             .subscribe(on: DispatchQueue.global(qos: .userInitiated)) // 在后台线程处理网络请求
             .map { data, _ -> UIImage? in
                 // 优化：在后台线程解码图片
+                // 检查数据大小，防止加载过大的图片（超过5MB的图片数据）
+                if data.count > 5 * 1024 * 1024 {
+                    Logger.warning("图片数据过大: \(data.count) bytes，跳过加载", category: .general)
+                    return nil
+                }
                 guard let image = UIImage(data: data) else { return nil }
-                // 优化图片大小（减少内存占用）- 限制最大尺寸为 1200x1200（优化性能）
-                return self.optimizeImageSize(image, maxSize: CGSize(width: 1200, height: 1200))
+                // 优化图片大小（减少内存占用）- 限制最大尺寸为 800x800（从1200降到800，进一步减少内存占用）
+                return self.optimizeImageSize(image, maxSize: CGSize(width: 800, height: 800))
             }
             .catch { _ in Just(nil) }
             .handleEvents(receiveOutput: { [weak self] image in
@@ -88,7 +111,23 @@ public final class ImageCache: ObservableObject {
     private func loadFromDisk(url: String) -> UIImage? {
         let fileName = url.md5Hash
         let fileURL = cacheDirectory.appendingPathComponent(fileName)
+        
+        // 检查文件大小，防止加载过大的图片
+        guard let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+              let fileSize = attributes[.size] as? Int64,
+              fileSize <= 5 * 1024 * 1024 else { // 限制5MB
+            Logger.warning("磁盘缓存图片过大: \(fileURL.path)，跳过加载", category: .general)
+            return nil
+        }
+        
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        
+        // 再次检查数据大小
+        if data.count > 5 * 1024 * 1024 {
+            Logger.warning("磁盘缓存图片数据过大: \(data.count) bytes，跳过加载", category: .general)
+            return nil
+        }
+        
         return UIImage(data: data)
     }
     

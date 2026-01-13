@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-struct Task: Codable, Identifiable {
+struct Task: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
     let description: String

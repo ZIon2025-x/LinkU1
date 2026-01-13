@@ -7,7 +7,7 @@ public class MemoryMonitor {
     
     @Published public var currentMemoryUsage: Int64 = 0
     @Published public var peakMemoryUsage: Int64 = 0
-    @Published public var warningThreshold: Int64 = 200 * 1024 * 1024 // 200MB
+    @Published public var warningThreshold: Int64 = 150 * 1024 * 1024 // 150MB（降低阈值，更早触发警告）
     
     private var monitoringTimer: Timer?
     private let updateInterval: TimeInterval = 5.0
@@ -55,9 +55,13 @@ public class MemoryMonitor {
                 peakMemoryUsage = usedMemory
             }
             
-            // 内存警告
+            // 内存警告和自动清理
             if usedMemory > warningThreshold {
-                Logger.warning("内存使用较高: \(formatBytes(usedMemory))", category: .general)
+                Logger.warning("内存使用较高: \(formatBytes(usedMemory))，触发自动清理", category: .general)
+                // 自动清理图片缓存
+                ImageCache.shared.clearCache()
+                // 发送通知，让其他组件也进行清理
+                NotificationCenter.default.post(name: NSNotification.Name("MemoryWarning"), object: nil)
             }
         }
     }

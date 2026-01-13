@@ -43,7 +43,9 @@ public class AppState: ObservableObject {
     
     private func setupNotifications() {
         NotificationCenter.default.publisher(for: .userDidLogin)
-            .compactMap { $0.object as? User }
+            .compactMap { notification -> User? in
+                return notification.object as? User
+            }
             .sink { [weak self] user in
                 self?.currentUser = user
                 self?.isAuthenticated = true
@@ -59,9 +61,9 @@ public class AppState: ObservableObject {
                 // 登录成功后，请求位置权限并获取位置
                 self?.requestLocationAfterLogin()
                 
-                // 登录成功后，智能预加载推荐任务
+                // 登录成功后，智能预加载首页数据（包括推荐任务）
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    self?.preloadRecommendedTasksIfNeeded()
+                    self?.preloadHomeData()
                 }
             }
             .store(in: &cancellables)
@@ -323,7 +325,7 @@ public class AppState: ObservableObject {
                     self.isPreloadingHomeData = false
                 }
             }, receiveValue: { [weak self] response in
-                guard let self = self else { return }
+                guard self != nil else { return }
                 // 将推荐任务保存到专用缓存
                 let openRecommendedTasks = response.tasks.filter { $0.status == .open }
                 CacheManager.shared.saveTasks(openRecommendedTasks, category: nil, city: nil, isRecommended: true)

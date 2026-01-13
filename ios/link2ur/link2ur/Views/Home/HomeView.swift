@@ -1343,9 +1343,7 @@ struct RecommendedTasksSection: View {
         guard appState.isAuthenticated else { return }
         
         // 异步非阻塞方式记录交互
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            
+        DispatchQueue.global(qos: .utility).async {
             let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
             let metadata: [String: Any] = [
                 "source": "home_recommended",

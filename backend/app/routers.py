@@ -3661,21 +3661,45 @@ def send_announcement_api(
     """发送平台公告给所有用户"""
     from app.models import User
 
-    # 获取所有用户
-    users = db.query(User).all()
-
-    # 为每个用户创建公告通知
-    for user in users:
-        crud.create_notification(
-            db,
-            user.id,
-            "announcement",
-            announcement.get("title", "平台公告"),
-            announcement.get("content", ""),
-            None,
-        )
-
-    return {"message": f"Announcement sent to {len(users)} users"}
+    # 获取所有用户（分批处理，防止内存溢出）
+    # 使用 yield_per 分批加载，每批最多 1000 个用户
+    users_query = db.query(User)
+    total_users = users_query.count()
+    
+    # 如果用户数量过多，分批处理
+    batch_size = 1000
+    if total_users > batch_size:
+        logger.warning(f"用户数量过多 ({total_users})，将分批处理，每批 {batch_size} 个")
+    
+    # 分批处理用户
+    offset = 0
+    processed_count = 0
+    while offset < total_users:
+        users = users_query.offset(offset).limit(batch_size).all()
+        if not users:
+            break
+            
+        # 为每个用户创建公告通知
+        for user in users:
+            try:
+                crud.create_notification(
+                    db,
+                    user.id,
+                    "announcement",
+                    announcement.get("title", "平台公告"),
+                    announcement.get("content", ""),
+                    None,
+                )
+                processed_count += 1
+            except Exception as e:
+                logger.error(f"创建通知失败，用户ID: {user.id}, 错误: {e}")
+        
+        # 更新偏移量
+        offset += batch_size
+        # 每批处理后提交一次，避免事务过大
+        db.commit()
+    
+    return {"message": f"Announcement sent to {processed_count} users"}
 
 
 @router.post("/tasks/{task_id}/pay")
@@ -5476,7 +5500,8 @@ def assign_customer_service(
         
         # 如果数据库查询没有结果，使用备用方法：在Python层面检查
         if not services:
-            all_services = db.query(CustomerService).all()
+            # 限制查询数量，防止内存溢出（最多查询1000个客服）
+            all_services = db.query(CustomerService).limit(1000).all()
             logger.info(f"[CUSTOMER_SERVICE] 数据库查询无结果，使用Python层面检查，总客服数量={len(all_services)}")
             # 在Python层面检查在线客服（兼容不同的数据类型）
             services = []
@@ -9973,6 +9998,12 @@ async def translate_batch(
             raise HTTPException(status_code=400, detail="缺少texts参数")
         if not target_language:
             raise HTTPException(status_code=400, detail="缺少target_language参数")
+        
+        # 限制单次批量翻译的最大文本数量，防止内存溢出
+        MAX_BATCH_SIZE = 500
+        if len(texts) > MAX_BATCH_SIZE:
+            logger.warning(f"批量翻译文本数量过多 ({len(texts)})，限制为 {MAX_BATCH_SIZE} 个")
+            texts = texts[:MAX_BATCH_SIZE]
         
         # 预处理：去除空白、去重
         processed_texts = []

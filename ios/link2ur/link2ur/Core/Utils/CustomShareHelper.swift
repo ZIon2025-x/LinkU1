@@ -227,7 +227,7 @@ public class CustomShareHelper {
         image: UIImage?
     ) {
         // 添加调试日志
-        Logger.debug("降级到系统分享面板 - Title: \(title), Description: \(description.prefix(50))...", category: .ui)
+        Logger.debug("降级到系统分享面板 - Title: \(title), Description: \(String(description.prefix(50)))...", category: .ui)
         
         // 优化：在后台线程准备分享项，避免阻塞主线程
         DispatchQueue.global(qos: .userInitiated).async {
@@ -549,13 +549,13 @@ public class CustomShareHelper {
 class ShareItemSource: NSObject, UIActivityItemSource {
     let url: URL
     let title: String
-    let description: String
+    let itemDescription: String
     let image: UIImage?
     
     init(url: URL, title: String, description: String, image: UIImage?) {
         self.url = url
         self.title = title
-        self.description = description
+        self.itemDescription = description
         self.image = image
         super.init()
     }
@@ -588,7 +588,7 @@ class ShareItemSource: NSObject, UIActivityItemSource {
         
         // 对于复制链接、短信等，返回包含完整信息的文本
         if activityType == .copyToPasteboard || activityType == .message {
-            return "\(title)\n\n\(description)\n\n\(url.absoluteString)"
+            return "\(title)\n\n\(itemDescription)\n\n\(url.absoluteString)" as String
         }
         
         return url
@@ -616,7 +616,7 @@ class ShareItemSource: NSObject, UIActivityItemSource {
         // 我们只提供手动设置的元数据（title 和 image），避免网络请求
         
         // 添加调试日志
-        Logger.debug("ShareItemSource - 提供元数据: Title=\(title), Description=\(description.prefix(50))...", category: .ui)
+        Logger.debug("ShareItemSource - 提供元数据: Title=\(title), Description=\(String(itemDescription.prefix(50)))...", category: .ui)
         
         return metadata
     }

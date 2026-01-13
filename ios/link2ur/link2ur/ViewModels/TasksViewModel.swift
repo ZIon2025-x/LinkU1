@@ -49,7 +49,7 @@ class TasksViewModel: ObservableObject {
     
     /// 设置网络监控
     private func setupNetworkMonitoring() {
-        reachability = Reachability()
+        reachability = Reachability.shared
         
         reachability?.$isConnected
             .receive(on: DispatchQueue.main)
@@ -428,7 +428,8 @@ class TasksViewModel: ObservableObject {
                     )
                     
                     // 重试机制：网络错误且未达到最大重试次数时自动重试
-                    if retryCount < maxRetries && (error == .networkError || error == .timeout) {
+                    let isNetworkError = self?.isNetworkOrTimeoutError(error) ?? false
+                    if retryCount < maxRetries && isNetworkError {
                         Logger.info("推荐任务加载失败，\(maxRetries - retryCount)秒后重试...", category: .api)
                         DispatchQueue.main.asyncAfter(deadline: .now() + Double(maxRetries - retryCount)) { [weak self] in
                             self?.loadRecommendedTasks(
@@ -616,6 +617,26 @@ class TasksViewModel: ObservableObject {
         // 更新到主线程
         DispatchQueue.main.async { [weak self] in
             self?.tasks = tasks
+        }
+    }
+    
+    /// 检查是否是网络错误或超时错误
+    private func isNetworkOrTimeoutError(_ error: APIError) -> Bool {
+        switch error {
+        case .requestFailed(let underlyingError):
+            // 检查底层错误是否是网络错误或超时错误
+            let nsError = underlyingError as NSError
+            // 网络错误：NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost 等
+            // 超时错误：NSURLErrorTimedOut
+            return nsError.domain == NSURLErrorDomain && (
+                nsError.code == NSURLErrorNotConnectedToInternet ||
+                nsError.code == NSURLErrorNetworkConnectionLost ||
+                nsError.code == NSURLErrorTimedOut ||
+                nsError.code == NSURLErrorCannotConnectToHost ||
+                nsError.code == NSURLErrorCannotFindHost
+            )
+        default:
+            return false
         }
     }
     
