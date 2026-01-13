@@ -184,7 +184,8 @@ export function setTranslationCache(
     let oldestKey: string | null = null;
     let oldestTime = Date.now();
     
-    for (const [k, entry] of cache.entries()) {
+    // 使用 Array.from() 将迭代器转换为数组，兼容 es5 target
+    for (const [k, entry] of Array.from(cache.entries())) {
       if (entry.timestamp < oldestTime) {
         oldestTime = entry.timestamp;
         oldestKey = k;

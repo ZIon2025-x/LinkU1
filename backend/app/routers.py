@@ -9792,30 +9792,28 @@ async def translate_text(
                         "cached": True
                     }
             
-            # 分段翻译（使用翻译管理器）
+            # 使用异步批量翻译（并发处理多个分段）
             from app.translation_manager import get_translation_manager
+            from app.utils.translation_async import translate_batch_async
             translation_manager = get_translation_manager()
             
+            translated_segments_list = await translate_batch_async(
+                translation_manager,
+                texts=final_segments,
+                target_lang=target_lang,
+                source_lang=source_lang,
+                max_retries=2,
+                max_concurrent=3  # 限制并发数，避免触发限流
+            )
+            
+            # 处理翻译结果（失败的使用原文）
             translated_segments = []
-            for i, segment in enumerate(final_segments):
-                try:
-                    # 使用翻译管理器，自动降级
-                    translated_seg = translation_manager.translate(
-                        text=segment,
-                        target_lang=target_lang,
-                        source_lang=source_lang,
-                        max_retries=2
-                    )
-                    
-                    # 如果翻译失败，使用原文
-                    translated_segments.append(translated_seg or segment)
-                    
-                    # 段之间添加小延迟，避免触发限流
-                    if i < len(final_segments) - 1:
-                        await asyncio.sleep(0.1)
-                except Exception as e:
-                    logger.error(f"分段翻译异常: {e}")
-                    translated_segments.append(segment)
+            for i, translated_seg in enumerate(translated_segments_list):
+                if translated_seg:
+                    translated_segments.append(translated_seg)
+                else:
+                    logger.warning(f"分段 {i} 翻译失败，使用原文")
+                    translated_segments.append(final_segments[i])
             
             translated_text = "".join(translated_segments)
             
@@ -9890,7 +9888,10 @@ async def translate_text(
             logger.debug(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
             
             translation_manager = get_translation_manager()
-            translated_text = translation_manager.translate(
+            # 使用异步翻译（在线程池中执行，不阻塞事件循环）
+            from app.utils.translation_async import translate_async
+            translated_text = await translate_async(
+                translation_manager,
                 text=text,
                 target_lang=target_lang,
                 source_lang=source_lang,
@@ -10310,7 +10311,10 @@ async def translate_and_save_task(
         
         translation_manager = get_translation_manager()
         with TranslationTimer('task_translation', source_lang, target_lang, cached=False):
-            translated_text = translation_manager.translate(
+            # 使用异步翻译（在线程池中执行，不阻塞事件循环）
+            from app.utils.translation_async import translate_async
+            translated_text = await translate_async(
+                translation_manager,
                 text=original_text,
                 target_lang=target_lang,
                 source_lang=source_lang,
@@ -10435,23 +10439,44 @@ async def get_task_translations_batch(
         
         # 3. 转换为响应格式并填充缓存
         result = {}
-        for task_id, translation in translations_dict.items():
-            result[task_id] = {
-                "translated_text": translation.translated_text,
-                "source_language": translation.source_language,
-                "target_language": translation.target_language
-            }
+        missing_task_ids = []  # 记录缺少翻译的任务ID
         
-        # 4. 缓存批量查询结果
+        for task_id in task_ids:
+            if task_id in translations_dict:
+                translation = translations_dict[task_id]
+                result[task_id] = {
+                    "translated_text": translation.translated_text,
+                    "source_language": translation.source_language,
+                    "target_language": translation.target_language
+                }
+            else:
+                missing_task_ids.append(task_id)
+        
+        # 4. 如果有缺少翻译的任务，尝试异步翻译（不阻塞，后台处理）
+        if missing_task_ids:
+            logger.debug(f"发现 {len(missing_task_ids)} 个任务缺少翻译，将在后台处理")
+            # 在后台异步翻译缺少的任务（不等待结果）
+            try:
+                asyncio.create_task(
+                    _translate_missing_tasks_async(
+                        db, missing_task_ids, field_type, target_lang
+                    )
+                )
+            except Exception as e:
+                logger.warning(f"启动后台翻译任务失败: {e}")
+        
+        # 5. 缓存批量查询结果（只缓存已有的翻译）
         if result:
             cache_batch_translations(task_ids, field_type, target_lang, result)
         
-        logger.debug(f"批量获取任务翻译: 请求{len(task_ids)}个，返回{len(result)}个")
+        logger.debug(f"批量获取任务翻译: 请求{len(task_ids)}个，返回{len(result)}个，缺少{len(missing_task_ids)}个")
         
         return {
             "translations": result,
             "target_language": target_lang,
-            "from_cache": False
+            "from_cache": False,
+            "missing_count": len(missing_task_ids),  # 返回缺少翻译的数量
+            "partial": len(missing_task_ids) > 0  # 是否部分成功
         }
         
     except HTTPException:
@@ -10603,6 +10628,159 @@ def get_failed_services_info():
     except Exception as e:
         logger.error(f"获取失败服务信息失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取失败服务信息失败: {str(e)}")
+
+
+# 翻译告警API
+@router.get("/translate/alerts")
+def get_translation_alerts(
+    service_name: Optional[str] = Query(None, description="服务名称过滤"),
+    severity: Optional[str] = Query(None, description="严重程度过滤（info/warning/error/critical）"),
+    limit: int = Query(50, ge=1, le=200, description="返回数量限制")
+):
+    """
+    获取翻译服务告警信息
+    
+    返回:
+    - alerts: 告警列表
+    - stats: 告警统计
+    """
+    try:
+        from app.utils.translation_alert import get_recent_alerts, get_alert_stats
+        
+        alerts = get_recent_alerts(
+            service_name=service_name,
+            severity=severity,
+            limit=limit
+        )
+        stats = get_alert_stats()
+        
+        return {
+            "alerts": alerts,
+            "stats": stats,
+            "count": len(alerts)
+        }
+    except Exception as e:
+        logger.error(f"获取翻译告警失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取翻译告警失败: {str(e)}")
+
+
+# 预翻译API
+@router.post("/translate/prefetch")
+async def prefetch_translations(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    预翻译热门任务或指定任务
+    
+    参数:
+    - task_ids: 任务ID列表（可选，如果提供则翻译指定任务，否则翻译热门任务）
+    - target_languages: 目标语言列表（可选，默认使用常用语言）
+    - limit: 预翻译的任务数量（仅当task_ids为空时有效）
+    
+    返回:
+    - prefetched_count: 预翻译的数量
+    """
+    try:
+        from app.utils.translation_prefetch import (
+            prefetch_popular_tasks,
+            prefetch_task_by_id
+        )
+        
+        body = await request.json()
+        task_ids = body.get('task_ids', [])
+        target_languages = body.get('target_languages')
+        limit = body.get('limit', 50)
+        
+        if task_ids:
+            # 翻译指定任务
+            total_count = 0
+            for task_id in task_ids[:100]:  # 限制最多100个任务
+                count = await prefetch_task_by_id(
+                    db, task_id, target_languages
+                )
+                total_count += count
+            
+            return {
+                "prefetched_count": total_count,
+                "task_count": len(task_ids)
+            }
+        else:
+            # 翻译热门任务
+            count = await prefetch_popular_tasks(
+                db, limit=limit, target_languages=target_languages
+            )
+            
+            return {
+                "prefetched_count": count,
+                "limit": limit
+            }
+    except Exception as e:
+        logger.error(f"预翻译失败: {e}")
+        raise HTTPException(status_code=500, detail=f"预翻译失败: {str(e)}")
+
+
+# 智能缓存预热API
+@router.post("/translate/warmup")
+async def warmup_translations(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    智能缓存预热（根据用户偏好和任务类型）
+    
+    参数:
+    - task_ids: 任务ID列表（可选）
+    - user_language: 用户语言偏好（可选）
+    - task_type: 任务类型（可选）
+    - limit: 预热的任务数量（默认50）
+    
+    返回:
+    - stats: 预热统计信息
+    """
+    try:
+        from app.utils.translation_cache_warmup import (
+            warmup_hot_tasks,
+            warmup_by_user_preference,
+            warmup_task_translations
+        )
+        
+        body = await request.json()
+        task_ids = body.get('task_ids', [])
+        user_language = body.get('user_language')
+        task_type = body.get('task_type')
+        limit = body.get('limit', 50)
+        
+        if task_ids:
+            # 预热指定任务
+            stats = warmup_task_translations(
+                db,
+                task_ids=task_ids,
+                languages=[user_language] if user_language else None
+            )
+        elif user_language:
+            # 根据用户偏好预热
+            stats = warmup_by_user_preference(
+                db,
+                user_language=user_language,
+                limit=limit
+            )
+        else:
+            # 预热热门任务
+            stats = warmup_hot_tasks(
+                db,
+                limit=limit,
+                user_language=user_language,
+                task_type=task_type
+            )
+        
+        return {
+            "stats": stats,
+            "success": True
+        }
+    except Exception as e:
+        logger.error(f"缓存预热失败: {e}")
+        raise HTTPException(status_code=500, detail=f"缓存预热失败: {str(e)}")
 
 
 @router.post("/admin/cleanup/completed-tasks")

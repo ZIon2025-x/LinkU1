@@ -309,7 +309,41 @@ class TranslationManager:
     
     def get_service_stats(self) -> dict:
         """获取服务统计信息"""
-        return self.service_stats.copy()
+        stats = self.service_stats.copy()
+        
+        # 添加错误统计
+        try:
+            from app.utils.translation_error_handler import get_error_handler
+            error_handler = get_error_handler()
+            error_stats = error_handler.get_error_stats()
+            stats['error_stats'] = error_stats
+        except Exception:
+            pass
+        
+        # 计算平均响应时间（如果有记录）
+        for service_name, service_stats in stats.items():
+            if isinstance(service_stats, dict) and 'times' in service_stats:
+                times = service_stats['times']
+                if times:
+                    service_stats['avg_time'] = sum(times) / len(times)
+                    service_stats['min_time'] = min(times)
+                    service_stats['max_time'] = max(times)
+        
+        # 检查服务健康状态并生成告警
+        try:
+            from app.utils.translation_alert import check_service_health, record_alert
+            for service in TranslationService:
+                service_name = service.value
+                if service_name in stats:
+                    service_stats = stats[service_name]
+                    if isinstance(service_stats, dict):
+                        alerts = check_service_health(service_name, service_stats, [])
+                        for alert in alerts:
+                            record_alert(alert)
+        except Exception as e:
+            logger.debug(f"检查服务健康状态失败: {e}")
+        
+        return stats
     
     def get_available_services(self) -> List[str]:
         """获取可用服务列表"""
