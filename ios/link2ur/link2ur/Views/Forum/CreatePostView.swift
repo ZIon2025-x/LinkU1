@@ -12,13 +12,13 @@ struct CreatePostView: View {
                 VStack(spacing: AppSpacing.xl) {
                     // 1. 标题与板块
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "基本信息", icon: "doc.text.fill")
+                        SectionHeader(title: LocalizationKey.forumCreatePostBasicInfo.localized, icon: "doc.text.fill")
                         
                         VStack(spacing: AppSpacing.lg) {
                             // 标题
                             EnhancedTextField(
-                                title: "帖子标题",
-                                placeholder: "给你的帖子起一个吸引人的标题吧",
+                                title: LocalizationKey.forumCreatePostPostTitle.localized,
+                                placeholder: LocalizationKey.forumCreatePostPostTitlePlaceholder.localized,
                                 text: $viewModel.title,
                                 icon: "pencil.line",
                                 isRequired: true
@@ -43,11 +43,11 @@ struct CreatePostView: View {
                     
                     // 2. 帖子内容
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "帖子内容", icon: "text.alignleft")
+                        SectionHeader(title: LocalizationKey.forumCreatePostPostContent.localized, icon: "text.alignleft")
                         
                         EnhancedTextEditor(
                             title: nil,
-                            placeholder: "分享你的见解、经验或提问，友善发言，共同进步...",
+                            placeholder: LocalizationKey.forumCreatePostContentPlaceholder.localized,
                             text: $viewModel.content,
                             height: 250,
                             isRequired: true,
@@ -94,7 +94,7 @@ struct CreatePostView: View {
                             } else {
                                 IconStyle.icon("paperplane.fill", size: 18)
                             }
-                            Text(viewModel.isLoading ? "正在发布..." : "立即发布")
+                            Text(viewModel.isLoading ? LocalizationKey.forumCreatePostPublishing.localized : LocalizationKey.forumCreatePostPublishNow.localized)
                                 .font(AppTypography.bodyBold)
                         }
                     }
@@ -112,12 +112,12 @@ struct CreatePostView: View {
             .onTapGesture {
                 hideKeyboard()
             }
-            .navigationTitle("发布帖子")
+            .navigationTitle(LocalizationKey.forumCreatePostTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }

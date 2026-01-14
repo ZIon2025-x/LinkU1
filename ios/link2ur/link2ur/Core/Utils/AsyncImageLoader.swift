@@ -14,8 +14,21 @@ public class AsyncImageLoader: ObservableObject {
         self.cache = cache
     }
     
+    /// 设置图片（用于从缓存直接设置，避免重新加载）
+    public func setImage(_ image: UIImage?) {
+        self.image = image
+        self.isLoading = false
+    }
+    
     /// 加载图片
     public func load(from url: String) {
+        // 先检查缓存，如果存在则立即设置，避免闪烁
+        if let cachedImage = cache.getCachedImage(from: url) {
+            self.image = cachedImage
+            self.isLoading = false
+            return
+        }
+        
         isLoading = true
         error = nil
         

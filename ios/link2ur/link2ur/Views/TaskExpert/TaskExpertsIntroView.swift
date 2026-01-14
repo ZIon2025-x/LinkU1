@@ -32,14 +32,14 @@ struct TaskExpertsIntroView: View {
                 // 什么是任务达人
                 InfoCard(
                     icon: "lightbulb.fill",
-                    title: "什么是任务达人？",
-                    content: "任务达人是平台认证的专业服务提供者，拥有丰富的经验和良好的口碑。成为任务达人后，您的服务将获得更多曝光，吸引更多客户。",
+                    title: LocalizationKey.taskExpertWhatIs.localized,
+                    content: LocalizationKey.taskExpertWhatIsContent.localized,
                     color: .yellow
                 )
                 
                 // 成为达人的好处
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("成为达人的好处")
+                    Text(LocalizationKey.taskExpertBenefits.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -47,33 +47,33 @@ struct TaskExpertsIntroView: View {
                     
                     BenefitRow(
                         icon: "eye.fill",
-                        title: "更多曝光",
-                        description: "您的服务将优先展示，获得更多用户关注"
+                        title: LocalizationKey.taskExpertMoreExposure.localized,
+                        description: LocalizationKey.taskExpertMoreExposureDesc.localized
                     )
                     
                     BenefitRow(
                         icon: "star.fill",
-                        title: "专属标识",
-                        description: "显示达人认证标识，提升您的专业形象"
+                        title: LocalizationKey.taskExpertExclusiveBadge.localized,
+                        description: LocalizationKey.taskExpertExclusiveBadgeDesc.localized
                     )
                     
                     BenefitRow(
                         icon: "chart.line.uptrend.xyaxis",
-                        title: "更多订单",
-                        description: "获得更多任务申请，增加收入机会"
+                        title: LocalizationKey.taskExpertMoreOrders.localized,
+                        description: LocalizationKey.taskExpertMoreOrdersDesc.localized
                     )
                     
                     BenefitRow(
                         icon: "shield.checkered",
-                        title: "平台支持",
-                        description: "享受平台提供的专业支持和资源"
+                        title: LocalizationKey.taskExpertPlatformSupport.localized,
+                        description: LocalizationKey.taskExpertPlatformSupportDesc.localized
                     )
                 }
                 .padding(.top, AppSpacing.md)
                 
                 // 如何申请
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("如何申请？")
+                    Text(LocalizationKey.taskExpertHowToApply.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -81,20 +81,20 @@ struct TaskExpertsIntroView: View {
                     
                     StepRow(
                         number: 1,
-                        title: "填写申请信息",
-                        description: "介绍您的专业技能和经验"
+                        title: LocalizationKey.taskExpertFillApplication.localized,
+                        description: LocalizationKey.taskExpertFillApplicationDesc.localized
                     )
                     
                     StepRow(
                         number: 2,
-                        title: "提交审核",
-                        description: "平台将在3-5个工作日内完成审核"
+                        title: LocalizationKey.taskExpertSubmitReview.localized,
+                        description: LocalizationKey.taskExpertSubmitReviewDesc.localized
                     )
                     
                     StepRow(
                         number: 3,
-                        title: "开始服务",
-                        description: "审核通过后即可发布服务，开始接单"
+                        title: LocalizationKey.taskExpertStartService.localized,
+                        description: LocalizationKey.taskExpertStartServiceDesc.localized
                     )
                 }
                 .padding(.top, AppSpacing.md)
@@ -106,7 +106,7 @@ struct TaskExpertsIntroView: View {
                     }) {
                         HStack {
                             Spacer()
-                            Text("立即申请")
+                            Text(LocalizationKey.taskExpertApplyNow.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(.white)
                             Spacer()
@@ -127,7 +127,7 @@ struct TaskExpertsIntroView: View {
                     NavigationLink(destination: LoginView()) {
                         HStack {
                             Spacer()
-                            Text("登录后申请")
+                            Text(LocalizationKey.taskExpertLoginToApply.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(.white)
                             Spacer()
@@ -144,7 +144,7 @@ struct TaskExpertsIntroView: View {
             }
             .padding(.bottom, AppSpacing.xl)
         }
-        .navigationTitle("任务达人")
+        .navigationTitle(LocalizationKey.taskExpertTitle.localized)
         .navigationBarTitleDisplayMode(.large)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -281,7 +281,7 @@ struct TaskExpertApplyView: View {
                             .frame(minHeight: 200)
                             .font(AppTypography.body)
                     } header: {
-                        Text("申请信息")
+                        Text(LocalizationKey.taskExpertApplicationInfo.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                     } footer: {
@@ -305,25 +305,25 @@ struct TaskExpertApplyView: View {
                     }
                 }
             }
-            .navigationTitle("申请成为达人")
+            .navigationTitle(LocalizationKey.taskExpertApplyTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("申请成功", isPresented: $showSuccess) {
-                Button("确定") {
+            .alert(LocalizationKey.taskExpertApplicationSubmitted.localized, isPresented: $showSuccess) {
+                Button(LocalizationKey.commonOk.localized) {
                     dismiss()
                 }
             } message: {
-                Text("您的申请已提交，我们将在3-5个工作日内完成审核。")
+                Text(LocalizationKey.taskExpertApplicationSubmittedMessage.localized)
             }
-            .alert("申请失败", isPresented: $showError) {
-                Button("确定", role: .cancel) {}
+            .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }

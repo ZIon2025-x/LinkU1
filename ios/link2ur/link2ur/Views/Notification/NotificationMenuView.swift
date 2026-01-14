@@ -20,8 +20,8 @@ struct NotificationMenuView: View {
                 }) {
                     NotificationMenuItem(
                         icon: "bell.fill",
-                        title: "通知",
-                        subtitle: "系统通知消息",
+                        title: LocalizationKey.notificationNotifications.localized,
+                        subtitle: LocalizationKey.notificationSystemMessage.localized,
                         color: AppColors.primary
                     )
                 }
@@ -39,8 +39,8 @@ struct NotificationMenuView: View {
                 }) {
                     NotificationMenuItem(
                         icon: "headphones",
-                        title: "客服中心",
-                        subtitle: "联系客服",
+                        title: LocalizationKey.notificationCustomerService.localized,
+                        subtitle: LocalizationKey.notificationContactService.localized,
                         color: AppColors.success
                     )
                 }
@@ -58,8 +58,8 @@ struct NotificationMenuView: View {
                 }) {
                     NotificationMenuItem(
                         icon: "message.fill",
-                        title: "任务聊天",
-                        subtitle: "全部任务聊天列表",
+                        title: LocalizationKey.notificationTaskChat.localized,
+                        subtitle: LocalizationKey.notificationTaskChatList.localized,
                         color: AppColors.warning
                     )
                 }

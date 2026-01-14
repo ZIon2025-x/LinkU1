@@ -20,7 +20,7 @@ struct MyTasksView: View {
                 tasksContentView
             }
         }
-        .navigationTitle("我的任务")
+        .navigationTitle(LocalizationKey.tasksMyTasks.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -105,7 +105,7 @@ struct MyTasksView: View {
             Spacer()
             VStack(spacing: AppSpacing.md) {
                 ProgressView()
-                Text("正在加载已完成的任务...")
+                Text(LocalizationKey.myTasksLoadingCompleted.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
             }
@@ -121,10 +121,10 @@ struct MyTasksView: View {
                 Image(systemName: "wifi.slash")
                     .font(.system(size: 48))
                     .foregroundColor(AppColors.textTertiary)
-                Text("网络不可用")
+                Text(LocalizationKey.myTasksNetworkUnavailable.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
-                Text("请检查网络连接后重试")
+                Text(LocalizationKey.myTasksCheckNetwork.localized)
                     .font(AppTypography.body)
                     .foregroundColor(AppColors.textSecondary)
             }
@@ -148,8 +148,8 @@ struct MyTasksView: View {
             Spacer()
             EmptyStateView(
                 icon: "clock.fill",
-                title: "暂无待处理申请",
-                message: "您还没有待处理的申请记录"
+                title: LocalizationKey.myTasksNoPendingApplications.localized,
+                message: LocalizationKey.myTasksNoPendingApplicationsMessage.localized
             )
             Spacer()
         } else {
@@ -174,7 +174,7 @@ struct MyTasksView: View {
             Spacer()
             EmptyStateView(
                 icon: "doc.text.fill",
-                title: "暂无任务",
+                title: LocalizationKey.emptyNoTasks.localized,
                 message: getEmptyMessage()
             )
             Spacer()
@@ -317,7 +317,7 @@ struct MyTasksApplicationCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 10))
-                    Text("待处理")
+                    Text(LocalizationKey.myTasksPending.localized)
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .foregroundColor(AppColors.warning)
@@ -348,7 +348,7 @@ struct MyTasksApplicationCard: View {
                         Image(systemName: "message.fill")
                             .font(.system(size: 11))
                             .foregroundColor(AppColors.textTertiary)
-                        Text("申请留言")
+                        Text(LocalizationKey.myTasksApplicationMessage.localized)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(AppColors.textTertiary)
                     }
@@ -367,7 +367,7 @@ struct MyTasksApplicationCard: View {
             // 操作按钮
             NavigationLink(destination: TaskDetailView(taskId: application.taskId)) {
                 HStack {
-                    Text("查看详情")
+                    Text(LocalizationKey.myTasksViewDetails.localized)
                         .font(.system(size: 14, weight: .medium))
                     Spacer()
                     Image(systemName: "chevron.right")

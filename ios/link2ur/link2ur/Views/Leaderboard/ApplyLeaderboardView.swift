@@ -28,27 +28,27 @@ struct ApplyLeaderboardView: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 基本信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "排行榜信息", icon: "trophy.fill")
+                            SectionHeader(title: LocalizationKey.leaderboardInfo.localized, icon: "trophy.fill")
                             
                             VStack(spacing: AppSpacing.lg) {
                                 EnhancedTextField(
-                                    title: "排行榜名称",
-                                    placeholder: "例：最受欢迎的中餐厅",
+                                    title: LocalizationKey.leaderboardName.localized,
+                                    placeholder: LocalizationKey.leaderboardNamePlaceholder.localized,
                                     text: $name,
                                     icon: "tag.fill",
                                     isRequired: true
                                 )
                                 
                                 CustomPickerField(
-                                    title: "所属地区",
+                                    title: LocalizationKey.leaderboardRegion.localized,
                                     selection: $location,
                                     options: cities.map { ($0, $0) },
                                     icon: "mappin.and.ellipse"
                                 )
                                 
                                 EnhancedTextEditor(
-                                    title: "详细描述",
-                                    placeholder: "请描述该排行榜的主旨和收录标准...",
+                                    title: LocalizationKey.leaderboardDescription.localized,
+                                    placeholder: LocalizationKey.leaderboardDescriptionPlaceholder.localized,
                                     text: $description,
                                     height: 120,
                                     characterLimit: 500
@@ -62,11 +62,11 @@ struct ApplyLeaderboardView: View {
                         
                         // 2. 申请理由
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "申请理由", icon: "doc.text.fill")
+                            SectionHeader(title: LocalizationKey.leaderboardReason.localized, icon: "doc.text.fill")
                             
                             EnhancedTextEditor(
-                                title: "为什么创建该榜单？",
-                                placeholder: "向管理员说明创建此排行榜的必要性，有助于快速通过审核...",
+                                title: LocalizationKey.leaderboardReasonTitle.localized,
+                                placeholder: LocalizationKey.leaderboardReasonPlaceholder.localized,
                                 text: $applicationReason,
                                 height: 100,
                                 characterLimit: 300
@@ -79,7 +79,7 @@ struct ApplyLeaderboardView: View {
                         
                         // 3. 封面图
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "封面图 (可选)", icon: "photo.fill")
+                            SectionHeader(title: LocalizationKey.leaderboardCoverImage.localized, icon: "photo.fill")
                             
                             PhotosPicker(selection: $selectedItems, maxSelectionCount: 1, matching: .images) {
                                 if let image = coverImage {
@@ -109,7 +109,7 @@ struct ApplyLeaderboardView: View {
                                         Image(systemName: "plus.viewfinder")
                                             .font(.system(size: 32))
                                             .foregroundColor(AppColors.primary)
-                                        Text("添加封面图片")
+                                        Text(LocalizationKey.leaderboardAddCoverImage.localized)
                                             .font(AppTypography.subheadline)
                                             .foregroundColor(AppColors.textSecondary)
                                     }
@@ -170,12 +170,12 @@ struct ApplyLeaderboardView: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("申请新榜单")
+            .navigationTitle(LocalizationKey.leaderboardApplyTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }

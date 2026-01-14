@@ -429,7 +429,9 @@ struct TaskDetailView: View {
         let currentTaskId = taskId
         DispatchQueue.global(qos: .utility).async {
             // 调用 API 记录交互
-            let cancellable = APIService.shared.recordTaskInteraction(
+            // 使用 AnyCancellable 来保持订阅活跃，直到请求完成
+            var cancellable: AnyCancellable?
+            cancellable = APIService.shared.recordTaskInteraction(
                 taskId: currentTaskId,
                 interactionType: type,
                 deviceType: deviceType,
@@ -441,15 +443,15 @@ struct TaskDetailView: View {
                     if case .failure(let error) = completion {
                         Logger.warning("记录任务交互失败: \(error.localizedDescription)", category: .api)
                     }
+                    // 请求完成后，释放 cancellable
+                    cancellable = nil
                 },
                 receiveValue: { _ in
                     Logger.debug("已记录任务交互: type=\(type), taskId=\(currentTaskId)", category: .api)
                 }
             )
-            // 在主线程上存储 cancellable
-            DispatchQueue.main.async {
-                interactionCancellables.insert(cancellable)
-            }
+            // 保持 cancellable 活跃直到请求完成
+            _ = cancellable
         }
     }
     
@@ -1048,6 +1050,11 @@ struct TaskImageCarouselView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
+            // 占位背景（避免闪烁）
+            Rectangle()
+                .fill(AppColors.cardBackground)
+                .frame(height: 300)
+            
             if !images.isEmpty {
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
@@ -1109,9 +1116,12 @@ struct TaskImageView: View {
     var body: some View {
         AsyncImageView(
             urlString: imageUrl,
-            placeholder: Image(systemName: "photo.fill")
+            placeholder: Image(systemName: "photo.fill"),
+            width: nil,
+            height: 300,
+            contentMode: .fill,
+            cornerRadius: 0
         )
-        .aspectRatio(contentMode: .fill)
         .frame(height: 300)
         .frame(maxWidth: .infinity)
         .clipped()
@@ -1693,7 +1703,7 @@ struct ApplyTaskSheet: View {
                             
                             EnhancedTextEditor(
                                 title: nil,
-                                placeholder: "简单说明您的优势或如何完成任务...",
+                                placeholder: LocalizationKey.taskApplicationAdvantagePlaceholder.localized,
                                 text: $message,
                                 height: 120,
                                 characterLimit: 500
@@ -2374,7 +2384,7 @@ struct ReviewModal: View {
                             
                             EnhancedTextEditor(
                                 title: nil,
-                                placeholder: "写下您的合作感受，帮助其他用户参考...",
+                                placeholder: LocalizationKey.taskApplicationReviewPlaceholder.localized,
                                 text: $comment,
                                 height: 150,
                                 characterLimit: 500

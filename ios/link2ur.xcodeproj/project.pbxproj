@@ -21,6 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		147679712F172DB7009EB626 /* Link²Ur.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Link²Ur.entitlements"; sourceTree = "<group>"; };
 		14817E332F14324D00620BCA /* Link-Ur-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Link-Ur-Info.plist"; sourceTree = "<group>"; };
 		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Link²Ur.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -58,6 +59,7 @@
 		1491C68C2EDF90BC0054DEAA = {
 			isa = PBXGroup;
 			children = (
+				147679712F172DB7009EB626 /* Link²Ur.entitlements */,
 				14817E332F14324D00620BCA /* Link-Ur-Info.plist */,
 				1491C6972EDF90BC0054DEAA /* link2ur */,
 				1491C6962EDF90BC0054DEAA /* Products */,
@@ -293,9 +295,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Link²Ur.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = W2WB7KNHTP;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";
@@ -329,9 +332,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Link²Ur.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = W2WB7KNHTP;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";

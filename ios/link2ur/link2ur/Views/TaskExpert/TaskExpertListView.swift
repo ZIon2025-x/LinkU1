@@ -57,7 +57,7 @@ struct TaskExpertListView: View {
                             
                             Spacer()
                             
-                            Button("清除") {
+                            Button(LocalizationKey.taskExpertClear.localized) {
                                 selectedCategory = nil
                                 selectedCity = nil
                                 applyFilters()
@@ -83,8 +83,8 @@ struct TaskExpertListView: View {
                                 Spacer()
                                 EmptyStateView(
                                     icon: "person.3.fill",
-                                    title: "暂无任务达人",
-                                    message: searchText.isEmpty ? "还没有任务达人，敬请期待..." : "没有找到相关达人"
+                                    title: LocalizationKey.taskExpertNoExperts.localized,
+                                    message: searchText.isEmpty ? LocalizationKey.taskExpertNoExpertsMessage.localized : LocalizationKey.taskExpertNoExpertsSearchMessage.localized
                                 )
                                 Spacer()
                             }
@@ -107,7 +107,7 @@ struct TaskExpertListView: View {
                     .background(AppColors.background)
                 }
             }
-            .navigationTitle("任务达人")
+            .navigationTitle(LocalizationKey.taskExpertTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -124,13 +124,13 @@ struct TaskExpertListView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: TaskExpertsIntroView()) {
-                        Text("成为达人")
+                        Text(LocalizationKey.taskExpertBecomeExpert.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.primary)
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "搜索任务达人")
+            .searchable(text: $searchText, prompt: LocalizationKey.taskExpertSearchPrompt.localized)
             .onChange(of: searchText) { newValue in
                 applyFilters()
             }
@@ -224,7 +224,7 @@ struct TaskExpertFilterView: View {
                     }
                 }
             }
-            .navigationTitle("筛选")
+            .navigationTitle(LocalizationKey.commonFilter.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {

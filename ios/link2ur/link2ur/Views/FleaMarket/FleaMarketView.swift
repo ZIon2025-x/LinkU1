@@ -123,7 +123,7 @@ struct ItemCard: View {
                             Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 32))
                                 .foregroundColor(AppColors.primary.opacity(0.3))
-                            Text("暂无图片")
+                            Text(LocalizationKey.fleaMarketNoImage.localized)
                                 .font(.system(size: 10))
                                 .foregroundColor(AppColors.primary.opacity(0.4))
                         }

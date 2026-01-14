@@ -22,8 +22,8 @@ struct TaskChatListView: View {
             } else if viewModel.taskChats.isEmpty {
                 EmptyStateView(
                     icon: "message.fill",
-                    title: "暂无任务聊天",
-                    message: "还没有任务相关的聊天记录"
+                    title: LocalizationKey.notificationNoTaskChat.localized,
+                    message: LocalizationKey.notificationNoTaskChatMessage.localized
                 )
             } else {
                 ScrollView {
@@ -180,19 +180,19 @@ struct TaskChatRow: View {
                         
                         // 判断用户角色并显示
                         if taskChat.posterId == currentUserId {
-                            Text("发布者")
+                            Text(LocalizationKey.notificationPoster.localized)
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         } else if taskChat.takerId == currentUserId {
-                            Text("承接者")
+                            Text(LocalizationKey.notificationTaker.localized)
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         } else if let expertCreatorId = taskChat.expertCreatorId, expertCreatorId == currentUserId {
-                            Text("专家")
+                            Text(LocalizationKey.notificationExpert.localized)
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         } else {
-                            Text("参与者")
+                            Text(LocalizationKey.notificationParticipant.localized)
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         }
@@ -210,7 +210,7 @@ struct TaskChatRow: View {
                                 .foregroundColor(taskChat.unreadCount ?? 0 > 0 ? AppColors.textSecondary : AppColors.textTertiary)
                         } else {
                             // 如果没有发送者名称（系统消息），显示"系统: "
-                            Text("系统: ")
+                            Text("\(LocalizationKey.notificationSystem.localized): ")
                                 .font(AppTypography.caption)
                                 .fontWeight(taskChat.unreadCount ?? 0 > 0 ? .medium : .regular)
                                 .foregroundColor(AppColors.textTertiary)
@@ -226,7 +226,7 @@ struct TaskChatRow: View {
                                 .truncationMode(.tail)
                         } else {
                             // 如果内容为空，显示默认提示
-                            Text("系统消息")
+                            Text(LocalizationKey.notificationSystemMessage.localized)
                                 .font(AppTypography.caption)
                                 .fontWeight(taskChat.unreadCount ?? 0 > 0 ? .medium : .regular)
                                 .foregroundColor(AppColors.textTertiary)
@@ -294,17 +294,17 @@ struct TaskChatView: View {
     // 根据任务状态返回提示文本
     private var closedStatusText: String {
         guard let status = taskChat?.taskStatus ?? taskChat?.status else {
-            return "任务已结束"
+            return LocalizationKey.notificationTaskEnded.localized
         }
         switch status.lowercased() {
         case "completed":
-            return "任务已完成，无法发送消息"
+            return LocalizationKey.notificationTaskCompletedCannotSend.localized
         case "cancelled":
-            return "任务已取消，无法发送消息"
+            return LocalizationKey.notificationTaskCancelledCannotSend.localized
         case "pending_confirmation":
-            return "任务待确认，暂停发送消息"
+            return LocalizationKey.notificationTaskPendingCannotSend.localized
         default:
-            return "任务已结束"
+            return LocalizationKey.notificationTaskEnded.localized
         }
     }
     
@@ -325,7 +325,7 @@ struct TaskChatView: View {
                 Group {
                     if viewModel.isLoading && viewModel.messages.isEmpty {
                         // 加载状态
-                        LoadingView(message: "加载消息中...")
+                        LoadingView(message: LocalizationKey.commonLoading.localized)
                     } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
                         // 使用统一的错误状态组件
                         ErrorStateView(
@@ -352,7 +352,7 @@ struct TaskChatView: View {
                                                     Image(systemName: "arrow.up.circle")
                                                         .font(.system(size: 14))
                                                 }
-                                                Text(viewModel.isLoadingMore ? "加载中..." : "查看更多历史消息")
+                                                Text(viewModel.isLoadingMore ? LocalizationKey.commonLoading.localized : LocalizationKey.commonLoadMore.localized)
                                                     .font(.system(size: 13))
                                             }
                                             .foregroundColor(AppColors.textSecondary)
@@ -370,10 +370,10 @@ struct TaskChatView: View {
                                             Image(systemName: "message.fill")
                                                 .font(.system(size: 48))
                                                 .foregroundColor(AppColors.textTertiary)
-                                            Text("还没有消息")
+                                            Text(LocalizationKey.notificationNoMessages.localized)
                                                 .font(AppTypography.title3)
                                                 .foregroundColor(AppColors.textSecondary)
-                                            Text("开始对话吧！")
+                                            Text(LocalizationKey.notificationStartConversation.localized)
                                                 .font(AppTypography.subheadline)
                                                 .foregroundColor(AppColors.textTertiary)
                                         }
@@ -465,7 +465,7 @@ struct TaskChatView: View {
                             
                             // 查看任务详情按钮
                             Button(action: { showTaskDetail = true }) {
-                                Text("查看详情")
+                                Text(LocalizationKey.notificationViewDetails.localized)
                                     .font(AppTypography.caption)
                                     .fontWeight(.medium)
                                     .foregroundColor(AppColors.primary)
@@ -509,7 +509,7 @@ struct TaskChatView: View {
                             
                             // 输入框
                             HStack(spacing: AppSpacing.sm) {
-                                TextField("输入消息...", text: $messageText, axis: .vertical)
+                                TextField(LocalizationKey.actionsEnterMessage.localized, text: $messageText, axis: .vertical)
                                     .font(AppTypography.body)
                                     .lineLimit(1...4)
                                     .focused($isInputFocused)
@@ -936,7 +936,7 @@ struct ChatActionMenuView: View {
                 // 上传图片
                 ChatActionButton(
                     icon: "photo.fill",
-                    title: "图片",
+                    title: LocalizationKey.notificationImage.localized,
                     color: AppColors.success,
                     action: onImagePicker
                 )
@@ -944,7 +944,7 @@ struct ChatActionMenuView: View {
                 // 查看任务详情
                 ChatActionButton(
                     icon: "doc.text.fill",
-                    title: "任务详情",
+                    title: LocalizationKey.notificationTaskDetail.localized,
                     color: AppColors.primary,
                     action: onViewTaskDetail
                 )
@@ -953,7 +953,7 @@ struct ChatActionMenuView: View {
                 if shouldShowLocationDetail {
                     ChatActionButton(
                         icon: "mappin.circle.fill",
-                        title: "详细地址",
+                        title: LocalizationKey.notificationDetailAddress.localized,
                         color: AppColors.warning,
                         action: onViewLocationDetail
                     )

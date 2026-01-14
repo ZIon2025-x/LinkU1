@@ -23,11 +23,11 @@ class TaskExpertViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadExperts(category: String? = nil, location: String? = nil, keyword: String? = nil) {
+    func loadExperts(category: String? = nil, location: String? = nil, keyword: String? = nil, forceRefresh: Bool = false) {
         let startTime = Date()
         
-        // 防止重复请求
-        guard !isLoading else {
+        // 防止重复请求：如果正在加载且不是强制刷新，则跳过
+        guard !isLoading || forceRefresh else {
             Logger.warning("请求已在进行中，跳过重复请求", category: .api)
             return
         }
@@ -35,8 +35,13 @@ class TaskExpertViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        // 尝试从缓存加载数据（仅在没有筛选条件时）
-        if category == nil && location == nil && keyword == nil {
+        // 强制刷新时清除缓存
+        if forceRefresh && category == nil && location == nil && keyword == nil {
+            CacheManager.shared.invalidateTaskExpertsCache()
+        }
+        
+        // 尝试从缓存加载数据（仅在没有筛选条件时，且非强制刷新）
+        if !forceRefresh && category == nil && location == nil && keyword == nil {
             if let cachedExperts = CacheManager.shared.loadTaskExperts(category: nil, location: nil) {
                 self.experts = cachedExperts
                 Logger.success("从缓存加载了 \(self.experts.count) 个任务达人", category: .cache)

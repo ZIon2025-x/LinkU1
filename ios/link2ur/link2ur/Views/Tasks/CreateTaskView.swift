@@ -33,8 +33,8 @@ struct CreateTaskView: View {
                             VStack(spacing: AppSpacing.lg) {
                                 // 标题
                                 EnhancedTextField(
-                                    title: "任务标题",
-                                    placeholder: "简要说明您的需求 (例: 代取包裹)",
+                                    title: LocalizationKey.createTaskTitle.localized,
+                                    placeholder: LocalizationKey.createTaskTitlePlaceholder.localized,
                                     text: $viewModel.title,
                                     icon: "pencil.line",
                                     isRequired: true
@@ -42,8 +42,8 @@ struct CreateTaskView: View {
                                 
                                 // 描述
                                 EnhancedTextEditor(
-                                    title: "任务详情",
-                                    placeholder: "请详细描述您的需求、时间、特殊要求等，越详细越容易被接单哦...",
+                                    title: LocalizationKey.createTaskDescription.localized,
+                                    placeholder: LocalizationKey.createTaskDescriptionPlaceholder.localized,
                                     text: $viewModel.description,
                                     height: 150,
                                     isRequired: true,
@@ -63,7 +63,7 @@ struct CreateTaskView: View {
                             VStack(spacing: AppSpacing.lg) {
                                 // 价格（固定英镑）
                                 EnhancedNumberField(
-                                    title: "任务酬金",
+                                    title: LocalizationKey.createTaskReward.localized,
                                     placeholder: "0.00",
                                     value: $viewModel.price,
                                     prefix: "£",
@@ -88,7 +88,7 @@ struct CreateTaskView: View {
                                         Image(systemName: "exclamationmark.triangle.fill")
                                             .font(.system(size: 14))
                                             .foregroundColor(AppColors.warning)
-                                        Text("只有已通过学生认证的用户才能发布\"校园生活\"类型的任务")
+                                        Text(LocalizationKey.createTaskCampusLifeRestriction.localized)
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.warning)
                                     }
@@ -272,7 +272,7 @@ struct CreateTaskView: View {
     private var locationInputSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("所在城市")
+                Text(LocalizationKey.createTaskCity.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                 if viewModel.city.isEmpty {
@@ -308,7 +308,7 @@ struct CreateTaskView: View {
                                             .font(.system(size: 11, weight: .heavy))
                                             .textCase(.uppercase)
                                     } else {
-                                        Text("线上")
+                                        Text(LocalizationKey.createTaskOnline.localized)
                                             .font(.system(size: 11, weight: .bold))
                                     }
                                 }
@@ -325,7 +325,7 @@ struct CreateTaskView: View {
                                 )
                             }
                             
-                            TextField("搜索或输入城市名称", text: $viewModel.city)
+                            TextField(LocalizationKey.taskLocationSearchCity.localized, text: $viewModel.city)
                                 .font(AppTypography.body)
                                 .autocorrectionDisabled()
                                 .focused($isLocationFocused)

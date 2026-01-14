@@ -28,7 +28,7 @@ struct FleaMarketDetailView: View {
                 VStack(spacing: 16) {
                 ProgressView()
                         .scaleEffect(1.2)
-                    Text("加载中...")
+                    Text(LocalizationKey.fleaMarketLoading.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -72,7 +72,7 @@ struct FleaMarketDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("商品信息加载失败")
+                    Text(LocalizationKey.fleaMarketLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -152,10 +152,10 @@ struct FleaMarketDetailView: View {
             )
             }
         }
-        .alert("刷新成功", isPresented: $showRefreshSuccess) {
-            Button("确定", role: .cancel) { }
+        .alert(LocalizationKey.successRefreshSuccess.localized, isPresented: $showRefreshSuccess) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
-            Text("商品已刷新，自动下架计时器已重置")
+            Text(LocalizationKey.successRefreshSuccessMessage.localized)
         }
         .task(id: itemId) {
             print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
@@ -217,11 +217,11 @@ struct FleaMarketDetailView: View {
                     .foregroundColor(textColor)
                 
                 if daysRemaining > 0 {
-                    Text("距离自动下架还有 \(daysRemaining) 天")
+                    Text(String(format: LocalizationKey.fleaMarketAutoRemovalDays.localized, daysRemaining))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(textColor)
                 } else {
-                    Text("商品即将自动下架")
+                    Text(LocalizationKey.fleaMarketAutoRemovalSoon.localized)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(textColor)
                 }
@@ -317,7 +317,7 @@ struct FleaMarketDetailView: View {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(AppColors.textTertiary)
-                Text("暂无图片")
+                Text(LocalizationKey.fleaMarketNoImage.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -417,7 +417,7 @@ struct FleaMarketDetailView: View {
                     .fill(AppColors.primary)
                     .frame(width: 4, height: 18)
                 
-                Text("商品详情")
+                Text(LocalizationKey.fleaMarketProductDetail.localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -433,7 +433,7 @@ struct FleaMarketDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "text.quote")
                         .foregroundColor(AppColors.textTertiary)
-                    Text("卖家很懒，什么都没写~")
+                    Text(LocalizationKey.fleaMarketNoDescription.localized)
                         .font(.system(size: 14))
                         .foregroundColor(AppColors.textTertiary)
                         .italic()
@@ -494,7 +494,7 @@ struct FleaMarketDetailView: View {
                             Image(systemName: "checkmark.seal.fill")
                                 .font(.system(size: 12))
                                 .foregroundColor(.green)
-                            Text("活跃卖家")
+                            Text(LocalizationKey.fleaMarketActiveSeller.localized)
                                 .font(.system(size: 12))
                                 .foregroundColor(AppColors.textSecondary)
                         }
@@ -507,7 +507,7 @@ struct FleaMarketDetailView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "bubble.left.fill")
                                 .font(.system(size: 12))
-                            Text("联系")
+                            Text(LocalizationKey.fleaMarketContactSeller.localized)
                                 .font(.system(size: 14, weight: .medium))
                         }
                         .foregroundColor(.white)
@@ -594,7 +594,7 @@ struct FleaMarketDetailView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "pencil")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("编辑商品")
+                            Text(LocalizationKey.fleaMarketEditItem.localized)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -637,7 +637,7 @@ struct FleaMarketDetailView: View {
                             }
                             .frame(height: 24)
                             
-                            Text("收藏")
+                            Text(LocalizationKey.fleaMarketFavorite.localized)
                                 .font(.system(size: 10))
                                 .foregroundColor(viewModel.isFavorited ? .red : AppColors.textTertiary)
                         }
@@ -654,7 +654,7 @@ struct FleaMarketDetailView: View {
                             showLogin = true
                         }
                     }) {
-                        Text("议价")
+                        Text(LocalizationKey.fleaMarketNegotiate.localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(AppColors.primary)
                             .frame(maxWidth: .infinity)
@@ -674,7 +674,7 @@ struct FleaMarketDetailView: View {
                             showLogin = true
                         }
                     }) {
-                        Text("立即购买")
+                        Text(LocalizationKey.fleaMarketBuyNow.localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -758,7 +758,7 @@ struct PurchaseSheet: View {
                     if purchaseType == .negotiate {
                         // 议价金额输入
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("您的出价")
+                            Text(LocalizationKey.fleaMarketYourBid.localized)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(AppColors.textSecondary)
                             
@@ -767,7 +767,7 @@ struct PurchaseSheet: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(AppColors.textSecondary)
                                 
-                                TextField("输入金额", value: $proposedPrice, format: .number)
+                                TextField(LocalizationKey.fleaMarketEnterAmount.localized, value: $proposedPrice, format: .number)
                                     .keyboardType(.decimalPad)
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
                             }
@@ -779,7 +779,7 @@ struct PurchaseSheet: View {
                     
                     // 留言输入
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("给卖家留言（可选）")
+                        Text(LocalizationKey.fleaMarketMessageToSeller.localized)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                         
@@ -792,7 +792,7 @@ struct PurchaseSheet: View {
                             .overlay(
                                 Group {
                                     if message.isEmpty {
-                                        Text("例如：希望面交、能否包邮等...")
+                                        Text(LocalizationKey.fleaMarketMessagePlaceholder.localized)
                                             .font(.system(size: 14))
                                             .foregroundColor(AppColors.textTertiary)
                                             .padding(.leading, 16)
@@ -810,11 +810,11 @@ struct PurchaseSheet: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color(UIColor.systemBackground))
-            .navigationTitle(purchaseType == .direct ? "确认购买" : "出价购买")
+            .navigationTitle(purchaseType == .direct ? LocalizationKey.fleaMarketConfirmPurchase.localized : LocalizationKey.fleaMarketBidPurchase.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(LocalizationKey.commonCancel.localized) { dismiss() }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {

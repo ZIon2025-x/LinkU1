@@ -21,8 +21,8 @@ struct NotificationListView: View {
             } else if viewModel.notifications.isEmpty {
                 EmptyStateView(
                     icon: "bell.fill",
-                    title: "暂无通知",
-                    message: "还没有收到任何通知消息"
+                    title: LocalizationKey.notificationNoNotifications.localized,
+                    message: LocalizationKey.notificationNoNotificationsMessage.localized
                 )
             } else {
                 ScrollView {
@@ -223,7 +223,7 @@ struct NotificationRow: View {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 16))
-                            Text("同意")
+                            Text(LocalizationKey.notificationAgree.localized)
                                 .font(AppTypography.caption)
                                 .fontWeight(.bold)
                         }
@@ -241,7 +241,7 @@ struct NotificationRow: View {
                         HStack {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16))
-                            Text("拒绝")
+                            Text(LocalizationKey.notificationReject.localized)
                                 .font(AppTypography.caption)
                                 .fontWeight(.bold)
                         }
@@ -265,8 +265,8 @@ struct NotificationRow: View {
                 loadNegotiationTokens()
             }
         }
-        .alert("操作失败", isPresented: $showError) {
-            Button("确定", role: .cancel) {}
+        .alert(LocalizationKey.errorOperationFailed.localized, isPresented: $showError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {}
         } message: {
             Text(errorMessage)
         }

@@ -114,6 +114,76 @@ enum TaskStatus: String, Codable {
     }
 }
 
+// MARK: - 推荐任务响应模型
+struct RecommendationTask: Codable {
+    let taskId: Int
+    let title: String
+    let description: String
+    let taskType: String
+    let location: String
+    let reward: Double
+    let deadline: String?
+    let taskLevel: String?
+    let matchScore: Double?
+    let recommendationReason: String?
+    let createdAt: String
+    let images: [String]?  // 添加图片字段
+    
+    enum CodingKeys: String, CodingKey {
+        case taskId = "task_id"
+        case title
+        case description
+        case taskType = "task_type"
+        case location
+        case reward
+        case deadline
+        case taskLevel = "task_level"
+        case matchScore = "match_score"
+        case recommendationReason = "recommendation_reason"
+        case createdAt = "created_at"
+        case images  // 添加图片字段的 CodingKey
+    }
+    
+    /// 转换为 Task 对象
+    func toTask() -> Task {
+        return Task(
+            id: taskId,
+            title: title,
+            description: description,
+            taskType: taskType,
+            location: location,
+            latitude: nil,
+            longitude: nil,
+            reward: reward,
+            baseReward: reward,
+            agreedReward: nil,
+            currency: nil,
+            status: .open, // 推荐任务默认是开放状态
+            images: images,  // 使用实际的图片数据，而不是 nil
+            createdAt: createdAt,
+            deadline: deadline,
+            isFlexible: nil,
+            isPublic: 1,
+            posterId: nil,
+            takerId: nil,
+            taskLevel: taskLevel,
+            pointsReward: nil,
+            isMultiParticipant: nil,
+            maxParticipants: nil,
+            minParticipants: nil,
+            currentParticipants: nil,
+            poster: nil,
+            isRecommended: true,
+            matchScore: matchScore,
+            recommendationReason: recommendationReason
+        )
+    }
+}
+
+struct TaskRecommendationResponse: Codable {
+    let recommendations: [RecommendationTask]
+}
+
 struct TaskListResponse: Codable {
     let tasks: [Task]
     let total: Int

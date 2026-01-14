@@ -16,7 +16,7 @@ struct LeaderboardDetailView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.leaderboard == nil {
-                LoadingView(message: "加载中...")
+                LoadingView(message: LocalizationKey.commonLoading.localized)
             } else if let leaderboard = viewModel.leaderboard {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -41,22 +41,22 @@ struct LeaderboardDetailView: View {
                             // 4. 排序过滤器
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: AppSpacing.sm) {
-                                    SortButton(title: "综合", isSelected: selectedSort == "vote_score") {
+                                    SortButton(title: LocalizationKey.leaderboardSortComprehensive.localized, isSelected: selectedSort == "vote_score") {
                                         selectedSort = "vote_score"
                                         viewModel.loadItems(leaderboardId: leaderboardId, sort: selectedSort)
                                         HapticFeedback.selection()
                                     }
-                                    SortButton(title: "净投票", isSelected: selectedSort == "net_votes") {
+                                    SortButton(title: LocalizationKey.leaderboardSortNetVotes.localized, isSelected: selectedSort == "net_votes") {
                                         selectedSort = "net_votes"
                                         viewModel.loadItems(leaderboardId: leaderboardId, sort: selectedSort)
                                         HapticFeedback.selection()
                                     }
-                                    SortButton(title: "支持数", isSelected: selectedSort == "upvotes") {
+                                    SortButton(title: LocalizationKey.leaderboardSortUpvotes.localized, isSelected: selectedSort == "upvotes") {
                                         selectedSort = "upvotes"
                                         viewModel.loadItems(leaderboardId: leaderboardId, sort: selectedSort)
                                         HapticFeedback.selection()
                                     }
-                                    SortButton(title: "最新", isSelected: selectedSort == "created_at") {
+                                    SortButton(title: LocalizationKey.leaderboardSortLatest.localized, isSelected: selectedSort == "created_at") {
                                         selectedSort = "created_at"
                                         viewModel.loadItems(leaderboardId: leaderboardId, sort: selectedSort)
                                         HapticFeedback.selection()
@@ -74,7 +74,7 @@ struct LeaderboardDetailView: View {
                                 }
                                 .padding(.top, AppSpacing.xl)
                             } else if viewModel.items.isEmpty {
-                                EmptyStateView(icon: "tray", title: "暂无条目", message: "这个排行榜还没有参与者，快来提交第一个吧！")
+                                EmptyStateView(icon: "tray", title: LocalizationKey.leaderboardNoItems.localized, message: LocalizationKey.leaderboardNoItemsMessage.localized)
                                     .frame(height: 300)
                             } else {
                                 VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -106,7 +106,7 @@ struct LeaderboardDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("排行榜信息加载失败")
+                    Text(LocalizationKey.leaderboardLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -221,11 +221,11 @@ struct LeaderboardStatsBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            LeaderboardStatItem(value: leaderboard.itemCount.formatCount(), label: "竞品数", icon: "square.grid.2x2.fill", color: AppColors.primary)
+            LeaderboardStatItem(value: leaderboard.itemCount.formatCount(), label: LocalizationKey.leaderboardItemCount.localized, icon: "square.grid.2x2.fill", color: AppColors.primary)
             Divider().frame(height: 30).padding(.horizontal, AppSpacing.sm)
-            LeaderboardStatItem(value: leaderboard.voteCount.formatCount(), label: "总投票", icon: "hand.thumbsup.fill", color: AppColors.warning)
+            LeaderboardStatItem(value: leaderboard.voteCount.formatCount(), label: LocalizationKey.leaderboardTotalVotes.localized, icon: "hand.thumbsup.fill", color: AppColors.warning)
             Divider().frame(height: 30).padding(.horizontal, AppSpacing.sm)
-            LeaderboardStatItem(value: leaderboard.viewCount.formatCount(), label: "浏览量", icon: "eye.fill", color: AppColors.textSecondary)
+            LeaderboardStatItem(value: leaderboard.viewCount.formatCount(), label: LocalizationKey.leaderboardViewCount.localized, icon: "eye.fill", color: AppColors.textSecondary)
         }
         .padding(.vertical, AppSpacing.md)
         .background(AppColors.cardBackground)

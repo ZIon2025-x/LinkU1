@@ -80,6 +80,8 @@ enum TaskTab: String, CaseIterable {
 extension Notification.Name {
     static let taskStatusUpdated = Notification.Name("taskStatusUpdated")
     static let taskUpdated = Notification.Name("taskUpdated")
+    static let refreshRecommendedTasks = Notification.Name("refreshRecommendedTasks")
+    static let refreshHomeContent = Notification.Name("refreshHomeContent") // 刷新首页所有内容
 }
 
 class MyTasksViewModel: ObservableObject {

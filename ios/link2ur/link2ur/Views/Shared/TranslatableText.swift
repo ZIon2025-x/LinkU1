@@ -51,7 +51,7 @@ struct TranslatableText: View {
                     if isTranslating {
                         ProgressView()
                             .scaleEffect(0.7)
-                        Text("翻译中...")
+                        Text(LocalizationKey.translationTranslating.localized)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     } else if let translated = translatedText, translated != text {

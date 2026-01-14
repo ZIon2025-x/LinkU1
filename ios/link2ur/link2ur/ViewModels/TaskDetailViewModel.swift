@@ -61,6 +61,11 @@ class TaskDetailViewModel: ObservableObject {
                 }
             }, receiveValue: { [weak self] task in
                 DispatchQueue.main.async {
+                    // 如果任务状态变为已完成或取消，清理相关图片缓存
+                    if task.status == .completed || task.status == .cancelled {
+                        ImageCache.shared.clearTaskImages(task: task)
+                    }
+                    
                     self?.task = task
                     // 发送任务更新通知，让其他页面（如"我的任务"）也更新
                     NotificationCenter.default.post(name: .taskUpdated, object: task)
@@ -83,8 +88,17 @@ class TaskDetailViewModel: ObservableObject {
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoadingApplications = false
                 if case .failure(let error) = result {
-                    // 使用 ErrorHandler 统一处理错误
-                    ErrorHandler.shared.handle(error, context: "加载任务申请列表")
+                    // 403 错误表示用户没有权限查看申请列表（例如不是任务发布者），静默处理
+                    if case .httpError(let statusCode) = error, statusCode == 403 {
+                        Logger.debug("用户无权限查看申请列表（403），静默处理", category: .api)
+                        DispatchQueue.main.async {
+                            self?.applications = [] // 设置为空数组，不显示错误
+                        }
+                    } else {
+                        // 其他错误才显示
+                        ErrorHandler.shared.handle(error, context: "加载任务申请列表")
+                        Logger.error("加载申请列表失败: \(error.localizedDescription)", category: .api)
+                    }
                     // 记录性能指标
                     self?.performanceMonitor.recordNetworkRequest(
                         endpoint: endpoint,
@@ -92,7 +106,6 @@ class TaskDetailViewModel: ObservableObject {
                         duration: duration,
                         error: error
                     )
-                    Logger.error("加载申请列表失败: \(error.localizedDescription)", category: .api)
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(

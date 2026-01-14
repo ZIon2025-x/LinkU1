@@ -15,6 +15,7 @@ struct AsyncImageView: View {
     
     @StateObject private var imageLoader = AsyncImageLoader()
     @State private var isLoading = false
+    @State private var cachedImage: UIImage? = nil  // 用于存储立即从缓存获取的图片
     
     init(
         urlString: String?,
@@ -30,49 +31,74 @@ struct AsyncImageView: View {
         self.height = height
         self.contentMode = contentMode
         self.cornerRadius = cornerRadius
+        
+        // 立即检查缓存，如果存在则立即设置图片（避免闪烁）
+        if let urlString = urlString, !urlString.isEmpty {
+            _cachedImage = State(initialValue: ImageCache.shared.getCachedImage(from: urlString))
+        }
     }
     
     var body: some View {
-        Group {
-            if let image = imageLoader.image {
-                // 图片加载成功 - 使用drawingGroup优化渲染性能
+        ZStack {
+            // 占位符（始终显示在底层，避免闪烁）
+            placeholder
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundColor(AppColors.textTertiary)
+                .frame(width: width, height: height)
+                .background(AppColors.cardBackground)
+                .cornerRadius(cornerRadius)
+            
+            // 实际图片（优先使用缓存的图片，然后使用加载器加载的图片）
+            if let image = cachedImage ?? imageLoader.image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: contentMode)
                     .frame(width: width, height: height)
                     .cornerRadius(cornerRadius)
                     .drawingGroup() // 优化复杂视图的渲染性能，减少重绘
-            } else {
-                // 加载中或失败 - 显示占位符
-                ZStack {
-                    placeholder
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundColor(AppColors.textTertiary)
-                        .frame(width: width, height: height)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(cornerRadius)
-                    
-                    if imageLoader.isLoading {
-                        ProgressView()
-                            .tint(AppColors.primary)
-                            .scaleEffect(0.8)
-                    }
-                }
+                    .transition(.opacity.animation(.easeInOut(duration: 0.1))) // 更快的淡入动画
+                    .zIndex(1) // 确保图片在占位符上方
+            }
+            
+            // 加载指示器（只在没有缓存图片且正在加载时显示）
+            if imageLoader.isLoading && cachedImage == nil {
+                ProgressView()
+                    .tint(AppColors.primary)
+                    .scaleEffect(0.8)
+                    .zIndex(2) // 确保加载指示器在最上层
             }
         }
+        .frame(width: width, height: height)
+        .animation(.easeInOut(duration: 0.1), value: cachedImage != nil || imageLoader.image != nil) // 更快的过渡动画
         .onAppear {
-            // 只在视图出现时加载图片，避免重复加载
-            if let urlString = urlString, !urlString.isEmpty, imageLoader.image == nil {
-                imageLoader.load(from: urlString)
+            // 如果已经有缓存图片，同步到 imageLoader
+            if let urlString = urlString, !urlString.isEmpty {
+                // 优化：减少日志输出，只在必要时记录
+                if let cached = cachedImage {
+                    // 如果缓存图片存在，同步到 imageLoader，避免重复加载
+                    imageLoader.setImage(cached)
+                } else if imageLoader.image == nil && !imageLoader.isLoading {
+                    // 如果缓存图片不存在且没有正在加载，才从网络加载
+                    imageLoader.load(from: urlString)
+                }
+                // 其他情况（正在加载或已加载）不需要处理
             }
         }
         .onChange(of: urlString) { newValue in
             // URL变化时重新加载
             if let newValue = newValue, !newValue.isEmpty {
-                imageLoader.load(from: newValue)
+                // 优化：立即检查缓存，避免闪烁
+                if let cached = ImageCache.shared.getCachedImage(from: newValue) {
+                    cachedImage = cached
+                    imageLoader.setImage(cached)
+                } else {
+                    cachedImage = nil
+                    imageLoader.load(from: newValue)
+                }
             } else {
                 imageLoader.cancel()
+                cachedImage = nil
             }
         }
         .onDisappear {
@@ -218,12 +244,7 @@ struct AvatarView: View {
                 cornerRadius: size / 2
             )
             .clipShape(Circle())
-            .onAppear {
-                Logger.debug("AvatarView 从服务器加载，urlString: \(urlString)", category: .ui)
-                if let fullURL = urlString.toImageURL() {
-                    Logger.debug("AvatarView 转换后的完整 URL: \(fullURL.absoluteString)", category: .ui)
-                }
-            }
+            // 优化：移除不必要的日志输出
         } else {
             // 使用默认头像
             placeholder

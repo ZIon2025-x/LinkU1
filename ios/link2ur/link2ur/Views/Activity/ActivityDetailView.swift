@@ -223,6 +223,11 @@ struct ActivityImageCarousel: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
+            // 占位背景（避免闪烁）
+            Rectangle()
+                .fill(AppColors.cardBackground)
+                .frame(height: 300)
+            
             if let images = activity.images, !images.isEmpty {
                 TabView(selection: $currentIndex) {
                     ForEach(0..<images.count, id: \.self) { index in
@@ -521,7 +526,7 @@ struct PosterInfoRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("活动发布者")
+                    Text(LocalizationKey.activityPoster.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -530,7 +535,7 @@ struct PosterInfoRow: View {
                             .font(AppTypography.bodyBold)
                             .foregroundColor(AppColors.textPrimary)
                     } else {
-                        Text("查看达人主页")
+                        Text(LocalizationKey.activityViewExpertProfile.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(AppColors.textPrimary)
                     }
@@ -586,7 +591,7 @@ struct ActivityBottomBar: View {
                             }
                             .frame(height: 24)
                             
-                            Text("收藏")
+                            Text(LocalizationKey.activityFavorite.localized)
                                 .font(.system(size: 10))
                                 .foregroundColor(isFavorited ? .red : AppColors.textTertiary)
                         }
@@ -646,99 +651,21 @@ struct ActivityApplyView: View {
             KeyboardAvoidingScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     if hasTimeSlots {
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: LocalizationKey.activitySelectTimeSlot.localized, icon: "clock.fill")
-                            
-                            if viewModel.isLoadingTimeSlots {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                    Spacer()
-                                }
-                                .padding(.vertical, 40)
-                            } else if viewModel.timeSlots.isEmpty {
-                                EmptyStateView(icon: "calendar.badge.exclamationmark", title: LocalizationKey.activityNoAvailableTime.localized, message: LocalizationKey.activityNoAvailableTimeMessage.localized)
-                            } else {
-                                ForEach(groupedTimeSlots.keys.sorted(), id: \.self) { date in
-                                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                        Text(formatDate(date))
-                                            .font(AppTypography.subheadline)
-                                            .fontWeight(.bold)
-                                            .padding(.leading, 4)
-                                        
-                                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppSpacing.sm) {
-                                            ForEach(groupedTimeSlots[date] ?? []) { slot in
-                                                ActivityTimeSlotCard(
-                                                    slot: slot,
-                                                    isSelected: selectedTimeSlotId == slot.id,
-                                                    onSelect: {
-                                                        if canSelectSlot(slot) {
-                                                            selectedTimeSlotId = slot.id
-                                                            HapticFeedback.selection()
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .cardStyle(useMaterial: true)
+                        timeSlotSelectionView
                     } else {
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: LocalizationKey.activityParticipateTime.localized, icon: "calendar")
-                            
-                            Toggle(isOn: $isFlexibleTime) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("时间灵活")
-                                        .font(AppTypography.bodyBold)
-                                    Text("如果您在近期任何时间都方便参加")
-                                        .font(AppTypography.caption)
-                                        .foregroundColor(AppColors.textSecondary)
-                                }
-                            }
-                            .tint(AppColors.primary)
-                            
-                            if !isFlexibleTime {
-                                Divider()
-                                DatePicker("期望参加日期", selection: $preferredDeadline, displayedComponents: .date)
-                                    .font(AppTypography.body)
-                            }
-                        }
-                        .cardStyle(useMaterial: true)
+                        flexibleTimeSelectionView
                     }
                     
                     if let error = applyError {
-                        HStack {
-                            Image(systemName: "exclamationmark.circle.fill")
-                            Text(error)
-                        }
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.error)
-                        .padding()
-                        .background(AppColors.error.opacity(0.1))
-                        .cornerRadius(AppCornerRadius.medium)
+                        errorView(error)
                     }
                     
-                    Button(action: apply) {
-                        HStack {
-                            if isApplying {
-                                ProgressView().tint(.white)
-                            } else {
-                                Image(systemName: "paperplane.fill")
-                                Text("确认申请参与")
-                            }
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isApplying || (hasTimeSlots && selectedTimeSlotId == nil))
-                    .opacity((hasTimeSlots && selectedTimeSlotId == nil) ? 0.6 : 1.0)
+                    applyButton
                 }
                 .padding(AppSpacing.md)
             }
             .background(AppColors.background)
-            .navigationTitle("申请参加活动")
+            .navigationTitle(LocalizationKey.activityApplyToJoin.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
@@ -753,6 +680,110 @@ struct ActivityApplyView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Subviews
+    
+    private var timeSlotSelectionView: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            SectionHeader(title: LocalizationKey.activitySelectTimeSlot.localized, icon: "clock.fill")
+            
+            if viewModel.isLoadingTimeSlots {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .padding(.vertical, 40)
+            } else if viewModel.timeSlots.isEmpty {
+                EmptyStateView(
+                    icon: "calendar.badge.exclamationmark",
+                    title: LocalizationKey.activityNoAvailableTime.localized,
+                    message: LocalizationKey.activityNoAvailableTimeMessage.localized
+                )
+            } else {
+                timeSlotsList
+            }
+        }
+        .cardStyle(useMaterial: true)
+    }
+    
+    private var timeSlotsList: some View {
+        ForEach(groupedTimeSlots.keys.sorted(), id: \.self) { date in
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                Text(formatDate(date))
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.bold)
+                    .padding(.leading, 4)
+                
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppSpacing.sm) {
+                    ForEach(groupedTimeSlots[date] ?? []) { slot in
+                        ActivityTimeSlotCard(
+                            slot: slot,
+                            isSelected: selectedTimeSlotId == slot.id,
+                            onSelect: {
+                                if canSelectSlot(slot) {
+                                    selectedTimeSlotId = slot.id
+                                    HapticFeedback.selection()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    private var flexibleTimeSelectionView: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            SectionHeader(title: LocalizationKey.activityParticipateTime.localized, icon: "calendar")
+            
+            Toggle(isOn: $isFlexibleTime) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizationKey.activityTimeFlexible.localized)
+                        .font(AppTypography.bodyBold)
+                    Text(LocalizationKey.activityTimeFlexibleMessage.localized)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+            .tint(AppColors.primary)
+            
+            if !isFlexibleTime {
+                Divider()
+                DatePicker(LocalizationKey.activityPreferredDate.localized, selection: $preferredDeadline, displayedComponents: .date)
+                    .font(AppTypography.body)
+            }
+        }
+        .cardStyle(useMaterial: true)
+    }
+    
+    private func errorView(_ error: String) -> some View {
+        HStack {
+            Image(systemName: "exclamationmark.circle.fill")
+            Text(error)
+        }
+        .font(AppTypography.caption)
+        .foregroundColor(AppColors.error)
+        .padding()
+        .background(AppColors.error.opacity(0.1))
+        .cornerRadius(AppCornerRadius.medium)
+    }
+    
+    private var applyButton: some View {
+        Button(action: apply) {
+            HStack {
+                if isApplying {
+                    ProgressView().tint(.white)
+                } else {
+                    Image(systemName: "paperplane.fill")
+                    Text(LocalizationKey.activityConfirmApply.localized)
+                }
+            }
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(isApplying || (hasTimeSlots && selectedTimeSlotId == nil))
+        .opacity((hasTimeSlots && selectedTimeSlotId == nil) ? 0.6 : 1.0)
     }
     
     // Helper methods for date/time formatting (same as before but integrated)

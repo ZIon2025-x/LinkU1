@@ -33,13 +33,13 @@ struct EditFleaMarketItemView: View {
                 VStack(spacing: AppSpacing.xl) {
                     // 1. 基本信息
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "商品信息", icon: "bag.fill")
+                        SectionHeader(title: LocalizationKey.fleaMarketProductInfo.localized, icon: "bag.fill")
                         
                         VStack(spacing: AppSpacing.lg) {
                             // 标题
                             EnhancedTextField(
-                                title: "商品标题",
-                                placeholder: "品牌、型号、成色等 (例: iPhone 15 Pro)",
+                                title: LocalizationKey.fleaMarketProductTitle.localized,
+                                placeholder: LocalizationKey.fleaMarketProductTitlePlaceholder.localized,
                                 text: $viewModel.title,
                                 icon: "tag.fill",
                                 isRequired: true
@@ -47,7 +47,7 @@ struct EditFleaMarketItemView: View {
                             
                             // 分类
                             CustomPickerField(
-                                title: "商品分类",
+                                title: LocalizationKey.fleaMarketCategory.localized,
                                 selection: $viewModel.category,
                                 options: viewModel.categories.map { ($0, $0) },
                                 icon: "list.bullet.indent"
@@ -55,8 +55,8 @@ struct EditFleaMarketItemView: View {
                             
                             // 描述
                             EnhancedTextEditor(
-                                title: "详情描述",
-                                placeholder: "请详细描述商品信息、成色、使用情况、转手原因等...",
+                                title: LocalizationKey.fleaMarketDescription.localized,
+                                placeholder: LocalizationKey.fleaMarketDescriptionPlaceholder.localized,
                                 text: $viewModel.description,
                                 height: 150,
                                 isRequired: true,
@@ -71,12 +71,12 @@ struct EditFleaMarketItemView: View {
                     
                     // 2. 价格与交易
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "价格与交易", icon: "dollarsign.circle.fill")
+                        SectionHeader(title: LocalizationKey.fleaMarketPriceAndTransaction.localized, icon: "dollarsign.circle.fill")
                         
                         VStack(spacing: AppSpacing.lg) {
                             // 价格
                             EnhancedNumberField(
-                                title: "出售价格",
+                                title: LocalizationKey.fleaMarketPrice.localized,
                                 placeholder: "0.00",
                                 value: $viewModel.price,
                                 prefix: "£",
@@ -89,8 +89,8 @@ struct EditFleaMarketItemView: View {
                             
                             // 联系方式
                             EnhancedTextField(
-                                title: "联系方式",
-                                placeholder: "微信、电话或 WhatsApp",
+                                title: LocalizationKey.fleaMarketContact.localized,
+                                placeholder: LocalizationKey.fleaMarketContactPlaceholder.localized,
                                 text: $viewModel.contact,
                                 icon: "phone.fill"
                             )
@@ -104,7 +104,7 @@ struct EditFleaMarketItemView: View {
                     // 3. 图片展示
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
                         HStack {
-                            SectionHeader(title: "商品图片", icon: "photo.on.rectangle.angled")
+                            SectionHeader(title: LocalizationKey.fleaMarketProductImages.localized, icon: "photo.on.rectangle.angled")
                             Spacer()
                             Text("\(viewModel.selectedImages.count + viewModel.existingImageUrls.count)/5")
                                 .font(AppTypography.caption)
@@ -173,7 +173,7 @@ struct EditFleaMarketItemView: View {
                                             Image(systemName: "plus.viewfinder")
                                                 .font(.system(size: 28))
                                                 .foregroundColor(AppColors.primary)
-                                            Text("添加图片")
+                                            Text(LocalizationKey.fleaMarketAddImage.localized)
                                                 .font(.system(size: 11, weight: .medium))
                                                 .foregroundColor(AppColors.textSecondary)
                                         }
@@ -278,7 +278,7 @@ struct EditFleaMarketItemView: View {
     
     private var locationInputSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("交易地点")
+            Text(LocalizationKey.fleaMarketTransactionLocation.localized)
                 .font(AppTypography.subheadline)
                 .foregroundColor(AppColors.textSecondary)
             
@@ -309,7 +309,7 @@ struct EditFleaMarketItemView: View {
                                             .font(.system(size: 11, weight: .heavy))
                                             .textCase(.uppercase)
                                     } else {
-                                        Text("线上")
+                                        Text(LocalizationKey.fleaMarketOnline.localized)
                                             .font(.system(size: 11, weight: .bold))
                                     }
                                 }

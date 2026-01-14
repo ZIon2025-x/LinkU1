@@ -25,7 +25,7 @@ struct LeaderboardItemDetailView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text("加载中...")
+                    Text(LocalizationKey.leaderboardLoading.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }

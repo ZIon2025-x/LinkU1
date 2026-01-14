@@ -44,6 +44,22 @@ public final class ImageCache: ObservableObject {
     
     // MARK: - 图片加载
     
+    /// 同步检查缓存（用于立即显示已缓存的图片）
+    public func getCachedImage(from url: String) -> UIImage? {
+        // 检查内存缓存
+        if let cachedImage = cache.object(forKey: url as NSString) {
+            return cachedImage
+        }
+        
+        // 检查磁盘缓存
+        if let diskImage = loadFromDisk(url: url) {
+            cache.setObject(diskImage, forKey: url as NSString)
+            return diskImage
+        }
+        
+        return nil
+    }
+    
     /// 加载图片（带缓存）
     public func loadImage(from url: String) -> AnyPublisher<UIImage?, Never> {
         // 检查内存缓存
@@ -102,33 +118,86 @@ public final class ImageCache: ObservableObject {
     }
     
     private func saveToDisk(image: UIImage, url: String) {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
         let fileName = url.md5Hash
         let fileURL = cacheDirectory.appendingPathComponent(fileName)
-        try? data.write(to: fileURL)
+        
+        // 尝试不同的压缩质量，确保文件不超过 5MB
+        var compressionQuality: CGFloat = 0.8
+        var data: Data?
+        
+        // 最多尝试 5 次，逐步降低压缩质量
+        for _ in 0..<5 {
+            if let imageData = image.jpegData(compressionQuality: compressionQuality) {
+                // 如果数据大小在限制内，使用这个质量
+                if imageData.count <= 5 * 1024 * 1024 {
+                    data = imageData
+                    break
+                }
+                // 如果数据过大，降低压缩质量
+                compressionQuality -= 0.15
+            } else {
+                break
+            }
+        }
+        
+        // 如果仍然无法压缩到 5MB 以内，使用最低质量（0.2）
+        if data == nil || (data?.count ?? 0) > 5 * 1024 * 1024 {
+            data = image.jpegData(compressionQuality: 0.2)
+        }
+        
+        // 如果最终数据仍然过大，不保存（避免占用过多磁盘空间）
+        guard let finalData = data, finalData.count <= 5 * 1024 * 1024 else {
+            Logger.warning("图片压缩后仍然过大，跳过保存: \(url)", category: .general)
+            return
+        }
+        
+        try? finalData.write(to: fileURL)
     }
     
     private func loadFromDisk(url: String) -> UIImage? {
         let fileName = url.md5Hash
         let fileURL = cacheDirectory.appendingPathComponent(fileName)
         
-        // 检查文件大小，防止加载过大的图片
-        guard let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
-              let fileSize = attributes[.size] as? Int64,
-              fileSize <= 5 * 1024 * 1024 else { // 限制5MB
-            Logger.warning("磁盘缓存图片过大: \(fileURL.path)，跳过加载", category: .general)
+        // 检查文件是否存在
+        guard fileManager.fileExists(atPath: fileURL.path) else {
             return nil
         }
         
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        // 检查文件大小，防止加载过大的图片
+        guard let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+              let fileSize = attributes[.size] as? Int64 else {
+            // 无法读取文件属性，尝试删除并返回 nil
+            try? fileManager.removeItem(at: fileURL)
+            return nil
+        }
+        
+        // 如果文件过大（超过5MB），删除它并返回 nil（会触发从网络重新加载并优化）
+        if fileSize > 5 * 1024 * 1024 {
+            Logger.warning("磁盘缓存图片过大: \(fileSize / 1024 / 1024)MB，删除并重新加载: \(fileURL.lastPathComponent)", category: .general)
+            try? fileManager.removeItem(at: fileURL)
+            return nil
+        }
+        
+        guard let data = try? Data(contentsOf: fileURL) else {
+            // 读取失败，删除损坏的文件
+            try? fileManager.removeItem(at: fileURL)
+            return nil
+        }
         
         // 再次检查数据大小
         if data.count > 5 * 1024 * 1024 {
-            Logger.warning("磁盘缓存图片数据过大: \(data.count) bytes，跳过加载", category: .general)
+            Logger.warning("磁盘缓存图片数据过大: \(data.count / 1024 / 1024)MB，删除并重新加载: \(fileURL.lastPathComponent)", category: .general)
+            try? fileManager.removeItem(at: fileURL)
             return nil
         }
         
-        return UIImage(data: data)
+        guard let image = UIImage(data: data) else {
+            // 图片数据损坏，删除文件
+            try? fileManager.removeItem(at: fileURL)
+            return nil
+        }
+        
+        return image
     }
     
     /// 清除所有缓存
@@ -145,12 +214,77 @@ public final class ImageCache: ObservableObject {
         }
         
         let now = Date()
+        var clearedCount = 0
         for file in files {
             if let attributes = try? fileManager.attributesOfItem(atPath: file.path),
                let modificationDate = attributes[.modificationDate] as? Date,
                now.timeIntervalSince(modificationDate) > maxAge {
                 try? fileManager.removeItem(at: file)
+                clearedCount += 1
             }
+        }
+        if clearedCount > 0 {
+            Logger.debug("已清理 \(clearedCount) 个过期图片缓存（超过 \(Int(maxAge / 86400)) 天）", category: .cache)
+        }
+    }
+    
+    /// 清除指定任务的图片缓存（当任务完成或取消时调用）
+    /// - Parameter task: 已完成或取消的任务
+    func clearTaskImages(task: Task) {
+        // 只清理已完成或取消的任务图片
+        guard task.status == .completed || task.status == .cancelled else {
+            return
+        }
+        
+        guard let images = task.images, !images.isEmpty else {
+            return
+        }
+        
+        var clearedCount = 0
+        for imageUrl in images {
+            // 从内存缓存中移除
+            cache.removeObject(forKey: imageUrl as NSString)
+            
+            // 从磁盘缓存中移除
+            let fileName = imageUrl.md5Hash
+            let fileURL = cacheDirectory.appendingPathComponent(fileName)
+            if fileManager.fileExists(atPath: fileURL.path) {
+                try? fileManager.removeItem(at: fileURL)
+                clearedCount += 1
+            }
+        }
+        
+        if clearedCount > 0 {
+            Logger.debug("已清理任务 \(task.id) 的 \(clearedCount) 张图片缓存（任务状态: \(task.status.rawValue)）", category: .cache)
+        }
+    }
+    
+    /// 批量清除已完成或取消任务的图片缓存
+    /// - Parameter tasks: 任务列表（只处理已完成或取消的任务）
+    func clearCompletedOrCancelledTaskImages(tasks: [Task]) {
+        let tasksToClear = tasks.filter { $0.status == .completed || $0.status == .cancelled }
+        guard !tasksToClear.isEmpty else { return }
+        
+        var totalClearedCount = 0
+        for task in tasksToClear {
+            guard let images = task.images, !images.isEmpty else { continue }
+            
+            for imageUrl in images {
+                // 从内存缓存中移除
+                cache.removeObject(forKey: imageUrl as NSString)
+                
+                // 从磁盘缓存中移除
+                let fileName = imageUrl.md5Hash
+                let fileURL = cacheDirectory.appendingPathComponent(fileName)
+                if fileManager.fileExists(atPath: fileURL.path) {
+                    try? fileManager.removeItem(at: fileURL)
+                    totalClearedCount += 1
+                }
+            }
+        }
+        
+        if totalClearedCount > 0 {
+            Logger.debug("已批量清理 \(tasksToClear.count) 个已完成/取消任务的 \(totalClearedCount) 张图片缓存", category: .cache)
         }
     }
     

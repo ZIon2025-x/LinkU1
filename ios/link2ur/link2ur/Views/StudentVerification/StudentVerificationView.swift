@@ -75,7 +75,7 @@ struct StudentVerificationView: View {
                                         }) {
                                             HStack {
                                                 IconStyle.icon("arrow.clockwise", size: IconStyle.medium)
-                                                Text("续期认证")
+                                                Text(LocalizationKey.studentVerificationRenewVerification.localized)
                                                     .font(AppTypography.bodyBold)
                                             }
                                             .foregroundColor(.white)
@@ -93,7 +93,7 @@ struct StudentVerificationView: View {
                                         }) {
                                             HStack {
                                                 IconStyle.icon("envelope", size: IconStyle.medium)
-                                                Text("更换邮箱")
+                                                Text(LocalizationKey.studentVerificationChangeEmail.localized)
                                                     .font(AppTypography.bodyBold)
                                             }
                                             .foregroundColor(AppColors.primary)
@@ -118,7 +118,7 @@ struct StudentVerificationView: View {
                                     }) {
                                         HStack {
                                             IconStyle.icon("checkmark.shield.fill", size: IconStyle.medium)
-                                            Text("提交认证")
+                                            Text(LocalizationKey.studentVerificationSubmitVerification.localized)
                                                 .font(AppTypography.bodyBold)
                                         }
                                         .foregroundColor(.white)
@@ -153,12 +153,12 @@ struct StudentVerificationView: View {
                                 }
                                 
                                 VStack(spacing: AppSpacing.sm) {
-                                    Text("学生认证")
+                                    Text(LocalizationKey.studentVerificationStudentVerificationTitle.localized)
                                         .font(AppTypography.title2)
                                         .fontWeight(.bold)
                                         .foregroundColor(AppColors.textPrimary)
                                     
-                                    Text("验证您的学生身份以享受学生专属特权")
+                                    Text(LocalizationKey.studentVerificationDescription.localized)
                                         .font(AppTypography.subheadline)
                                         .foregroundColor(AppColors.textSecondary)
                                         .multilineTextAlignment(.center)
@@ -174,7 +174,7 @@ struct StudentVerificationView: View {
                                 }) {
                                     HStack {
                                         IconStyle.icon("arrow.right", size: IconStyle.medium)
-                                        Text("开始认证")
+                                        Text(LocalizationKey.studentVerificationStartVerification.localized)
                                             .font(AppTypography.bodyBold)
                                     }
                                     .foregroundColor(.white)
@@ -284,22 +284,22 @@ struct StatusCardView: View {
                 // Details
                 VStack(spacing: AppSpacing.md) {
                     if let email = status.email {
-                        DetailRow(icon: "envelope.fill", label: "认证邮箱", value: email, color: .blue)
+                        DetailRow(icon: "envelope.fill", label: LocalizationKey.studentVerificationEmail.localized, value: email, color: .blue)
                     }
                     
                     if let verifiedAt = status.verifiedAt {
-                        DetailRow(icon: "calendar", label: "认证时间", value: verifiedAt, color: .green)
+                        DetailRow(icon: "calendar", label: LocalizationKey.studentVerificationTime.localized, value: verifiedAt, color: .green)
                     }
                     
                     if let expiresAt = status.expiresAt {
-                        DetailRow(icon: "clock.fill", label: "到期时间", value: expiresAt, color: .orange)
+                        DetailRow(icon: "clock.fill", label: LocalizationKey.studentVerificationExpiryTime.localized, value: expiresAt, color: .orange)
                     }
                     
                     if let daysRemaining = status.daysRemaining {
                         DetailRow(
                             icon: "hourglass",
-                            label: "剩余天数",
-                            value: "\(daysRemaining) 天",
+                            label: LocalizationKey.studentVerificationDaysRemaining.localized,
+                            value: String(format: LocalizationKey.studentVerificationDaysFormat.localized, daysRemaining),
                             color: daysRemaining < 30 ? .red : .blue
                         )
                     }
@@ -308,7 +308,7 @@ struct StatusCardView: View {
                 HStack {
                     IconStyle.icon("info.circle.fill", size: IconStyle.small)
                         .foregroundColor(AppColors.warning)
-                    Text("状态: \(statusText)")
+                    Text(String(format: LocalizationKey.studentVerificationStatus.localized, statusText))
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -371,12 +371,12 @@ struct SubmitVerificationView: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 邮箱信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "邮箱信息", icon: "envelope.fill")
+                            SectionHeader(title: LocalizationKey.studentVerificationEmailInfo.localized, icon: "envelope.fill")
                             
                             VStack(spacing: AppSpacing.lg) {
                                 EnhancedTextField(
-                                    title: "学校邮箱",
-                                    placeholder: "请输入您的 .ac.uk 或 .edu 邮箱",
+                                    title: LocalizationKey.studentVerificationSchoolEmail.localized,
+                                    placeholder: LocalizationKey.studentVerificationSchoolEmailPlaceholder.localized,
                                     text: $email,
                                     icon: "envelope",
                                     keyboardType: .emailAddress,
@@ -384,7 +384,7 @@ struct SubmitVerificationView: View {
                                     isRequired: true
                                 )
                                 
-                                Text("说明: 请输入您的学校邮箱地址，我们将发送验证邮件到该邮箱。")
+                                Text(LocalizationKey.studentVerificationEmailInstruction.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                                     .padding(.horizontal, 4)
@@ -417,7 +417,7 @@ struct SubmitVerificationView: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("提交认证")
+            .navigationTitle(LocalizationKey.studentVerificationSubmitVerification.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
@@ -488,12 +488,12 @@ struct RenewVerificationView: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 邮箱信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "续期信息", icon: "arrow.clockwise.circle.fill")
+                            SectionHeader(title: LocalizationKey.studentVerificationRenewInfo.localized, icon: "arrow.clockwise.circle.fill")
                             
                             VStack(spacing: AppSpacing.lg) {
                                 EnhancedTextField(
-                                    title: "学校邮箱",
-                                    placeholder: "请输入您的学校邮箱",
+                                    title: LocalizationKey.studentVerificationSchoolEmail.localized,
+                                    placeholder: LocalizationKey.studentVerificationRenewEmailPlaceholder.localized,
                                     text: $email,
                                     icon: "envelope",
                                     keyboardType: .emailAddress,
@@ -501,7 +501,7 @@ struct RenewVerificationView: View {
                                     isRequired: true
                                 )
                                 
-                                Text("说明: 请输入您的学校邮箱地址以续期认证。")
+                                Text(LocalizationKey.studentVerificationRenewInstruction.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                                     .padding(.horizontal, 4)
@@ -534,7 +534,7 @@ struct RenewVerificationView: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("续期认证")
+            .navigationTitle(LocalizationKey.studentVerificationRenewVerification.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
@@ -605,12 +605,12 @@ struct ChangeEmailView: View {
                     VStack(spacing: AppSpacing.xl) {
                         // 1. 新邮箱信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            SectionHeader(title: "更换邮箱", icon: "envelope.badge.shield.half.filled")
+                            SectionHeader(title: LocalizationKey.studentVerificationChangeEmail.localized, icon: "envelope.badge.shield.half.filled")
                             
                             VStack(spacing: AppSpacing.lg) {
                                 EnhancedTextField(
-                                    title: "新学校邮箱",
-                                    placeholder: "请输入新的学校邮箱",
+                                    title: LocalizationKey.studentVerificationNewSchoolEmail.localized,
+                                    placeholder: LocalizationKey.studentVerificationNewSchoolEmailPlaceholder.localized,
                                     text: $newEmail,
                                     icon: "envelope",
                                     keyboardType: .emailAddress,
@@ -618,7 +618,7 @@ struct ChangeEmailView: View {
                                     isRequired: true
                                 )
                                 
-                                Text("说明: 请输入新的学校邮箱地址，更换后需重新验证。")
+                                Text(LocalizationKey.studentVerificationChangeEmailInstruction.localized)
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.textSecondary)
                                     .padding(.horizontal, 4)
@@ -651,7 +651,7 @@ struct ChangeEmailView: View {
                     .padding(AppSpacing.md)
                 }
             }
-            .navigationTitle("更换邮箱")
+            .navigationTitle(LocalizationKey.studentVerificationChangeEmail.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
@@ -721,29 +721,29 @@ struct StudentBenefitsCard: View {
             VStack(spacing: AppSpacing.sm) {
                 StudentBenefitRow(
                     icon: "graduationcap.fill",
-                    title: "发布校园生活任务",
-                    description: "只有学生用户才能发布\"校园生活\"类型的任务",
+                    title: LocalizationKey.studentVerificationBenefitCampusLife.localized,
+                    description: LocalizationKey.studentVerificationBenefitCampusLifeDescription.localized,
                     color: .blue
                 )
                 
                 StudentBenefitRow(
                     icon: "person.3.fill",
-                    title: "进入学生社区",
-                    description: "访问专属的学生论坛板块，与同校同学交流",
+                    title: LocalizationKey.studentVerificationBenefitStudentCommunity.localized,
+                    description: LocalizationKey.studentVerificationBenefitStudentCommunityDescription.localized,
                     color: .green
                 )
                 
                 StudentBenefitRow(
                     icon: "gift.fill",
-                    title: "学生专属福利",
-                    description: "享受学生优惠、专属活动和更多特权",
+                    title: LocalizationKey.studentVerificationBenefitExclusiveBenefits.localized,
+                    description: LocalizationKey.studentVerificationBenefitExclusiveBenefitsDescription.localized,
                     color: .orange
                 )
                 
                 StudentBenefitRow(
                     icon: "checkmark.seal.fill",
-                    title: "身份认证标识",
-                    description: "在个人主页显示学生认证徽章，提升信任度",
+                    title: LocalizationKey.studentVerificationBenefitVerificationBadge.localized,
+                    description: LocalizationKey.studentVerificationBenefitVerificationBadgeDescription.localized,
                     color: .purple
                 )
             }

@@ -12,13 +12,13 @@ struct SettingsView: View {
             
             List {
                 // 通知设置
-                Section("通知设置") {
-                    Toggle("允许通知", isOn: $notificationsEnabled)
+                Section(LocalizationKey.settingsNotifications.localized) {
+                    Toggle(LocalizationKey.settingsAllowNotifications.localized, isOn: $notificationsEnabled)
                 }
                 
                 // 外观设置
-                Section("外观") {
-                    Picker("主题模式", selection: Binding(
+                Section(LocalizationKey.settingsAppearance.localized) {
+                    Picker(LocalizationKey.settingsThemeMode.localized, selection: Binding(
                         get: { appTheme.themeMode },
                         set: { appTheme.setThemeMode($0) }
                     )) {
@@ -30,23 +30,23 @@ struct SettingsView: View {
                 }
                 
                 // 会员
-                Section("会员") {
+                Section(LocalizationKey.settingsMembership.localized) {
                     NavigationLink(destination: VIPView()) {
                         HStack {
                             Image(systemName: "crown.fill")
                                 .foregroundColor(.yellow)
-                            Text("VIP 会员")
+                            Text(LocalizationKey.settingsVIPMembership.localized)
                         }
                     }
                 }
                 
                 // 帮助与支持
-                Section("帮助与支持") {
+                Section(LocalizationKey.settingsHelpSupport.localized) {
                     NavigationLink(destination: FAQView()) {
                         HStack {
                             Image(systemName: "questionmark.circle.fill")
                                 .foregroundColor(AppColors.primary)
-                            Text("常见问题")
+                            Text(LocalizationKey.settingsFAQ.localized)
                         }
                     }
                     
@@ -54,18 +54,18 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "headphones")
                                 .foregroundColor(AppColors.primary)
-                            Text("联系客服")
+                            Text(LocalizationKey.settingsContactSupport.localized)
                         }
                     }
                 }
                 
                 // 法律信息
-                Section("法律信息") {
+                Section(LocalizationKey.settingsLegal.localized) {
                     NavigationLink(destination: TermsView()) {
                         HStack {
                             Image(systemName: "doc.text.fill")
                                 .foregroundColor(AppColors.primary)
-                            Text("服务条款")
+                            Text(LocalizationKey.appTermsOfService.localized)
                         }
                     }
                     
@@ -73,30 +73,30 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "lock.shield.fill")
                                 .foregroundColor(AppColors.primary)
-                            Text("隐私政策")
+                            Text(LocalizationKey.appPrivacyPolicy.localized)
                         }
                     }
                 }
                 
                 // 关于
-                Section("关于") {
+                Section(LocalizationKey.settingsAbout.localized) {
                     NavigationLink(destination: AboutView()) {
                         HStack {
                             Image(systemName: "info.circle.fill")
                                 .foregroundColor(AppColors.primary)
-                            Text("关于我们")
+                            Text(LocalizationKey.appAbout.localized)
                         }
                     }
                     
                     HStack {
-                        Text("版本")
+                        Text(LocalizationKey.appVersion.localized)
                         Spacer()
                         Text("1.0.0")
                             .foregroundColor(AppColors.textSecondary)
                     }
                     
                     HStack {
-                        Text("应用名称")
+                        Text(LocalizationKey.settingsAppName.localized)
                         Spacer()
                         Text("Link²Ur")
                             .foregroundColor(AppColors.textSecondary)
@@ -104,12 +104,12 @@ struct SettingsView: View {
                 }
                 
                 // 收款账户
-                Section("收款账户") {
+                Section(LocalizationKey.settingsPaymentAccount.localized) {
                     NavigationLink(destination: StripeConnectOnboardingView()) {
                         HStack {
                             Image(systemName: "creditcard.fill")
                                 .foregroundColor(AppColors.primary)
-                            Text("设置收款账户")
+                            Text(LocalizationKey.settingsSetupPaymentAccount.localized)
                         }
                     }
                     
@@ -117,7 +117,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "arrow.up.right.circle.fill")
                                 .foregroundColor(AppColors.success)
-                            Text("提现管理")
+                            Text(LocalizationKey.walletPayoutManagement.localized)
                         }
                     }
                     
@@ -125,25 +125,25 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "list.bullet.rectangle.fill")
                                 .foregroundColor(.blue)
-                            Text("支付记录")
+                            Text(LocalizationKey.walletPaymentRecords.localized)
                         }
                     }
                 }
                 
                 // 账户信息
-                Section("账户") {
+                Section(LocalizationKey.settingsAccount.localized) {
                     if let user = appState.currentUser {
                         HStack {
-                            Text("用户ID")
+                            Text(LocalizationKey.settingsUserID.localized)
                             Spacer()
                             Text(user.id)
                                 .foregroundColor(AppColors.textSecondary)
                         }
                         
                         HStack {
-                            Text("邮箱")
+                            Text(LocalizationKey.profileEmail.localized)
                             Spacer()
-                            Text(user.email ?? "未提供")
+                            Text(user.email ?? LocalizationKey.commonNotProvided.localized)
                                 .foregroundColor(AppColors.textSecondary)
                         }
                     }
@@ -151,7 +151,7 @@ struct SettingsView: View {
             }
             .listStyle(InsetGroupedListStyle())
         }
-        .navigationTitle("设置")
+        .navigationTitle(LocalizationKey.profileSettings.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)

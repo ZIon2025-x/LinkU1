@@ -955,7 +955,7 @@ extension APIService {
     // MARK: - Recommendations (推荐)
     
     /// 获取推荐任务列表
-    func getTaskRecommendations(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil) -> AnyPublisher<TaskListResponse, APIError> {
+    func getTaskRecommendations(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil) -> AnyPublisher<TaskRecommendationResponse, APIError> {
         var queryParams: [String: String?] = [
             "limit": "\(limit)",
             "algorithm": algorithm
@@ -973,7 +973,7 @@ extension APIService {
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Recommendations.list)?\(queryString)"
         
-        return request(TaskListResponse.self, endpoint)
+        return request(TaskRecommendationResponse.self, endpoint)
     }
     
     /// 提交推荐反馈

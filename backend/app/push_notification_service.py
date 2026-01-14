@@ -5,6 +5,9 @@
 import os
 import logging
 import json
+import base64
+import tempfile
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 
@@ -14,8 +17,58 @@ logger = logging.getLogger(__name__)
 APNS_KEY_ID = os.getenv("APNS_KEY_ID")
 APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
 APNS_BUNDLE_ID = os.getenv("APNS_BUNDLE_ID", "com.link2ur.app")
-APNS_KEY_FILE = os.getenv("APNS_KEY_FILE")  # APNs 密钥文件路径
+APNS_KEY_FILE = os.getenv("APNS_KEY_FILE")  # APNs 密钥文件路径（本地开发使用）
+APNS_KEY_CONTENT = os.getenv("APNS_KEY_CONTENT")  # APNs 密钥内容（Base64编码，Railway等云平台使用）
 APNS_USE_SANDBOX = os.getenv("APNS_USE_SANDBOX", "false").lower() == "true"  # 是否使用沙盒环境
+
+# 临时文件路径（用于存储从环境变量读取的密钥）
+_temp_key_file: Optional[str] = None
+
+
+def get_apns_key_file() -> Optional[str]:
+    """
+    获取 APNs 密钥文件路径
+    优先使用环境变量中的密钥内容（Base64编码），如果不存在则使用文件路径
+    
+    Returns:
+        str: 密钥文件路径，如果配置不完整则返回 None
+    """
+    global _temp_key_file
+    
+    # 优先使用环境变量中的密钥内容（适合 Railway 等云平台）
+    if APNS_KEY_CONTENT:
+        try:
+            # 解码 Base64 密钥内容
+            key_content = base64.b64decode(APNS_KEY_CONTENT).decode('utf-8')
+            
+            # 如果临时文件已存在，直接返回
+            if _temp_key_file and Path(_temp_key_file).exists():
+                return _temp_key_file
+            
+            # 创建临时文件存储密钥
+            temp_dir = Path(tempfile.gettempdir())
+            temp_key_file = temp_dir / "apns_key.p8"
+            
+            # 写入密钥内容
+            with open(temp_key_file, 'w') as f:
+                f.write(key_content)
+            
+            # 设置文件权限（仅所有者可读）
+            os.chmod(temp_key_file, 0o600)
+            
+            _temp_key_file = str(temp_key_file)
+            logger.info("已从环境变量加载 APNs 密钥")
+            return _temp_key_file
+            
+        except Exception as e:
+            logger.error(f"从环境变量加载 APNs 密钥失败: {e}")
+            return None
+    
+    # 如果没有环境变量密钥，使用文件路径（本地开发）
+    if APNS_KEY_FILE and Path(APNS_KEY_FILE).exists():
+        return APNS_KEY_FILE
+    
+    return None
 
 
 def send_push_notification(
@@ -136,8 +189,14 @@ def send_apns_notification(
     """
     try:
         # 检查 APNs 配置
-        if not APNS_KEY_ID or not APNS_TEAM_ID or not APNS_KEY_FILE:
-            logger.warning("APNs 配置不完整，跳过推送通知")
+        if not APNS_KEY_ID or not APNS_TEAM_ID:
+            logger.warning("APNs 配置不完整（缺少 KEY_ID 或 TEAM_ID），跳过推送通知")
+            return False
+        
+        # 获取密钥文件路径
+        key_file = get_apns_key_file()
+        if not key_file:
+            logger.warning("APNs 密钥文件不存在或无法加载，跳过推送通知")
             return False
         
         # 尝试导入 PyAPNs2
@@ -164,7 +223,7 @@ def send_apns_notification(
         
         # 创建 APNs 客户端
         apns_client = APNsClient(
-            credentials=APNS_KEY_FILE,
+            credentials=key_file,
             use_sandbox=APNS_USE_SANDBOX,
             use_alternative_port=False
         )

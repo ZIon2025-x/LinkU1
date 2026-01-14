@@ -72,7 +72,7 @@ struct StripeConnectOnboardingView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("加载中...")
+            Text(LocalizationKey.commonLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -84,7 +84,7 @@ struct StripeConnectOnboardingView: View {
                 .font(.system(size: 50))
                 .foregroundColor(.orange)
             
-            Text("加载失败")
+            Text(LocalizationKey.errorNetworkError.localized)
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
             
@@ -97,7 +97,7 @@ struct StripeConnectOnboardingView: View {
             Button(action: {
                 viewModel.loadOnboardingSession()
             }) {
-                Text("重试")
+                Text(LocalizationKey.errorRetry.localized)
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -115,18 +115,18 @@ struct StripeConnectOnboardingView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.green)
             
-            Text("收款账户已设置完成")
+            Text(LocalizationKey.paymentAccountSetupComplete.localized)
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
             
-            Text("您可以开始接收任务奖励了")
+            Text(LocalizationKey.paymentCanReceiveRewards.localized)
                 .font(.subheadline)
                 .foregroundColor(AppColors.textSecondary)
             
             Button(action: {
                 dismiss()
             }) {
-                Text("完成")
+                Text(LocalizationKey.commonDone.localized)
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -173,11 +173,11 @@ struct AccountDetailsViewContent: View {
                         .font(.system(size: 50))
                         .foregroundColor(.green)
                     
-                    Text("收款账户已设置")
+                    Text(LocalizationKey.paymentAccountSetupComplete.localized)
                         .font(AppTypography.title2)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("您的账户信息如下")
+                    Text(LocalizationKey.paymentAccountInfoBelow.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -200,7 +200,7 @@ struct AccountDetailsViewContent: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text("刷新账户信息")
+                            Text(LocalizationKey.paymentRefreshAccountInfo.localized)
                         }
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.primary)
@@ -217,7 +217,7 @@ struct AccountDetailsViewContent: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        Text("完成")
+                        Text(LocalizationKey.paymentComplete.localized)
                             .font(AppTypography.body)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

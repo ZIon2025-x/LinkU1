@@ -22,7 +22,7 @@ struct StripeConnectPayoutsView: View {
                 contentView
             }
         }
-        .navigationTitle("提现管理")
+        .navigationTitle(LocalizationKey.paymentPayoutManagement.localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.loadBalance()
@@ -62,7 +62,7 @@ struct StripeConnectPayoutsView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-            Text("加载中...")
+            Text(LocalizationKey.commonLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -74,7 +74,7 @@ struct StripeConnectPayoutsView: View {
                 .font(.system(size: 50))
                 .foregroundColor(.orange)
             
-            Text("加载失败")
+            Text(LocalizationKey.errorNetworkError.localized)
                 .font(.headline)
                 .foregroundColor(AppColors.textPrimary)
             
@@ -88,7 +88,7 @@ struct StripeConnectPayoutsView: View {
                 viewModel.loadBalance()
                 viewModel.loadTransactions()
             }) {
-                Text("重试")
+                Text(LocalizationKey.errorRetry.localized)
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
@@ -119,7 +119,7 @@ struct StripeConnectPayoutsView: View {
                             HStack {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 18))
-                                Text("查看详情")
+                                Text(LocalizationKey.paymentViewDetails.localized)
                                     .font(AppTypography.body)
                             }
                             .foregroundColor(AppColors.primary)
@@ -141,7 +141,7 @@ struct StripeConnectPayoutsView: View {
                                 HStack {
                                     Image(systemName: "arrow.up.circle.fill")
                                         .font(.system(size: 18))
-                                    Text("提现")
+                                    Text(LocalizationKey.paymentPayout.localized)
                                         .font(AppTypography.body)
                                 }
                                 .foregroundColor(.white)
@@ -155,7 +155,7 @@ struct StripeConnectPayoutsView: View {
                     .padding(.horizontal, AppSpacing.md)
                     
                     if balance.available == 0 {
-                        Text("当前无可提现余额")
+                        Text(LocalizationKey.paymentNoAvailableBalance.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                             .frame(maxWidth: .infinity)
@@ -169,7 +169,7 @@ struct StripeConnectPayoutsView: View {
                 // 提现记录标题
                 if !viewModel.transactions.isEmpty {
                     HStack {
-                        Text("提现记录")
+                        Text(LocalizationKey.paymentPayoutRecords.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textPrimary)
                         Spacer()
@@ -182,8 +182,8 @@ struct StripeConnectPayoutsView: View {
                 if viewModel.transactions.isEmpty {
                     EmptyStateView(
                         icon: "banknote.fill",
-                        title: "暂无提现记录",
-                        message: "您的提现记录将显示在这里"
+                        title: LocalizationKey.paymentNoPayoutRecords.localized,
+                        message: LocalizationKey.paymentNoPayoutRecordsMessage.localized
                     )
                     .padding(.top, 60)
                 } else {
@@ -193,8 +193,8 @@ struct StripeConnectPayoutsView: View {
                     if payoutTransactions.isEmpty {
                         EmptyStateView(
                             icon: "banknote.fill",
-                            title: "暂无提现记录",
-                            message: "您的提现记录将显示在这里"
+                            title: LocalizationKey.paymentNoPayoutRecords.localized,
+                            message: LocalizationKey.paymentNoPayoutRecordsMessage.localized
                         )
                         .padding(.top, 60)
                     } else {
@@ -222,7 +222,7 @@ struct BalanceCard: View {
         VStack(spacing: AppSpacing.md) {
             // 总余额
             VStack(spacing: 4) {
-                Text("总余额")
+                Text(LocalizationKey.paymentTotalBalance.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
                 
@@ -236,7 +236,7 @@ struct BalanceCard: View {
             // 可用余额和待处理余额
             HStack(spacing: AppSpacing.xl) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("可用余额")
+                    Text(LocalizationKey.paymentAvailableBalance.localized)
                         .font(AppTypography.caption2)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -249,7 +249,7 @@ struct BalanceCard: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("待处理")
+                    Text(LocalizationKey.paymentPending.localized)
                         .font(AppTypography.caption2)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -298,7 +298,7 @@ struct PayoutSheet: View {
                     // 可用余额提示
                     if let balance = viewModel.balance {
                         VStack(spacing: 8) {
-                            Text("可用余额")
+                            Text(LocalizationKey.paymentAvailableBalance.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                             
@@ -314,7 +314,7 @@ struct PayoutSheet: View {
                     
                     // 提现金额输入
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("提现金额")
+                        Text(LocalizationKey.paymentPayoutAmount.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textPrimary)
                         
@@ -336,11 +336,11 @@ struct PayoutSheet: View {
                     
                     // 描述（可选）
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("备注（可选）")
+                        Text(LocalizationKey.paymentNoteOptional.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textPrimary)
                         
-                        TextField("提现备注", text: $description)
+                        TextField(LocalizationKey.paymentPayoutNote.localized, text: $description)
                             .padding()
                             .background(AppColors.cardBackground)
                             .cornerRadius(AppCornerRadius.medium)
@@ -359,7 +359,7 @@ struct PayoutSheet: View {
                             } else {
                                 Image(systemName: "arrow.up.circle.fill")
                                     .font(.system(size: 20))
-                                Text("确认提现")
+                                Text(LocalizationKey.paymentConfirmPayout.localized)
                                     .font(AppTypography.title3)
                             }
                         }
@@ -374,7 +374,7 @@ struct PayoutSheet: View {
                 }
                 .padding(AppSpacing.lg)
             }
-            .navigationTitle("提现")
+            .navigationTitle(LocalizationKey.paymentPayout.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -479,7 +479,7 @@ struct PayoutTransactionRowView: View {
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("提现")
+                Text(LocalizationKey.paymentPayout.localized)
                     .font(.system(size: 11))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -1020,7 +1020,7 @@ struct AccountDetailsSheet: View {
                 if viewModel.isLoadingAccountDetails {
                     VStack(spacing: 16) {
                         ProgressView()
-                        Text("加载中...")
+                        Text(LocalizationKey.commonLoading.localized)
                             .foregroundColor(AppColors.textSecondary)
                     }
                 } else {
@@ -1046,7 +1046,7 @@ struct AccountDetailsSheet: View {
                                     Image(systemName: "creditcard")
                                         .font(.system(size: 40))
                                         .foregroundColor(AppColors.textTertiary)
-                                    Text("暂无外部账户")
+                                    Text(LocalizationKey.paymentNoExternalAccount.localized)
                                         .font(AppTypography.subheadline)
                                         .foregroundColor(AppColors.textSecondary)
                                 }
@@ -1057,7 +1057,7 @@ struct AccountDetailsSheet: View {
                     }
                 }
             }
-            .navigationTitle("账户详情")
+            .navigationTitle(LocalizationKey.paymentAccountDetails.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1082,23 +1082,23 @@ struct AccountInfoSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("账户信息")
+            Text(LocalizationKey.paymentAccountInfo.localized)
                 .font(AppTypography.title3)
                 .foregroundColor(AppColors.textPrimary)
             
             VStack(spacing: AppSpacing.sm) {
-                InfoRow(icon: "number", label: "账户ID", value: details.accountId)
+                InfoRow(icon: "number", label: LocalizationKey.paymentAccountId.localized, value: details.accountId)
                 if let displayName = details.displayName {
-                    InfoRow(icon: "person.fill", label: "显示名称", value: displayName)
+                    InfoRow(icon: "person.fill", label: LocalizationKey.paymentDisplayName.localized, value: displayName)
                 }
                 if let email = details.email {
-                    InfoRow(icon: "envelope.fill", label: "邮箱", value: email)
+                    InfoRow(icon: "envelope.fill", label: LocalizationKey.profileEmail.localized, value: email)
                 }
-                InfoRow(icon: "globe", label: "国家", value: details.country)
-                InfoRow(icon: "creditcard.fill", label: "账户类型", value: details.type == "express" ? "Express" : details.type.capitalized)
-                InfoRow(icon: "checkmark.circle.fill", label: "详情已提交", value: details.detailsSubmitted ? "是" : "否")
-                InfoRow(icon: "arrow.down.circle.fill", label: "收款已启用", value: details.chargesEnabled ? "是" : "否")
-                InfoRow(icon: "arrow.up.circle.fill", label: "提现已启用", value: details.payoutsEnabled ? "是" : "否")
+                InfoRow(icon: "globe", label: LocalizationKey.paymentCountry.localized, value: details.country)
+                InfoRow(icon: "creditcard.fill", label: LocalizationKey.paymentAccountType.localized, value: details.type == "express" ? "Express" : details.type.capitalized)
+                InfoRow(icon: "checkmark.circle.fill", label: LocalizationKey.paymentDetailsSubmitted.localized, value: details.detailsSubmitted ? LocalizationKey.paymentYes.localized : LocalizationKey.paymentNo.localized)
+                InfoRow(icon: "arrow.down.circle.fill", label: LocalizationKey.paymentChargesEnabled.localized, value: details.chargesEnabled ? LocalizationKey.paymentYes.localized : LocalizationKey.paymentNo.localized)
+                InfoRow(icon: "arrow.up.circle.fill", label: LocalizationKey.paymentPayoutsEnabled.localized, value: details.payoutsEnabled ? LocalizationKey.paymentYes.localized : LocalizationKey.paymentNo.localized)
                 
                 // Stripe Dashboard 链接
                 if details.dashboardUrl != nil {
@@ -1108,7 +1108,7 @@ struct AccountInfoSection: View {
                         HStack {
                             Image(systemName: "safari.fill")
                                 .font(.system(size: 16))
-                            Text("打开 Stripe 仪表板")
+                            Text(LocalizationKey.paymentOpenStripeDashboard.localized)
                                 .font(AppTypography.body)
                         }
                         .foregroundColor(AppColors.primary)
@@ -1133,7 +1133,7 @@ struct ExternalAccountsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            Text("外部账户")
+            Text(LocalizationKey.paymentExternalAccount.localized)
                 .font(AppTypography.title3)
                 .foregroundColor(AppColors.textPrimary)
             
@@ -1155,7 +1155,7 @@ struct ExternalAccountCard: View {
                     .font(.system(size: 24))
                     .foregroundColor(AppColors.primary)
                 
-                Text(account.object == "bank_account" ? "银行账户" : "银行卡")
+                Text(account.object == "bank_account" ? LocalizationKey.paymentBankAccount.localized : LocalizationKey.paymentCard.localized)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -1164,35 +1164,35 @@ struct ExternalAccountCard: View {
             
             if account.object == "bank_account" {
                 if let bankName = account.bankName {
-                    InfoRow(icon: "building.columns.fill", label: "银行名称", value: bankName)
+                    InfoRow(icon: "building.columns.fill", label: LocalizationKey.paymentBankName.localized, value: bankName)
                 }
                 if let last4 = account.last4 {
-                    InfoRow(icon: "number", label: "账户尾号", value: "****\(last4)")
+                    InfoRow(icon: "number", label: LocalizationKey.paymentAccountLast4.localized, value: "****\(last4)")
                 }
                 if let routingNumber = account.routingNumber {
-                    InfoRow(icon: "number", label: "路由号码", value: routingNumber)
+                    InfoRow(icon: "number", label: LocalizationKey.paymentRoutingNumber.localized, value: routingNumber)
                 }
                 if let accountHolderName = account.accountHolderName {
-                    InfoRow(icon: "person.fill", label: "账户持有人", value: accountHolderName)
+                    InfoRow(icon: "person.fill", label: LocalizationKey.paymentAccountHolder.localized, value: accountHolderName)
                 }
                 if let accountHolderType = account.accountHolderType {
-                    InfoRow(icon: "person.2.fill", label: "持有人类型", value: accountHolderType == "individual" ? "个人" : "企业")
+                    InfoRow(icon: "person.2.fill", label: LocalizationKey.paymentHolderType.localized, value: accountHolderType == "individual" ? LocalizationKey.paymentIndividual.localized : LocalizationKey.paymentCompany.localized)
                 }
                 if let status = account.status {
-                    InfoRow(icon: "info.circle.fill", label: "状态", value: status)
+                    InfoRow(icon: "info.circle.fill", label: LocalizationKey.paymentStatus.localized, value: status)
                 }
             } else if account.object == "card" {
                 if let brand = account.brand {
-                    InfoRow(icon: "creditcard.fill", label: "卡品牌", value: brand.capitalized)
+                    InfoRow(icon: "creditcard.fill", label: LocalizationKey.paymentCardBrand.localized, value: brand.capitalized)
                 }
                 if let last4 = account.last4 {
-                    InfoRow(icon: "number", label: "卡号尾号", value: "****\(last4)")
+                    InfoRow(icon: "number", label: LocalizationKey.paymentCardLast4.localized, value: "****\(last4)")
                 }
                 if let expMonth = account.expMonth, let expYear = account.expYear {
-                    InfoRow(icon: "calendar", label: "有效期", value: String(format: "%02d/%d", expMonth, expYear))
+                    InfoRow(icon: "calendar", label: LocalizationKey.paymentExpiry.localized, value: String(format: "%02d/%d", expMonth, expYear))
                 }
                 if let funding = account.funding {
-                    InfoRow(icon: "creditcard.fill", label: "类型", value: funding == "credit" ? "信用卡" : "借记卡")
+                    InfoRow(icon: "creditcard.fill", label: LocalizationKey.paymentCardType.localized, value: funding == "credit" ? LocalizationKey.paymentCreditCard.localized : LocalizationKey.paymentDebitCard.localized)
                 }
             }
         }
@@ -1219,7 +1219,7 @@ struct TransactionDetailSheet: View {
                     VStack(spacing: AppSpacing.lg) {
                         // 金额卡片
                         VStack(spacing: AppSpacing.md) {
-                            Text(transaction.type == "expense" ? "提现金额" : "收入金额")
+                            Text(transaction.type == "expense" ? LocalizationKey.paymentPayoutAmountTitle.localized : LocalizationKey.paymentIncomeAmount.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
                             
@@ -1234,17 +1234,17 @@ struct TransactionDetailSheet: View {
                         
                         // 详细信息
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text("详细信息")
+                            Text(LocalizationKey.paymentDetails.localized)
                                 .font(AppTypography.title3)
                                 .foregroundColor(AppColors.textPrimary)
                             
                             VStack(spacing: AppSpacing.sm) {
-                                InfoRow(icon: "number", label: "交易ID", value: transaction.id)
-                                InfoRow(icon: "text.alignleft", label: "描述", value: transaction.description)
-                                InfoRow(icon: "clock.fill", label: "时间", value: formatDate(transaction.createdAt))
-                                InfoRow(icon: "checkmark.circle.fill", label: "状态", value: statusText)
-                                InfoRow(icon: "creditcard.fill", label: "类型", value: transaction.type == "expense" ? "提现" : "收入")
-                                InfoRow(icon: "arrow.right.circle.fill", label: "来源", value: sourceText)
+                                InfoRow(icon: "number", label: LocalizationKey.paymentTransactionId.localized, value: transaction.id)
+                                InfoRow(icon: "text.alignleft", label: LocalizationKey.paymentDescription.localized, value: transaction.description)
+                                InfoRow(icon: "clock.fill", label: LocalizationKey.paymentTime.localized, value: formatDate(transaction.createdAt))
+                                InfoRow(icon: "checkmark.circle.fill", label: LocalizationKey.paymentStatus.localized, value: statusText)
+                                InfoRow(icon: "creditcard.fill", label: LocalizationKey.paymentType.localized, value: transaction.type == "expense" ? LocalizationKey.paymentPayout.localized : LocalizationKey.paymentIncome.localized)
+                                InfoRow(icon: "arrow.right.circle.fill", label: LocalizationKey.paymentSource.localized, value: sourceText)
                             }
                         }
                         .padding(AppSpacing.lg)
@@ -1254,7 +1254,7 @@ struct TransactionDetailSheet: View {
                     .padding(AppSpacing.lg)
                 }
             }
-            .navigationTitle("交易详情")
+            .navigationTitle(LocalizationKey.paymentTransactionDetails.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

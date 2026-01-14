@@ -6,28 +6,32 @@ struct TaskFilterView: View {
     @Environment(\.dismiss) var dismiss
     
     // 任务分类映射 (显示名称 -> 后端值)
-    let categories: [(name: String, value: String)] = [
-        ("全部", ""),
-        ("清洁家政", "Housekeeping"),
-        ("校园生活", "Campus Life"),
-        ("二手租赁", "Second-hand & Rental"),
-        ("跑腿代购", "Errand Running"),
-        ("技能服务", "Skill Service"),
-        ("社交互助", "Social Help"),
-        ("交通用车", "Transportation"),
-        ("宠物寄养", "Pet Care"),
-        ("生活便利", "Life Convenience"),
-        ("其他", "Other")
-    ]
+    var categories: [(name: String, value: String)] {
+        [
+            (LocalizationKey.commonAll.localized, ""),
+            (LocalizationKey.taskCategoryHousekeeping.localized, "Housekeeping"),
+            (LocalizationKey.taskCategoryCampusLife.localized, "Campus Life"),
+            (LocalizationKey.taskCategorySecondhandRental.localized, "Second-hand & Rental"),
+            (LocalizationKey.taskCategoryErrandRunning.localized, "Errand Running"),
+            (LocalizationKey.taskCategorySkillService.localized, "Skill Service"),
+            (LocalizationKey.taskCategorySocialHelp.localized, "Social Help"),
+            (LocalizationKey.taskCategoryTransportation.localized, "Transportation"),
+            (LocalizationKey.taskCategoryPetCare.localized, "Pet Care"),
+            (LocalizationKey.taskCategoryLifeConvenience.localized, "Life Convenience"),
+            (LocalizationKey.taskCategoryOther.localized, "Other")
+        ]
+    }
     
     // 英国主要城市列表
-    let cities = ["全部", "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"]
+    var cities: [String] {
+        [LocalizationKey.commonAll.localized, "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"]
+    }
     
     var body: some View {
         NavigationView {
             Form {
-                Section("分类") {
-                    Picker("选择分类", selection: $selectedCategory) {
+                Section(LocalizationKey.taskFilterCategory.localized) {
+                    Picker(LocalizationKey.taskFilterSelectCategory.localized, selection: $selectedCategory) {
                         ForEach(categories, id: \.value) { category in
                             Text(category.name)
                                 .tag(category.value.isEmpty ? nil : category.value as String?)
@@ -35,21 +39,21 @@ struct TaskFilterView: View {
                     }
                 }
                 
-                Section("城市") {
-                    Picker("选择城市", selection: $selectedCity) {
+                Section(LocalizationKey.taskFilterCity.localized) {
+                    Picker(LocalizationKey.taskFilterSelectCity.localized, selection: $selectedCity) {
                         ForEach(cities, id: \.self) { city in
-                            Text(city == "全部" ? "全部" : city)
+                            Text(city == LocalizationKey.commonAll.localized ? LocalizationKey.commonAll.localized : city)
                                 .tag(city == "全部" ? nil : city as String?)
                         }
                     }
                 }
             }
-            .navigationTitle("筛选")
+            .navigationTitle(LocalizationKey.commonFilter.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(LocalizationKey.commonDone.localized) {
                         dismiss()
                     }
                 }

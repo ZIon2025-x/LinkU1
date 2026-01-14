@@ -408,9 +408,6 @@ class TasksViewModel: ObservableObject {
         
         errorMessage = nil
         
-        // 记录推荐任务请求开始
-        AppMetrics.shared.increment("recommendation.load.requests", by: 1.0)
-        
         // 调用推荐 API
         apiService.getTaskRecommendations(limit: limit, algorithm: algorithm, taskType: taskType, location: location, keyword: keyword)
             .sink(receiveCompletion: { [weak self] completion in
@@ -419,17 +416,8 @@ class TasksViewModel: ObservableObject {
                 if case .failure(let error) = completion {
                     ErrorHandler.shared.handle(error, context: "加载推荐任务")
                     
-                    // 记录推荐任务加载失败
-                    AppMetrics.shared.increment("recommendation.load.failures", by: 1.0)
-                    AppMetrics.shared.record(
-                        name: "recommendation.load.error",
-                        value: duration,
-                        tags: ["algorithm": algorithm, "error": error.localizedDescription]
-                    )
-                    
                     // 重试机制：网络错误且未达到最大重试次数时自动重试
-                    let isNetworkError = self?.isNetworkOrTimeoutError(error) ?? false
-                    if retryCount < maxRetries && isNetworkError {
+                    if retryCount < maxRetries && self?.isNetworkOrTimeoutError(error) == true {
                         Logger.info("推荐任务加载失败，\(maxRetries - retryCount)秒后重试...", category: .api)
                         DispatchQueue.main.asyncAfter(deadline: .now() + Double(maxRetries - retryCount)) { [weak self] in
                             self?.loadRecommendedTasks(
@@ -459,111 +447,145 @@ class TasksViewModel: ObservableObject {
                         duration: duration,
                         statusCode: 200
                     )
-                    
-                    // 记录推荐任务加载成功
-                    AppMetrics.shared.increment("recommendation.load.success_count", by: 1.0)
                 }
             }, receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 
-                // 标记所有任务为推荐任务
-                let recommendedTasks = response.tasks.map { task -> Task in
-                    // 由于 Task 是 struct，我们需要创建一个新的 Task 实例
-                    // 但 Task 没有 init，所以我们需要通过修改来标记
-                    // 实际上，后端应该已经返回 isRecommended 字段
+                // 将推荐任务转换为 Task 对象
+                let recommendedTasks = response.recommendations.map { recommendation -> Task in
+                    let task = recommendation.toTask()
+                    // 调试：检查图片数据
+                    if let images = task.images, !images.isEmpty {
+                        Logger.debug("推荐任务 \(task.id) 有 \(images.count) 张图片", category: .api)
+                    } else {
+                        Logger.debug("推荐任务 \(task.id) 没有图片数据，尝试从普通任务列表补充", category: .api)
+                    }
                     return task
                 }
                 
-                // 保存到推荐任务专用缓存（仅第一页）
-                if limit <= 20 {
-                    CacheManager.shared.saveTasks(recommendedTasks, category: taskType, city: location, isRecommended: true)
-                    Logger.success("已缓存 \(recommendedTasks.count) 个推荐任务", category: .cache)
-                }
-                
-                DispatchQueue.main.async {
-                    let loadDuration = Date().timeIntervalSince(startTime)
+                // 如果推荐任务没有图片，尝试从任务详情 API 补充图片信息
+                // 只对 images 为 nil 的任务进行补充（如果 API 返回空数组，说明任务确实没有图片，不需要补充）
+                let tasksWithoutImages = recommendedTasks.filter { $0.images == nil }
+                if !tasksWithoutImages.isEmpty {
+                    Logger.debug("发现 \(tasksWithoutImages.count) 个推荐任务缺少图片，尝试补充", category: .api)
                     
-                    self.tasks = recommendedTasks
-                    self.isLoading = false
-                    self.errorMessage = nil
-                    self.lastRecommendedTasksLoadTime = Date()
+                    // 批量获取任务详情来补充图片（限制最多10个，避免过多请求）
+                    let taskIdsToFetch = Array(tasksWithoutImages.prefix(10).map { $0.id })
+                    let dispatchGroup = DispatchGroup()
+                    var taskImageMap: [Int: [String]] = [:]
+                    var detailFetchCancellables = Set<AnyCancellable>()
                     
-                    // 记录推荐任务性能指标
-                    AppMetrics.shared.record(
-                        name: "recommendation.load.success",
-                        value: Double(recommendedTasks.count),
-                        tags: ["algorithm": algorithm, "limit": "\(limit)"]
-                    )
-                    
-                    // 记录推荐任务加载时间
-                    AppMetrics.shared.record(
-                        name: "recommendation.load.duration",
-                        value: loadDuration,
-                        tags: ["algorithm": algorithm]
-                    )
-                    
-                    // 检查推荐任务多样性
-                    let diversity = self.calculateRecommendationDiversity(recommendedTasks)
-                    AppMetrics.shared.record(
-                        name: "recommendation.diversity",
-                        value: diversity,
-                        tags: ["algorithm": algorithm]
-                    )
-                    
-                    // 如果多样性较低，记录警告
-                    if diversity < 0.5 {
-                        Logger.warning("推荐任务多样性较低: \(String(format: "%.2f", diversity))", category: .api)
+                    for taskId in taskIdsToFetch {
+                        dispatchGroup.enter()
+                        self.apiService.getTaskDetail(taskId: taskId)
+                            .sink(
+                                receiveCompletion: { _ in
+                                    dispatchGroup.leave()
+                                },
+                                receiveValue: { fullTask in
+                                    if let images = fullTask.images, !images.isEmpty {
+                                        taskImageMap[taskId] = images
+                                        Logger.debug("成功获取任务 \(taskId) 的图片: \(images.count) 张", category: .api)
+                                    }
+                                }
+                            )
+                            .store(in: &detailFetchCancellables)
                     }
                     
-                    // 记录推荐任务的平均匹配分数
-                    let avgMatchScore = recommendedTasks.compactMap { $0.matchScore }.reduce(0.0, +) / Double(max(recommendedTasks.count, 1))
-                    AppMetrics.shared.record(
-                        name: "recommendation.avg_match_score",
-                        value: avgMatchScore,
-                        tags: ["algorithm": algorithm]
-                    )
+                    // 等待所有请求完成
+                    dispatchGroup.notify(queue: .main) {
+                        // 更新推荐任务的图片信息
+                        var updatedTasks = recommendedTasks
+                        for (index, task) in updatedTasks.enumerated() {
+                            if let images = taskImageMap[task.id] {
+                                // 创建新的 Task 对象，包含图片信息
+                                updatedTasks[index] = Task(
+                                    id: task.id,
+                                    title: task.title,
+                                    description: task.description,
+                                    taskType: task.taskType,
+                                    location: task.location,
+                                    latitude: task.latitude,
+                                    longitude: task.longitude,
+                                    reward: task.reward,
+                                    baseReward: task.baseReward,
+                                    agreedReward: task.agreedReward,
+                                    currency: task.currency,
+                                    status: task.status,
+                                    images: images, // 使用补充的图片
+                                    createdAt: task.createdAt,
+                                    deadline: task.deadline,
+                                    isFlexible: task.isFlexible,
+                                    isPublic: task.isPublic,
+                                    posterId: task.posterId,
+                                    takerId: task.takerId,
+                                    taskLevel: task.taskLevel,
+                                    pointsReward: task.pointsReward,
+                                    isMultiParticipant: task.isMultiParticipant,
+                                    maxParticipants: task.maxParticipants,
+                                    minParticipants: task.minParticipants,
+                                    currentParticipants: task.currentParticipants,
+                                    poster: task.poster,
+                                    isRecommended: task.isRecommended,
+                                    matchScore: task.matchScore,
+                                    recommendationReason: task.recommendationReason
+                                )
+                            }
+                        }
+                        
+                        // 保存到推荐任务专用缓存（仅第一页）
+                        if limit <= 20 {
+                            CacheManager.shared.saveTasks(updatedTasks, category: taskType, city: location, isRecommended: true)
+                            Logger.success("已缓存 \(updatedTasks.count) 个推荐任务（包含补充的图片）", category: .cache)
+                        }
+                        
+                        DispatchQueue.main.async {
+                            self.tasks = updatedTasks
+                            self.isLoading = false
+                            self.errorMessage = nil
+                            self.lastRecommendedTasksLoadTime = Date()
+                        }
+                    }
+                } else {
+                    // 所有推荐任务都有图片，直接保存
+                    // 保存到推荐任务专用缓存（仅第一页）
+                    if limit <= 20 {
+                        CacheManager.shared.saveTasks(recommendedTasks, category: taskType, city: location, isRecommended: true)
+                        Logger.success("已缓存 \(recommendedTasks.count) 个推荐任务", category: .cache)
+                    }
+                    
+                    DispatchQueue.main.async {
+                        self.tasks = recommendedTasks
+                        self.isLoading = false
+                        self.errorMessage = nil
+                        self.lastRecommendedTasksLoadTime = Date()
+                    }
                 }
             })
             .store(in: &cancellables)
     }
     
-    /// 计算推荐任务的多样性（0-1之间，1表示完全多样）
-    private func calculateRecommendationDiversity(_ tasks: [Task]) -> Double {
-        guard !tasks.isEmpty else { return 0.0 }
-        
-        // 统计任务类型分布
-        var typeCounts: [String: Int] = [:]
-        var locationCounts: [String: Int] = [:]
-        
-        for task in tasks {
-            typeCounts[task.taskType, default: 0] += 1
-            locationCounts[task.location, default: 0] += 1
-        }
-        
-        // 计算类型多样性（使用熵）
-        let typeDiversity = calculateEntropy(typeCounts.values.map { Double($0) })
-        let locationDiversity = calculateEntropy(locationCounts.values.map { Double($0) })
-        
-        // 归一化到0-1范围
-        let maxEntropy = log2(Double(tasks.count))
-        let normalizedTypeDiversity = maxEntropy > 0 ? typeDiversity / maxEntropy : 0.0
-        let normalizedLocationDiversity = maxEntropy > 0 ? locationDiversity / maxEntropy : 0.0
-        
-        // 综合多样性（类型和位置的加权平均）
-        return (normalizedTypeDiversity * 0.6 + normalizedLocationDiversity * 0.4)
-    }
-    
-    /// 计算熵（用于多样性计算）
-    private func calculateEntropy(_ values: [Double]) -> Double {
-        let sum = values.reduce(0, +)
-        guard sum > 0 else { return 0.0 }
-        
-        return values.reduce(0.0) { result, value in
-            if value > 0 {
-                let probability = value / sum
-                return result - probability * log2(probability)
+    /// 检查错误是否是网络错误或超时错误
+    private func isNetworkOrTimeoutError(_ error: APIError) -> Bool {
+        switch error {
+        case .requestFailed(let underlyingError):
+            // 检查是否是 URLError 的网络错误或超时错误
+            if let urlError = underlyingError as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet,
+                     .networkConnectionLost,
+                     .timedOut,
+                     .cannotConnectToHost,
+                     .cannotFindHost,
+                     .dnsLookupFailed:
+                    return true
+                default:
+                    return false
+                }
             }
-            return result
+            return false
+        default:
+            return false
         }
     }
     
@@ -617,26 +639,6 @@ class TasksViewModel: ObservableObject {
         // 更新到主线程
         DispatchQueue.main.async { [weak self] in
             self?.tasks = tasks
-        }
-    }
-    
-    /// 检查是否是网络错误或超时错误
-    private func isNetworkOrTimeoutError(_ error: APIError) -> Bool {
-        switch error {
-        case .requestFailed(let underlyingError):
-            // 检查底层错误是否是网络错误或超时错误
-            let nsError = underlyingError as NSError
-            // 网络错误：NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost 等
-            // 超时错误：NSURLErrorTimedOut
-            return nsError.domain == NSURLErrorDomain && (
-                nsError.code == NSURLErrorNotConnectedToInternet ||
-                nsError.code == NSURLErrorNetworkConnectionLost ||
-                nsError.code == NSURLErrorTimedOut ||
-                nsError.code == NSURLErrorCannotConnectToHost ||
-                nsError.code == NSURLErrorCannotFindHost
-            )
-        default:
-            return false
         }
     }
     

@@ -7,18 +7,20 @@ struct TaskPreferencesView: View {
     @StateObject private var viewModel = TaskPreferencesViewModel()
     
     // 任务类型选项
-    private let taskTypes: [(name: String, value: String)] = [
-        ("家政服务", "Housekeeping"),
-        ("校园生活", "Campus Life"),
-        ("二手租赁", "Second-hand & Rental"),
-        ("跑腿代购", "Errand Running"),
-        ("技能服务", "Skill Service"),
-        ("社交互助", "Social Help"),
-        ("交通用车", "Transportation"),
-        ("宠物寄养", "Pet Care"),
-        ("生活便利", "Life Convenience"),
-        ("其他", "Other")
-    ]
+    private var taskTypes: [(name: String, value: String)] {
+        [
+            (LocalizationKey.taskCategoryHousekeeping.localized, "Housekeeping"),
+            (LocalizationKey.taskCategoryCampusLife.localized, "Campus Life"),
+            (LocalizationKey.taskCategorySecondhandRental.localized, "Second-hand & Rental"),
+            (LocalizationKey.taskCategoryErrandRunning.localized, "Errand Running"),
+            (LocalizationKey.taskCategorySkillService.localized, "Skill Service"),
+            (LocalizationKey.taskCategorySocialHelp.localized, "Social Help"),
+            (LocalizationKey.taskCategoryTransportation.localized, "Transportation"),
+            (LocalizationKey.taskCategoryPetCare.localized, "Pet Care"),
+            (LocalizationKey.taskCategoryLifeConvenience.localized, "Life Convenience"),
+            (LocalizationKey.taskCategoryOther.localized, "Other")
+        ]
+    }
     
     // 地点选项
     private let locations = [
@@ -46,8 +48,8 @@ struct TaskPreferencesView: View {
                         VStack(spacing: AppSpacing.xl) {
                             // 偏好的任务类型
                             PreferenceSection(
-                                title: "📋 偏好的任务类型",
-                                description: "选择您感兴趣的任务类型，系统会优先为您推荐这些类型的任务"
+                                title: LocalizationKey.taskPreferencesPreferredTypes.localized,
+                                description: LocalizationKey.taskPreferencesPreferredTypesDescription.localized
                             ) {
                                 LazyVGrid(columns: [
                                     GridItem(.flexible(), spacing: AppSpacing.sm),
@@ -66,8 +68,8 @@ struct TaskPreferencesView: View {
                             
                             // 偏好的地点
                             PreferenceSection(
-                                title: "📍 偏好的地点",
-                                description: "选择您希望接收任务的地理位置"
+                                title: LocalizationKey.taskPreferencesPreferredLocations.localized,
+                                description: LocalizationKey.taskPreferencesPreferredLocationsDescription.localized
                             ) {
                                 LazyVGrid(columns: [
                                     GridItem(.flexible(), spacing: AppSpacing.sm),
@@ -86,8 +88,8 @@ struct TaskPreferencesView: View {
                             
                             // 偏好的任务等级
                             PreferenceSection(
-                                title: "🌟 偏好的任务等级",
-                                description: "选择您感兴趣的任务等级"
+                                title: LocalizationKey.taskPreferencesPreferredLevels.localized,
+                                description: LocalizationKey.taskPreferencesPreferredLevelsDescription.localized
                             ) {
                                 HStack(spacing: AppSpacing.md) {
                                     ForEach(taskLevels, id: \.self) { level in
@@ -103,8 +105,8 @@ struct TaskPreferencesView: View {
                             
                             // 最少截止时间
                             PreferenceSection(
-                                title: "⏰ 最少截止时间",
-                                description: "设置任务截止时间至少需要多少天，系统将只推荐符合此条件的任务"
+                                title: LocalizationKey.taskPreferencesMinDeadline.localized,
+                                description: LocalizationKey.taskPreferencesMinDeadlineDescription.localized
                             ) {
                                 HStack(spacing: AppSpacing.md) {
                                     Stepper(
@@ -114,12 +116,12 @@ struct TaskPreferencesView: View {
                                         ),
                                         in: 1...30
                                     ) {
-                                        Text("\(viewModel.preferences?.minDeadlineDays ?? 1) 天")
+                                        Text("\(viewModel.preferences?.minDeadlineDays ?? 1) \(LocalizationKey.taskPreferencesDays.localized)")
                                             .font(AppTypography.body)
                                             .foregroundColor(AppColors.textPrimary)
                                     }
                                     
-                                    Text("（至少 1 天，最多 30 天）")
+                                    Text(LocalizationKey.taskPreferencesDaysRange.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                 }
@@ -131,7 +133,7 @@ struct TaskPreferencesView: View {
                                     dismiss()
                                 }
                             } label: {
-                                Text("保存偏好设置")
+                                Text(LocalizationKey.taskPreferencesSave.localized)
                                     .font(AppTypography.bodyBold)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -156,12 +158,12 @@ struct TaskPreferencesView: View {
                     }
                 }
             }
-            .navigationTitle("任务偏好")
+            .navigationTitle(LocalizationKey.taskPreferencesTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(LocalizationKey.commonDone.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)

@@ -364,7 +364,7 @@ public struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
                                     } else {
-                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)秒")
+                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)s")
                                             .font(AppTypography.caption)
                                             .fontWeight(.semibold)
                                     }
@@ -455,7 +455,7 @@ public struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     } else {
-                                        Text("登录")
+                                        Text(LocalizationKey.authLogin.localized)
                                             .font(AppTypography.bodyBold)
                                         
                                         Image(systemName: "arrow.right")
@@ -578,7 +578,7 @@ public struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.primary))
                                     } else {
-                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)秒")
+                                        Text(viewModel.canResendCode ? LocalizationKey.authSendCode.localized : "\(viewModel.countdownSeconds)s")
                                             .font(AppTypography.caption)
                                             .fontWeight(.semibold)
                                     }

@@ -43,9 +43,7 @@ public class AppState: ObservableObject {
     
     private func setupNotifications() {
         NotificationCenter.default.publisher(for: .userDidLogin)
-            .compactMap { notification -> User? in
-                return notification.object as? User
-            }
+            .compactMap { $0.object as? User }
             .sink { [weak self] user in
                 self?.currentUser = user
                 self?.isAuthenticated = true
@@ -61,9 +59,9 @@ public class AppState: ObservableObject {
                 // 登录成功后，请求位置权限并获取位置
                 self?.requestLocationAfterLogin()
                 
-                // 登录成功后，智能预加载首页数据（包括推荐任务）
+                // 登录成功后，智能预加载推荐任务
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    self?.preloadHomeData()
+                    self?.preloadRecommendedTasksIfNeeded()
                 }
             }
             .store(in: &cancellables)
@@ -90,6 +88,17 @@ public class AppState: ObservableObject {
             .sink { [weak self] _ in
                 // 收到新消息，刷新未读消息数量
                 self?.loadUnreadMessageCount()
+            }
+            .store(in: &cancellables)
+        
+        // 监听任务状态更新，清理已完成/取消任务的图片缓存
+        NotificationCenter.default.publisher(for: .taskUpdated)
+            .compactMap { $0.object as? Task }
+            .sink { task in
+                // 如果任务状态变为已完成或取消，清理相关图片缓存
+                if task.status == .completed || task.status == .cancelled {
+                    ImageCache.shared.clearTaskImages(task: task)
+                }
             }
             .store(in: &cancellables)
         
@@ -325,11 +334,13 @@ public class AppState: ObservableObject {
                     self.isPreloadingHomeData = false
                 }
             }, receiveValue: { [weak self] response in
-                guard self != nil else { return }
-                // 将推荐任务保存到专用缓存
-                let openRecommendedTasks = response.tasks.filter { $0.status == .open }
+                // 将推荐任务转换为 Task 对象并保存到专用缓存
+                let recommendedTasks = response.recommendations.map { $0.toTask() }
+                let openRecommendedTasks = recommendedTasks.filter { $0.status == .open }
                 CacheManager.shared.saveTasks(openRecommendedTasks, category: nil, city: nil, isRecommended: true)
                 Logger.success("已预加载并缓存 \(openRecommendedTasks.count) 个推荐任务", category: .cache)
+                // 确保 self 存在时才更新状态
+                guard self != nil else { return }
             })
             .store(in: &cancellables)
         
@@ -393,6 +404,27 @@ public class AppState: ObservableObject {
                 let openTasks = response.tasks.filter { $0.status == .open }
                 CacheManager.shared.saveTasks(openTasks, category: nil, city: nil, isRecommended: false)
                 Logger.success("已预加载并缓存 \(openTasks.count) 个普通任务", category: .cache)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 智能预加载推荐任务（登录后延迟加载，避免影响登录流程）
+    private func preloadRecommendedTasksIfNeeded() {
+        guard isAuthenticated, !isPreloadingHomeData else { return }
+        
+        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.warning("智能预加载推荐任务失败: \(error.localizedDescription)", category: .api)
+                } else {
+                    Logger.success("智能预加载推荐任务成功", category: .api)
+                }
+            }, receiveValue: { response in
+                // 将推荐任务转换为 Task 对象并保存到专用缓存
+                let recommendedTasks = response.recommendations.map { $0.toTask() }
+                let openRecommendedTasks = recommendedTasks.filter { $0.status == .open }
+                CacheManager.shared.saveTasks(openRecommendedTasks, category: nil, city: nil, isRecommended: true)
+                Logger.success("已智能预加载并缓存 \(openRecommendedTasks.count) 个推荐任务", category: .cache)
             })
             .store(in: &cancellables)
     }

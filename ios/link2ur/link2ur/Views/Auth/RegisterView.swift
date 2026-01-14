@@ -140,7 +140,7 @@ struct RegisterView: View {
                             hideKeyboard()
                             viewModel.register { success, message in
                                 if success {
-                                    successMessage = message ?? "注册成功！"
+                                    successMessage = message ?? LocalizationKey.authRegisterSuccess.localized
                                     showSuccessAlert = true
                                 }
                             }
@@ -208,7 +208,7 @@ struct RegisterView: View {
         }
         .alert(LocalizationKey.authRegisterSuccess.localized, isPresented: $showSuccessAlert) {
             Button(LocalizationKey.commonOk.localized) {
-                if successMessage.contains("验证") {
+                if successMessage.contains("verif") || successMessage.contains("验证") {
                     // 需要邮箱验证，返回登录页
                     dismiss()
                 } else {

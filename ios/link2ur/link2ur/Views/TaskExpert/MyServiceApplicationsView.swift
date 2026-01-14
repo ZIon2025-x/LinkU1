@@ -71,7 +71,7 @@ struct MyServiceApplicationsView: View {
                 .animation(.interactiveSpring(response: 0.4, dampingFraction: 0.9), value: selectedTab)
             }
         }
-        .navigationTitle("我的活动")
+        .navigationTitle(LocalizationKey.profileMyApplications.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -139,8 +139,8 @@ struct ActivityListViewContent: View {
             } else if filteredActivities.isEmpty {
                 EmptyStateView(
                     icon: "calendar",
-                    title: type == .favorited ? "暂无收藏" : "暂无活动",
-                    message: type == .favorited ? "您还没有收藏任何活动" : (type == .applied ? "您还没有申请过任何活动" : "您还没有申请或收藏任何活动")
+                    title: type == .favorited ? LocalizationKey.taskExpertNoFavorites.localized : LocalizationKey.taskExpertNoActivities.localized,
+                    message: type == .favorited ? LocalizationKey.taskExpertNoFavoritesMessage.localized : (type == .applied ? LocalizationKey.taskExpertNoAppliedMessage.localized : LocalizationKey.taskExpertNoActivitiesMessage.localized)
                 )
             } else {
                 ScrollView {
@@ -188,7 +188,7 @@ struct ActivityCard: View {
                 // 类型标签
                 HStack(spacing: 4) {
                     if activity.type == "applied" || activity.type == "both" {
-                        Text("已申请")
+                        Text(LocalizationKey.taskExpertApplied.localized)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
@@ -244,7 +244,7 @@ struct ActivityCard: View {
                     Spacer()
                     
                     if activity.hasTimeSlots {
-                        Text("预约制")
+                        Text(LocalizationKey.taskExpertByAppointment.localized)
                             .font(.system(size: 10, weight: .bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

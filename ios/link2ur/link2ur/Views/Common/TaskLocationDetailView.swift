@@ -37,7 +37,7 @@ struct TaskLocationDetailView: View {
                                         .frame(width: 20, height: 20)
                                 )
                             
-                            Text(item.isUserLocation ? "我的位置" : "任务地址")
+                            Text(item.isUserLocation ? LocalizationKey.taskLocationMyLocation.localized : LocalizationKey.taskLocationAddress.localized)
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 6)
@@ -59,7 +59,7 @@ struct TaskLocationDetailView: View {
                                     .font(.system(size: 24))
                                     .foregroundColor(AppColors.primary)
                                 
-                                Text("任务地址")
+                                Text(LocalizationKey.taskLocationAddress.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.textSecondary)
                                 
@@ -79,7 +79,7 @@ struct TaskLocationDetailView: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(AppColors.textTertiary)
                                     
-                                    Text("坐标: \(String(format: "%.6f", lat)), \(String(format: "%.6f", lon))")
+                                    Text("\(LocalizationKey.taskLocationCoordinates.localized): \(String(format: "%.6f", lat)), \(String(format: "%.6f", lon))")
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textSecondary)
                                     
@@ -97,7 +97,7 @@ struct TaskLocationDetailView: View {
                                         HStack(spacing: 6) {
                                             Image(systemName: "map.fill")
                                                 .font(.system(size: 14))
-                                            Text("苹果地图")
+                                            Text(LocalizationKey.taskLocationAppleMaps.localized)
                                                 .font(AppTypography.caption)
                                                 .fontWeight(.medium)
                                         }
@@ -142,7 +142,7 @@ struct TaskLocationDetailView: View {
                                         .font(.system(size: 24))
                                         .foregroundColor(AppColors.success)
                                     
-                                    Text("我的位置")
+                                    Text(LocalizationKey.taskLocationMyLocation.localized)
                                         .font(AppTypography.subheadline)
                                         .foregroundColor(AppColors.textSecondary)
                                     
@@ -166,7 +166,7 @@ struct TaskLocationDetailView: View {
                                             .font(.system(size: 14))
                                             .foregroundColor(AppColors.textTertiary)
                                         
-                                        Text("坐标: \(String(format: "%.6f", userLocation.latitude)), \(String(format: "%.6f", userLocation.longitude))")
+                                        Text("\(LocalizationKey.taskLocationCoordinates.localized): \(String(format: "%.6f", userLocation.latitude)), \(String(format: "%.6f", userLocation.longitude))")
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.textSecondary)
                                         
@@ -183,7 +183,7 @@ struct TaskLocationDetailView: View {
                                                 HStack(spacing: 6) {
                                                     Image(systemName: "map.fill")
                                                         .font(.system(size: 14))
-                                                    Text("苹果地图")
+                                                    Text(LocalizationKey.taskLocationAppleMaps.localized)
                                                         .font(AppTypography.caption)
                                                         .fontWeight(.medium)
                                                 }
@@ -216,7 +216,7 @@ struct TaskLocationDetailView: View {
                                         }
                                     }
                                 } else {
-                                    Text("正在获取地址...")
+                                    Text(LocalizationKey.taskLocationLoadingAddress.localized)
                                         .font(AppTypography.caption)
                                         .foregroundColor(AppColors.textTertiary)
                                 }
@@ -231,12 +231,12 @@ struct TaskLocationDetailView: View {
                 
             }
         }
-        .navigationTitle("详细地址")
+        .navigationTitle(LocalizationKey.taskLocationDetailAddress.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("完成") {
+                Button(LocalizationKey.commonDone.localized) {
                     dismiss()
                 }
                 .foregroundColor(AppColors.primary)
@@ -433,7 +433,7 @@ struct TaskLocationDetailView: View {
             mapItem.name = self.location
         } else {
             // 用户位置导航
-            mapItem.name = userCurrentAddress ?? "我的位置"
+            mapItem.name = userCurrentAddress ?? LocalizationKey.taskLocationMyLocation.localized
         }
         
         mapItem.openInMaps(launchOptions: [

@@ -467,7 +467,7 @@ struct MessageBubble: View {
                                 if isTranslating {
                                     ProgressView()
                                         .scaleEffect(0.7)
-                                    Text("翻译中...")
+                                    Text(LocalizationKey.translationTranslating.localized)
                                         .font(AppTypography.caption2)
                                         .foregroundColor(AppColors.textTertiary)
                                 } else if let translated = translatedText, translated != content {
@@ -478,7 +478,7 @@ struct MessageBubble: View {
                                         HStack(spacing: 4) {
                                             Image(systemName: showOriginal ? "arrow.uturn.backward" : "text.bubble")
                                                 .font(.system(size: 10))
-                                            Text(showOriginal ? "显示翻译" : "显示原文")
+                                            Text(showOriginal ? LocalizationKey.translationShowTranslation.localized : LocalizationKey.translationShowOriginal.localized)
                                                 .font(AppTypography.caption2)
                                         }
                                         .foregroundColor(AppColors.primary)
@@ -495,7 +495,7 @@ struct MessageBubble: View {
                                         HStack(spacing: 4) {
                                             Image(systemName: "text.bubble")
                                                 .font(.system(size: 10))
-                                            Text("翻译")
+                                            Text(LocalizationKey.translationTranslate.localized)
                                                 .font(AppTypography.caption2)
                                         }
                                         .foregroundColor(AppColors.primary)

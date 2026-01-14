@@ -22,7 +22,7 @@ struct WalletView: View {
                             .padding(.top, AppSpacing.xl)
                     } else {
                         ErrorStateView(
-                            message: viewModel.errorMessage ?? "加载失败",
+                            message: viewModel.errorMessage ?? LocalizationKey.stripeConnectLoadFailed.localized,
                             retryAction: {
                                 viewModel.loadPointsAccount()
                             }
@@ -90,8 +90,8 @@ struct WalletView: View {
                         NavigationLink(destination: StripeConnectPayoutsView()) {
                             QuickActionCard(
                                 icon: "arrow.up.right.circle.fill",
-                                title: "提现管理",
-                                subtitle: "查看余额、提现记录和管理提现设置",
+                                title: LocalizationKey.walletPayoutManagement.localized,
+                                subtitle: LocalizationKey.walletPayoutManagementSubtitle.localized,
                                 color: AppColors.primary
                             )
                         }
@@ -101,8 +101,8 @@ struct WalletView: View {
                         NavigationLink(destination: StripeConnectPaymentsView()) {
                             QuickActionCard(
                                 icon: "list.bullet.rectangle.fill",
-                                title: "支付记录",
-                                subtitle: "查看所有支付、退款和争议记录",
+                                title: LocalizationKey.walletPaymentRecords.localized,
+                                subtitle: LocalizationKey.walletPaymentRecordsSubtitle.localized,
                                 color: Color.blue
                             )
                         }

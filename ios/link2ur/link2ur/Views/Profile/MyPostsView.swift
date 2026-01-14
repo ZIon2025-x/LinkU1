@@ -32,7 +32,7 @@ struct MyPostsView: View {
                 }
             }
         }
-        .navigationTitle("我的闲置")
+        .navigationTitle(LocalizationKey.myPostsTitle.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)

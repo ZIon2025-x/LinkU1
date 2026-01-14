@@ -51,7 +51,7 @@ struct ForumPostDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("帖子信息加载失败")
+                    Text(LocalizationKey.forumPostLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -172,7 +172,7 @@ struct ForumPostDetailView: View {
                                     .foregroundColor(AppColors.textPrimary)
                                 
                                 if author.isAdmin == true {
-                                    Text("官方")
+                                    Text(LocalizationKey.forumOfficial.localized)
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 5)
@@ -232,9 +232,9 @@ struct ForumPostDetailView: View {
     @ViewBuilder
     private func postStats(post: ForumPost) -> some View {
         HStack(spacing: 24) {
-            statItem(icon: "eye", count: post.viewCount, label: "浏览")
-            statItem(icon: "heart", count: likeCount, label: "点赞", active: isLiked, activeColor: AppColors.error)
-            statItem(icon: "star", count: favoriteCount, label: "收藏", active: isFavorited, activeColor: AppColors.warning)
+            statItem(icon: "eye", count: post.viewCount, label: LocalizationKey.forumView.localized)
+            statItem(icon: "heart", count: likeCount, label: LocalizationKey.forumLike.localized, active: isLiked, activeColor: AppColors.error)
+            statItem(icon: "star", count: favoriteCount, label: LocalizationKey.forumFavorite.localized, active: isFavorited, activeColor: AppColors.warning)
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -262,7 +262,7 @@ struct ForumPostDetailView: View {
     private func replySection(post: ForumPost) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("全部回复")
+                Text(LocalizationKey.forumAllReplies.localized)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -435,7 +435,7 @@ struct ReplyCard: View {
                                 .foregroundColor(AppColors.textPrimary)
                             
                             if author.isAdmin == true {
-                                Text("官方")
+                                Text(LocalizationKey.forumOfficial.localized)
                                     .font(.system(size: 8, weight: .bold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 4)
@@ -494,7 +494,7 @@ struct ReplyCard: View {
                     showLogin = true
                 }
             }) {
-                Text("回复")
+                Text(LocalizationKey.forumReply.localized)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(AppColors.primary)
                     .padding(.horizontal, 12)
@@ -563,7 +563,7 @@ struct ReplySheet: View {
                     .overlay(
                         Group {
                             if content.isEmpty {
-                                Text("写下你的回复...")
+                                Text(LocalizationKey.forumWriteReply.localized)
                                     .font(.system(size: 16))
                                     .foregroundColor(AppColors.textTertiary)
                                     .padding(.leading, 16)
@@ -578,7 +578,7 @@ struct ReplySheet: View {
             }
             .padding(20)
             .background(Color(UIColor.systemBackground))
-            .navigationTitle("回复")
+            .navigationTitle(LocalizationKey.forumReply.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .scrollDismissesKeyboard(.interactively)
@@ -596,7 +596,7 @@ struct ReplySheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onReply) {
-                        Text("发送")
+                        Text(LocalizationKey.forumSend.localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)

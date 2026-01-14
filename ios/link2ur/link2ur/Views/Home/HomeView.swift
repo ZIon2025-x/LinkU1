@@ -107,6 +107,8 @@ struct HomeView: View {
             .sheet(isPresented: $showSearch) {
                 SearchView()
             }
+            // 点击空白区域关闭键盘
+            .keyboardDismissable()
             .onReceive(resetNotification) { _ in
                 // 只重置到默认状态（推荐页面），不清空导航路径
                 // 这样用户可以从子页面返回到首页，导航栈保持可用
@@ -251,7 +253,7 @@ struct RecommendedContentView: View {
                 // 热门活动（立即加载，数据已预加载）
                 PopularActivitiesSection()
                     .opacity(hasAppeared ? 1.0 : 0.0)
-                    .animation(.easeInOut(duration: 0.3), value: hasAppeared)
+                    .animation(.easeInOut(duration: 0.15), value: hasAppeared) // 更快的淡入动画
                 
                 // 最新动态（延迟加载，优化首次加载性能）
                 if hasAppeared {
@@ -266,6 +268,12 @@ struct RecommendedContentView: View {
                 Spacer()
                     .frame(height: AppSpacing.xl)
             }
+        }
+        .refreshable {
+            // 手动下拉刷新首页所有内容（推荐任务、热门活动、最新动态）
+            NotificationCenter.default.post(name: .refreshHomeContent, object: nil)
+            // 等待一小段时间，确保刷新完成
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
         }
         .onAppear {
             // 立即显示所有内容，数据已预加载
@@ -368,9 +376,11 @@ struct NearbyTasksView: View {
                 print("🔄 [NearbyTasksView] 刷新位置...")
                 locationService.requestLocation()
             }
-            // 加载所有同城任务，按距离排序
+            // 加载所有同城任务，按距离排序（强制刷新）
             let city = locationService.currentCityName
             viewModel.loadTasks(city: city, status: "open", sortBy: "distance", forceRefresh: true)
+            // 等待一小段时间，确保刷新完成
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
         }
     }
 }
@@ -491,21 +501,24 @@ struct TaskExpertListContentView: View {
     
     // 任务达人分类映射（根据后端 models.py 中的 category 字段）
     let categories: [(name: String, value: String)] = [
-        ("全部", ""),
-        ("编程", "programming"),
-        ("翻译", "translation"),
-        ("辅导", "tutoring"),
-        ("食品", "food"),
-        ("饮料", "beverage"),
-        ("蛋糕", "cake"),
-        ("跑腿/交通", "errand_transport"),
-        ("社交/娱乐", "social_entertainment"),
-        ("美容/护肤", "beauty_skincare"),
-        ("手工艺", "handicraft")
+        (LocalizationKey.commonAll.localized, ""),
+        (LocalizationKey.expertCategoryProgramming.localized, "programming"),
+        (LocalizationKey.expertCategoryTranslation.localized, "translation"),
+        (LocalizationKey.expertCategoryTutoring.localized, "tutoring"),
+        (LocalizationKey.expertCategoryFood.localized, "food"),
+        (LocalizationKey.expertCategoryBeverage.localized, "beverage"),
+        (LocalizationKey.expertCategoryCake.localized, "cake"),
+        (LocalizationKey.expertCategoryErrandTransport.localized, "errand_transport"),
+        (LocalizationKey.expertCategorySocialEntertainment.localized, "social_entertainment"),
+        (LocalizationKey.expertCategoryBeautySkincare.localized, "beauty_skincare"),
+        (LocalizationKey.expertCategoryHandicraft.localized, "handicraft")
     ]
     
     // 城市列表
-    let cities = ["全部", "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"]
+    let cities: [String] = {
+        let all = LocalizationKey.commonAll.localized
+        return [all, "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"]
+    }()
     
     var body: some View {
         ZStack {
@@ -557,7 +570,7 @@ struct TaskExpertListContentView: View {
                                 )
                             }
                             
-                            if let city = selectedCity, !city.isEmpty, city != "全部" {
+                            if let city = selectedCity, !city.isEmpty, city != LocalizationKey.commonAll.localized {
                                 FilterChip(
                                     text: city,
                                     onRemove: {
@@ -639,18 +652,21 @@ struct TaskExpertListContentView: View {
             }
         }
         .refreshable {
-            // 刷新位置
+            // 下拉刷新：刷新位置和达人列表
             if locationService.isAuthorized {
                 locationService.requestLocation()
             }
-            applyFilters()
+            // 强制刷新达人列表
+            applyFilters(forceRefresh: true)
+            // 等待一小段时间，确保刷新完成
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
         }
     }
     
-    private func applyFilters() {
+    private func applyFilters(forceRefresh: Bool = false) {
         let category = selectedCategory?.isEmpty == true ? nil : selectedCategory
-        let city = selectedCity == "全部" ? nil : selectedCity
-        viewModel.loadExperts(category: category, location: city, keyword: nil)
+        let city = selectedCity == LocalizationKey.commonAll.localized ? nil : selectedCity
+        viewModel.loadExperts(category: category, location: city, keyword: nil, forceRefresh: forceRefresh)
     }
 }
 
@@ -669,7 +685,7 @@ struct SearchView: View {
                         .foregroundColor(AppColors.textSecondary)
                         .font(.system(size: 16, weight: .medium))
                     
-                    TextField("搜索任务、达人、商品...", text: $viewModel.searchText)
+                    TextField(LocalizationKey.searchPlaceholder.localized, text: $viewModel.searchText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .submitLabel(.search)
@@ -741,10 +757,10 @@ struct SearchView: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 50))
                             .foregroundColor(AppColors.textSecondary.opacity(0.5))
-                        Text("没有找到相关结果")
+                        Text(LocalizationKey.searchNoResults.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
-                        Text("试试其他关键词")
+                        Text(LocalizationKey.searchTryOtherKeywords.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textTertiary)
                     }
@@ -755,11 +771,11 @@ struct SearchView: View {
                 }
             }
             .background(AppColors.background)
-            .navigationTitle("搜索")
+            .navigationTitle(LocalizationKey.searchSearch.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)
@@ -769,6 +785,8 @@ struct SearchView: View {
         .onAppear {
             isSearchFocused = true
         }
+        // 点击空白区域关闭键盘
+        .keyboardDismissable()
     }
     
     private func countForType(_ type: SearchResultType) -> Int {
@@ -825,11 +843,11 @@ struct SearchHomePage: View {
                 if !viewModel.searchHistory.keywords.isEmpty {
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
                         HStack {
-                            Text("搜索历史")
+                            Text(LocalizationKey.homeSearchHistory.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(AppColors.textPrimary)
                             Spacer()
-                            Button("清空") {
+                            Button(LocalizationKey.commonClear.localized) {
                                 viewModel.clearHistory()
                             }
                             .font(AppTypography.caption)
@@ -851,7 +869,7 @@ struct SearchHomePage: View {
                 
                 // 热门搜索
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Text("热门搜索")
+                    Text(LocalizationKey.homeHotSearches.localized)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -1331,8 +1349,30 @@ struct RecommendedTasksSection: View {
         return vm
     }()
     @EnvironmentObject var appState: AppState
-    @State private var interactionCancellables = Set<AnyCancellable>()
     @State private var recordedViews: Set<Int> = []  // 已记录的查看交互（防重复）
+    
+    /// 加载推荐任务，如果失败或为空则回退到默认任务
+    private func loadRecommendedTasksWithFallback(forceRefresh: Bool = false) {
+        guard appState.isAuthenticated else {
+            // 未登录，直接加载默认任务
+            if viewModel.tasks.isEmpty && !viewModel.isLoading {
+                viewModel.loadTasks(status: "open", forceRefresh: forceRefresh)
+            }
+            return
+        }
+        
+        // 已登录，先尝试加载推荐任务
+        viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: forceRefresh)
+        
+        // 延迟检查，如果推荐任务为空或失败，回退到默认任务
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            // 如果推荐任务加载完成且为空，或者有错误，回退到默认任务
+            if !self.viewModel.isLoading && (self.viewModel.tasks.isEmpty || self.viewModel.errorMessage != nil) {
+                Logger.info("推荐任务为空或失败，回退到默认任务", category: .api)
+                self.viewModel.loadTasks(status: "open", forceRefresh: forceRefresh)
+            }
+        }
+    }
     
     /// 记录推荐任务的查看交互
     private func recordRecommendedTaskView(taskId: Int, position: Int) {
@@ -1343,6 +1383,7 @@ struct RecommendedTasksSection: View {
         guard appState.isAuthenticated else { return }
         
         // 异步非阻塞方式记录交互
+        // 注意：RecommendedTasksSection 是 struct，不需要 weak 引用
         DispatchQueue.global(qos: .utility).async {
             let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
             let metadata: [String: Any] = [
@@ -1350,7 +1391,9 @@ struct RecommendedTasksSection: View {
                 "list_position": position
             ]
             
-            APIService.shared.recordTaskInteraction(
+            // 使用局部变量保持 cancellable 活跃
+            var cancellable: AnyCancellable?
+            cancellable = APIService.shared.recordTaskInteraction(
                 taskId: taskId,
                 interactionType: "view",
                 deviceType: deviceType,
@@ -1362,12 +1405,13 @@ struct RecommendedTasksSection: View {
                     if case .failure(let error) = completion {
                         Logger.warning("记录推荐任务查看失败: \(error.localizedDescription)", category: .api)
                     }
+                    cancellable = nil
                 },
                 receiveValue: { _ in
                     Logger.debug("已记录推荐任务查看: taskId=\(taskId), position=\(position)", category: .api)
                 }
             )
-            .store(in: &self.interactionCancellables)
+            _ = cancellable
         }
     }
     
@@ -1429,25 +1473,37 @@ struct RecommendedTasksSection: View {
                     }
                     .padding(.horizontal, AppSpacing.md)
                 }
-                .animation(.easeInOut(duration: 0.2), value: viewModel.tasks.count) // 平滑过渡，减少闪烁
+                .animation(.easeInOut(duration: 0.1), value: viewModel.tasks.count) // 更快的过渡动画
             }
         }
         .task {
-            // 使用推荐 API 加载推荐任务
+            // 只在首次加载时加载推荐任务，不自动刷新
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid")
-            } else if !viewModel.tasks.isEmpty {
-                // 已经有缓存数据，在后台静默刷新（不显示加载状态）
-                viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: false)
+                if !appState.isAuthenticated {
+                    // 未登录，加载默认任务
+                    viewModel.loadTasks(status: "open")
+                } else {
+                    // 已登录，使用推荐 API 加载推荐任务
+                    loadRecommendedTasksWithFallback()
+                }
             }
         }
-        // 监听任务更新通知，实时刷新推荐任务
-        .onReceive(NotificationCenter.default.publisher(for: .taskUpdated)) { _ in
-            // 用户交互后，延迟刷新推荐任务（避免频繁请求）
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                if !viewModel.isLoading {
-                    viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: false)
-                }
+        // 移除自动刷新逻辑：不再监听任务更新通知，避免每次返回时都刷新
+        // 用户可以通过下拉刷新手动更新推荐任务
+        .onReceive(NotificationCenter.default.publisher(for: .refreshRecommendedTasks)) { _ in
+            // 手动刷新推荐任务（用户下拉刷新时触发）
+            if appState.isAuthenticated {
+                loadRecommendedTasksWithFallback(forceRefresh: true)
+            } else {
+                viewModel.loadTasks(status: "open", forceRefresh: true)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshHomeContent)) { _ in
+            // 刷新推荐任务（首页下拉刷新时触发）
+            if appState.isAuthenticated {
+                loadRecommendedTasksWithFallback(forceRefresh: true)
+            } else {
+                viewModel.loadTasks(status: "open", forceRefresh: true)
             }
         }
     }
@@ -1522,6 +1578,10 @@ struct RecentActivitiesSection: View {
                     viewModel.loadRecentActivities()
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshHomeContent)) { _ in
+            // 刷新最新动态（首页下拉刷新时触发）
+            viewModel.refresh()
         }
     }
 }
@@ -1676,7 +1736,7 @@ struct PopularActivitiesSection: View {
                     }
                     .padding(.horizontal, AppSpacing.md)
                 }
-                .animation(.easeInOut(duration: 0.2), value: viewModel.activities.count) // 平滑过渡，减少闪烁
+                .animation(.easeInOut(duration: 0.1), value: viewModel.activities.count) // 更快的过渡动画
             }
         }
         .task {
@@ -1687,6 +1747,10 @@ struct PopularActivitiesSection: View {
             if viewModel.activities.isEmpty && !viewModel.isLoading {
                 viewModel.loadActivities(status: "open", includeEnded: false)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshHomeContent)) { _ in
+            // 刷新热门活动（首页下拉刷新时触发）
+            viewModel.loadActivities(status: "open", includeEnded: false, forceRefresh: true)
         }
     }
 }
@@ -1757,8 +1821,8 @@ class BannerCarouselViewModel: ObservableObject {
         Banner(
             id: -1, // 使用负数ID，避免与后端Banner冲突
             imageUrl: "local:FleaMarketBanner", // 使用本地Assets中的跳蚤市场图片
-            title: "跳蚤市场",
-            subtitle: "发现心仪物品，出售闲置商品",
+            title: LocalizationKey.fleaMarketFleaMarket.localized,
+            subtitle: LocalizationKey.fleaMarketSubtitle.localized,
             linkUrl: "/flea-market",
             linkType: "internal",
             order: -999 // 确保始终是第一个
