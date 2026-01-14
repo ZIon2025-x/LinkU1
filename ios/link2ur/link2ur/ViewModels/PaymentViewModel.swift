@@ -23,6 +23,7 @@ class PaymentViewModel: ObservableObject {
     
     private var initialClientSecret: String?
     private var isCreatingPaymentIntent = false // 防止重复创建支付意图
+    private var isLoadingPaymentInfo = false // 防止重复加载支付信息
     
     init(taskId: Int, amount: Double, clientSecret: String? = nil, apiService: APIService? = nil) {
         self.taskId = taskId
@@ -33,13 +34,61 @@ class PaymentViewModel: ObservableObject {
         // 初始化 Stripe
         StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
         
-        // 如果提供了 client_secret，直接创建 Payment Sheet
+        // 如果提供了 client_secret，先创建 Payment Sheet，然后获取完整的支付信息
         if let clientSecret = clientSecret {
             setupPaymentElement(with: clientSecret)
+            // 调用 API 获取完整的支付信息（包括金额、优惠券等）
+            // 这样不会创建新的 PaymentIntent，而是获取已存在的 PaymentIntent 信息
+            loadPaymentInfo()
         }
         
         // 加载可用优惠券
         loadAvailableCoupons()
+    }
+    
+    /// 加载支付信息（当已有 client_secret 时使用）
+    private func loadPaymentInfo() {
+        // 防止重复请求
+        guard !isLoadingPaymentInfo else {
+            Logger.debug("支付信息加载中，跳过重复请求", category: .network)
+            return
+        }
+        
+        isLoadingPaymentInfo = true
+        isLoading = true
+        errorMessage = nil
+        
+        Logger.debug("开始加载支付信息，taskId: \(taskId)", category: .api)
+        
+        // 调用 API 获取支付信息（不创建新的 PaymentIntent）
+        // 后端会检查是否已存在 PaymentIntent，如果存在则返回其信息
+        var requestBody: [String: Any] = [
+            "payment_method": "stripe"
+        ]
+        
+        apiService.request(
+            PaymentResponse.self,
+            APIEndpoints.Payment.createTaskPayment(taskId),
+            method: "POST",
+            body: requestBody
+        )
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                self?.isLoadingPaymentInfo = false
+                self?.isLoading = false
+                if case .failure(let error) = completion {
+                    Logger.error("加载支付信息失败: \(error.localizedDescription)", category: .api)
+                    self?.errorMessage = error.userFriendlyMessage
+                }
+            },
+            receiveValue: { [weak self] response in
+                self?.isLoadingPaymentInfo = false
+                self?.isLoading = false
+                Logger.debug("支付信息加载成功，finalAmount: \(response.finalAmount)", category: .api)
+                self?.handlePaymentResponse(response)
+            }
+        )
+        .store(in: &cancellables)
     }
     
     /// 加载可用优惠券（状态为 active 的优惠券）
@@ -182,18 +231,31 @@ class PaymentViewModel: ObservableObject {
         // 保存支付响应信息
         paymentResponse = response
         
+        Logger.debug("处理支付响应: finalAmount=\(response.finalAmount), hasClientSecret=\(response.clientSecret != nil)", category: .api)
+        
         // 如果纯积分支付，直接成功
         if response.finalAmount == 0 {
+            Logger.info("纯积分支付，无需支付", category: .api)
             paymentSuccess = true
             return
         }
         
-        // 如果有 client_secret，创建 Payment Sheet
+        // 如果有 client_secret，创建或更新 Payment Sheet
         guard let clientSecret = response.clientSecret else {
-            errorMessage = "无法创建支付表单"
+            Logger.error("支付响应中缺少 client_secret", category: .api)
+            errorMessage = "无法创建支付表单，请重试"
             return
         }
         
+        // 如果 PaymentSheet 已存在且使用相同的 client_secret，则不需要重新创建
+        if let existingSheet = paymentSheet,
+           let existingClientSecret = initialClientSecret,
+           existingClientSecret == clientSecret {
+            Logger.debug("PaymentSheet 已存在且 client_secret 相同，跳过重新创建", category: .api)
+            return
+        }
+        
+        Logger.debug("创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...", category: .api)
         setupPaymentElement(with: clientSecret)
     }
     

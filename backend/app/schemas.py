@@ -284,7 +284,7 @@ class TaskBase(BaseModel):
     description: str
     deadline: Optional[datetime.datetime] = None  # 允许为 NULL，支持灵活模式任务
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
-    reward: float = Field(..., ge=1.0, description="任务金额，最小值为1镑")  # 最小值为1镑
+    reward: float = Field(..., ge=0.0, description="任务金额，最小值为0（创建新任务时要求>=1镑）")  # 允许0以兼容历史数据，创建时验证>=1
     base_reward: Optional[float] = None  # 原始标价
     agreed_reward: Optional[float] = None  # 最终成交价
     currency: Optional[str] = "GBP"  # 货币类型
@@ -297,6 +297,13 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
+    
+    @validator('reward')
+    def validate_reward_minimum(cls, v):
+        """创建新任务时，reward必须>=1.0"""
+        if v < 1.0:
+            raise ValueError('任务金额必须至少为1镑')
+        return v
 
 
 class TaskOut(TaskBase):
