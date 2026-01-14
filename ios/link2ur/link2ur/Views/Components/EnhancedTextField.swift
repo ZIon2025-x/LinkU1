@@ -522,7 +522,7 @@ struct CustomPickerField: View {
                             .foregroundColor(AppColors.primary)
                     }
                     
-                    Text(options.first(where: { $0.value == selection })?.label ?? (selection.isEmpty ? "请选择" : selection))
+                    Text(options.first(where: { $0.value == selection })?.label ?? (selection.isEmpty ? LocalizationKey.commonPleaseSelect.localized : selection))
                         .font(AppTypography.body)
                         .foregroundColor(selection.isEmpty ? AppColors.textQuaternary : AppColors.textPrimary)
                     

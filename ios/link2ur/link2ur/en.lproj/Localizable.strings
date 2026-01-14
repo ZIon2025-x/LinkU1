@@ -29,6 +29,7 @@
 "common.all" = "All";
 "common.filter" = "Filter";
 "common.not_provided" = "Not provided";
+"common.please_select" = "Please select";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -813,6 +814,9 @@
 "create_task.task_type" = "Task Type";
 "create_task.images" = "Images";
 "create_task.add_images" = "Add Images";
+"create_task.fill_all_required" = "Please fill in all required fields";
+"create_task.image_upload_failed" = "Some images failed to upload, please try again";
+"create_task.student_verification_required" = "Only verified students can post \"Campus Life\" type tasks. Please complete student verification first";
 
 // MARK: - Task Expert
 "task_expert.become_expert" = "Become an Expert";

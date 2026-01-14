@@ -26,6 +26,8 @@
 "common.more" = "更多";
 "common.view_all" = "查看全部";
 "common.loading_image" = "加载图片中...";
+"common.not_provided" = "未提供";
+"common.please_select" = "请选择";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -646,6 +648,9 @@
 "create_task.task_type" = "任务类型";
 "create_task.images" = "图片";
 "create_task.add_images" = "添加图片";
+"create_task.fill_all_required" = "请填写所有必填项";
+"create_task.image_upload_failed" = "部分图片上传失败，请重试";
+"create_task.student_verification_required" = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证";
 
 // MARK: - Task Expert
 "task_expert.become_expert" = "成为达人";

@@ -89,6 +89,7 @@ public enum LocalizationKey: String {
     case commonAll = "common.all"
     case commonNotProvided = "common.not_provided"
     case commonLoadMore = "common.load_more"
+    case commonPleaseSelect = "common.please_select"
     
     // MARK: - App
     case appName = "app.name"
@@ -928,6 +929,9 @@ public enum LocalizationKey: String {
     case createTaskCity = "create_task.city"
     case createTaskOnline = "create_task.online"
     case createTaskCampusLifeRestriction = "create_task.campus_life_restriction"
+    case createTaskFillAllRequired = "create_task.fill_all_required"
+    case createTaskImageUploadFailed = "create_task.image_upload_failed"
+    case createTaskStudentVerificationRequired = "create_task.student_verification_required"
     
     // MARK: - Task Expert (Part 1 - Non-duplicate cases)
     case taskExpertBecomeExpertTitle = "task_expert.become_expert_title"

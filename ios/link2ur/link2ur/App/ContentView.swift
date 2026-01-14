@@ -7,7 +7,6 @@ public struct ContentView: View {
     @State private var progress: Double = 1.0 // 进度值（1.0 到 0.0）
     @State private var timer: Timer?
     @State private var hasStartedAnimation: Bool = false // 标记是否已启动动画
-    @State private var showNotificationPermissionView: Bool = false // 显示通知权限请求视图
     
     public var body: some View {
         Group {
@@ -155,23 +154,6 @@ public struct ContentView: View {
             // 处理推送通知点击
             handlePushNotificationTap(userInfo: notification.userInfo)
         }
-        .overlay {
-            // 美化的通知权限请求视图
-            if showNotificationPermissionView {
-                NotificationPermissionView(
-                    isPresented: $showNotificationPermissionView,
-                    onAllow: {
-                        // 用户点击允许，请求系统权限
-                        requestSystemNotificationPermission()
-                    },
-                    onNotNow: {
-                        // 用户选择稍后，标记已请求过，但不请求系统权限
-                        UserDefaults.standard.set(true, forKey: "has_requested_notification_permission")
-                    }
-                )
-                .zIndex(1000) // 确保在最上层
-            }
-        }
     }
     
     // 处理推送通知点击
@@ -228,7 +210,7 @@ public struct ContentView: View {
             return
         }
         
-        // 检查当前权限状态，如果已经授权则不需要显示
+        // 检查当前权限状态，如果已经授权则不需要请求
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 if settings.authorizationStatus == .authorized {
@@ -237,29 +219,25 @@ public struct ContentView: View {
                     return
                 }
                 
-                // 延迟一小段时间，确保用户已经看到主界面，然后显示美化的权限请求视图
+                // 延迟一小段时间，确保用户已经看到主界面，然后直接请求系统权限
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    showNotificationPermissionView = true
-                }
-            }
-        }
-    }
-    
-    // 请求系统通知权限（在用户点击允许后调用）
-    private func requestSystemNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            DispatchQueue.main.async {
-                // 标记已经请求过
-                UserDefaults.standard.set(true, forKey: "has_requested_notification_permission")
-                
-                if let error = error {
-                    print("推送通知权限请求失败: \(error)")
-                } else if granted {
-                    print("推送通知权限已授予")
-                    // 权限授予后，注册远程推送
-                    UIApplication.shared.registerForRemoteNotifications()
-                } else {
-                    print("推送通知权限被拒绝")
+                    // 直接请求系统通知权限（会显示系统提示框）
+                    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+                        DispatchQueue.main.async {
+                            // 标记已经请求过
+                            UserDefaults.standard.set(true, forKey: "has_requested_notification_permission")
+                            
+                            if let error = error {
+                                print("推送通知权限请求失败: \(error)")
+                            } else if granted {
+                                print("推送通知权限已授予")
+                                // 权限授予后，注册远程推送
+                                UIApplication.shared.registerForRemoteNotifications()
+                            } else {
+                                print("推送通知权限被拒绝")
+                            }
+                        }
+                    }
                 }
             }
         }

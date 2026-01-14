@@ -138,7 +138,8 @@ def send_task_application_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification
-            send_push_notification(
+            logger.info(f"准备发送推送通知给用户 {task.poster_id}，任务ID: {task.id}")
+            result = send_push_notification(
                 db=db,
                 user_id=task.poster_id,
                 title=None,  # 从模板生成
@@ -150,8 +151,12 @@ def send_task_application_notification(
                     "task_title": task.title
                 }
             )
+            if result:
+                logger.info(f"推送通知发送成功，用户ID: {task.poster_id}")
+            else:
+                logger.warning(f"推送通知发送失败（返回 False），用户ID: {task.poster_id}")
         except Exception as e:
-            logger.warning(f"发送任务申请推送通知失败: {e}")
+            logger.error(f"发送任务申请推送通知失败: {e}", exc_info=True)
             # 推送通知失败不影响主流程
         
         # 获取发布者信息
@@ -695,12 +700,12 @@ async def send_service_application_notification(
                                 None,
                                 lambda: send_email(expert.email, email_subject, email_body)
                             )
-                        logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
-                    except Exception as e:
-                        logger.error(f"发送服务申请邮件失败: {e}")
-                
-                # 在后台执行邮件发送，不阻塞主流程
-                asyncio.create_task(send_email_task())
+                            logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
+                        except Exception as e:
+                            logger.error(f"发送服务申请邮件失败: {e}")
+                    
+                    # 在后台执行邮件发送，不阻塞主流程
+                    asyncio.create_task(send_email_task())
                 
             except Exception as e:
                 logger.error(f"准备发送服务申请邮件时出错: {e}")

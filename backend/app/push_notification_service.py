@@ -110,8 +110,10 @@ def send_push_notification(
         ).all()
         
         if not device_tokens:
-            logger.debug(f"用户 {user_id} 没有注册的设备令牌")
+            logger.warning(f"用户 {user_id} 没有注册的设备令牌，无法发送推送通知")
             return False
+        
+        logger.info(f"找到 {len(device_tokens)} 个设备令牌，准备发送推送通知给用户 {user_id}")
         
         success_count = 0
         failed_tokens = []
@@ -221,14 +223,18 @@ def send_apns_notification(
     try:
         # 检查 APNs 配置
         if not APNS_KEY_ID or not APNS_TEAM_ID:
-            logger.warning("APNs 配置不完整（缺少 KEY_ID 或 TEAM_ID），跳过推送通知")
+            logger.error("APNs 配置不完整（缺少 KEY_ID 或 TEAM_ID），跳过推送通知")
+            logger.error(f"APNS_KEY_ID: {APNS_KEY_ID is not None}, APNS_TEAM_ID: {APNS_TEAM_ID is not None}")
             return False
         
         # 获取密钥文件路径
         key_file = get_apns_key_file()
         if not key_file:
-            logger.warning("APNs 密钥文件不存在或无法加载，跳过推送通知")
+            logger.error("APNs 密钥文件不存在或无法加载，跳过推送通知")
+            logger.error(f"APNS_KEY_FILE: {APNS_KEY_FILE}, APNS_KEY_CONTENT: {APNS_KEY_CONTENT is not None}")
             return False
+        
+        logger.info(f"APNs 配置检查通过，使用密钥文件: {key_file}")
         
         # 尝试导入 PyAPNs2
         try:
@@ -280,11 +286,13 @@ def send_apns_notification(
         )
         
         apns_client.send_notification(request, topic=topic)
-        logger.info(f"APNs 推送通知已发送: {device_token[:20]}...")
+        logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")
         return True
         
     except Exception as e:
-        logger.error(f"发送 APNs 推送通知失败: {e}")
+        logger.error(f"发送 APNs 推送通知失败: {e}", exc_info=True)
+        import traceback
+        logger.error(f"详细错误信息: {traceback.format_exc()}")
         return False
 
 

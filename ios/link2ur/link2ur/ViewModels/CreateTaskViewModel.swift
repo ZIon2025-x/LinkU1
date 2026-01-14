@@ -52,19 +52,21 @@ class CreateTaskViewModel: ObservableObject {
         return studentVerificationStatus?.isVerified == true
     }
     
-    // 后端真实的任务类型列表
-    let taskTypes: [(label: String, value: String)] = [
-        ("家政服务", "Housekeeping"),
-        ("校园生活", "Campus Life"),
-        ("二手租赁", "Second-hand & Rental"),
-        ("跑腿代购", "Errand Running"),
-        ("技能服务", "Skill Service"),
-        ("社交互助", "Social Help"),
-        ("交通用车", "Transportation"),
-        ("宠物寄养", "Pet Care"),
-        ("生活便利", "Life Convenience"),
-        ("其他", "Other")
-    ]
+    // 后端真实的任务类型列表（使用本地化）
+    var taskTypes: [(label: String, value: String)] {
+        [
+            (LocalizationKey.taskCategoryHousekeeping.localized, "Housekeeping"),
+            (LocalizationKey.taskCategoryCampusLife.localized, "Campus Life"),
+            (LocalizationKey.taskCategorySecondhandRental.localized, "Second-hand & Rental"),
+            (LocalizationKey.taskCategoryErrandRunning.localized, "Errand Running"),
+            (LocalizationKey.taskCategorySkillService.localized, "Skill Service"),
+            (LocalizationKey.taskCategorySocialHelp.localized, "Social Help"),
+            (LocalizationKey.taskCategoryTransportation.localized, "Transportation"),
+            (LocalizationKey.taskCategoryPetCare.localized, "Pet Care"),
+            (LocalizationKey.taskCategoryLifeConvenience.localized, "Life Convenience"),
+            (LocalizationKey.taskCategoryOther.localized, "Other")
+        ]
+    }
     
     func uploadImages(completion: @escaping (Bool) -> Void) {
         guard !selectedImages.isEmpty else {
@@ -108,7 +110,7 @@ class CreateTaskViewModel: ObservableObject {
                 if let firstError = uploadErrors.first {
                     ErrorHandler.shared.handle(firstError, context: "上传任务图片")
                 }
-                self?.errorMessage = "部分图片上传失败，请重试"
+                self?.errorMessage = LocalizationKey.createTaskImageUploadFailed.localized
                 completion(false)
             }
         }
@@ -116,13 +118,13 @@ class CreateTaskViewModel: ObservableObject {
     
     func createTask(completion: @escaping (Bool) -> Void) {
         guard !title.isEmpty, !description.isEmpty, !city.isEmpty else {
-            errorMessage = "请填写所有必填项"
+            errorMessage = LocalizationKey.createTaskFillAllRequired.localized
             return
         }
         
         // 权限检查：只有学生用户才能发布"校园生活"类型的任务
         if !canPublishCampusLifeTask() {
-            errorMessage = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证"
+            errorMessage = LocalizationKey.createTaskStudentVerificationRequired.localized
             return
         }
         
