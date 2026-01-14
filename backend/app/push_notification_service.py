@@ -74,25 +74,28 @@ def get_apns_key_file() -> Optional[str]:
 def send_push_notification(
     db: Session,
     user_id: str,
-    title: str,
-    body: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
     notification_type: str = "general",
     data: Optional[Dict[str, Any]] = None,
     badge: Optional[int] = None,
-    sound: str = "default"
+    sound: str = "default",
+    template_vars: Optional[Dict[str, Any]] = None
 ) -> bool:
     """
     发送推送通知给指定用户的所有设备
+    推送通知会在 payload 中包含多语言内容，iOS 端通过 Notification Service Extension 根据设备系统语言选择显示
     
     Args:
         db: 数据库会话
         user_id: 用户ID
-        title: 通知标题
-        body: 通知内容
+        title: 通知标题（如果为 None，将从模板生成所有语言）
+        body: 通知内容（如果为 None，将从模板生成所有语言）
         notification_type: 通知类型（task_application, task_completed, forum_reply等）
         data: 额外的通知数据
         badge: 应用徽章数字
         sound: 通知声音
+        template_vars: 模板变量字典（用于国际化模板，如 applicant_name, task_title 等）
         
     Returns:
         bool: 是否成功发送
@@ -114,8 +117,32 @@ def send_push_notification(
         failed_tokens = []
         from app.utils.time_utils import get_utc_time
         
+        # 准备模板变量
+        template_vars = template_vars or {}
+        if data:
+            template_vars.update(data)
+        
+        # 如果 title 或 body 为 None，生成所有语言的本地化内容
+        localized_content = None
+        if title is None or body is None:
+            from app.push_notification_templates import get_push_notification_text
+            
+            # 生成英文和中文的本地化内容
+            localized_content = {}
+            for lang in ["en", "zh"]:
+                template_title, template_body = get_push_notification_text(
+                    notification_type=notification_type,
+                    language=lang,
+                    **template_vars
+                )
+                localized_content[lang] = {
+                    "title": template_title,
+                    "body": template_body
+                }
+        
         for device_token in device_tokens:
             try:
+                # 如果提供了本地化内容，直接使用；否则使用传入的 title 和 body
                 if device_token.platform == "ios":
                     result = send_apns_notification(
                         device_token.device_token,
@@ -124,7 +151,8 @@ def send_push_notification(
                         notification_type=notification_type,
                         data=data,
                         badge=badge,
-                        sound=sound
+                        sound=sound,
+                        localized_content=localized_content
                     )
                 elif device_token.platform == "android":
                     # TODO: 实现 FCM 推送
@@ -165,24 +193,27 @@ def send_push_notification(
 
 def send_apns_notification(
     device_token: str,
-    title: str,
-    body: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
     notification_type: str = "general",
     data: Optional[Dict[str, Any]] = None,
     badge: Optional[int] = None,
-    sound: str = "default"
+    sound: str = "default",
+    localized_content: Optional[Dict[str, Dict[str, str]]] = None
 ) -> bool:
     """
     发送 APNs 推送通知
     
     Args:
         device_token: iOS 设备令牌
-        title: 通知标题
-        body: 通知内容
+        title: 通知标题（如果提供了 localized_content，此参数将被忽略）
+        body: 通知内容（如果提供了 localized_content，此参数将被忽略）
         notification_type: 通知类型
         data: 额外的通知数据
         badge: 应用徽章数字
         sound: 通知声音
+        localized_content: 本地化内容字典，格式为 {"en": {"title": "...", "body": "..."}, "zh": {...}}
+                          如果提供，iOS端会根据系统语言选择显示
         
     Returns:
         bool: 是否成功发送
@@ -214,8 +245,20 @@ def send_apns_notification(
         if data:
             payload_data.update(data)
         
+        # 如果提供了本地化内容，将其添加到 payload_data 中
+        if localized_content:
+            payload_data["localized"] = localized_content
+            # 使用默认语言（英文）作为 alert 的 fallback
+            default_content = localized_content.get("en", {})
+            alert_title = default_content.get("title", title or "Notification")
+            alert_body = default_content.get("body", body or "")
+        else:
+            # 如果没有本地化内容，使用传入的 title 和 body
+            alert_title = title or "Notification"
+            alert_body = body or ""
+        
         payload = Payload(
-            alert={"title": title, "body": body},
+            alert={"title": alert_title, "body": alert_body},
             badge=badge,
             sound=sound,
             custom=payload_data
@@ -248,10 +291,11 @@ def send_apns_notification(
 def send_push_notification_async_safe(
     async_db,
     user_id: str,
-    title: str,
-    body: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
     notification_type: str = "general",
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[Dict[str, Any]] = None,
+    template_vars: Optional[Dict[str, Any]] = None
 ) -> bool:
     """
     在异步环境中安全地发送推送通知
@@ -260,10 +304,11 @@ def send_push_notification_async_safe(
     Args:
         async_db: 异步数据库会话（AsyncSession，实际不使用，仅为类型提示）
         user_id: 用户ID
-        title: 通知标题
-        body: 通知内容
+        title: 通知标题（如果为 None，将从模板生成所有语言）
+        body: 通知内容（如果为 None，将从模板生成所有语言）
         notification_type: 通知类型
         data: 额外的通知数据
+        template_vars: 模板变量字典（用于国际化模板，如 applicant_name, task_title 等）
         
     Returns:
         bool: 是否成功发送
@@ -278,7 +323,8 @@ def send_push_notification_async_safe(
                 title=title,
                 body=body,
                 notification_type=notification_type,
-                data=data
+                data=data,
+                template_vars=template_vars
             )
         finally:
             sync_db.close()

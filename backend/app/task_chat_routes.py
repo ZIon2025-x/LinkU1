@@ -1633,10 +1633,11 @@ async def reject_application(
                 send_push_notification_async_safe(
                     async_db=db,
                     user_id=application.applicant_id,
-                    title="您的申请已被拒绝",
-                    body=content,
+                    title=None,  # 从模板生成
+                    body=None,  # 从模板生成
                     notification_type="application_rejected",
-                    data={"task_id": task_id, "application_id": application_id}
+                    data={"task_id": task_id, "application_id": application_id},
+                    template_vars={"task_title": task.title}
                 )
             except Exception as e:
                 logger.warning(f"发送申请拒绝推送通知失败: {e}")
@@ -1762,10 +1763,11 @@ async def withdraw_application(
                 send_push_notification_async_safe(
                     async_db=db,
                     user_id=task.poster_id,
-                    title="有申请者撤回了申请",
-                    body=content,
+                    title=None,  # 从模板生成
+                    body=None,  # 从模板生成
                     notification_type="application_withdrawn",
-                    data={"task_id": task_id, "application_id": application_id}
+                    data={"task_id": task_id, "application_id": application_id},
+                    template_vars={"task_title": task.title}
                 )
             except Exception as e:
                 logger.warning(f"发送申请撤回推送通知失败: {e}")
@@ -2316,13 +2318,14 @@ async def respond_negotiation(
                     send_push_notification_async_safe(
                         async_db=db,
                         user_id=task.poster_id,
-                        title="申请者已拒绝您的议价",
-                        body=f"申请者已拒绝您对任务「{task.title}」的议价",
+                        title=None,  # 从模板生成
+                        body=None,  # 从模板生成
                         notification_type="negotiation_rejected",
                         data={
                             "task_id": task_id,
                             "application_id": application_id
-                        }
+                        },
+                        template_vars={"task_title": task.title}
                     )
                 except Exception as e:
                     logger.warning(f"发送议价拒绝推送通知失败: {e}")
@@ -2527,18 +2530,18 @@ async def send_application_message(
         
         # 发送推送通知
         try:
-            title = "新的留言" if notification_type == "application_message" else "新的议价提议"
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=application.applicant_id,
-                title=title,
-                body=content,
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type=notification_type,
                 data={
                     "task_id": task_id,
                     "application_id": application_id,
                     "notification_id": new_notification.id
-                }
+                },
+                template_vars={"message": content}
             )
         except Exception as e:
             logger.warning(f"发送申请留言/议价推送通知失败: {e}")
@@ -2708,13 +2711,17 @@ async def reply_application_message(
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=task.poster_id,
-                title="申请者回复了您的留言",
-                body=content,
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type="application_message_reply",
                 data={
                     "task_id": task_id,
                     "application_id": application_id,
                     "notification_id": request.notification_id
+                },
+                template_vars={
+                    "task_title": task.title,
+                    "message": request.message
                 }
             )
         except Exception as e:

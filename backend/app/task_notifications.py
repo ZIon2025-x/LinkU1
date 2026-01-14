@@ -141,10 +141,14 @@ def send_task_application_notification(
             send_push_notification(
                 db=db,
                 user_id=task.poster_id,
-                title="新任务申请",
-                body=f"{applicant_name} 申请了任务「{task.title}」",
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type="task_application",
-                data={"task_id": task.id, "application_id": application_id}
+                data={"task_id": task.id, "application_id": application_id},
+                template_vars={
+                    "applicant_name": applicant_name,
+                    "task_title": task.title
+                }
             )
         except Exception as e:
             logger.warning(f"发送任务申请推送通知失败: {e}")
@@ -195,10 +199,13 @@ def send_task_approval_notification(
             send_push_notification(
                 db=db,
                 user_id=applicant.id,
-                title="您的申请已被接受",
-                body=f"您的任务申请已被接受：{task.title}",
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type="application_accepted",
-                data={"task_id": task.id}
+                data={"task_id": task.id},
+                template_vars={
+                    "task_title": task.title
+                }
             )
         except Exception as e:
             logger.warning(f"发送任务申请接受推送通知失败: {e}")
@@ -249,7 +256,8 @@ def send_task_completion_notification(
     """发送任务完成通知和邮件给发布者"""
     try:
         # 创建通知
-        notification_content = f"用户 {taker.name} 标记任务已完成：{task.title}"
+        taker_name = taker.name or f"用户{taker.id}"
+        notification_content = f"用户 {taker_name} 标记任务已完成：{task.title}"
         
         crud.create_notification(
             db=db,
@@ -259,6 +267,25 @@ def send_task_completion_notification(
             content=notification_content,
             related_id=str(task.id)
         )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=task.poster_id,
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
+                notification_type="task_completed",
+                data={"task_id": task.id},
+                template_vars={
+                    "taker_name": taker_name,
+                    "task_title": task.title
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送任务完成推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
         # 获取发布者信息
@@ -314,10 +341,13 @@ def send_task_confirmation_notification(
             send_push_notification(
                 db=db,
                 user_id=taker.id,
-                title="任务已确认完成",
-                body=f"任务已完成并确认！奖励已发放：{task.title}",
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type="task_confirmed",
-                data={"task_id": task.id}
+                data={"task_id": task.id},
+                template_vars={
+                    "task_title": task.title
+                }
             )
         except Exception as e:
             logger.warning(f"发送任务确认推送通知失败: {e}")
@@ -374,10 +404,13 @@ def send_task_rejection_notification(
             send_push_notification(
                 db=db,
                 user_id=applicant.id,
-                title="任务申请被拒绝",
-                body=notification_content,
+                title=None,  # 从模板生成
+                body=None,  # 从模板生成
                 notification_type="task_rejected",
-                data={"task_id": task.id}
+                data={"task_id": task.id},
+                template_vars={
+                    "task_title": task.title
+                }
             )
         except Exception as e:
             logger.warning(f"发送任务拒绝推送通知失败: {e}")

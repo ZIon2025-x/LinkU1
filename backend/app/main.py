@@ -1718,10 +1718,11 @@ async def websocket_chat(
                             send_push_notification(
                                 db=db,
                                 user_id=msg["receiver_id"],
-                                title="新消息",
-                                body=notification_content,
+                                title=None,  # 从模板生成
+                                body=None,  # 从模板生成
                                 notification_type="message",
-                                data={"sender_id": user_id}
+                                data={"sender_id": user_id},
+                                template_vars={"message": notification_content}
                             )
                         except Exception as e:
                             logger.warning(f"发送私信推送通知失败: {e}")

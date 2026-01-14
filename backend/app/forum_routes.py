@@ -3497,27 +3497,20 @@ async def create_reply(
         # 发送推送通知
         for notification in notifications_to_create:
             # 获取通知类型对应的标题和内容
-            if notification.notification_type == "reply_post":
-                title = "有人回复了您的帖子"
-                body = f"{current_user.name if current_user else '用户'} 回复了您的帖子"
-            elif notification.notification_type == "reply_reply":
-                title = "有人回复了您的评论"
-                body = f"{current_user.name if current_user else '用户'} 回复了您的评论"
-            else:
-                title = "新通知"
-                body = "您有新的论坛通知"
-            
+            # 使用模板生成推送通知
+            user_name = current_user.name if current_user else "用户"
             try:
                 send_push_notification_async_safe(
                     async_db=db,
                     user_id=notification.to_user_id,
-                    title=title,
-                    body=body,
+                    title=None,  # 从模板生成
+                    body=None,  # 从模板生成
                     notification_type=notification.notification_type,
                     data={
                         "post_id": post_id,
                         "reply_id": db_reply.id
-                    }
+                    },
+                    template_vars={"user_name": user_name}
                 )
             except Exception as e:
                 logger.warning(f"发送论坛回复推送通知失败: {e}")

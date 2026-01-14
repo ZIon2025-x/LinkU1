@@ -929,18 +929,11 @@ public enum LocalizationKey: String {
     case createTaskOnline = "create_task.online"
     case createTaskCampusLifeRestriction = "create_task.campus_life_restriction"
     
-    // MARK: - Task Expert
-    case taskExpertBecomeExpert = "task_expert.become_expert"
+    // MARK: - Task Expert (Part 1 - Non-duplicate cases)
     case taskExpertBecomeExpertTitle = "task_expert.become_expert_title"
     case taskExpertShowcaseSkills = "task_expert.showcase_skills"
-    case taskExpertBenefits = "task_expert.benefits"
-    case taskExpertHowToApply = "task_expert.how_to_apply"
-    case taskExpertApplyNow = "task_expert.apply_now"
-    case taskExpertLoginToApply = "task_expert.login_to_apply"
-    case taskExpertApplicationInfo = "task_expert.application_info"
     case taskExpertApplicationHint = "task_expert.application_hint"
     case taskExpertSubmitApplication = "task_expert.submit_application"
-    case taskExpertApplicationSubmitted = "task_expert.application_submitted"
     case taskExpertNoIntro = "task_expert.no_intro"
     case taskExpertServiceMenu = "task_expert.service_menu"
     case taskExpertOptionalTimeSlots = "task_expert.optional_time_slots"
@@ -953,7 +946,6 @@ public enum LocalizationKey: String {
     case taskExpertExpertNegotiatePrice = "task_expert.expert_negotiate_price"
     case taskExpertViewTask = "task_expert.view_task"
     case taskExpertTaskDetails = "task_expert.task_details"
-    case taskExpertClear = "task_expert.clear"
     
     // MARK: - Task Filter
     case taskFilterCategory = "task_filter.category"

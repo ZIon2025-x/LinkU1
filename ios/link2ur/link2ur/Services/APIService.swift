@@ -589,18 +589,17 @@ public class APIService {
     }
     
     // 注册设备Token（用于推送通知）
+    // 注意：不再需要发送设备语言，因为推送通知会在 payload 中包含多语言内容
     public func registerDeviceToken(_ token: String, completion: @escaping (Bool) -> Void) {
-        // 注意：如果后端没有专门的设备token注册API，可以暂时跳过
-        // 或者使用通用的用户设置API
-        // 这里提供一个基础实现，实际使用时需要根据后端API调整
+        // 获取应用版本
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         
         let body: [String: Any] = [
             "device_token": token,
-            "platform": "ios"
+            "platform": "ios",
+            "app_version": appVersion
         ]
         
-        // 假设后端有 /api/users/device-token 或类似的端点
-        // 如果没有，可以暂时注释掉或使用其他端点
         request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "POST", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure = result {
