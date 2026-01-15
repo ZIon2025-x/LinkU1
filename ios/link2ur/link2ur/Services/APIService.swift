@@ -600,9 +600,13 @@ public class APIService {
         // 获取应用版本
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         
+        // 获取设备唯一标识符
+        let deviceId = DeviceInfo.deviceIdentifier
+        
         let body: [String: Any] = [
             "device_token": token,
             "platform": "ios",
+            "device_id": deviceId,
             "app_version": appVersion
         ]
         

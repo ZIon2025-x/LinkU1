@@ -3584,11 +3584,12 @@ def register_device_token(
     
     device_token = device_token_data.get("device_token")
     platform = device_token_data.get("platform", "ios")
-    device_id = device_token_data.get("device_id")
-    app_version = device_token_data.get("app_version")
+    device_id = device_token_data.get("device_id")  # 可能为 None 或空字符串
+    app_version = device_token_data.get("app_version")  # 可能为 None 或空字符串
     
-    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}")
+    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}, device_id={device_id or '未提供'}")
     logger.debug(f"[DEVICE_TOKEN] 请求头: X-Platform={request.headers.get('X-Platform')}, X-Session-ID={'已设置' if request.headers.get('X-Session-ID') else '未设置'}, X-App-Signature={'已设置' if request.headers.get('X-App-Signature') else '未设置'}")
+    logger.debug(f"[DEVICE_TOKEN] 请求体: device_token={device_token[:20] if device_token else 'None'}..., device_id={device_id}, platform={platform}")
     
     if not device_token:
         raise HTTPException(status_code=400, detail="device_token is required")
@@ -3603,12 +3604,26 @@ def register_device_token(
         # 更新现有令牌
         existing_token.is_active = True
         existing_token.platform = platform
-        existing_token.device_id = device_id
-        existing_token.app_version = app_version
+        
+        # 更新 device_id：如果请求中提供了 device_id（非空），则更新
+        # 如果 device_id 为 None（字段不存在）或空字符串，保持原有值不变
+        if device_id and device_id.strip():  # 非空字符串才更新
+            old_device_id = existing_token.device_id
+            existing_token.device_id = device_id
+            if old_device_id != device_id:
+                logger.debug(f"[DEVICE_TOKEN] device_id 已更新: {old_device_id or '未设置'} -> {device_id}")
+        elif device_id is None:
+            # 字段不存在，不更新（保持原有值）
+            logger.debug(f"[DEVICE_TOKEN] device_id 字段未提供，保持原有值: {existing_token.device_id or '未设置'}")
+        
+        # 更新 app_version：如果请求中提供了 app_version（非空），则更新
+        if app_version and app_version.strip():  # 非空字符串才更新
+            existing_token.app_version = app_version
+        
         existing_token.updated_at = get_utc_time()
         existing_token.last_used_at = get_utc_time()
         db.commit()
-        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新: token_id={existing_token.id}")
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新: token_id={existing_token.id}, device_id={existing_token.device_id or '未设置'}")
         return {"message": "Device token updated", "token_id": existing_token.id}
     else:
         # 创建新令牌
@@ -3624,7 +3639,7 @@ def register_device_token(
         db.add(new_token)
         db.commit()
         db.refresh(new_token)
-        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已注册: token_id={new_token.id}, device_token={device_token[:20]}...")
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已注册: token_id={new_token.id}, device_token={device_token[:20]}..., device_id={new_token.device_id or '未设置'}")
         return {"message": "Device token registered", "token_id": new_token.id}
 
 

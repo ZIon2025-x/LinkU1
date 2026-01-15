@@ -1545,8 +1545,8 @@ struct TaskActionButtonsView: View {
                                 // 显示成功提示
                                 showConfirmCompletionSuccess = true
                                 
-                                // 立即刷新任务详情以获取最新状态
-                                viewModel.loadTask(taskId: taskId)
+                                // 立即强制刷新任务详情以获取最新状态
+                                viewModel.loadTask(taskId: taskId, force: true)
                             }
                         }
                     }

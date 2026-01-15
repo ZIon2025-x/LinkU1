@@ -1303,7 +1303,15 @@ async def confirm_task_completion_async(
         finally:
             sync_db.close()
         
+        # 重新查询任务以确保获取最新状态（refresh 在异步会话中可能不可靠）
         await db.refresh(task)
+        # 如果 refresh 失败，重新查询
+        if task.status != "completed":
+            task_query = select(models.Task).where(models.Task.id == task_id)
+            task_result = await db.execute(task_query)
+            task = task_result.scalar_one_or_none()
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found after update")
         
         # 发送任务确认完成通知和邮件给接收者
         if task.taker_id:

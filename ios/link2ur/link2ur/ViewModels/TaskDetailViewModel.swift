@@ -24,9 +24,9 @@ class TaskDetailViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
-    func loadTask(taskId: Int) {
-        // 防止重复请求
-        guard !isLoading else {
+    func loadTask(taskId: Int, force: Bool = false) {
+        // 防止重复请求（除非强制刷新）
+        if !force && isLoading {
             Logger.debug("任务详情请求已在进行中，跳过重复请求", category: .api)
             return
         }
@@ -218,16 +218,16 @@ class TaskDetailViewModel: ObservableObject {
                     completion(false)
                 } else {
                     completion(true)
-                    // 立即重新加载任务以获取最新状态
+                    // 立即强制重新加载任务以获取最新状态
                     DispatchQueue.main.async {
-                        self?.loadTask(taskId: taskId)
+                        self?.loadTask(taskId: taskId, force: true)
                     }
                 }
             }, receiveValue: { [weak self] response in
                 completion(true)
-                // 立即重新加载任务以获取最新状态
+                // 立即强制重新加载任务以获取最新状态
                 DispatchQueue.main.async {
-                    self?.loadTask(taskId: taskId)
+                    self?.loadTask(taskId: taskId, force: true)
                 }
             })
             .store(in: &cancellables)
