@@ -347,6 +347,10 @@ app.include_router(admin_student_verification_router, prefix="/api/admin", tags=
 from app.admin_banner_routes import router as admin_banner_router
 app.include_router(admin_banner_router, tags=["管理员-Banner广告管理"])
 
+# 优化版图片上传路由 (V2)
+from app.upload_routes import router as upload_v2_router
+app.include_router(upload_v2_router, tags=["图片上传V2"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

@@ -69,6 +69,9 @@ public class APIService {
         request.httpMethod = method
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         
+        // 确保 X-Platform header 被设置（移动端验证必需）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
             request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
@@ -180,6 +183,9 @@ public class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 X-Platform header 被设置（移动端验证必需）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
         
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         // 检查是否是公开端点（不需要认证）

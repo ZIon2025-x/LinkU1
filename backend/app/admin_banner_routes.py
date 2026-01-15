@@ -102,62 +102,31 @@ def create_banner(
     db.commit()
     db.refresh(banner)
     
-    # 如果图片在临时目录中，移动到正式目录
+    # 如果图片在临时目录中，移动到正式目录（使用图片上传服务）
     image_url = banner_data.image_url
     if "/banner/temp_" in image_url:
         try:
-            # 检测部署环境
-            railway_env = os.getenv("RAILWAY_ENVIRONMENT")
-            use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+            from app.services import ImageCategory, get_image_upload_service
             
-            # 确定存储目录
-            if railway_env and not use_cloud_storage:
-                base_public_dir = Path("/data/uploads/public/images")
-            else:
-                base_public_dir = Path("uploads/public/images")
+            service = get_image_upload_service()
             
-            # 从 URL 中解析临时路径
-            # URL 格式: {base_url}/uploads/images/banner/temp_{admin_id}/{filename}
-            parsed = urlparse(image_url)
-            path_parts = parsed.path.split('/')
+            # 使用服务移动临时图片
+            new_urls = service.move_from_temp(
+                category=ImageCategory.BANNER,
+                user_id=current_admin.id,
+                resource_id=str(banner.id),
+                image_urls=[image_url]
+            )
             
-            # 找到 banner 后面的部分
-            if 'banner' in path_parts:
-                banner_idx = path_parts.index('banner')
-                if len(path_parts) > banner_idx + 2:
-                    temp_subdir = path_parts[banner_idx + 1]  # temp_{admin_id}
-                    filename = path_parts[banner_idx + 2]     # filename
-                    
-                    temp_dir = base_public_dir / "banner" / temp_subdir
-                    temp_file = temp_dir / filename
-                    
-                    # 创建正式目录
-                    banner_dir = base_public_dir / "banner" / str(banner.id)
-                    banner_dir.mkdir(parents=True, exist_ok=True)
-                    
-                    banner_file = banner_dir / filename
-                    
-                    if temp_file.exists():
-                        # 移动文件到正式目录
-                        shutil.move(str(temp_file), str(banner_file))
-                        logger.info(f"移动 Banner 图片从临时目录到正式目录: {temp_file} -> {banner_file}")
-                        
-                        # 更新 Banner 的 image_url
-                        base_url = Config.FRONTEND_URL.rstrip('/') if hasattr(Config, 'FRONTEND_URL') else "http://localhost:3000"
-                        new_image_url = f"{base_url}/uploads/images/banner/{banner.id}/{filename}"
-                        banner.image_url = new_image_url
-                        db.commit()
-                        db.refresh(banner)
-                        
-                        # 尝试删除空的临时目录
-                        try:
-                            if temp_dir.exists() and not any(temp_dir.iterdir()):
-                                temp_dir.rmdir()
-                                logger.info(f"删除空的 Banner 临时目录: {temp_dir}")
-                        except Exception as e:
-                            logger.debug(f"删除临时目录失败（可能不为空）: {temp_dir}: {e}")
-                    else:
-                        logger.warning(f"临时 Banner 图片文件不存在: {temp_file}")
+            # 更新 Banner 的 image_url
+            if new_urls and new_urls[0] != image_url:
+                banner.image_url = new_urls[0]
+                db.commit()
+                db.refresh(banner)
+                logger.info(f"移动 Banner 图片到正式目录: {new_urls[0]}")
+            
+            # 尝试删除临时目录
+            service.delete_temp(category=ImageCategory.BANNER, user_id=current_admin.id)
         except Exception as e:
             logger.warning(f"移动 Banner 图片从临时目录失败: {e}")
     
@@ -208,38 +177,19 @@ def update_banner(
             detail="link_url 格式无效，必须是有效的 URL"
         )
     
-    # 如果更换了图片，删除旧图片
+    # 如果更换了图片，删除旧图片（使用图片上传服务）
     old_image_url = banner.image_url
     if "image_url" in update_data and update_data["image_url"] != old_image_url and old_image_url:
         try:
-            import os
-            from urllib.parse import urlparse
+            from app.services import ImageCategory, get_image_upload_service
             
-            # 从 URL 中提取文件名
-            parsed = urlparse(old_image_url)
-            path = parsed.path
-            # 路径格式：/uploads/images/banner/{banner_id}/filename
-            path_parts = path.split('/')
-            if len(path_parts) >= 5 and path_parts[2] == 'images' and path_parts[3] == 'banner':
-                filename = path_parts[-1]
-                
-                # 检测部署环境
-                railway_env = os.getenv("RAILWAY_ENVIRONMENT")
-                use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
-                
-                # 确定存储目录
-                if railway_env and not use_cloud_storage:
-                    base_public_dir = Path("/data/uploads/public/images")
-                else:
-                    base_public_dir = Path("uploads/public/images")
-                
-                # 构建文件路径
-                image_file = base_public_dir / "banner" / str(banner_id) / filename
-                
-                # 删除文件
-                if image_file.exists() and image_file.is_file():
-                    image_file.unlink()
-                    logger.info(f"删除 Banner {banner_id} 的旧图片: {filename}")
+            service = get_image_upload_service()
+            service.delete(
+                category=ImageCategory.BANNER,
+                resource_id=str(banner_id),
+                image_urls=[old_image_url]
+            )
+            logger.info(f"删除 Banner {banner_id} 的旧图片")
         except Exception as e:
             logger.warning(f"删除 Banner {banner_id} 的旧图片失败: {e}")
     
@@ -264,9 +214,6 @@ def delete_banner(
     db: Session = Depends(get_db)
 ):
     """删除 Banner（管理员）"""
-    import os
-    from urllib.parse import urlparse
-    
     banner = db.query(models.Banner).filter(models.Banner.id == banner_id).first()
     if not banner:
         raise HTTPException(
@@ -274,45 +221,19 @@ def delete_banner(
             detail="Banner 不存在"
         )
 
-    # 删除 Banner 图片
-    if banner.image_url:
-        try:
-            # 从 URL 中提取文件名
-            parsed = urlparse(banner.image_url)
-            path = parsed.path
-            # 路径格式：/uploads/images/banner/{banner_id}/filename
-            path_parts = path.split('/')
-            if len(path_parts) >= 5 and path_parts[2] == 'images' and path_parts[3] == 'banner':
-                filename = path_parts[-1]
-                
-                # 检测部署环境
-                railway_env = os.getenv("RAILWAY_ENVIRONMENT")
-                use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
-                
-                # 确定存储目录
-                if railway_env and not use_cloud_storage:
-                    base_public_dir = Path("/data/uploads/public/images")
-                else:
-                    base_public_dir = Path("uploads/public/images")
-                
-                # 构建文件路径
-                image_file = base_public_dir / "banner" / str(banner_id) / filename
-                
-                # 删除文件
-                if image_file.exists() and image_file.is_file():
-                    image_file.unlink()
-                    logger.info(f"删除 Banner {banner_id} 的图片: {filename}")
-                    
-                    # 如果文件夹为空，尝试删除它
-                    banner_dir = image_file.parent
-                    try:
-                        if banner_dir.exists() and not any(banner_dir.iterdir()):
-                            banner_dir.rmdir()
-                            logger.info(f"删除空的 Banner 图片文件夹: {banner_dir}")
-                    except Exception as e:
-                        logger.debug(f"删除 Banner 图片文件夹失败（可能不为空）: {banner_dir}: {e}")
-        except Exception as e:
-            logger.warning(f"删除 Banner {banner_id} 的图片失败: {e}")
+    # 删除 Banner 图片目录（使用图片上传服务）
+    try:
+        from app.services import ImageCategory, get_image_upload_service
+        
+        service = get_image_upload_service()
+        # 删除整个 Banner 图片目录
+        service.delete(
+            category=ImageCategory.BANNER,
+            resource_id=str(banner_id)
+        )
+        logger.info(f"删除 Banner {banner_id} 的图片目录")
+    except Exception as e:
+        logger.warning(f"删除 Banner {banner_id} 的图片失败: {e}")
 
     db.delete(banner)
     db.commit()
@@ -498,79 +419,62 @@ async def upload_banner_image(
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
-    """上传 Banner 图片（管理员）"""
-    import uuid
-    import os
-    from app.config import Config
+    """
+    上传 Banner 图片（管理员）
     
+    优化功能：
+    - 自动压缩图片
+    - 自动旋转（根据 EXIF）
+    - 移除隐私元数据
+    """
     try:
-        # 验证文件类型
-        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-        file_ext = Path(image.filename).suffix.lower() if image.filename else ''
-        if file_ext not in allowed_extensions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"不支持的图片格式。支持的格式: {', '.join(allowed_extensions)}"
-            )
+        # 导入图片上传服务
+        from app.services import ImageCategory, get_image_upload_service
         
-        # 验证文件大小（最大 5MB）
+        # 读取文件内容
         content = await image.read()
-        max_size = 5 * 1024 * 1024  # 5MB
-        if len(content) > max_size:
+        
+        # 使用图片上传服务
+        service = get_image_upload_service()
+        
+        # 确定是否使用临时目录
+        is_temp = banner_id is None
+        resource_id = str(banner_id) if banner_id else None
+        
+        result = service.upload(
+            content=content,
+            category=ImageCategory.BANNER,
+            resource_id=resource_id,
+            user_id=current_admin.id,
+            filename=image.filename,
+            is_temp=is_temp
+        )
+        
+        if not result.success:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="图片大小不能超过 5MB"
+                detail=result.error
             )
         
-        # 检测部署环境
-        railway_env = os.getenv("RAILWAY_ENVIRONMENT")
-        use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+        logger.info(
+            f"管理员 {current_admin.id} ({current_admin.name}) 上传了 Banner 图片: "
+            f"size={result.original_size}->{result.size}, url={result.url}"
+        )
         
-        # 确定存储目录
-        if railway_env and not use_cloud_storage:
-            base_public_dir = Path("/data/uploads/public/images")
-        else:
-            base_public_dir = Path("uploads/public/images")
-        
-        # Banner 图片存储在 banner 子目录，按 banner_id 分类
-        sub_dir = "banner"
-        if banner_id:
-            # 编辑时：使用 banner_id 作为子文件夹
-            resource_subdir = str(banner_id)
-            public_image_dir = base_public_dir / sub_dir / resource_subdir
-        else:
-            # 新建时：使用临时文件夹
-            resource_subdir = f"temp_{current_admin.id}"
-            public_image_dir = base_public_dir / sub_dir / resource_subdir
-        
-        # 确保目录存在
-        public_image_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 生成唯一文件名
-        filename_prefix = "banner_"
-        unique_filename = f"{filename_prefix}{uuid.uuid4()}{file_ext}"
-        file_path = public_image_dir / unique_filename
-        
-        # 保存文件
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-        
-        # 生成公开URL
-        base_url = Config.FRONTEND_URL.rstrip('/') if hasattr(Config, 'FRONTEND_URL') else "http://localhost:3000"
-        if banner_id:
-            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
-        else:
-            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
-        
-        logger.info(f"管理员 {current_admin.id} ({current_admin.name}) 上传了 Banner 图片: {image_url}")
-        
-        return {
+        response = {
             "success": True,
-            "url": image_url,
-            "filename": unique_filename,
-            "size": len(content),
+            "url": result.url,
+            "filename": result.filename,
+            "size": result.size,
             "message": "图片上传成功"
         }
+        
+        # 添加压缩信息
+        if result.original_size != result.size:
+            response["original_size"] = result.original_size
+            response["compression_saved"] = result.original_size - result.size
+        
+        return response
         
     except HTTPException:
         raise

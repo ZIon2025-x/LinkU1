@@ -387,6 +387,14 @@ def get_current_user_secure_sync_csrf(
                 )
             
             return user
+    else:
+        # 会话认证失败，记录详细信息用于调试
+        import logging
+        logger = logging.getLogger(__name__)
+        x_session_id = request.headers.get("X-Session-ID")
+        x_platform = request.headers.get("X-Platform")
+        x_app_signature = request.headers.get("X-App-Signature")
+        logger.warning(f"[AUTH] 会话认证失败 - URL: {request.url.path}, X-Session-ID: {'已设置' if x_session_id else '未设置'}, X-Platform: {x_platform}, X-App-Signature: {'已设置' if x_app_signature else '未设置'}")
     
     # 如果会话认证失败，回退到JWT认证
     if not credentials:

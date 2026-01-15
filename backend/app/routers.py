@@ -3573,15 +3573,22 @@ def mark_notification_read_api(
 
 @router.post("/users/device-token")
 def register_device_token(
+    request: Request,
     device_token_data: dict = Body(...),
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """注册或更新设备推送令牌"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     device_token = device_token_data.get("device_token")
     platform = device_token_data.get("platform", "ios")
     device_id = device_token_data.get("device_id")
     app_version = device_token_data.get("app_version")
+    
+    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}")
+    logger.debug(f"[DEVICE_TOKEN] 请求头: X-Platform={request.headers.get('X-Platform')}, X-Session-ID={'已设置' if request.headers.get('X-Session-ID') else '未设置'}, X-App-Signature={'已设置' if request.headers.get('X-App-Signature') else '未设置'}")
     
     if not device_token:
         raise HTTPException(status_code=400, detail="device_token is required")
@@ -3601,6 +3608,7 @@ def register_device_token(
         existing_token.updated_at = get_utc_time()
         existing_token.last_used_at = get_utc_time()
         db.commit()
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新: token_id={existing_token.id}")
         return {"message": "Device token updated", "token_id": existing_token.id}
     else:
         # 创建新令牌
@@ -3616,6 +3624,7 @@ def register_device_token(
         db.add(new_token)
         db.commit()
         db.refresh(new_token)
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已注册: token_id={new_token.id}, device_token={device_token[:20]}...")
         return {"message": "Device token registered", "token_id": new_token.id}
 
 
@@ -7699,8 +7708,17 @@ async def upload_public_image(
       - expert_avatar: 任务达人ID（expert_id）
       - service_image: 任务达人ID（expert_id），不是service_id
       - public: 任务ID（task_id），用于任务相关的图片
+    
+    优化功能：
+    - 自动压缩图片（节省存储空间）
+    - 自动旋转（根据 EXIF）
+    - 移除隐私元数据
+    - 限制最大尺寸
     """
     try:
+        # 导入图片上传服务
+        from app.services import ImageCategory, get_image_upload_service
+        
         # 尝试获取管理员或用户ID
         user_id = None
         user_type = None
@@ -7711,7 +7729,6 @@ async def upload_public_image(
         if admin_session:
             user_id = admin_session.admin_id
             user_type = "管理员"
-            logger.info(f"管理员 {user_id} 上传公开图片")
         else:
             # 尝试普通用户认证
             from app.secure_auth import validate_session
@@ -7719,182 +7736,84 @@ async def upload_public_image(
             if user_session:
                 user_id = user_session.user_id
                 user_type = "用户"
-                logger.info(f"用户 {user_id} 上传公开图片")
             else:
                 raise HTTPException(status_code=401, detail="认证失败，请先登录")
         
         if not user_id:
             raise HTTPException(status_code=401, detail="认证失败，请先登录")
         
-        # 验证 category 参数
-        valid_categories = ["expert_avatar", "service_image", "public", "leaderboard_item", "leaderboard_cover"]
-        if category not in valid_categories:
+        # 类别映射
+        category_map = {
+            "expert_avatar": ImageCategory.EXPERT_AVATAR,
+            "service_image": ImageCategory.SERVICE_IMAGE,
+            "public": ImageCategory.TASK,
+            "leaderboard_item": ImageCategory.LEADERBOARD_ITEM,
+            "leaderboard_cover": ImageCategory.LEADERBOARD_COVER,
+        }
+        
+        if category not in category_map:
             raise HTTPException(
                 status_code=400,
-                detail=f"无效的图片类型。允许的类型: {', '.join(valid_categories)}"
+                detail=f"无效的图片类型。允许的类型: {', '.join(category_map.keys())}"
             )
         
-        # 根据 category 确定 resource_id（如果未提供）
+        image_category = category_map[category]
+        
+        # 确定是否使用临时目录
+        is_temp = False
+        actual_resource_id = resource_id
+        
         if not resource_id:
-            if category == "expert_avatar":
-                # 任务达人头像：使用当前用户ID（任务达人ID等于用户ID）
-                resource_id = user_id
-            elif category == "service_image":
-                # 服务图片：使用当前用户ID（任务达人ID等于用户ID）
-                # 因为服务图片属于任务达人，应该按任务达人ID分类
-                resource_id = user_id
-            elif category == "leaderboard_item":
-                # 竞品图片：如果没有提供item_id，使用临时标识
-                # 注意：上传时item可能还未创建，所以使用临时标识
-                resource_id = f"temp_{user_id}"
-            elif category == "leaderboard_cover":
-                # 榜单封面：如果没有提供resource_id，使用临时标识
-                resource_id = f"temp_{user_id}"
-            else:  # public
-                # 用户上传的图片都是任务相关的，需要提供task_id
-                # 如果没有提供task_id，使用临时标识（用于发布新任务时）
-                resource_id = f"temp_{user_id}"
+            if category in ("expert_avatar", "service_image"):
+                # 头像和服务图片使用用户ID
+                actual_resource_id = user_id
+            else:
+                # 其他类别使用临时目录
+                is_temp = True
+        elif resource_id.startswith("temp_"):
+            is_temp = True
+            actual_resource_id = None  # 服务会自动使用 user_id 构建临时目录
         
         # 读取文件内容
         content = await image.read()
         
-        # 验证文件类型
-        # 首先尝试从filename获取扩展名
-        if image.filename:
-            file_extension = Path(image.filename).suffix.lower()
-        else:
-            file_extension = ''
+        # 使用图片上传服务
+        service = get_image_upload_service()
+        result = service.upload(
+            content=content,
+            category=image_category,
+            resource_id=actual_resource_id,
+            user_id=user_id,
+            filename=image.filename,
+            is_temp=is_temp
+        )
         
-        # 如果从filename无法获取扩展名（如filename为"blob"），尝试从Content-Type或文件内容检测
-        if not file_extension:
-            # 首先尝试从Content-Type获取
-            content_type = image.content_type or ''
-            if 'jpeg' in content_type or 'jpg' in content_type:
-                file_extension = '.jpg'
-            elif 'png' in content_type:
-                file_extension = '.png'
-            elif 'gif' in content_type:
-                file_extension = '.gif'
-            elif 'webp' in content_type:
-                file_extension = '.webp'
-            
-            # 如果Content-Type无法确定，通过文件内容的magic bytes检测
-            if not file_extension and len(content) >= 4:
-                # JPEG: FF D8 FF
-                if content[:3] == b'\xff\xd8\xff':
-                    file_extension = '.jpg'
-                # PNG: 89 50 4E 47
-                elif content[:4] == b'\x89PNG':
-                    file_extension = '.png'
-                # GIF: 47 49 46 38
-                elif content[:4] == b'GIF8':
-                    file_extension = '.gif'
-                # WEBP: RIFF...WEBP
-                elif len(content) >= 12 and content[:4] == b'RIFF' and content[8:12] == b'WEBP':
-                    file_extension = '.webp'
-            
-            if not file_extension:
-                logger.error(f"无法检测文件类型: filename={image.filename}, content_type={image.content_type}, content_size={len(content)}, magic_bytes={content[:12].hex() if len(content) >= 12 else content.hex()}")
-                raise HTTPException(
-                    status_code=400,
-                    detail="无法检测文件类型，请确保上传的是有效的图片文件（JPG、PNG、GIF、WEBP）"
-                )
+        if not result.success:
+            raise HTTPException(status_code=400, detail=result.error)
         
-        if file_extension not in ALLOWED_EXTENSIONS:
-            logger.warning(f"不支持的文件类型: {file_extension}, filename={image.filename}, content_type={image.content_type}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型: {file_extension}。允许的类型: {', '.join(ALLOWED_EXTENSIONS)}"
-            )
+        logger.info(
+            f"{user_type} {user_id} 上传公开图片 [{category}]: "
+            f"size={result.original_size}->{result.size}, "
+            f"resource_id={actual_resource_id or 'temp'}"
+        )
         
-        # 验证文件大小
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=400,
-                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE // (1024*1024)}MB"
-            )
-        
-        # 检测部署环境
-        if RAILWAY_ENVIRONMENT:
-            base_public_dir = Path("/data/uploads/public/images")
-        else:
-            base_public_dir = Path("uploads/public/images")
-        
-        # 根据 category 确定子目录和文件命名前缀
-        if category == "expert_avatar":
-            sub_dir = "expert_avatars"
-            filename_prefix = "expert_avatar_"
-            # 创建按任务达人ID的子文件夹
-            resource_subdir = resource_id
-        elif category == "service_image":
-            sub_dir = "service_images"
-            filename_prefix = "service_image_"
-            # 创建按任务达人ID的子文件夹（不是service_id）
-            resource_subdir = resource_id
-        elif category == "leaderboard_item":
-            sub_dir = "leaderboard_items"
-            filename_prefix = "leaderboard_item_"
-            # 创建按竞品ID的子文件夹
-            resource_subdir = str(resource_id) if resource_id else f"temp_{user_id}"
-        elif category == "leaderboard_cover":
-            sub_dir = "leaderboard_covers"
-            filename_prefix = "leaderboard_cover_"
-            # 创建按用户ID的临时子文件夹（申请时使用temp_，审核批准后移动到leaderboard_id文件夹）
-            if resource_id and resource_id.startswith("temp_"):
-                # 如果resource_id是temp_开头，直接使用（前端已传入temp_{user_id}）
-                resource_subdir = resource_id
-            elif resource_id and not resource_id.startswith("temp_"):
-                # 如果resource_id不是temp_开头，说明是正式榜单ID，直接使用
-                resource_subdir = str(resource_id)
-            else:
-                # 如果没有提供resource_id，使用临时文件夹
-                resource_subdir = f"temp_{user_id}"
-        else:  # public
-            sub_dir = "public"
-            filename_prefix = "public_"
-            # 创建按任务ID的子文件夹（用户上传的图片都是任务相关的）
-            resource_subdir = str(resource_id)
-        
-        # 构建完整的保存目录：/data/uploads/public/images/{sub_dir}/{resource_id}/
-        if sub_dir:
-            public_image_dir = base_public_dir / sub_dir / resource_subdir
-        else:
-            public_image_dir = base_public_dir / resource_subdir
-        
-        # 确保目录存在
-        public_image_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 生成唯一文件名（使用前缀+UUID，便于后续清理）
-        unique_filename = f"{filename_prefix}{uuid.uuid4()}{file_extension}"
-        file_path = public_image_dir / unique_filename
-        
-        # 保存文件
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-        
-        # 生成公开URL（通过静态文件服务访问）
-        # 注意：图片在后端服务器上，通过Vercel的rewrite规则代理到后端
-        from app.config import Config
-        # 使用前端域名，Vercel会将/uploads/请求代理到后端API服务器
-        base_url = Config.FRONTEND_URL.rstrip('/')
-        
-        # 构建URL路径（包含子目录和资源ID）
-        if sub_dir:
-            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
-        else:
-            image_url = f"{base_url}/uploads/images/{resource_subdir}/{unique_filename}"
-        
-        logger.info(f"{user_type} {user_id} 上传公开图片 [{category}] 资源ID: {resource_id}, 文件名: {unique_filename}")
-        
-        return JSONResponse(content={
+        # 返回响应（保持与原 API 兼容的格式）
+        response_data = {
             "success": True,
-            "url": image_url,
-            "filename": unique_filename,
-            "size": len(content),
+            "url": result.url,
+            "filename": result.filename,
+            "size": result.size,
             "category": category,
-            "resource_id": resource_id,
+            "resource_id": resource_id or f"temp_{user_id}",
             "message": "图片上传成功"
-        })
+        }
+        
+        # 添加压缩信息
+        if result.original_size != result.size:
+            response_data["original_size"] = result.original_size
+            response_data["compression_saved"] = result.original_size - result.size
+        
+        return JSONResponse(content=response_data)
         
     except HTTPException:
         raise

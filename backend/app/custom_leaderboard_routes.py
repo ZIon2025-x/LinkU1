@@ -775,91 +775,53 @@ async def review_leaderboard(
     if action == "approve":
         leaderboard.status = "active"
         
-        # 移动临时封面图片到正式目录并更新URL（如果使用了临时目录）
+        # 移动临时封面图片到正式目录并更新URL（使用图片上传服务）
         if leaderboard.cover_image:
-            # 检测部署环境
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-            if RAILWAY_ENVIRONMENT:
-                base_dir = Path("/data/uploads/public/images")
-            else:
-                base_dir = Path("uploads/public/images")
-            
-            # 检查是否是临时文件夹的图片
             cover_image_url = leaderboard.cover_image
             if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
                 try:
-                    # 从URL中提取临时路径信息
-                    # URL格式: {base_url}/uploads/images/leaderboard_covers/temp_{user_id}/{filename}
-                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/")
+                    from app.services import ImageCategory, get_image_upload_service
+                    
+                    # 从URL中提取用户ID
+                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/temp_")
                     if len(url_parts) == 2:
                         temp_path = url_parts[1]
-                        temp_parts = temp_path.split("/")
-                        if len(temp_parts) >= 2:
-                            temp_user_id = temp_parts[0]  # temp_{user_id}
-                            filename = temp_parts[1]  # filename
-                            
-                            temp_dir = base_dir / "leaderboard_covers" / temp_user_id
-                            leaderboard_dir = base_dir / "leaderboard_covers" / str(leaderboard_id)
-                            
-                            temp_file = temp_dir / filename
-                            if temp_file.exists():
-                                # 创建榜单目录
-                                leaderboard_dir.mkdir(parents=True, exist_ok=True)
-                                
-                                # 移动文件
-                                leaderboard_file = leaderboard_dir / filename
-                                temp_file.rename(leaderboard_file)
-                                
-                                # 更新URL
-                                from app.config import Config
-                                base_url = Config.FRONTEND_URL.rstrip('/')
-                                new_url = f"{base_url}/uploads/images/leaderboard_covers/{leaderboard_id}/{filename}"
-                                leaderboard.cover_image = new_url
-                                
-                                logger.info(f"移动临时封面图片到榜单目录并更新URL: {filename} -> {new_url}")
-                            else:
-                                logger.warning(f"临时封面图片文件不存在: {temp_file}")
-                        else:
-                            logger.warning(f"无法解析临时封面图片URL路径: {temp_path}")
+                        user_id = temp_path.split("/")[0]
+                        
+                        service = get_image_upload_service()
+                        new_urls = service.move_from_temp(
+                            category=ImageCategory.LEADERBOARD_COVER,
+                            user_id=user_id,
+                            resource_id=str(leaderboard_id),
+                            image_urls=[cover_image_url]
+                        )
+                        
+                        if new_urls and new_urls[0] != cover_image_url:
+                            leaderboard.cover_image = new_urls[0]
+                            logger.info(f"移动临时封面图片到榜单目录: {new_urls[0]}")
+                        
+                        # 清理临时目录
+                        service.delete_temp(category=ImageCategory.LEADERBOARD_COVER, user_id=user_id)
                 except Exception as e:
-                    logger.warning(f"移动封面图片文件失败: {e}，保持原URL")
+                    logger.warning(f"移动封面图片失败: {e}，保持原URL")
     else:
         leaderboard.status = "rejected"
-        # 如果拒绝申请，清理临时封面图片
+        # 如果拒绝申请，清理临时封面图片（使用图片上传服务）
         if leaderboard.cover_image:
             cover_image_url = leaderboard.cover_image
             if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
                 try:
-                    # 检测部署环境
-                    RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-                    if RAILWAY_ENVIRONMENT:
-                        base_dir = Path("/data/uploads/public/images")
-                    else:
-                        base_dir = Path("uploads/public/images")
+                    from app.services import ImageCategory, get_image_upload_service
                     
-                    # 从URL中提取临时路径信息
-                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/")
+                    # 从URL中提取用户ID
+                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/temp_")
                     if len(url_parts) == 2:
                         temp_path = url_parts[1]
-                        temp_parts = temp_path.split("/")
-                        if len(temp_parts) >= 2:
-                            temp_user_id = temp_parts[0]  # temp_{user_id}
-                            filename = temp_parts[1]  # filename
-                            
-                            temp_dir = base_dir / "leaderboard_covers" / temp_user_id
-                            temp_file = temp_dir / filename
-                            
-                            if temp_file.exists():
-                                temp_file.unlink()
-                                logger.info(f"拒绝申请，删除临时封面图片: {temp_file}")
-                                
-                                # 如果文件夹为空，尝试删除它
-                                try:
-                                    if not any(temp_dir.iterdir()):
-                                        temp_dir.rmdir()
-                                        logger.info(f"删除空的临时文件夹: {temp_dir}")
-                                except Exception as e:
-                                    logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                        user_id = temp_path.split("/")[0]
+                        
+                        service = get_image_upload_service()
+                        service.delete_temp(category=ImageCategory.LEADERBOARD_COVER, user_id=user_id)
+                        logger.info(f"拒绝申请，删除临时封面图片目录")
                 except Exception as e:
                     logger.warning(f"清理临时封面图片失败: {e}")
     
@@ -999,73 +961,39 @@ async def submit_item(
     
     await db.refresh(new_item)
     
-    # 移动临时图片到正式目录并更新URL（如果使用了临时目录）
+    # 移动临时图片到正式目录并更新URL（使用图片上传服务）
     if item_data.images:
-        # 检测部署环境
-        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-        if RAILWAY_ENVIRONMENT:
-            base_dir = Path("/data/uploads/public/images")
-        else:
-            base_dir = Path("uploads/public/images")
-        
-        temp_dir = base_dir / "leaderboard_items" / f"temp_{current_user.id}"
-        item_dir = base_dir / "leaderboard_items" / str(new_item.id)
-        base_url = Config.FRONTEND_URL.rstrip('/')
-        updated_images = []
-        
-        if temp_dir.exists():
-            item_dir.mkdir(parents=True, exist_ok=True)
-            # 移动临时目录中的图片文件并更新URL
-            moved_count = 0
-            for image_url in item_data.images:
-                try:
-                    # 检查是否是临时文件夹的图片
-                    if f"/uploads/images/leaderboard_items/temp_{current_user.id}/" in image_url:
-                        # 从URL中提取文件名
-                        filename = image_url.split('/')[-1]
-                        temp_file = temp_dir / filename
-                        if temp_file.exists():
-                            item_file = item_dir / filename
-                            temp_file.rename(item_file)
-                            moved_count += 1
-                            # 更新URL为正式目录
-                            new_url = f"{base_url}/uploads/images/leaderboard_items/{new_item.id}/{filename}"
-                            updated_images.append(new_url)
-                            logger.info(f"移动临时图片到竞品目录并更新URL: {filename} -> {new_url}")
-                        else:
-                            # 文件不存在，保持原URL（可能是其他来源的图片）
-                            updated_images.append(image_url)
-                            logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
-                    else:
-                        # 不是临时图片，保持原URL
-                        updated_images.append(image_url)
-                except Exception as e:
-                    logger.warning(f"移动图片文件失败: {e}，保持原URL")
-                    updated_images.append(image_url)
+        try:
+            from app.services import ImageCategory, get_image_upload_service
+            
+            service = get_image_upload_service()
+            
+            # 使用服务移动临时图片
+            updated_images = service.move_from_temp(
+                category=ImageCategory.LEADERBOARD_ITEM,
+                user_id=current_user.id,
+                resource_id=str(new_item.id),
+                image_urls=list(item_data.images)
+            )
             
             # 如果有图片被移动，更新数据库中的图片URL
-            if updated_images != item_data.images:
+            if updated_images != list(item_data.images):
                 new_item.images = json.dumps(updated_images) if updated_images else None
                 await db.commit()
                 await db.refresh(new_item)
                 logger.info(f"已更新竞品 {new_item.id} 的图片URL")
             # 如果没有图片被移动，但item_data.images不为空，确保保存了图片URL
             elif item_data.images and len(item_data.images) > 0:
-                # 如果数据库中的images为空，但item_data.images不为空，说明初始保存时可能有问题，重新保存
                 if not new_item.images:
                     new_item.images = json.dumps(item_data.images)
                     await db.commit()
                     await db.refresh(new_item)
                     logger.info(f"重新保存竞品 {new_item.id} 的图片URL")
             
-            # 删除临时目录（如果为空或所有文件都已移动）
-            try:
-                remaining_files = list(temp_dir.iterdir())
-                if not remaining_files:
-                    temp_dir.rmdir()
-                    logger.info(f"删除空的临时目录: {temp_dir}")
-            except Exception as e:
-                logger.debug(f"删除临时目录失败（可能不为空）: {temp_dir}: {e}")
+            # 尝试删除临时目录
+            service.delete_temp(category=ImageCategory.LEADERBOARD_ITEM, user_id=current_user.id)
+        except Exception as e:
+            logger.warning(f"移动竞品图片失败: {e}")
     
     # 构建返回数据，解析images字段
     images_list = None

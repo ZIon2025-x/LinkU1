@@ -520,36 +520,24 @@ async def upload_flea_market_image(
     上传跳蚤市场商品图片
     - 新建商品时：不提供item_id，图片会存储在临时目录，创建商品后移动到正式目录
     - 编辑商品时：提供item_id（支持格式化ID如S0004或数字ID），图片直接存储在商品目录
+    
+    优化功能：
+    - 自动压缩图片
+    - 生成缩略图
+    - 自动旋转（根据 EXIF）
+    - 移除隐私元数据
     """
     try:
+        # 导入图片上传服务
+        from app.services import ImageCategory, get_image_upload_service
+        
         # 读取文件内容
         content = await image.read()
         
-        # 验证文件类型（使用智能扩展名检测，支持从 filename、Content-Type 或 magic bytes 检测）
-        from app.file_utils import get_file_extension_from_upload
-        file_extension = get_file_extension_from_upload(image, content=content)
-        
-        if not file_extension:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="无法检测文件类型，请确保上传的是有效的图片文件（JPG、PNG、GIF、WEBP）"
-            )
-        
-        if file_extension not in ALLOWED_EXTENSIONS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"不支持的文件类型。允许的类型: {', '.join(ALLOWED_EXTENSIONS)}"
-            )
-        
-        # 验证文件大小
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE // (1024*1024)}MB"
-            )
-        
         # 确定存储目录
         db_id = None
+        is_temp = True
+        
         if item_id:
             # 解析商品ID（支持格式化ID如S0004或数字ID）
             try:
@@ -575,39 +563,48 @@ async def upload_flea_market_image(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="无权限操作此商品"
                 )
-            image_dir = FLEA_MARKET_IMAGE_DIR / str(db_id)
-        else:
-            # 新建商品：使用临时目录
-            image_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
+            is_temp = False
         
-        # 确保目录存在
-        image_dir.mkdir(parents=True, exist_ok=True)
+        # 使用图片上传服务
+        service = get_image_upload_service()
+        result = service.upload(
+            content=content,
+            category=ImageCategory.FLEA_MARKET,
+            resource_id=str(db_id) if db_id else None,
+            user_id=current_user.id,
+            filename=image.filename,
+            is_temp=is_temp
+        )
         
-        # 生成唯一文件名
-        unique_filename = f"flea_market_{uuid.uuid4()}{file_extension}"
-        file_path = image_dir / unique_filename
+        if not result.success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result.error
+            )
         
-        # 保存文件
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
+        logger.info(
+            f"用户 {current_user.id} 上传跳蚤市场图片: "
+            f"size={result.original_size}->{result.size}, url={result.url}"
+        )
         
-        # 生成URL
-        base_url = Config.FRONTEND_URL.rstrip('/')
-        if item_id:
-            # 使用解析后的数据库ID生成URL
-            image_url = f"{base_url}/uploads/flea_market/{db_id}/{unique_filename}"
-        else:
-            image_url = f"{base_url}/uploads/flea_market/temp_{current_user.id}/{unique_filename}"
-        
-        logger.info(f"用户 {current_user.id} 上传跳蚤市场图片: {image_url}")
-        
-        return JSONResponse(content={
+        response = {
             "success": True,
-            "url": image_url,
-            "filename": unique_filename,
-            "size": len(content),
+            "url": result.url,
+            "filename": result.filename,
+            "size": result.size,
             "message": "图片上传成功"
-        })
+        }
+        
+        # 添加压缩信息
+        if result.original_size != result.size:
+            response["original_size"] = result.original_size
+            response["compression_saved"] = result.original_size - result.size
+        
+        # 添加缩略图 URL
+        if result.thumbnails:
+            response["thumbnails"] = result.thumbnails
+        
+        return JSONResponse(content=response)
         
     except HTTPException:
         raise
@@ -669,68 +666,32 @@ async def create_flea_market_item(
         await db.commit()
         await db.refresh(new_item)
         
-        # 移动临时图片到正式目录并更新URL（如果使用了临时目录）
+        # 移动临时图片到正式目录并更新URL（使用图片上传服务）
         if item_data.images:
-            temp_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
-            item_dir = FLEA_MARKET_IMAGE_DIR / str(new_item.id)
-            base_url = Config.FRONTEND_URL.rstrip('/')
-            updated_images = []
-            
-            if temp_dir.exists():
-                item_dir.mkdir(parents=True, exist_ok=True)
-                # 移动临时目录中的图片文件并更新URL
-                moved_count = 0
-                for image_url in item_data.images:
-                    try:
-                        # 检查是否是临时文件夹的图片
-                        if f"/uploads/flea_market/temp_{current_user.id}/" in image_url:
-                            # 从URL中提取文件名
-                            filename = image_url.split('/')[-1]
-                            temp_file = temp_dir / filename
-                            if temp_file.exists():
-                                item_file = item_dir / filename
-                                temp_file.rename(item_file)
-                                moved_count += 1
-                                # 更新URL为正式目录
-                                new_url = f"{base_url}/uploads/flea_market/{new_item.id}/{filename}"
-                                updated_images.append(new_url)
-                                logger.info(f"移动临时图片到商品目录并更新URL: {filename} -> {new_url}")
-                            else:
-                                # 文件不存在，保持原URL（可能是其他来源的图片）
-                                updated_images.append(image_url)
-                                logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
-                        else:
-                            # 不是临时图片，保持原URL
-                            updated_images.append(image_url)
-                    except Exception as e:
-                        logger.warning(f"移动图片文件失败: {e}，保持原URL")
-                        updated_images.append(image_url)
+            try:
+                from app.services import ImageCategory, get_image_upload_service
+                
+                service = get_image_upload_service()
+                
+                # 使用服务移动临时图片
+                updated_images = service.move_from_temp(
+                    category=ImageCategory.FLEA_MARKET,
+                    user_id=current_user.id,
+                    resource_id=str(new_item.id),
+                    image_urls=list(item_data.images)
+                )
                 
                 # 如果有图片被移动，更新数据库中的图片URL
-                if updated_images != item_data.images:
+                if updated_images != list(item_data.images):
                     new_item.images = json.dumps(updated_images)
                     await db.commit()
                     await db.refresh(new_item)
                     logger.info(f"已更新商品 {new_item.id} 的图片URL")
                 
-                # 删除临时目录（如果为空或所有文件都已移动）
-                try:
-                    remaining_files = list(temp_dir.iterdir())
-                    if not remaining_files:
-                        temp_dir.rmdir()
-                        logger.info(f"删除空的临时目录: {temp_dir}")
-                    else:
-                        # 如果还有未移动的文件，记录警告
-                        logger.warning(f"临时目录 {temp_dir} 中还有 {len(remaining_files)} 个文件未移动")
-                except Exception as e:
-                    logger.warning(f"删除临时目录失败: {e}")
-                
-                # 清理临时目录中未使用的图片（如果创建商品时没有使用所有临时图片）
-                if moved_count > 0:
-                    delete_flea_market_temp_images(str(current_user.id))
-            else:
-                # 临时目录不存在，可能是直接上传到正式目录的图片，不需要移动
-                updated_images = item_data.images
+                # 尝试删除临时目录
+                service.delete_temp(category=ImageCategory.FLEA_MARKET, user_id=current_user.id)
+            except Exception as e:
+                logger.warning(f"移动商品图片失败: {e}")
         
         return {
             "success": True,
@@ -828,43 +789,28 @@ async def update_flea_market_item(
                     except:
                         old_images = []
                 
-                # 处理临时图片：移动临时图片到正式目录并更新URL
-                temp_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
-                item_dir = FLEA_MARKET_IMAGE_DIR / str(db_id)
-                base_url = Config.FRONTEND_URL.rstrip('/')
+                # 处理临时图片：移动临时图片到正式目录并更新URL（使用图片上传服务）
                 updated_images = []
                 
                 if item_data.images:
-                    if temp_dir.exists():
-                        item_dir.mkdir(parents=True, exist_ok=True)
-                        # 移动临时目录中的图片文件并更新URL
-                        for image_url in item_data.images:
-                            try:
-                                # 检查是否是临时文件夹的图片
-                                if f"/uploads/flea_market/temp_{current_user.id}/" in image_url:
-                                    # 从URL中提取文件名
-                                    filename = image_url.split('/')[-1]
-                                    temp_file = temp_dir / filename
-                                    if temp_file.exists():
-                                        item_file = item_dir / filename
-                                        temp_file.rename(item_file)
-                                        # 更新URL为正式目录
-                                        new_url = f"{base_url}/uploads/flea_market/{db_id}/{filename}"
-                                        updated_images.append(new_url)
-                                        logger.info(f"编辑商品时移动临时图片并更新URL: {filename} -> {new_url}")
-                                    else:
-                                        # 文件不存在，保持原URL
-                                        updated_images.append(image_url)
-                                        logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
-                                else:
-                                    # 不是临时图片，保持原URL
-                                    updated_images.append(image_url)
-                            except Exception as e:
-                                logger.warning(f"移动图片文件失败: {e}，保持原URL")
-                                updated_images.append(image_url)
-                    else:
-                        # 临时目录不存在，使用原图片列表
-                        updated_images = item_data.images
+                    try:
+                        from app.services import ImageCategory, get_image_upload_service
+                        
+                        service = get_image_upload_service()
+                        
+                        # 使用服务移动临时图片
+                        updated_images = service.move_from_temp(
+                            category=ImageCategory.FLEA_MARKET,
+                            user_id=current_user.id,
+                            resource_id=str(db_id),
+                            image_urls=list(item_data.images)
+                        )
+                        
+                        # 尝试删除临时目录
+                        service.delete_temp(category=ImageCategory.FLEA_MARKET, user_id=current_user.id)
+                    except Exception as e:
+                        logger.warning(f"移动商品图片失败: {e}，使用原图片列表")
+                        updated_images = list(item_data.images)
                 
                 # 更新图片列表（使用更新后的URL）
                 update_data["images"] = json.dumps(updated_images) if updated_images else None

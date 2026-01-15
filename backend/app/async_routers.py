@@ -425,71 +425,35 @@ async def create_task_async(
         
         print(f"DEBUG: 任务创建成功，任务ID: {db_task.id}")
         
-        # 迁移临时图片到正式的任务ID文件夹
+        # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:
             try:
-                from pathlib import Path
-                import os
-                import shutil
-                from app.config import Config
+                from app.services import ImageCategory, get_image_upload_service
+                import json
                 
-                # 检测部署环境
-                RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-                if RAILWAY_ENVIRONMENT:
-                    base_public_dir = Path("/data/uploads/public/images")
-                else:
-                    base_public_dir = Path("uploads/public/images")
+                service = get_image_upload_service()
                 
-                temp_dir = base_public_dir / "public" / f"temp_{current_user.id}"
-                task_dir = base_public_dir / "public" / str(db_task.id)
-                
-                # 确保任务文件夹存在
-                task_dir.mkdir(parents=True, exist_ok=True)
-                
-                # 更新图片URL列表
-                updated_images = []
-                base_url = Config.FRONTEND_URL.rstrip('/')
-                
-                for image_url in task.images:
-                    # 检查是否是临时文件夹的图片
-                    if f"/uploads/images/public/temp_{current_user.id}/" in image_url:
-                        # 提取文件名
-                        filename = image_url.split("/")[-1]
-                        temp_file_path = temp_dir / filename
-                        task_file_path = task_dir / filename
-                        
-                        # 如果临时文件存在，移动到任务文件夹
-                        if temp_file_path.exists():
-                            shutil.move(str(temp_file_path), str(task_file_path))
-                            print(f"DEBUG: 迁移图片 {filename} 从临时文件夹到任务文件夹")
-                        
-                        # 更新URL
-                        new_url = f"{base_url}/uploads/images/public/{db_task.id}/{filename}"
-                        updated_images.append(new_url)
-                    else:
-                        # 不是临时图片，保持原URL
-                        updated_images.append(image_url)
+                # 使用服务移动临时图片
+                updated_images = service.move_from_temp(
+                    category=ImageCategory.TASK,
+                    user_id=current_user.id,
+                    resource_id=str(db_task.id),
+                    image_urls=list(task.images)
+                )
                 
                 # 如果有图片被迁移，更新数据库中的图片URL
-                if updated_images != task.images:
-                    import json
+                if updated_images != list(task.images):
                     images_json = json.dumps(updated_images)
                     db_task.images = images_json
                     await db.commit()
                     await db.refresh(db_task)
-                    print(f"DEBUG: 已更新任务 {db_task.id} 的图片URL")
+                    logger.info(f"已更新任务 {db_task.id} 的图片URL")
                 
-                # 如果临时文件夹为空，尝试删除它
-                try:
-                    if temp_dir.exists() and not any(temp_dir.iterdir()):
-                        temp_dir.rmdir()
-                        print(f"DEBUG: 已删除空的临时文件夹 {temp_dir}")
-                except Exception as e:
-                    print(f"DEBUG: 删除临时文件夹失败（可能不为空）: {e}")
+                # 尝试删除临时目录
+                service.delete_temp(category=ImageCategory.TASK, user_id=current_user.id)
                     
             except Exception as e:
                 # 迁移失败不影响任务创建，只记录错误
-                print(f"DEBUG: 迁移临时图片失败: {e}")
                 logger.warning(f"迁移临时图片失败: {e}")
         
         # 清除用户任务缓存，确保新任务能立即显示
