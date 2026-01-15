@@ -3,6 +3,7 @@
 支持 iOS (APNs) 和 Android (FCM) 推送通知
 """
 import os
+import sys
 import logging
 import json
 import base64
@@ -10,6 +11,21 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
+
+# Python 3.10+ 兼容性补丁：修复 apns2 的 collections.Iterable 导入问题
+# 在 Python 3.10+ 中，collections.Iterable 已移至 collections.abc.Iterable
+if sys.version_info >= (3, 10):
+    import collections
+    import collections.abc
+    # 重新添加已移除的别名，以兼容旧版本的 apns2
+    if not hasattr(collections, 'Iterable'):
+        collections.Iterable = collections.abc.Iterable
+    if not hasattr(collections, 'Mapping'):
+        collections.Mapping = collections.abc.Mapping
+    if not hasattr(collections, 'MutableMapping'):
+        collections.MutableMapping = collections.abc.MutableMapping
+    if not hasattr(collections, 'MutableSet'):
+        collections.MutableSet = collections.abc.MutableSet
 
 logger = logging.getLogger(__name__)
 
