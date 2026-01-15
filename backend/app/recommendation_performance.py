@@ -41,7 +41,10 @@ def get_excluded_task_ids_cached(db: Session, user_id: str, use_cache: bool = Tr
             cached = redis_cache.get(cache_key)
             if cached:
                 # 解析缓存的数据（存储为逗号分隔的字符串）
-                excluded_ids = set(int(x) for x in cached.decode('utf-8').split(',') if x)
+                # redis_cache.get() 已经反序列化，可能是 str 或 bytes
+                if isinstance(cached, bytes):
+                    cached = cached.decode('utf-8')
+                excluded_ids = set(int(x) for x in str(cached).split(',') if x)
                 return excluded_ids
         except Exception as e:
             logger.warning(f"读取排除任务缓存失败: {e}，继续查询数据库")

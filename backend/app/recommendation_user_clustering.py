@@ -49,7 +49,11 @@ class UserClusteringManager:
         try:
             cached = redis_cache.get(cache_key)
             if cached:
-                cluster_id = cached.decode('utf-8')
+                # redis_cache.get() 已经反序列化，可能是 str 或 bytes
+                if isinstance(cached, bytes):
+                    cluster_id = cached.decode('utf-8')
+                else:
+                    cluster_id = str(cached)
                 if cluster_id != "none":
                     return cluster_id
         except Exception as e:

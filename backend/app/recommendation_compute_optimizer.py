@@ -81,11 +81,18 @@ class RecommendationComputeCache:
             cached = redis_cache.get(cache_key)
             if cached:
                 import pickle
-                try:
-                    return pickle.loads(cached)
-                except:
-                    import json
-                    return json.loads(cached.decode('utf-8'))
+                import json
+                # redis_cache.get() 已经反序列化，可能是 bytes、str 或 Python 对象
+                if isinstance(cached, bytes):
+                    try:
+                        return pickle.loads(cached)
+                    except:
+                        return json.loads(cached.decode('utf-8'))
+                elif isinstance(cached, str):
+                    return json.loads(cached)
+                else:
+                    # 已经是 Python 对象
+                    return cached
         except Exception as e:
             logger.warning(f"读取热门任务缓存失败: {e}")
         
