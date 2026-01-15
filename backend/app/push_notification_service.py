@@ -30,23 +30,28 @@ if sys.version_info >= (3, 10):
 logger = logging.getLogger(__name__)
 
 # 尝试导入 apns2（优先使用 compat-fork-apns2，它支持 Python 3.11 和 PyJWT 2.x）
+APNS2_ERRORS = None
 try:
     # 优先尝试导入 compat-fork-apns2（兼容 Python 3.11 和 PyJWT 2.x）
     try:
         from compat_fork_apns2.client import APNsClient
         from compat_fork_apns2.payload import Payload
         from compat_fork_apns2.credentials import TokenCredentials
+        from compat_fork_apns2 import errors as apns2_errors
         APNS2_AVAILABLE = True
         APNS2_IMPORT_ERROR = None
         APNS2_LIBRARY = "compat-fork-apns2"
+        APNS2_ERRORS = apns2_errors
     except ImportError:
         # 回退到原始的 apns2（可能不兼容 Python 3.11 + PyJWT 2.x）
         from apns2.client import APNsClient
         from apns2.payload import Payload
         from apns2.credentials import TokenCredentials
+        from apns2 import errors as apns2_errors
         APNS2_AVAILABLE = True
         APNS2_IMPORT_ERROR = None
         APNS2_LIBRARY = "apns2"
+        APNS2_ERRORS = apns2_errors
 except ImportError as e:
     APNS2_AVAILABLE = False
     APNS2_IMPORT_ERROR = str(e)
@@ -364,10 +369,53 @@ def send_apns_notification(
                 return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
         
     except Exception as e:
+        # 检查异常类型名称（更健壮的方法，不依赖于具体的模块路径）
+        exception_type_name = type(e).__name__
+        exception_module = type(e).__module__
+        
+        logger.debug(f"捕获到异常: {exception_type_name} (模块: {exception_module})")
+        
+        # 检查是否是 apns2 库抛出的特定异常（表示设备令牌无效）
+        # 使用异常类型名称检查，因为模块路径可能不同（apns2.errors 或 compat_fork_apns2.errors）
+        if 'apns2' in exception_module.lower() or 'compat_fork_apns2' in exception_module.lower():
+            # 以下异常表示设备令牌无效，应该标记为不活跃
+            if exception_type_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic']:
+                logger.warning(f"设备令牌无效（异常类型: {exception_type_name}），应标记为不活跃: {e}")
+                return False  # False 表示推送失败且应该标记令牌为不活跃
+            
+            # 其他 apns2 异常（如 PayloadTooLarge, TopicDisallowed 等）不应该标记令牌为不活跃
+            if exception_type_name in ['PayloadTooLarge', 'TopicDisallowed', 'BadCollapseId',
+                                      'BadExpirationDate', 'BadMessageId', 'BadPriority',
+                                      'BadTopic', 'ExpiredProviderToken', 'Forbidden',
+                                      'InvalidProviderToken', 'MissingDeviceToken',
+                                      'MissingTopic', 'ServiceUnavailable', 'Shutdown',
+                                      'TooManyProviderTokenUpdates', 'TooManyRequests',
+                                      'UnknownError']:
+                logger.warning(f"推送失败但令牌可能有效（异常类型: {exception_type_name}），不标记为不活跃: {e}")
+                return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
+        
+        # 如果 APNS2_ERRORS 可用，也尝试使用 isinstance 检查（更精确）
+        if APNS2_ERRORS is not None:
+            try:
+                # 以下异常表示设备令牌无效，应该标记为不活跃
+                if isinstance(e, (APNS2_ERRORS.BadDeviceToken, 
+                                 APNS2_ERRORS.Unregistered,
+                                 APNS2_ERRORS.DeviceTokenNotForTopic)):
+                    logger.warning(f"设备令牌无效（异常类型: {exception_type_name}），应标记为不活跃: {e}")
+                    return False  # False 表示推送失败且应该标记令牌为不活跃
+                
+                # 其他 apns2 异常不应该标记令牌为不活跃
+                if hasattr(APNS2_ERRORS, exception_type_name):
+                    logger.warning(f"推送失败但令牌可能有效（异常类型: {exception_type_name}），不标记为不活跃: {e}")
+                    return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
+            except (AttributeError, TypeError):
+                # 如果 APNS2_ERRORS 中没有对应的异常类，继续使用类型名称检查的结果
+                pass
+        
+        # 其他未预期的异常（网络错误、超时等）不应该标记令牌为不活跃
         logger.error(f"发送 APNs 推送通知失败: {e}", exc_info=True)
         import traceback
         logger.error(f"详细错误信息: {traceback.format_exc()}")
-        # 异常通常是系统错误，不应该标记令牌为不活跃
         return None  # None 表示系统错误，不应该标记令牌为不活跃
 
 
