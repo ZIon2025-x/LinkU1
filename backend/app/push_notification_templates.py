@@ -8,40 +8,41 @@ logger = logging.getLogger(__name__)
 
 # 推送通知模板字典
 # 格式: {notification_type: {language: {"title": "...", "body": "..."}}}
+# 注意：使用简洁友好的表达，适当使用表情符号增强视觉效果
 PUSH_NOTIFICATION_TEMPLATES = {
     # 任务申请
     "task_application": {
         "en": {
-            "title": "New Task Application",
-            "body_template": "{applicant_name} applied for task「{task_title}」"
+            "title": "✨ New Application",
+            "body_template": "{applicant_name} applied for「{task_title}」"
         },
         "zh": {
-            "title": "新任务申请",
-            "body_template": "{applicant_name} 申请了任务「{task_title}」"
+            "title": "✨ 新申请",
+            "body_template": "{applicant_name} 申请了「{task_title}」"
         }
     },
     
     # 任务申请被接受
     "application_accepted": {
         "en": {
-            "title": "Application Accepted",
-            "body_template": "Your application has been accepted: {task_title}"
+            "title": "🎉 Application Accepted!",
+            "body_template": "Great news! Your application for「{task_title}」has been accepted"
         },
         "zh": {
-            "title": "申请已被接受",
-            "body_template": "您的任务申请已被接受：{task_title}"
+            "title": "🎉 申请已通过！",
+            "body_template": "好消息！您对「{task_title}」的申请已通过"
         }
     },
     
     # 任务申请被拒绝
     "application_rejected": {
         "en": {
-            "title": "Application Rejected",
-            "body_template": "Your application has been rejected: {task_title}"
+            "title": "Application Not Selected",
+            "body_template": "Your application for「{task_title}」was not selected this time"
         },
         "zh": {
-            "title": "申请已被拒绝",
-            "body_template": "您的任务申请已被拒绝：{task_title}"
+            "title": "申请未通过",
+            "body_template": "很遗憾，您对「{task_title}」的申请未通过"
         }
     },
     
@@ -49,58 +50,58 @@ PUSH_NOTIFICATION_TEMPLATES = {
     "application_withdrawn": {
         "en": {
             "title": "Application Withdrawn",
-            "body_template": "An applicant withdrew their application for task「{task_title}」"
+            "body_template": "An applicant withdrew from「{task_title}」"
         },
         "zh": {
             "title": "申请已撤回",
-            "body_template": "有申请者撤回了对任务「{task_title}」的申请"
+            "body_template": "有申请者撤回了对「{task_title}」的申请"
         }
     },
     
     # 任务完成
     "task_completed": {
         "en": {
-            "title": "Task Completed",
-            "body_template": "{taker_name} marked task as completed: {task_title}"
+            "title": "✅ Task Completed",
+            "body_template": "{taker_name} marked「{task_title}」as completed"
         },
         "zh": {
-            "title": "任务已完成",
-            "body_template": "{taker_name} 标记任务已完成：{task_title}"
+            "title": "✅ 任务已完成",
+            "body_template": "{taker_name} 已将「{task_title}」标记为完成"
         }
     },
     
     # 任务确认完成
     "task_confirmed": {
         "en": {
-            "title": "Task Confirmed",
-            "body_template": "Task completed and confirmed! Reward has been issued: {task_title}"
+            "title": "💰 Reward Issued!",
+            "body_template": "Task completed and confirmed! Reward for「{task_title}」has been issued"
         },
         "zh": {
-            "title": "任务已确认完成",
-            "body_template": "任务已完成并确认！奖励已发放：{task_title}"
+            "title": "💰 奖励已发放！",
+            "body_template": "任务已完成并确认！「{task_title}」的奖励已发放"
         }
     },
     
     # 任务拒绝
     "task_rejected": {
         "en": {
-            "title": "Application Rejected",
-            "body_template": "Sorry, your task application was rejected: {task_title}"
+            "title": "Application Not Selected",
+            "body_template": "Your application for「{task_title}」was not selected"
         },
         "zh": {
-            "title": "任务申请被拒绝",
-            "body_template": "很抱歉，您的任务申请被拒绝：{task_title}"
+            "title": "申请未通过",
+            "body_template": "很抱歉，您对「{task_title}」的申请未通过"
         }
     },
     
     # 申请留言/议价
     "application_message": {
         "en": {
-            "title": "New Message",
+            "title": "💬 New Message",
             "body_template": "{message}"
         },
         "zh": {
-            "title": "新的留言",
+            "title": "💬 新留言",
             "body_template": "{message}"
         }
     },
@@ -108,35 +109,35 @@ PUSH_NOTIFICATION_TEMPLATES = {
     # 申请留言回复
     "application_message_reply": {
         "en": {
-            "title": "Reply to Your Message",
-            "body_template": "Applicant replied to your message for task「{task_title}」: {message}"
+            "title": "💬 Reply Received",
+            "body_template": "Reply to your message about「{task_title}」: {message}"
         },
         "zh": {
-            "title": "申请者回复了您的留言",
-            "body_template": "申请者回复了您对任务「{task_title}」的留言：{message}"
+            "title": "💬 收到回复",
+            "body_template": "关于「{task_title}」的留言回复：{message}"
         }
     },
     
     # 议价被拒绝
     "negotiation_rejected": {
         "en": {
-            "title": "Negotiation Rejected",
-            "body_template": "Applicant rejected your negotiation for task「{task_title}」"
+            "title": "Negotiation Not Accepted",
+            "body_template": "Your negotiation for「{task_title}」was not accepted"
         },
         "zh": {
-            "title": "议价被拒绝",
-            "body_template": "申请者已拒绝您对任务「{task_title}」的议价"
+            "title": "议价未接受",
+            "body_template": "您对「{task_title}」的议价未被接受"
         }
     },
     
     # 私信消息
     "message": {
         "en": {
-            "title": "New Message",
+            "title": "💌 New Message",
             "body_template": "{message}"
         },
         "zh": {
-            "title": "新消息",
+            "title": "💌 新消息",
             "body_template": "{message}"
         }
     },
@@ -144,11 +145,11 @@ PUSH_NOTIFICATION_TEMPLATES = {
     # 论坛回复帖子
     "reply_post": {
         "en": {
-            "title": "Post Replied",
+            "title": "💬 Post Replied",
             "body_template": "{user_name} replied to your post"
         },
         "zh": {
-            "title": "有人回复了您的帖子",
+            "title": "💬 帖子有新回复",
             "body_template": "{user_name} 回复了您的帖子"
         }
     },
@@ -156,11 +157,11 @@ PUSH_NOTIFICATION_TEMPLATES = {
     # 论坛回复评论
     "reply_reply": {
         "en": {
-            "title": "Comment Replied",
+            "title": "💬 Comment Replied",
             "body_template": "{user_name} replied to your comment"
         },
         "zh": {
-            "title": "有人回复了您的评论",
+            "title": "💬 评论有新回复",
             "body_template": "{user_name} 回复了您的评论"
         }
     },
@@ -168,23 +169,23 @@ PUSH_NOTIFICATION_TEMPLATES = {
     # 论坛回复（通用）
     "forum_reply": {
         "en": {
-            "title": "Forum Reply",
-            "body_template": "{user_name} replied to your post: {post_title}"
+            "title": "💬 Forum Reply",
+            "body_template": "{user_name} replied to「{post_title}」"
         },
         "zh": {
-            "title": "论坛回复",
-            "body_template": "{user_name} 回复了您的帖子：{post_title}"
+            "title": "💬 论坛回复",
+            "body_template": "{user_name} 回复了「{post_title}」"
         }
     },
     
     # 通用通知
     "general": {
         "en": {
-            "title": "Notification",
+            "title": "📢 Notification",
             "body_template": "{message}"
         },
         "zh": {
-            "title": "通知",
+            "title": "📢 通知",
             "body_template": "{message}"
         }
     }

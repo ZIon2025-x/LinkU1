@@ -62,7 +62,7 @@ except ImportError as e:
 # APNs 配置
 APNS_KEY_ID = os.getenv("APNS_KEY_ID")
 APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
-APNS_BUNDLE_ID = os.getenv("APNS_BUNDLE_ID", "com.link2ur.app")
+APNS_BUNDLE_ID = os.getenv("APNS_BUNDLE_ID", "com.link2ur")
 APNS_KEY_FILE = os.getenv("APNS_KEY_FILE")  # APNs 密钥文件路径（本地开发使用）
 APNS_KEY_CONTENT = os.getenv("APNS_KEY_CONTENT")  # APNs 密钥内容（Base64编码，Railway等云平台使用）
 APNS_USE_SANDBOX = os.getenv("APNS_USE_SANDBOX", "false").lower() == "true"  # 是否使用沙盒环境
@@ -315,14 +315,21 @@ def send_apns_notification(
         # 如果提供了本地化内容，将其添加到 payload_data 中
         if localized_content:
             payload_data["localized"] = localized_content
-            # 使用默认语言（英文）作为 alert 的 fallback
+            # 记录本地化内容（用于调试）
+            logger.debug(f"[推送本地化] 已添加本地化内容: {list(localized_content.keys())}")
+            # 使用默认语言（英文）作为 alert 的 fallback（iOS 会通过 Notification Service Extension 替换为正确语言）
             default_content = localized_content.get("en", {})
             alert_title = default_content.get("title", title or "Notification")
             alert_body = default_content.get("body", body or "")
+            logger.debug(f"[推送本地化] 使用英文作为 alert fallback: title={alert_title[:30]}..., body={alert_body[:50]}...")
         else:
             # 如果没有本地化内容，使用传入的 title 和 body
             alert_title = title or "Notification"
             alert_body = body or ""
+            logger.debug(f"[推送本地化] 未提供本地化内容，使用传入的 title 和 body")
+        
+        # 记录 payload_data 结构（用于调试）
+        logger.debug(f"[推送本地化] payload_data 结构: type={payload_data.get('type')}, has_localized={'localized' in payload_data}")
         
         payload = Payload(
             alert={"title": alert_title, "body": alert_body},
@@ -358,6 +365,12 @@ def send_apns_notification(
             logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
         
         response = apns_client.send_notification(device_token, payload, topic)
+        
+        # 检查响应是否为 None（某些情况下 apns2 可能返回 None）
+        if response is None:
+            logger.warning(f"[APNs诊断] send_notification 返回 None，可能是异步发送或配置问题")
+            # 对于异步发送，可能需要等待响应，这里先返回 None（系统错误，不标记令牌为不活跃）
+            return None
         
         # 检查响应
         if response.is_successful:
