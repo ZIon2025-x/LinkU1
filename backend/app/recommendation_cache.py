@@ -39,26 +39,53 @@ def serialize_recommendations(recommendations: List[Dict]) -> bytes:
         return json.dumps(recommendations, default=str).encode('utf-8')
 
 
-def deserialize_recommendations(data: bytes) -> List[Dict]:
+def deserialize_recommendations(data) -> List[Dict]:
     """
     反序列化推荐结果
     
     Args:
-        data: 序列化后的字节数据
+        data: 序列化后的字节数据，或已反序列化的列表
     
     Returns:
         推荐结果列表
     """
-    try:
-        # 尝试pickle反序列化
-        return pickle.loads(data)
-    except (pickle.UnpicklingError, TypeError):
+    # 如果已经是列表，直接返回（redis_cache.get() 可能已经反序列化）
+    if isinstance(data, list):
+        return data
+    
+    # 如果是字典，可能是单个结果，包装成列表
+    if isinstance(data, dict):
+        return [data]
+    
+    # 如果是 bytes，尝试反序列化
+    if isinstance(data, bytes):
         try:
-            # 降级到JSON
-            return json.loads(data.decode('utf-8'))
+            # 尝试pickle反序列化
+            result = pickle.loads(data)
+            if isinstance(result, list):
+                return result
+            return [result] if result else []
+        except (pickle.UnpicklingError, TypeError, Exception):
+            try:
+                # 降级到JSON
+                return json.loads(data.decode('utf-8'))
+            except Exception as e:
+                logger.error(f"反序列化推荐结果失败: {e}")
+                return []
+    
+    # 如果是字符串，尝试 JSON 解析
+    if isinstance(data, str):
+        try:
+            result = json.loads(data)
+            if isinstance(result, list):
+                return result
+            return [result] if result else []
         except Exception as e:
             logger.error(f"反序列化推荐结果失败: {e}")
             return []
+    
+    logger.warning(f"未知的数据类型: {type(data)}")
+    return []
 
 
 def get_cache_key(

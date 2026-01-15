@@ -61,6 +61,11 @@ def create_banner(
     db: Session = Depends(get_db)
 ):
     """创建 Banner（管理员）"""
+    import os
+    import shutil
+    from urllib.parse import urlparse
+    from app.config import Config
+    
     # 验证 link_type
     if banner_data.link_type not in ["internal", "external"]:
         raise HTTPException(
@@ -96,6 +101,65 @@ def create_banner(
     db.add(banner)
     db.commit()
     db.refresh(banner)
+    
+    # 如果图片在临时目录中，移动到正式目录
+    image_url = banner_data.image_url
+    if "/banner/temp_" in image_url:
+        try:
+            # 检测部署环境
+            railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+            use_cloud_storage = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+            
+            # 确定存储目录
+            if railway_env and not use_cloud_storage:
+                base_public_dir = Path("/data/uploads/public/images")
+            else:
+                base_public_dir = Path("uploads/public/images")
+            
+            # 从 URL 中解析临时路径
+            # URL 格式: {base_url}/uploads/images/banner/temp_{admin_id}/{filename}
+            parsed = urlparse(image_url)
+            path_parts = parsed.path.split('/')
+            
+            # 找到 banner 后面的部分
+            if 'banner' in path_parts:
+                banner_idx = path_parts.index('banner')
+                if len(path_parts) > banner_idx + 2:
+                    temp_subdir = path_parts[banner_idx + 1]  # temp_{admin_id}
+                    filename = path_parts[banner_idx + 2]     # filename
+                    
+                    temp_dir = base_public_dir / "banner" / temp_subdir
+                    temp_file = temp_dir / filename
+                    
+                    # 创建正式目录
+                    banner_dir = base_public_dir / "banner" / str(banner.id)
+                    banner_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    banner_file = banner_dir / filename
+                    
+                    if temp_file.exists():
+                        # 移动文件到正式目录
+                        shutil.move(str(temp_file), str(banner_file))
+                        logger.info(f"移动 Banner 图片从临时目录到正式目录: {temp_file} -> {banner_file}")
+                        
+                        # 更新 Banner 的 image_url
+                        base_url = Config.FRONTEND_URL.rstrip('/') if hasattr(Config, 'FRONTEND_URL') else "http://localhost:3000"
+                        new_image_url = f"{base_url}/uploads/images/banner/{banner.id}/{filename}"
+                        banner.image_url = new_image_url
+                        db.commit()
+                        db.refresh(banner)
+                        
+                        # 尝试删除空的临时目录
+                        try:
+                            if temp_dir.exists() and not any(temp_dir.iterdir()):
+                                temp_dir.rmdir()
+                                logger.info(f"删除空的 Banner 临时目录: {temp_dir}")
+                        except Exception as e:
+                            logger.debug(f"删除临时目录失败（可能不为空）: {temp_dir}: {e}")
+                    else:
+                        logger.warning(f"临时 Banner 图片文件不存在: {temp_file}")
+        except Exception as e:
+            logger.warning(f"移动 Banner 图片从临时目录失败: {e}")
     
     # 清除缓存
     clear_banner_cache()
