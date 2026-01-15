@@ -190,6 +190,10 @@ def send_push_notification(
         
         for device_token in device_tokens:
             try:
+                # 记录设备令牌信息（用于诊断 BadDeviceToken 错误）
+                logger.info(f"[推送诊断] 准备发送到设备: token_id={device_token.id}, device_token长度={len(device_token.device_token)}, device_id={device_token.device_id or '未设置'}, platform={device_token.platform}, is_active={device_token.is_active}")
+                logger.debug(f"[推送诊断] device_token前32字符: {device_token.device_token[:32] if len(device_token.device_token) >= 32 else device_token.device_token}")
+                
                 # 如果提供了本地化内容，直接使用；否则使用传入的 title 和 body
                 if device_token.platform == "ios":
                     result = send_apns_notification(
@@ -343,6 +347,16 @@ def send_apns_notification(
         
         # 发送通知
         topic = APNS_BUNDLE_ID
+        
+        # 记录详细的诊断信息（用于调试 BadDeviceToken 错误）
+        logger.info(f"[APNs诊断] 准备发送推送: device_token长度={len(device_token)}, device_token前32字符={device_token[:32] if len(device_token) >= 32 else device_token}, topic={topic}, use_sandbox={APNS_USE_SANDBOX}, bundle_id={APNS_BUNDLE_ID}, key_id={APNS_KEY_ID}, team_id={APNS_TEAM_ID}")
+        
+        # 验证设备令牌格式（APNs 设备令牌应该是 64 个十六进制字符）
+        if len(device_token) != 64:
+            logger.warning(f"[APNs诊断] 设备令牌长度异常: 期望64字符，实际{len(device_token)}字符")
+        if not all(c in '0123456789abcdefABCDEF' for c in device_token):
+            logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
+        
         response = apns_client.send_notification(device_token, payload, topic)
         
         # 检查响应
