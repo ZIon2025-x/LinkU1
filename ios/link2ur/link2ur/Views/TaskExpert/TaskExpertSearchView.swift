@@ -38,7 +38,7 @@ struct TaskExpertSearchView: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(AppColors.textTertiary)
                         
-                        TextField("搜索任务达人", text: $searchText)
+                        TextField(LocalizationKey.taskExpertSearchExperts.localized, text: $searchText)
                             .focused($isSearchFocused)
                             .onSubmit {
                                 performSearch()
@@ -82,7 +82,7 @@ struct TaskExpertSearchView: View {
                         } label: {
                             HStack {
                                 Image(systemName: "tag.fill")
-                                Text(selectedCategory == nil ? "全部类型" : categories.first(where: { $0.value == selectedCategory })?.name ?? "类型")
+                                Text(selectedCategory == nil ? LocalizationKey.taskExpertAllTypes.localized : categories.first(where: { $0.value == selectedCategory })?.name ?? LocalizationKey.taskExpertType.localized)
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 12))
                             }
@@ -160,8 +160,8 @@ struct TaskExpertSearchView: View {
                     Spacer()
                     EmptyStateView(
                         icon: "magnifyingglass",
-                        title: "没有找到相关达人",
-                        message: searchText.isEmpty ? "尝试调整筛选条件" : "没有找到包含\"\(searchText)\"的达人"
+                        title: LocalizationKey.taskExpertNoExpertsFound.localized,
+                        message: searchText.isEmpty ? LocalizationKey.taskExpertNoExpertsFoundMessage.localized : String(format: LocalizationKey.taskExpertNoExpertsFoundWithQuery.localized, searchText)
                     )
                     Spacer()
                 } else {

@@ -193,7 +193,7 @@ struct PointsAccountCard: View {
         VStack(spacing: AppSpacing.lg) {
             // 余额显示
             VStack(spacing: AppSpacing.sm) {
-                Text("points.balance")
+                Text(LocalizationKey.pointsBalance.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                 
@@ -202,7 +202,7 @@ struct PointsAccountCard: View {
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundColor(AppColors.primary)
                     
-                    Text("points.unit")
+                    Text(LocalizationKey.pointsUnit.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -214,13 +214,13 @@ struct PointsAccountCard: View {
             // 统计信息
             HStack(spacing: AppSpacing.xl) {
                 StatItem(
-                    label: String(localized: "points.total_earned"),
+                    label: LocalizationKey.pointsTotalEarned.localized,
                     value: "\(account.totalEarned)",
                     color: AppColors.success
                 )
                 
                 StatItem(
-                    label: String(localized: "points.total_spent"),
+                    label: LocalizationKey.pointsTotalSpent.localized,
                     value: "\(account.totalSpent)",
                     color: AppColors.warning
                 )

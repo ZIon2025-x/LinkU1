@@ -194,7 +194,7 @@ struct ImageViewWithGestures: View {
                         VStack(spacing: AppSpacing.md) {
                             ProgressView()
                                 .tint(.white)
-                            Text("加载中...")
+                            Text(LocalizationKey.webviewLoading.localized)
                                 .font(.system(size: 14))
                                 .foregroundColor(.white.opacity(0.7))
                         }

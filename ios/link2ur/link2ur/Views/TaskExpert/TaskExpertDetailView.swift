@@ -42,7 +42,7 @@ struct TaskExpertDetailView: View {
                                 
                                 Spacer()
                                 
-                                Text("\(viewModel.services.count) 个服务")
+                                Text(String(format: LocalizationKey.taskExpertServicesCount.localized, viewModel.services.count))
                                     .font(.system(size: 13))
                                     .foregroundColor(AppColors.textTertiary)
                             }
@@ -158,11 +158,11 @@ struct TaskExpertDetailView: View {
             
             // 统计网格
             HStack(spacing: 0) {
-                statItem(value: String(format: "%.1f", expert.avgRating ?? 0), label: "评分", icon: "star.fill", color: .orange)
+                statItem(value: String(format: "%.1f", expert.avgRating ?? 0), label: LocalizationKey.taskExpertRating.localized, icon: "star.fill", color: .orange)
                 divider()
-                statItem(value: "\(expert.completedTasks ?? 0)", label: "已完成", icon: "checkmark.circle.fill", color: AppColors.primary)
+                statItem(value: "\(expert.completedTasks ?? 0)", label: LocalizationKey.taskExpertCompleted.localized, icon: "checkmark.circle.fill", color: AppColors.primary)
                 divider()
-                statItem(value: "\(String(format: "%.0f", expert.completionRate ?? 0))%", label: "完成率", icon: "chart.bar.fill", color: .green)
+                statItem(value: "\(String(format: "%.0f", expert.completionRate ?? 0))%", label: LocalizationKey.taskExpertCompletionRate.localized, icon: "chart.bar.fill", color: .green)
             }
             .padding(.top, 8)
         }
@@ -207,7 +207,7 @@ struct TaskExpertDetailView: View {
             Image(systemName: "bag.badge.questionmark")
                 .font(.system(size: 48, weight: .light))
                 .foregroundColor(AppColors.textQuaternary)
-            Text("该达人暂时没有上架服务")
+            Text(LocalizationKey.taskExpertNoServices.localized)
                 .font(.system(size: 14))
                 .foregroundColor(AppColors.textTertiary)
         }

@@ -67,11 +67,13 @@ struct NotificationListView: View {
             }
         }
         .refreshable {
-            viewModel.loadNotifications()
+            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
+            viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
         }
         .onAppear {
+            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
             if viewModel.notifications.isEmpty {
-                viewModel.loadNotifications()
+                viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
             }
         }
     }

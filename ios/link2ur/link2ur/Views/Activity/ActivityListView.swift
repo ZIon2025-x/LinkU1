@@ -11,6 +11,14 @@ struct ActivityListView: View {
         case active = "activity.active"
         case ended = "activity.ended"
         
+        var localized: String {
+            switch self {
+            case .all: return LocalizationKey.activityAll.localized
+            case .active: return LocalizationKey.activityActive.localized
+            case .ended: return LocalizationKey.activityEnded.localized
+            }
+        }
+        
         var status: String? {
             switch self {
             case .all:
@@ -33,7 +41,7 @@ struct ActivityListView: View {
                 // 筛选器
                 Picker(LocalizationKey.activityFilter.localized, selection: $filterOption) {
                     ForEach(ActivityFilterOption.allCases, id: \.self) { option in
-                        Text(LocalizationHelper.localized(option.rawValue)).tag(option)
+                        Text(option.localized).tag(option)
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())

@@ -10,11 +10,11 @@ public enum ThemeMode: String, CaseIterable {
     var displayName: String {
         switch self {
         case .system:
-            return "跟随系统"
+            return LocalizationKey.themeSystem.localized
         case .light:
-            return "浅色"
+            return LocalizationKey.themeLight.localized
         case .dark:
-            return "深色"
+            return LocalizationKey.themeDark.localized
         }
     }
 }

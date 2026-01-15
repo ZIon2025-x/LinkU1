@@ -16,6 +16,13 @@
 "common.retry" = "重试";
 "common.loading" = "加载中...";
 "common.search" = "搜索";
+"common.all" = "全部";
+"common.filter" = "筛选";
+"common.load_more" = "加载更多";
+"common.copy" = "复制";
+"common.copied" = "已复制: %@";
+"common.tap" = "点击";
+"common.long_press_to_copy" = "长按复制";
 "common.clear" = "清空";
 "common.submit" = "提交";
 "common.back" = "返回";
@@ -33,6 +40,10 @@
 "app.name" = "Link²Ur";
 "app.tagline" = "连接你我，创造价值";
 "app.user" = "Link²Ur用户";
+"app.terms_of_service" = "服务条款";
+"app.privacy_policy" = "隐私政策";
+"app.about" = "关于";
+"app.version" = "版本";
 
 // MARK: - Auth
 "auth.login" = "登录";
@@ -44,6 +55,7 @@
 "auth.phone" = "手机号";
 "auth.verification_code" = "验证码";
 "auth.login_later" = "稍后登录";
+"auth.countdown_seconds" = "%d 秒";
 
 // MARK: - Login Required
 "login.required" = "需要登录";
@@ -116,6 +128,7 @@
 "tasks.cancel_task" = "取消任务";
 "tasks.cancel_task_confirm" = "确定要取消这个任务吗？";
 "tasks.apply" = "申请";
+"tasks.my_tasks" = "我的任务";
 "tasks.apply_task" = "申请任务";
 "tasks.apply_message" = "留言（可选）";
 "tasks.apply_info" = "申请信息";
@@ -153,13 +166,68 @@
 "forum.no_posts_message" = "这个板块还没有帖子，快来发布第一个吧！";
 "forum.search_posts" = "搜索帖子";
 "forum.posts" = "帖子";
+"forum.post_load_failed" = "加载帖子失败";
+"forum.official" = "官方";
+"forum.all_replies" = "全部回复";
+"forum.reply" = "回复";
+"forum.write_reply" = "写回复...";
+"forum.send" = "发送";
+"forum.view" = "浏览量";
+"forum.like" = "点赞";
+"forum.favorite" = "收藏";
+"forum.create_post_title" = "发布帖子";
+"forum.create_post_basic_info" = "基本信息";
+"forum.create_post_post_title" = "帖子标题";
+"forum.create_post_post_title_placeholder" = "给您的帖子起个吸引人的标题";
+"forum.create_post_post_content" = "帖子内容";
+"forum.create_post_content_placeholder" = "分享您的见解、经验或提出问题。友好互助，共同成长...";
+"forum.create_post_publishing" = "发布中...";
+"forum.create_post_publish_now" = "立即发布";
 
 // MARK: - Flea Market
 "flea_market.flea_market" = "跳蚤市场";
+"flea_market.subtitle" = "发现好物，出售闲置";
 "flea_market.no_items" = "暂无商品";
 "flea_market.no_items_message" = "跳蚤市场还没有商品，快来发布第一个吧！";
 "flea_market.search_items" = "搜索商品";
 "flea_market.items" = "商品";
+"flea_market.product_info" = "商品信息";
+"flea_market.product_title" = "商品标题";
+"flea_market.product_title_placeholder" = "请输入商品标题";
+"flea_market.description" = "商品描述";
+"flea_market.description_placeholder" = "详细描述您的商品";
+"flea_market.price" = "价格";
+"flea_market.contact" = "联系方式";
+"flea_market.contact_placeholder" = "请输入联系方式";
+"flea_market.no_image" = "暂无图片";
+"flea_market.active_seller" = "活跃卖家";
+"flea_market.add_image" = "添加图片";
+"flea_market.auto_removal_days" = "%d 天后自动下架";
+"flea_market.auto_removal_soon" = "商品即将下架";
+"flea_market.bid_purchase" = "竞价购买";
+"flea_market.buy_now" = "立即购买";
+"flea_market.category" = "商品分类";
+"flea_market.confirm_purchase" = "确认购买";
+"flea_market.contact_seller" = "联系卖家";
+"flea_market.create_publish_now" = "立即发布商品";
+"flea_market.create_publishing" = "发布中...";
+"flea_market.create_search_location" = "搜索地点或输入 Online";
+"flea_market.edit_item" = "编辑商品";
+"flea_market.enter_amount" = "输入金额";
+"flea_market.favorite" = "收藏";
+"flea_market.load_failed" = "加载商品信息失败";
+"flea_market.loading" = "加载中...";
+"flea_market.message_placeholder" = "例如：希望面交，能否包邮等...";
+"flea_market.message_to_seller" = "给卖家留言（可选）";
+"flea_market.negotiate" = "议价";
+"flea_market.no_description" = "卖家还没有写任何内容~";
+"flea_market.online" = "线上";
+"flea_market.price_and_transaction" = "价格与交易";
+"flea_market.product_detail" = "商品详情";
+"flea_market.product_images" = "商品图片";
+"flea_market.publish_item" = "发布商品";
+"flea_market.transaction_location" = "交易地点";
+"flea_market.your_bid" = "您的出价";
 
 // MARK: - Profile
 "profile.profile" = "个人中心";
@@ -181,6 +249,118 @@
 "leaderboard.rank" = "排名";
 "leaderboard.points" = "积分";
 "leaderboard.user" = "用户";
+"leaderboard.item_load_failed" = "竞品信息加载失败";
+"leaderboard.add_cover_image" = "添加封面图片";
+"leaderboard.apply_title" = "申请新榜单";
+"leaderboard.cover_image" = "封面图片（可选）";
+"leaderboard.description" = "描述";
+"leaderboard.description_placeholder" = "请描述此榜单的目的和入选标准...";
+"leaderboard.info" = "榜单信息";
+"leaderboard.item_count" = "项目数";
+"leaderboard.load_failed" = "加载榜单失败";
+"leaderboard.loading" = "加载中...";
+"leaderboard.name" = "榜单名称";
+"leaderboard.name_placeholder" = "例如：最受欢迎的中餐厅";
+"leaderboard.no_items" = "暂无项目";
+"leaderboard.no_items_message" = "此榜单还没有参与者。成为第一个提交者吧！";
+"leaderboard.reason" = "申请理由";
+"leaderboard.reason_placeholder" = "向管理员说明创建此榜单的必要性，有助于加快审核流程...";
+"leaderboard.reason_title" = "为什么要创建此榜单？";
+"leaderboard.region" = "地区";
+"leaderboard.sort_comprehensive" = "综合";
+"leaderboard.sort_latest" = "最新";
+"leaderboard.sort_net_votes" = "净投票";
+"leaderboard.sort_upvotes" = "支持票";
+"leaderboard.total_votes" = "总投票";
+"leaderboard.view_count" = "浏览量";
+"leaderboard.submitted_by" = "由 %@ 提交";
+"leaderboard.item_detail" = "竞品详情";
+"leaderboard.no_description" = "暂无描述信息";
+"leaderboard.contact_location" = "联系与位置";
+"leaderboard.current_score" = "当前得分";
+"leaderboard.total_votes_count" = "总投票数";
+"leaderboard.featured_comments" = "精选留言";
+"leaderboard.no_comments" = "暂无留言，快来发表你的看法吧";
+"leaderboard.oppose" = "反对";
+"leaderboard.support" = "支持";
+"leaderboard.no_images" = "暂无图片";
+"leaderboard.write_reason" = "写下你的理由让大家参考吧...";
+"leaderboard.anonymous_vote" = "匿名投票";
+"leaderboard.submit_vote" = "提交投票";
+"leaderboard.add_image" = "添加图片";
+"leaderboard.apply_new" = "申请新榜单";
+"leaderboard.support_reason" = "支持理由";
+"leaderboard.oppose_reason" = "反对理由";
+"leaderboard.anonymous_user" = "匿名用户";
+"leaderboard.net_score" = "净分";
+"leaderboard.basic_info" = "基本信息";
+"leaderboard.contact_info" = "联系方式 (可选)";
+"leaderboard.image_display" = "图片展示 (可选)";
+"leaderboard.item_name" = "竞品名称";
+"leaderboard.item_description" = "竞品描述";
+"leaderboard.item_address" = "地址";
+"leaderboard.item_phone" = "电话";
+"leaderboard.item_website" = "官方网站";
+"leaderboard.submit_item" = "提交竞品";
+"leaderboard.submitting" = "正在提交...";
+"leaderboard.name_placeholder" = "请输入名称";
+"leaderboard.description_placeholder" = "简单介绍一下这个竞品...";
+"leaderboard.address_placeholder" = "请输入详细地址";
+"leaderboard.phone_placeholder" = "请输入联系电话";
+"leaderboard.website_placeholder" = "请输入网站地址";
+"leaderboard.please_enter_item_name" = "请输入竞品名称";
+
+// MARK: - Activity
+"activity.person" = "人";
+"activity.persons_booked" = "人已约";
+
+// MARK: - Task Expert
+"task_expert.services_count" = "%d 个服务";
+"task_expert.completion_rate" = "完成率";
+"task_expert.no_services" = "该达人暂时没有上架服务";
+"task_expert.order" = "单";
+"task_expert.completion_rate_percent" = "%d%%完成率";
+"task_expert.search_experts" = "搜索任务达人";
+"task_expert.no_experts_found" = "没有找到相关达人";
+"task_expert.no_experts_found_message" = "尝试调整筛选条件";
+"task_expert.no_experts_found_with_query" = "没有找到包含\"%@\"的达人";
+"task_expert.search_title" = "搜索达人";
+"task_expert.all_types" = "全部类型";
+"task_expert.type" = "类型";
+"task_expert.all_cities" = "全部城市";
+"task_expert.rating" = "评分";
+"task_expert.completed" = "已完成";
+
+// MARK: - Service
+"service.loading" = "加载中...";
+"service.load_failed" = "服务信息加载失败";
+"service.need_description" = "简单说明你的需求，方便达人了解...";
+
+// MARK: - Location
+"location.google_maps" = "Google 地图";
+
+// MARK: - WebView
+"webview.web_page" = "网页";
+"webview.loading" = "加载中...";
+"webview.done" = "完成";
+
+// MARK: - Profile
+"profile.recent_tasks" = "最近任务";
+"profile.user_reviews" = "用户评价";
+"profile.joined_days" = "加入 %d 天";
+"profile.reward" = "奖励";
+"profile.select_avatar" = "选择头像";
+
+// MARK: - Location
+"location.title" = "位置";
+"location.search_placeholder" = "搜索地点或输入 Online";
+"location.getting_address" = "正在获取地址...";
+"location.drag_to_select" = "拖动地图选择位置";
+"location.current_location" = "当前位置";
+"location.online_remote" = "线上/远程";
+
+// MARK: - Payment
+"payment.setup_account" = "设置收款账户";
 
 // MARK: - Notifications
 "notifications.notifications" = "通知";
@@ -199,6 +379,16 @@
 "student_verification.verification" = "学生认证";
 "student_verification.submit" = "提交认证";
 "student_verification.upload_document" = "上传证件";
+"student_verification.submitting" = "正在提交...";
+"student_verification.send_email" = "发送验证邮件";
+"student_verification.renewing" = "正在续期...";
+"student_verification.renew_now" = "立即续期";
+"student_verification.changing" = "正在更换...";
+"student_verification.confirm_change" = "确认更换";
+"student_verification.verified" = "已认证";
+"student_verification.unverified" = "未认证";
+"student_verification.benefits_title_verified" = "您已享有的学生特权";
+"student_verification.benefits_title_unverified" = "完成认证后，您将获得";
 
 // MARK: - Customer Service
 "customer_service.customer_service" = "客服中心";
@@ -216,6 +406,8 @@
 "search.results" = "结果";
 "search.no_results" = "没有找到相关结果";
 "search.try_other_keywords" = "试试其他关键词";
+"search.placeholder" = "搜索任务、达人、商品...";
+"search.task_placeholder" = "搜索任务";
 
 // MARK: - Errors
 "error.network_error" = "网络错误";
@@ -228,6 +420,8 @@
 "success.operation_success" = "操作成功";
 "success.saved" = "已保存";
 "success.deleted" = "已删除";
+"success.refresh_success" = "刷新成功";
+"success.refresh_success_message" = "商品已刷新，自动下架计时器已重置";
 
 // MARK: - Currency
 "currency.pound" = "£";
@@ -254,6 +448,12 @@
 "points.show_recent_only" = "仅显示最近记录";
 "coupon.coupons" = "优惠券";
 "coupon.check_in" = "签到";
+"coupon.allowed" = "可用于";
+"coupon.forbidden" = "不可用于";
+"coupon.check_in_rules" = "签到规则";
+"coupon.status_unused" = "未使用";
+"coupon.status_used" = "已使用";
+"coupon.status_expired" = "已过期";
 
 // MARK: - Time
 "time.just_now" = "刚刚";
@@ -320,6 +520,18 @@
 "profile.my_applications" = "我的活动";
 "profile.my_applications_subtitle" = "查看申请和收藏的活动";
 "profile.points_coupons" = "积分与优惠券";
+"profile.name" = "姓名";
+"profile.enter_name" = "输入姓名";
+"profile.enter_email" = "输入邮箱";
+"profile.enter_new_email" = "输入新邮箱";
+"profile.verification_code" = "验证码";
+"profile.enter_verification_code" = "输入验证码";
+"profile.phone" = "手机号";
+"profile.enter_phone" = "输入手机号";
+"profile.enter_new_phone" = "输入新手机号";
+"profile.click_to_change_avatar" = "点击相机图标更换头像";
+"profile.edit_profile" = "编辑资料";
+"profile.updated" = "资料已更新";
 "profile.points_coupons_subtitle" = "查看积分、优惠券和签到";
 "profile.student_verification" = "学生认证";
 "profile.student_verification_subtitle" = "验证学生身份享受优惠";
@@ -327,6 +539,7 @@
 "profile.activity_subtitle" = "查看和参加活动";
 "profile.settings" = "设置";
 "profile.settings_subtitle" = "应用设置和偏好";
+"profile.email" = "邮箱";
 "profile.logout" = "退出登录";
 "profile.welcome" = "欢迎使用 Link²Ur";
 "profile.login_prompt" = "登录后即可使用全部功能";
@@ -405,6 +618,14 @@
 "messages.no_interactions" = "暂无互动消息";
 "messages.no_interactions_message" = "还没有收到任何互动通知";
 "messages.click_to_view" = "点击查看消息";
+"messages.loading_more" = "加载中...";
+"messages.load_more_history" = "加载更多历史消息";
+
+// MARK: - Translation
+"translation.translating" = "翻译中...";
+"translation.translate" = "翻译";
+"translation.show_translation" = "显示翻译";
+"translation.show_original" = "显示原文";
 
 // MARK: - Permissions
 "permission.location_usage_description" = "我们需要获取您的位置信息，以便为您提供更精准的服务和任务推荐";
@@ -464,6 +685,8 @@
 "task_application.is_negotiate_price" = "是否议价";
 "task_application.negotiate_amount" = "议价金额";
 "task_application.send_message" = "发送留言";
+"task_application.advantage_placeholder" = "简要说明您的优势或如何完成任务...";
+"task_application.review_placeholder" = "写下您的合作体验，帮助其他用户...";
 "task_application.unknown_user" = "未知用户";
 
 // MARK: - Empty States
@@ -483,8 +706,35 @@
 "payment.task_number" = "任务 #%d";
 
 // MARK: - Notification
+"notification.notifications" = "通知";
+"notification.no_task_chat" = "暂无任务聊天";
+"notification.no_task_chat_message" = "还没有任务相关的聊天记录";
+"notification.no_messages" = "还没有消息";
+"notification.start_conversation" = "开始对话吧！";
+"notification.view_details" = "查看详情";
+"notification.image" = "图片";
+"notification.task_detail" = "任务详情";
+"notification.detail_address" = "详细地址";
 "notification.system_messages" = "系统消息";
 "notification.view_all_notifications" = "查看全部通知消息";
+"notification.system_notification" = "系统通知";
+"notification.customer_service" = "客服中心";
+"notification.task_chat" = "任务聊天";
+"notification.poster" = "发布方";
+"notification.taker" = "接受方";
+"notification.expert" = "服务方";
+"notification.participant" = "参与者";
+"notification.system" = "系统";
+"notification.system_message" = "系统消息";
+"notification.agree" = "同意";
+"notification.reject" = "拒绝";
+"notification.no_notifications" = "暂无通知";
+"notification.no_notifications_message" = "还没有收到任何通知消息";
+"notification.task_cancelled_cannot_send" = "任务已取消，无法发送消息";
+"notification.task_chat_list" = "所有任务聊天列表";
+"notification.task_completed_cannot_send" = "任务已完成，无法发送消息";
+"notification.task_ended" = "任务已结束";
+"notification.task_pending_cannot_send" = "任务待确认，消息发送已暂停";
 
 // MARK: - Customer Service (Extended)
 "customer_service.queue_position" = "排队位置: 第 %d 位";
@@ -508,6 +758,7 @@
 // MARK: - Coupon
 "coupon.min_amount_available" = "满%@可用";
 "coupon.available" = "可领取的";
+"coupon.discount" = "%d%% 折扣";
 "coupon.my_coupons" = "我的卡券";
 "coupon.no_threshold" = "无门槛";
 "coupon.claim_now" = "立即领取";
@@ -538,12 +789,51 @@
 "create_task.publishing" = "正在发布...";
 "create_task.publish_now" = "立即发布任务";
 "create_task.publish_task" = "发布任务";
+"create_task.campus_life_restriction" = "仅已验证学生可发布\"校园生活\"类型任务";
+"create_task.city" = "城市";
+"create_task.description" = "任务详情";
+"create_task.description_placeholder" = "请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...";
+"create_task.online" = "线上";
+"create_task.reward" = "任务奖励";
+"create_task.title" = "任务标题";
+"create_task.title_placeholder" = "简要描述您的需求（例如：代取包裹）";
 
 // MARK: - Student Verification
 "student_verification.student_verification" = "学生认证";
+"student_verification.email_info" = "邮箱信息";
+"student_verification.school_email" = "学校邮箱";
+"student_verification.school_email_placeholder" = "请输入学校邮箱";
+"student_verification.renew_verification" = "续期认证";
+"student_verification.change_email" = "更换邮箱";
+"student_verification.submit_verification" = "提交认证";
+"student_verification.student_verification_title" = "学生认证";
+"student_verification.description" = "学生认证可以让您享受更多平台特权和服务";
+"student_verification.start_verification" = "开始认证";
+"student_verification.status" = "认证状态";
+"student_verification.email_instruction" = "请输入您的学校邮箱地址";
+"student_verification.renew_info" = "续期信息";
+"student_verification.renew_email_placeholder" = "请输入学校邮箱";
+"student_verification.renew_instruction" = "如果您的认证即将到期，可以续期";
+"student_verification.new_school_email" = "新学校邮箱";
+"student_verification.new_school_email_placeholder" = "请输入新的学校邮箱";
+"student_verification.change_email_instruction" = "如需更换学校邮箱，请填写新的邮箱地址";
+"student_verification.benefit_campus_life" = "发布校园生活任务";
+"student_verification.benefit_campus_life_description" = "发布和参与校园生活相关任务";
+"student_verification.benefit_student_community" = "访问学生社区";
+"student_verification.benefit_student_community_description" = "访问专属学生论坛板块，与校友互动";
+"student_verification.benefit_exclusive_benefits" = "学生专享福利";
+"student_verification.benefit_exclusive_benefits_description" = "享受学生折扣、专属活动等更多特权";
+"student_verification.benefit_verification_badge" = "认证徽章";
+"student_verification.benefit_verification_badge_description" = "显示学生认证徽章，提升可信度";
+"student_verification.verification_email" = "验证邮箱";
+"student_verification.verification_time" = "认证时间";
+"student_verification.expiry_time" = "到期时间";
+"student_verification.days_remaining" = "剩余 %d 天";
+"student_verification.days_format" = "%d 天";
 
 // MARK: - Stripe Connect
 "stripe_connect.setup_account" = "设置收款账户";
+"stripe_connect.load_failed" = "加载失败";
 
 // MARK: - Activity
 "activity.load_failed" = "加载失败";
@@ -551,6 +841,14 @@
 "activity.description" = "活动描述";
 "activity.details" = "详细信息";
 "activity.select_time_slot" = "选择时间段";
+"activity.apply_to_join" = "申请参加活动";
+"activity.confirm_apply" = "确认申请";
+"activity.favorite" = "收藏";
+"activity.poster" = "活动发布者";
+"activity.preferred_date" = "首选日期";
+"activity.time_flexible" = "时间灵活";
+"activity.time_flexible_message" = "如果您在近期任何时间都有空";
+"activity.view_expert_profile" = "查看达人资料";
 "activity.no_available_time" = "暂无可用时间";
 "activity.no_available_time_message" = "目前没有可选的时间段";
 "activity.participate_time" = "参与时间";
@@ -577,6 +875,14 @@
 "activity.no_activities" = "暂无活动";
 "activity.no_activities_message" = "目前还没有活动，敬请期待...";
 "activity.full_capacity" = "已满员";
+"activity.apply_to_join" = "申请参加活动";
+"activity.confirm_apply" = "确认申请";
+"activity.favorite" = "收藏";
+"activity.poster" = "活动发布者";
+"activity.preferred_date" = "首选日期";
+"activity.time_flexible" = "时间灵活";
+"activity.time_flexible_message" = "如果您在近期任何时间都有空";
+"activity.view_expert_profile" = "查看达人资料";
 
 // MARK: - Task Type
 "task_type.super_task" = "超级任务";
@@ -586,6 +892,7 @@
 "error.error" = "错误";
 "error.retry" = "重试";
 "error.something_went_wrong" = "出错了";
+"error.operation_failed" = "操作失败";
 "error.invalid_url" = "请求地址无效，请稍后重试";
 "error.network_connection_failed" = "网络连接失败，请检查网络设置";
 "error.request_timeout" = "请求超时，请稍后重试";
@@ -641,6 +948,12 @@
 "expert_category.beauty_skincare" = "美容/护肤";
 "expert_category.handicraft" = "手工艺";
 
+// MARK: - Task Filter
+"task_filter.category" = "分类";
+"task_filter.city" = "城市";
+"task_filter.select_category" = "选择分类";
+"task_filter.select_city" = "选择城市";
+
 // MARK: - Create Task
 "create_task.basic_info" = "基本信息";
 "create_task.reward_location" = "报酬与地点";
@@ -651,6 +964,14 @@
 "create_task.fill_all_required" = "请填写所有必填项";
 "create_task.image_upload_failed" = "部分图片上传失败，请重试";
 "create_task.student_verification_required" = "只有已通过学生认证的用户才能发布\"校园生活\"类型的任务，请先完成学生认证";
+"create_task.campus_life_restriction" = "仅已验证学生可发布\"校园生活\"类型任务";
+"create_task.city" = "城市";
+"create_task.description" = "任务详情";
+"create_task.description_placeholder" = "请详细描述您的需求、时间、特殊要求等。描述越详细，越容易被接受...";
+"create_task.online" = "线上";
+"create_task.reward" = "任务奖励";
+"create_task.title" = "任务标题";
+"create_task.title_placeholder" = "简要描述您的需求（例如：代取包裹）";
 
 // MARK: - Task Expert
 "task_expert.become_expert" = "成为达人";
@@ -673,6 +994,36 @@
 "task_expert.full" = "已满";
 "task_expert.application_message" = "申请留言";
 "task_expert.negotiate_price" = "议价金额";
+"task_expert.application_submitted_message" = "您的申请已提交，我们将在3-5个工作日内完成审核";
+"task_expert.applied" = "已申请";
+"task_expert.apply_title" = "申请成为任务达人";
+"task_expert.by_appointment" = "预约制";
+"task_expert.exclusive_badge" = "专属徽章";
+"task_expert.exclusive_badge_desc" = "显示达人认证徽章，提升专业形象";
+"task_expert.fill_application" = "填写申请信息";
+"task_expert.fill_application_desc" = "介绍您的专业技能和经验";
+"task_expert.more_exposure" = "更多曝光";
+"task_expert.more_exposure_desc" = "您的服务将优先展示，获得更多用户关注";
+"task_expert.more_orders" = "更多订单";
+"task_expert.more_orders_desc" = "获得更多任务申请，增加收入机会";
+"task_expert.no_activities" = "暂无活动";
+"task_expert.no_activities_message" = "目前还没有活动记录";
+"task_expert.no_applied_message" = "您还没有申请过任何活动";
+"task_expert.no_experts" = "暂无达人";
+"task_expert.no_experts_message" = "目前还没有任务达人，敬请期待...";
+"task_expert.no_experts_search_message" = "尝试调整筛选条件";
+"task_expert.no_favorites" = "暂无收藏";
+"task_expert.no_favorites_message" = "您还没有收藏任何达人";
+"task_expert.platform_support" = "平台支持";
+"task_expert.platform_support_desc" = "享受平台提供的专业支持和资源";
+"task_expert.search_prompt" = "搜索任务达人";
+"task_expert.start_service" = "开始服务";
+"task_expert.start_service_desc" = "开始提供专业服务";
+"task_expert.submit_review" = "提交评价";
+"task_expert.submit_review_desc" = "提交服务评价";
+"task_expert.title" = "任务达人";
+"task_expert.what_is" = "什么是任务达人？";
+"task_expert.what_is_content" = "任务达人是平台认证的专业服务提供者，拥有丰富的经验和良好的声誉。成为任务达人后，您的服务将获得更多曝光，吸引更多客户";
 "task_expert.expert_negotiate_price" = "任务达人提出议价：";
 "task_expert.view_task" = "查看任务";
 "task_expert.task_details" = "任务详情: %@";
@@ -686,6 +1037,7 @@
 "forum.verification_pending" = "您的学生认证申请正在审核中，请耐心等待";
 "forum.verification_rejected" = "您的学生认证申请未通过，请重新提交";
 "forum.complete_verification" = "请完成学生认证以访问社区功能";
+"forum.complete_verification_message" = "请完成学生认证以访问社区功能";
 "forum.go_verify" = "去认证";
 "forum.no_posts" = "暂无帖子";
 "forum.official" = "官方";
@@ -709,6 +1061,30 @@
 "info.terms_of_service" = "服务条款";
 "info.privacy_policy" = "隐私政策";
 "info.last_updated" = "最后更新：2024年1月1日";
+"info.about_us" = "关于我们";
+"info.our_mission" = "我们的使命";
+"info.our_vision" = "我们的愿景";
+"info.about_us_content" = "Link²Ur 是一个创新的任务发布与接取平台，致力于连接需要帮助的人和愿意提供帮助的人。我们相信每个人都有自己的技能和时间，通过平台可以让这些资源得到更好的利用。";
+"info.our_mission_content" = "让任务发布和接取变得简单、高效、安全。我们致力于打造一个值得信赖的社区平台，让每个人都能找到合适的任务，也能为他人提供帮助。";
+"info.our_vision_content" = "成为英国最受欢迎的任务平台，连接成千上万的用户，创造更多价值，让社区更加紧密。";
+"vip.member" = "VIP 会员";
+"vip.become_vip" = "成为 VIP 会员";
+"vip.enjoy_benefits" = "享受专属权益和特权";
+"vip.unlock_privileges" = "解锁更多特权和服务";
+"vip.priority_recommendation" = "优先推荐";
+"vip.priority_recommendation_desc" = "您的任务和申请将优先展示，获得更多曝光机会";
+"vip.fee_discount" = "手续费优惠";
+"vip.fee_discount_desc" = "享受更低的任务发布手续费，节省更多成本";
+"vip.exclusive_badge" = "专属标识";
+"vip.exclusive_badge_desc" = "显示专属 VIP 标识，提升您的信誉度";
+"vip.exclusive_activity" = "专属活动";
+"vip.exclusive_activity_desc" = "参与 VIP 专属活动和优惠，获得更多奖励";
+"vip.faq_how_to_upgrade" = "如何升级会员？";
+"vip.faq_how_to_upgrade_answer" = "目前会员升级功能正在开发中，您可以联系管理员手动升级，或等待自动升级功能上线。";
+"vip.faq_when_effective" = "会员权益何时生效？";
+"vip.faq_when_effective_answer" = "会员权益在升级后立即生效，您可以立即享受相应的特权服务。";
+"vip.faq_can_cancel" = "可以随时取消会员吗？";
+"vip.faq_can_cancel_answer" = "是的，您可以随时联系管理员取消会员服务，取消后将在下个计费周期生效。";
 
 // MARK: - Share
 "share.wechat" = "微信";
@@ -730,6 +1106,33 @@
 "wallet.recent_transactions" = "最近交易";
 "wallet.balance" = "钱包余额";
 "wallet.my_wallet" = "我的钱包";
+"wallet.payout_management" = "提现管理";
+"wallet.payment_records" = "支付记录";
+"wallet.payment_records_subtitle" = "查看所有支付记录";
+"wallet.payout_management_subtitle" = "管理您的提现";
+
+// MARK: - Settings
+"settings.notifications" = "通知设置";
+"settings.allow_notifications" = "允许通知";
+"settings.appearance" = "外观";
+"settings.theme_mode" = "主题模式";
+"settings.membership" = "会员";
+"settings.vip_membership" = "VIP会员";
+"settings.help_support" = "帮助与支持";
+"settings.faq" = "常见问题";
+"settings.contact_support" = "联系客服";
+"settings.legal" = "法律信息";
+"settings.about" = "关于";
+"settings.app_name" = "应用名称";
+"settings.payment_account" = "收款账户";
+"settings.setup_payment_account" = "设置收款账户";
+"settings.account" = "账户信息";
+"settings.user_id" = "用户ID";
+
+// MARK: - Theme
+"theme.system" = "跟随系统";
+"theme.light" = "浅色";
+"theme.dark" = "深色";
 
 // MARK: - Payment
 "payment.loading_form" = "正在加载支付表单...";
@@ -761,3 +1164,103 @@
 "payment.retry" = "重试";
 "payment.retry_payment" = "重试支付";
 "payment.coupons" = "优惠券";
+"payment.no_payout_records" = "无提现记录";
+"payment.no_payout_records_message" = "还没有提现记录";
+"payment.view_details" = "查看详情";
+"payment.payout" = "提现";
+"payment.no_available_balance" = "无可用余额";
+"payment.payout_records" = "支付记录";
+"payment.total_balance" = "总余额";
+"payment.available_balance" = "可用余额";
+"payment.pending" = "待处理";
+"payment.payout_amount" = "提现金额";
+"payment.payout_amount_title" = "提现金额";
+"payment.income_amount" = "收入金额";
+"payment.note_optional" = "备注（可选）";
+"payment.payout_note" = "提现备注";
+"payment.confirm_payout" = "确认提现";
+"payment.account_info" = "账户信息";
+"payment.account_details" = "账户详情";
+"payment.open_stripe_dashboard" = "打开 Stripe 控制台";
+"payment.external_account" = "外部账户";
+"payment.no_external_account" = "无外部账户";
+"payment.details" = "详情";
+"payment.account_id" = "账户ID";
+"payment.display_name" = "显示名称";
+"payment.country" = "国家";
+"payment.account_type" = "账户类型";
+"payment.details_submitted" = "详情已提交";
+"payment.charges_enabled" = "收款已启用";
+"payment.payouts_enabled" = "提现已启用";
+"payment.yes" = "是";
+"payment.no" = "否";
+"payment.bank_account" = "银行账户";
+"payment.card" = "卡片";
+"payment.bank_name" = "银行名称";
+"payment.account_last4" = "账户后4位";
+"payment.routing_number" = "路由号码";
+"payment.account_holder" = "账户持有人";
+"payment.holder_type" = "持有人类型";
+"payment.individual" = "个人";
+"payment.company" = "公司";
+"payment.status" = "状态";
+"payment.card_brand" = "卡片品牌";
+"payment.card_last4" = "卡片后4位";
+"payment.expiry" = "有效期";
+"payment.card_type" = "卡片类型";
+"payment.credit_card" = "信用卡";
+"payment.debit_card" = "借记卡";
+"payment.transaction_id" = "交易ID";
+"payment.description" = "描述";
+"payment.time" = "时间";
+"payment.type" = "类型";
+"payment.income" = "收入";
+"payment.source" = "来源";
+"payment.account_setup_complete" = "账户设置完成";
+"payment.can_receive_rewards" = "可以接收奖励";
+"payment.account_info_below" = "您的账户信息如下";
+"payment.refresh_account_info" = "刷新账户信息";
+"payment.transaction_details" = "交易详情";
+"payment.complete" = "完成";
+
+// MARK: - My Tasks
+"my_tasks.loading_completed" = "加载已完成任务...";
+"my_tasks.network_unavailable" = "网络不可用";
+"my_tasks.check_network" = "请检查网络连接后重试";
+"my_tasks.no_pending_applications" = "暂无待处理申请";
+"my_tasks.no_pending_applications_message" = "没有待处理的申请记录";
+"my_tasks.pending" = "待处理";
+"my_tasks.application_message" = "申请消息";
+"my_tasks.view_details" = "查看详情";
+
+// MARK: - My Posts
+"my_posts.title" = "我的闲置";
+
+// MARK: - Task Location
+"task_location.address" = "任务地址";
+"task_location.coordinates" = "坐标";
+"task_location.apple_maps" = "Apple 地图";
+"task_location.my_location" = "我的位置";
+"task_location.loading_address" = "加载地址中...";
+"task_location.detail_address" = "详细地址";
+"task_location.search_city" = "搜索或输入城市名称";
+
+// MARK: - Task Preferences
+"task_preferences.title" = "任务偏好";
+"task_preferences.preferred_types" = "偏好任务类型";
+"task_preferences.preferred_types_description" = "选择您感兴趣的任务类型。系统将优先推荐这些类型的任务";
+"task_preferences.preferred_locations" = "偏好地点";
+"task_preferences.preferred_locations_description" = "选择您希望接收任务的地理位置";
+"task_preferences.preferred_levels" = "偏好任务等级";
+"task_preferences.preferred_levels_description" = "选择您感兴趣的任务等级";
+"task_preferences.min_deadline" = "最短截止时间";
+"task_preferences.min_deadline_description" = "设置任务截止时间所需的最少天数。系统将只推荐满足此条件的任务";
+"task_preferences.days" = "天";
+"task_preferences.days_range" = "（至少1天，最多30天）";
+"task_preferences.save" = "保存偏好";
+
+// MARK: - Notification (Additional)
+"notification.contact_service" = "联系客服";
+
+// MARK: - Payment (Additional)
+"payment.payout_management" = "提现管理";

@@ -393,11 +393,11 @@ struct LocationPickerView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     if isLoadingAddress {
-                        Text("正在获取地址...")
+                        Text(LocalizationKey.locationGettingAddress.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                     } else if currentAddress.isEmpty {
-                        Text("拖动地图选择位置")
+                        Text(LocalizationKey.locationDragToSelect.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                     } else {
@@ -431,7 +431,7 @@ struct LocationPickerView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
                             .font(.system(size: 14))
-                        Text("当前位置")
+                        Text(LocalizationKey.locationCurrentLocation.localized)
                             .font(AppTypography.caption)
                         if isLoadingLocation {
                             ProgressView()
@@ -454,7 +454,7 @@ struct LocationPickerView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "globe")
                             .font(.system(size: 14))
-                        Text("线上/远程")
+                        Text(LocalizationKey.locationOnlineRemote.localized)
                             .font(AppTypography.caption)
                     }
                     .foregroundColor(AppColors.primary)

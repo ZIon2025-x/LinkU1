@@ -61,7 +61,7 @@ struct TranslatableText: View {
                             HStack(spacing: 4) {
                                 Image(systemName: showOriginal ? "arrow.uturn.backward" : "text.bubble")
                                     .font(.system(size: 10))
-                                Text(showOriginal ? "显示翻译" : "显示原文")
+                                Text(showOriginal ? LocalizationKey.translationShowTranslation.localized : LocalizationKey.translationShowOriginal.localized)
                                     .font(.caption2)
                             }
                             .foregroundColor(.blue)

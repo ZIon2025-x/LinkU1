@@ -35,7 +35,7 @@ struct TermsView: View {
                 InfoBox(
                     title: isChinese ? "主体信息" : "Entity Information",
                     content: [
-                        isChinese ? "运营方（\"我们\"\"Link²Ur\"）：Zixiong Zhang，以\"Link²Ur\"名义开展测试（trading as）。" : "Operator (\"We\" \"Link²Ur\"): Zixiong Zhang, trading as \"Link²Ur\".",
+                        isChinese ? "运营方（\"我们\"\"Link²Ur\"）：Link²Ur" : "Operator (\"We\" \"Link²Ur\"): Link²Ur",
                         isChinese ? "联系：info@link2ur.com" : "Contact: info@link2ur.com"
                     ]
                 )

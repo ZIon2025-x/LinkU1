@@ -11,8 +11,8 @@ struct LocationInputField: View {
     @Binding var longitude: Double?
     
     // MARK: - Configuration
-    var title: String = "位置"
-    var placeholder: String = "搜索地点或输入 Online"
+    var title: String = LocalizationKey.locationTitle.localized
+    var placeholder: String = LocalizationKey.locationSearchPlaceholder.localized
     var isRequired: Bool = false
     var showOnlineOption: Bool = true
     

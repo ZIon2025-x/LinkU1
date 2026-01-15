@@ -24,11 +24,11 @@ struct StudentVerificationView: View {
                             .font(.system(size: 80))
                             .foregroundColor(AppColors.textTertiary)
                         
-                        Text("login.required")
+                        Text(LocalizationKey.loginRequired.localized)
                             .font(AppTypography.title3)
                             .foregroundColor(AppColors.textPrimary)
                         
-                        Text("login.required_for_verification")
+                        Text(LocalizationKey.loginRequiredForVerification.localized)
                             .font(AppTypography.body)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
@@ -36,7 +36,7 @@ struct StudentVerificationView: View {
                         Button(action: {
                             showLogin = true
                         }) {
-                            Text("login.login_now")
+                            Text(LocalizationKey.loginLoginNow.localized)
                                 .font(AppTypography.bodyBold)
                                 .foregroundColor(.white)
                                 .frame(width: 200)
@@ -263,7 +263,7 @@ struct StatusCardView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(status.isVerified ? "已认证" : "未认证")
+                    Text(status.isVerified ? LocalizationKey.studentVerificationVerified.localized : LocalizationKey.studentVerificationUnverified.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -406,7 +406,7 @@ struct SubmitVerificationView: View {
                                 } else {
                                     IconStyle.icon("paperplane.fill", size: 18)
                                 }
-                                Text(isSubmitting ? "正在提交..." : "发送验证邮件")
+                                Text(isSubmitting ? LocalizationKey.studentVerificationSubmitting.localized : LocalizationKey.studentVerificationSendEmail.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -523,7 +523,7 @@ struct RenewVerificationView: View {
                                 } else {
                                     IconStyle.icon("arrow.clockwise", size: 18)
                                 }
-                                Text(isRenewing ? "正在续期..." : "立即续期")
+                                Text(isRenewing ? LocalizationKey.studentVerificationRenewing.localized : LocalizationKey.studentVerificationRenewNow.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -640,7 +640,7 @@ struct ChangeEmailView: View {
                                 } else {
                                     IconStyle.icon("arrow.left.and.right", size: 18)
                                 }
-                                Text(isChanging ? "正在更换..." : "确认更换")
+                                Text(isChanging ? LocalizationKey.studentVerificationChanging.localized : LocalizationKey.studentVerificationConfirmChange.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
@@ -712,7 +712,7 @@ struct StudentBenefitsCard: View {
             HStack(spacing: AppSpacing.sm) {
                 IconStyle.icon("sparkles", size: IconStyle.medium)
                     .foregroundColor(AppColors.primary)
-                Text(isVerified ? "您已享有的学生特权" : "完成认证后，您将获得")
+                Text(isVerified ? LocalizationKey.studentVerificationBenefitsTitleVerified.localized : LocalizationKey.studentVerificationBenefitsTitleUnverified.localized)
                     .font(AppTypography.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)

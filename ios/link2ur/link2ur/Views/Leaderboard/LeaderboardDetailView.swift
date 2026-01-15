@@ -373,7 +373,7 @@ struct LeaderboardItemCard: View {
                     Text("·")
                         .foregroundColor(AppColors.textQuaternary)
                     
-                    Text("\(netVotes) 净分")
+                    Text("\(netVotes) \(LocalizationKey.leaderboardNetScore.localized)")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                 }

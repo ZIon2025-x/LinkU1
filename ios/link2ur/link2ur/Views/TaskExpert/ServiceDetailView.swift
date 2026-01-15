@@ -18,7 +18,7 @@ struct ServiceDetailView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text("加载中...")
+                    Text(LocalizationKey.serviceLoading.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -58,7 +58,7 @@ struct ServiceDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("服务信息加载失败")
+                    Text(LocalizationKey.serviceLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -301,7 +301,7 @@ struct TimeSlotCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 10))
-                    Text("\(slot.currentParticipants)/\(slot.maxParticipants) 人已约")
+                    Text("\(slot.currentParticipants)/\(slot.maxParticipants) \(LocalizationKey.activityPersonsBooked.localized)")
                         .font(.system(size: 11))
                 }
                 .foregroundColor(AppColors.textSecondary)
@@ -365,7 +365,7 @@ struct ApplyServiceSheet: View {
                             .overlay(
                                 Group {
                                     if message.isEmpty {
-                                        Text("简单说明你的需求，方便达人了解...")
+                                        Text(LocalizationKey.serviceNeedDescription.localized)
                                             .font(.system(size: 14))
                                             .foregroundColor(AppColors.textTertiary)
                                             .padding(.leading, 16)

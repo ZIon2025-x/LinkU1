@@ -90,3 +90,10 @@ extension URL {
     }
 }
 
+// MARK: - Identifiable Conformance
+extension URL: @retroactive Identifiable {
+    public var id: String {
+        return absoluteString
+    }
+}
+

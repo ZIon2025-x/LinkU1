@@ -6,7 +6,13 @@ struct NotificationCenterView: View {
     @State private var searchText = ""
     @StateObject private var notificationViewModel = NotificationViewModel()
     
-    let tabs = ["系统通知", "客服中心", "任务聊天"]
+    private var tabs: [String] {
+        [
+            LocalizationKey.notificationSystemNotification.localized,
+            LocalizationKey.notificationCustomerService.localized,
+            LocalizationKey.notificationTaskChat.localized
+        ]
+    }
     
     var body: some View {
         NavigationView {
@@ -31,7 +37,7 @@ struct NotificationCenterView: View {
                                 .foregroundColor(AppColors.textSecondary)
                                 .font(.system(size: 16))
                             
-                            TextField("搜索", text: $searchText)
+                            TextField(LocalizationKey.commonSearch.localized, text: $searchText)
                                 .font(.system(size: 15))
                         }
                         .padding(.horizontal, 12)
@@ -240,11 +246,13 @@ struct SystemMessageView: View {
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .refreshable {
-            viewModel.loadNotifications()
+            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
+            viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
         }
         .onAppear {
+            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
             if viewModel.notifications.isEmpty {
-                viewModel.loadNotifications()
+                viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
             }
         }
     }

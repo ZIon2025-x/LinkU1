@@ -31,7 +31,7 @@ struct LeaderboardView: View {
                     }) {
                         HStack {
                             IconStyle.icon("plus.circle.fill", size: 18)
-                            Text("申请新榜单")
+                            Text(LocalizationKey.leaderboardApplyNew.localized)
                         }
                         .font(AppTypography.bodyBold)
                     }

@@ -29,6 +29,9 @@ enum APIEndpoints {
         static let notifications = "/api/users/notifications"
         static let unreadNotifications = "/api/users/notifications/unread"
         static let unreadNotificationCount = "/api/users/notifications/unread/count"
+        static func notificationsWithRecentRead(limit: Int = 10) -> String {
+            "/api/users/notifications/with-recent-read?recent_read_limit=\(limit)"
+        }
         static func markNotificationRead(_ id: Int) -> String {
             "/api/users/notifications/\(id)/read"
         }

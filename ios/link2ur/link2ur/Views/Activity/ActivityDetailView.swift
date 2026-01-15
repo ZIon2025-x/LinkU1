@@ -600,7 +600,7 @@ struct ActivityBottomBar: View {
                     .disabled(isTogglingFavorite)
                     
                     if activity.isEnded {
-                        Text("activity.ended")
+                        Text(LocalizationKey.activityEnded.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -609,7 +609,7 @@ struct ActivityBottomBar: View {
                             .cornerRadius(AppCornerRadius.medium)
                     } else {
                         Button(action: onApply) {
-                            Text(activity.isFull ? "activity.full" : "activity.apply")
+                            Text(activity.isFull ? LocalizationKey.activityFull.localized : LocalizationKey.activityApply.localized)
                                 .font(AppTypography.bodyBold)
                         }
                         .buttonStyle(PrimaryButtonStyle())
@@ -870,7 +870,7 @@ struct ActivityTimeSlotCard: View {
                 Text(formatTimeRange(slot.slotStartDatetime, end: slot.slotEndDatetime))
                     .font(.system(size: 14, weight: .bold))
                 
-                Text("\(slot.currentParticipants)/\(slot.maxParticipants) 人")
+                Text("\(slot.currentParticipants)/\(slot.maxParticipants) \(LocalizationKey.activityPerson.localized)")
                     .font(.system(size: 11))
                 
                 if let price = slot.activityPrice ?? slot.pricePerParticipant {

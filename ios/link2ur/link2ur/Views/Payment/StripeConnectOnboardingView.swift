@@ -293,7 +293,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         // }
         
         controller.delegate = context.coordinator
-        controller.title = "设置收款账户"
+        controller.title = LocalizationKey.paymentSetupAccount.localized
         
         // 创建容器视图控制器来持有和展示 AccountOnboardingController
         let containerVC = ContainerViewController()

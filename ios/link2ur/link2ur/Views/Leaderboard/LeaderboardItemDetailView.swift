@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct LeaderboardItemDetailView: View {
     let itemId: Int
@@ -15,6 +16,9 @@ struct LeaderboardItemDetailView: View {
     @State private var voteComment: String = ""
     @State private var isAnonymous: Bool = false
     @State private var selectedImageIndex = 0
+    @State private var websiteURL: URL?
+    @State private var showCopySuccess = false
+    @State private var copiedText = ""
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -74,7 +78,7 @@ struct LeaderboardItemDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("竞品信息加载失败")
+                    Text(LocalizationKey.leaderboardItemLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -129,6 +133,18 @@ struct LeaderboardItemDetailView: View {
                     isAnonymous = false
                 }
             )
+        }
+        .sheet(item: $websiteURL) { url in
+            ExternalWebView(url: url, title: LocalizationKey.leaderboardItemWebsite.localized)
+        }
+        .alert(LocalizationKey.commonCopy.localized, isPresented: $showCopySuccess) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {
+                showCopySuccess = false
+            }
+        } message: {
+            if !copiedText.isEmpty {
+                Text(String(format: LocalizationKey.commonCopied.localized, copiedText))
+            }
         }
         .onAppear {
             viewModel.loadItem(itemId: itemId)
@@ -208,7 +224,7 @@ struct LeaderboardItemDetailView: View {
                         )
                         .clipShape(Circle())
                         
-                        Text("由 \(submitter.name) 提交")
+                        Text(String(format: LocalizationKey.leaderboardSubmittedBy.localized, submitter.name))
                             .font(.system(size: 13))
                             .foregroundColor(AppColors.textSecondary)
                         
@@ -241,7 +257,7 @@ struct LeaderboardItemDetailView: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(AppColors.primary)
                     .frame(width: 4, height: 16)
-                Text("竞品详情")
+                Text(LocalizationKey.leaderboardItemDetail.localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -253,7 +269,7 @@ struct LeaderboardItemDetailView: View {
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("暂无描述信息")
+                Text(LocalizationKey.leaderboardNoDescription.localized)
                     .font(.system(size: 14))
                     .foregroundColor(AppColors.textTertiary)
                     .italic()
@@ -274,23 +290,74 @@ struct LeaderboardItemDetailView: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(AppColors.primary)
                     .frame(width: 4, height: 16)
-                Text("联系与位置")
+                Text(LocalizationKey.leaderboardContactLocation.localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(AppColors.textPrimary)
             }
             
             VStack(spacing: 12) {
                 if let address = item.address, !address.isEmpty {
-                    contactRow(icon: "mappin.circle.fill", text: address, color: .red)
+                    clickableContactRow(
+                        icon: "mappin.circle.fill",
+                        text: address,
+                        color: .red,
+                        onTap: {
+                            openInGoogleMaps(address: address)
+                        },
+                        onLongPress: {
+                            Clipboard.copy(address)
+                            copiedText = address
+                            showCopySuccess = true
+                            HapticFeedback.success()
+                        }
+                    )
                 }
                 if let phone = item.phone, !phone.isEmpty {
-                    contactRow(icon: "phone.circle.fill", text: phone, color: .green)
+                    clickableContactRow(
+                        icon: "phone.circle.fill",
+                        text: phone,
+                        color: .green,
+                        onTap: {
+                            openPhoneCall(phone: phone)
+                        },
+                        onLongPress: {
+                            Clipboard.copy(phone)
+                            copiedText = phone
+                            showCopySuccess = true
+                            HapticFeedback.success()
+                        }
+                    )
                 }
                 if let website = item.website, !website.isEmpty {
-                    if let url = URL(string: website) {
-                        Link(destination: url) {
-                            contactRow(icon: "globe", text: website, color: .blue)
-                        }
+                    if let url = website.safeURL {
+                        clickableContactRow(
+                            icon: "globe",
+                            text: website,
+                            color: .blue,
+                            onTap: {
+                                websiteURL = url
+                            },
+                            onLongPress: {
+                                Clipboard.copy(website)
+                                copiedText = website
+                                showCopySuccess = true
+                                HapticFeedback.success()
+                            }
+                        )
+                    } else {
+                        // 如果无法解析为 URL，仍然可以复制
+                        clickableContactRow(
+                            icon: "globe",
+                            text: website,
+                            color: .blue,
+                            onTap: nil,
+                            onLongPress: {
+                                Clipboard.copy(website)
+                                copiedText = website
+                                showCopySuccess = true
+                                HapticFeedback.success()
+                            }
+                        )
                     }
                 }
             }
@@ -316,6 +383,107 @@ struct LeaderboardItemDetailView: View {
         }
     }
     
+    /// 可点击的联系信息行 - 支持点击和长按复制
+    @ViewBuilder
+    private func clickableContactRow(
+        icon: String,
+        text: String,
+        color: Color,
+        onTap: (() -> Void)?,
+        onLongPress: @escaping () -> Void
+    ) -> some View {
+        Button(action: {
+            onTap?()
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(color)
+                    .frame(width: 28, height: 28)
+                    .background(color.opacity(0.15))
+                    .clipShape(Circle())
+                
+                Text(text)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                // 显示操作提示图标（无文字）
+                HStack(spacing: 8) {
+                    if onTap != nil {
+                        Image(systemName: "arrow.up.right.square.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.primary)
+                    }
+                    Image(systemName: "doc.on.doc.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppColors.primary.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppColors.primary.opacity(0.4), lineWidth: 1.5)
+                    )
+            )
+            .shadow(color: AppColors.primary.opacity(0.1), radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    onLongPress()
+                }
+        )
+    }
+    
+    // MARK: - Contact Actions
+    
+    /// 在 Google 地图中打开地址导航
+    private func openInGoogleMaps(address: String) {
+        // 对地址进行 URL 编码
+        guard let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return
+        }
+        
+        // Google Maps URL Scheme: comgooglemaps://
+        // 如果安装了 Google Maps，使用 URL Scheme
+        let urlString = "comgooglemaps://?q=\(encodedAddress)&directionsmode=driving"
+        if let url = URL(string: urlString),
+           UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else {
+            // 如果没有安装 Google Maps，使用网页版
+            let webUrlString = "https://www.google.com/maps/search/?api=1&query=\(encodedAddress)"
+            if let url = URL(string: webUrlString) {
+                UIApplication.shared.open(url)
+            }
+        }
+    }
+    
+    /// 拨打电话
+    private func openPhoneCall(phone: String) {
+        // 清理电话号码，移除空格和特殊字符
+        let cleanedPhone = phone.replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
+        
+        // 使用 tel: URL Scheme 拨打电话
+        if let phoneURL = URL(string: "tel://\(cleanedPhone)") {
+            if UIApplication.shared.canOpenURL(phoneURL) {
+                UIApplication.shared.open(phoneURL)
+            }
+        }
+    }
+    
     @ViewBuilder
     private func statsSection(item: LeaderboardItem) -> some View {
         HStack {
@@ -324,7 +492,7 @@ struct LeaderboardItemDetailView: View {
                 Text("\(netVotes)")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(netVotes >= 0 ? AppColors.success : AppColors.error)
-                Text("当前得分")
+                Text(LocalizationKey.leaderboardCurrentScore.localized)
                     .font(.system(size: 12))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -335,7 +503,7 @@ struct LeaderboardItemDetailView: View {
                 Text("\(upvotes + downvotes)")
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.textPrimary)
-                Text("总投票数")
+                Text(LocalizationKey.leaderboardTotalVotesCount.localized)
                     .font(.system(size: 12))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -349,13 +517,13 @@ struct LeaderboardItemDetailView: View {
         HStack {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .foregroundColor(AppColors.primary)
-            Text("精选留言")
+            Text(LocalizationKey.leaderboardFeaturedComments.localized)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
             
             Spacer()
             
-            Text("\(viewModel.comments.count) 条")
+            Text("\(viewModel.comments.count)")
                 .font(.system(size: 13))
                 .foregroundColor(AppColors.textTertiary)
         }
@@ -370,7 +538,7 @@ struct LeaderboardItemDetailView: View {
                 Image(systemName: "quote.bubble")
                     .font(.system(size: 48, weight: .light))
                     .foregroundColor(AppColors.textQuaternary)
-                Text("暂无留言，快来发表你的看法吧")
+                Text(LocalizationKey.leaderboardNoComments.localized)
                     .font(.system(size: 14))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -397,7 +565,7 @@ struct LeaderboardItemDetailView: View {
             Button(action: { handleVoteAction(type: "downvote") }) {
                 HStack(spacing: 8) {
                     Image(systemName: voteType == "downvote" ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    Text("反对")
+                    Text(LocalizationKey.leaderboardOppose.localized)
                         .fontWeight(.semibold)
                     if downvotes > 0 {
                         Text("\(downvotes)")
@@ -419,7 +587,7 @@ struct LeaderboardItemDetailView: View {
             Button(action: { handleVoteAction(type: "upvote") }) {
                 HStack(spacing: 8) {
                     Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    Text("支持")
+                    Text(LocalizationKey.leaderboardSupport.localized)
                         .fontWeight(.semibold)
                     if upvotes > 0 {
                         Text("\(upvotes)")
@@ -500,7 +668,7 @@ struct LeaderboardItemImageSection: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 40))
                         .foregroundColor(AppColors.primary.opacity(0.3))
-                    Text("暂无图片")
+                    Text(LocalizationKey.leaderboardNoImages.localized)
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.primary.opacity(0.4))
                 }
@@ -535,7 +703,7 @@ struct LeaderboardCommentCard: View {
                         
                         if let voteType = comment.voteType {
                             Label {
-                                Text(voteType == "upvote" ? "支持" : "反对")
+                                Text(voteType == "upvote" ? LocalizationKey.leaderboardSupport.localized : LocalizationKey.leaderboardOppose.localized)
                                     .font(.system(size: 10, weight: .bold))
                             } icon: {
                                 Image(systemName: voteType == "upvote" ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
@@ -594,8 +762,8 @@ struct LeaderboardCommentCard: View {
     }
     
     private var displayName: String {
-        if comment.isAnonymous == true { return "匿名用户" }
-        return comment.author?.name ?? "用户"
+        if comment.isAnonymous == true { return LocalizationKey.leaderboardAnonymousUser.localized }
+        return comment.author?.name ?? LocalizationKey.leaderboardUser.localized
     }
 }
 
@@ -612,7 +780,7 @@ struct VoteCommentModal: View {
         NavigationView {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(voteType == "upvote" ? "支持理由" : "反对理由")
+                    Text(voteType == "upvote" ? LocalizationKey.leaderboardSupportReason.localized : LocalizationKey.leaderboardOpposeReason.localized)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -624,7 +792,7 @@ struct VoteCommentModal: View {
                         .overlay(
                             Group {
                                 if comment.isEmpty {
-                                    Text("写下你的理由让大家参考吧...")
+                                    Text(LocalizationKey.leaderboardWriteReason.localized)
                                         .font(.system(size: 14))
                                         .foregroundColor(AppColors.textTertiary)
                                         .padding(.leading, 16)
@@ -639,7 +807,7 @@ struct VoteCommentModal: View {
                 Toggle(isOn: $isAnonymous) {
                     HStack {
                         Image(systemName: isAnonymous ? "eye.slash.fill" : "eye.fill")
-                        Text("匿名投票")
+                        Text(LocalizationKey.leaderboardAnonymousVote.localized)
                             .font(.system(size: 15))
                     }
                 }
@@ -649,7 +817,7 @@ struct VoteCommentModal: View {
                 Spacer()
                 
                 Button(action: onConfirm) {
-                    Text("提交投票")
+                    Text(LocalizationKey.leaderboardSubmitVote.localized)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -660,7 +828,7 @@ struct VoteCommentModal: View {
                 }
             }
             .padding(24)
-            .navigationTitle(voteType == "upvote" ? "支持竞品" : "反对竞品")
+            .navigationTitle(voteType == "upvote" ? LocalizationKey.leaderboardSupport.localized : LocalizationKey.leaderboardOppose.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {

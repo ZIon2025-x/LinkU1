@@ -27,13 +27,13 @@ struct SubmitLeaderboardItemView: View {
                 VStack(spacing: AppSpacing.xl) {
                     // 1. 基本信息
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "基本信息", icon: "building.2.fill")
+                        SectionHeader(title: LocalizationKey.leaderboardBasicInfo.localized, icon: "building.2.fill")
                         
                         VStack(spacing: AppSpacing.lg) {
                             // 名称
                             EnhancedTextField(
-                                title: "竞品名称",
-                                placeholder: "请输入名称",
+                                title: LocalizationKey.leaderboardItemName.localized,
+                                placeholder: LocalizationKey.leaderboardNamePlaceholder.localized,
                                 text: $name,
                                 icon: "pencil",
                                 isRequired: true
@@ -41,8 +41,8 @@ struct SubmitLeaderboardItemView: View {
                             
                             // 描述
                             EnhancedTextEditor(
-                                title: "竞品描述",
-                                placeholder: "简单介绍一下这个竞品...",
+                                title: LocalizationKey.leaderboardItemDescription.localized,
+                                placeholder: LocalizationKey.leaderboardDescriptionPlaceholder.localized,
                                 text: $description,
                                 height: 120,
                                 characterLimit: 500
@@ -56,13 +56,13 @@ struct SubmitLeaderboardItemView: View {
                     
                     // 2. 联系方式
                     VStack(alignment: .leading, spacing: AppSpacing.md) {
-                        SectionHeader(title: "联系方式 (可选)", icon: "info.circle.fill")
+                        SectionHeader(title: LocalizationKey.leaderboardContactInfo.localized, icon: "info.circle.fill")
                         
                         VStack(spacing: AppSpacing.lg) {
                             // 地址
                             EnhancedTextField(
-                                title: "地址",
-                                placeholder: "请输入详细地址",
+                                title: LocalizationKey.leaderboardItemAddress.localized,
+                                placeholder: LocalizationKey.leaderboardAddressPlaceholder.localized,
                                 text: $address,
                                 icon: "mappin.and.ellipse"
                             )
@@ -79,8 +79,8 @@ struct SubmitLeaderboardItemView: View {
                             
                             // 网站
                             EnhancedTextField(
-                                title: "官方网站",
-                                placeholder: "请输入网站地址",
+                                title: LocalizationKey.leaderboardItemWebsite.localized,
+                                placeholder: LocalizationKey.leaderboardWebsitePlaceholder.localized,
                                 text: $website,
                                 icon: "globe",
                                 keyboardType: .URL,
@@ -117,7 +117,7 @@ struct SubmitLeaderboardItemView: View {
                                             Image(systemName: "plus.viewfinder")
                                                 .font(.system(size: 28))
                                                 .foregroundColor(AppColors.primary)
-                                            Text("添加图片")
+                                            Text(LocalizationKey.leaderboardAddImage.localized)
                                                 .font(.system(size: 11, weight: .medium))
                                                 .foregroundColor(AppColors.textSecondary)
                                         }
@@ -200,7 +200,7 @@ struct SubmitLeaderboardItemView: View {
                             } else {
                                 IconStyle.icon("checkmark.seal.fill", size: 18)
                             }
-                            Text(viewModel.isLoading || isUploading ? "正在提交..." : "提交竞品")
+                            Text(viewModel.isLoading || isUploading ? LocalizationKey.leaderboardSubmitting.localized : LocalizationKey.leaderboardSubmitItem.localized)
                                 .font(AppTypography.bodyBold)
                         }
                     }
@@ -214,7 +214,7 @@ struct SubmitLeaderboardItemView: View {
             }
             .background(AppColors.background)
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("提交竞品")
+            .navigationTitle(LocalizationKey.leaderboardSubmitItem.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .toolbar {
@@ -255,7 +255,7 @@ struct SubmitLeaderboardItemView: View {
     
     private func submitItem() {
         guard !name.isEmpty else {
-            errorMessage = "请输入竞品名称"
+            errorMessage = LocalizationKey.leaderboardPleaseEnterItemName.localized
             return
         }
         

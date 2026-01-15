@@ -21,29 +21,29 @@ struct VIPView: View {
                     
                     VIPBenefitRow(
                         icon: "star.fill",
-                        title: "优先推荐",
-                        description: "您的任务和申请将优先展示，获得更多曝光机会",
+                        title: LocalizationKey.vipPriorityRecommendation.localized,
+                        description: LocalizationKey.vipPriorityRecommendationDesc.localized,
                         color: .yellow
                     )
                     
                     VIPBenefitRow(
                         icon: "percent",
-                        title: "手续费优惠",
-                        description: "享受更低的任务发布手续费，节省更多成本",
+                        title: LocalizationKey.vipFeeDiscount.localized,
+                        description: LocalizationKey.vipFeeDiscountDesc.localized,
                         color: .green
                     )
                     
                     VIPBenefitRow(
                         icon: "crown.fill",
-                        title: "专属标识",
-                        description: "显示专属 VIP 标识，提升您的信誉度",
+                        title: LocalizationKey.vipExclusiveBadge.localized,
+                        description: LocalizationKey.vipExclusiveBadgeDesc.localized,
                         color: .purple
                     )
                     
                     VIPBenefitRow(
                         icon: "gift.fill",
-                        title: "专属活动",
-                        description: "参与 VIP 专属活动和优惠，获得更多奖励",
+                        title: LocalizationKey.vipExclusiveActivity.localized,
+                        description: LocalizationKey.vipExclusiveActivityDesc.localized,
                         color: .orange
                     )
                 }
@@ -51,32 +51,32 @@ struct VIPView: View {
                 
                 // 常见问题
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("常见问题")
+                    Text(LocalizationKey.infoFaq.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                         .padding(.horizontal, AppSpacing.md)
                     
                     FAQRow(
-                        question: "如何升级会员？",
-                        answer: "目前会员升级功能正在开发中，您可以联系管理员手动升级，或等待自动升级功能上线。"
+                        question: LocalizationKey.vipFaqHowToUpgrade.localized,
+                        answer: LocalizationKey.vipFaqHowToUpgradeAnswer.localized
                     )
                     
                     FAQRow(
-                        question: "会员权益何时生效？",
-                        answer: "会员权益在升级后立即生效，您可以立即享受相应的特权服务。"
+                        question: LocalizationKey.vipFaqWhenEffective.localized,
+                        answer: LocalizationKey.vipFaqWhenEffectiveAnswer.localized
                     )
                     
                     FAQRow(
-                        question: "可以随时取消会员吗？",
-                        answer: "是的，您可以随时联系管理员取消会员服务，取消后将在下个计费周期生效。"
+                        question: LocalizationKey.vipFaqCanCancel.localized,
+                        answer: LocalizationKey.vipFaqCanCancelAnswer.localized
                     )
                 }
                 .padding(.top, AppSpacing.md)
                 
                 // 联系管理员
                 VStack(spacing: AppSpacing.md) {
-                    Text("需要帮助？")
+                    Text(LocalizationKey.infoNeedHelp.localized)
                         .font(AppTypography.title3)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -106,7 +106,7 @@ struct VIPView: View {
             }
             .padding(.bottom, AppSpacing.xl)
         }
-        .navigationTitle("VIP 会员")
+        .navigationTitle(LocalizationKey.vipMember.localized)
         .navigationBarTitleDisplayMode(.large)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -151,12 +151,12 @@ struct VIPCardView: View {
             
             // 状态文本
             VStack(spacing: AppSpacing.sm) {
-                Text(isVIP ? "您是 VIP 会员" : "成为 VIP 会员")
+                Text(isVIP ? LocalizationKey.vipMember.localized : LocalizationKey.vipBecomeVip.localized)
                     .font(AppTypography.title2)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text(isVIP ? "享受专属权益和特权" : "解锁更多特权和服务")
+                Text(isVIP ? LocalizationKey.vipEnjoyBenefits.localized : LocalizationKey.vipUnlockPrivileges.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)

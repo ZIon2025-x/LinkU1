@@ -25,7 +25,18 @@ public struct LocalizationHelper {
         bundle: Bundle = .main,
         comment: String = ""
     ) -> String {
-        return NSLocalizedString(key, tableName: tableName, bundle: bundle, comment: comment)
+        let localized = NSLocalizedString(key, tableName: tableName, bundle: bundle, comment: comment)
+        // 如果返回的是key本身（说明没有找到翻译），尝试从英文文件加载
+        if localized == key && bundle == .main {
+            if let englishPath = Bundle.main.path(forResource: "en", ofType: "lproj"),
+               let englishBundle = Bundle(path: englishPath) {
+                let englishLocalized = NSLocalizedString(key, tableName: tableName, bundle: englishBundle, comment: comment)
+                if englishLocalized != key {
+                    return englishLocalized
+                }
+            }
+        }
+        return localized
     }
     
     /// 获取本地化字符串（带参数）
@@ -90,6 +101,10 @@ public enum LocalizationKey: String {
     case commonNotProvided = "common.not_provided"
     case commonLoadMore = "common.load_more"
     case commonPleaseSelect = "common.please_select"
+    case commonCopy = "common.copy"
+    case commonCopied = "common.copied"
+    case commonTap = "common.tap"
+    case commonLongPressToCopy = "common.long_press_to_copy"
     
     // MARK: - App
     case appName = "app.name"
@@ -137,6 +152,12 @@ public enum LocalizationKey: String {
     case authTermsOfService = "auth.terms_of_service"
     case authPrivacyPolicy = "auth.privacy_policy"
     case authLoginLater = "auth.login_later"
+    
+    // MARK: - Login Required
+    case loginRequired = "login.required"
+    case loginRequiredForPoints = "login.required_for_points"
+    case loginRequiredForVerification = "login.required_for_verification"
+    case loginLoginNow = "login.login_now"
     
     // MARK: - Home
     case homeExperts = "home.experts"
@@ -259,6 +280,43 @@ public enum LocalizationKey: String {
     case leaderboardSortLatest = "leaderboard.sort_latest"
     case leaderboardNoItems = "leaderboard.no_items"
     case leaderboardNoItemsMessage = "leaderboard.no_items_message"
+    case leaderboardItemLoadFailed = "leaderboard.item_load_failed"
+    case leaderboardSubmittedBy = "leaderboard.submitted_by"
+    case leaderboardItemDetail = "leaderboard.item_detail"
+    case leaderboardNoDescription = "leaderboard.no_description"
+    case leaderboardContactLocation = "leaderboard.contact_location"
+    case leaderboardCurrentScore = "leaderboard.current_score"
+    case leaderboardTotalVotesCount = "leaderboard.total_votes_count"
+    case leaderboardFeaturedComments = "leaderboard.featured_comments"
+    case leaderboardNoComments = "leaderboard.no_comments"
+    case leaderboardOppose = "leaderboard.oppose"
+    case leaderboardSupport = "leaderboard.support"
+    case leaderboardNoImages = "leaderboard.no_images"
+    case leaderboardWriteReason = "leaderboard.write_reason"
+    case leaderboardAnonymousVote = "leaderboard.anonymous_vote"
+    case leaderboardSubmitVote = "leaderboard.submit_vote"
+    case leaderboardAddImage = "leaderboard.add_image"
+    case leaderboardApplyNew = "leaderboard.apply_new"
+    case leaderboardSupportReason = "leaderboard.support_reason"
+    case leaderboardOpposeReason = "leaderboard.oppose_reason"
+    case leaderboardAnonymousUser = "leaderboard.anonymous_user"
+    case leaderboardNetScore = "leaderboard.net_score"
+    case leaderboardBasicInfo = "leaderboard.basic_info"
+    case leaderboardContactInfo = "leaderboard.contact_info"
+    case leaderboardImageDisplay = "leaderboard.image_display"
+    case leaderboardItemName = "leaderboard.item_name"
+    case leaderboardItemDescription = "leaderboard.item_description"
+    case leaderboardItemAddress = "leaderboard.item_address"
+    case leaderboardItemPhone = "leaderboard.item_phone"
+    case leaderboardItemWebsite = "leaderboard.item_website"
+    case leaderboardSubmitItem = "leaderboard.submit_item"
+    case leaderboardSubmitting = "leaderboard.submitting"
+    case leaderboardNamePlaceholder = "leaderboard.name_placeholder"
+    case leaderboardDescriptionPlaceholder = "leaderboard.description_placeholder"
+    case leaderboardAddressPlaceholder = "leaderboard.address_placeholder"
+    case leaderboardPhonePlaceholder = "leaderboard.phone_placeholder"
+    case leaderboardWebsitePlaceholder = "leaderboard.website_placeholder"
+    case leaderboardPleaseEnterItemName = "leaderboard.please_enter_item_name"
     
     // MARK: - Notifications
     case notificationsNotifications = "notifications.notifications"
@@ -316,6 +374,9 @@ public enum LocalizationKey: String {
     case activityPreferredDate = "activity.preferred_date"
     case activityConfirmApply = "activity.confirm_apply"
     case activityApplyToJoin = "activity.apply_to_join"
+    case activityApply = "activity.apply"
+    case activityPerson = "activity.person"
+    case activityPersonsBooked = "activity.persons_booked"
     
     // MARK: - Search
     case searchSearch = "search.search"
@@ -470,7 +531,19 @@ public enum LocalizationKey: String {
     case pointsAndCoupons = "points.points_and_coupons"
     case pointsShowRecentOnly = "points.show_recent_only"
     case pointsAmountFormat = "points.amount_format"
+    case pointsBalance = "points.balance"
+    case pointsBalanceFormat = "points.balance_format"
+    case pointsUnit = "points.unit"
+    case pointsTotalEarned = "points.total_earned"
+    case pointsTotalSpent = "points.total_spent"
+    case pointsBalanceAfter = "points.balance_after"
     case couponCoupons = "coupon.coupons"
+    case couponAllowed = "coupon.allowed"
+    case couponForbidden = "coupon.forbidden"
+    case couponCheckInRules = "coupon.check_in_rules"
+    case couponStatusUnused = "coupon.status_unused"
+    case couponStatusUsed = "coupon.status_used"
+    case couponStatusExpired = "coupon.status_expired"
     case couponCheckIn = "coupon.check_in"
     case couponDiscount = "coupon.discount"
     case couponAvailable = "coupon.available"
@@ -521,6 +594,11 @@ public enum LocalizationKey: String {
     case settingsSetupPaymentAccount = "settings.setup_payment_account"
     case settingsAccount = "settings.account"
     case settingsUserID = "settings.user_id"
+    
+    // MARK: - Theme
+    case themeSystem = "theme.system"
+    case themeLight = "theme.light"
+    case themeDark = "theme.dark"
     
     // MARK: - My Tasks
     case myTasksLoadingCompleted = "my_tasks.loading_completed"
@@ -582,6 +660,16 @@ public enum LocalizationKey: String {
     
     // MARK: - Student Verification
     case studentVerificationStudentVerification = "student_verification.student_verification"
+    case studentVerificationSubmitting = "student_verification.submitting"
+    case studentVerificationSendEmail = "student_verification.send_email"
+    case studentVerificationRenewing = "student_verification.renewing"
+    case studentVerificationRenewNow = "student_verification.renew_now"
+    case studentVerificationChanging = "student_verification.changing"
+    case studentVerificationConfirmChange = "student_verification.confirm_change"
+    case studentVerificationVerified = "student_verification.verified"
+    case studentVerificationUnverified = "student_verification.unverified"
+    case studentVerificationBenefitsTitleVerified = "student_verification.benefits_title_verified"
+    case studentVerificationBenefitsTitleUnverified = "student_verification.benefits_title_unverified"
     
     // MARK: - Stripe Connect
     case stripeConnectSetupAccount = "stripe_connect.setup_account"
@@ -637,6 +725,7 @@ public enum LocalizationKey: String {
     // MARK: - Notification
     case notificationSystemMessages = "notification.system_messages"
     case notificationViewAllNotifications = "notification.view_all_notifications"
+    case notificationSystemNotification = "notification.system_notification"
     
     // MARK: - Customer Service (Extended)
     case customerServiceQueuePosition = "customer_service.queue_position"
@@ -841,6 +930,8 @@ public enum LocalizationKey: String {
     case messagesNoInteractions = "messages.no_interactions"
     case messagesNoInteractionsMessage = "messages.no_interactions_message"
     case messagesClickToView = "messages.click_to_view"
+    case messagesLoadingMore = "messages.loading_more"
+    case messagesLoadMoreHistory = "messages.load_more_history"
     
     // MARK: - Customer Service (Extended)
     case customerServiceWelcome = "customer_service.welcome"
@@ -873,6 +964,8 @@ public enum LocalizationKey: String {
     case ratingComment = "rating.comment"
     case ratingAnonymous = "rating.anonymous"
     case ratingSubmit = "rating.submit"
+    case ratingAnonymousRating = "rating.anonymous_rating"
+    case ratingSubmitRating = "rating.submit_rating"
     
     // MARK: - Menu
     case menuMenu = "menu.menu"
@@ -965,6 +1058,7 @@ public enum LocalizationKey: String {
     case forumVerificationPending = "forum.verification_pending"
     case forumVerificationRejected = "forum.verification_rejected"
     case forumCompleteVerification = "forum.complete_verification"
+    case forumCompleteVerificationMessage = "forum.complete_verification_message"
     case forumGoVerify = "forum.go_verify"
     case forumReplies = "forum.replies"
     case forumLoadRepliesFailed = "forum.load_replies_failed"
@@ -985,6 +1079,32 @@ public enum LocalizationKey: String {
     case infoTermsOfService = "info.terms_of_service"
     case infoPrivacyPolicy = "info.privacy_policy"
     case infoLastUpdated = "info.last_updated"
+    case infoAboutUs = "info.about_us"
+    case infoOurMission = "info.our_mission"
+    case infoOurVision = "info.our_vision"
+    case infoAboutUsContent = "info.about_us_content"
+    case infoOurMissionContent = "info.our_mission_content"
+    case infoOurVisionContent = "info.our_vision_content"
+    
+    // MARK: - VIP
+    case vipMember = "vip.member"
+    case vipBecomeVip = "vip.become_vip"
+    case vipEnjoyBenefits = "vip.enjoy_benefits"
+    case vipUnlockPrivileges = "vip.unlock_privileges"
+    case vipPriorityRecommendation = "vip.priority_recommendation"
+    case vipPriorityRecommendationDesc = "vip.priority_recommendation_desc"
+    case vipFeeDiscount = "vip.fee_discount"
+    case vipFeeDiscountDesc = "vip.fee_discount_desc"
+    case vipExclusiveBadge = "vip.exclusive_badge"
+    case vipExclusiveBadgeDesc = "vip.exclusive_badge_desc"
+    case vipExclusiveActivity = "vip.exclusive_activity"
+    case vipExclusiveActivityDesc = "vip.exclusive_activity_desc"
+    case vipFaqHowToUpgrade = "vip.faq_how_to_upgrade"
+    case vipFaqHowToUpgradeAnswer = "vip.faq_how_to_upgrade_answer"
+    case vipFaqWhenEffective = "vip.faq_when_effective"
+    case vipFaqWhenEffectiveAnswer = "vip.faq_when_effective_answer"
+    case vipFaqCanCancel = "vip.faq_can_cancel"
+    case vipFaqCanCancelAnswer = "vip.faq_can_cancel_answer"
     
     // MARK: - Flea Market Additional
     case fleaMarketNoImage = "flea_market.no_image"
@@ -1103,16 +1223,29 @@ public enum LocalizationKey: String {
     case taskExpertNoActivities = "task_expert.no_activities"
     case taskExpertNoFavoritesMessage = "task_expert.no_favorites_message"
     case taskExpertNoAppliedMessage = "task_expert.no_applied_message"
+    case taskExpertServicesCount = "task_expert.services_count"
+    case taskExpertCompletionRate = "task_expert.completion_rate"
+    case taskExpertNoServices = "task_expert.no_services"
+    case taskExpertOrder = "task_expert.order"
+    case taskExpertCompletionRatePercent = "task_expert.completion_rate_percent"
+    case taskExpertSearchExperts = "task_expert.search_experts"
+    case taskExpertNoExpertsFound = "task_expert.no_experts_found"
+    case taskExpertNoExpertsFoundMessage = "task_expert.no_experts_found_message"
+    case taskExpertNoExpertsFoundWithQuery = "task_expert.no_experts_found_with_query"
+    case taskExpertSearchTitle = "task_expert.search_title"
+    case taskExpertAllTypes = "task_expert.all_types"
+    case taskExpertType = "task_expert.type"
+    case taskExpertAllCities = "task_expert.all_cities"
     case taskExpertNoActivitiesMessage = "task_expert.no_activities_message"
+    case taskExpertRating = "task_expert.rating"
+    case taskExpertCompleted = "task_expert.completed"
     
     // MARK: - Leaderboard
     case leaderboardApplyTitle = "leaderboard.apply_title"
     case leaderboardInfo = "leaderboard.info"
     case leaderboardName = "leaderboard.name"
-    case leaderboardNamePlaceholder = "leaderboard.name_placeholder"
     case leaderboardRegion = "leaderboard.region"
     case leaderboardDescription = "leaderboard.description"
-    case leaderboardDescriptionPlaceholder = "leaderboard.description_placeholder"
     case leaderboardReason = "leaderboard.reason"
     case leaderboardReasonTitle = "leaderboard.reason_title"
     case leaderboardReasonPlaceholder = "leaderboard.reason_placeholder"
@@ -1144,6 +1277,40 @@ public enum LocalizationKey: String {
     case notificationContactService = "notification.contact_service"
     case notificationTaskChat = "notification.task_chat"
     case notificationTaskChatList = "notification.task_chat_list"
+    
+    // MARK: - Service
+    case serviceLoading = "service.loading"
+    case serviceLoadFailed = "service.load_failed"
+    case serviceNeedDescription = "service.need_description"
+    
+    // MARK: - Location
+    case locationGoogleMaps = "location.google_maps"
+    
+    // MARK: - WebView
+    case webviewWebPage = "webview.web_page"
+    case webviewLoading = "webview.loading"
+    case webviewDone = "webview.done"
+    
+    // MARK: - Profile (Extended)
+    case profileRecentTasks = "profile.recent_tasks"
+    case profileUserReviews = "profile.user_reviews"
+    case profileJoinedDays = "profile.joined_days"
+    case profileReward = "profile.reward"
+    case profileSelectAvatar = "profile.select_avatar"
+    
+    // MARK: - Permission
+    case permissionLocationUsageDescription = "permission.location_usage_description"
+    
+    // MARK: - Location (Extended)
+    case locationTitle = "location.title"
+    case locationSearchPlaceholder = "location.search_placeholder"
+    case locationGettingAddress = "location.getting_address"
+    case locationDragToSelect = "location.drag_to_select"
+    case locationCurrentLocation = "location.current_location"
+    case locationOnlineRemote = "location.online_remote"
+    
+    // MARK: - Payment (Extended)
+    case paymentSetupAccount = "payment.setup_account"
     
     /// 获取本地化字符串
     public var localized: String {

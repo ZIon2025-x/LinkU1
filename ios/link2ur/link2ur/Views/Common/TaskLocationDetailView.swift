@@ -115,7 +115,7 @@ struct TaskLocationDetailView: View {
                                         HStack(spacing: 6) {
                                             Image(systemName: "map.circle.fill")
                                                 .font(.system(size: 14))
-                                            Text("Google 地图")
+                                            Text(LocalizationKey.locationGoogleMaps.localized)
                                                 .font(AppTypography.caption)
                                                 .fontWeight(.medium)
                                         }
@@ -201,7 +201,7 @@ struct TaskLocationDetailView: View {
                                                 HStack(spacing: 6) {
                                                     Image(systemName: "map.circle.fill")
                                                         .font(.system(size: 14))
-                                                    Text("Google 地图")
+                                                    Text(LocalizationKey.locationGoogleMaps.localized)
                                                         .font(AppTypography.caption)
                                                         .fontWeight(.medium)
                                                 }

@@ -210,7 +210,7 @@ struct UnverifiedForumView: View {
                         .padding(.horizontal, AppSpacing.xl)
                 }
             } else {
-                Text("请完成学生认证以访问社区功能")
+                Text(LocalizationKey.forumCompleteVerificationMessage.localized)
                     .font(AppTypography.body)
                     .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)

@@ -16,7 +16,7 @@ struct AvatarPickerView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: AppSpacing.lg) {
-                    Text("选择头像")
+                    Text(LocalizationKey.profileSelectAvatar.localized)
                         .font(AppTypography.title2)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
@@ -72,7 +72,7 @@ struct AvatarPickerView: View {
             .enableSwipeBack()
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(LocalizationKey.webviewDone.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)

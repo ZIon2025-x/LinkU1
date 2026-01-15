@@ -22,11 +22,11 @@ struct CouponPointsView: View {
                         .font(.system(size: 80))
                         .foregroundColor(AppColors.textTertiary)
                     
-                    Text("login.required")
+                    Text(LocalizationKey.loginRequired.localized)
                         .font(AppTypography.title3)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("login.required_for_points")
+                    Text(LocalizationKey.loginRequiredForPoints.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
@@ -34,7 +34,7 @@ struct CouponPointsView: View {
                     Button(action: {
                         showLogin = true
                     }) {
-                        Text("login.login_now")
+                        Text(LocalizationKey.loginLoginNow.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)
                             .frame(width: 200)
@@ -175,7 +175,7 @@ struct PointsView: View {
                         VStack(spacing: AppSpacing.md) {
                             // Allowed
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                Label("可用于", systemImage: "checkmark.circle.fill")
+                                Label(LocalizationKey.couponAllowed.localized, systemImage: "checkmark.circle.fill")
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.success)
                                 
@@ -196,7 +196,7 @@ struct PointsView: View {
                             
                             // Forbidden
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                                Label("不可用于", systemImage: "xmark.circle.fill")
+                                Label(LocalizationKey.couponForbidden.localized, systemImage: "xmark.circle.fill")
                                     .font(AppTypography.caption)
                                     .foregroundColor(AppColors.error)
                                 
@@ -291,7 +291,7 @@ struct PointsBalanceCard: View {
             VStack(spacing: AppSpacing.lg) {
                 // Balance
                 VStack(spacing: 4) {
-                    Text("points.balance")
+                    Text(LocalizationKey.pointsBalance.localized)
                         .font(AppTypography.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.white.opacity(0.8))
@@ -299,7 +299,7 @@ struct PointsBalanceCard: View {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(account.balance)")
                             .font(.system(size: 48, weight: .bold, design: .rounded))
-                        Text("points.unit")
+                        Text(LocalizationKey.pointsUnit.localized)
                             .font(AppTypography.subheadline)
                             .fontWeight(.bold)
                     }
@@ -312,7 +312,7 @@ struct PointsBalanceCard: View {
                 // Stats
                 HStack {
                     BalanceStatItem(
-                        label: String(localized: "points.total_earned"),
+                        label: LocalizationKey.pointsTotalEarned.localized,
                         value: "\(account.totalEarned)",
                         icon: "arrow.down.circle.fill"
                     )
@@ -326,7 +326,7 @@ struct PointsBalanceCard: View {
                     Spacer()
                     
                     BalanceStatItem(
-                        label: String(localized: "points.total_spent"),
+                        label: LocalizationKey.pointsTotalSpent.localized,
                         value: "\(account.totalSpent)",
                         icon: "arrow.up.circle.fill"
                     )
@@ -393,11 +393,11 @@ struct TransactionRowView: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(transaction.amount > 0 ? "+" : "")\(transaction.amount) \(String(localized: "points.unit"))")
+                Text("\(transaction.amount > 0 ? "+" : "")\(transaction.amount) \(LocalizationKey.pointsUnit.localized)")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(transaction.amount > 0 ? AppColors.success : AppColors.textPrimary)
                 
-                Text("\(String(localized: "points.balance_after")): \(transaction.balanceAfter) \(String(localized: "points.unit"))")
+                Text("\(LocalizationKey.pointsBalanceAfter.localized): \(transaction.balanceAfter) \(LocalizationKey.pointsUnit.localized)")
                     .font(.system(size: 11))
                     .foregroundColor(AppColors.textTertiary)
             }
@@ -705,9 +705,9 @@ struct CouponStatusBadge: View {
     
     private var statusText: String {
         switch status {
-        case "unused": return "未使用"
-        case "used": return "已使用"
-        case "expired": return "已过期"
+        case "unused": return LocalizationKey.couponStatusUnused.localized
+        case "used": return LocalizationKey.couponStatusUsed.localized
+        case "expired": return LocalizationKey.couponStatusExpired.localized
         default: return status
         }
     }
@@ -757,7 +757,7 @@ struct CheckInView: View {
                 
                 // Tips
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("签到规则", systemImage: "lightbulb.fill")
+                    Label(LocalizationKey.couponCheckInRules.localized, systemImage: "lightbulb.fill")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -942,7 +942,7 @@ struct RewardRowView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 10))
-                    Text("\(points) \(String(localized: "points.unit"))")
+                    Text("\(points) \(LocalizationKey.pointsUnit.localized)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                 }
                 .foregroundColor(isCompleted ? AppColors.success : AppColors.primary)

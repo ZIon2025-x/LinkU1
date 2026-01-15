@@ -31,7 +31,7 @@ struct PrivacyView: View {
                 InfoBox(
                     title: isChinese ? "控制者（Controller）" : "Controller",
                     content: [
-                        isChinese ? "Zixiong Zhang（trading as \"Link²Ur\"）" : "Zixiong Zhang (trading as \"Link²Ur\")",
+                        isChinese ? "Link²Ur" : "Link²Ur",
                         isChinese ? "联系邮箱：info@link2ur.com" : "Contact Email: info@link2ur.com",
                         isChinese ? "通讯地址：A3, B16 9NB, UK" : "Mailing Address: A3, B16 9NB, UK",
                         isChinese ? "（如需数据保护联系人/DPO，可使用以上邮箱）" : "(For data protection contact/DPO, please use the above email)"

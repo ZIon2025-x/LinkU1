@@ -47,6 +47,36 @@ class NotificationViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    /// 加载所有未读通知和最近已读通知（用于 SystemMessageView）
+    /// 这样用户可以查看所有未读通知并标记为已读
+    func loadNotificationsWithRecentRead(recentReadLimit: Int = 10) {
+        isLoading = true
+        errorMessage = nil
+        
+        // 加载所有未读通知 + 最近已读通知
+        let systemNotifications = apiService.getNotificationsWithRecentRead(recentReadLimit: recentReadLimit)
+            .catch { _ in Just([SystemNotification]()).eraseToAnyPublisher() }
+        
+        // 同时加载论坛通知（用于统一显示）
+        let forumNotifications = apiService.getForumNotifications(page: 1, pageSize: 50)
+            .map { $0.notifications }
+            .catch { _ in Just([ForumNotification]()).eraseToAnyPublisher() }
+        
+        Publishers.Zip(systemNotifications, forumNotifications)
+            .receive(on: DispatchQueue.main)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoading = false
+                if case .failure(let error) = result {
+                    self?.errorMessage = error.localizedDescription
+                }
+            }, receiveValue: { [weak self] (systemNotifs, forumNotifs) in
+                self?.notifications = systemNotifs
+                self?.forumNotifications = forumNotifs
+                self?.updateUnifiedNotifications()
+            })
+            .store(in: &cancellables)
+    }
+    
     private func updateUnifiedNotifications() {
         var unified: [UnifiedNotification] = []
         

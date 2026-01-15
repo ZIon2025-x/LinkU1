@@ -64,7 +64,7 @@ struct ChatView: View {
                                                 Image(systemName: "arrow.up.circle")
                                                     .font(.system(size: 14))
                                             }
-                                            Text(viewModel.isLoadingMore ? "加载中..." : "加载更多历史消息")
+                                            Text(viewModel.isLoadingMore ? LocalizationKey.messagesLoadingMore.localized : LocalizationKey.messagesLoadMoreHistory.localized)
                                                 .font(.system(size: 13))
                                         }
                                         .foregroundColor(AppColors.textSecondary)

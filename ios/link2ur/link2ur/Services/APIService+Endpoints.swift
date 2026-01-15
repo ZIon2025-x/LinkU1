@@ -563,6 +563,11 @@ extension APIService {
         return request([String: Int].self, APIEndpoints.Users.unreadNotificationCount)
     }
     
+    /// 获取所有未读通知和最近N条已读通知
+    func getNotificationsWithRecentRead(recentReadLimit: Int = 10) -> AnyPublisher<[NotificationOut], APIError> {
+        return request([NotificationOut].self, APIEndpoints.Users.notificationsWithRecentRead(limit: recentReadLimit))
+    }
+    
     /// 标记通知为已读（后端返回 NotificationOut）
     /// 注意：发送空 body 以确保后端正确解析 POST 请求
     func markNotificationRead(notificationId: Int) -> AnyPublisher<SystemNotification, APIError> {
