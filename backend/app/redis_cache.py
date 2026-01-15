@@ -6,7 +6,7 @@ import os
 import json
 import logging
 import pickle
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
 from datetime import datetime, timedelta
 
 try:
@@ -135,6 +135,22 @@ class RedisCache:
             logger.error(f"Redis设置失败: {e}")
             return False
     
+    def setex(self, key: str, ttl: int, value: Any) -> bool:
+        """设置缓存数据（带过期时间，与Redis setex方法签名一致）"""
+        if not self.enabled:
+            return False
+        
+        try:
+            # 如果value已经是bytes，直接使用；否则序列化
+            if isinstance(value, bytes):
+                serialized_data = value
+            else:
+                serialized_data = self._serialize(value)
+            return self.redis_client.setex(key, ttl, serialized_data)
+        except RedisError as e:
+            logger.error(f"Redis设置失败: {e}")
+            return False
+    
     def delete(self, key: str) -> bool:
         """删除缓存数据"""
         if not self.enabled:
@@ -159,6 +175,18 @@ class RedisCache:
         except RedisError as e:
             logger.error(f"Redis批量删除失败: {e}")
             return 0
+    
+    def keys(self, pattern: str) -> List[str]:
+        """获取匹配模式的所有键"""
+        if not self.enabled:
+            return []
+        
+        try:
+            return [key.decode('utf-8') if isinstance(key, bytes) else key 
+                    for key in self.redis_client.keys(pattern)]
+        except RedisError as e:
+            logger.error(f"Redis获取键列表失败: {e}")
+            return []
     
     def exists(self, key: str) -> bool:
         """检查键是否存在"""

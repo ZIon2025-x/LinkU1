@@ -238,8 +238,9 @@ def send_apns_notification(
         
         # 尝试导入 PyAPNs2
         try:
-            from apns2 import APNsClient, NotificationRequest, PushType
+            from apns2.client import APNsClient
             from apns2.payload import Payload
+            from apns2.credentials import TokenCredentials
         except ImportError:
             logger.error("PyAPNs2 未安装，无法发送推送通知。请运行: pip install apns2")
             return False
@@ -270,24 +271,31 @@ def send_apns_notification(
             custom=payload_data
         )
         
+        # 创建 Token 凭证（使用 .p8 密钥文件）
+        credentials = TokenCredentials(
+            auth_key_path=key_file,
+            auth_key_id=APNS_KEY_ID,
+            team_id=APNS_TEAM_ID
+        )
+        
         # 创建 APNs 客户端
         apns_client = APNsClient(
-            credentials=key_file,
+            credentials=credentials,
             use_sandbox=APNS_USE_SANDBOX,
             use_alternative_port=False
         )
         
         # 发送通知
         topic = APNS_BUNDLE_ID
-        request = NotificationRequest(
-            device_token=device_token,
-            message=payload,
-            push_type=PushType.ALERT
-        )
+        response = apns_client.send_notification(device_token, payload, topic)
         
-        apns_client.send_notification(request, topic=topic)
-        logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")
-        return True
+        # 检查响应
+        if response.is_successful:
+            logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")
+            return True
+        else:
+            logger.warning(f"APNs 推送通知失败: reason={response.reason}, status={response.status_code}")
+            return False
         
     except Exception as e:
         logger.error(f"发送 APNs 推送通知失败: {e}", exc_info=True)

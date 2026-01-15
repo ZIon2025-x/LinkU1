@@ -5,6 +5,11 @@ import UIKit
 import StripePaymentSheet
 import StripeCore
 
+// 尝试导入 StripePayments（如果可用）
+#if canImport(StripePayments)
+import StripePayments
+#endif
+
 @MainActor
 class PaymentViewModel: ObservableObject {
     @Published var isLoading = false
@@ -32,12 +37,21 @@ class PaymentViewModel: ObservableObject {
         self.apiService = apiService ?? APIService.shared
         
         // 初始化 Stripe
-        StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
+        let publishableKey = Constants.Stripe.publishableKey
+        StripeAPI.defaultPublishableKey = publishableKey
         
-        // 如果提供了 client_secret，先创建 Payment Sheet，然后获取完整的支付信息
+        // PaymentSheet 需要 STPAPIClient.shared.publishableKey
+        #if canImport(StripePayments)
+        STPAPIClient.shared.publishableKey = publishableKey
+        Logger.debug("STPAPIClient.publishableKey 已设置", category: .api)
+        #else
+        Logger.debug("StripePayments 未导入，PaymentSheet 可能使用 StripeAPI.defaultPublishableKey", category: .api)
+        #endif
+        
+        // 如果提供了 client_secret，先调用 API 获取完整的支付信息
+        // 然后使用返回的 client_secret 创建 Payment Sheet（确保使用最新的）
         if let clientSecret = clientSecret {
-            setupPaymentElement(with: clientSecret)
-            // 调用 API 获取完整的支付信息（包括金额、优惠券等）
+            // 先调用 API 获取完整的支付信息（包括金额、优惠券等）
             // 这样不会创建新的 PaymentIntent，而是获取已存在的 PaymentIntent 信息
             loadPaymentInfo()
         }
@@ -177,6 +191,7 @@ class PaymentViewModel: ObservableObject {
         )
         
         self.paymentSheet = paymentSheet
+        Logger.debug("PaymentSheet 创建成功，clientSecret: \(clientSecret.prefix(20))...", category: .api)
     }
     
     func createPaymentIntent(paymentMethod: String = "stripe", pointsAmount: Double? = nil, couponCode: String? = nil) {
@@ -248,12 +263,16 @@ class PaymentViewModel: ObservableObject {
         }
         
         // 如果 PaymentSheet 已存在且使用相同的 client_secret，则不需要重新创建
-        if let existingSheet = paymentSheet,
-           let existingClientSecret = initialClientSecret,
-           existingClientSecret == clientSecret {
+        // 但如果 client_secret 不同，需要重新创建（使用最新的）
+        if let existingClientSecret = initialClientSecret,
+           existingClientSecret == clientSecret,
+           paymentSheet != nil {
             Logger.debug("PaymentSheet 已存在且 client_secret 相同，跳过重新创建", category: .api)
             return
         }
+        
+        // 更新 initialClientSecret 为最新的
+        initialClientSecret = clientSecret
         
         Logger.debug("创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...", category: .api)
         setupPaymentElement(with: clientSecret)
@@ -284,11 +303,15 @@ class PaymentViewModel: ObservableObject {
     func handlePaymentResult(_ result: PaymentSheetResult) {
         switch result {
         case .completed:
+            Logger.info("支付成功", category: .api)
             paymentSuccess = true
         case .failed(let error):
-            errorMessage = error.localizedDescription
+            Logger.error("支付失败: \(error.localizedDescription)", category: .api)
+            // 使用格式化的错误消息
+            errorMessage = formatPaymentError(error)
         case .canceled:
             // 用户取消，不显示错误
+            Logger.debug("用户取消支付", category: .api)
             break
         }
     }

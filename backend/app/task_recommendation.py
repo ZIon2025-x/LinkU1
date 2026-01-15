@@ -459,6 +459,9 @@ class TaskRecommendationEngine:
         keyword: Optional[str] = None
     ) -> List[Dict]:
         """混合推荐算法（支持筛选，包含新用户/新任务优先曝光，优化版）"""
+        # 检查用户是否为新用户（注册7天内）- 在所有分支之前定义
+        is_new_user = self._is_new_user(user)
+        
         # 尝试使用优化版本（减少重复计算）
         try:
             from app.recommendation_compute_optimizer import (
@@ -475,9 +478,73 @@ class TaskRecommendationEngine:
             # 如果优化模块不可用，使用原始实现
             scores = {}
             reasons = {}
+            filtered_scores = None
+        
+        # 如果使用了优化版本，直接处理结果并返回
+        if filtered_scores is not None:
+            # 排序并获取任务对象
+            sorted_task_ids = sorted(filtered_scores.items(), key=lambda x: x[1], reverse=True)
             
-            # 检查用户是否为新用户（注册7天内）
-            is_new_user = self._is_new_user(user)
+            # 多样性优化：避免推荐过于相似的任务
+            diversified_task_ids = self._diversify_recommendations(
+                sorted_task_ids, 
+                limit,
+                task_type,
+                location
+            )
+            
+            task_ids = [task_id for task_id, _ in diversified_task_ids]
+            if not task_ids:
+                # 如果没有推荐结果，尝试补充
+                from app.recommendation_utils import ensure_minimum_recommendations
+                return ensure_minimum_recommendations(
+                    [],
+                    limit,
+                    self.db,
+                    user.id,
+                    task_type,
+                    location,
+                    keyword
+                )
+            
+            # 优化：批量获取任务详情（预加载关联数据，避免N+1查询）
+            try:
+                from app.recommendation_query_optimizer import RecommendationQueryOptimizer
+                query_optimizer = RecommendationQueryOptimizer(self.db)
+                task_dict = query_optimizer.batch_get_tasks_with_details(task_ids, preload_relations=True)
+            except ImportError:
+                # 如果优化模块不可用，使用原始方法
+                tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+                task_dict = {task.id: task for task in tasks}
+            
+            result = []
+            for task_id, score in diversified_task_ids:
+                if task_id in task_dict:
+                    result.append({
+                        "task": task_dict[task_id],
+                        "score": score,
+                        "reason": reasons.get(task_id, "为您推荐")
+                    })
+            
+            # 最终过滤：确保排除所有不应推荐的任务
+            from app.recommendation_utils import filter_recommendations, get_excluded_task_ids
+            excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+            result = filter_recommendations(result, excluded_task_ids)
+            
+            # 确保推荐结果达到最小数量
+            if len(result) < limit:
+                from app.recommendation_utils import ensure_minimum_recommendations
+                result = ensure_minimum_recommendations(
+                    result,
+                    limit,
+                    self.db,
+                    user.id,
+                    task_type,
+                    location,
+                    keyword
+                )
+            
+            return result
         
         # 1. 基于内容的推荐（权重：35%，新用户时降低到30%）
         content_weight = 0.3 if is_new_user else 0.35

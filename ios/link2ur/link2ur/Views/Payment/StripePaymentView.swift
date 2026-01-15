@@ -343,10 +343,18 @@ struct StripePaymentView: View {
                         }
                         // 弹出 PaymentSheet
                         if let paymentSheet = viewModel.paymentSheet {
+                            Logger.debug("准备弹出 PaymentSheet", category: .api)
                             paymentSheet.present(from: topViewController) { result in
+                                Logger.debug("PaymentSheet 结果: \(result)", category: .api)
                                 viewModel.handlePaymentResult(result)
                             }
+                        } else {
+                            Logger.error("PaymentSheet 为 nil，无法弹出", category: .api)
+                            viewModel.errorMessage = "支付表单未准备好，请稍后重试"
                         }
+                    } else {
+                        Logger.error("无法获取顶层视图控制器", category: .api)
+                        viewModel.errorMessage = "无法打开支付界面，请重试"
                     }
                 }) {
                     HStack(spacing: 12) {
