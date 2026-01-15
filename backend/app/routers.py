@@ -3586,8 +3586,20 @@ def register_device_token(
     platform = device_token_data.get("platform", "ios")
     device_id = device_token_data.get("device_id")  # 可能为 None 或空字符串
     app_version = device_token_data.get("app_version")  # 可能为 None 或空字符串
+    device_language = device_token_data.get("device_language")  # 设备系统语言（zh 或 en）
     
-    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}, device_id={device_id or '未提供'}")
+    # 验证和规范化设备语言
+    # 只有中文使用中文推送，其他所有语言都使用英文推送
+    if device_language:
+        device_language = device_language.strip().lower()
+        if device_language.startswith('zh'):
+            device_language = 'zh'  # 中文
+        else:
+            device_language = 'en'  # 其他所有语言都使用英文
+    else:
+        device_language = 'en'  # 默认英文
+    
+    logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 尝试注册设备令牌: platform={platform}, app_version={app_version}, device_id={device_id or '未提供'}, device_language={device_language}")
     logger.debug(f"[DEVICE_TOKEN] 请求头: X-Platform={request.headers.get('X-Platform')}, X-Session-ID={'已设置' if request.headers.get('X-Session-ID') else '未设置'}, X-App-Signature={'已设置' if request.headers.get('X-App-Signature') else '未设置'}")
     logger.debug(f"[DEVICE_TOKEN] 请求体: device_token={device_token[:20] if device_token else 'None'}..., device_id={device_id}, platform={platform}")
     
@@ -3604,6 +3616,7 @@ def register_device_token(
         # 更新现有令牌
         existing_token.is_active = True
         existing_token.platform = platform
+        existing_token.device_language = device_language  # 更新设备语言
         
         # 更新 device_id：如果请求中提供了 device_id（非空），则更新
         # 如果 device_id 为 None（字段不存在）或空字符串，保持原有值不变
@@ -3623,7 +3636,7 @@ def register_device_token(
         existing_token.updated_at = get_utc_time()
         existing_token.last_used_at = get_utc_time()
         db.commit()
-        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新: token_id={existing_token.id}, device_id={existing_token.device_id or '未设置'}")
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新: token_id={existing_token.id}, device_id={existing_token.device_id or '未设置'}, device_language={existing_token.device_language}")
         return {"message": "Device token updated", "token_id": existing_token.id}
     else:
         # 创建新令牌
@@ -3633,6 +3646,7 @@ def register_device_token(
             platform=platform,
             device_id=device_id,
             app_version=app_version,
+            device_language=device_language,  # 设置设备语言
             is_active=True,
             last_used_at=get_utc_time()
         )

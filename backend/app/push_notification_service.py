@@ -130,13 +130,13 @@ def send_push_notification(
 ) -> bool:
     """
     发送推送通知给指定用户的所有设备
-    推送通知会在 payload 中包含多语言内容，iOS 端通过 Notification Service Extension 根据设备系统语言选择显示
+    根据用户的 language_preference 生成对应语言的推送内容
     
     Args:
         db: 数据库会话
         user_id: 用户ID
-        title: 通知标题（如果为 None，将从模板生成所有语言）
-        body: 通知内容（如果为 None，将从模板生成所有语言）
+        title: 通知标题（如果为 None，将从模板生成）
+        body: 通知内容（如果为 None，将从模板生成）
         notification_type: 通知类型（task_application, task_completed, forum_reply等）
         data: 额外的通知数据
         badge: 应用徽章数字
@@ -148,6 +148,12 @@ def send_push_notification(
     """
     try:
         from app import models
+        
+        # 获取用户信息（用于验证用户存在）
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user:
+            logger.warning(f"用户 {user_id} 不存在，无法发送推送通知")
+            return False
         
         # 获取用户的所有激活的设备令牌
         device_tokens = db.query(models.DeviceToken).filter(
@@ -165,46 +171,94 @@ def send_push_notification(
         failed_tokens = []
         from app.utils.time_utils import get_utc_time
         
-        # 准备模板变量
+        # 准备模板变量（所有设备共享）
         template_vars = template_vars or {}
         if data:
             template_vars.update(data)
         
-        # 如果 title 或 body 为 None，生成所有语言的本地化内容
-        localized_content = None
-        if title is None or body is None:
-            from app.push_notification_templates import get_push_notification_text
-            
-            # 生成英文和中文的本地化内容
-            localized_content = {}
-            for lang in ["en", "zh"]:
-                template_title, template_body = get_push_notification_text(
-                    notification_type=notification_type,
-                    language=lang,
-                    **template_vars
-                )
-                localized_content[lang] = {
-                    "title": template_title,
-                    "body": template_body
-                }
-        
+        # 为每个设备生成对应语言的推送内容
         for device_token in device_tokens:
             try:
-                # 记录设备令牌信息（用于诊断 BadDeviceToken 错误）
-                logger.info(f"[推送诊断] 准备发送到设备: token_id={device_token.id}, device_token长度={len(device_token.device_token)}, device_id={device_token.device_id or '未设置'}, platform={device_token.platform}, is_active={device_token.is_active}")
-                logger.debug(f"[推送诊断] device_token前32字符: {device_token.device_token[:32] if len(device_token.device_token) >= 32 else device_token.device_token}")
+                # 获取设备语言（默认为英文）
+                # 只有中文使用中文推送，其他所有语言都使用英文推送
+                device_language = getattr(device_token, 'device_language', 'en') or 'en'
+                device_language = device_language.strip().lower()
+                if device_language.startswith('zh'):
+                    device_language = 'zh'  # 中文
+                else:
+                    device_language = 'en'  # 其他所有语言都使用英文
                 
-                # 如果提供了本地化内容，直接使用；否则使用传入的 title 和 body
+                logger.debug(f"[推送通知] 设备 {device_token.id} 的语言: {device_language}")
+                
+                # 准备该设备的模板变量（可能需要翻译任务标题）
+                device_template_vars = template_vars.copy()
+                
+                # 处理任务标题翻译（如果 template_vars 中包含 task_title 和 task_id）
+                if 'task_title' in device_template_vars and 'task_id' in device_template_vars:
+                    task_id = device_template_vars.get('task_id')
+                    original_task_title = device_template_vars.get('task_title')
+                    
+                    # 尝试从翻译表获取任务标题的翻译
+                    if task_id and original_task_title:
+                        try:
+                            from app.crud import get_task_translation
+                            # 确保 task_id 是整数类型
+                            task_id_int = int(task_id) if isinstance(task_id, str) else task_id
+                            
+                            translation = get_task_translation(
+                                db=db,
+                                task_id=task_id_int,
+                                field_type='title',
+                                target_language=device_language
+                            )
+                            if translation and translation.translated_text:
+                                # 使用翻译后的标题
+                                device_template_vars['task_title'] = translation.translated_text
+                                logger.debug(f"设备 {device_token.id} 使用翻译后的任务标题（{device_language}）: {translation.translated_text[:50]}...")
+                            else:
+                                logger.debug(f"任务 {task_id_int} 没有 {device_language} 语言的翻译，使用原始标题")
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"task_id 类型错误: {e}，使用原始标题")
+                        except Exception as e:
+                            logger.warning(f"获取任务翻译失败: {e}，使用原始标题")
+                
+                # 生成该设备的推送通知标题和内容（根据设备语言）
+                if title is None or body is None:
+                    from app.push_notification_templates import get_push_notification_text
+                    
+                    # 根据设备语言生成推送内容
+                    device_push_title, device_push_body = get_push_notification_text(
+                        notification_type=notification_type,
+                        language=device_language,
+                        **device_template_vars
+                    )
+                    
+                    # 如果 title 或 body 已提供，使用提供的值
+                    if title is not None:
+                        device_push_title = title
+                    if body is not None:
+                        device_push_body = body
+                else:
+                    # 如果 title 和 body 都已提供，直接使用
+                    device_push_title = title
+                    device_push_body = body
+                
+                logger.debug(f"[推送通知] 设备 {device_token.id} 语言: {device_language}, 标题: {device_push_title[:50]}..., 内容: {device_push_body[:100]}...")
+                
+                # 记录设备令牌信息（用于诊断 BadDeviceToken 错误）
+                logger.info(f"[推送诊断] 准备发送到设备: token_id={device_token.id}, device_token长度={len(device_token.device_token)}, device_id={device_token.device_id or '未设置'}, platform={device_token.platform}, device_language={device_language}, is_active={device_token.is_active}")
+                
+                # 发送推送通知（使用根据设备语言生成的内容）
                 if device_token.platform == "ios":
                     result = send_apns_notification(
                         device_token.device_token,
-                        title=title,
-                        body=body,
+                        title=device_push_title,
+                        body=device_push_body,
                         notification_type=notification_type,
                         data=data,
                         badge=badge,
                         sound=sound,
-                        localized_content=localized_content
+                        localized_content=None  # 不再使用多语言 payload
                     )
                 elif device_token.platform == "android":
                     # TODO: 实现 FCM 推送
@@ -312,25 +366,13 @@ def send_apns_notification(
         if data:
             payload_data.update(data)
         
-        # 如果提供了本地化内容，将其添加到 payload_data 中
-        if localized_content:
-            payload_data["localized"] = localized_content
-            # 记录本地化内容（用于调试）
-            logger.debug(f"[推送本地化] 已添加本地化内容: {list(localized_content.keys())}")
-            # 使用默认语言（英文）作为 alert 的 fallback（iOS 会通过 Notification Service Extension 替换为正确语言）
-            default_content = localized_content.get("en", {})
-            alert_title = default_content.get("title", title or "Notification")
-            alert_body = default_content.get("body", body or "")
-            logger.debug(f"[推送本地化] 使用英文作为 alert fallback: title={alert_title[:30]}..., body={alert_body[:50]}...")
-        else:
-            # 如果没有本地化内容，使用传入的 title 和 body
-            alert_title = title or "Notification"
-            alert_body = body or ""
-            logger.debug(f"[推送本地化] 未提供本地化内容，使用传入的 title 和 body")
+        # 使用传入的 title 和 body（已经根据用户语言偏好生成）
+        alert_title = title or "Notification"
+        alert_body = body or ""
         
-        # 记录 payload_data 结构（用于调试）
-        logger.debug(f"[推送本地化] payload_data 结构: type={payload_data.get('type')}, has_localized={'localized' in payload_data}")
+        logger.debug(f"[推送通知] 标题: {alert_title[:50]}..., 内容: {alert_body[:100]}...")
         
+        # 构建 payload
         payload = Payload(
             alert={"title": alert_title, "body": alert_body},
             badge=badge,

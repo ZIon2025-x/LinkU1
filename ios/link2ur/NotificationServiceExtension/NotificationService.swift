@@ -17,13 +17,24 @@ class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
         
+        // 调试：打印原始通知内容
+        print("🔔 [NotificationService] 收到推送通知")
+        print("🔔 [NotificationService] 原始标题: \(request.content.title)")
+        print("🔔 [NotificationService] 原始内容: \(request.content.body)")
+        print("🔔 [NotificationService] userInfo keys: \(request.content.userInfo.keys)")
+        
         guard let bestAttemptContent = bestAttemptContent else {
+            print("⚠️ [NotificationService] 无法创建 mutable content，使用原始内容")
             contentHandler(request.content)
             return
         }
         
         // 使用 PushNotificationLocalizer 获取本地化内容
         let localizedContent = PushNotificationLocalizer.localizeNotificationContent(request)
+        
+        // 调试：打印本地化后的内容
+        print("🔔 [NotificationService] 本地化后标题: \(localizedContent.title)")
+        print("🔔 [NotificationService] 本地化后内容: \(localizedContent.body)")
         
         // 返回修改后的内容
         contentHandler(localizedContent)

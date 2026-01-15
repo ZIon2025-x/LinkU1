@@ -1259,6 +1259,7 @@ class DeviceToken(Base):
     platform = Column(String(20), nullable=False, default="ios")  # ios, android
     device_id = Column(String(255), nullable=True)  # 设备唯一标识（可选）
     app_version = Column(String(20), nullable=True)  # 应用版本
+    device_language = Column(String(10), default="en")  # 设备系统语言（zh 或 en），用于推送通知
     is_active = Column(Boolean, default=True)  # 是否激活
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)

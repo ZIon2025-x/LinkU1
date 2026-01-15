@@ -1633,11 +1633,14 @@ async def reject_application(
                 send_push_notification_async_safe(
                     async_db=db,
                     user_id=application.applicant_id,
-                    title=None,  # 从模板生成
-                    body=None,  # 从模板生成
+                    title=None,  # 从模板生成（会根据用户语言偏好）
+                    body=None,  # 从模板生成（会根据用户语言偏好）
                     notification_type="application_rejected",
                     data={"task_id": task_id, "application_id": application_id},
-                    template_vars={"task_title": task.title}
+                    template_vars={
+                        "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                        "task_id": task_id  # 传递 task_id 以便获取翻译
+                    }
                 )
             except Exception as e:
                 logger.warning(f"发送申请拒绝推送通知失败: {e}")
@@ -1763,11 +1766,14 @@ async def withdraw_application(
                 send_push_notification_async_safe(
                     async_db=db,
                     user_id=task.poster_id,
-                    title=None,  # 从模板生成
-                    body=None,  # 从模板生成
+                    title=None,  # 从模板生成（会根据用户语言偏好）
+                    body=None,  # 从模板生成（会根据用户语言偏好）
                     notification_type="application_withdrawn",
                     data={"task_id": task_id, "application_id": application_id},
-                    template_vars={"task_title": task.title}
+                    template_vars={
+                        "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                        "task_id": task_id  # 传递 task_id 以便获取翻译
+                    }
                 )
             except Exception as e:
                 logger.warning(f"发送申请撤回推送通知失败: {e}")
@@ -2318,14 +2324,17 @@ async def respond_negotiation(
                     send_push_notification_async_safe(
                         async_db=db,
                         user_id=task.poster_id,
-                        title=None,  # 从模板生成
-                        body=None,  # 从模板生成
+                        title=None,  # 从模板生成（会根据用户语言偏好）
+                        body=None,  # 从模板生成（会根据用户语言偏好）
                         notification_type="negotiation_rejected",
                         data={
                             "task_id": task_id,
                             "application_id": application_id
                         },
-                        template_vars={"task_title": task.title}
+                        template_vars={
+                            "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                            "task_id": task_id  # 传递 task_id 以便获取翻译
+                        }
                     )
                 except Exception as e:
                     logger.warning(f"发送议价拒绝推送通知失败: {e}")
@@ -2533,15 +2542,18 @@ async def send_application_message(
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=application.applicant_id,
-                title=None,  # 从模板生成
-                body=None,  # 从模板生成
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type=notification_type,
                 data={
                     "task_id": task_id,
                     "application_id": application_id,
                     "notification_id": new_notification.id
                 },
-                template_vars={"message": content}
+                template_vars={
+                    "message": content,
+                    "task_id": task_id  # 传递 task_id（如果需要任务标题翻译）
+                }
             )
         except Exception as e:
             logger.warning(f"发送申请留言/议价推送通知失败: {e}")
@@ -2711,8 +2723,8 @@ async def reply_application_message(
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=task.poster_id,
-                title=None,  # 从模板生成
-                body=None,  # 从模板生成
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="application_message_reply",
                 data={
                     "task_id": task_id,
@@ -2720,7 +2732,8 @@ async def reply_application_message(
                     "notification_id": request.notification_id
                 },
                 template_vars={
-                    "task_title": task.title,
+                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                    "task_id": task_id,  # 传递 task_id 以便获取翻译
                     "message": request.message
                 }
             )

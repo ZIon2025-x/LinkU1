@@ -142,13 +142,14 @@ def send_task_application_notification(
             result = send_push_notification(
                 db=db,
                 user_id=task.poster_id,
-                title=None,  # 从模板生成
-                body=None,  # 从模板生成
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="task_application",
                 data={"task_id": task.id, "application_id": application_id},
                 template_vars={
                     "applicant_name": applicant_name,
-                    "task_title": task.title
+                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                    "task_id": task.id  # 传递 task_id 以便获取翻译
                 }
             )
             if result:
@@ -279,13 +280,14 @@ def send_task_completion_notification(
             send_push_notification(
                 db=db,
                 user_id=task.poster_id,
-                title=None,  # 从模板生成
-                body=None,  # 从模板生成
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="task_completed",
                 data={"task_id": task.id},
                 template_vars={
                     "taker_name": taker_name,
-                    "task_title": task.title
+                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                    "task_id": task.id  # 传递 task_id 以便获取翻译
                 }
             )
         except Exception as e:
@@ -346,12 +348,13 @@ def send_task_confirmation_notification(
             send_push_notification(
                 db=db,
                 user_id=taker.id,
-                title=None,  # 从模板生成
-                body=None,  # 从模板生成
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="task_confirmed",
                 data={"task_id": task.id},
                 template_vars={
-                    "task_title": task.title
+                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                    "task_id": task.id  # 传递 task_id 以便获取翻译
                 }
             )
         except Exception as e:

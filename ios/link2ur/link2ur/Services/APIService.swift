@@ -595,7 +595,6 @@ public class APIService {
     }
     
     // 注册设备Token（用于推送通知）
-    // 注意：不再需要发送设备语言，因为推送通知会在 payload 中包含多语言内容
     public func registerDeviceToken(_ token: String, completion: @escaping (Bool) -> Void) {
         // 获取应用版本
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -603,11 +602,19 @@ public class APIService {
         // 获取设备唯一标识符
         let deviceId = DeviceInfo.deviceIdentifier
         
+        // 获取设备系统语言（用于推送通知本地化）
+        // 只有中文使用中文推送，其他所有语言都使用英文推送
+        let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+        let languageCode = preferredLanguage.components(separatedBy: "-").first ?? "en"
+        // 如果是中文相关语言，返回 "zh"；其他所有语言都返回 "en"
+        let deviceLanguage = languageCode.lowercased().hasPrefix("zh") ? "zh" : "en"
+        
         let body: [String: Any] = [
             "device_token": token,
             "platform": "ios",
             "device_id": deviceId,
-            "app_version": appVersion
+            "app_version": appVersion,
+            "device_language": deviceLanguage  // 设备系统语言
         ]
         
         request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "POST", body: body)
