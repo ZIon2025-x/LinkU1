@@ -193,14 +193,18 @@ def send_push_notification(
                     logger.warning(f"未知平台: {device_token.platform}")
                     result = False
                 
-                if result:
+                if result is True:
                     success_count += 1
                     # 更新最后使用时间
                     device_token.last_used_at = get_utc_time()
-                else:
-                    # 如果推送失败，可能是 token 失效，标记为不活跃
-                    logger.warning(f"推送失败，标记设备令牌为不活跃: {device_token.id}")
+                elif result is False:
+                    # result 为 False 表示推送失败且设备令牌无效，应该标记为不活跃
+                    logger.warning(f"推送失败且设备令牌无效，标记设备令牌为不活跃: {device_token.id}")
                     failed_tokens.append(device_token)
+                elif result is None:
+                    # result 为 None 表示系统错误（如 apns2 未安装、配置错误等），不应该标记令牌为不活跃
+                    logger.warning(f"推送失败（系统错误），不标记设备令牌为不活跃: {device_token.id}")
+                    # 不添加到 failed_tokens，保持令牌为活跃状态
                     
             except Exception as e:
                 logger.warning(f"发送推送通知到设备 {device_token.device_token[:20]}... 失败: {e}")
@@ -231,7 +235,7 @@ def send_apns_notification(
     badge: Optional[int] = None,
     sound: str = "default",
     localized_content: Optional[Dict[str, Dict[str, str]]] = None
-) -> bool:
+) -> Optional[bool]:
     """
     发送 APNs 推送通知
     
@@ -247,21 +251,23 @@ def send_apns_notification(
                           如果提供，iOS端会根据系统语言选择显示
         
     Returns:
-        bool: 是否成功发送
+        True: 推送成功
+        False: 推送失败且设备令牌无效（应标记为不活跃）
+        None: 系统错误（如配置错误、apns2 未安装等，不应标记令牌为不活跃）
     """
     try:
         # 检查 APNs 配置
         if not APNS_KEY_ID or not APNS_TEAM_ID:
             logger.error("APNs 配置不完整（缺少 KEY_ID 或 TEAM_ID），跳过推送通知")
             logger.error(f"APNS_KEY_ID: {APNS_KEY_ID is not None}, APNS_TEAM_ID: {APNS_TEAM_ID is not None}")
-            return False
+            return None  # None 表示系统错误，不应该标记令牌为不活跃
         
         # 获取密钥文件路径
         key_file = get_apns_key_file()
         if not key_file:
             logger.error("APNs 密钥文件不存在或无法加载，跳过推送通知")
             logger.error(f"APNS_KEY_FILE: {APNS_KEY_FILE}, APNS_KEY_CONTENT: {APNS_KEY_CONTENT is not None}")
-            return False
+            return None  # None 表示系统错误，不应该标记令牌为不活跃
         
         logger.info(f"APNs 配置检查通过，使用密钥文件: {key_file}")
         
@@ -271,8 +277,8 @@ def send_apns_notification(
             logger.error("请确保已安装 apns2: pip install apns2")
             logger.error("如果已安装，请检查 Python 环境和依赖是否正确加载")
             logger.error("在 Railway 环境中，请确保 requirements.txt 中的 apns2>=0.7.0,<1.0.0 已正确安装")
-            # 标记设备令牌为不活跃（推送失败）
-            return False
+            # 系统错误，不应该标记令牌为不活跃（返回特殊值表示系统错误）
+            return None  # None 表示系统错误，不应该标记令牌为不活跃
         
         # 构建通知负载
         payload_data = {
@@ -323,14 +329,30 @@ def send_apns_notification(
             logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")
             return True
         else:
+            # APNs 返回的错误，需要根据错误类型决定是否标记令牌为不活跃
             logger.warning(f"APNs 推送通知失败: reason={response.reason}, status={response.status_code}")
-            return False
+            
+            # 以下错误表示设备令牌无效，应该标记为不活跃：
+            # - BadDeviceToken (400): 设备令牌格式错误或无效
+            # - Unregistered (410): 设备令牌已失效（应用已卸载或令牌过期）
+            # - DeviceTokenNotForTopic (400): 设备令牌不属于此应用
+            should_deactivate = response.status_code in [400, 410] or \
+                               response.reason in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic']
+            
+            if should_deactivate:
+                logger.warning(f"设备令牌无效，应标记为不活跃: reason={response.reason}, status={response.status_code}")
+                return False  # False 表示推送失败且应该标记令牌为不活跃
+            else:
+                # 其他错误（如 PayloadTooLarge, TopicDisallowed 等）不应该标记令牌为不活跃
+                logger.warning(f"推送失败但令牌可能有效，不标记为不活跃: reason={response.reason}, status={response.status_code}")
+                return None  # None 表示系统/配置错误，不应该标记令牌为不活跃
         
     except Exception as e:
         logger.error(f"发送 APNs 推送通知失败: {e}", exc_info=True)
         import traceback
         logger.error(f"详细错误信息: {traceback.format_exc()}")
-        return False
+        # 异常通常是系统错误，不应该标记令牌为不活跃
+        return None  # None 表示系统错误，不应该标记令牌为不活跃
 
 
 def send_push_notification_async_safe(
