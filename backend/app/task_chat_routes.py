@@ -228,20 +228,26 @@ async def get_task_chat_list(
             
             if cursor and cursor.last_read_message_id is not None:
                 # 使用游标计算未读数
+                # 排除系统消息，与 crud.get_unread_messages 保持一致
                 unread_query = select(func.count(models.Message.id)).where(
                     and_(
                         models.Message.task_id == task.id,
                         models.Message.id > cursor.last_read_message_id,
                         models.Message.sender_id != current_user.id,
+                        models.Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
+                        models.Message.message_type != 'system',  # 排除系统类型消息
                         models.Message.conversation_type == 'task'
                     )
                 )
             else:
                 # 没有游标或游标为None，使用 message_reads 表兜底
+                # 排除系统消息，与 crud.get_unread_messages 保持一致
                 unread_query = select(func.count(models.Message.id)).where(
                     and_(
                         models.Message.task_id == task.id,
                         models.Message.sender_id != current_user.id,
+                        models.Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
+                        models.Message.message_type != 'system',  # 排除系统类型消息
                         models.Message.conversation_type == 'task',
                         ~exists(
                             select(1).where(

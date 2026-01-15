@@ -75,29 +75,26 @@ struct MessageView: View {
                 notificationViewModel.loadNotifications()
             }
             .onAppear {
-                if viewModel.taskChats.isEmpty {
-                    viewModel.loadTaskChats()
-                }
+                // 始终重新加载任务聊天列表，确保未读数最新
+                viewModel.loadTaskChats()
+                
                 // 加载通知以获取未读数量
                 notificationViewModel.loadNotifications()
                 
                 // 更新 AppState 中的未读通知数量
                 appState.loadUnreadNotificationCount()
-                
-                // 更新未读消息数量（任务聊天）- 使用缓存的计算属性
-                appState.unreadMessageCount = totalUnreadMessages
             }
             .onChange(of: notificationViewModel.notifications.count) { _ in
                 // 当通知列表更新时，更新 AppState
-                // 只计算系统通知的未读数（保持与原有逻辑一致）
-                appState.unreadNotificationCount = unreadNotificationCount
+                appState.loadUnreadNotificationCount()
             }
             .onChange(of: notificationViewModel.forumNotifications.count) { _ in
-                // 当论坛通知列表更新时，也更新 AppState（如果需要的话）
-                // 这里可以添加论坛通知的未读数计算
+                // 当论坛通知列表更新时，也更新 AppState
+                appState.loadUnreadNotificationCount()
             }
             .onChange(of: viewModel.taskChats) { _ in
-                // 当任务聊天列表更新时，更新未读消息数量 - 使用缓存的计算属性
+                // 当任务聊天列表更新时，使用列表中的 unread_count 更新 badge
+                // 这样可以保证 badge 与页面显示的未读数一致
                 appState.unreadMessageCount = totalUnreadMessages
             }
         }

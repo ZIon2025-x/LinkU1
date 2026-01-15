@@ -14,17 +14,20 @@ public func hideKeyboard() {
 
 extension View {
     /// 添加点击关闭键盘手势（点击空白区域关闭键盘）
-    /// 优化：使用 contentShape 确保整个区域可点击，但不影响其他交互
+    /// 使用 simultaneousGesture 确保不会阻止其他交互（如 NavigationLink）
     public func dismissKeyboardOnTap() -> some View {
-        self.contentShape(Rectangle())
-            .onTapGesture {
-                hideKeyboard()
-            }
+        self.simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    hideKeyboard()
+                }
+        )
     }
     
     /// 添加拖拽关闭键盘手势
+    /// 使用 simultaneousGesture 确保不会阻止其他交互
     public func dismissKeyboardOnDrag() -> some View {
-        self.gesture(
+        self.simultaneousGesture(
             DragGesture(minimumDistance: 10)
                 .onEnded { _ in
                     hideKeyboard()
@@ -34,18 +37,22 @@ extension View {
 }
 
 /// 键盘关闭修饰符 - 点击空白区域关闭键盘
+/// 使用 simultaneousGesture 避免阻止其他手势（如 NavigationLink 的点击）
 public struct KeyboardDismissModifier: ViewModifier {
     public func body(content: Content) -> some View {
         content
-            .contentShape(Rectangle())
-            .onTapGesture {
-                hideKeyboard()
-            }
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded { _ in
+                        hideKeyboard()
+                    }
+            )
     }
 }
 
 extension View {
     /// 应用键盘关闭修饰符（点击空白区域关闭键盘）
+    /// 使用 simultaneousGesture 确保不会阻止 NavigationLink 等其他交互
     /// 使用示例：.keyboardDismissable()
     public func keyboardDismissable() -> some View {
         modifier(KeyboardDismissModifier())
