@@ -13,6 +13,19 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+# 尝试导入 apns2（延迟导入，避免在模块加载时失败）
+try:
+    from apns2.client import APNsClient
+    from apns2.payload import Payload
+    from apns2.credentials import TokenCredentials
+    APNS2_AVAILABLE = True
+    APNS2_IMPORT_ERROR = None
+except ImportError as e:
+    APNS2_AVAILABLE = False
+    APNS2_IMPORT_ERROR = str(e)
+    logger.warning(f"apns2 未安装，推送通知功能将不可用。错误: {e}")
+    logger.warning("请确保已安装 apns2: pip install apns2")
+
 # APNs 配置
 APNS_KEY_ID = os.getenv("APNS_KEY_ID")
 APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
@@ -236,13 +249,13 @@ def send_apns_notification(
         
         logger.info(f"APNs 配置检查通过，使用密钥文件: {key_file}")
         
-        # 尝试导入 PyAPNs2
-        try:
-            from apns2.client import APNsClient
-            from apns2.payload import Payload
-            from apns2.credentials import TokenCredentials
-        except ImportError:
-            logger.error("PyAPNs2 未安装，无法发送推送通知。请运行: pip install apns2")
+        # 检查 apns2 是否可用
+        if not APNS2_AVAILABLE:
+            logger.error(f"apns2 未安装，无法发送推送通知。导入错误: {APNS2_IMPORT_ERROR}")
+            logger.error("请确保已安装 apns2: pip install apns2")
+            logger.error("如果已安装，请检查 Python 环境和依赖是否正确加载")
+            logger.error("在 Railway 环境中，请确保 requirements.txt 中的 apns2>=0.7.0,<1.0.0 已正确安装")
+            # 标记设备令牌为不活跃（推送失败）
             return False
         
         # 构建通知负载

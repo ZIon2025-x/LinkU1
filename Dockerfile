@@ -22,8 +22,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt /app/requirements.txt
 
 # 安装Python依赖（这一层可以被缓存）
+# 强制重新安装依赖以确保 apns2 和 Pillow 被安装（2026-01-15 更新）
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
+
+# 验证关键依赖是否安装（构建时验证，如果失败会中断构建）
+RUN python -c "import apns2; print('✓ apns2 installed')" && \
+    python -c "import PIL; print('✓ Pillow installed, version:', PIL.__version__)" || \
+    (echo "ERROR: Required packages not installed!" && exit 1)
 
 # 复制后端应用代码
 COPY backend/ /app
