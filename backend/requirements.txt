@@ -58,7 +58,8 @@ google-cloud-translate>=3.15.0
 pyahocorasick>=2.0.0,<3.0.0
 
 # iOS 推送通知服务
-apns2>=0.7.0,<1.0.0
+# 使用 compat-fork-apns2 以支持 Python 3.11 和 PyJWT 2.x
+compat-fork-apns2>=0.7.0
 
 # 图片处理
 Pillow>=10.0.0,<11.0.0

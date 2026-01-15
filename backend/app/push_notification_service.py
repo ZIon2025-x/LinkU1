@@ -29,18 +29,30 @@ if sys.version_info >= (3, 10):
 
 logger = logging.getLogger(__name__)
 
-# 尝试导入 apns2（延迟导入，避免在模块加载时失败）
+# 尝试导入 apns2（优先使用 compat-fork-apns2，它支持 Python 3.11 和 PyJWT 2.x）
 try:
-    from apns2.client import APNsClient
-    from apns2.payload import Payload
-    from apns2.credentials import TokenCredentials
-    APNS2_AVAILABLE = True
-    APNS2_IMPORT_ERROR = None
+    # 优先尝试导入 compat-fork-apns2（兼容 Python 3.11 和 PyJWT 2.x）
+    try:
+        from compat_fork_apns2.client import APNsClient
+        from compat_fork_apns2.payload import Payload
+        from compat_fork_apns2.credentials import TokenCredentials
+        APNS2_AVAILABLE = True
+        APNS2_IMPORT_ERROR = None
+        APNS2_LIBRARY = "compat-fork-apns2"
+    except ImportError:
+        # 回退到原始的 apns2（可能不兼容 Python 3.11 + PyJWT 2.x）
+        from apns2.client import APNsClient
+        from apns2.payload import Payload
+        from apns2.credentials import TokenCredentials
+        APNS2_AVAILABLE = True
+        APNS2_IMPORT_ERROR = None
+        APNS2_LIBRARY = "apns2"
 except ImportError as e:
     APNS2_AVAILABLE = False
     APNS2_IMPORT_ERROR = str(e)
+    APNS2_LIBRARY = None
     logger.warning(f"apns2 未安装，推送通知功能将不可用。错误: {e}")
-    logger.warning("请确保已安装 apns2: pip install apns2")
+    logger.warning("请确保已安装 apns2 或 compat-fork-apns2: pip install compat-fork-apns2")
 
 # APNs 配置
 APNS_KEY_ID = os.getenv("APNS_KEY_ID")
@@ -274,11 +286,15 @@ def send_apns_notification(
         # 检查 apns2 是否可用
         if not APNS2_AVAILABLE:
             logger.error(f"apns2 未安装，无法发送推送通知。导入错误: {APNS2_IMPORT_ERROR}")
-            logger.error("请确保已安装 apns2: pip install apns2")
+            logger.error("请确保已安装 compat-fork-apns2: pip install compat-fork-apns2")
             logger.error("如果已安装，请检查 Python 环境和依赖是否正确加载")
-            logger.error("在 Railway 环境中，请确保 requirements.txt 中的 apns2>=0.7.0,<1.0.0 已正确安装")
+            logger.error("在 Railway 环境中，请确保 requirements.txt 中的 compat-fork-apns2>=0.7.0 已正确安装")
             # 系统错误，不应该标记令牌为不活跃（返回特殊值表示系统错误）
             return None  # None 表示系统错误，不应该标记令牌为不活跃
+        
+        # 记录使用的库版本（用于调试）
+        if APNS2_LIBRARY:
+            logger.debug(f"使用 {APNS2_LIBRARY} 库发送推送通知")
         
         # 构建通知负载
         payload_data = {

@@ -27,7 +27,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
 # 验证关键依赖是否安装（构建时验证，如果失败会中断构建）
-RUN python -c "import apns2; print('✓ apns2 installed')" && \
+RUN (python -c "import compat_fork_apns2; print('✓ compat-fork-apns2 installed')" || \
+     python -c "import apns2; print('✓ apns2 installed (fallback)')") && \
     python -c "import PIL; print('✓ Pillow installed, version:', PIL.__version__)" || \
     (echo "ERROR: Required packages not installed!" && exit 1)
 
