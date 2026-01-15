@@ -56,6 +56,15 @@ public class AppState: ObservableObject {
                 // 开始定期刷新未读数量（会立即加载一次）
                 self?.startPeriodicRefresh()
                 
+                // 登录成功后，更新设备令牌（确保令牌是最新的）
+                if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
+                    APIService.shared.registerDeviceToken(deviceToken) { success in
+                        if success {
+                            Logger.debug("设备令牌已更新（登录成功后）", category: .api)
+                        }
+                    }
+                }
+                
                 // 登录成功后，请求位置权限并获取位置
                 self?.requestLocationAfterLogin()
                 
@@ -111,6 +120,15 @@ public class AppState: ObservableObject {
                 if self?.isAuthenticated == true {
                     self?.loadUnreadNotificationCount()
                     self?.loadUnreadMessageCount()
+                    
+                    // 更新设备令牌（确保令牌始终是最新的）
+                    if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
+                        APIService.shared.registerDeviceToken(deviceToken) { success in
+                            if success {
+                                Logger.debug("设备令牌已更新（应用恢复前台）", category: .api)
+                            }
+                        }
+                    }
                 }
             }
             .store(in: &cancellables)
