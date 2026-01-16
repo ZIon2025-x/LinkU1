@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Spin, Empty, Tag, Tooltip } from 'antd';
-import { FireOutlined, StarOutlined, ClockCircleOutlined, EnvironmentOutlined, SchoolOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { FireOutlined, StarOutlined, ClockCircleOutlined, EnvironmentOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { getTaskRecommendations, recordTaskInteraction } from '../api';
 import TaskCard from './TaskCard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -91,7 +91,7 @@ const RecommendedTasks: React.FC<RecommendedTasksProps> = ({
 
   // 增强：根据推荐理由返回对应的图标
   const getRecommendationReasonIcon = (reason: string) => {
-    if (reason.includes('同校') || reason.includes('学校')) return <SchoolOutlined />;
+    if (reason.includes('同校') || reason.includes('学校')) return <TeamOutlined />;
     if (reason.includes('距离') || reason.includes('km')) return <EnvironmentOutlined />;
     if (reason.includes('活跃时间') || reason.includes('时间段') || reason.includes('当前活跃')) return <ClockCircleOutlined />;
     if (reason.includes('高评分') || reason.includes('评分')) return <StarOutlined />;
