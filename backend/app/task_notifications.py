@@ -655,6 +655,27 @@ async def send_service_application_notification(
             related_id=str(service_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=expert_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="service_application",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "applicant_name": applicant_name,
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送服务申请推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         # 发送邮件（如果有任务达人邮箱）
         if expert and expert.email:
             try:
@@ -753,6 +774,27 @@ async def send_counter_offer_notification(
             related_id=str(service_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=applicant_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="counter_offer",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "service_name": service_name,
+                    "counter_price": float(counter_price)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送任务达人议价推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"议价通知已发送给申请用户: {applicant_id}")
         
     except Exception as e:
@@ -791,6 +833,27 @@ async def send_counter_offer_accepted_notification(
             related_id=str(service_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=expert_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="counter_offer_accepted",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "applicant_name": applicant_name,
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送议价同意推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"议价同意通知已发送给任务达人: {expert_id}")
         
     except Exception as e:
@@ -828,6 +891,27 @@ async def send_counter_offer_rejected_notification(
             related_id=str(service_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=expert_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="counter_offer_rejected",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "applicant_name": applicant_name,
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送议价拒绝推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"议价拒绝通知已发送给任务达人: {expert_id}")
         
     except Exception as e:
@@ -860,6 +944,27 @@ async def send_service_application_approved_notification(
             content=notification_content,
             related_id=str(task_id),
         )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=applicant_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="service_application_approved",
+                data={
+                    "task_id": task_id,
+                    "service_id": service_id
+                },
+                template_vars={
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送服务申请批准推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         logger.info(f"服务申请批准通知已发送给申请用户: {applicant_id}, 任务ID: {task_id}")
         
@@ -903,6 +1008,26 @@ async def send_service_application_rejected_notification(
             related_id=str(service_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=applicant_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="service_application_rejected",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送服务申请拒绝推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"服务申请拒绝通知已发送给申请用户: {applicant_id}")
         
     except Exception as e:
@@ -939,6 +1064,27 @@ async def send_service_application_cancelled_notification(
             content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=expert_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="service_application_cancelled",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "applicant_name": applicant_name,
+                    "service_name": service_name
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送服务申请取消推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         logger.info(f"服务申请取消通知已发送给任务达人: {expert_id}")
         

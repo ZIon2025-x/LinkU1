@@ -10,6 +10,7 @@ import UIKit
 import UserNotifications
 import LinkU
 import StripeCore
+import CoreSpotlight
 
 @main
 struct link2urApp: App {
@@ -31,6 +32,9 @@ struct link2urApp: App {
                     
                     // 初始化 Stripe
                     StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
+                    
+                    // 索引快速操作到 Spotlight
+                    SpotlightIndexer.shared.indexQuickActions()
                 }
                 .onOpenURL { url in
                     // 处理Universal Links和深度链接
@@ -82,6 +86,18 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Universal Link处理（微信）
     
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        // 处理 Spotlight 搜索
+        // 使用字符串常量（CSSearchableItemActionType 在某些 iOS 版本可能不可用）
+        let spotlightActionType = "com.apple.corespotlightitem"
+        let spotlightIdentifierKey = "kCSSearchableItemActivityIdentifier"
+        
+        if userActivity.activityType == spotlightActionType {
+            if let identifier = userActivity.userInfo?[spotlightIdentifierKey] as? String {
+                handleSpotlightSearch(identifier: identifier)
+                return true
+            }
+        }
+        
         // 处理Universal Link（微信）
         #if canImport(WechatOpenSDK)
         if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
@@ -92,6 +108,40 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         #endif
         
         return false
+    }
+    
+    // 处理 Spotlight 搜索
+    private func handleSpotlightSearch(identifier: String) {
+        print("🔍 [Spotlight] 用户点击了搜索结果: \(identifier)")
+        
+        // 解析标识符并跳转
+        if identifier.hasPrefix("task_") {
+            let taskIdString = String(identifier.dropFirst(5))
+            if let taskId = Int(taskIdString) {
+                // 跳转到任务详情
+                if let url = DeepLinkHandler.generateURL(for: .task(id: taskId)) {
+                    DeepLinkHandler.shared.handle(url)
+                }
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToTask"), object: taskId)
+            }
+        } else if identifier.hasPrefix("expert_") {
+            let userIdString = String(identifier.dropFirst(7))
+            // 跳转到任务达人详情
+            if let url = DeepLinkHandler.generateURL(for: .expert(id: userIdString)) {
+                DeepLinkHandler.shared.handle(url)
+            }
+            NotificationCenter.default.post(name: NSNotification.Name("NavigateToExpert"), object: userIdString)
+        } else if identifier.hasPrefix("quick_action_") {
+            let actionId = String(identifier.dropFirst(14))
+            // 处理快速操作
+            handleQuickAction(actionId)
+        }
+    }
+    
+    // 处理快速操作（Spotlight 和 Shortcuts 共用）
+    private func handleQuickAction(_ actionId: String) {
+        print("⚡ [AppDelegate] 快速操作: \(actionId)")
+        NotificationCenter.default.post(name: NSNotification.Name("QuickAction"), object: actionId)
     }
     
     // 请求推送通知权限

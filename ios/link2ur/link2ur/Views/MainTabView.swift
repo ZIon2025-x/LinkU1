@@ -8,6 +8,7 @@ public struct MainTabView: View {
     @State private var showCreateTask = false
     @State private var showLogin = false
     @State private var homeViewResetTrigger = UUID() // 用于重置 HomeView
+    @State private var searchKeyword: String? = nil // 用于搜索快捷指令
     
     public var body: some View {
         ZStack(alignment: .bottom) {
@@ -162,6 +163,75 @@ public struct MainTabView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QuickAction"))) { notification in
+            // 处理快捷指令
+            handleQuickAction(notification.object as? String, userInfo: notification.userInfo)
+        }
+    }
+    
+    // 处理快捷指令
+    private func handleQuickAction(_ actionId: String?, userInfo: [AnyHashable: Any]?) {
+        guard let actionId = actionId else { return }
+        
+        print("⚡ [MainTabView] 处理快捷指令: \(actionId)")
+        
+        switch actionId {
+        case "publish_task":
+            if appState.isAuthenticated {
+                showCreateTask = true
+            } else {
+                showLogin = true
+            }
+            
+        case "my_tasks":
+            if appState.isAuthenticated {
+                // 切换到个人资料页面（我的任务在个人资料中）
+                selection = 4
+                previousSelection = 4
+            } else {
+                showLogin = true
+            }
+            
+        case "view_messages":
+            if appState.isAuthenticated {
+                selection = 3
+                previousSelection = 3
+            } else {
+                showLogin = true
+            }
+            
+        case "search_tasks":
+            if let keyword = userInfo?["keyword"] as? String {
+                searchKeyword = keyword
+                // 切换到首页并触发搜索
+                selection = 0
+                previousSelection = 0
+                // 发送搜索通知
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SearchTasks"),
+                    object: keyword
+                )
+            }
+            
+        case "flea_market":
+            // 跳蚤市场在首页中，切换到首页
+            selection = 0
+            previousSelection = 0
+            NotificationCenter.default.post(
+                name: NSNotification.Name("NavigateToFleaMarket"),
+                object: nil
+            )
+            
+        case "forum":
+            // 论坛在社区页面中，切换到社区
+            selection = 1
+            previousSelection = 1
+            
+        default:
+            print("⚠️ [MainTabView] 未知的快捷指令: \(actionId)")
+        }
+        
+        HapticFeedback.selection()
     }
     
     

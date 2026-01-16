@@ -964,12 +964,37 @@ async def send_task_message(
                 }
             }
             
-            # 向所有参与者（除了发送者）广播消息
+            # 向所有参与者（除了发送者）广播消息并发送推送通知
             for participant_id in participant_ids:
                 if participant_id != current_user.id:
+                    # 尝试通过WebSocket发送（实时通知）
                     success = await ws_manager.send_to_user(participant_id, message_response)
                     if success:
                         logger.debug(f"Task message broadcasted to participant {participant_id}")
+                    
+                    # 无论WebSocket是否成功，都发送推送通知（确保用户不在app中时也能收到）
+                    try:
+                        # 截取消息内容（最多50个字符）
+                        message_preview = new_message.content[:50] + ("..." if len(new_message.content) > 50 else "")
+                        send_push_notification_async_safe(
+                            async_db=db,
+                            user_id=participant_id,
+                            title=None,  # 从模板生成（会根据用户语言偏好）
+                            body=None,  # 从模板生成（会根据用户语言偏好）
+                            notification_type="task_message",
+                            data={
+                                "task_id": task_id,
+                                "sender_id": current_user.id
+                            },
+                            template_vars={
+                                "sender_name": current_user.name or f"用户{current_user.id}",
+                                "message": message_preview,
+                                "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                                "task_id": task_id  # 传递 task_id 以便获取翻译
+                            }
+                        )
+                    except Exception as e:
+                        logger.warning(f"发送任务消息推送通知失败（用户 {participant_id}）: {e}")
         except Exception as e:
             # WebSocket广播失败不应该影响消息发送
             logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)
@@ -2033,6 +2058,28 @@ async def negotiate_application(
         
         await db.commit()
         
+        # 发送推送通知
+        try:
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=application.applicant_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="negotiation_offer",
+                data={
+                    "task_id": task_id,
+                    "application_id": application_id
+                },
+                template_vars={
+                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                    "task_id": task_id,  # 传递 task_id 以便获取翻译
+                    "negotiated_price": float(request.negotiated_price)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送议价提议推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         return {
             "message": "议价提议已发送",
             "application_id": application_id,
@@ -2713,6 +2760,17 @@ async def send_application_message(
         
         # 发送推送通知
         try:
+            template_vars = {
+                "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                "task_id": task_id,  # 传递 task_id 以便获取翻译
+            }
+            
+            # 如果是议价通知，添加议价金额
+            if notification_type == "negotiation_offer" and request.negotiated_price is not None:
+                template_vars["negotiated_price"] = float(request.negotiated_price)
+            elif notification_type == "application_message" and request.message:
+                template_vars["message"] = request.message
+            
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=application.applicant_id,
@@ -2724,10 +2782,7 @@ async def send_application_message(
                     "application_id": application_id,
                     "notification_id": new_notification.id
                 },
-                template_vars={
-                    "message": content,
-                    "task_id": task_id  # 传递 task_id（如果需要任务标题翻译）
-                }
+                template_vars=template_vars
             )
         except Exception as e:
             logger.warning(f"发送申请留言/议价推送通知失败: {e}")

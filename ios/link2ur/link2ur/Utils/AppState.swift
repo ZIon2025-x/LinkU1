@@ -88,6 +88,11 @@ public class AppState: ObservableObject {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     self?.preloadRecommendedTasksIfNeeded()
                 }
+                
+                // 登录成功后，同步引导教程保存的偏好设置到服务器
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    self?.syncOnboardingPreferencesToServer()
+                }
             }
             .store(in: &cancellables)
         
@@ -301,9 +306,26 @@ public class AppState: ObservableObject {
                     DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
                         self?.isCheckingLoginStatus = false
                         self?.isCheckingLogin = false
-                        if case .failure = result {
-                            // Token无效，清除并登出
-                            self?.logout()
+                        if case .failure(let error) = result {
+                            // ⚠️ 修复：区分网络错误和认证错误
+                            // 只有真正的认证失败（401且刷新失败）才应该登出
+                            // 网络错误、超时等不应该导致登出，保持登录状态
+                            if case APIError.unauthorized = error {
+                                // 401 未授权：可能是 token 过期，尝试刷新
+                                Logger.warning("登录状态检查：401 未授权，可能是 token 过期", category: .auth)
+                                // 注意：APIService 会自动尝试刷新 token
+                                // 如果刷新失败，APIService 会处理登出逻辑
+                                // 这里不立即登出，等待刷新结果
+                            } else if case APIError.httpError(401) = error {
+                                // HTTP 401 错误：认证失败
+                                Logger.warning("登录状态检查：HTTP 401 错误，认证失败", category: .auth)
+                                // 不立即登出，等待 token 刷新机制处理
+                            } else {
+                                // 网络错误、超时等：不登出，保持登录状态
+                                Logger.warning("登录状态检查失败（网络错误），保持登录状态: \(error.localizedDescription)", category: .auth)
+                                // 保持 isAuthenticated 状态，不调用 logout()
+                                // 用户仍然可以尝试使用应用，如果 token 有效，后续请求会成功
+                            }
                         }
                     }
                 }, receiveValue: { [weak self] user in
@@ -489,6 +511,67 @@ public class AppState: ObservableObject {
             .sink { _ in
                 // 城市名称已确定，可以用于筛选任务
             }
+            .store(in: &cancellables)
+    }
+    
+    /// 同步引导教程保存的偏好设置到服务器
+    private func syncOnboardingPreferencesToServer() {
+        // 检查是否有引导教程保存的偏好设置
+        guard let preferredCity = UserDefaults.standard.string(forKey: "preferred_city"),
+              !preferredCity.isEmpty else {
+            return
+        }
+        
+        guard let preferredTaskTypes = UserDefaults.standard.array(forKey: "preferred_task_types") as? [String],
+              !preferredTaskTypes.isEmpty else {
+            return
+        }
+        
+        // 检查是否已经同步过（避免重复同步）
+        if UserDefaults.standard.bool(forKey: "onboarding_preferences_synced") {
+            return
+        }
+        
+        // 将本地化的显示名称转换为后端值
+        let taskTypeMapping: [String: String] = [
+            LocalizationKey.taskCategoryErrandRunning.localized: "Errand Running",
+            LocalizationKey.taskCategorySkillService.localized: "Skill Service",
+            LocalizationKey.taskCategoryHousekeeping.localized: "Housekeeping",
+            LocalizationKey.taskCategoryTransportation.localized: "Transportation",
+            LocalizationKey.taskCategorySocialHelp.localized: "Social Help",
+            LocalizationKey.taskCategoryCampusLife.localized: "Campus Life",
+            LocalizationKey.taskCategorySecondhandRental.localized: "Second-hand & Rental",
+            LocalizationKey.taskCategoryPetCare.localized: "Pet Care",
+            LocalizationKey.taskCategoryLifeConvenience.localized: "Life Convenience",
+            LocalizationKey.taskCategoryOther.localized: "Other"
+        ]
+        
+        // 转换任务类型
+        let backendTaskTypes = preferredTaskTypes.compactMap { taskTypeMapping[$0] }
+        
+        // 创建用户偏好对象
+        let preferences = UserPreferences(
+            taskTypes: backendTaskTypes,
+            locations: [preferredCity],
+            taskLevels: [],
+            keywords: [],
+            minDeadlineDays: 1
+        )
+        
+        // 同步到服务器
+        apiService.updateUserPreferences(preferences: preferences)
+            .sink(
+                receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        Logger.warning("同步引导偏好设置失败: \(error.localizedDescription)", category: .api)
+                    }
+                },
+                receiveValue: { _ in
+                    // 标记已同步，避免重复同步
+                    UserDefaults.standard.set(true, forKey: "onboarding_preferences_synced")
+                    Logger.success("引导偏好设置已同步到服务器", category: .api)
+                }
+            )
             .store(in: &cancellables)
     }
     

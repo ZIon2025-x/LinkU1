@@ -1266,3 +1266,51 @@
 "notification.contact_service" = "Contact Service";
 "notification.task_chat" = "Task Chat";
 "notification.task_chat_list" = "All Task Chat List";
+
+// MARK: - Onboarding
+"onboarding.skip" = "Skip";
+"onboarding.welcome_title" = "Welcome to Link²Ur";
+"onboarding.welcome_subtitle" = "Connect Your World";
+"onboarding.welcome_description" = "Publish tasks, accept tasks, buy and sell second-hand goods, everything is in your hands";
+"onboarding.publish_task_title" = "Publish Tasks";
+"onboarding.publish_task_subtitle" = "Easily publish your needs";
+"onboarding.publish_task_description" = "Need help? Publish a task and let capable users help you complete it";
+"onboarding.accept_task_title" = "Accept Tasks";
+"onboarding.accept_task_subtitle" = "Earn extra income";
+"onboarding.accept_task_description" = "Browse tasks, accept interesting tasks, and earn rewards after completing them";
+"onboarding.secure_payment_title" = "Secure Payment";
+"onboarding.secure_payment_subtitle" = "Platform guarantees transaction security";
+"onboarding.secure_payment_description" = "Use Stripe secure payment, automatic transfer after task completion, protecting both parties' rights";
+"onboarding.community_title" = "Community Interaction";
+"onboarding.community_subtitle" = "Forum, Leaderboard, Flea Market";
+"onboarding.community_description" = "Participate in community discussions, view leaderboards, buy and sell second-hand goods, enrich your campus life";
+"onboarding.personalization_title" = "Personalization Settings";
+"onboarding.personalization_subtitle" = "Help us recommend more suitable content for you";
+"onboarding.preferred_city" = "Preferred City";
+"onboarding.use_current_location" = "Use Current Location";
+"onboarding.preferred_task_types" = "Interested Task Types";
+"onboarding.preferred_task_types_optional" = "Interested Task Types (Optional)";
+"onboarding.enable_notifications" = "Enable Notifications";
+"onboarding.enable_notifications_description" = "Receive task status updates and message reminders in time";
+"onboarding.get_started" = "Get Started";
+"onboarding.previous" = "Previous";
+
+// MARK: - Spotlight
+"spotlight.task" = "Task";
+"spotlight.tasks" = "Tasks";
+"spotlight.expert" = "Task Expert";
+"spotlight.quick_action" = "Quick Action";
+
+// MARK: - Shortcuts
+"shortcuts.publish_task" = "Publish Task";
+"shortcuts.publish_task_description" = "Quickly publish a new task";
+"shortcuts.view_my_tasks" = "View My Tasks";
+"shortcuts.view_my_tasks_description" = "View tasks I published and accepted";
+"shortcuts.view_messages" = "View Messages";
+"shortcuts.view_messages_description" = "View unread messages and notifications";
+"shortcuts.search_tasks" = "Search Tasks";
+"shortcuts.search_tasks_description" = "Search for tasks";
+"shortcuts.view_flea_market" = "View Flea Market";
+"shortcuts.view_flea_market_description" = "Browse and publish second-hand goods";
+"shortcuts.view_forum" = "View Forum";
+"shortcuts.view_forum_description" = "Participate in community discussions";

@@ -758,3 +758,51 @@
 "payment.retry" = "重試";
 "payment.retry_payment" = "重試支付";
 "payment.coupons" = "優惠券";
+
+// MARK: - Onboarding
+"onboarding.skip" = "跳過";
+"onboarding.welcome_title" = "歡迎來到 Link²Ur";
+"onboarding.welcome_subtitle" = "連接你的世界";
+"onboarding.welcome_description" = "發布任務、接受任務、買賣二手商品，一切盡在掌握";
+"onboarding.publish_task_title" = "發布任務";
+"onboarding.publish_task_subtitle" = "輕鬆發布你的需求";
+"onboarding.publish_task_description" = "需要幫助？發布任務，讓有能力的用戶來幫你完成";
+"onboarding.accept_task_title" = "接受任務";
+"onboarding.accept_task_subtitle" = "賺取額外收入";
+"onboarding.accept_task_description" = "瀏覽任務，接受感興趣的任務，完成任務後獲得獎勵";
+"onboarding.secure_payment_title" = "安全支付";
+"onboarding.secure_payment_subtitle" = "平台保障交易安全";
+"onboarding.secure_payment_description" = "使用 Stripe 安全支付，任務完成後自動轉帳，保障雙方權益";
+"onboarding.community_title" = "社區互動";
+"onboarding.community_subtitle" = "論壇、排行榜、跳蚤市場";
+"onboarding.community_description" = "參與社區討論，查看排行榜，買賣二手商品，豐富你的校園生活";
+"onboarding.personalization_title" = "個性化設置";
+"onboarding.personalization_subtitle" = "幫助我們為你推薦更合適的內容";
+"onboarding.preferred_city" = "常用城市";
+"onboarding.use_current_location" = "使用目前位置";
+"onboarding.preferred_task_types" = "感興趣的任務類型";
+"onboarding.preferred_task_types_optional" = "感興趣的任務類型（可選）";
+"onboarding.enable_notifications" = "啟用通知";
+"onboarding.enable_notifications_description" = "及時接收任務狀態更新和消息提醒";
+"onboarding.get_started" = "開始使用";
+"onboarding.previous" = "上一步";
+
+// MARK: - Spotlight
+"spotlight.task" = "任務";
+"spotlight.tasks" = "任務";
+"spotlight.expert" = "任務達人";
+"spotlight.quick_action" = "快速操作";
+
+// MARK: - Shortcuts
+"shortcuts.publish_task" = "發布任務";
+"shortcuts.publish_task_description" = "快速發布一個新任務";
+"shortcuts.view_my_tasks" = "查看我的任務";
+"shortcuts.view_my_tasks_description" = "查看我發布和接受的任務";
+"shortcuts.view_messages" = "查看消息";
+"shortcuts.view_messages_description" = "查看未讀消息和通知";
+"shortcuts.search_tasks" = "搜索任務";
+"shortcuts.search_tasks_description" = "搜索任務";
+"shortcuts.view_flea_market" = "查看跳蚤市場";
+"shortcuts.view_flea_market_description" = "瀏覽和發布二手商品";
+"shortcuts.view_forum" = "查看論壇";
+"shortcuts.view_forum_description" = "參與社區討論";

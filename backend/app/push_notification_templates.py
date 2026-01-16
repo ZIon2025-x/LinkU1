@@ -118,6 +118,18 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
+    # 议价提议（发布者发起议价）
+    "negotiation_offer": {
+        "en": {
+            "title": "💰 New Price Offer",
+            "body_template": "Publisher proposed a new price for「{task_title}」: £{negotiated_price:.2f}"
+        },
+        "zh": {
+            "title": "💰 新的议价提议",
+            "body_template": "发布者对「{task_title}」提出新价格：£{negotiated_price:.2f}"
+        }
+    },
+    
     # 议价被拒绝
     "negotiation_rejected": {
         "en": {
@@ -175,6 +187,138 @@ PUSH_NOTIFICATION_TEMPLATES = {
         "zh": {
             "title": "💬 论坛回复",
             "body_template": "{user_name} 回复了「{post_title}」"
+        }
+    },
+    
+    # 跳蚤市场购买申请
+    "flea_market_purchase_request": {
+        "en": {
+            "title": "🛒 New Purchase Request",
+            "body_template": "{buyer_name} wants to buy「{item_title}」"
+        },
+        "zh": {
+            "title": "🛒 新的购买申请",
+            "body_template": "{buyer_name} 想要购买「{item_title}」"
+        }
+    },
+    
+    # 跳蚤市场购买申请已接受
+    "flea_market_purchase_accepted": {
+        "en": {
+            "title": "✅ Purchase Accepted!",
+            "body_template": "Your purchase request for「{item_title}」has been accepted"
+        },
+        "zh": {
+            "title": "✅ 购买申请已接受！",
+            "body_template": "您对「{item_title}」的购买申请已被接受"
+        }
+    },
+    
+    # 跳蚤市场直接购买
+    "flea_market_direct_purchase": {
+        "en": {
+            "title": "💰 Item Sold",
+            "body_template": "{buyer_name} directly purchased「{item_title}」"
+        },
+        "zh": {
+            "title": "💰 商品已售出",
+            "body_template": "{buyer_name} 直接购买了「{item_title}」"
+        }
+    },
+    
+    # 任务消息（任务聊天）
+    "task_message": {
+        "en": {
+            "title": "💬 New Task Message",
+            "body_template": "{sender_name}: {message}"
+        },
+        "zh": {
+            "title": "💬 新任务消息",
+            "body_template": "{sender_name}: {message}"
+        }
+    },
+    
+    # 任务达人服务申请
+    "service_application": {
+        "en": {
+            "title": "🎯 New Service Application",
+            "body_template": "{applicant_name} applied for service「{service_name}」"
+        },
+        "zh": {
+            "title": "🎯 新服务申请",
+            "body_template": "{applicant_name} 申请了服务「{service_name}」"
+        }
+    },
+    
+    # 任务达人服务申请已批准
+    "service_application_approved": {
+        "en": {
+            "title": "✅ Service Application Approved!",
+            "body_template": "Your service application for「{service_name}」has been approved"
+        },
+        "zh": {
+            "title": "✅ 服务申请已通过！",
+            "body_template": "您对「{service_name}」的服务申请已通过"
+        }
+    },
+    
+    # 任务达人服务申请被拒绝
+    "service_application_rejected": {
+        "en": {
+            "title": "Service Application Rejected",
+            "body_template": "Your service application for「{service_name}」was rejected"
+        },
+        "zh": {
+            "title": "服务申请被拒绝",
+            "body_template": "您对「{service_name}」的服务申请被拒绝"
+        }
+    },
+    
+    # 任务达人服务申请已取消
+    "service_application_cancelled": {
+        "en": {
+            "title": "Service Application Cancelled",
+            "body_template": "{applicant_name} cancelled application for「{service_name}」"
+        },
+        "zh": {
+            "title": "服务申请已取消",
+            "body_template": "{applicant_name} 取消了对「{service_name}」的申请"
+        }
+    },
+    
+    # 任务达人再次议价
+    "counter_offer": {
+        "en": {
+            "title": "💰 New Counter Offer",
+            "body_template": "Expert proposed new price for「{service_name}」: £{counter_price:.2f}"
+        },
+        "zh": {
+            "title": "💰 新的议价提议",
+            "body_template": "任务达人对「{service_name}」提出新价格：£{counter_price:.2f}"
+        }
+    },
+    
+    # 用户同意任务达人的议价
+    "counter_offer_accepted": {
+        "en": {
+            "title": "✅ Counter Offer Accepted",
+            "body_template": "{applicant_name} accepted your counter offer for「{service_name}」"
+        },
+        "zh": {
+            "title": "✅ 议价已接受",
+            "body_template": "{applicant_name} 已接受您对「{service_name}」的议价"
+        }
+    },
+    
+    # 用户拒绝任务达人的议价
+    "counter_offer_rejected": {
+        "en": {
+            "title": "Counter Offer Rejected",
+            "body_template": "{applicant_name} rejected your counter offer for「{service_name}」"
+        },
+        "zh": {
+            "title": "议价被拒绝",
+            "body_template": "{applicant_name} 拒绝了您对「{service_name}」的议价"
         }
     },
     

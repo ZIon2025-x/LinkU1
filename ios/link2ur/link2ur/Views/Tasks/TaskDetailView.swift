@@ -11,6 +11,7 @@ struct TaskDetailView: View {
     @State private var applyMessage = ""
     @State private var negotiatedPrice: Double?
     @State private var showNegotiatePrice = false
+    @State private var showNegotiatePriceDialog = false // 议价选择对话框
     @State private var showFullScreenImage = false
     @State private var selectedImageIndex = 0
     @State private var actionLoading = false
@@ -172,6 +173,11 @@ struct TaskDetailView: View {
             }
             .sheet(isPresented: $showPaymentView) {
                 paymentSheetContent
+            }
+            .alert(LocalizationKey.taskApplicationIsNegotiatePrice.localized, isPresented: $showNegotiatePriceDialog) {
+                negotiatePriceDialog
+            } message: {
+                Text(LocalizationKey.taskApplicationNegotiatePriceHint.localized)
             }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
@@ -378,6 +384,33 @@ struct TaskDetailView: View {
                 }
             }
         )
+    }
+    
+    @ViewBuilder
+    private var negotiatePriceDialog: some View {
+        // 是，我要议价
+        Button(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized) {
+            // 设置议价选项
+            showNegotiatePrice = true
+            // 如果任务有基础奖励，预填充议价金额
+            if let task = viewModel.task {
+                negotiatedPrice = task.baseReward ?? task.reward
+            }
+            // 打开申请表单
+            showApplySheet = true
+        }
+        // 否，不议价
+        Button(LocalizationKey.paymentNo.localized) {
+            // 不议价
+            showNegotiatePrice = false
+            negotiatedPrice = nil
+            // 打开申请表单
+            showApplySheet = true
+        }
+        // 取消
+        Button(LocalizationKey.commonCancel.localized, role: .cancel) {
+            // 什么都不做，直接关闭对话框
+        }
     }
     
     @ViewBuilder
@@ -1510,7 +1543,8 @@ struct TaskActionButtonsView: View {
                 else if task.status == .open && task.takerId == nil {
                     Button(action: {
                         if appState.isAuthenticated {
-                            showApplySheet = true
+                            // 先显示议价选择对话框
+                            showNegotiatePriceDialog = true
                         } else {
                             showLogin = true
                         }

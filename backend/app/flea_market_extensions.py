@@ -84,6 +84,27 @@ async def send_purchase_request_notification(
             related_id=str(item.id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=item.seller_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="flea_market_purchase_request",
+                data={
+                    "item_id": item.id
+                },
+                template_vars={
+                    "buyer_name": buyer_name,
+                    "item_title": item.title
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送购买申请推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"购买申请通知已发送给卖家 {item.seller_id}")
     except Exception as e:
         logger.error(f"发送购买申请通知失败: {e}")
@@ -109,6 +130,27 @@ async def send_purchase_accepted_notification(
             related_id=str(task_id),
         )
         
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=buyer.id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="flea_market_purchase_accepted",
+                data={
+                    "item_id": item.id,
+                    "task_id": task_id
+                },
+                template_vars={
+                    "item_title": item.title
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送购买接受推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
         logger.info(f"购买接受通知已发送给买家 {buyer.id}")
     except Exception as e:
         logger.error(f"发送购买接受通知失败: {e}")
@@ -133,6 +175,28 @@ async def send_direct_purchase_notification(
             content=content,
             related_id=str(task_id),
         )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=item.seller_id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="flea_market_direct_purchase",
+                data={
+                    "item_id": item.id,
+                    "task_id": task_id
+                },
+                template_vars={
+                    "buyer_name": buyer_name,
+                    "item_title": item.title
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送直接购买推送通知失败: {e}")
+            # 推送通知失败不影响主流程
         
         logger.info(f"直接购买通知已发送给卖家 {item.seller_id}")
     except Exception as e:

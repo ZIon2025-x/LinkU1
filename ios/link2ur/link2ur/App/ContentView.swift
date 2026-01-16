@@ -7,6 +7,7 @@ public struct ContentView: View {
     @State private var progress: Double = 1.0 // 进度值（1.0 到 0.0）
     @State private var timer: Timer?
     @State private var hasStartedAnimation: Bool = false // 标记是否已启动动画
+    @State private var showOnboarding = false // 是否显示引导教程
     
     public var body: some View {
         Group {
@@ -126,9 +127,19 @@ public struct ContentView: View {
             } else if appState.isAuthenticated || appState.userSkippedLogin {
                 // 已登录或用户选择跳过登录，都显示主界面
                 MainTabView()
+                    .sheet(isPresented: $showOnboarding) {
+                        OnboardingView(isPresented: $showOnboarding)
+                    }
             } else {
                 LoginView()
+                    .sheet(isPresented: $showOnboarding) {
+                        OnboardingView(isPresented: $showOnboarding)
+                    }
             }
+        }
+        .onAppear {
+            // 检查是否已经看过引导教程
+            checkOnboardingStatus()
         }
         // 移除 onAppear 中的 checkLoginStatus 调用
         // AppState 的 init() 中已经调用了 checkLoginStatus()，避免重复调用
@@ -189,6 +200,17 @@ public struct ContentView: View {
         default:
             // 其他通知类型，跳转到通知列表
             print("跳转到通知列表")
+        }
+    }
+    
+    // 检查引导教程状态
+    private func checkOnboardingStatus() {
+        let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
+        if !hasSeenOnboarding {
+            // 延迟显示引导教程，确保登录状态检查完成
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                showOnboarding = true
+            }
         }
     }
     

@@ -26,6 +26,7 @@ struct TasksView: View {
         (LocalizationKey.taskCategoryOther.localized, "Other")
     ]
     @State private var selectedCategoryIndex = 0
+    @State private var hasAppliedOnboardingPreferences = false // 标记是否已应用引导偏好
     
     var body: some View {
         ZStack {
@@ -207,6 +208,9 @@ struct TasksView: View {
                 )
             }
             .task {
+                // 首次加载时，应用引导教程保存的个性化设置
+                applyOnboardingPreferences()
+                
                 // 使用 task 替代 onAppear，避免重复加载
                 if allTasks.isEmpty && !viewModel.isLoading && !recommendedViewModel.isLoading {
                     // 加载推荐任务和普通任务
@@ -285,6 +289,47 @@ struct TasksView: View {
         
         // 监听两个 ViewModel 的变化，合并任务列表
         updateMergedTasks()
+    }
+    
+    /// 应用引导教程保存的个性化设置
+    private func applyOnboardingPreferences() {
+        // 只应用一次，避免重复应用
+        guard !hasAppliedOnboardingPreferences else { return }
+        hasAppliedOnboardingPreferences = true
+        
+        // 读取保存的偏好城市
+        if let preferredCity = UserDefaults.standard.string(forKey: "preferred_city"),
+           !preferredCity.isEmpty {
+            selectedCity = preferredCity
+            print("✅ [TasksView] 应用引导偏好城市: \(preferredCity)")
+        }
+        
+        // 读取保存的偏好任务类型
+        if let preferredTaskTypes = UserDefaults.standard.array(forKey: "preferred_task_types") as? [String],
+           !preferredTaskTypes.isEmpty {
+            // 将本地化的显示名称转换为后端值
+            // 引导教程中保存的是本地化名称（如"跑腿代购"），需要转换为后端值（如"Errand Running"）
+            let taskTypeMapping: [String: String] = [
+                LocalizationKey.taskCategoryErrandRunning.localized: "Errand Running",
+                LocalizationKey.taskCategorySkillService.localized: "Skill Service",
+                LocalizationKey.taskCategoryHousekeeping.localized: "Housekeeping",
+                LocalizationKey.taskCategoryTransportation.localized: "Transportation",
+                LocalizationKey.taskCategorySocialHelp.localized: "Social Help",
+                LocalizationKey.taskCategoryCampusLife.localized: "Campus Life",
+                LocalizationKey.taskCategorySecondhandRental.localized: "Second-hand & Rental",
+                LocalizationKey.taskCategoryPetCare.localized: "Pet Care",
+                LocalizationKey.taskCategoryLifeConvenience.localized: "Life Convenience",
+                LocalizationKey.taskCategoryOther.localized: "Other"
+            ]
+            
+            // 如果用户只选择了一个任务类型，自动应用筛选
+            if preferredTaskTypes.count == 1,
+               let firstType = preferredTaskTypes.first,
+               let backendValue = taskTypeMapping[firstType] {
+                selectedCategory = backendValue
+                print("✅ [TasksView] 应用引导偏好任务类型: \(firstType) -> \(backendValue)")
+            }
+        }
     }
     
     /// 更新合并后的任务列表（推荐任务优先）

@@ -1266,3 +1266,51 @@
 
 // MARK: - Payment (Additional)
 "payment.payout_management" = "提现管理";
+
+// MARK: - Onboarding
+"onboarding.skip" = "跳过";
+"onboarding.welcome_title" = "欢迎来到 Link²Ur";
+"onboarding.welcome_subtitle" = "连接你的世界";
+"onboarding.welcome_description" = "发布任务、接受任务、买卖二手商品，一切尽在掌握";
+"onboarding.publish_task_title" = "发布任务";
+"onboarding.publish_task_subtitle" = "轻松发布你的需求";
+"onboarding.publish_task_description" = "需要帮助？发布任务，让有能力的用户来帮你完成";
+"onboarding.accept_task_title" = "接受任务";
+"onboarding.accept_task_subtitle" = "赚取额外收入";
+"onboarding.accept_task_description" = "浏览任务，接受感兴趣的任务，完成任务后获得奖励";
+"onboarding.secure_payment_title" = "安全支付";
+"onboarding.secure_payment_subtitle" = "平台保障交易安全";
+"onboarding.secure_payment_description" = "使用 Stripe 安全支付，任务完成后自动转账，保障双方权益";
+"onboarding.community_title" = "社区互动";
+"onboarding.community_subtitle" = "论坛、排行榜、跳蚤市场";
+"onboarding.community_description" = "参与社区讨论，查看排行榜，买卖二手商品，丰富你的校园生活";
+"onboarding.personalization_title" = "个性化设置";
+"onboarding.personalization_subtitle" = "帮助我们为你推荐更合适的内容";
+"onboarding.preferred_city" = "常用城市";
+"onboarding.use_current_location" = "使用当前位置";
+"onboarding.preferred_task_types" = "感兴趣的任务类型";
+"onboarding.preferred_task_types_optional" = "感兴趣的任务类型（可选）";
+"onboarding.enable_notifications" = "启用通知";
+"onboarding.enable_notifications_description" = "及时接收任务状态更新和消息提醒";
+"onboarding.get_started" = "开始使用";
+"onboarding.previous" = "上一步";
+
+// MARK: - Spotlight
+"spotlight.task" = "任务";
+"spotlight.tasks" = "任务";
+"spotlight.expert" = "任务达人";
+"spotlight.quick_action" = "快速操作";
+
+// MARK: - Shortcuts
+"shortcuts.publish_task" = "发布任务";
+"shortcuts.publish_task_description" = "快速发布一个新任务";
+"shortcuts.view_my_tasks" = "查看我的任务";
+"shortcuts.view_my_tasks_description" = "查看我发布和接受的任务";
+"shortcuts.view_messages" = "查看消息";
+"shortcuts.view_messages_description" = "查看未读消息和通知";
+"shortcuts.search_tasks" = "搜索任务";
+"shortcuts.search_tasks_description" = "搜索任务";
+"shortcuts.view_flea_market" = "查看跳蚤市场";
+"shortcuts.view_flea_market_description" = "浏览和发布二手商品";
+"shortcuts.view_forum" = "查看论坛";
+"shortcuts.view_forum_description" = "参与社区讨论";

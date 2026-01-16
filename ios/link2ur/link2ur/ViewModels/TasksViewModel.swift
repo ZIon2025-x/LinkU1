@@ -247,6 +247,21 @@ class TasksViewModel: ObservableObject {
                     if page == 1 && (keyword == nil || keyword?.isEmpty == true) {
                         CacheManager.shared.saveTasks(filteredTasks, category: category, city: city)
                         Logger.success("已缓存 \(filteredTasks.count) 个任务", category: .cache)
+                        
+                        // 索引任务到 Spotlight（仅第一页，避免索引过多）
+                        // 只索引前 20 个任务，避免性能问题
+                        let tasksToIndex = Array(filteredTasks.prefix(20))
+                        let indexData = tasksToIndex.map { task in
+                            (
+                                id: task.id,
+                                title: task.title,
+                                description: task.description,
+                                taskType: task.taskType,
+                                location: task.location,
+                                reward: task.reward
+                            )
+                        }
+                        SpotlightIndexer.shared.indexTasks(indexData)
                     }
                     
                     // 回到主线程更新UI

@@ -1314,6 +1314,54 @@ public enum LocalizationKey: String {
     // MARK: - Payment (Extended)
     case paymentSetupAccount = "payment.setup_account"
     
+    // MARK: - Onboarding
+    case onboardingSkip = "onboarding.skip"
+    case onboardingWelcomeTitle = "onboarding.welcome_title"
+    case onboardingWelcomeSubtitle = "onboarding.welcome_subtitle"
+    case onboardingWelcomeDescription = "onboarding.welcome_description"
+    case onboardingPublishTaskTitle = "onboarding.publish_task_title"
+    case onboardingPublishTaskSubtitle = "onboarding.publish_task_subtitle"
+    case onboardingPublishTaskDescription = "onboarding.publish_task_description"
+    case onboardingAcceptTaskTitle = "onboarding.accept_task_title"
+    case onboardingAcceptTaskSubtitle = "onboarding.accept_task_subtitle"
+    case onboardingAcceptTaskDescription = "onboarding.accept_task_description"
+    case onboardingSecurePaymentTitle = "onboarding.secure_payment_title"
+    case onboardingSecurePaymentSubtitle = "onboarding.secure_payment_subtitle"
+    case onboardingSecurePaymentDescription = "onboarding.secure_payment_description"
+    case onboardingCommunityTitle = "onboarding.community_title"
+    case onboardingCommunitySubtitle = "onboarding.community_subtitle"
+    case onboardingCommunityDescription = "onboarding.community_description"
+    case onboardingPersonalizationTitle = "onboarding.personalization_title"
+    case onboardingPersonalizationSubtitle = "onboarding.personalization_subtitle"
+    case onboardingPreferredCity = "onboarding.preferred_city"
+    case onboardingUseCurrentLocation = "onboarding.use_current_location"
+    case onboardingPreferredTaskTypes = "onboarding.preferred_task_types"
+    case onboardingPreferredTaskTypesOptional = "onboarding.preferred_task_types_optional"
+    case onboardingEnableNotifications = "onboarding.enable_notifications"
+    case onboardingEnableNotificationsDescription = "onboarding.enable_notifications_description"
+    case onboardingGetStarted = "onboarding.get_started"
+    case onboardingPrevious = "onboarding.previous"
+    
+    // MARK: - Spotlight
+    case spotlightTask = "spotlight.task"
+    case spotlightTasks = "spotlight.tasks"
+    case spotlightExpert = "spotlight.expert"
+    case spotlightQuickAction = "spotlight.quick_action"
+    
+    // MARK: - Shortcuts
+    case shortcutsPublishTask = "shortcuts.publish_task"
+    case shortcutsPublishTaskDescription = "shortcuts.publish_task_description"
+    case shortcutsViewMyTasks = "shortcuts.view_my_tasks"
+    case shortcutsViewMyTasksDescription = "shortcuts.view_my_tasks_description"
+    case shortcutsViewMessages = "shortcuts.view_messages"
+    case shortcutsViewMessagesDescription = "shortcuts.view_messages_description"
+    case shortcutsSearchTasks = "shortcuts.search_tasks"
+    case shortcutsSearchTasksDescription = "shortcuts.search_tasks_description"
+    case shortcutsViewFleaMarket = "shortcuts.view_flea_market"
+    case shortcutsViewFleaMarketDescription = "shortcuts.view_flea_market_description"
+    case shortcutsViewForum = "shortcuts.view_forum"
+    case shortcutsViewForumDescription = "shortcuts.view_forum_description"
+    
     /// 获取本地化字符串
     public var localized: String {
         return LocalizationHelper.localized(self.rawValue)
