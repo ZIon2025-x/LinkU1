@@ -86,6 +86,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 3600.0,  # 1小时
     },
     
+    # 撤销超时未支付的申请批准 - 每1小时执行一次（处理 pending_payment 状态超过24小时的任务）
+    'revert-unpaid-application-approvals': {
+        'task': 'app.celery_tasks.revert_unpaid_application_approvals_task',
+        'schedule': 3600.0,  # 1小时
+    },
+    
     # ========== 中频任务（每5分钟）==========
     
     # 检查过期优惠券 - 每15分钟执行一次（降低频率，减少DB压力）

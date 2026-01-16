@@ -126,6 +126,7 @@ struct TasksView: View {
                                 ForEach(allTasks, id: \.id) { task in
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                         TaskCard(task: task, isRecommended: task.isRecommended == true)
+                                            .drawingGroup() // 优化复杂卡片渲染性能
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     .id(task.id) // 确保稳定的id，优化视图复用
@@ -212,18 +213,14 @@ struct TasksView: View {
                     loadTasksWithRecommendations()
                 }
             }
-            // 优化：使用防抖机制，减少频繁更新
+            // 优化：使用防抖机制，减少频繁更新（减少延迟提升响应速度）
             .onChange(of: viewModel.tasks) { _ in
-                // 延迟更新，避免频繁调用
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateMergedTasks()
-                }
+                // 立即更新，减少延迟（已使用防抖机制避免频繁调用）
+                updateMergedTasks()
             }
             .onChange(of: recommendedViewModel.tasks) { _ in
-                // 延迟更新，避免频繁调用
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateMergedTasks()
-                }
+                // 立即更新，减少延迟（已使用防抖机制避免频繁调用）
+                updateMergedTasks()
             }
             // 监听任务更新通知，实时刷新推荐任务
             .onReceive(NotificationCenter.default.publisher(for: .taskUpdated)) { _ in
@@ -255,8 +252,8 @@ struct TasksView: View {
         }
         filterWorkItem = workItem
         
-        // 延迟300ms执行，避免频繁调用
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+        // 延迟200ms执行，避免频繁调用（优化响应速度）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
     }
     
     private func applyFilters() {

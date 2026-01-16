@@ -29,6 +29,7 @@ struct FleaMarketView: View {
                         ForEach(viewModel.items, id: \.id) { item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
                                 ItemCard(item: item, isFavorited: viewModel.favoritedItemIds.contains(item.id))
+                                    .drawingGroup() // 优化复杂卡片渲染性能
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .id(item.id) // 确保稳定的id，优化视图复用

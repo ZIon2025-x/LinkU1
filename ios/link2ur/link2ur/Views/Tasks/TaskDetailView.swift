@@ -119,6 +119,8 @@ struct TaskDetailView: View {
                     showLogin: $showLogin,
                     showPaymentView: $showPaymentView,
                     paymentClientSecret: $paymentClientSecret,
+                    paymentCustomerId: $paymentCustomerId,
+                    paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                     approvedApplicantName: $approvedApplicantName,
                     showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                     isPoster: isPoster,
@@ -921,6 +923,8 @@ struct TaskDetailContentView: View {
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
     @Binding var paymentClientSecret: String?
+    @Binding var paymentCustomerId: String?
+    @Binding var paymentEphemeralKeySecret: String?
     @Binding var approvedApplicantName: String?
     @Binding var showConfirmCompletionSuccess: Bool
     let isPoster: Bool

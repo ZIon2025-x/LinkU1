@@ -1578,7 +1578,15 @@ def approve_task_taker(
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
 ):
-    """任务发布者同意接受者进行任务"""
+    """
+    任务发布者同意接受者进行任务
+    
+    ⚠️ 安全修复：添加支付验证，防止绕过支付
+    注意：此端点可能已废弃，新的流程使用 accept_application 端点
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     db_task = crud.get_task(db, task_id)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -1589,13 +1597,36 @@ def approve_task_taker(
             status_code=403, detail="Only task poster can approve the taker"
         )
 
-    # 检查任务状态：必须是taken状态
-    if db_task.status != "taken":
-        raise HTTPException(status_code=400, detail="Task is not in taken status")
+    # ⚠️ 安全修复：检查支付状态，防止绕过支付
+    if not db_task.is_paid:
+        logger.warning(
+            f"⚠️ 安全警告：用户 {current_user.id} 尝试批准未支付的任务 {task_id}"
+        )
+        raise HTTPException(
+            status_code=400, 
+            detail="任务尚未支付，无法批准。请先完成支付。"
+        )
 
-    # 更新任务状态为进行中
-    db_task.status = "in_progress"
-    db.commit()
+    # 检查任务状态：必须是 pending_payment 或 in_progress 状态
+    # 注意：旧的 "taken" 状态已废弃，新流程使用 pending_payment
+    if db_task.status not in ["pending_payment", "in_progress", "taken"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"任务状态不正确，无法批准。当前状态: {db_task.status}"
+        )
+
+    # 更新任务状态为进行中（如果还不是）
+    if db_task.status == "pending_payment":
+        db_task.status = "in_progress"
+        db.commit()
+        logger.info(f"✅ 任务 {task_id} 状态从 pending_payment 更新为 in_progress")
+    elif db_task.status == "taken":
+        # 兼容旧流程：如果状态是 taken，也更新为 in_progress
+        db_task.status = "in_progress"
+        db.commit()
+        logger.info(f"✅ 任务 {task_id} 状态从 taken 更新为 in_progress（旧流程兼容）")
+    # 如果已经是 in_progress，不需要更新
+    
     db.refresh(db_task)
 
     # 创建通知给任务接受者
@@ -1815,6 +1846,18 @@ def complete_task(
     if db_task.taker_id != current_user.id:
         raise HTTPException(
             status_code=403, detail="Only the task taker can complete the task"
+        )
+    
+    # ⚠️ 安全修复：检查支付状态，确保只有已支付的任务才能完成
+    import logging
+    logger = logging.getLogger(__name__)
+    if not db_task.is_paid:
+        logger.warning(
+            f"⚠️ 安全警告：用户 {current_user.id} 尝试完成未支付的任务 {task_id}"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="任务尚未支付，无法完成。请联系发布者完成支付。"
         )
 
     # 更新任务状态为等待确认
@@ -2222,18 +2265,29 @@ def confirm_task_completion(
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
     
-    # 检查任务状态：允许 pending_confirmation 状态，也允许已支付但状态异常的情况
+    # ⚠️ 安全修复：更严格的状态检查，防止绕过支付
+    # 检查任务状态：只允许 pending_confirmation 状态，或已支付且正常进行中的任务
     if task.status != "pending_confirmation":
-        # 如果任务已支付且有接受者，但状态不是 pending_confirmation，记录日志并允许确认
-        if task.is_paid == 1 and task.taker_id and task.status in ["in_progress", "pending_payment"]:
-            logger.warning(f"任务 {task_id} 状态为 {task.status}，但已支付且有接受者，允许确认完成")
+        # 只允许 in_progress 状态的任务（已支付且正常进行中）
+        # 不允许 pending_payment 状态的任务确认完成（即使 is_paid 被错误设置）
+        if task.is_paid == 1 and task.taker_id and task.status == "in_progress":
+            logger.warning(
+                f"⚠️ 任务 {task_id} 状态为 {task.status}，但已支付且有接受者，允许确认完成"
+            )
             # 将状态更新为 pending_confirmation 以便后续处理
             task.status = "pending_confirmation"
             db.commit()
         else:
+            # 如果 is_paid 被错误设置，记录安全警告
+            if task.is_paid == 1 and task.status == "pending_payment":
+                logger.error(
+                    f"🔴 安全警告：任务 {task_id} 状态为 pending_payment 但 is_paid=1，"
+                    f"可能存在数据不一致或安全漏洞"
+                )
             raise HTTPException(
                 status_code=400, 
-                detail=f"Task is not pending confirmation. Current status: {task.status}, is_paid: {task.is_paid}"
+                detail=f"任务状态不正确，无法确认完成。当前状态: {task.status}, is_paid: {task.is_paid}。"
+                      f"任务必须处于 pending_confirmation 状态，或已支付且处于 in_progress 状态。"
             )
 
     # 将任务状态改为已完成
@@ -2361,53 +2415,95 @@ def confirm_task_completion(
         try:
             from app.payment_transfer_service import create_transfer_record, execute_transfer
             from decimal import Decimal
+            from sqlalchemy import and_
             
-            # 确保 escrow_amount 正确（任务金额 - 平台服务费）
-            if task.escrow_amount <= 0:
-                # 重新计算 escrow_amount
-                task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
-                from app.utils.fee_calculator import calculate_application_fee
-                application_fee = calculate_application_fee(task_amount)
-                task.escrow_amount = max(0.0, task_amount - application_fee)
-                logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
-            
-            # 获取任务接受人信息
-            taker = crud.get_user_by_id(db, task.taker_id)
-            if not taker:
-                logger.warning(f"任务接受人不存在: taker_id={task.taker_id}")
-            elif not taker.stripe_account_id:
-                logger.warning(f"任务接受人尚未创建 Stripe Connect 账户: taker_id={task.taker_id}")
-                # 创建转账记录，等待账户设置完成后由定时任务处理
-                create_transfer_record(
-                    db,
-                    task_id=task_id,
-                    taker_id=task.taker_id,
-                    poster_id=current_user.id,
-                    amount=Decimal(str(task.escrow_amount)),
-                    currency="GBP",
-                    metadata={
-                        "task_title": task.title,
-                        "reason": "taker_stripe_account_not_setup"
-                    }
+            # ⚠️ 安全修复：防止重复转账 - 检查是否已有成功的转账记录
+            existing_success_transfer = db.query(models.PaymentTransfer).filter(
+                and_(
+                    models.PaymentTransfer.task_id == task_id,
+                    models.PaymentTransfer.status == "succeeded"
                 )
-                logger.info(f"✅ 已创建转账记录，等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
+            ).first()
+            
+            if existing_success_transfer:
+                logger.warning(f"⚠️ 任务 {task_id} 已有成功的转账记录 (transfer_record_id={existing_success_transfer.id}, transfer_id={existing_success_transfer.transfer_id})，跳过重复转账")
+                # 如果任务状态未更新，更新任务状态（可能是 webhook 延迟）
+                if task.is_confirmed == 0:
+                    task.is_confirmed = 1
+                    task.paid_to_user_id = existing_success_transfer.taker_id
+                    task.escrow_amount = Decimal('0.0')
+                    db.commit()
+                    logger.info(f"✅ 已更新任务状态为已确认（基于已有成功转账记录）")
             else:
-                # 创建转账记录（用于审计）
-                transfer_record = create_transfer_record(
-                    db,
-                    task_id=task_id,
-                    taker_id=task.taker_id,
-                    poster_id=current_user.id,
-                    amount=Decimal(str(task.escrow_amount)),
-                    currency="GBP",
-                    metadata={
-                        "task_title": task.title,
-                        "transfer_source": "confirm_completion"
-                    }
-                )
+                # 确保 escrow_amount 正确（任务金额 - 平台服务费）
+                if task.escrow_amount <= 0:
+                    # 重新计算 escrow_amount
+                    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+                    from app.utils.fee_calculator import calculate_application_fee
+                    application_fee = calculate_application_fee(task_amount)
+                    task.escrow_amount = max(0.0, task_amount - application_fee)
+                    logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
                 
-                # 尝试立即执行转账
-                success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
+                # 获取任务接受人信息
+                taker = crud.get_user_by_id(db, task.taker_id)
+                if not taker:
+                    logger.warning(f"任务接受人不存在: taker_id={task.taker_id}")
+                elif not taker.stripe_account_id:
+                    logger.warning(f"任务接受人尚未创建 Stripe Connect 账户: taker_id={task.taker_id}")
+                    # ⚠️ 安全修复：检查是否已有待处理的转账记录（防止重复创建）
+                    existing_pending_transfer = db.query(models.PaymentTransfer).filter(
+                        and_(
+                            models.PaymentTransfer.task_id == task_id,
+                            models.PaymentTransfer.status.in_(["pending", "retrying"])
+                        )
+                    ).first()
+                    
+                    if existing_pending_transfer:
+                        logger.info(f"ℹ️ 任务 {task_id} 已有待处理的转账记录 (transfer_record_id={existing_pending_transfer.id})，跳过创建新记录")
+                    else:
+                        # 创建转账记录，等待账户设置完成后由定时任务处理
+                        create_transfer_record(
+                            db,
+                            task_id=task_id,
+                            taker_id=task.taker_id,
+                            poster_id=current_user.id,
+                            amount=Decimal(str(task.escrow_amount)),
+                            currency="GBP",
+                            metadata={
+                                "task_title": task.title,
+                                "reason": "taker_stripe_account_not_setup"
+                            }
+                        )
+                        logger.info(f"✅ 已创建转账记录，等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
+                else:
+                    # ⚠️ 安全修复：检查是否已有待处理的转账记录（防止重复创建）
+                    existing_pending_transfer = db.query(models.PaymentTransfer).filter(
+                        and_(
+                            models.PaymentTransfer.task_id == task_id,
+                            models.PaymentTransfer.status.in_(["pending", "retrying"])
+                        )
+                    ).first()
+                    
+                    if existing_pending_transfer:
+                        logger.info(f"ℹ️ 任务 {task_id} 已有待处理的转账记录 (transfer_record_id={existing_pending_transfer.id})，使用现有记录执行转账")
+                        transfer_record = existing_pending_transfer
+                    else:
+                        # 创建转账记录（用于审计）
+                        transfer_record = create_transfer_record(
+                            db,
+                            task_id=task_id,
+                            taker_id=task.taker_id,
+                            poster_id=current_user.id,
+                            amount=Decimal(str(task.escrow_amount)),
+                            currency="GBP",
+                            metadata={
+                                "task_title": task.title,
+                                "transfer_source": "confirm_completion"
+                            }
+                        )
+                    
+                    # 尝试立即执行转账
+                    success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
                 
                 if success:
                     logger.info(f"✅ 任务 {task_id} 转账完成，金额已转给接受人 {task.taker_id}")
@@ -4354,8 +4450,31 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     
     elif event_type == "payment_intent.canceled":
         payment_intent = event_data
+        payment_intent_id = payment_intent.get("id")
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
-        logger.warning(f"Payment intent canceled for task {task_id}: payment_intent_id={payment_intent.get('id')}")
+        logger.warning(f"⚠️ [WEBHOOK] Payment intent canceled: payment_intent_id={payment_intent_id}, task_id={task_id}")
+        
+        # ⚠️ 安全修复：处理 PaymentIntent 取消事件
+        # 如果任务处于 pending_payment 状态，可以选择：
+        # 1. 保持 pending_payment 状态，等待超时处理（推荐）
+        # 2. 立即回滚任务状态（如果业务需要）
+        # 这里选择保持状态，等待超时处理，避免频繁状态变更
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task and task.status == "pending_payment" and task.payment_intent_id == payment_intent_id:
+                logger.info(
+                    f"ℹ️ [WEBHOOK] 任务 {task_id} 的 PaymentIntent 已取消，"
+                    f"任务状态保持为 pending_payment，等待超时处理或用户重新支付"
+                )
+                # 清除 payment_intent_id，允许用户重新创建支付
+                task.payment_intent_id = None
+                db.commit()
+                logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的 payment_intent_id，允许重新创建支付")
+            else:
+                logger.info(
+                    f"ℹ️ [WEBHOOK] 任务 {task_id} 状态不是 pending_payment 或 payment_intent_id 不匹配，"
+                    f"当前状态: {task.status if task else 'N/A'}, payment_intent_id: {task.payment_intent_id if task else 'N/A'}"
+                )
     
     elif event_type == "payment_intent.requires_action":
         payment_intent = event_data

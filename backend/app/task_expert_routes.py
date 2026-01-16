@@ -2677,7 +2677,26 @@ async def approve_service_application(
             except:
                 images_json = None
     
+    # ⚠️ 安全修复：任务达人服务创建任务需要支付，不能直接进入 in_progress
+    # 检查申请用户（发布者）是否有 Stripe Connect 账户（用于接收任务奖励）
+    # 注意：对于任务达人服务，申请用户是发布者，任务达人是接收者
+    applicant_user = await db.get(models.User, application.applicant_id)
+    if not applicant_user:
+        raise HTTPException(status_code=404, detail="申请用户不存在")
+    
+    # 获取任务达人的 Stripe Connect 账户ID（接收方）
+    expert_user = await db.get(models.User, application.expert_id)
+    taker_stripe_account_id = expert_user.stripe_account_id if expert_user else None
+    
+    if not taker_stripe_account_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
+            headers={"X-Stripe-Connect-Required": "true"}
+        )
+    
     # 8. 创建任务（任务达人服务创建的任务等级为 expert）
+    # 设置为 pending_payment 状态，等待支付完成
     new_task = models.Task(
         title=service.service_name,
         description=service.description,
@@ -2692,13 +2711,59 @@ async def approve_service_application(
         task_level="expert",  # 任务达人服务创建的任务等级为 expert
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
-        status="in_progress",
+        status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
+        is_paid=0,  # 明确标记为未支付
         images=images_json,  # 存储为JSON字符串
         accepted_at=get_utc_time()
     )
     
     db.add(new_task)
     await db.flush()  # 获取任务ID
+    
+    # ⚠️ 安全修复：创建支付意图，确保任务达人服务也需要支付
+    # 注意：在提交事务之前创建 PaymentIntent，如果失败可以回滚
+    import stripe
+    import os
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
+    task_amount_pence = int(price * 100)
+    from app.utils.fee_calculator import calculate_application_fee_pence
+    application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+    
+    try:
+        payment_intent = stripe.PaymentIntent.create(
+            amount=task_amount_pence,
+            currency="gbp",
+            automatic_payment_methods={"enabled": True},
+            description=f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
+            metadata={
+                "task_id": str(new_task.id),
+                "task_title": service.service_name[:200] if service.service_name else "",
+                "poster_id": str(application.applicant_id),
+                "poster_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
+                "taker_id": str(application.expert_id),
+                "taker_name": expert_user.name if expert_user else f"User {application.expert_id}",
+                "taker_stripe_account_id": taker_stripe_account_id,
+                "application_fee": str(application_fee_pence),
+                "task_amount": str(task_amount_pence),
+                "task_amount_display": f"{price:.2f}",
+                "platform": "Link²Ur",
+                "payment_type": "service_application_approve",
+                "service_application_id": str(application_id),
+                "service_id": str(service.id)
+            },
+        )
+        
+        # 更新任务的 payment_intent_id
+        new_task.payment_intent_id = payment_intent.id
+    except Exception as e:
+        # 如果创建 PaymentIntent 失败，回滚整个事务
+        await db.rollback()
+        logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="创建支付失败，请稍后重试"
+        )
     
     # 9. 更新申请记录
     application.status = "approved"
@@ -2707,10 +2772,37 @@ async def approve_service_application(
     application.approved_at = get_utc_time()
     application.updated_at = get_utc_time()
     
+    # 提交事务（任务和申请状态都已更新，PaymentIntent 已创建）
     await db.commit()
     await db.refresh(new_task)
     
-    # 7. 发送通知给申请用户（任务已创建）
+    # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+    customer_id = None
+    ephemeral_key_secret = None
+    try:
+        existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(application.applicant_id)})
+        if existing_customers.data:
+            customer_id = existing_customers.data[0].id
+        else:
+            customer = stripe.Customer.create(
+                metadata={
+                    "user_id": str(application.applicant_id),
+                    "user_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
+                }
+            )
+            customer_id = customer.id
+
+        ephemeral_key = stripe.EphemeralKey.create(
+            customer=customer_id,
+            stripe_version="2025-04-30.preview",
+        )
+        ephemeral_key_secret = ephemeral_key.secret
+    except Exception as e:
+        logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+        customer_id = None
+        ephemeral_key_secret = None
+    
+    # 7. 发送通知给申请用户（任务已创建，需要支付）
     from app.task_notifications import send_service_application_approved_notification
     try:
         await send_service_application_approved_notification(
@@ -2724,9 +2816,17 @@ async def approve_service_application(
         logger.error(f"Failed to send notification: {e}")
     
     return {
-        "message": "申请已同意，任务已创建",
+        "message": "申请已同意，请完成支付",
         "application_id": application_id,
         "task_id": new_task.id,
+        "task_status": "pending_payment",
+        "payment_intent_id": payment_intent.id,
+        "client_secret": payment_intent.client_secret,
+        "amount": payment_intent.amount,
+        "amount_display": f"{payment_intent.amount / 100:.2f}",
+        "currency": payment_intent.currency.upper(),
+        "customer_id": customer_id,
+        "ephemeral_key_secret": ephemeral_key_secret,
         "task": new_task,
     }
 

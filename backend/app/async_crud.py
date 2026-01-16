@@ -1400,10 +1400,28 @@ class AsyncTaskCRUD:
                 print(f"DEBUG: 申请记录不存在: task_id={task_id}, applicant_id={applicant_id}")
                 return None
             
+            # ⚠️ 安全修复：检查任务支付状态
+            # 获取任务以检查支付状态
+            task_result = await db.execute(
+                select(models.Task).where(models.Task.id == task_id)
+            )
+            task = task_result.scalar_one_or_none()
+            
+            if not task:
+                print(f"DEBUG: 任务不存在: task_id={task_id}")
+                return None
+            
+            # ⚠️ 安全修复：只有已支付的任务才能批准申请
+            if not task.is_paid:
+                print(f"DEBUG: 任务 {task_id} 尚未支付，无法批准申请")
+                # 注意：此方法可能已废弃，新的流程使用 accept_application
+                # 但为了安全，仍然添加支付检查
+                return None
+            
             # 更新申请状态为已批准
             setattr(application, 'status', "approved")
             
-            # 更新任务状态和接收者
+            # 更新任务状态和接收者（只有已支付的任务才能进入 in_progress）
             result = await db.execute(
                 update(models.Task)
                 .where(models.Task.id == task_id)

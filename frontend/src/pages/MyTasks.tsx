@@ -756,6 +756,7 @@ const MyTasks: React.FC = () => {
       case 'open': return t('myTasks.taskStatus.open');
       case 'taken': return t('myTasks.taskStatus.taken');
       case 'in_progress': return t('myTasks.taskStatus.in_progress');
+      case 'pending_payment': return language === 'zh' ? '待支付' : 'Pending Payment';
       case 'pending_confirmation': return t('myTasks.taskStatus.pending_confirmation');
       case 'completed': return t('myTasks.taskStatus.completed');
       case 'cancelled': return t('myTasks.taskStatus.cancelled');
@@ -781,6 +782,7 @@ const MyTasks: React.FC = () => {
       case 'open': return '#10b981';
       case 'taken': return '#f59e0b';
       case 'in_progress': return '#3b82f6';
+      case 'pending_payment': return '#f59e0b'; // 待支付 - 橙色
       case 'pending_confirmation': return '#f59e0b';
       case 'completed': return '#6b7280';
       case 'cancelled': return '#ef4444'; // 红色

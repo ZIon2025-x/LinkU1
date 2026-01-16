@@ -277,13 +277,11 @@ struct RecommendedContentView: View {
         }
         .onAppear {
             // 立即显示所有内容，数据已预加载
-            // 使用平滑的淡入动画，避免闪烁
+            // 使用平滑的淡入动画，避免闪烁（优化：减少延迟提升响应速度）
             if !hasAppeared {
-                // 短暂延迟后显示，确保数据已加载
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        hasAppeared = true
-                    }
+                // 立即显示，减少延迟（数据已预加载）
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    hasAppeared = true
                 }
             }
         }

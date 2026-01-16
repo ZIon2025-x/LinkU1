@@ -26,7 +26,7 @@ struct MyPostsView: View {
                     appState: appState
                 )
                 .id(viewModel.selectedCategory.rawValue) // 确保切换分类时视图更新
-                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedCategory) // 优化动画性能
+                .animation(.easeInOut(duration: 0.2), value: viewModel.selectedCategory) // 优化动画性能
                 .onChange(of: viewModel.selectedCategory) { newCategory in
                     print("🔍 [MyPostsView] selectedCategory 变化: \(newCategory), 时间: \(Date())")
                 }
@@ -223,6 +223,7 @@ struct CategoryContentView: View {
                         ForEach(items, id: \.id) { item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
                                 MyItemCard(item: item, category: category)
+                                    .drawingGroup() // 优化复杂卡片渲染性能
                             }
                             .buttonStyle(PlainButtonStyle())
                             .id(item.id) // 确保稳定的id，优化视图复用

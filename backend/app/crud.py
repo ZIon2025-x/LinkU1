@@ -2188,12 +2188,39 @@ def revert_unpaid_application_approvals(db: Session):
                     reverted_count += 1
                     logger.info(f"✅ 已撤销任务 {task.id} 的超时未支付申请批准，申请 {application.id} 状态已改回 pending")
                 else:
-                    # 如果没有找到申请，直接回滚任务状态
+                    # 如果没有找到申请（可能是跳蚤市场直接购买），直接回滚任务状态
+                    # ⚠️ 注意：跳蚤市场直接购买没有申请记录，需要特殊处理
                     task.taker_id = None
                     task.status = "open"
                     task.is_paid = 0
                     task.payment_intent_id = None
-                    logger.warning(f"⚠️ 任务 {task.id} 处于 pending_payment 状态但未找到对应的已批准申请，已直接回滚任务状态")
+                    
+                    # 检查是否是跳蚤市场任务（通过 task_type 判断）
+                    is_flea_market_task = task.task_type == "Second-hand & Rental"
+                    if is_flea_market_task:
+                        # ⚠️ 安全修复：回滚跳蚤市场商品状态
+                        # 查找关联的商品并回滚状态
+                        from app.models import FleaMarketItem
+                        flea_market_item = db.query(FleaMarketItem).filter(
+                            FleaMarketItem.sold_task_id == task.id
+                        ).first()
+                        
+                        if flea_market_item:
+                            # 回滚商品状态：从 sold 改回 active
+                            flea_market_item.status = "active"
+                            flea_market_item.sold_task_id = None
+                            logger.info(
+                                f"✅ 跳蚤市场任务 {task.id} 超时未支付，已回滚任务状态和商品状态。"
+                                f"商品 {flea_market_item.id} 状态已从 sold 改回 active"
+                            )
+                        else:
+                            logger.warning(
+                                f"⚠️ 跳蚤市场任务 {task.id} 超时未支付，但未找到关联的商品"
+                            )
+                    else:
+                        logger.warning(
+                            f"⚠️ 任务 {task.id} 处于 pending_payment 状态但未找到对应的已批准申请，已直接回滚任务状态"
+                        )
                     reverted_count += 1
                     
             except Exception as e:

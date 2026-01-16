@@ -2278,13 +2278,86 @@ async def respond_negotiation(
                     detail="任务已被接受"
                 )
             
-            # 更新任务
+            # ⚠️ 安全修复：接受议价需要支付，不能直接进入 in_progress
+            # 更新任务状态为 pending_payment，等待支付完成
             locked_task.taker_id = application.applicant_id
-            locked_task.status = "in_progress"
+            locked_task.status = "pending_payment"
+            locked_task.is_paid = 0  # 明确标记为未支付
             
             # 如果申请包含议价，更新 agreed_reward
             if application.negotiated_price is not None:
                 locked_task.agreed_reward = application.negotiated_price
+            
+            # 计算任务金额
+            task_amount = float(application.negotiated_price) if application.negotiated_price is not None else float(locked_task.base_reward) if locked_task.base_reward is not None else 0.0
+            
+            if task_amount <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="任务金额必须大于0，无法进行支付"
+                )
+            
+            task_amount_pence = int(task_amount * 100)
+            
+            # 计算平台服务费
+            from app.utils.fee_calculator import calculate_application_fee_pence
+            application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+            
+            # 获取申请者信息（用于创建 PaymentIntent）
+            applicant = await db.get(models.User, application.applicant_id)
+            if not applicant:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="申请者不存在"
+                )
+            
+            # 获取接受者的 Stripe Connect 账户ID
+            taker_stripe_account_id = applicant.stripe_account_id
+            
+            if not taker_stripe_account_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="申请者尚未创建 Stripe Connect 收款账户，无法完成支付。请联系申请者先创建收款账户。",
+                    headers={"X-Stripe-Connect-Required": "true"}
+                )
+            
+            # 创建 Stripe Payment Intent
+            import stripe
+            import os
+            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+            
+            try:
+                payment_intent = stripe.PaymentIntent.create(
+                    amount=task_amount_pence,
+                    currency="gbp",
+                    automatic_payment_methods={"enabled": True},
+                    description=f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
+                    metadata={
+                        "task_id": str(task_id),
+                        "task_title": locked_task.title[:200] if locked_task.title else "",
+                        "poster_id": str(locked_task.poster_id),
+                        "taker_id": str(application.applicant_id),
+                        "taker_name": applicant.name if applicant else f"User {application.applicant_id}",
+                        "taker_stripe_account_id": taker_stripe_account_id,
+                        "application_fee": str(application_fee_pence),
+                        "task_amount": str(task_amount_pence),
+                        "task_amount_display": f"{task_amount:.2f}",
+                        "platform": "Link²Ur",
+                        "payment_type": "negotiation_accept",
+                        "application_id": str(application_id),
+                        "negotiated_price": str(application.negotiated_price) if application.negotiated_price else ""
+                    },
+                )
+                
+                # 更新任务的 payment_intent_id
+                locked_task.payment_intent_id = payment_intent.id
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="创建支付失败，请稍后重试"
+                )
             
             # 更新申请状态
             application.status = "approved"
@@ -2318,10 +2391,40 @@ async def respond_negotiation(
             )
             db.add(log_entry)
             
+            # 提交事务（任务状态、PaymentIntent 都已更新）
+            await db.commit()
+            
+            # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+            customer_id = None
+            ephemeral_key_secret = None
+            try:
+                existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(locked_task.poster_id)})
+                if existing_customers.data:
+                    customer_id = existing_customers.data[0].id
+                else:
+                    poster = await db.get(models.User, locked_task.poster_id)
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(locked_task.poster_id),
+                            "user_name": poster.name if poster else f"User {locked_task.poster_id}",
+                        }
+                    )
+                    customer_id = customer.id
+
+                ephemeral_key = stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-04-30.preview",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
+            
             # 发送通知给发布者
             try:
                 # ⚠️ 直接使用文本内容，不存储 JSON
-                content = f"申请者已接受您对任务「{task.title}」的议价"
+                content = f"申请者已接受您对任务「{task.title}」的议价，请完成支付"
                 
                 new_notification = models.Notification(
                     user_id=task.poster_id,
@@ -2332,10 +2435,25 @@ async def respond_negotiation(
                     created_at=current_time
                 )
                 db.add(new_notification)
-                # 注意：通知会在下面的 await db.commit() 中一起提交
+                await db.commit()
             except Exception as e:
                 logger.error(f"发送接受议价通知失败: {e}")
                 # 通知失败不影响主流程
+            
+            # 返回支付信息
+            return {
+                "message": "议价已被接受，请完成支付",
+                "application_id": application_id,
+                "task_id": task_id,
+                "task_status": "pending_payment",
+                "payment_intent_id": payment_intent.id,
+                "client_secret": payment_intent.client_secret,
+                "amount": payment_intent.amount,
+                "amount_display": f"{payment_intent.amount / 100:.2f}",
+                "currency": payment_intent.currency.upper(),
+                "customer_id": customer_id,
+                "ephemeral_key_secret": ephemeral_key_secret,
+            }
             
         else:  # reject
             # 拒绝议价：更新申请状态为rejected

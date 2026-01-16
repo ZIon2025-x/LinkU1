@@ -206,8 +206,20 @@ def auto_complete_expired_time_slot_tasks(db: Session):
                             max_end_time = end_time
             
             # 如果找到了时间段结束时间，且已过期，则自动完成
+            # ⚠️ 安全修复：只有已支付的任务才能自动完成
             if max_end_time and max_end_time < current_time:
-                logger.info(f"达人任务 {task.id} (expert_service_id: {task.expert_service_id}) 的时间段已过期（结束时间: {max_end_time}），自动标记为已完成")
+                # 检查支付状态
+                if not task.is_paid:
+                    logger.warning(
+                        f"⚠️ 安全警告：达人任务 {task.id} 时间段已过期但未支付，跳过自动完成。"
+                        f"expert_service_id={task.expert_service_id}, is_paid={task.is_paid}"
+                    )
+                    continue
+                
+                logger.info(
+                    f"达人任务 {task.id} (expert_service_id: {task.expert_service_id}) "
+                    f"的时间段已过期（结束时间: {max_end_time}），自动标记为已完成"
+                )
                 task.status = "completed"
                 task.completed_at = current_time
                 completed_count += 1

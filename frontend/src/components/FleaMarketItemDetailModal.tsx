@@ -216,9 +216,19 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         setPurchaseLoading(true);
         try {
           const response = await api.post(`/api/flea-market/items/${itemId}/direct-purchase`);
-          message.success(t('fleaMarket.purchaseSuccess') || '购买成功！任务已创建');
-          onClose();
-          navigate(`/${language}/message`);
+          const data = response.data.data;
+          
+          // ⚠️ 安全修复：如果任务状态为 pending_payment，跳转到支付页面
+          if (data.task_status === 'pending_payment' && data.task_id) {
+            message.success(t('fleaMarket.purchaseSuccess') || '购买成功！请完成支付');
+            onClose();
+            // 跳转到支付页面
+            navigate(`/${language}/tasks/${data.task_id}/payment`);
+          } else {
+            message.success(t('fleaMarket.purchaseSuccess') || '购买成功！任务已创建');
+            onClose();
+            navigate(`/${language}/message`);
+          }
         } catch (error: any) {
                     message.error(getErrorMessage(error));
         } finally {
@@ -628,6 +638,40 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                               <div className={styles.requestTime}>
                                 {t('fleaMarket.waitingBuyerResponse') || '等待买家回应'}
                               </div>
+                              {/* ⚠️ 安全修复：买家接受卖家议价时需要支付 */}
+                              {!isOwner && currentUser && request.buyer_id === currentUser.id && (
+                                <div className={styles.requestActions} style={{ marginTop: '8px' }}>
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={async () => {
+                                      if (!itemId) return;
+                                      try {
+                                        const requestId = parseInt(request.id.replace(/[^0-9]/g, ''));
+                                        const response = await api.post(`/api/flea-market/items/${itemId}/accept-purchase`, {
+                                          purchase_request_id: requestId
+                                        });
+                                        const data = response.data.data;
+                                        
+                                        // ⚠️ 安全修复：如果任务状态为 pending_payment，跳转到支付页面
+                                        if (data.task_status === 'pending_payment' && data.task_id) {
+                                          message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，请完成支付');
+                                          onClose();
+                                          // 跳转到支付页面
+                                          navigate(`/${language}/tasks/${data.task_id}/payment`);
+                                        } else {
+                                          message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，任务已创建');
+                                          loadPurchaseRequests();
+                                        }
+                                      } catch (error: any) {
+                                        message.error(getErrorMessage(error));
+                                      }
+                                    }}
+                                  >
+                                    {t('fleaMarket.acceptPurchase') || '接受购买申请'}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

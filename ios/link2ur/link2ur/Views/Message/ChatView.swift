@@ -336,7 +336,7 @@ struct ChatView: View {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
                 } else {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
                 }

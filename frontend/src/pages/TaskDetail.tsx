@@ -1796,6 +1796,7 @@ const TaskDetail: React.FC = () => {
       case 'open': return '开放中';
       case 'taken': return '开放中';  // 在任务大厅中显示为开放中
       case 'in_progress': return '进行中';
+      case 'pending_payment': return language === 'zh' ? '待支付' : 'Pending Payment';
       case 'pending_confirmation': return '待确认';
       case 'completed': return '已完成';
       case 'cancelled': return '已取消';
@@ -2287,14 +2288,17 @@ const TaskDetail: React.FC = () => {
                 fontWeight: '600',
                 background: (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
+                           task.status === 'pending_payment' ? '#fef3c7' : // 待支付 - 浅橙色
                            task.status === 'pending_confirmation' ? '#e0e7ff' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
                 color: (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
+                       task.status === 'pending_payment' ? '#92400e' : // 待支付 - 深橙色
                        task.status === 'pending_confirmation' ? '#3730a3' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
                 border: `1px solid ${(task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
+                                   task.status === 'pending_payment' ? '#fbbf24' : // 待支付 - 橙色边框
                                    task.status === 'pending_confirmation' ? '#6366f1' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
               }}>
@@ -3803,6 +3807,26 @@ const TaskDetail: React.FC = () => {
             }}
           >
             {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '💰 分配奖励' : '💰 Distribute Rewards')}
+          </button>
+        )}
+
+        {/* 支付按钮：任务状态为 pending_payment 且用户是发布者时显示 */}
+        {task.status === 'pending_payment' && isTaskPoster && id && (
+          <button
+            onClick={() => navigate(`/${language}/tasks/${id}/payment`)}
+            style={{
+              background: '#10b981',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 32px',
+              fontWeight: 700,
+              fontSize: 18,
+              cursor: 'pointer',
+              marginRight: '16px'
+            }}
+          >
+            💳 {language === 'zh' ? '立即支付' : 'Pay Now'}
           </button>
         )}
 

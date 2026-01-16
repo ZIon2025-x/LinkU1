@@ -93,7 +93,8 @@ if CELERY_AVAILABLE:
     )
     from app.crud import (
         cancel_expired_tasks,
-        update_all_featured_task_experts_response_time
+        update_all_featured_task_experts_response_time,
+        revert_unpaid_application_approvals
     )
     from app.main import update_all_users_statistics
     
@@ -285,6 +286,39 @@ if CELERY_AVAILABLE:
         except Exception as e:
             duration = time.time() - start_time
             logger.error(f"处理待处理转账失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+    
+    @celery_app.task(
+        name='app.celery_tasks.revert_unpaid_application_approvals_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def revert_unpaid_application_approvals_task(self):
+        """撤销超时未支付的申请批准 - Celery任务包装（每1小时执行）"""
+        start_time = time.time()
+        task_name = 'revert_unpaid_application_approvals_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            reverted_count = revert_unpaid_application_approvals(db)
+            duration = time.time() - start_time
+            logger.info(f"✅ 撤销超时未支付申请批准执行完成，撤销了 {reverted_count} 个任务 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "message": f"Reverted {reverted_count} unpaid application approvals", "reverted_count": reverted_count}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"撤销超时未支付申请批准失败: {e}", exc_info=True)
             _record_task_metrics(task_name, "error", duration)
             try:
                 db.rollback()
