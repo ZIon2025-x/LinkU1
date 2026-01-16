@@ -54,7 +54,7 @@ interface Notification {
 }
 
 const MyTasks: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
