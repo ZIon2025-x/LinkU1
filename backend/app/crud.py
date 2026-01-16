@@ -722,37 +722,21 @@ def list_tasks(
     if location and location.strip():
         loc = location.strip()
         if loc.lower() == 'other':
-            # "Other" 筛选：排除所有预定义城市和 Online
-            from app.constants import UK_MAIN_CITIES
-            from sqlalchemy import not_, or_
-            exclusion_conditions = []
-            for city in UK_MAIN_CITIES:
-                exclusion_conditions.append(Task.location.ilike(f"%, {city}%"))
-                exclusion_conditions.append(Task.location.ilike(f"{city},%"))
-                exclusion_conditions.append(Task.location.ilike(f"{city}"))
-                exclusion_conditions.append(Task.location.ilike(f"% {city}"))
-            exclusion_conditions.append(Task.location.ilike("%online%"))
-            query = query.filter(not_(or_(*exclusion_conditions)))
+            # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+            from sqlalchemy import not_
+            from app.utils.city_filter_utils import build_other_exclusion_filter
+
+            exclusion_expr = build_other_exclusion_filter(Task.location)
+            if exclusion_expr is not None:
+                query = query.filter(not_(exclusion_expr))
         elif loc.lower() == 'online':
             query = query.filter(Task.location.ilike("%online%"))
         else:
-            from sqlalchemy import or_
-            from app.constants import get_city_name_variants
-            
-            # 获取城市名的所有变体（英文和中文）
-            city_variants = get_city_name_variants(loc)
-            
-            # 为每个变体创建匹配条件
-            conditions = []
-            for variant in city_variants:
-                conditions.extend([
-                    Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
-                    Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
-                    Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
-                    Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
-                ])
-            
-            query = query.filter(or_(*conditions))
+            from app.utils.city_filter_utils import build_city_location_filter
+
+            city_expr = build_city_location_filter(Task.location, loc)
+            if city_expr is not None:
+                query = query.filter(city_expr)
 
     # 在数据库层面添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
@@ -877,37 +861,21 @@ def count_tasks(
     if location and location.strip():
         loc = location.strip()
         if loc.lower() == 'other':
-            # "Other" 筛选：排除所有预定义城市和 Online
-            from app.constants import UK_MAIN_CITIES
-            from sqlalchemy import not_, or_
-            exclusion_conditions = []
-            for city in UK_MAIN_CITIES:
-                exclusion_conditions.append(Task.location.ilike(f"%, {city}%"))
-                exclusion_conditions.append(Task.location.ilike(f"{city},%"))
-                exclusion_conditions.append(Task.location.ilike(f"{city}"))
-                exclusion_conditions.append(Task.location.ilike(f"% {city}"))
-            exclusion_conditions.append(Task.location.ilike("%online%"))
-            query = query.filter(not_(or_(*exclusion_conditions)))
+            # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+            from sqlalchemy import not_
+            from app.utils.city_filter_utils import build_other_exclusion_filter
+
+            exclusion_expr = build_other_exclusion_filter(Task.location)
+            if exclusion_expr is not None:
+                query = query.filter(not_(exclusion_expr))
         elif loc.lower() == 'online':
             query = query.filter(Task.location.ilike("%online%"))
         else:
-            from sqlalchemy import or_
-            from app.constants import get_city_name_variants
-            
-            # 获取城市名的所有变体（英文和中文）
-            city_variants = get_city_name_variants(loc)
-            
-            # 为每个变体创建匹配条件
-            conditions = []
-            for variant in city_variants:
-                conditions.extend([
-                    Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
-                    Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
-                    Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
-                    Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
-                ])
-            
-            query = query.filter(or_(*conditions))
+            from app.utils.city_filter_utils import build_city_location_filter
+
+            city_expr = build_city_location_filter(Task.location, loc)
+            if city_expr is not None:
+                query = query.filter(city_expr)
 
     # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():

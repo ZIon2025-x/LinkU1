@@ -363,32 +363,20 @@ class AsyncTaskCRUD:
                 query = query.where(models.Task.task_type == task_type)
             if location and location not in ['全部城市', '全部', 'all']:
                 if location.lower() == 'other':
-                    # "Other" 筛选：排除所有预定义城市和 Online
-                    from app.constants import UK_MAIN_CITIES
-                    from sqlalchemy import and_, not_, or_
-                    # 使用更精确的城市匹配模式，避免匹配街道名
-                    exclusion_conditions = []
-                    for city in UK_MAIN_CITIES:
-                        # 匹配城市名的多种格式，确保是城市名而非街道名
-                        exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                    exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                    query = query.where(not_(or_(*exclusion_conditions)))
+                    # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                    from sqlalchemy import not_
+                    from app.utils.city_filter_utils import build_other_exclusion_filter
+                    exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                    if exclusion_expr is not None:
+                        query = query.where(not_(exclusion_expr))
                 elif location.lower() == 'online':
                     # Online 精确匹配
                     query = query.where(models.Task.location.ilike("%online%"))
                 else:
-                    # 使用更精确的城市匹配模式，避免 "Bristol Road" 匹配到 "Bristol"
-                    # 匹配城市名称的多种格式
-                    from sqlalchemy import or_
-                    query = query.where(or_(
-                        models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
-                        models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
-                        models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
-                        models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
-                    ))
+                    from app.utils.city_filter_utils import build_city_location_filter
+                    city_expr = build_city_location_filter(models.Task.location, location)
+                    if city_expr is not None:
+                        query = query.where(city_expr)
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
@@ -547,37 +535,19 @@ class AsyncTaskCRUD:
             # 地点筛选（使用精确城市匹配）
             if location and location not in ["全部城市", "全部", "all"]:
                 if location.lower() == 'other':
-                    # "Other" 筛选：排除所有预定义城市和 Online
-                    from app.constants import UK_MAIN_CITIES
-                    from sqlalchemy import not_, or_
-                    exclusion_conditions = []
-                    for city in UK_MAIN_CITIES:
-                        exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                        exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                    exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                    base_query = base_query.where(not_(or_(*exclusion_conditions)))
+                    # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                    from sqlalchemy import not_
+                    from app.utils.city_filter_utils import build_other_exclusion_filter
+                    exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                    if exclusion_expr is not None:
+                        base_query = base_query.where(not_(exclusion_expr))
                 elif location.lower() == 'online':
                     base_query = base_query.where(models.Task.location.ilike("%online%"))
                 else:
-                    from sqlalchemy import or_
-                    from app.constants import get_city_name_variants
-                    
-                    # 获取城市名的所有变体（英文和中文）
-                    city_variants = get_city_name_variants(location)
-                    
-                    # 为每个变体创建匹配条件
-                    conditions = []
-                    for variant in city_variants:
-                        conditions.extend([
-                            models.Task.location.ilike(f"%, {variant}%"),  # ", Birmingham, UK" 或 ", 伯明翰, UK"
-                            models.Task.location.ilike(f"{variant},%"),    # "Birmingham, UK" 或 "伯明翰, UK"
-                            models.Task.location.ilike(f"{variant}"),      # 精确匹配 "Birmingham" 或 "伯明翰"
-                            models.Task.location.ilike(f"% {variant}")     # 以空格+城市名结尾
-                        ])
-                    
-                    base_query = base_query.where(or_(*conditions))
+                    from app.utils.city_filter_utils import build_city_location_filter
+                    city_expr = build_city_location_filter(models.Task.location, location)
+                    if city_expr is not None:
+                        base_query = base_query.where(city_expr)
             
             # 关键词筛选（和 /tasks 的实现保持一致）
             if keyword:
@@ -803,7 +773,6 @@ class AsyncTaskCRUD:
             # 如果有用户位置，计算距离并按距离排序
             if user_latitude is not None and user_longitude is not None:
                 from app.utils.location_utils import calculate_distance
-                from app.constants import UK_MAIN_CITIES
                 
                 # 根据用户坐标判断大致城市（用于匹配没有坐标的任务）
                 def get_user_city_from_coords(lat: float, lon: float) -> list:
@@ -1045,28 +1014,19 @@ class AsyncTaskCRUD:
         
         if location and location not in ["全部城市", "全部", "all"]:
             if location.lower() == 'other':
-                # "Other" 筛选：排除所有预定义城市和 Online
-                from app.constants import UK_MAIN_CITIES
-                from sqlalchemy import not_, or_
-                exclusion_conditions = []
-                for city in UK_MAIN_CITIES:
-                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                query = query.where(not_(or_(*exclusion_conditions)))
+                # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                from sqlalchemy import not_
+                from app.utils.city_filter_utils import build_other_exclusion_filter
+                exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                if exclusion_expr is not None:
+                    query = query.where(not_(exclusion_expr))
             elif location.lower() == 'online':
                 query = query.where(models.Task.location.ilike("%online%"))
             else:
-                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                from sqlalchemy import or_
-                query = query.where(or_(
-                    models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
-                    models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
-                    models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
-                    models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
-                ))
+                from app.utils.city_filter_utils import build_city_location_filter
+                city_expr = build_city_location_filter(models.Task.location, location)
+                if city_expr is not None:
+                    query = query.where(city_expr)
         
         if keyword:
             keyword = keyword.strip()

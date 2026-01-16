@@ -54,37 +54,19 @@ class QueryOptimizer:
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
             loc = filters['location']
             if loc.lower() == 'other':
-                # "Other" 筛选：排除所有预定义城市和 Online
-                from app.constants import UK_MAIN_CITIES
-                exclusion_conditions = []
-                for city in UK_MAIN_CITIES:
-                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                query = query.filter(not_(or_(*exclusion_conditions)))
+                # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                from app.utils.city_filter_utils import build_other_exclusion_filter
+                exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                if exclusion_expr is not None:
+                    query = query.filter(not_(exclusion_expr))
             elif loc.lower() == 'online':
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                # 同时支持中英文城市名匹配
-                from app.constants import get_city_name_variants
-                
-                # 获取城市名的所有变体（英文和中文）
-                city_variants = get_city_name_variants(loc)
-                
-                # 为每个变体创建匹配条件
-                conditions = []
-                for variant in city_variants:
-                    conditions.extend([
-                        models.Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
-                        models.Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
-                        models.Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
-                        models.Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
-                    ])
-                
-                query = query.filter(or_(*conditions))
+                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
+                from app.utils.city_filter_utils import build_city_location_filter
+                city_expr = build_city_location_filter(models.Task.location, loc)
+                if city_expr is not None:
+                    query = query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -155,26 +137,19 @@ class QueryOptimizer:
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
             loc = filters['location']
             if loc.lower() == 'other':
-                # "Other" 筛选：排除所有预定义城市和 Online
-                from app.constants import UK_MAIN_CITIES
-                exclusion_conditions = []
-                for city in UK_MAIN_CITIES:
-                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                base_query = base_query.filter(not_(or_(*exclusion_conditions)))
+                # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                from app.utils.city_filter_utils import build_other_exclusion_filter
+                exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                if exclusion_expr is not None:
+                    base_query = base_query.filter(not_(exclusion_expr))
             elif loc.lower() == 'online':
                 base_query = base_query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                base_query = base_query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
-                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
-                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
-                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
-                ))
+                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
+                from app.utils.city_filter_utils import build_city_location_filter
+                city_expr = build_city_location_filter(models.Task.location, loc)
+                if city_expr is not None:
+                    base_query = base_query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -329,37 +304,19 @@ class AsyncQueryOptimizer:
         if filters.get('location') and filters['location'] not in ['全部城市', '全部']:
             loc = filters['location']
             if loc.lower() == 'other':
-                # "Other" 筛选：排除所有预定义城市和 Online
-                from app.constants import UK_MAIN_CITIES
-                exclusion_conditions = []
-                for city in UK_MAIN_CITIES:
-                    exclusion_conditions.append(models.Task.location.ilike(f"%, {city}%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city},%"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"{city}"))
-                    exclusion_conditions.append(models.Task.location.ilike(f"% {city}"))
-                exclusion_conditions.append(models.Task.location.ilike("%online%"))
-                query = query.filter(not_(or_(*exclusion_conditions)))
+                # "Other" 筛选：排除所有预定义城市和 Online（支持中英文地址）
+                from app.utils.city_filter_utils import build_other_exclusion_filter
+                exclusion_expr = build_other_exclusion_filter(models.Task.location)
+                if exclusion_expr is not None:
+                    query = query.filter(not_(exclusion_expr))
             elif loc.lower() == 'online':
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
-                # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                # 同时支持中英文城市名匹配
-                from app.constants import get_city_name_variants
-                
-                # 获取城市名的所有变体（英文和中文）
-                city_variants = get_city_name_variants(loc)
-                
-                # 为每个变体创建匹配条件
-                conditions = []
-                for variant in city_variants:
-                    conditions.extend([
-                        models.Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
-                        models.Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
-                        models.Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
-                        models.Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
-                    ])
-                
-                query = query.filter(or_(*conditions))
+                # 精确城市匹配 + 中英文互查（中文支持包含匹配）
+                from app.utils.city_filter_utils import build_city_location_filter
+                city_expr = build_city_location_filter(models.Task.location, loc)
+                if city_expr is not None:
+                    query = query.filter(city_expr)
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"

@@ -185,8 +185,12 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         configuration.allowsDelayedPaymentMethods = true
         
         // 设置默认账单地址国家为英国（GB）
-        configuration.defaultBillingDetails.address.country = "GB"
-        Logger.debug("PaymentSheet 默认账单地址国家已设置为 GB（英国）", category: .api)
+        // 说明：这里用“先取出再写回”的方式，兼容 BillingDetails / Address 可能为可选的 SDK 版本差异
+        var defaultBillingDetails = configuration.defaultBillingDetails
+        var defaultAddress = defaultBillingDetails.address ?? .init()
+        defaultAddress.country = "GB"
+        defaultBillingDetails.address = defaultAddress
+        configuration.defaultBillingDetails = defaultBillingDetails
         
         // 如果支付响应包含 Customer ID 和 Ephemeral Key，配置保存支付方式功能
         // 这样用户可以保存银行卡信息，下次支付时可以直接选择已保存的卡

@@ -465,30 +465,24 @@ struct StripePaymentView: View {
             // 支付方式选项
             // 注意：paymentInfoView 只有在 paymentResponse 存在时才会显示
             // 所以这里可以安全地假设 viewModel.paymentResponse 存在
-            // 两个支付方式都应该始终可用，允许用户自由切换
             VStack(spacing: 12) {
                 // 信用卡/借记卡选项
                 PaymentMethodOption(
                     method: .card,
                     isSelected: viewModel.selectedPaymentMethod == .card,
-                    isAvailable: true  // 始终可用，允许切换
+                    isAvailable: true  // 允许用户自由切换
                 ) {
                     // 切换到信用卡支付
-                    print("💳 [StripePaymentView] 用户切换到信用卡支付方式")
                     viewModel.selectedPaymentMethod = .card
                     // 如果 PaymentSheet 不存在，尝试创建
                     if viewModel.paymentSheet == nil {
                         if let clientSecret = viewModel.paymentResponse?.clientSecret {
                             // 如果有 clientSecret，立即创建 PaymentSheet
-                            print("💳 [StripePaymentView] 创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...")
                             viewModel.setupPaymentElement(with: clientSecret)
                         } else {
                             // 如果 clientSecret 还没有，重新创建支付意图
-                            print("💳 [StripePaymentView] clientSecret 不存在，重新创建支付意图")
                             viewModel.createPaymentIntent()
                         }
-                    } else {
-                        print("💳 [StripePaymentView] PaymentSheet 已存在")
                     }
                 }
                 
@@ -497,9 +491,8 @@ struct StripePaymentView: View {
                     PaymentMethodOption(
                         method: .applePay,
                         isSelected: viewModel.selectedPaymentMethod == .applePay,
-                        isAvailable: true  // 始终可用，允许切换
+                        isAvailable: true  // 允许用户自由切换
                     ) {
-                        print("🍎 [StripePaymentView] 用户切换到 Apple Pay 支付方式")
                         viewModel.selectedPaymentMethod = .applePay
                     }
                 }
@@ -521,11 +514,7 @@ struct StripePaymentView: View {
         let action: () -> Void
         
         var body: some View {
-            Button(action: {
-                print("🔘 [PaymentMethodOption] 按钮被点击: method=\(method.rawValue), isAvailable=\(isAvailable), isSelected=\(isSelected)")
-                // 始终执行 action，允许自由切换
-                action()
-            }) {
+            Button(action: action) {
                 HStack(spacing: 16) {
                     // 图标
                     Image(systemName: method.icon)
