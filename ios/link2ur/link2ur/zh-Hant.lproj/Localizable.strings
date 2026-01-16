@@ -748,6 +748,8 @@
 "payment.total_amount" = "總金額";
 "payment.final_payment" = "最終支付";
 "payment.mixed" = "混合";
+"payment.select_method" = "選擇支付方式";
+"payment.pay_with_apple_pay" = "使用 Apple Pay 支付";
 "coupon.discount" = "優惠: %@";
 
 // MARK: - Payment (Extended)

@@ -1533,6 +1533,8 @@ class TaskPaymentResponse(BaseModel):
     checkout_url: Optional[str] = None  # 保留兼容性，Payment Intent 不使用
     client_secret: Optional[str] = None  # Payment Intent 的 client_secret，前端需要
     payment_intent_id: Optional[str] = None  # Payment Intent ID
+    customer_id: Optional[str] = None  # Stripe Customer ID，用于保存支付方式
+    ephemeral_key_secret: Optional[str] = None  # Ephemeral Key Secret，用于访问 Customer 的支付方式
     note: str
 
 

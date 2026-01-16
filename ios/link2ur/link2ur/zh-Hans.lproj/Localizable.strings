@@ -1156,6 +1156,8 @@
 "payment.total_amount" = "总金额";
 "payment.final_payment" = "最终支付";
 "payment.mixed" = "混合";
+"payment.select_method" = "选择支付方式";
+"payment.pay_with_apple_pay" = "使用 Apple Pay 支付";
 "coupon.discount" = "优惠: %@";
 
 // MARK: - Payment (Extended)

@@ -4,14 +4,40 @@ import SwiftUI
 import UIKit
 import StripePaymentSheet
 import StripeCore
+import StripeApplePay
+import PassKit
 
 // 尝试导入 StripePayments（如果可用）
 #if canImport(StripePayments)
 import StripePayments
 #endif
 
+// MARK: - Payment Method
+enum PaymentMethodType: String, CaseIterable {
+    case card = "card"
+    case applePay = "applePay"
+    
+    var displayName: String {
+        switch self {
+        case .card:
+            return "信用卡/借记卡"
+        case .applePay:
+            return "Apple Pay"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .card:
+            return "creditcard.fill"
+        case .applePay:
+            return "applelogo"
+        }
+    }
+}
+
 @MainActor
-class PaymentViewModel: ObservableObject {
+class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     @Published var isLoading = false
     @Published var paymentSheet: PaymentSheet?
     @Published var errorMessage: String?
@@ -20,6 +46,7 @@ class PaymentViewModel: ObservableObject {
     @Published var availableCoupons: [UserCoupon] = []
     @Published var isLoadingCoupons = false
     @Published var selectedCoupon: UserCoupon?
+    @Published var selectedPaymentMethod: PaymentMethodType = .card
     
     private let apiService: APIService
     private let taskId: Int
@@ -29,12 +56,16 @@ class PaymentViewModel: ObservableObject {
     private var initialClientSecret: String?
     private var isCreatingPaymentIntent = false // 防止重复创建支付意图
     private var isLoadingPaymentInfo = false // 防止重复加载支付信息
+    private var applePayContext: STPApplePayContext?
     
     init(taskId: Int, amount: Double, clientSecret: String? = nil, apiService: APIService? = nil) {
         self.taskId = taskId
         self.amount = amount
         self.initialClientSecret = clientSecret
         self.apiService = apiService ?? APIService.shared
+        
+        // 必须先调用 super.init() 因为继承自 NSObject
+        super.init()
         
         // 初始化 Stripe
         let publishableKey = Constants.Stripe.publishableKey
@@ -50,7 +81,7 @@ class PaymentViewModel: ObservableObject {
         
         // 如果提供了 client_secret，先调用 API 获取完整的支付信息
         // 然后使用返回的 client_secret 创建 Payment Sheet（确保使用最新的）
-        if let clientSecret = clientSecret {
+        if clientSecret != nil {
             // 先调用 API 获取完整的支付信息（包括金额、优惠券等）
             // 这样不会创建新的 PaymentIntent，而是获取已存在的 PaymentIntent 信息
             loadPaymentInfo()
@@ -58,6 +89,14 @@ class PaymentViewModel: ObservableObject {
         
         // 加载可用优惠券
         loadAvailableCoupons()
+        
+        // 根据设备支持情况设置默认支付方式
+        // 如果设备支持 Apple Pay 且已配置 Merchant ID，优先选择 Apple Pay
+        if isApplePaySupported && Constants.Stripe.applePayMerchantIdentifier != nil {
+            selectedPaymentMethod = .applePay
+        } else {
+            selectedPaymentMethod = .card
+        }
     }
     
     /// 加载支付信息（当已有 client_secret 时使用）
@@ -76,7 +115,7 @@ class PaymentViewModel: ObservableObject {
         
         // 调用 API 获取支付信息（不创建新的 PaymentIntent）
         // 后端会检查是否已存在 PaymentIntent，如果存在则返回其信息
-        var requestBody: [String: Any] = [
+        let requestBody: [String: Any] = [
             "payment_method": "stripe"
         ]
         
@@ -139,19 +178,27 @@ class PaymentViewModel: ObservableObject {
         createPaymentIntent()
     }
     
-    private func setupPaymentElement(with clientSecret: String) {
-        // 配置 Payment Sheet
+    func setupPaymentElement(with clientSecret: String) {
+        // 配置 Payment Sheet（仅用于信用卡支付）
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = "LinkU"
         configuration.allowsDelayedPaymentMethods = true
         
-        // 配置 Apple Pay（如果 Merchant ID 已配置）
-        if let merchantId = Constants.Stripe.applePayMerchantIdentifier {
-            configuration.applePay = .init(
-                merchantId: merchantId,
-                merchantCountryCode: "GB" // 英国，根据你的业务所在国家修改
+        // 如果支付响应包含 Customer ID 和 Ephemeral Key，配置保存支付方式功能
+        // 这样用户可以保存银行卡信息，下次支付时可以直接选择已保存的卡
+        // 注意：CVV 安全码不会被保存，这是 Stripe 的安全机制
+        if let customerId = paymentResponse?.customerId,
+           let ephemeralKeySecret = paymentResponse?.ephemeralKeySecret {
+            configuration.customer = PaymentSheet.CustomerConfiguration(
+                id: customerId,
+                ephemeralKeySecret: ephemeralKeySecret
             )
+            Logger.debug("PaymentSheet 已配置 Customer，支持保存支付方式", category: .api)
+        } else {
+            Logger.debug("PaymentSheet 未配置 Customer，支付方式不会被保存", category: .api)
         }
+        
+        // 注意：不再在 PaymentSheet 中配置 Apple Pay，因为使用原生实现
         
         // 自定义外观以匹配应用设计
         var appearance = PaymentSheet.Appearance()
@@ -255,15 +302,19 @@ class PaymentViewModel: ObservableObject {
             return
         }
         
-        // 如果有 client_secret，创建或更新 Payment Sheet
+        // 如果有 client_secret，根据当前选择的支付方式创建相应的支付表单
         guard let clientSecret = response.clientSecret else {
             Logger.error("支付响应中缺少 client_secret", category: .api)
             errorMessage = "无法创建支付表单，请重试"
             return
         }
         
+        // 更新 initialClientSecret 为最新的
+        initialClientSecret = clientSecret
+        
+        // 无论选择哪种支付方式，都创建 PaymentSheet（用于信用卡支付）
+        // 这样用户可以在两种支付方式之间切换
         // 如果 PaymentSheet 已存在且使用相同的 client_secret，则不需要重新创建
-        // 但如果 client_secret 不同，需要重新创建（使用最新的）
         if let existingClientSecret = initialClientSecret,
            existingClientSecret == clientSecret,
            paymentSheet != nil {
@@ -271,9 +322,7 @@ class PaymentViewModel: ObservableObject {
             return
         }
         
-        // 更新 initialClientSecret 为最新的
-        initialClientSecret = clientSecret
-        
+        // 创建 PaymentSheet（用于信用卡支付）
         Logger.debug("创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...", category: .api)
         setupPaymentElement(with: clientSecret)
     }
@@ -315,6 +364,177 @@ class PaymentViewModel: ObservableObject {
             break
         }
     }
+    
+    // MARK: - Apple Pay 原生实现
+    
+    /// 检查是否支持 Apple Pay
+    var isApplePaySupported: Bool {
+        return ApplePayHelper.isApplePaySupported()
+    }
+    
+    /// 使用 Apple Pay 原生实现支付
+    func payWithApplePay() {
+        guard let merchantId = Constants.Stripe.applePayMerchantIdentifier else {
+            errorMessage = "Apple Pay 未配置，请使用其他支付方式"
+            Logger.warning("Apple Pay Merchant ID 未配置", category: .api)
+            return
+        }
+        
+        guard let paymentResponse = paymentResponse else {
+            errorMessage = "支付信息未准备好，请稍后再试"
+            Logger.warning("支付信息未准备好，无法使用 Apple Pay", category: .api)
+            // 如果支付信息未准备好，尝试创建支付意图
+            createPaymentIntent()
+            return
+        }
+        
+        // 检查最终支付金额
+        guard paymentResponse.finalAmount > 0 else {
+            Logger.info("最终支付金额为 0，无需支付", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        // 创建支付请求
+        let currency = paymentResponse.currency.uppercased()
+        let amountDecimal = ApplePayHelper.decimalAmount(
+            from: paymentResponse.finalAmount,
+            currency: currency
+        )
+        
+        // 创建摘要项
+        var summaryItems: [PKPaymentSummaryItem] = []
+        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "LinkU 任务支付"
+        let item = PKPaymentSummaryItem(
+            label: taskTitle,
+            amount: NSDecimalNumber(decimal: amountDecimal)
+        )
+        summaryItems.append(item)
+        
+        // 总金额项
+        let totalItem = PKPaymentSummaryItem(
+            label: "LinkU",
+            amount: NSDecimalNumber(decimal: amountDecimal)
+        )
+        summaryItems.append(totalItem)
+        
+        let paymentRequest = ApplePayHelper.createPaymentRequest(
+            merchantIdentifier: merchantId,
+            countryCode: "GB",
+            currency: currency,
+            amount: amountDecimal,
+            summaryItems: summaryItems
+        )
+        
+        // 创建 Apple Pay Context
+        guard let applePayContext = STPApplePayContext(paymentRequest: paymentRequest, delegate: self) else {
+            errorMessage = "无法创建 Apple Pay 支付表单"
+            return
+        }
+        
+        self.applePayContext = applePayContext
+        
+        // 展示支付表单（使用新的 API，不需要传入 viewController）
+        Logger.debug("准备弹出 Apple Pay 表单", category: .api)
+        applePayContext.presentApplePay {
+            // completion 回调，错误会通过 delegate 方法处理
+            Logger.debug("Apple Pay 表单已显示", category: .api)
+        }
+    }
+    
+    // MARK: - ApplePayContextDelegate
+    
+    func applePayContext(
+        _ context: STPApplePayContext,
+        didCreatePaymentMethod paymentMethod: StripeAPI.PaymentMethod,
+        paymentInformation: PKPayment
+    ) async throws -> String {
+        guard let paymentResponse = paymentResponse,
+              let clientSecret = paymentResponse.clientSecret else {
+            throw NSError(
+                domain: "ApplePayError",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "无法获取支付信息"]
+            )
+        }
+        return clientSecret
+    }
+    
+    func applePayContext(
+        _ context: STPApplePayContext,
+        didCompleteWith status: STPApplePayContext.PaymentStatus,
+        error: Error?
+    ) {
+        switch status {
+        case .success:
+            Logger.info("Apple Pay 支付成功", category: .api)
+            paymentSuccess = true
+            errorMessage = nil
+        case .error:
+            if let error = error {
+                Logger.error("Apple Pay 支付失败: \(error.localizedDescription)", category: .api)
+                errorMessage = formatPaymentError(error)
+            } else {
+                errorMessage = "支付失败"
+            }
+        case .userCancellation:
+            Logger.debug("用户取消 Apple Pay 支付", category: .api)
+            break
+        @unknown default:
+            errorMessage = "未知错误"
+        }
+    }
+    
+    /// 执行支付（根据选择的支付方式）
+    func performPayment() {
+        // 确保支付信息已准备好
+        guard let paymentResponse = paymentResponse else {
+            errorMessage = "支付信息未准备好，正在加载..."
+            Logger.warning("尝试支付但支付信息未准备好，重新创建支付意图", category: .api)
+            createPaymentIntent()
+            return
+        }
+        
+        // 检查最终支付金额
+        guard paymentResponse.finalAmount > 0 else {
+            Logger.info("最终支付金额为 0，无需支付", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        switch selectedPaymentMethod {
+        case .card:
+            // 使用 PaymentSheet 支付
+            if let paymentSheet = paymentSheet {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootViewController = windowScene.windows.first?.rootViewController {
+                    var topViewController = rootViewController
+                    while let presented = topViewController.presentedViewController {
+                        topViewController = presented
+                    }
+                    Logger.debug("准备弹出 PaymentSheet", category: .api)
+                    paymentSheet.present(from: topViewController) { [weak self] result in
+                        Logger.debug("PaymentSheet 结果: \(result)", category: .api)
+                        self?.handlePaymentResult(result)
+                    }
+                } else {
+                    errorMessage = "无法打开支付界面，请重试"
+                    Logger.error("无法获取顶层视图控制器", category: .api)
+                }
+            } else {
+                errorMessage = "支付表单未准备好，请稍后重试"
+                Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
+                // 尝试重新创建 PaymentSheet
+                if let clientSecret = paymentResponse.clientSecret {
+                    setupPaymentElement(with: clientSecret)
+                }
+            }
+        case .applePay:
+            // 使用 Apple Pay 原生实现
+            Logger.debug("使用 Apple Pay 原生实现支付", category: .api)
+            payWithApplePay()
+        }
+    }
 }
 
 // MARK: - Payment Response Model
@@ -354,6 +574,8 @@ struct PaymentResponse: Codable {
         case checkoutUrl = "checkout_url"
         case clientSecret = "client_secret"
         case paymentIntentId = "payment_intent_id"
+        case customerId = "customer_id"
+        case ephemeralKeySecret = "ephemeral_key_secret"
         case note
     }
 }

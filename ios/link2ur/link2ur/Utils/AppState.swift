@@ -13,8 +13,18 @@ public class AppState: ObservableObject {
             }
         }
     }
-    @Published public var unreadNotificationCount: Int = 0 // 未读通知数量
-    @Published public var unreadMessageCount: Int = 0 // 未读消息数量（任务聊天）
+    @Published public var unreadNotificationCount: Int = 0 { // 未读通知数量
+        didSet {
+            // 当未读通知数量变化时，更新应用图标 Badge
+            updateAppIconBadge()
+        }
+    }
+    @Published public var unreadMessageCount: Int = 0 { // 未读消息数量（任务聊天）
+        didSet {
+            // 当未读消息数量变化时，更新应用图标 Badge
+            updateAppIconBadge()
+        }
+    }
     @Published public var hideTabBar: Bool = false // 控制是否隐藏底部 TabBar
     @Published public var isCheckingLoginStatus: Bool = true // 是否正在检查登录状态
     @Published public var userSkippedLogin: Bool = false // 用户是否选择跳过登录

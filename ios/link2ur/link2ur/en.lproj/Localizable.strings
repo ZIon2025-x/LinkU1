@@ -1059,6 +1059,8 @@
 "payment.total_amount" = "Total Amount";
 "payment.final_payment" = "Final Payment";
 "payment.mixed" = "Mixed";
+"payment.select_method" = "Select Payment Method";
+"payment.pay_with_apple_pay" = "Pay with Apple Pay";
 
 // MARK: - Share
 "share.wechat" = "WeChat";

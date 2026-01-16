@@ -741,6 +741,47 @@ def create_task_payment(
                 detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
             )
         
+        # 创建或获取 Stripe Customer（用于保存支付方式）
+        customer_id = None
+        ephemeral_key_secret = None
+        
+        # 检查用户是否已有 Stripe Customer ID（可以存储在 User 模型中，这里先检查数据库）
+        # 如果没有，创建一个新的 Customer
+        try:
+            # 尝试从 metadata 查找现有 Customer（通过 user_id）
+            existing_customers = stripe.Customer.list(
+                limit=1,
+                metadata={"user_id": str(current_user.id)}
+            )
+            
+            if existing_customers.data:
+                customer_id = existing_customers.data[0].id
+            else:
+                # 创建新的 Stripe Customer
+                customer = stripe.Customer.create(
+                    metadata={
+                        "user_id": str(current_user.id),
+                        "user_name": current_user.name
+                    }
+                )
+                customer_id = customer.id
+                # 注意：这里可以将 customer_id 保存到 User 模型，但为了简化，暂时不保存
+            
+            # 创建 Ephemeral Key（用于客户端访问 Customer 的支付方式）
+            # Ephemeral Key 有效期通常为 24 小时
+            ephemeral_key = stripe.EphemeralKey.create(
+                customer=customer_id,
+                stripe_version="2025-04-30.preview"  # 使用最新的 API 版本
+            )
+            ephemeral_key_secret = ephemeral_key.secret
+            
+        except Exception as e:
+            # 如果创建 Customer 或 Ephemeral Key 失败，记录错误但不阻止支付
+            # 用户仍然可以使用一次性支付（不保存卡）
+            logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {str(e)}")
+            customer_id = None
+            ephemeral_key_secret = None
+        
         # 创建 Payment Intent（参考 Stripe Payment Intents API sample code）
         # Create a PaymentIntent with the order amount and currency
         # 使用 automatic_payment_methods（与官方 sample code 一致）
@@ -820,6 +861,8 @@ def create_task_payment(
             "checkout_url": None,  # Payment Intent 不需要 checkout_url
             "client_secret": payment_intent.client_secret,  # 前端需要这个来确认支付
             "payment_intent_id": payment_intent.id,
+            "customer_id": customer_id,  # Stripe Customer ID，用于保存支付方式
+            "ephemeral_key_secret": ephemeral_key_secret,  # Ephemeral Key Secret，用于访问 Customer 的支付方式
             "note": f"任务金额已支付，任务接受人将获得 {task_amount - (application_fee_pence / 100.0):.2f} 镑（已扣除平台服务费 {application_fee_pence / 100.0:.2f} 镑）"
         }
     

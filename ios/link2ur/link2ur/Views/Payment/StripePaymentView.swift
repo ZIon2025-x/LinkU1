@@ -331,31 +331,31 @@ struct StripePaymentView: View {
                 .cornerRadius(AppCornerRadius.medium)
             }
             
+            // 支付方式选择卡片
+            paymentMethodSelectionCard
+            
             // 支付按钮
+            paymentButton
+        }
+        .padding(.vertical)
+    }
+    
+    // MARK: - Payment Button
+    
+    @ViewBuilder
+    private var paymentButton: some View {
+        if viewModel.selectedPaymentMethod == .card {
+            // 信用卡支付按钮
+            // 如果 PaymentSheet 不存在但 paymentResponse 有 clientSecret，尝试创建
+            if viewModel.paymentSheet == nil,
+               let clientSecret = viewModel.paymentResponse?.clientSecret {
+                // 尝试创建 PaymentSheet
+                viewModel.setupPaymentElement(with: clientSecret)
+            }
+            
             if viewModel.paymentSheet != nil {
                 Button(action: {
-                    // 获取当前最顶层的视图控制器
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let rootViewController = windowScene.windows.first?.rootViewController {
-                        var topViewController = rootViewController
-                        while let presented = topViewController.presentedViewController {
-                            topViewController = presented
-                        }
-                        // 弹出 PaymentSheet
-                        if let paymentSheet = viewModel.paymentSheet {
-                            Logger.debug("准备弹出 PaymentSheet", category: .api)
-                            paymentSheet.present(from: topViewController) { result in
-                                Logger.debug("PaymentSheet 结果: \(result)", category: .api)
-                                viewModel.handlePaymentResult(result)
-                            }
-                        } else {
-                            Logger.error("PaymentSheet 为 nil，无法弹出", category: .api)
-                            viewModel.errorMessage = "支付表单未准备好，请稍后重试"
-                        }
-                    } else {
-                        Logger.error("无法获取顶层视图控制器", category: .api)
-                        viewModel.errorMessage = "无法打开支付界面，请重试"
-                    }
+                    viewModel.performPayment()
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: "lock.shield.fill")
@@ -379,7 +379,7 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                // 如果 PaymentSheet 未准备好，显示加载状态
+                // 加载状态
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
@@ -390,8 +390,157 @@ struct StripePaymentView: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
                 .padding()
             }
+        } else if viewModel.selectedPaymentMethod == .applePay {
+            // Apple Pay 按钮
+            if viewModel.paymentResponse != nil {
+                Button(action: {
+                    viewModel.performPayment()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "applelogo")
+                            .font(.system(size: 18))
+                        Text(LocalizationKey.paymentPayWithApplePay.localized)
+                            .font(AppTypography.title3)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(Color.black)
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                // 加载状态
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text(LocalizationKey.paymentPreparingPayment.localized)
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .padding()
+            }
+        } else {
+            // 默认加载状态
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text(LocalizationKey.paymentPreparingPayment.localized)
+                    .font(AppTypography.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .padding()
         }
-        .padding(.vertical)
+    }
+    
+    // MARK: - Payment Method Selection Card
+    
+    private var paymentMethodSelectionCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // 标题
+            HStack {
+                Image(systemName: "creditcard.fill")
+                    .foregroundColor(AppColors.primary)
+                    .font(.system(size: 18))
+                Text(LocalizationKey.paymentSelectMethod.localized)
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+            }
+            
+            Divider()
+            
+            // 支付方式选项
+            VStack(spacing: 12) {
+                // 信用卡/借记卡选项
+                // 只要 paymentResponse 存在且有 clientSecret，就可以选择（PaymentSheet 可以在需要时创建）
+                PaymentMethodOption(
+                    method: .card,
+                    isSelected: viewModel.selectedPaymentMethod == .card,
+                    isAvailable: viewModel.paymentResponse?.clientSecret != nil
+                ) {
+                    // 切换到信用卡支付
+                    viewModel.selectedPaymentMethod = .card
+                    // 如果 PaymentSheet 不存在，尝试创建
+                    if viewModel.paymentSheet == nil,
+                       let clientSecret = viewModel.paymentResponse?.clientSecret {
+                        viewModel.setupPaymentElement(with: clientSecret)
+                    }
+                }
+                
+                // Apple Pay 选项（仅在设备支持且支付信息已准备好时可用）
+                if viewModel.isApplePaySupported {
+                    PaymentMethodOption(
+                        method: .applePay,
+                        isSelected: viewModel.selectedPaymentMethod == .applePay,
+                        isAvailable: viewModel.paymentResponse != nil
+                    ) {
+                        viewModel.selectedPaymentMethod = .applePay
+                    }
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+    }
+    
+    // MARK: - Payment Method Option
+    
+    struct PaymentMethodOption: View {
+        let method: PaymentMethodType
+        let isSelected: Bool
+        let isAvailable: Bool
+        let action: () -> Void
+        
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 16) {
+                    // 图标
+                    Image(systemName: method.icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(isSelected ? AppColors.primary.opacity(0.1) : AppColors.surface)
+                        )
+                    
+                    // 名称
+                    Text(method.displayName)
+                        .font(AppTypography.body)
+                        .foregroundColor(isAvailable ? AppColors.textPrimary : AppColors.textSecondary)
+                    
+                    Spacer()
+                    
+                    // 选中指示器
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(AppColors.primary)
+                            .font(.system(size: 20))
+                    }
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                        .fill(isSelected ? AppColors.primary.opacity(0.05) : Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                .stroke(isSelected ? AppColors.primary : AppColors.separator, lineWidth: isSelected ? 2 : 1)
+                        )
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(!isAvailable)
+            .opacity(isAvailable ? 1.0 : 0.6)
+        }
     }
     
     // MARK: - Coupon Selection Card

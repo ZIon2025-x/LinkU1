@@ -77,7 +77,7 @@ public struct Constants {
         // 1. 通过 Xcode Scheme 配置（推荐）：
         //    - Product → Scheme → Edit Scheme...
         //    - Run → Arguments → Environment Variables
-        //    - 添加：Name = APPLE_PAY_MERCHANT_ID, Value = merchant.com.yourcompany
+        //    - 添加：Name = APPLE_PAY_MERCHANT_ID, Value = merchant.com.link2ur
         //
         // 2. 直接修改下面的默认值（快速测试，不推荐用于生产）
         //
