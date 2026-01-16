@@ -5,6 +5,8 @@ struct StripePaymentView: View {
     let taskId: Int
     let amount: Double
     let clientSecret: String?
+    let customerId: String?
+    let ephemeralKeySecret: String?
     let taskTitle: String?
     let applicantName: String?
     let onPaymentSuccess: (() -> Void)?
@@ -13,14 +15,24 @@ struct StripePaymentView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
     
-    init(taskId: Int, amount: Double, clientSecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
+    init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
         self.taskId = taskId
         self.amount = amount
         self.clientSecret = clientSecret
+        self.customerId = customerId
+        self.ephemeralKeySecret = ephemeralKeySecret
         self.taskTitle = taskTitle
         self.applicantName = applicantName
         self.onPaymentSuccess = onPaymentSuccess
-        _viewModel = StateObject(wrappedValue: PaymentViewModel(taskId: taskId, amount: amount, clientSecret: clientSecret))
+        _viewModel = StateObject(
+            wrappedValue: PaymentViewModel(
+                taskId: taskId,
+                amount: amount,
+                clientSecret: clientSecret,
+                customerId: customerId,
+                ephemeralKeySecret: ephemeralKeySecret
+            )
+        )
     }
     
     var body: some View {
@@ -41,6 +53,9 @@ struct StripePaymentView: View {
                         paymentErrorView(error: error)
                     } else if let paymentResponse = viewModel.paymentResponse {
                         paymentInfoView(paymentResponse: paymentResponse)
+                    } else if clientSecret != nil {
+                        // 批准申请支付：外部已提供 PaymentIntent client_secret，此时 paymentResponse 可能为空
+                        approvalPaymentFallbackView
                     } else {
                         VStack(spacing: 16) {
                             ProgressView()
@@ -66,6 +81,9 @@ struct StripePaymentView: View {
                 // 如果没有提供 client_secret，才调用 API 创建支付意图
                 if clientSecret == nil {
                     viewModel.createPaymentIntent()
+                } else {
+                    // 已提供 client_secret：确保 PaymentSheet 已预热（避免等待）
+                    viewModel.ensurePaymentSheetReady()
                 }
             }
             .alert(LocalizationKey.paymentError.localized, isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
@@ -340,6 +358,86 @@ struct StripePaymentView: View {
         }
         .padding(.vertical)
     }
+
+    // MARK: - Approval Payment Fallback View (client_secret provided, no paymentResponse)
+    private var approvalPaymentFallbackView: some View {
+        VStack(spacing: 24) {
+            // 任务信息卡片（如果有）
+            if taskTitle != nil || applicantName != nil {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(AppColors.primary)
+                            .font(.system(size: 18))
+                        Text(LocalizationKey.paymentTaskInfo.localized)
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                        Spacer()
+                    }
+                    Divider()
+
+                    if let taskTitle = taskTitle {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "list.bullet.rectangle")
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .font(.system(size: 14))
+                                Text(LocalizationKey.paymentTaskTitle.localized)
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            Text(taskTitle)
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(AppColors.textPrimary)
+                                .lineLimit(3)
+                        }
+                    }
+
+                    if let applicantName = applicantName {
+                        if taskTitle != nil { Divider() }
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .font(.system(size: 14))
+                                Text(LocalizationKey.paymentApplicant.localized)
+                                    .font(AppTypography.subheadline)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            Text(applicantName)
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(AppColors.textPrimary)
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppColors.cardBackground)
+                .cornerRadius(AppCornerRadius.large)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+            }
+
+            // 金额卡片（简化版）
+            VStack(spacing: 16) {
+                PaymentInfoRow(
+                    label: LocalizationKey.paymentFinalPayment.localized,
+                    value: String(format: "%.2f", amount),
+                    currency: "GBP",
+                    isHighlighted: true,
+                    isFinal: true
+                )
+            }
+            .padding()
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+
+            // 支付方式选择 + 支付按钮
+            paymentMethodSelectionCard
+            paymentButton
+        }
+        .padding(.vertical)
+    }
     
     // MARK: - Payment Button
     
@@ -372,13 +470,6 @@ struct StripePaymentView: View {
                     .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .onAppear {
-                    // 如果 PaymentSheet 不存在但 paymentResponse 有 clientSecret，尝试创建
-                    if viewModel.paymentSheet == nil,
-                       let clientSecret = viewModel.paymentResponse?.clientSecret {
-                        viewModel.setupPaymentElement(with: clientSecret)
-                    }
-                }
             } else {
                 // 加载状态
                 VStack(spacing: 16) {
@@ -391,16 +482,13 @@ struct StripePaymentView: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
                 .padding()
                 .onAppear {
-                    // 如果 PaymentSheet 不存在但 paymentResponse 有 clientSecret，尝试创建
-                    if viewModel.paymentSheet == nil,
-                       let clientSecret = viewModel.paymentResponse?.clientSecret {
-                        viewModel.setupPaymentElement(with: clientSecret)
-                    }
+                    // 统一入口：只在必要时创建/复用 PaymentSheet
+                    viewModel.ensurePaymentSheetReady()
                 }
             }
         } else if viewModel.selectedPaymentMethod == .applePay {
             // Apple Pay 按钮
-            if viewModel.paymentResponse != nil {
+            if viewModel.hasActivePaymentClientSecret {
                 Button(action: {
                     viewModel.performPayment()
                 }) {
@@ -472,18 +560,7 @@ struct StripePaymentView: View {
                     isSelected: viewModel.selectedPaymentMethod == .card,
                     isAvailable: true  // 允许用户自由切换
                 ) {
-                    // 切换到信用卡支付
-                    viewModel.selectedPaymentMethod = .card
-                    // 如果 PaymentSheet 不存在，尝试创建
-                    if viewModel.paymentSheet == nil {
-                        if let clientSecret = viewModel.paymentResponse?.clientSecret {
-                            // 如果有 clientSecret，立即创建 PaymentSheet
-                            viewModel.setupPaymentElement(with: clientSecret)
-                        } else {
-                            // 如果 clientSecret 还没有，重新创建支付意图
-                            viewModel.createPaymentIntent()
-                        }
-                    }
+                    viewModel.selectPaymentMethod(.card)
                 }
                 
                 // Apple Pay 选项（仅在设备支持时显示）
@@ -493,7 +570,7 @@ struct StripePaymentView: View {
                         isSelected: viewModel.selectedPaymentMethod == .applePay,
                         isAvailable: true  // 允许用户自由切换
                     ) {
-                        viewModel.selectedPaymentMethod = .applePay
+                        viewModel.selectPaymentMethod(.applePay)
                     }
                 }
             }

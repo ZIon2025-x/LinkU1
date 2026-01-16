@@ -159,18 +159,18 @@ class TaskDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func approveApplication(taskId: Int, applicationId: Int, completion: @escaping (Bool, String?) -> Void) {
+    func approveApplication(taskId: Int, applicationId: Int, completion: @escaping (Bool, String?, String?, String?) -> Void) {
         apiService.acceptApplication(taskId: taskId, applicationId: applicationId)
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
-                    completion(false, nil)
+                    completion(false, nil, nil, nil)
                 } else {
                     // 重新加载任务以获取最新状态
                     self?.loadTask(taskId: taskId)
                 }
             }, receiveValue: { [weak self] response in
                 // 如果返回了 client_secret，说明需要支付
-                completion(true, response.clientSecret)
+                completion(true, response.clientSecret, response.customerId, response.ephemeralKeySecret)
                 // 重新加载任务以获取最新状态
                 self?.loadTask(taskId: taskId)
             })

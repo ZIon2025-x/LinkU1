@@ -46,7 +46,14 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     @Published var availableCoupons: [UserCoupon] = []
     @Published var isLoadingCoupons = false
     @Published var selectedCoupon: UserCoupon?
-    @Published var selectedPaymentMethod: PaymentMethodType = .card
+    @Published var selectedPaymentMethod: PaymentMethodType = .card {
+        didSet {
+            // 当切到信用卡时，尽量预热 PaymentSheet，减少 UI 等待
+            if selectedPaymentMethod == .card {
+                ensurePaymentSheetReady()
+            }
+        }
+    }
     
     private let apiService: APIService
     private let taskId: Int
@@ -54,14 +61,50 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     private var cancellables = Set<AnyCancellable>()
     
     private var initialClientSecret: String?
+    private var initialCustomerId: String?
+    private var initialEphemeralKeySecret: String?
+    private var paymentSheetClientSecret: String?
     private var isCreatingPaymentIntent = false // 防止重复创建支付意图
     private var isLoadingPaymentInfo = false // 防止重复加载支付信息
     private var applePayContext: STPApplePayContext?
+
+    /// 当前应使用的 PaymentIntent client_secret
+    /// - Note: 批准申请支付会直接传入 client_secret，此时 paymentResponse 可能为空
+    private var activeClientSecret: String? {
+        return paymentResponse?.clientSecret ?? initialClientSecret
+    }
+
+    /// 当前支付金额（便士）
+    /// - Note: 若 paymentResponse 为空（批准申请支付），使用初始化时传入的 amount（英镑）推算
+    private var activeFinalAmountPence: Int {
+        if let pence = paymentResponse?.finalAmount {
+            return pence
+        }
+        return Int((amount * 100).rounded())
+    }
+
+    private var activeCurrency: String {
+        return paymentResponse?.currency.uppercased() ?? "GBP"
+    }
+
+    private var activeNote: String {
+        if let note = paymentResponse?.note, !note.isEmpty {
+            return note
+        }
+        return "Link²Ur 任务支付"
+    }
+
+    /// 是否已具备可发起支付的 client_secret
+    var hasActivePaymentClientSecret: Bool {
+        return activeClientSecret != nil
+    }
     
-    init(taskId: Int, amount: Double, clientSecret: String? = nil, apiService: APIService? = nil) {
+    init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, apiService: APIService? = nil) {
         self.taskId = taskId
         self.amount = amount
         self.initialClientSecret = clientSecret
+        self.initialCustomerId = customerId
+        self.initialEphemeralKeySecret = ephemeralKeySecret
         self.apiService = apiService ?? APIService.shared
         
         // 必须先调用 super.init() 因为继承自 NSObject
@@ -79,12 +122,10 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         Logger.debug("StripePayments 未导入，PaymentSheet 可能使用 StripeAPI.defaultPublishableKey", category: .api)
         #endif
         
-        // 如果提供了 client_secret，先调用 API 获取完整的支付信息
-        // 然后使用返回的 client_secret 创建 Payment Sheet（确保使用最新的）
+        // 如果外部传入了 client_secret（例如“批准申请支付”创建的 PaymentIntent）
+        // 则直接使用该 PaymentIntent，不再去 coupon-points 创建新的 PaymentIntent，避免支付成功后任务状态无法推进
         if clientSecret != nil {
-            // 先调用 API 获取完整的支付信息（包括金额、优惠券等）
-            // 这样不会创建新的 PaymentIntent，而是获取已存在的 PaymentIntent 信息
-            loadPaymentInfo()
+            ensurePaymentSheetReady()
         }
         
         // 加载可用优惠券
@@ -185,9 +226,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         configuration.allowsDelayedPaymentMethods = true
         
         // 设置默认账单地址国家为英国（GB）
-        // 说明：这里用“先取出再写回”的方式，兼容 BillingDetails / Address 可能为可选的 SDK 版本差异
+        // 说明：这里用“先取出再写回”的方式，避免直接链式修改导致的可变性问题
         var defaultBillingDetails = configuration.defaultBillingDetails
-        var defaultAddress = defaultBillingDetails.address ?? .init()
+        var defaultAddress = defaultBillingDetails.address
         defaultAddress.country = "GB"
         defaultBillingDetails.address = defaultAddress
         configuration.defaultBillingDetails = defaultBillingDetails
@@ -195,8 +236,10 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         // 如果支付响应包含 Customer ID 和 Ephemeral Key，配置保存支付方式功能
         // 这样用户可以保存银行卡信息，下次支付时可以直接选择已保存的卡
         // 注意：CVV 安全码不会被保存，这是 Stripe 的安全机制
-        if let customerId = paymentResponse?.customerId,
-           let ephemeralKeySecret = paymentResponse?.ephemeralKeySecret {
+        let customerIdToUse = paymentResponse?.customerId ?? initialCustomerId
+        let ephemeralKeyToUse = paymentResponse?.ephemeralKeySecret ?? initialEphemeralKeySecret
+        if let customerId = customerIdToUse,
+           let ephemeralKeySecret = ephemeralKeyToUse {
             configuration.customer = PaymentSheet.CustomerConfiguration(
                 id: customerId,
                 ephemeralKeySecret: ephemeralKeySecret
@@ -246,7 +289,42 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         )
         
         self.paymentSheet = paymentSheet
+        self.paymentSheetClientSecret = clientSecret
         Logger.debug("PaymentSheet 创建成功，clientSecret: \(clientSecret.prefix(20))...", category: .api)
+    }
+
+    /// 确保 PaymentSheet 已准备好（仅在 clientSecret 变化时重建）
+    /// - Note: 统一入口，避免 View 层多处重复触发 setup
+    func ensurePaymentSheetReady() {
+        guard let clientSecret = activeClientSecret, !clientSecret.isEmpty else {
+            return
+        }
+
+        if paymentSheet != nil, paymentSheetClientSecret == clientSecret {
+            return
+        }
+
+        setupPaymentElement(with: clientSecret)
+    }
+
+    /// 统一的支付方式切换入口（便于扩展更多支付方式）
+    func selectPaymentMethod(_ method: PaymentMethodType) {
+        selectedPaymentMethod = method
+
+        switch method {
+        case .card:
+            // 优先预热 PaymentSheet；如果还没拿到 clientSecret，则拉取一次支付信息
+            if activeClientSecret == nil {
+                createPaymentIntent()
+            } else {
+                ensurePaymentSheetReady()
+            }
+        case .applePay:
+            // Apple Pay 需要 paymentResponse；如果没有则拉取
+            if activeClientSecret == nil {
+                createPaymentIntent()
+            }
+        }
     }
     
     func createPaymentIntent(paymentMethod: String = "stripe", pointsAmount: Double? = nil, couponCode: String? = nil) {
@@ -319,21 +397,10 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         // 更新 initialClientSecret 为最新的
         initialClientSecret = clientSecret
-        
-        // 无论选择哪种支付方式，都创建 PaymentSheet（用于信用卡支付）
-        // 这样用户可以在两种支付方式之间切换
-        // 如果 PaymentSheet 已存在且使用相同的 client_secret，则不需要重新创建
-        if let existingClientSecret = initialClientSecret,
-           existingClientSecret == clientSecret,
-           paymentSheet != nil {
-            Logger.debug("PaymentSheet 已存在且 client_secret 相同，跳过重新创建", category: .api)
-            return
-        }
-        
-        // 始终创建 PaymentSheet（用于信用卡支付），无论当前选择的支付方式是什么
-        // 这样用户可以在两种支付方式之间切换
-        Logger.debug("创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...", category: .api)
-        setupPaymentElement(with: clientSecret)
+
+        // 无论当前选择哪种支付方式，都预热 PaymentSheet（用于信用卡支付）
+        // 这样用户可以自由切换；且 ensure 内部会避免重复重建
+        ensurePaymentSheetReady()
     }
     
     // 不再需要 confirmPayment 方法，直接使用 PaymentSheet.present()
@@ -388,32 +455,32 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             Logger.warning("Apple Pay Merchant ID 未配置", category: .api)
             return
         }
-        
-        guard let paymentResponse = paymentResponse else {
+
+        // 必须有 client_secret 才能确认 PaymentIntent
+        guard activeClientSecret != nil else {
             errorMessage = "支付信息未准备好，请稍后再试"
-            Logger.warning("支付信息未准备好，无法使用 Apple Pay", category: .api)
-            // 如果支付信息未准备好，尝试创建支付意图
+            Logger.warning("缺少 client_secret，无法使用 Apple Pay，尝试创建支付意图", category: .api)
             createPaymentIntent()
             return
         }
-        
+
         // 检查最终支付金额
-        guard paymentResponse.finalAmount > 0 else {
+        guard activeFinalAmountPence > 0 else {
             Logger.info("最终支付金额为 0，无需支付", category: .api)
             paymentSuccess = true
             return
         }
         
         // 创建支付请求
-        let currency = paymentResponse.currency.uppercased()
+        let currency = activeCurrency
         let amountDecimal = ApplePayHelper.decimalAmount(
-            from: paymentResponse.finalAmount,
+            from: activeFinalAmountPence,
             currency: currency
         )
         
         // 创建摘要项
         var summaryItems: [PKPaymentSummaryItem] = []
-        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "Link²Ur 任务支付"
+        let taskTitle = activeNote
         let item = PKPaymentSummaryItem(
             label: taskTitle,
             amount: NSDecimalNumber(decimal: amountDecimal)
@@ -458,8 +525,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         didCreatePaymentMethod paymentMethod: StripeAPI.PaymentMethod,
         paymentInformation: PKPayment
     ) async throws -> String {
-        guard let paymentResponse = paymentResponse,
-              let clientSecret = paymentResponse.clientSecret else {
+        guard let clientSecret = activeClientSecret else {
             throw NSError(
                 domain: "ApplePayError",
                 code: -1,
@@ -496,16 +562,16 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     
     /// 执行支付（根据选择的支付方式）
     func performPayment() {
-        // 确保支付信息已准备好
-        guard let paymentResponse = paymentResponse else {
+        // 必须有 client_secret 才能发起支付；没有则创建支付意图
+        guard activeClientSecret != nil else {
             errorMessage = "支付信息未准备好，正在加载..."
-            Logger.warning("尝试支付但支付信息未准备好，重新创建支付意图", category: .api)
+            Logger.warning("缺少 client_secret，重新创建支付意图", category: .api)
             createPaymentIntent()
             return
         }
-        
+
         // 检查最终支付金额
-        guard paymentResponse.finalAmount > 0 else {
+        guard activeFinalAmountPence > 0 else {
             Logger.info("最终支付金额为 0，无需支付", category: .api)
             paymentSuccess = true
             return
@@ -533,10 +599,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             } else {
                 errorMessage = "支付表单未准备好，请稍后重试"
                 Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-                // 尝试重新创建 PaymentSheet
-                if let clientSecret = paymentResponse.clientSecret {
-                    setupPaymentElement(with: clientSecret)
-                }
+                // 尝试按统一入口创建/复用 PaymentSheet
+                ensurePaymentSheetReady()
             }
         case .applePay:
             // 使用 Apple Pay 原生实现

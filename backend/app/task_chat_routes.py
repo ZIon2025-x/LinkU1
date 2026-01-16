@@ -1267,6 +1267,38 @@ async def accept_application(
     使用事务锁防止并发，支持幂等性
     """
     try:
+        async def _create_customer_and_ephemeral_key(stripe_module, user_id: str, user_name: str):
+            """
+            为支付方创建/获取 Stripe Customer，并生成 Ephemeral Key（用于客户端保存/复用支付方式）。
+            失败时返回 (None, None)，不阻塞支付流程。
+            """
+            customer_id = None
+            ephemeral_key_secret = None
+            try:
+                existing_customers = stripe_module.Customer.list(limit=1, metadata={"user_id": user_id})
+                if existing_customers.data:
+                    customer_id = existing_customers.data[0].id
+                else:
+                    customer = stripe_module.Customer.create(
+                        metadata={
+                            "user_id": user_id,
+                            "user_name": user_name,
+                        }
+                    )
+                    customer_id = customer.id
+
+                ephemeral_key = stripe_module.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-04-30.preview",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
+
+            return customer_id, ephemeral_key_secret
+
         # 检查任务是否存在
         task_query = select(models.Task).where(models.Task.id == task_id)
         task_result = await db.execute(task_query)
@@ -1330,6 +1362,13 @@ async def accept_application(
                     import os
                     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
                     payment_intent = stripe.PaymentIntent.retrieve(locked_task.payment_intent_id)
+
+                    # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+                    customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
+                        stripe_module=stripe,
+                        user_id=str(current_user.id),
+                        user_name=current_user.name or f"User {current_user.id}",
+                    )
                     
                     # 检查 PaymentIntent 状态
                     if payment_intent.status == "succeeded":
@@ -1353,7 +1392,9 @@ async def accept_application(
                         "client_secret": payment_intent.client_secret,
                         "amount": payment_intent.amount,
                         "amount_display": f"{payment_intent.amount / 100:.2f}",
-                        "currency": payment_intent.currency.upper()
+                        "currency": payment_intent.currency.upper(),
+                        "customer_id": customer_id,
+                        "ephemeral_key_secret": ephemeral_key_secret,
                     }
                 except Exception as e:
                     logger.error(f"❌ 获取 PaymentIntent 失败: {e}")
@@ -1494,6 +1535,13 @@ async def accept_application(
                 "payment_type": "application_approval"  # 支付类型：申请批准
             },
         )
+
+        # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+        customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
+            stripe_module=stripe,
+            user_id=str(current_user.id),
+            user_name=current_user.name or f"User {current_user.id}",
+        )
         
         # 保存 payment_intent_id 到任务（临时存储，支付成功后才会真正批准）
         locked_task.payment_intent_id = payment_intent.id
@@ -1523,7 +1571,9 @@ async def accept_application(
             "client_secret": payment_intent.client_secret,
             "amount": task_amount_pence,
             "amount_display": f"{task_amount_pence / 100:.2f}",
-            "currency": "GBP"
+            "currency": "GBP",
+            "customer_id": customer_id,
+            "ephemeral_key_secret": ephemeral_key_secret,
         }
         
         # 记录响应数据的各个字段，确保格式正确

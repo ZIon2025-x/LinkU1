@@ -199,6 +199,8 @@ struct AcceptApplicationResponse: Decodable {
     let taskId: Int?
     let paymentIntentId: String?
     let clientSecret: String?
+    let customerId: String?
+    let ephemeralKeySecret: String?
     let amount: Int?
     let amountDisplay: String?
     let currency: String?
@@ -210,6 +212,8 @@ struct AcceptApplicationResponse: Decodable {
         case taskId = "task_id"
         case paymentIntentId = "payment_intent_id"
         case clientSecret = "client_secret"
+        case customerId = "customer_id"
+        case ephemeralKeySecret = "ephemeral_key_secret"
         case amount
         case amountDisplay = "amount_display"
         case currency

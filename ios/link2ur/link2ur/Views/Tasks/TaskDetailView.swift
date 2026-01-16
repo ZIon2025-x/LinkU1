@@ -27,6 +27,8 @@ struct TaskDetailView: View {
     @State private var showApplySuccessAlert = false
     @State private var showPaymentView = false
     @State private var paymentClientSecret: String?
+    @State private var paymentCustomerId: String?
+    @State private var paymentEphemeralKeySecret: String?
     @State private var approvedApplicantName: String?
     @State private var shareImageCancellable: AnyCancellable?
     @State private var isShareImageLoading = false // 分享图片加载状态
@@ -267,12 +269,16 @@ struct TaskDetailView: View {
                 taskId: taskId,
                 amount: paymentAmount,
                 clientSecret: paymentClientSecret,
+                customerId: paymentCustomerId,
+                ephemeralKeySecret: paymentEphemeralKeySecret,
                 taskTitle: task.title,
                 applicantName: applicantName,
                 onPaymentSuccess: {
                     // 支付成功后的回调
                     // 清除 client_secret 和申请者名字
                     paymentClientSecret = nil
+                    paymentCustomerId = nil
+                    paymentEphemeralKeySecret = nil
                     approvedApplicantName = nil
                     // 关闭支付视图
                     showPaymentView = false
@@ -283,6 +289,8 @@ struct TaskDetailView: View {
             .onDisappear {
                 // 清除 client_secret 和申请者名字（如果还没清除）
                 paymentClientSecret = nil
+                paymentCustomerId = nil
+                paymentEphemeralKeySecret = nil
                 approvedApplicantName = nil
             }
         }
@@ -961,7 +969,7 @@ struct TaskDetailContentView: View {
                                 let application = viewModel.applications.first { $0.id == applicationId }
                                 let applicantName = application?.applicantName
                                 
-                                viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret in
+                                viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret, customerId, ephemeralKeySecret in
                                     actionLoading = false
                                     if success {
                                         // 保存申请者名字
@@ -971,10 +979,14 @@ struct TaskDetailContentView: View {
                                         if let clientSecret = clientSecret, !clientSecret.isEmpty {
                                             // 保存 client_secret 并显示支付界面
                                             paymentClientSecret = clientSecret
+                                            paymentCustomerId = customerId
+                                            paymentEphemeralKeySecret = ephemeralKeySecret
                                             showPaymentView = true
                                         } else {
                                             // 没有 client_secret，重新加载任务信息
                                             paymentClientSecret = nil
+                                            paymentCustomerId = nil
+                                            paymentEphemeralKeySecret = nil
                                             viewModel.loadTask(taskId: taskId)
                                             viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
                                             
