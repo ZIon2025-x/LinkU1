@@ -136,6 +136,7 @@
 "tasks.share_to" = "分享到...";
 "tasks.task" = "任務";
 "tasks.tasks" = "任務";
+"tasks.not_interested" = "不感興趣";
 
 // MARK: - Task Experts
 "experts.experts" = "任務達人";

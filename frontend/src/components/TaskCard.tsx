@@ -33,6 +33,68 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
   getTaskLevelLabel,
   t
 }) => {
+  // 增强：根据推荐理由返回对应的图标
+  const getRecommendationReasonIcon = (reason?: string): string => {
+    if (!reason) return '⭐';
+    if (reason.includes('同校') || reason.includes('学校')) return '🎓';
+    if (reason.includes('距离') || reason.includes('km')) return '📍';
+    if (reason.includes('活跃时间') || reason.includes('时间段') || reason.includes('当前活跃')) return '⏰';
+    if (reason.includes('高评分') || reason.includes('评分')) return '⭐';
+    if (reason.includes('新发布') || reason.includes('新任务')) return '✨';
+    if (reason.includes('即将截止') || reason.includes('截止')) return '⏳';
+    return '⭐';
+  };
+
+  // 增强：根据推荐理由返回对应的样式
+  const getRecommendationReasonStyle = (reason?: string): { background: string; shadowColor: string } => {
+    if (!reason) {
+      return {
+        background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+        shadowColor: 'rgba(255, 107, 107, 0.4)'
+      };
+    }
+    if (reason.includes('同校') || reason.includes('学校')) {
+      return {
+        background: 'linear-gradient(135deg, #4a90e2, #357abd)',
+        shadowColor: 'rgba(74, 144, 226, 0.4)'
+      };
+    }
+    if (reason.includes('距离') || reason.includes('km')) {
+      return {
+        background: 'linear-gradient(135deg, #52c41a, #389e0d)',
+        shadowColor: 'rgba(82, 196, 26, 0.4)'
+      };
+    }
+    if (reason.includes('活跃时间') || reason.includes('时间段') || reason.includes('当前活跃')) {
+      return {
+        background: 'linear-gradient(135deg, #fa8c16, #d46b08)',
+        shadowColor: 'rgba(250, 140, 22, 0.4)'
+      };
+    }
+    if (reason.includes('高评分') || reason.includes('评分')) {
+      return {
+        background: 'linear-gradient(135deg, #fadb14, #d4b106)',
+        shadowColor: 'rgba(250, 219, 20, 0.4)'
+      };
+    }
+    if (reason.includes('新发布') || reason.includes('新任务')) {
+      return {
+        background: 'linear-gradient(135deg, #9254de, #722ed1)',
+        shadowColor: 'rgba(146, 84, 222, 0.4)'
+      };
+    }
+    if (reason.includes('即将截止') || reason.includes('截止')) {
+      return {
+        background: 'linear-gradient(135deg, #ff4d4f, #cf1322)',
+        shadowColor: 'rgba(255, 77, 79, 0.4)'
+      };
+    }
+    return {
+      background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+      shadowColor: 'rgba(255, 107, 107, 0.4)'
+    };
+  };
+
   // 根据任务等级确定卡片样式类名
   const getCardClassName = () => {
     const baseClass = styles.taskCard;
@@ -167,14 +229,14 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
           pointerEvents: 'none'
         }} />
 
-        {/* 推荐标记 - 左上角 */}
+        {/* 增强：推荐标记 - 左上角（优化推荐理由显示） */}
         {task.is_recommended && (
           <div 
             style={{
               position: 'absolute',
               top: isMobile ? '8px' : '12px',
               left: isMobile ? '8px' : '12px',
-              background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+              background: getRecommendationReasonStyle(task.recommendation_reason).background,
               backdropFilter: 'blur(4px)',
               color: '#fff',
               padding: isMobile ? '4px 8px' : '6px 12px',
@@ -185,9 +247,10 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
               alignItems: 'center',
               gap: '4px',
               zIndex: 4,
-              boxShadow: '0 2px 8px rgba(255, 107, 107, 0.4)',
+              boxShadow: `0 2px 8px ${getRecommendationReasonStyle(task.recommendation_reason).shadowColor}`,
               animation: 'pulse 2s ease-in-out infinite',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              maxWidth: isMobile ? 'calc(100% - 16px)' : 'calc(100% - 24px)'
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -195,8 +258,19 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
             }}
             title={task.recommendation_reason || (language === 'zh' ? '推荐任务' : 'Recommended task')}
           >
-            <span>⭐</span>
-            <span>{language === 'zh' ? '推荐' : 'Recommended'}</span>
+            <span>{getRecommendationReasonIcon(task.recommendation_reason)}</span>
+            {task.recommendation_reason ? (
+              <span style={{ 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                maxWidth: isMobile ? '80px' : '120px'
+              }}>
+                {task.recommendation_reason}
+              </span>
+            ) : (
+              <span>{language === 'zh' ? '推荐' : 'Recommended'}</span>
+            )}
             {task.match_score && (
               <span style={{ opacity: 0.9, fontSize: isMobile ? '9px' : '11px' }}>
                 {Math.round(task.match_score * 100)}%

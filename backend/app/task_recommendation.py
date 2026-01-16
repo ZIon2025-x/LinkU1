@@ -266,8 +266,20 @@ class TaskRecommendationEngine:
         # 2. 获取用户历史任务
         user_history = self._get_user_task_history(user.id)
         
-        # 3. 构建用户偏好向量
-        user_vector = self._build_user_preference_vector(user, user_preferences, user_history)
+        # 3. 增强：分析用户浏览和搜索行为（新增）
+        view_history = self._get_user_view_history(user.id)
+        search_keywords = self._get_user_search_keywords(user.id)
+        skipped_tasks = self._get_user_skipped_tasks(user.id)
+        
+        # 4. 构建用户偏好向量（增强版）
+        user_vector = self._build_user_preference_vector(
+            user, 
+            user_preferences, 
+            user_history,
+            view_history=view_history,
+            search_keywords=search_keywords,
+            skipped_tasks=skipped_tasks
+        )
         
         # 冷启动处理：如果用户没有历史数据，使用默认偏好
         if not user_history and not user_preferences:
@@ -584,7 +596,21 @@ class TaskRecommendationEngine:
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
         
-        # 4. 地理位置推荐（权重：12%）
+        # 4. 社交关系推荐（权重：15%，新增功能）⭐
+        social_weight = 0.15
+        social_based = self._social_based_recommend(user, limit=30)
+        # 应用筛选条件
+        if task_type or location or keyword:
+            social_based = self._apply_filters_to_recommendations(
+                social_based, task_type, location, keyword
+            )
+        for item in social_based:
+            task_id = item["task"].id
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * social_weight
+            if task_id not in reasons:
+                reasons[task_id] = item["reason"]
+        
+        # 5. 地理位置推荐（权重：10%，从12%降低）
         location_based = self._location_based_recommend(user, limit=30)
         # 应用筛选条件
         if task_type or location or keyword:
@@ -593,11 +619,11 @@ class TaskRecommendationEngine:
             )
         for item in location_based:
             task_id = item["task"].id
-            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.12
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.10
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
         
-        # 5. 热门任务推荐（权重：8%，仅作为补充策略）
+        # 6. 热门任务推荐（权重：2%，从8%降低）
         # 注意：热门任务主要用于解决冷启动问题和增加多样性
         # 对于有足够数据的用户，热门任务权重会自动降低
         if is_new_user:
@@ -619,7 +645,7 @@ class TaskRecommendationEngine:
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
         
-        # 6. 时间匹配推荐（权重：5%）
+        # 7. 时间匹配推荐（权重：8%，从5%提高，增强功能）
         time_based = self._time_based_recommend(user, limit=20)
         # 应用筛选条件
         if task_type or location or keyword:
@@ -628,7 +654,7 @@ class TaskRecommendationEngine:
             )
         for item in time_based:
             task_id = item["task"].id
-            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.05
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.08
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
         
@@ -805,24 +831,357 @@ class TaskRecommendationEngine:
         return selected
     
     def _location_based_recommend(self, user: User, limit: int) -> List[Dict]:
-        """基于地理位置的推荐"""
-        if not user.residence_city:
-            return []
-        
+        """基于地理位置的推荐（增强版：支持多城市、常去地点、GPS距离）"""
         # 获取应该排除的任务ID
         from app.recommendation_utils import get_excluded_task_ids
         excluded_task_ids = get_excluded_task_ids(self.db, user.id)
         
-        # 查找同城或附近的任务
+        # 1. 获取用户常去的地点（增强：新增）
+        frequent_locations = self._get_user_frequent_locations(user.id)
+        
+        # 2. 获取用户偏好的城市列表（增强：支持多城市）
+        preferred_cities = self._get_user_preferred_cities(user)
+        
+        # 3. 构建位置查询条件
+        location_conditions = []
+        
+        # 居住城市
+        if user.residence_city:
+            location_conditions.append(Task.location.ilike(f"%{user.residence_city}%"))
+        
+        # 常去地点（增强：新增）
+        for loc in frequent_locations[:3]:  # 最多3个常去地点
+            location_conditions.append(Task.location.ilike(f"%{loc}%"))
+        
+        # 偏好城市（增强：新增）
+        for city in preferred_cities:
+            if city != user.residence_city:  # 避免重复
+                location_conditions.append(Task.location.ilike(f"%{city}%"))
+        
+        if not location_conditions:
+            return []
+        
+        # 4. 查询任务
+        from sqlalchemy import or_
         query = self.db.query(Task).filter(
             Task.status == "open",
             Task.poster_id != user.id,
-            Task.location.ilike(f"%{user.residence_city}%"),
+            or_(*location_conditions),
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
         )
-        tasks = query.limit(limit).all()
         
-        return [{"task": task, "score": 1.0, "reason": "同城任务"} for task in tasks]
+        tasks = query.limit(limit * 2).all()  # 获取更多任务，后续按距离排序
+        
+        # 5. 如果有GPS位置，按距离排序（增强：新增）
+        if user.latitude and user.longitude:
+            scored_tasks = []
+            for task in tasks:
+                try:
+                    if task.latitude and task.longitude:
+                        distance = self._calculate_distance(
+                            user.latitude, user.longitude,
+                            task.latitude, task.longitude
+                        )
+                        # 如果距离计算失败（返回inf），使用默认分数
+                        if distance == float('inf'):
+                            score = 0.8
+                            reason = "同城任务"
+                        else:
+                            # 距离越近，分数越高（距离在10km内得1.0分，超过10km递减）
+                            score = max(0.5, 1.0 - (distance / 10000))  # 10km内高分
+                            reason = f"距离您{distance/1000:.1f}km" if distance < 10000 else "同城任务"
+                        
+                        scored_tasks.append({
+                            "task": task,
+                            "score": score,
+                            "reason": reason
+                        })
+                    else:
+                        scored_tasks.append({
+                            "task": task,
+                            "score": 0.8,
+                            "reason": "同城任务"
+                        })
+                except Exception as e:
+                    logger.warning(f"计算任务距离失败 (task_id={task.id}): {e}")
+                    scored_tasks.append({
+                        "task": task,
+                        "score": 0.8,
+                        "reason": "同城任务"
+                    })
+            
+            # 按分数排序
+            scored_tasks.sort(key=lambda x: x["score"], reverse=True)
+            return scored_tasks[:limit]
+        else:
+            # 没有GPS位置，返回同城任务
+            return [{"task": task, "score": 1.0, "reason": "同城任务"} for task in tasks[:limit]]
+    
+    def _get_user_frequent_locations(self, user_id: str) -> List[str]:
+        """获取用户常去的地点（从任务历史中分析，带缓存）"""
+        # 尝试从缓存获取（缓存30分钟）
+        cache_key = f"user_frequent_locations:{user_id}"
+        try:
+            cached = redis_cache.get(cache_key)
+            if cached:
+                if isinstance(cached, bytes):
+                    cached = cached.decode('utf-8')
+                import json
+                return json.loads(cached)
+        except Exception as e:
+            logger.debug(f"读取常去地点缓存失败: {e}")
+        
+        try:
+            history = self._get_user_task_history(user_id)
+            if not history:
+                return []
+            
+            # 获取历史任务的地点
+            task_ids = [h.task_id for h in history[:30]]
+            if not task_ids:
+                return []
+            
+            locations = self.db.query(Task.location).filter(
+                Task.id.in_(task_ids),
+                Task.location.isnot(None)
+            ).all()
+            
+            # 统计地点出现频率
+            location_counts = {}
+            for (location,) in locations:
+                if location:
+                    # 提取城市名（假设格式是 "详细地址, 城市"）
+                    city = location.split(',')[-1].strip() if ',' in location else location
+                    location_counts[city] = location_counts.get(city, 0) + 1
+            
+            # 返回出现频率最高的3个地点
+            result = [
+                loc for loc, count in sorted(
+                    location_counts.items(), key=lambda x: x[1], reverse=True
+                )[:3]
+            ]
+            
+            # 缓存结果（30分钟TTL）
+            try:
+                import json
+                redis_cache.setex(cache_key, 1800, json.dumps(result))
+            except Exception as e:
+                logger.debug(f"缓存常去地点失败: {e}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"获取用户常去地点失败: {e}")
+            return []
+    
+    def _get_user_preferred_cities(self, user: User) -> List[str]:
+        """获取用户偏好的城市列表（支持多城市）"""
+        cities = []
+        
+        # 1. 居住城市
+        if user.residence_city:
+            cities.append(user.residence_city)
+        
+        # 2. 从用户偏好中获取
+        preferences = self._get_user_preferences(user.id)
+        if preferences and preferences.locations:
+            try:
+                preferred_locations = json.loads(preferences.locations)
+                for loc in preferred_locations:
+                    # 提取城市名
+                    city = loc.split(',')[-1].strip() if ',' in loc else loc
+                    if city not in cities:
+                        cities.append(city)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        return cities[:5]  # 最多5个城市
+    
+    def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """计算两点之间的距离（米）使用 Haversine 公式（增强：添加参数验证）"""
+        # 参数验证
+        if not all([lat1, lon1, lat2, lon2]):
+            logger.warning(f"GPS坐标不完整: lat1={lat1}, lon1={lon1}, lat2={lat2}, lon2={lon2}")
+            return float('inf')  # 如果缺少坐标，返回无限大（不推荐）
+        
+        # 验证坐标范围
+        if not (-90 <= lat1 <= 90) or not (-90 <= lat2 <= 90):
+            logger.warning(f"纬度超出范围: lat1={lat1}, lat2={lat2}")
+            return float('inf')
+        if not (-180 <= lon1 <= 180) or not (-180 <= lon2 <= 180):
+            logger.warning(f"经度超出范围: lon1={lon1}, lon2={lon2}")
+            return float('inf')
+        
+        try:
+            from math import radians, sin, cos, sqrt, atan2
+            
+            R = 6371000  # 地球半径（米）
+            
+            lat1_rad = radians(lat1)
+            lat2_rad = radians(lat2)
+            delta_lat = radians(lat2 - lat1)
+            delta_lon = radians(lon2 - lon1)
+            
+            a = sin(delta_lat / 2) ** 2 + cos(lat1_rad) * cos(lat2_rad) * sin(delta_lon / 2) ** 2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            
+            distance = R * c
+            return distance
+        except Exception as e:
+            logger.error(f"计算GPS距离失败: {e}")
+            return float('inf')
+    
+    def _social_based_recommend(self, user: User, limit: int) -> List[Dict]:
+        """基于社交关系的推荐（新增功能）"""
+        from app.recommendation_utils import get_excluded_task_ids
+        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        
+        scored_tasks = {}
+        reasons = {}
+        
+        # 1. 推荐同校用户的任务（如果有大学信息）
+        school_tasks = self._get_school_user_tasks(user, limit=10)
+        for item in school_tasks:
+            task_id = item["task"].id
+            if task_id not in excluded_task_ids:
+                scored_tasks[task_id] = scored_tasks.get(task_id, 0) + item["score"] * 0.4
+                reasons[task_id] = item["reason"]
+        
+        # 2. 推荐高评分用户的任务
+        high_rated_tasks = self._get_high_rated_user_tasks(user, limit=10)
+        for item in high_rated_tasks:
+            task_id = item["task"].id
+            if task_id not in excluded_task_ids:
+                scored_tasks[task_id] = scored_tasks.get(task_id, 0) + item["score"] * 0.3
+                if task_id not in reasons:
+                    reasons[task_id] = item["reason"]
+        
+        # 3. 推荐同城高评分用户的任务（结合位置和评分）
+        local_high_rated_tasks = self._get_local_high_rated_user_tasks(user, limit=10)
+        for item in local_high_rated_tasks:
+            task_id = item["task"].id
+            if task_id not in excluded_task_ids:
+                scored_tasks[task_id] = scored_tasks.get(task_id, 0) + item["score"] * 0.3
+                if task_id not in reasons:
+                    reasons[task_id] = item["reason"]
+        
+        # 转换为列表并排序（优化：批量查询任务，避免N+1）
+        if not scored_tasks:
+            return []
+        
+        task_ids = [task_id for task_id, _ in sorted(scored_tasks.items(), key=lambda x: x[1], reverse=True)]
+        tasks = self.db.query(Task).filter(
+            Task.id.in_(task_ids),
+            Task.status == "open"
+        ).all()
+        
+        task_dict = {task.id: task for task in tasks}
+        
+        result = []
+        for task_id, score in sorted(scored_tasks.items(), key=lambda x: x[1], reverse=True):
+            task = task_dict.get(task_id)
+            if task:
+                result.append({
+                    "task": task,
+                    "score": min(score, 1.0),
+                    "reason": reasons.get(task_id, "社交关系推荐")
+                })
+                if len(result) >= limit:
+                    break
+        
+        return result
+    
+    def _get_school_user_tasks(self, user: User, limit: int) -> List[Dict]:
+        """获取同校用户发布的任务"""
+        # 从 StudentVerification 表获取用户的大学信息
+        from app.models import StudentVerification
+        user_verification = self.db.query(StudentVerification).filter(
+            StudentVerification.user_id == user.id,
+            StudentVerification.status == "approved"
+        ).first()
+        
+        if not user_verification or not user_verification.university_id:
+            return []
+        
+        # 查找同校用户
+        school_user_ids = self.db.query(StudentVerification.user_id).filter(
+            StudentVerification.university_id == user_verification.university_id,
+            StudentVerification.user_id != user.id,
+            StudentVerification.status == "approved"
+        ).limit(50).all()
+        
+        if not school_user_ids:
+            return []
+        
+        school_user_ids_list = [uid[0] for uid in school_user_ids]
+        
+        # 获取这些用户发布的任务
+        from app.recommendation_utils import get_excluded_task_ids
+        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        
+        tasks = self.db.query(Task).filter(
+            Task.status == "open",
+            Task.poster_id.in_(school_user_ids_list),
+            ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
+        ).order_by(desc(Task.created_at)).limit(limit).all()
+        
+        return [{"task": task, "score": 0.9, "reason": "同校用户发布"} for task in tasks]
+    
+    def _get_high_rated_user_tasks(self, user: User, limit: int) -> List[Dict]:
+        """获取高评分用户发布的任务"""
+        # 查找高评分用户（平均评分 >= 4.5 且完成任务数 >= 5）
+        high_rated_users = self.db.query(User).filter(
+            User.avg_rating >= 4.5,
+            User.completed_task_count >= 5,
+            User.id != user.id
+        ).order_by(desc(User.avg_rating)).limit(30).all()
+        
+        if not high_rated_users:
+            return []
+        
+        high_rated_user_ids = [u.id for u in high_rated_users]
+        
+        # 获取这些用户发布的任务
+        from app.recommendation_utils import get_excluded_task_ids
+        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        
+        tasks = self.db.query(Task).filter(
+            Task.status == "open",
+            Task.poster_id.in_(high_rated_user_ids),
+            ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
+        ).order_by(desc(Task.created_at)).limit(limit).all()
+        
+        return [{"task": task, "score": 0.85, "reason": "高评分用户发布"} for task in tasks]
+    
+    def _get_local_high_rated_user_tasks(self, user: User, limit: int) -> List[Dict]:
+        """获取同城高评分用户发布的任务（结合位置和评分）"""
+        if not user.residence_city:
+            return []
+        
+        # 查找同城高评分用户
+        high_rated_local_users = self.db.query(User).filter(
+            User.residence_city == user.residence_city,
+            User.avg_rating >= 4.0,
+            User.completed_task_count >= 3,
+            User.id != user.id
+        ).order_by(desc(User.avg_rating)).limit(20).all()
+        
+        if not high_rated_local_users:
+            return []
+        
+        local_user_ids = [u.id for u in high_rated_local_users]
+        
+        # 获取这些用户发布的任务
+        from app.recommendation_utils import get_excluded_task_ids
+        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        
+        tasks = self.db.query(Task).filter(
+            Task.status == "open",
+            Task.poster_id.in_(local_user_ids),
+            Task.location.ilike(f"%{user.residence_city}%"),
+            ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
+        ).order_by(desc(Task.created_at)).limit(limit).all()
+        
+        return [{"task": task, "score": 0.9, "reason": "同城高评分用户发布"} for task in tasks]
     
     def _popular_tasks_recommend(self, limit: int, user: Optional[User] = None) -> List[Dict]:
         """热门任务推荐"""
@@ -848,10 +1207,22 @@ class TaskRecommendationEngine:
         return [{"task": task, "score": 0.8, "reason": "热门任务"} for task in tasks]
     
     def _time_based_recommend(self, user: User, limit: int) -> List[Dict]:
-        """基于时间匹配的推荐"""
+        """基于时间匹配的推荐（增强版：考虑用户活跃时间段和当前时间段）"""
         # 获取应该排除的任务ID
         from app.recommendation_utils import get_excluded_task_ids
         excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        
+        # 1. 获取用户活跃时间段（增强：新增）
+        active_time_slots = self._get_user_active_time_slots(user.id)
+        now = get_utc_time()
+        current_hour = now.hour
+        current_day = now.weekday()
+        
+        # 2. 判断当前是否是用户活跃时间
+        is_active_time = (
+            current_hour in active_time_slots.get("active_hours", []) or
+            current_day in active_time_slots.get("active_days", [])
+        )
         
         now = get_utc_time()
         query = self.db.query(Task).filter(
@@ -861,9 +1232,52 @@ class TaskRecommendationEngine:
             Task.deadline > now,
             ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
         )
-        future_tasks = query.order_by(Task.deadline.asc()).limit(limit).all()
+        future_tasks = query.order_by(Task.deadline.asc()).limit(limit * 2).all()
         
-        return [{"task": task, "score": 0.7, "reason": "即将截止"} for task in future_tasks]
+        # 3. 计算时间匹配分数（增强：新增）
+        scored_tasks = []
+        for task in future_tasks:
+            score = 0.7
+            reason = "即将截止"
+            
+            # 如果任务截止时间在用户活跃时间段，加分（增强：新增）
+            if task.deadline:
+                deadline_hour = task.deadline.hour
+                deadline_day = task.deadline.weekday()
+                
+                if deadline_hour in active_time_slots.get("active_hours", []):
+                    score += 0.2
+                    reason = "适合您的活跃时间；" + reason
+                
+                if deadline_day in active_time_slots.get("active_days", []):
+                    score += 0.1
+            
+            # 如果当前是用户活跃时间，推荐即将截止的任务（增强：新增）
+            if is_active_time:
+                score += 0.1
+                if "您当前活跃" not in reason:
+                    reason = "您当前活跃；" + reason
+            
+            # 任务截止时间越近，分数越高（增强：优化）
+            if task.deadline:
+                now = get_utc_time()
+                hours_until_deadline = (task.deadline - now).total_seconds() / 3600
+                if hours_until_deadline < 24:
+                    score += 0.2
+                    reason = "24小时内截止；" + reason
+                elif hours_until_deadline < 72:
+                    score += 0.1
+                    reason = "3天内截止；" + reason
+            
+            scored_tasks.append({
+                "task": task,
+                "score": min(score, 1.0),
+                "reason": reason
+            })
+        
+        # 按分数排序
+        scored_tasks.sort(key=lambda x: x["score"], reverse=True)
+        return scored_tasks[:limit]
     
     def _is_new_user(self, user: User) -> bool:
         """判断是否为新用户（注册7天内）"""
@@ -1001,11 +1415,159 @@ class TaskRecommendationEngine:
         history = self._get_user_task_history(user_id)
         return {h.task_id for h in history}
     
+    def _get_user_view_history(self, user_id: str) -> List[Dict]:
+        """获取用户浏览历史（增强：分析浏览行为，带缓存）"""
+        # 尝试从缓存获取（缓存5分钟）
+        cache_key = f"user_view_history:{user_id}"
+        try:
+            cached = redis_cache.get(cache_key)
+            if cached:
+                if isinstance(cached, bytes):
+                    cached = cached.decode('utf-8')
+                import json
+                return json.loads(cached)
+        except Exception as e:
+            logger.debug(f"读取浏览历史缓存失败: {e}")
+        
+        try:
+            from app.models import UserTaskInteraction
+            interactions = self.db.query(UserTaskInteraction).filter(
+                UserTaskInteraction.user_id == user_id,
+                UserTaskInteraction.interaction_type == "view"
+            ).order_by(desc(UserTaskInteraction.interaction_time)).limit(100).all()
+            
+            result = [
+                {
+                    "task_id": i.task_id,
+                    "duration_seconds": i.duration_seconds or 0,
+                    "interaction_time": i.interaction_time.isoformat() if i.interaction_time else None
+                }
+                for i in interactions
+            ]
+            
+            # 缓存结果（5分钟TTL）
+            try:
+                import json
+                redis_cache.setex(cache_key, 300, json.dumps(result, default=str))
+            except Exception as e:
+                logger.debug(f"缓存浏览历史失败: {e}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"获取用户浏览历史失败: {e}")
+            return []
+    
+    def _get_user_search_keywords(self, user_id: str) -> List[str]:
+        """获取用户搜索关键词（从浏览行为中提取）"""
+        # 如果metadata中有搜索关键词，提取出来
+        from app.models import UserTaskInteraction
+        interactions = self.db.query(UserTaskInteraction).filter(
+            UserTaskInteraction.user_id == user_id,
+            UserTaskInteraction.interaction_type.in_(["view", "click"])
+        ).order_by(desc(UserTaskInteraction.interaction_time)).limit(50).all()
+        
+        keywords = []
+        for i in interactions:
+            if i.interaction_metadata and isinstance(i.interaction_metadata, dict):
+                # 从metadata中提取搜索关键词
+                if "search_keyword" in i.interaction_metadata:
+                    keywords.append(i.interaction_metadata["search_keyword"])
+                if "source" in i.interaction_metadata and i.interaction_metadata["source"] == "search":
+                    # 如果来源是搜索，可能有关键词
+                    pass
+        
+        return list(set(keywords))[:10]  # 去重，最多返回10个
+    
+    def _get_user_skipped_tasks(self, user_id: str) -> List[int]:
+        """获取用户跳过/忽略的任务（负反馈）"""
+        from app.models import UserTaskInteraction
+        skipped = self.db.query(UserTaskInteraction).filter(
+            UserTaskInteraction.user_id == user_id,
+            UserTaskInteraction.interaction_type == "skip"
+        ).limit(50).all()
+        
+        return [s.task_id for s in skipped]
+    
+    def _get_user_active_time_slots(self, user_id: str) -> Dict:
+        """获取用户活跃时间段（增强：分析用户活跃时间，带缓存）"""
+        # 尝试从缓存获取（缓存1小时）
+        cache_key = f"user_active_time_slots:{user_id}"
+        try:
+            cached = redis_cache.get(cache_key)
+            if cached:
+                if isinstance(cached, bytes):
+                    cached = cached.decode('utf-8')
+                import json
+                return json.loads(cached)
+        except Exception as e:
+            logger.debug(f"读取活跃时间段缓存失败: {e}")
+        
+        try:
+            from app.models import UserTaskInteraction
+            from sqlalchemy import func, extract
+            
+            # 分析最近30天的交互时间
+            cutoff_date = get_utc_time() - timedelta(days=30)
+            interactions = self.db.query(
+                extract('hour', UserTaskInteraction.interaction_time).label('hour'),
+                extract('dow', UserTaskInteraction.interaction_time).label('day_of_week')
+            ).filter(
+                UserTaskInteraction.user_id == user_id,
+                UserTaskInteraction.interaction_time >= cutoff_date
+            ).all()
+            
+            # 统计活跃时间段
+            hour_counts = {}
+            day_counts = {}
+            for hour, day in interactions:
+                hour_counts[int(hour)] = hour_counts.get(int(hour), 0) + 1
+                day_counts[int(day)] = day_counts.get(int(day), 0) + 1
+            
+            # 找出最活跃的时间段
+            active_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+            active_days = sorted(day_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+            
+            # 如果没有数据，返回默认值（基于当前时间）
+            if not hour_counts:
+                now = get_utc_time()
+                result = {
+                    "active_hours": [now.hour],  # 默认当前小时
+                    "active_days": [now.weekday()],
+                    "hour_distribution": {}
+                }
+            else:
+                result = {
+                    "active_hours": [h[0] for h in active_hours],
+                    "active_days": [d[0] for d in active_days],
+                    "hour_distribution": hour_counts
+                }
+            
+            # 缓存结果（1小时TTL）
+            try:
+                import json
+                redis_cache.setex(cache_key, 3600, json.dumps(result, default=str))
+            except Exception as e:
+                logger.debug(f"缓存活跃时间段失败: {e}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"获取用户活跃时间段失败: {e}")
+            # 返回默认值
+            now = get_utc_time()
+            return {
+                "active_hours": [now.hour],
+                "active_days": [now.weekday()],
+                "hour_distribution": {}
+            }
+    
     def _build_user_preference_vector(
         self, 
         user: User, 
         preferences: Optional[UserPreferences],
-        history: List[TaskHistory]
+        history: List[TaskHistory],
+        view_history: Optional[List[Dict]] = None,
+        search_keywords: Optional[List[str]] = None,
+        skipped_tasks: Optional[List[int]] = None
     ) -> Dict:
         """构建用户偏好向量"""
         vector = {
@@ -1026,6 +1588,52 @@ class TaskRecommendationEngine:
                 vector["task_levels"] = json.loads(preferences.task_levels)
             if preferences.keywords:
                 vector["keywords"] = json.loads(preferences.keywords)
+        
+        # 增强：从浏览行为中学习偏好（新增）
+        if view_history:
+            try:
+                # 分析浏览时长，长浏览时间表示更感兴趣
+                long_view_tasks = [
+                    v["task_id"] for v in view_history 
+                    if v.get("duration_seconds", 0) > 30  # 浏览超过30秒的任务
+                ]
+                if long_view_tasks:
+                    # 获取这些任务的特征（批量查询，避免N+1）
+                    tasks = self.db.query(
+                        Task.id,
+                        Task.task_type,
+                        Task.location
+                    ).filter(Task.id.in_(long_view_tasks[:20])).all()
+                    
+                    # 统计感兴趣的任务类型和位置
+                    for task_id, task_type, location in tasks:
+                        if task_type and task_type not in vector["task_types"]:
+                            vector["task_types"].append(task_type)
+                        if location and location not in vector["locations"]:
+                            vector["locations"].append(location)
+            except Exception as e:
+                logger.warning(f"从浏览行为学习偏好失败: {e}")
+        
+        # 增强：从搜索关键词中学习偏好（新增）
+        if search_keywords:
+            # 去重并添加到关键词列表
+            existing_keywords = set(vector["keywords"])
+            for keyword in search_keywords:
+                if keyword and keyword not in existing_keywords:
+                    vector["keywords"].append(keyword)
+                    existing_keywords.add(keyword)
+        
+        # 增强：记录用户不喜欢的任务类型（负反馈，新增）
+        if skipped_tasks:
+            try:
+                skipped_task_types = self.db.query(Task.task_type).filter(
+                    Task.id.in_(skipped_tasks[:20])
+                ).distinct().all()
+                # 可以用于后续过滤，但这里先记录
+                vector["negative_task_types"] = [t[0] for t in skipped_task_types if t[0]]
+            except Exception as e:
+                logger.warning(f"获取跳过任务类型失败: {e}")
+                vector["negative_task_types"] = []
         
         # 从历史行为中学习偏好
         if history:
@@ -1095,6 +1703,13 @@ class TaskRecommendationEngine:
     ) -> float:
         """计算内容匹配分数"""
         score = 0.0
+        
+        # 负反馈：如果任务类型在用户不喜欢的列表中，降低分数（新增）
+        if "negative_task_types" in user_vector:
+            if task.task_type in user_vector["negative_task_types"]:
+                # 返回很低的分，但不完全排除（避免过度过滤）
+                # 其他因素（如位置、价格）仍可能让任务被推荐
+                score = 0.1
         
         # 1. 任务类型匹配（权重：0.3）
         if user_vector["task_types"] and task.task_type in user_vector["task_types"]:

@@ -37,6 +37,7 @@ struct TaskDetailView: View {
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
+    @State private var viewStartTime: Date? // 增强：记录任务详情页查看开始时间（用于计算浏览时长）
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -205,8 +206,17 @@ struct TaskDetailView: View {
                     viewModel.loadTask(taskId: taskId)
                 }
                 
-                // 记录任务查看交互（用于推荐系统）
-                recordTaskInteraction(type: "view")
+                // 增强：记录任务查看开始时间（用于计算浏览时长）
+                viewStartTime = Date()
+            }
+            .onDisappear {
+                // 增强：计算浏览时长并记录（用于推荐系统学习）
+                if let startTime = viewStartTime {
+                    let duration = Int(Date().timeIntervalSince(startTime))
+                    if duration > 0 {
+                        recordTaskInteraction(type: "view", duration: duration)
+                    }
+                }
             }
             .onChange(of: viewModel.task?.id) { newTaskId in
                 // 优化：只在任务ID确实变化且不为nil时处理
@@ -432,7 +442,9 @@ struct TaskDetailView: View {
     }
     
     /// 记录任务交互（用于推荐系统，带防抖和异步优化）
-    private func recordTaskInteraction(type: String) {
+    @State private var viewStartTime: Date? // 增强：记录任务详情页查看开始时间
+    
+    private func recordTaskInteraction(type: String, duration: Int? = nil) {
         guard appState.isAuthenticated else { return }
         
         // 防抖：相同类型的交互在1秒内只记录一次
@@ -477,6 +489,7 @@ struct TaskDetailView: View {
             cancellable = APIService.shared.recordTaskInteraction(
                 taskId: currentTaskId,
                 interactionType: type,
+                durationSeconds: duration, // 增强：传递浏览时长
                 deviceType: deviceType,
                 isRecommended: isRecommended,
                 metadata: metadata

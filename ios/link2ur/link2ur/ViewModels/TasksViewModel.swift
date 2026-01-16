@@ -423,8 +423,17 @@ class TasksViewModel: ObservableObject {
         
         errorMessage = nil
         
-        // 调用推荐 API
-        apiService.getTaskRecommendations(limit: limit, algorithm: algorithm, taskType: taskType, location: location, keyword: keyword)
+        // 增强：获取GPS位置（如果用户允许位置权限）
+        var userLat: Double? = nil
+        var userLon: Double? = nil
+        if let userLocation = locationService.currentLocation {
+            userLat = userLocation.latitude
+            userLon = userLocation.longitude
+            Logger.debug("发送GPS位置到推荐API: lat=\(userLat!), lon=\(userLon!)", category: .api)
+        }
+        
+        // 调用推荐 API（增强：包含GPS位置）
+        apiService.getTaskRecommendations(limit: limit, algorithm: algorithm, taskType: taskType, location: location, keyword: keyword, latitude: userLat, longitude: userLon)
             .sink(receiveCompletion: { [weak self] completion in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false

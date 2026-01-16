@@ -296,17 +296,27 @@ def optimize_hybrid_recommendation(
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
     
-    # 4. 地理位置推荐
+    # 4. 社交关系推荐（新增功能）⭐
+    social_based = engine._social_based_recommend(compute_cache.user, limit=30)
+    social_based = batch_apply_filters(social_based, task_type, location, keyword)
+    for item in social_based:
+        task_id = item["task"].id
+        if task_id not in excluded_task_ids:
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.15
+            if task_id not in reasons:
+                reasons[task_id] = item["reason"]
+    
+    # 5. 地理位置推荐（权重从12%降低到10%）
     location_based = engine._location_based_recommend(compute_cache.user, limit=30)
     location_based = batch_apply_filters(location_based, task_type, location, keyword)
     for item in location_based:
         task_id = item["task"].id
         if task_id not in excluded_task_ids:
-            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.12
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.10
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
     
-    # 5. 热门任务推荐（使用全局缓存，仅作为补充策略）
+    # 6. 热门任务推荐（权重从8%降低到2%，仅作为补充策略）
     # 注意：热门任务主要用于解决冷启动问题和增加多样性
     # 权重根据用户数据量动态调整
     is_new_user = compute_cache.is_new_user()
@@ -331,13 +341,13 @@ def optimize_hybrid_recommendation(
         if task_id not in reasons:
             reasons[task_id] = item["reason"]
     
-    # 6. 时间匹配推荐
+    # 7. 时间匹配推荐（权重从5%提高到8%，增强功能）
     time_based = engine._time_based_recommend(compute_cache.user, limit=20)
     time_based = batch_apply_filters(time_based, task_type, location, keyword)
     for item in time_based:
         task_id = item["task"].id
         if task_id not in excluded_task_ids:
-            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.05
+            scores[task_id] = scores.get(task_id, 0) + item["score"] * 0.08
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
     

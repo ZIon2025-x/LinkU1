@@ -236,6 +236,35 @@ const TaskDetail: React.FC = () => {
     }, 2000);
   }, [id]);
 
+  // 增强：记录任务详情页浏览时长（用于推荐系统学习）
+  useEffect(() => {
+    if (!id || !task) return;
+    
+    const startTime = Date.now();
+    
+    // 页面离开时记录浏览时长
+    return () => {
+      const duration = Math.floor((Date.now() - startTime) / 1000); // 转换为秒
+      if (duration > 0 && user) {
+        // 异步记录，不阻塞页面跳转
+        import('../api').then(({ recordTaskInteraction }) => {
+          recordTaskInteraction(
+            parseInt(id),
+            'view',
+            duration,
+            undefined, // 自动检测设备类型
+            task.is_recommended,
+            {
+              source: 'task_detail',
+              match_score: task.match_score,
+              recommendation_reason: task.recommendation_reason
+            }
+          ).catch(err => console.warn('记录浏览时长失败:', err));
+        });
+      }
+    };
+  }, [id, task, user]);
+
   // 提取SEO描述生成逻辑为useMemo，避免重复计算
   const seoDescription = useMemo(() => {
     if (!task) return '';

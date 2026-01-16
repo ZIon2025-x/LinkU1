@@ -464,6 +464,24 @@ export async function getTaskRecommendations(
     if (location && location !== 'all') params.location = location;
     if (keyword) params.keyword = keyword;
     
+    // 增强：如果用户允许位置权限，获取并发送GPS位置
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 2000, // 2秒超时，避免阻塞推荐请求
+            maximumAge: 300000 // 5分钟内的位置缓存
+          });
+        });
+        params.latitude = position.coords.latitude;
+        params.longitude = position.coords.longitude;
+        console.debug('发送GPS位置到推荐API:', params.latitude, params.longitude);
+      } catch (geoError) {
+        // 位置获取失败不影响推荐请求
+        console.debug('获取位置失败，继续推荐请求:', geoError);
+      }
+    }
+    
     const response = await api.get('/recommendations', { params });
     return response.data;
   } catch (error: any) {

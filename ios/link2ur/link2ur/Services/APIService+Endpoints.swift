@@ -959,8 +959,8 @@ extension APIService {
     
     // MARK: - Recommendations (推荐)
     
-    /// 获取推荐任务列表
-    func getTaskRecommendations(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil) -> AnyPublisher<TaskRecommendationResponse, APIError> {
+    /// 获取推荐任务列表（增强：支持GPS位置）
+    func getTaskRecommendations(limit: Int = 20, algorithm: String = "hybrid", taskType: String? = nil, location: String? = nil, keyword: String? = nil, latitude: Double? = nil, longitude: Double? = nil) -> AnyPublisher<TaskRecommendationResponse, APIError> {
         var queryParams: [String: String?] = [
             "limit": "\(limit)",
             "algorithm": algorithm
@@ -973,6 +973,11 @@ extension APIService {
         }
         if let keyword = keyword, !keyword.isEmpty {
             queryParams["keyword"] = keyword
+        }
+        // 增强：如果提供了GPS位置，添加到查询参数
+        if let lat = latitude, let lon = longitude {
+            queryParams["latitude"] = "\(lat)"
+            queryParams["longitude"] = "\(lon)"
         }
         
         let queryString = APIRequestHelper.buildQueryString(queryParams)

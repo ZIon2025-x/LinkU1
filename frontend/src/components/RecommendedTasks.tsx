@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Spin, Empty, Tag, Tooltip } from 'antd';
-import { FireOutlined, StarOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { FireOutlined, StarOutlined, ClockCircleOutlined, EnvironmentOutlined, SchoolOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { getTaskRecommendations, recordTaskInteraction } from '../api';
 import TaskCard from './TaskCard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -87,6 +87,28 @@ const RecommendedTasks: React.FC<RecommendedTasksProps> = ({
     if (score >= 0.6) return language === 'zh' ? '中等匹配' : 'Medium Match';
     if (score >= 0.4) return language === 'zh' ? '低匹配' : 'Low Match';
     return language === 'zh' ? '匹配度低' : 'Low Match';
+  };
+
+  // 增强：根据推荐理由返回对应的图标
+  const getRecommendationReasonIcon = (reason: string) => {
+    if (reason.includes('同校') || reason.includes('学校')) return <SchoolOutlined />;
+    if (reason.includes('距离') || reason.includes('km')) return <EnvironmentOutlined />;
+    if (reason.includes('活跃时间') || reason.includes('时间段') || reason.includes('当前活跃')) return <ClockCircleOutlined />;
+    if (reason.includes('高评分') || reason.includes('评分')) return <StarOutlined />;
+    if (reason.includes('新发布') || reason.includes('新任务')) return <ThunderboltOutlined />;
+    if (reason.includes('即将截止') || reason.includes('截止')) return <ClockCircleOutlined />;
+    return <FireOutlined />;
+  };
+
+  // 增强：根据推荐理由返回对应的颜色
+  const getRecommendationReasonColor = (reason: string): string => {
+    if (reason.includes('同校') || reason.includes('学校')) return '#4a90e2';
+    if (reason.includes('距离') || reason.includes('km')) return '#52c41a';
+    if (reason.includes('活跃时间') || reason.includes('时间段') || reason.includes('当前活跃')) return '#fa8c16';
+    if (reason.includes('高评分') || reason.includes('评分')) return '#fadb14';
+    if (reason.includes('新发布') || reason.includes('新任务')) return '#9254de';
+    if (reason.includes('即将截止') || reason.includes('截止')) return '#ff4d4f';
+    return '#ff6b6b';
   };
 
   if (loading) {
@@ -201,8 +223,15 @@ const RecommendedTasks: React.FC<RecommendedTasksProps> = ({
               </div>
               {task.recommendation_reason && (
                 <Tooltip title={task.recommendation_reason}>
-                  <span className="recommendation-reason">
-                    {language === 'zh' ? '推荐理由' : 'Why recommended'}: {task.recommendation_reason}
+                  <span className="recommendation-reason" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: getRecommendationReasonColor(task.recommendation_reason),
+                    fontWeight: 500
+                  }}>
+                    {getRecommendationReasonIcon(task.recommendation_reason)}
+                    <span>{task.recommendation_reason}</span>
                   </span>
                 </Tooltip>
               )}

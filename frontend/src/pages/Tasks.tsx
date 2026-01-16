@@ -551,18 +551,27 @@ const Tasks: React.FC = () => {
         // 异步记录，不阻塞UI
         setTimeout(() => {
           tasksList.slice(0, 10).forEach((task: any) => {
+            const metadata: any = {
+              recommendation_algorithm: task.recommendation_algorithm,
+              match_score: task.match_score,
+              source_page: 'tasks_page',
+              list_position: tasksList.indexOf(task) + 1 // 记录在列表中的位置
+            };
+            
+            // 增强：如果有搜索关键词，添加到metadata（用于推荐系统学习）
+            const searchKeyword = filters.debouncedKeyword.trim() || filters.keyword.trim();
+            if (searchKeyword) {
+              metadata.search_keyword = searchKeyword;
+              metadata.source = 'search';
+            }
+            
             recordTaskInteraction(
               task.id,
               'view',
               undefined,
               undefined, // 自动检测设备类型
               task.is_recommended,
-              {
-                recommendation_algorithm: task.recommendation_algorithm,
-                match_score: task.match_score,
-                source_page: 'tasks_page',
-                list_position: tasksList.indexOf(task) + 1 // 记录在列表中的位置
-              }
+              metadata
             ).catch(err => console.warn('记录浏览失败:', err));
           });
         }, 100);

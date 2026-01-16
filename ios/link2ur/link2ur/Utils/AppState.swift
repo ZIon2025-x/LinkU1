@@ -378,8 +378,14 @@ public class AppState: ObservableObject {
         preloadTaskCompleted = false
         preloadActivityCompleted = false
         
-        // 预加载推荐任务（首页最重要的数据）
-        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil)
+        // 预加载推荐任务（首页最重要的数据，增强：包含GPS位置）
+        var userLat: Double? = nil
+        var userLon: Double? = nil
+        if let userLocation = LocationService.shared.currentLocation {
+            userLat = userLocation.latitude
+            userLon = userLocation.longitude
+        }
+        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil, latitude: userLat, longitude: userLon)
             .sink(receiveCompletion: { [weak self] result in
                 guard let self = self else { return }
                 if case .failure(let error) = result {
@@ -469,11 +475,18 @@ public class AppState: ObservableObject {
             .store(in: &cancellables)
     }
     
-    /// 智能预加载推荐任务（登录后延迟加载，避免影响登录流程）
+    /// 智能预加载推荐任务（登录后延迟加载，避免影响登录流程，增强：包含GPS位置）
     private func preloadRecommendedTasksIfNeeded() {
         guard isAuthenticated, !isPreloadingHomeData else { return }
         
-        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil)
+        // 增强：获取GPS位置（如果用户允许位置权限）
+        var userLat: Double? = nil
+        var userLon: Double? = nil
+        if let userLocation = LocationService.shared.currentLocation {
+            userLat = userLocation.latitude
+            userLon = userLocation.longitude
+        }
+        apiService.getTaskRecommendations(limit: 20, algorithm: "hybrid", taskType: nil, location: nil, keyword: nil, latitude: userLat, longitude: userLon)
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
                     Logger.warning("智能预加载推荐任务失败: \(error.localizedDescription)", category: .api)

@@ -1359,7 +1359,8 @@ struct RecommendedTasksSection: View {
             return
         }
         
-        // 已登录，先尝试加载推荐任务
+        // 已登录，先尝试加载推荐任务（增强：包含GPS位置）
+        // 注意：loadRecommendedTasks 内部已经会获取GPS位置，这里不需要额外处理
         viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: forceRefresh)
         
         // 延迟检查，如果推荐任务为空或失败，回退到默认任务
@@ -1413,6 +1414,41 @@ struct RecommendedTasksSection: View {
         }
     }
     
+    /// 增强：记录跳过任务（用于推荐系统负反馈）
+    private func recordTaskSkip(taskId: Int) {
+        guard appState.isAuthenticated else { return }
+        
+        // 异步非阻塞方式记录交互
+        DispatchQueue.global(qos: .utility).async {
+            let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
+            let metadata: [String: Any] = [
+                "source": "home_recommended",
+                "action": "not_interested"
+            ]
+            
+            var cancellable: AnyCancellable?
+            cancellable = APIService.shared.recordTaskInteraction(
+                taskId: taskId,
+                interactionType: "skip",
+                deviceType: deviceType,
+                isRecommended: true,
+                metadata: metadata
+            )
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("记录跳过任务失败: \(error.localizedDescription)", category: .api)
+                    }
+                    cancellable = nil
+                },
+                receiveValue: { _ in
+                    Logger.debug("已记录跳过任务: taskId=\(taskId)", category: .api)
+                }
+            )
+            _ = cancellable
+        }
+    }
+    
     var body: some View {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
@@ -1455,8 +1491,15 @@ struct RecommendedTasksSection: View {
                         let displayedTasks = Array(viewModel.tasks.prefix(10))
                         ForEach(Array(displayedTasks.enumerated()), id: \.element.id) { index, task in
                             NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                TaskCard(task: task, isRecommended: task.isRecommended == true)
-                                    .frame(width: 200)
+                                TaskCard(
+                                    task: task,
+                                    isRecommended: task.isRecommended == true,
+                                    onNotInterested: {
+                                        // 增强：记录跳过任务（用于推荐系统负反馈）
+                                        recordTaskSkip(taskId: task.id)
+                                    }
+                                )
+                                .frame(width: 200)
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .drawingGroup() // 优化复杂视图的渲染性能

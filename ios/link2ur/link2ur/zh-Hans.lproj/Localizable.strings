@@ -151,6 +151,7 @@
 "tasks.share_to" = "分享到...";
 "tasks.task" = "任务";
 "tasks.tasks" = "任务";
+"tasks.not_interested" = "不感兴趣";
 
 // MARK: - Task Experts
 "experts.experts" = "任务达人";

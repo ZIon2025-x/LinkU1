@@ -220,6 +220,7 @@ public enum LocalizationKey: String {
     case tasksTask = "tasks.task"
     case tasksTasks = "tasks.tasks"
     case tasksMyTasks = "tasks.my_tasks"
+    case tasksNotInterested = "tasks.not_interested"
     
     // MARK: - Task Experts
     case expertsExperts = "experts.experts"

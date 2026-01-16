@@ -145,6 +145,7 @@
 "tasks.share_to" = "Share to...";
 "tasks.task" = "Task";
 "tasks.tasks" = "Tasks";
+"tasks.not_interested" = "Not Interested";
 "tasks.my_tasks" = "My Tasks";
 
 // MARK: - Task Experts

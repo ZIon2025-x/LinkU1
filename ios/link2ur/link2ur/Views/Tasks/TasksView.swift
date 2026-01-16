@@ -4,6 +4,7 @@ import Combine
 struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
     @StateObject private var recommendedViewModel = TasksViewModel()  // 推荐任务 ViewModel
+    @EnvironmentObject var appState: AppState  // 增强：用于检查登录状态
     @State private var searchText = ""
     @State private var showFilter = false
     @State private var selectedCategory: String?
@@ -126,8 +127,15 @@ struct TasksView: View {
                             ], spacing: AppSpacing.md) {
                                 ForEach(allTasks, id: \.id) { task in
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                        TaskCard(task: task, isRecommended: task.isRecommended == true)
-                                            .drawingGroup() // 优化复杂卡片渲染性能
+                                        TaskCard(
+                                            task: task,
+                                            isRecommended: task.isRecommended == true,
+                                            onNotInterested: {
+                                                // 增强：记录跳过任务（用于推荐系统负反馈）
+                                                recordTaskSkip(taskId: task.id)
+                                            }
+                                        )
+                                        .drawingGroup() // 优化复杂卡片渲染性能
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     .id(task.id) // 确保稳定的id，优化视图复用
@@ -383,6 +391,7 @@ struct TasksView: View {
 struct TaskCard: View {
     let task: Task
     var isRecommended: Bool = false  // 是否为推荐任务
+    var onNotInterested: (() -> Void)? = nil  // 增强：不感兴趣回调
     
     // 任务类型 SF Symbols 映射（符合 Apple HIG）
     private let taskTypeIcons: [String: String] = [
@@ -451,6 +460,30 @@ struct TaskCard: View {
             return LocalizationKey.taskTypeVipTask.localized
         default:
             return ""
+        }
+    }
+    
+    // 增强：解析推荐理由，返回对应的图标和颜色
+    private func getRecommendationReasonInfo(_ reason: String?) -> (icon: String, color: Color) {
+        guard let reason = reason else {
+            return ("star.fill", AppColors.primary)
+        }
+        
+        // 根据推荐理由内容返回不同的图标和颜色
+        if reason.contains("同校") || reason.contains("学校") {
+            return ("graduationcap.fill", Color.blue)
+        } else if reason.contains("距离") || reason.contains("km") {
+            return ("mappin.circle.fill", Color.green)
+        } else if reason.contains("活跃时间") || reason.contains("时间段") || reason.contains("当前活跃") {
+            return ("clock.fill", Color.orange)
+        } else if reason.contains("高评分") || reason.contains("评分") {
+            return ("star.fill", Color.yellow)
+        } else if reason.contains("新发布") || reason.contains("新任务") {
+            return ("sparkles", Color.purple)
+        } else if reason.contains("即将截止") || reason.contains("截止") {
+            return ("timer", Color.red)
+        } else {
+            return ("star.fill", AppColors.primary)
         }
     }
     
@@ -573,6 +606,16 @@ struct TaskCard: View {
         )
         .compositingGroup() // 组合渲染，确保圆角边缘干净
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .contextMenu {
+            // 增强：长按菜单 - 不感兴趣
+            if let onNotInterested = onNotInterested {
+                Button(role: .destructive) {
+                    onNotInterested()
+                } label: {
+                    Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
+                }
+            }
+        }
         .overlay(alignment: .topTrailing) {
             // 任务等级标签（VIP/Super）- 右上角
             if let taskLevel = task.taskLevel, taskLevel != "normal" {
@@ -587,6 +630,47 @@ struct TaskCard: View {
                     .shadow(color: getTaskLevelColor(taskLevel).opacity(0.5), radius: 4, x: 0, y: 2)
                     .padding(.top, AppSpacing.sm)
                     .padding(.trailing, AppSpacing.sm)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            // 增强：推荐理由标签（如果有推荐理由）- 左上角
+            // 优先级：推荐理由 > 任务等级标签（如果同时存在，推荐理由在左上角，任务等级在右上角）
+            if isRecommended {
+                if let reason = task.recommendationReason, !reason.isEmpty {
+                    // 有推荐理由，显示推荐理由
+                    let reasonInfo = getRecommendationReasonInfo(reason)
+                    HStack(spacing: 4) {
+                        Image(systemName: reasonInfo.icon)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(reason)
+                            .font(AppTypography.caption2)
+                            .lineLimit(1)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 4)
+                    .background(reasonInfo.color.opacity(0.9))
+                    .clipShape(Capsule())
+                    .shadow(color: reasonInfo.color.opacity(0.5), radius: 4, x: 0, y: 2)
+                    .padding(.top, AppSpacing.sm)
+                    .padding(.leading, AppSpacing.sm)
+                } else {
+                    // 没有推荐理由，显示默认推荐标签
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(LocalizationKey.homeRecommendedTasks.localized)
+                            .font(AppTypography.caption2)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 4)
+                    .background(AppColors.primary.opacity(0.9))
+                    .clipShape(Capsule())
+                    .shadow(color: AppColors.primary.opacity(0.5), radius: 4, x: 0, y: 2)
+                    .padding(.top, AppSpacing.sm)
+                    .padding(.leading, AppSpacing.sm)
+                }
             }
         }
     }
@@ -693,6 +777,42 @@ struct StatusBadge: View {
         case .cancelled: return AppColors.error
         case .pendingConfirmation: return AppColors.warning
         case .pendingPayment: return AppColors.warning
+        }
+    }
+}
+
+    // 增强：记录跳过任务（用于推荐系统负反馈）
+    private func recordTaskSkip(taskId: Int) {
+        guard appState.isAuthenticated else { return }
+        
+        // 异步非阻塞方式记录交互
+        DispatchQueue.global(qos: .utility).async {
+            let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
+            let metadata: [String: Any] = [
+                "source": "task_list",
+                "action": "not_interested"
+            ]
+            
+            var cancellable: AnyCancellable?
+            cancellable = APIService.shared.recordTaskInteraction(
+                taskId: taskId,
+                interactionType: "skip",
+                deviceType: deviceType,
+                isRecommended: false,
+                metadata: metadata
+            )
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("记录跳过任务失败: \(error.localizedDescription)", category: .api)
+                    }
+                    cancellable = nil
+                },
+                receiveValue: { _ in
+                    Logger.debug("已记录跳过任务: taskId=\(taskId)", category: .api)
+                }
+            )
+            _ = cancellable
         }
     }
 }
