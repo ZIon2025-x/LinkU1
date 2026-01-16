@@ -2,10 +2,10 @@
 
 ## 项目概述
 
-**项目名称**：LinkU 平台支付系统集成  
+**项目名称**：Link²Ur 平台支付系统集成  
 **集成服务**：Stripe 支付网关  
 **开发时间**：2024年  
-**开发人员**：LinkU 开发团队  
+**开发人员**：Link²Ur 开发团队  
 **文档版本**：v1.0
 
 ---
@@ -14,7 +14,7 @@
 
 ### 1.1 业务需求
 
-LinkU 平台是一个任务发布与接单平台，需要集成支付系统以支持以下业务场景：
+Link²Ur 平台是一个任务发布与接单平台，需要集成支付系统以支持以下业务场景：
 
 1. **任务平台服务费支付**：用户发布任务时需要支付平台服务费（通常为任务金额的 10%）
 2. **任务奖励托管**：任务完成后，奖励金额托管在平台，待确认后发放给服务者
@@ -1381,7 +1381,7 @@ python -c "import stripe, os; stripe.api_key = os.getenv('STRIPE_SECRET_KEY'); p
 
 ### 13.1 什么是 Stripe Connect？
 
-Stripe Connect 允许平台（如 LinkU）管理多个账户，实现市场模式（Marketplace），可以直接将资金支付给服务者，而不是先到平台账户再转账。
+Stripe Connect 允许平台（如 Link²Ur）管理多个账户，实现市场模式（Marketplace），可以直接将资金支付给服务者，而不是先到平台账户再转账。
 
 ### 13.2 Connect 账户创建方式
 
@@ -1417,7 +1417,7 @@ account = stripe.Account.create(
     },
     metadata={
         "user_id": user_id,
-        "platform": "LinkU"
+        "platform": "Link²Ur"
     }
 )
 
@@ -1552,7 +1552,7 @@ GET /api/stripe/connect/account/status
 
 ---
 
-**文档维护者**：LinkU 开发团队  
+**文档维护者**：Link²Ur 开发团队  
 **最后更新**：2024年  
 **文档版本**：v1.0
 

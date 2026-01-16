@@ -13,10 +13,10 @@
 ```swift
 //
 //  FileName.swift
-//  LinkU
+//  Link²Ur
 //
 //  Created by [Author] on [Date].
-//  Copyright © [Year] LinkU. All rights reserved.
+//  Copyright © [Year] Link²Ur. All rights reserved.
 //
 //  Description: 简要描述文件的功能和用途
 //

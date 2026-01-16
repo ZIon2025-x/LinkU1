@@ -14,7 +14,7 @@ struct HomeView: View {
                         // 顶部欢迎区域
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("你好，\(appState.currentUser?.username ?? "LinkUer") 👋")
+                                Text("你好，\(appState.currentUser?.username ?? "Link²Urer") 👋")
                                     .font(.title)
                                     .fontWeight(.bold)
                                     .foregroundColor(AppColors.textPrimary)

@@ -68,12 +68,23 @@ class QueryOptimizer:
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                query = query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
-                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
-                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
-                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
-                ))
+                # 同时支持中英文城市名匹配
+                from app.constants import get_city_name_variants
+                
+                # 获取城市名的所有变体（英文和中文）
+                city_variants = get_city_name_variants(loc)
+                
+                # 为每个变体创建匹配条件
+                conditions = []
+                for variant in city_variants:
+                    conditions.extend([
+                        models.Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
+                        models.Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
+                        models.Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
+                        models.Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
+                    ])
+                
+                query = query.filter(or_(*conditions))
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"
@@ -332,12 +343,23 @@ class AsyncQueryOptimizer:
                 query = query.filter(models.Task.location.ilike("%online%"))
             else:
                 # 使用精确城市匹配，避免 "Bristol Road" 匹配到 "Bristol"
-                query = query.filter(or_(
-                    models.Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
-                    models.Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
-                    models.Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
-                    models.Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
-                ))
+                # 同时支持中英文城市名匹配
+                from app.constants import get_city_name_variants
+                
+                # 获取城市名的所有变体（英文和中文）
+                city_variants = get_city_name_variants(loc)
+                
+                # 为每个变体创建匹配条件
+                conditions = []
+                for variant in city_variants:
+                    conditions.extend([
+                        models.Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
+                        models.Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
+                        models.Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
+                        models.Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
+                    ])
+                
+                query = query.filter(or_(*conditions))
         
         if filters.get('keyword'):
             keyword = f"%{filters['keyword']}%"

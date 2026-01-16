@@ -18,7 +18,7 @@ public struct Constants {
     }
     
     public struct Keychain {
-        public static let service = "com.linku.app"
+        public static let service = "com.link2ur.app"
         public static let accessTokenKey = "accessToken"
         public static let refreshTokenKey = "refreshToken"
     }

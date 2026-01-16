@@ -4767,12 +4767,22 @@ def admin_get_tasks(
             query = query.filter(Task.location.ilike("%online%"))
         else:
             from sqlalchemy import or_
-            query = query.filter(or_(
-                Task.location.ilike(f"%, {loc}%"),   # ", Birmingham, UK"
-                Task.location.ilike(f"{loc},%"),     # "Birmingham, UK"
-                Task.location.ilike(f"{loc}"),       # 精确匹配 "Birmingham"
-                Task.location.ilike(f"% {loc}")      # 以空格+城市名结尾
-            ))
+            from app.constants import get_city_name_variants
+            
+            # 获取城市名的所有变体（英文和中文）
+            city_variants = get_city_name_variants(loc)
+            
+            # 为每个变体创建匹配条件
+            conditions = []
+            for variant in city_variants:
+                conditions.extend([
+                    Task.location.ilike(f"%, {variant}%"),   # ", Birmingham, UK" 或 ", 伯明翰, UK"
+                    Task.location.ilike(f"{variant},%"),     # "Birmingham, UK" 或 "伯明翰, UK"
+                    Task.location.ilike(f"{variant}"),       # 精确匹配 "Birmingham" 或 "伯明翰"
+                    Task.location.ilike(f"% {variant}")      # 以空格+城市名结尾
+                ])
+            
+            query = query.filter(or_(*conditions))
 
     # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():

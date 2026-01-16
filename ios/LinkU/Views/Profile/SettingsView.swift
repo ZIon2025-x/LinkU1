@@ -33,7 +33,7 @@ struct SettingsView: View {
                     HStack {
                         Text("应用名称")
                         Spacer()
-                        Text("LinkU")
+                        Text("Link²Ur")
                             .foregroundColor(AppColors.textSecondary)
                     }
                 }

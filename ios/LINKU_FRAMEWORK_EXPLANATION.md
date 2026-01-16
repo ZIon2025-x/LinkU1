@@ -1,8 +1,8 @@
-# LinkU Framework 说明
+# Link²Ur Framework 说明
 
 ## 📦 什么是 LinkU Framework？
 
-**LinkU** 是一个**本地 Swift Package**（本地框架），包含了应用的共享代码模块。
+**Link²Ur** 是一个**本地 Swift Package**（本地框架），包含了应用的共享代码模块。
 
 ## 🏗️ 项目架构
 
@@ -38,7 +38,7 @@ import LinkU  // 导入 LinkU Package
 在 `project.pbxproj` 中：
 
 ```swift
-// LinkU 作为 Swift Package 依赖被添加到 Frameworks
+// Link²Ur 作为 Swift Package 依赖被添加到 Frameworks
 1491C6B62EDF931E0054DEAA /* LinkU in Frameworks */
 ```
 
@@ -46,7 +46,7 @@ import LinkU  // 导入 LinkU Package
 
 ### 1. **代码复用**
 - 将通用的 Models、Views、ViewModels、Services 等代码打包成模块
-- 主应用通过 `import LinkU` 使用这些共享代码
+- 主应用通过 `import LinkU` 使用这些共享代码（框架名仍为 LinkU）
 
 ### 2. **模块化管理**
 - 清晰的代码组织结构
@@ -70,7 +70,7 @@ import LinkU  // 导入 LinkU Package
 ## 🔍 为什么有两个 App 入口？
 
 ### LinkU/App/LinkUApp.swift
-- 这是 LinkU Package 中的示例/测试 App
+- 这是 Link²Ur Package 中的示例/测试 App
 - **不是实际运行的 App**
 - 可能用于：
   - Package 的独立测试
@@ -88,7 +88,7 @@ import LinkU  // 导入 LinkU Package
 
 ```swift
 let package = Package(
-    name: "LinkU",
+    name: "LinkU",  // 框架名仍为 LinkU（技术标识符）
     platforms: [.iOS(.v16)],
     products: [
         .library(name: "LinkU", targets: ["LinkU"])
@@ -137,7 +137,7 @@ let package = Package(
 
 ## ❓ 常见问题
 
-### Q: 为什么需要 LinkU Framework？
+### Q: 为什么需要 Link²Ur Framework？
 A: 这是模块化架构设计，便于代码复用和维护。如果项目只有一个应用，也可以将所有代码放在主应用中。
 
 ### Q: 可以删除 LinkU Framework 吗？
@@ -149,7 +149,7 @@ A: 可以，但需要：
 ### Q: LinkU 和 link2ur 有什么区别？
 A: 
 - **link2ur**: 主应用（实际运行的 App）
-- **LinkU**: 共享代码库（Swift Package）
+- **LinkU（框架名）**: 共享代码库（Swift Package），框架名仍为 LinkU（技术标识符）
 
 ### Q: 为什么有两个 App 文件？
 A: 
@@ -164,4 +164,4 @@ A:
 
 ---
 
-**总结**: LinkU 是一个本地 Swift Package，提供共享代码给主应用使用。这是模块化架构设计，便于代码组织和复用。
+**总结**: Link²Ur 使用名为 "LinkU" 的本地 Swift Package（框架名仍为 LinkU，技术标识符），提供共享代码给主应用使用。这是模块化架构设计，便于代码组织和复用。

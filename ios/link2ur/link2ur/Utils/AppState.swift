@@ -49,6 +49,12 @@ public class AppState: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.checkLoginStatus()
         }
+        
+        // 初始化时清除 Badge（如果未登录）
+        // 登录后会自动更新 Badge
+        if !isAuthenticated {
+            BadgeManager.shared.clearBadge()
+        }
     }
     
     private func setupNotifications() {
@@ -139,6 +145,9 @@ public class AppState: ObservableObject {
                             }
                         }
                     }
+                } else {
+                    // 未登录时清除 Badge
+                    BadgeManager.shared.clearBadge()
                 }
             }
             .store(in: &cancellables)
@@ -182,6 +191,7 @@ public class AppState: ObservableObject {
                     let forumCount = response["forum"] ?? 0
                     self?.unreadNotificationCount = taskCount + forumCount
                 }
+                // Badge 会在 unreadNotificationCount 的 didSet 中自动更新
             })
             .store(in: &cancellables)
     }
@@ -227,6 +237,7 @@ public class AppState: ObservableObject {
                     // 如果没有找到任何字段，设置为0
                     self?.unreadMessageCount = 0
                 }
+                // Badge 会在 unreadMessageCount 的 didSet 中自动更新
             })
             .store(in: &cancellables)
     }
@@ -494,6 +505,16 @@ public class AppState: ObservableObject {
         currentUser = nil
         unreadNotificationCount = 0
         unreadMessageCount = 0
+        
+        // 登出时清除应用图标 Badge
+        BadgeManager.shared.clearBadge()
+    }
+    
+    /// 更新应用图标 Badge
+    /// 根据未读通知和消息的总数更新应用图标上的 Badge
+    private func updateAppIconBadge() {
+        let totalUnread = unreadNotificationCount + unreadMessageCount
+        BadgeManager.shared.updateBadge(count: totalUnread)
     }
 }
 

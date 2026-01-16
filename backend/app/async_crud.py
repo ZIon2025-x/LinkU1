@@ -562,12 +562,22 @@ class AsyncTaskCRUD:
                     base_query = base_query.where(models.Task.location.ilike("%online%"))
                 else:
                     from sqlalchemy import or_
-                    base_query = base_query.where(or_(
-                        models.Task.location.ilike(f"%, {location}%"),  # ", Birmingham, UK"
-                        models.Task.location.ilike(f"{location},%"),    # "Birmingham, UK"
-                        models.Task.location.ilike(f"{location}"),      # 精确匹配 "Birmingham"
-                        models.Task.location.ilike(f"% {location}")     # 以空格+城市名结尾
-                    ))
+                    from app.constants import get_city_name_variants
+                    
+                    # 获取城市名的所有变体（英文和中文）
+                    city_variants = get_city_name_variants(location)
+                    
+                    # 为每个变体创建匹配条件
+                    conditions = []
+                    for variant in city_variants:
+                        conditions.extend([
+                            models.Task.location.ilike(f"%, {variant}%"),  # ", Birmingham, UK" 或 ", 伯明翰, UK"
+                            models.Task.location.ilike(f"{variant},%"),    # "Birmingham, UK" 或 "伯明翰, UK"
+                            models.Task.location.ilike(f"{variant}"),      # 精确匹配 "Birmingham" 或 "伯明翰"
+                            models.Task.location.ilike(f"% {variant}")     # 以空格+城市名结尾
+                        ])
+                    
+                    base_query = base_query.where(or_(*conditions))
             
             # 关键词筛选（和 /tasks 的实现保持一致）
             if keyword:

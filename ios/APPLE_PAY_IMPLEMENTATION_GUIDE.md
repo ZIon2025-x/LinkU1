@@ -110,7 +110,7 @@ if let merchantId = Constants.Stripe.applePayMerchantIdentifier {
 3. 选择 **Identifiers** → 点击 **+**
 4. 选择 **Merchant IDs** → **Continue**
 5. 填写信息：
-   - **Description**：LinkU Payments
+   - **Description**：Link²Ur Payments
    - **Identifier**：`merchant.com.link2ur`（格式：`merchant.` + 你的域名）
 6. 点击 **Register**
 
@@ -305,7 +305,7 @@ let summaryItems = ApplePayHelper.createSummaryItems(
     ],
     tax: 2.40,
     total: 32.40,
-    merchantName: "LinkU"
+    merchantName: "Link²Ur"
 )
 ```
 

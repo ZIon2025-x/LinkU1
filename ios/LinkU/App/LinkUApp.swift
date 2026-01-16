@@ -14,7 +14,7 @@ struct LinkUApp: App {
                 .environmentObject(appState) // 注入全局状态
                 .onAppear {
                     // 应用启动时的初始化操作
-                    print("LinkU App Started")
+                    print("Link²Ur App Started")
                 }
         }
     }

@@ -181,8 +181,12 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     func setupPaymentElement(with clientSecret: String) {
         // 配置 Payment Sheet（仅用于信用卡支付）
         var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = "LinkU"
+        configuration.merchantDisplayName = "Link²Ur"
         configuration.allowsDelayedPaymentMethods = true
+        
+        // 设置默认账单地址国家为英国（GB）
+        configuration.defaultBillingDetails.address.country = "GB"
+        Logger.debug("PaymentSheet 默认账单地址国家已设置为 GB（英国）", category: .api)
         
         // 如果支付响应包含 Customer ID 和 Ephemeral Key，配置保存支付方式功能
         // 这样用户可以保存银行卡信息，下次支付时可以直接选择已保存的卡
@@ -322,7 +326,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             return
         }
         
-        // 创建 PaymentSheet（用于信用卡支付）
+        // 始终创建 PaymentSheet（用于信用卡支付），无论当前选择的支付方式是什么
+        // 这样用户可以在两种支付方式之间切换
         Logger.debug("创建 PaymentSheet，clientSecret: \(clientSecret.prefix(20))...", category: .api)
         setupPaymentElement(with: clientSecret)
     }
@@ -404,7 +409,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         // 创建摘要项
         var summaryItems: [PKPaymentSummaryItem] = []
-        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "LinkU 任务支付"
+        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "Link²Ur 任务支付"
         let item = PKPaymentSummaryItem(
             label: taskTitle,
             amount: NSDecimalNumber(decimal: amountDecimal)
@@ -413,7 +418,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         // 总金额项
         let totalItem = PKPaymentSummaryItem(
-            label: "LinkU",
+            label: "Link²Ur",
             amount: NSDecimalNumber(decimal: amountDecimal)
         )
         summaryItems.append(totalItem)
@@ -555,6 +560,8 @@ struct PaymentResponse: Codable {
     let checkoutUrl: String?
     let clientSecret: String?
     let paymentIntentId: String?
+    let customerId: String?
+    let ephemeralKeySecret: String?
     let note: String
     
     enum CodingKeys: String, CodingKey {

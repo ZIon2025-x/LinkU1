@@ -19,7 +19,7 @@
 
 ## 概述
 
-本文档详细说明如何在 LinkU 平台中集成 Stripe 和 PayPal 支付系统。平台支持多种支付方式：
+本文档详细说明如何在 Link²Ur 平台中集成 Stripe 和 PayPal 支付系统。平台支持多种支付方式：
 
 - **Stripe**：信用卡/借记卡支付
 - **PayPal**：PayPal 账户支付
@@ -1070,5 +1070,5 @@ logger.error(f"Payment failed: error={error}, task_id={task_id}")
 
 **文档版本**：v1.0  
 **最后更新**：2024年  
-**维护者**：LinkU 开发团队
+**维护者**：Link²Ur 开发团队
 

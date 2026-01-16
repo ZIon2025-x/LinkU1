@@ -204,7 +204,7 @@ class PaymentViewModel: ObservableObject {
                 
                 // 创建 Payment Sheet
                 var configuration = PaymentSheet.Configuration()
-                configuration.merchantDisplayName = "LinkU"
+                configuration.merchantDisplayName = "Link²Ur"
                 configuration.allowsDelayedPaymentMethods = true
                 
                 self.paymentSheet = PaymentSheet(

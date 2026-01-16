@@ -29,8 +29,8 @@ public class DeepLinkHandler: ObservableObject {
             return
         }
         
-        // 处理自定义协议（linku:// 或 link2ur://）
-        if scheme == "linku" || scheme == "link2ur" {
+        // 处理自定义协议（link2ur://）
+        if scheme == "link2ur" {
             handleCustomScheme(components: components)
             return
         }
@@ -150,7 +150,7 @@ public class DeepLinkHandler: ObservableObject {
     /// 生成深度链接 URL
     public static func generateURL(for link: DeepLink) -> URL? {
         var components = URLComponents()
-        components.scheme = "linku"
+        components.scheme = "link2ur"
         
         switch link {
         case .task(let id):

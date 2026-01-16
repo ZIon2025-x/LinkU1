@@ -1490,7 +1490,7 @@ async def accept_application(
                 "task_amount_display": f"{task_amount:.2f}",  # 任务金额（显示格式）
                 "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",  # 议价金额
                 "pending_approval": "true",  # 标记这是待确认的批准
-                "platform": "LinkU",  # 平台标识
+                "platform": "Link²Ur",  # 平台标识
                 "payment_type": "application_approval"  # 支付类型：申请批准
             },
         )

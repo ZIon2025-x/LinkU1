@@ -1,4 +1,4 @@
-# LinkU iOS - 企业级优化指南
+# Link²Ur iOS - 企业级优化指南
 
 ## 🎯 概述
 

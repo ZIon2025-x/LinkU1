@@ -2,7 +2,7 @@
 //  APIService+EndpointsSupplement.swift
 //  link2ur
 //
-//  Created by LinkU on 2024.
+//  Created by Link²Ur on 2024.
 //
 
 import Foundation

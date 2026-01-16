@@ -1,6 +1,6 @@
-# LinkU iOS 应用 - 用户端
+# Link²Ur iOS 应用 - 用户端
 
-这是 LinkU 的 iOS 原生应用项目（**用户端**），使用 Swift + SwiftUI 开发。
+这是 Link²Ur 的 iOS 原生应用项目（**用户端**），使用 Swift + SwiftUI 开发。
 
 **注意**: 这是纯用户端应用，不包含客服功能和管理员功能。客服和管理员功能仅在 Web 端提供。
 

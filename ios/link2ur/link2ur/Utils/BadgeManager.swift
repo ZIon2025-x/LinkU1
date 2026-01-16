@@ -21,11 +21,11 @@ public class BadgeManager {
                         // 设置应用图标 Badge 数量
                         // iOS 会自动处理超过 99 的情况（显示 "99+"）
                         UIApplication.shared.applicationIconBadgeNumber = count
-                        Logger.debug("应用图标 Badge 已更新: \(count)", category: .ui)
+                        print("📱 [BadgeManager] 应用图标 Badge 已更新: \(count)")
                     } else {
                         // 如果没有权限，清除 Badge
                         UIApplication.shared.applicationIconBadgeNumber = 0
-                        Logger.debug("通知权限未授权，清除应用图标 Badge", category: .ui)
+                        print("📱 [BadgeManager] 通知权限未授权，清除应用图标 Badge")
                     }
                 }
             }
@@ -36,7 +36,7 @@ public class BadgeManager {
     public func clearBadge() {
         DispatchQueue.main.async {
             UIApplication.shared.applicationIconBadgeNumber = 0
-            Logger.debug("应用图标 Badge 已清除", category: .ui)
+            print("📱 [BadgeManager] 应用图标 Badge 已清除")
         }
     }
     

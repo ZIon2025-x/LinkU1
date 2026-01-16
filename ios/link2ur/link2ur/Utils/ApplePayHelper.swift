@@ -55,7 +55,7 @@ class ApplePayHelper {
             // 创建默认摘要项
             let amountDecimal = NSDecimalNumber(decimal: amount)
             let totalItem = PKPaymentSummaryItem(
-                label: "LinkU",
+                label: "Link²Ur",
                 amount: amountDecimal
             )
             paymentRequest.paymentSummaryItems = [totalItem]
@@ -73,13 +73,13 @@ class ApplePayHelper {
     ///   - items: 商品项列表（标签和金额）
     ///   - tax: 税费（可选）
     ///   - total: 总金额
-    ///   - merchantName: 商户名称（默认 "LinkU"）
+    ///   - merchantName: 商户名称（默认 "Link²Ur"）
     /// - Returns: 支付摘要项列表
     static func createSummaryItems(
         items: [(label: String, amount: Decimal)],
         tax: Decimal? = nil,
         total: Decimal,
-        merchantName: String = "LinkU"
+        merchantName: String = "Link²Ur"
     ) -> [PKPaymentSummaryItem] {
         var summaryItems: [PKPaymentSummaryItem] = []
         

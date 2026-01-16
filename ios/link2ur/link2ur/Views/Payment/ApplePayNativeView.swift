@@ -325,16 +325,16 @@ class ApplePayNativeViewModel: NSObject, ObservableObject, ApplePayContextDelega
         var summaryItems: [PKPaymentSummaryItem] = []
         
         // note 是 String 类型，不是 Optional，直接检查是否为空
-        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "LinkU 任务支付"
+        let taskTitle = !paymentResponse.note.isEmpty ? paymentResponse.note : "Link²Ur 任务支付"
         let item = PKPaymentSummaryItem(
             label: taskTitle,
             amount: NSDecimalNumber(decimal: amountDecimal)
         )
         summaryItems.append(item)
         
-        // 总金额项（会显示为 "Pay LinkU [金额]"）
+        // 总金额项（会显示为 "Pay Link²Ur [金额]"）
         let totalItem = PKPaymentSummaryItem(
-            label: "LinkU",
+            label: "Link²Ur",
             amount: NSDecimalNumber(decimal: amountDecimal)
         )
         summaryItems.append(totalItem)

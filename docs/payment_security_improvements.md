@@ -95,7 +95,7 @@ metadata={
     
     # 业务标识
     "pending_approval": "true",  # 标记这是待确认的批准
-    "platform": "LinkU",  # 平台标识
+    "platform": "Link²Ur",  # 平台标识
     "payment_type": "application_approval"  # 支付类型：申请批准
 }
 ```

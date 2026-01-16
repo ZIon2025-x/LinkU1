@@ -526,7 +526,7 @@ def create_connect_account(
                     },
                     "metadata": {
                     "user_id": str(current_user.id),
-                    "platform": "LinkU",
+                    "platform": "Link²Ur",
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [
@@ -834,7 +834,7 @@ def create_connect_account_embedded(
                     },
                     "metadata": {
                     "user_id": str(current_user.id),
-                    "platform": "LinkU",
+                    "platform": "Link²Ur",
                         "user_name": current_user.name or f"User {current_user.id}"
                     },
                     "include": [

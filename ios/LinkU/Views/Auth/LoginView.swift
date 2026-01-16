@@ -42,7 +42,7 @@ public struct LoginView: View {
                                 .foregroundColor(.white)
                         }
                         
-                        Text("LinkU")
+                        Text("Link²Ur")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(AppColors.textPrimary)
                         
