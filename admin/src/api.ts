@@ -125,6 +125,28 @@ export const getDashboardStats = async () => {
   return res.data;
 };
 
+// ==================== 管理员通知 API ====================
+
+export const getAdminNotifications = async () => {
+  const res = await api.get('/api/auth/admin/notifications');
+  return res.data;
+};
+
+export const getUnreadAdminNotifications = async () => {
+  const res = await api.get('/api/auth/admin/notifications/unread');
+  return res.data;
+};
+
+export const markAdminNotificationRead = async (notificationId: number) => {
+  const res = await api.post(`/api/auth/admin/notifications/${notificationId}/read`);
+  return res.data;
+};
+
+export const markAllAdminNotificationsRead = async () => {
+  const res = await api.post('/api/auth/admin/notifications/read-all');
+  return res.data;
+};
+
 // ==================== 用户管理 API ====================
 
 export const getUsersForAdmin = async (page: number = 1, size: number = 20, search?: string) => {
@@ -242,6 +264,53 @@ export const markAllStaffNotificationsRead = async () => {
 };
 
 // ==================== 任务管理 API ====================
+
+export async function getAdminTasks(params?: {
+  skip?: number;
+  limit?: number;
+  status?: string;
+  task_type?: string;
+  location?: string;
+  keyword?: string;
+}) {
+  const res = await api.get('/api/admin/tasks', { params });
+  return res.data;
+}
+
+export async function getAdminTaskDetail(taskId: number) {
+  const res = await api.get(`/api/admin/tasks/${taskId}`);
+  return res.data;
+}
+
+export async function updateAdminTask(taskId: number, taskUpdate: any) {
+  const res = await api.put(`/api/admin/tasks/${taskId}`, taskUpdate);
+  return res.data;
+}
+
+export async function deleteAdminTask(taskId: number) {
+  const res = await api.delete(`/api/admin/tasks/${taskId}`);
+  return res.data;
+}
+
+export async function batchUpdateAdminTasks(taskIds: number[], taskUpdate: any) {
+  const res = await api.post('/api/admin/tasks/batch-update', {
+    task_ids: taskIds,
+    ...taskUpdate
+  });
+  return res.data;
+}
+
+export async function batchDeleteAdminTasks(taskIds: number[]) {
+  const res = await api.post('/api/admin/tasks/batch-delete', {
+    task_ids: taskIds
+  });
+  return res.data;
+}
+
+export const getTaskParticipants = async (taskId: number) => {
+  const res = await api.get(`/api/tasks/${taskId}/participants`);
+  return res.data;
+};
 
 export const updateTaskByAdmin = async (taskId: number, taskData: any) => {
   const res = await api.patch(`/api/admin/tasks/${taskId}`, taskData);
@@ -973,6 +1042,36 @@ export const completeTaskAndDistributeRewardsCustom = async (
   const res = await api.post(`/api/admin/tasks/${taskId}/complete/custom`, data);
   return res.data;
 };
+
+// ==================== 客服请求管理 API ====================
+
+export async function getAdminCustomerServiceRequests(params?: {
+  status?: string;
+  priority?: string;
+}) {
+  const res = await api.get('/api/admin/customer-service-requests', { params });
+  return res.data;
+}
+
+export async function getAdminCustomerServiceRequestDetail(requestId: number) {
+  const res = await api.get(`/api/admin/customer-service-requests/${requestId}`);
+  return res.data;
+}
+
+export async function updateAdminCustomerServiceRequest(requestId: number, updateData: any) {
+  const res = await api.put(`/api/admin/customer-service-requests/${requestId}`, updateData);
+  return res.data;
+}
+
+export async function getAdminCustomerServiceChatMessages() {
+  const res = await api.get('/api/admin/customer-service-chat');
+  return res.data;
+}
+
+export async function sendAdminCustomerServiceChatMessage(content: string) {
+  const res = await api.post('/api/admin/customer-service-chat', { content });
+  return res.data;
+}
 
 // ==================== 文件上传 API ====================
 
