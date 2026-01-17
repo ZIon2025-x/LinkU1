@@ -2,11 +2,13 @@ import SwiftUI
 import PhotosUI
 import UIKit
 import MapKit
+import CoreLocation
 
 @available(iOS 16.0, *)
 struct CreateTaskView: View {
     @StateObject private var viewModel = CreateTaskViewModel()
     @StateObject private var locationSearchCompleter = LocationSearchCompleter()
+    @ObservedObject private var locationService = LocationService.shared
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @State private var selectedItems: [PhotosPickerItem] = []
@@ -14,6 +16,7 @@ struct CreateTaskView: View {
     @State private var showLocationPicker = false
     @State private var showLocationSuggestions = false
     @State private var isSearchingLocation = false
+    @State private var isGettingCurrentLocation = false  // 正在获取当前位置
     @State private var searchDebounceTask: DispatchWorkItem?
     @State private var isProgrammaticLocationUpdate = false  // 标记是否是程序设置（非用户手动输入）
     @FocusState private var isLocationFocused: Bool
@@ -365,8 +368,14 @@ struct CreateTaskView: View {
                                     }
                                 }
                             
+                            // 搜索加载指示器
+                            if locationSearchCompleter.isSearching || isSearchingLocation || isGettingCurrentLocation {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            
                             // 清除按钮
-                            if !viewModel.city.isEmpty {
+                            if !viewModel.city.isEmpty && !locationSearchCompleter.isSearching && !isSearchingLocation && !isGettingCurrentLocation {
                                 Button(action: {
                                     viewModel.city = ""
                                     viewModel.latitude = nil
@@ -381,7 +390,7 @@ struct CreateTaskView: View {
                             }
                             
                             // 已选择位置的指示器
-                            if viewModel.latitude != nil && viewModel.longitude != nil {
+                            if viewModel.latitude != nil && viewModel.longitude != nil && !isSearchingLocation && !isGettingCurrentLocation {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(AppColors.success)
                                     .font(.system(size: 16))
@@ -410,23 +419,135 @@ struct CreateTaskView: View {
                         }
                     }
                     
+                    // 快捷操作按钮行
+                    HStack(spacing: 8) {
+                        // 使用当前位置按钮
+                        Button(action: {
+                            useCurrentLocation()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 12))
+                                Text(LocalizationKey.locationCurrentLocation.localized)
+                                    .font(.system(size: 12, weight: .medium))
+                                if isGettingCurrentLocation {
+                                    ProgressView()
+                                        .scaleEffect(0.6)
+                                }
+                            }
+                            .foregroundColor(AppColors.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(AppColors.primaryLight)
+                            .cornerRadius(AppCornerRadius.small)
+                        }
+                        .disabled(isGettingCurrentLocation)
+                        
+                        Spacer()
+                        
+                        // 坐标提示（如果已选择）
+                        if let lat = viewModel.latitude, let lon = viewModel.longitude {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 10))
+                                Text(String(format: "%.4f, %.4f", lat, lon))
+                                    .font(.system(size: 11))
+                            }
+                            .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                    .padding(.top, 8)
+                    
                     // 搜索建议列表
                     if showLocationSuggestions && !locationSearchCompleter.searchResults.isEmpty {
                         locationSuggestionsList
                     }
                 }
             }
-            
-            // 坐标提示（如果已选择）
-            if let lat = viewModel.latitude, let lon = viewModel.longitude {
-                HStack(spacing: 4) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 10))
-                    Text(String(format: "%.4f, %.4f", lat, lon))
-                        .font(.system(size: 11))
+        }
+    }
+    
+    /// 使用当前位置
+    private func useCurrentLocation() {
+        // 检查位置权限
+        if !locationService.isAuthorized {
+            locationService.requestAuthorization()
+            return
+        }
+        
+        isGettingCurrentLocation = true
+        showLocationSuggestions = false
+        isLocationFocused = false
+        HapticFeedback.light()
+        
+        // 请求位置更新
+        locationService.requestLocation()
+        
+        // 如果已有位置，立即使用
+        if let location = locationService.currentLocation {
+            handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
+        } else {
+            // 等待位置更新（最多3秒）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [self] in
+                if let location = locationService.currentLocation {
+                    handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
+                } else {
+                    // 继续等待
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [self] in
+                        if let location = locationService.currentLocation {
+                            handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
+                        } else {
+                            isGettingCurrentLocation = false
+                            HapticFeedback.error()
+                        }
+                    }
                 }
-                .foregroundColor(AppColors.textSecondary)
-                .padding(.top, 4)
+            }
+        }
+    }
+    
+    /// 处理获取到的当前位置
+    private func handleCurrentLocation(latitude: Double, longitude: Double) {
+        viewModel.latitude = latitude
+        viewModel.longitude = longitude
+        
+        // 反向地理编码获取地址
+        let geocoder = CLGeocoder()
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        
+        geocoder.reverseGeocodeLocation(location) { placemarks, error in
+            DispatchQueue.main.async {
+                isGettingCurrentLocation = false
+                
+                if let placemark = placemarks?.first {
+                    var addressParts: [String] = []
+                    
+                    // 地点名称
+                    if let name = placemark.name,
+                       name != placemark.locality,
+                       name != placemark.subLocality {
+                        addressParts.append(name)
+                    }
+                    
+                    // 城市
+                    if let locality = placemark.locality {
+                        addressParts.append(locality)
+                    }
+                    
+                    // 邮编
+                    if let postalCode = placemark.postalCode {
+                        addressParts.append(postalCode)
+                    }
+                    
+                    isProgrammaticLocationUpdate = true
+                    viewModel.city = addressParts.isEmpty ? "当前位置" : addressParts.joined(separator: ", ")
+                    HapticFeedback.success()
+                } else {
+                    // 地理编码失败，使用坐标作为地址
+                    isProgrammaticLocationUpdate = true
+                    viewModel.city = String(format: "%.4f, %.4f", latitude, longitude)
+                    HapticFeedback.warning()
+                }
             }
         }
     }
@@ -435,9 +556,25 @@ struct CreateTaskView: View {
     
     private var locationSuggestionsList: some View {
         VStack(spacing: 0) {
-            // 关闭按钮
+            // 标题栏
             HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("搜索结果")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    // 搜索中指示器
+                    if locationSearchCompleter.isSearching {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    }
+                }
+                
                 Spacer()
+                
                 Button(action: {
                     showLocationSuggestions = false
                     isLocationFocused = false
@@ -445,64 +582,99 @@ struct CreateTaskView: View {
                     HapticFeedback.light()
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                         .foregroundColor(AppColors.textSecondary)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(AppColors.cardBackground)
             
             Divider()
             
-            ForEach(Array(locationSearchCompleter.searchResults.prefix(5).enumerated()), id: \.element) { index, result in
-                Button(action: {
-                    selectLocationSuggestion(result)
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundColor(AppColors.primary)
-                            .font(.system(size: 18))
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(result.title)
-                                .font(AppTypography.body)
-                                .foregroundColor(AppColors.textPrimary)
-                                .lineLimit(1)
-                            
-                            if !result.subtitle.isEmpty {
-                                Text(result.subtitle)
-                                    .font(AppTypography.caption)
-                                    .foregroundColor(AppColors.textSecondary)
-                                    .lineLimit(1)
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(locationSearchCompleter.searchResults.prefix(6).enumerated()), id: \.element) { index, result in
+                        Button(action: {
+                            selectLocationSuggestion(result)
+                        }) {
+                            HStack(spacing: 12) {
+                                // 位置图标（UK地址使用特殊样式）
+                                ZStack {
+                                    Circle()
+                                        .fill(isUKLocation(result) ? AppColors.primary.opacity(0.15) : AppColors.background)
+                                        .frame(width: 36, height: 36)
+                                    
+                                    Image(systemName: isUKLocation(result) ? "mappin.circle.fill" : "mappin.and.ellipse")
+                                        .foregroundColor(isUKLocation(result) ? AppColors.primary : AppColors.textSecondary)
+                                        .font(.system(size: 16))
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 6) {
+                                        Text(result.title)
+                                            .font(.system(size: 15, weight: .medium))
+                                            .foregroundColor(AppColors.textPrimary)
+                                            .lineLimit(1)
+                                        
+                                        // UK 标识
+                                        if isUKLocation(result) {
+                                            Text("UK")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(AppColors.primary)
+                                                .cornerRadius(3)
+                                        }
+                                    }
+                                    
+                                    if !result.subtitle.isEmpty {
+                                        Text(result.subtitle)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(AppColors.textSecondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(AppColors.textSecondary.opacity(0.5))
                             }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(AppColors.cardBackground)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
-                        Spacer()
-                        
-                        Image(systemName: "arrow.up.left")
-                            .font(.system(size: 12))
-                            .foregroundColor(AppColors.textSecondary)
+                        if index < min(locationSearchCompleter.searchResults.count, 6) - 1 {
+                            Divider()
+                                .padding(.leading, 62)
+                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(AppColors.cardBackground)
-                }
-                
-                if index < min(locationSearchCompleter.searchResults.count, 5) - 1 {
-                    Divider()
-                        .padding(.leading, 44)
                 }
             }
+            .frame(maxHeight: 300)
         }
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                .stroke(AppColors.separator, lineWidth: 1)
+                .stroke(AppColors.separator.opacity(0.5), lineWidth: 1)
         )
-        .padding(.top, 4)
+        .padding(.top, 6)
+    }
+    
+    /// 判断搜索结果是否为 UK 地址
+    private func isUKLocation(_ result: MKLocalSearchCompletion) -> Bool {
+        let text = (result.title + " " + result.subtitle).lowercased()
+        return text.contains("uk") || text.contains("united kingdom") ||
+               text.contains("england") || text.contains("scotland") ||
+               text.contains("wales") || text.contains("northern ireland")
     }
     
     // MARK: - Helper Methods

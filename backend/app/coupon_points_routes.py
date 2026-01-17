@@ -46,17 +46,71 @@ def get_account_info(
     db: Session = Depends(get_db)
 ):
     """获取积分账户信息"""
+    from sqlalchemy import func, and_, or_
+    from decimal import Decimal
+    
     account = get_or_create_points_account(db, current_user.id)
     
     # 格式化显示
     balance_display = f"{account.balance / 100:.2f}"
     
+    # 计算累计获得（所有收入来源）
+    # 1. 任务完成收入：用户作为接受人收到的转账金额（从 PaymentTransfer 表）
+    task_earnings = db.query(
+        func.sum(models.PaymentTransfer.amount).label('total')
+    ).filter(
+        and_(
+            models.PaymentTransfer.taker_id == current_user.id,
+            models.PaymentTransfer.status == 'succeeded'
+        )
+    ).scalar() or Decimal('0.0')
+    
+    # 2. 跳蚤市场收入：用户作为卖家完成的交易（也是通过任务系统，所以已包含在 task_earnings 中）
+    # 注意：跳蚤市场交易会创建任务，所以收入已经包含在 PaymentTransfer 中
+    
+    # 3. 积分奖励收入（从积分交易记录中统计，如签到、邀请等）
+    points_earnings = db.query(
+        func.sum(func.abs(models.PointsTransaction.amount)).label('total')
+    ).filter(
+        and_(
+            models.PointsTransaction.user_id == current_user.id,
+            models.PointsTransaction.type.in_(['earn', 'refund'])
+        )
+    ).scalar() or 0
+    
+    # 累计获得 = 任务收入（便士）+ 积分奖励收入（便士）
+    total_earned_pence = int(task_earnings * 100) + points_earnings
+    
+    # 计算累计消费（所有支出来源）
+    # 1. 任务支付：用户作为发布人支付的金额（包括Stripe和积分支付）
+    task_payments = db.query(
+        func.sum(models.PaymentHistory.final_amount).label('total')
+    ).filter(
+        and_(
+            models.PaymentHistory.user_id == current_user.id,
+            models.PaymentHistory.status == 'succeeded'
+        )
+    ).scalar() or 0
+    
+    # 2. 积分消费（从积分交易记录中统计）
+    points_spent = db.query(
+        func.sum(func.abs(models.PointsTransaction.amount)).label('total')
+    ).filter(
+        and_(
+            models.PointsTransaction.user_id == current_user.id,
+            models.PointsTransaction.type.in_(['spend', 'expire'])
+        )
+    ).scalar() or 0
+    
+    # 累计消费 = 任务支付（便士）+ 积分消费（便士）
+    total_spent_pence = task_payments + points_spent
+    
     return {
         "balance": account.balance,
         "balance_display": balance_display,
         "currency": account.currency,
-        "total_earned": account.total_earned,
-        "total_spent": account.total_spent,
+        "total_earned": total_earned_pence,
+        "total_spent": total_spent_pence,
         "usage_restrictions": {
             "allowed": [
                 "抵扣申请费（任务发布费）",

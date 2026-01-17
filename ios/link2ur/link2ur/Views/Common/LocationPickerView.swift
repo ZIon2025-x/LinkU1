@@ -48,8 +48,11 @@ struct LocationPickerView: View {
                     // 中心指针
                     centerPinView
                     
-                    // 地图控制按钮
+                    // 地图控制按钮（右下角：放大缩小）
                     mapControlButtons
+                    
+                    // 定位按钮（左下角）
+                    locationButton
                     
                     // 搜索结果列表
                     if showSearchResults && !searchCompleter.searchResults.isEmpty {
@@ -119,12 +122,14 @@ struct LocationPickerView: View {
     
     private var searchBar: some View {
         HStack(spacing: 12) {
-            HStack {
+            HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(AppColors.textSecondary)
+                    .foregroundColor(isSearchFocused ? AppColors.primary : AppColors.textSecondary)
+                    .font(.system(size: 16, weight: .medium))
                 
-                TextField("搜索地点、地址...", text: $searchText)
+                TextField("搜索地点、地址、邮编...", text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
+                    .font(.system(size: 15))
                     .autocorrectionDisabled()
                     .focused($isSearchFocused)
                     .onChange(of: searchText) { newValue in
@@ -150,9 +155,11 @@ struct LocationPickerView: View {
                         showSearchResults = false
                         searchCompleter.searchResults = []
                         isSearchFocused = false
+                        HapticFeedback.light()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(AppColors.textSecondary)
+                            .font(.system(size: 18))
                     }
                 }
                 
@@ -161,13 +168,20 @@ struct LocationPickerView: View {
                         .scaleEffect(0.8)
                 }
             }
-            .padding(12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(AppColors.cardBackground)
             .cornerRadius(AppCornerRadius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                    .stroke(isSearchFocused ? AppColors.primary.opacity(0.5) : AppColors.separator.opacity(0.5), lineWidth: 1)
+            )
+            .shadow(color: isSearchFocused ? AppColors.primary.opacity(0.1) : .clear, radius: 4, x: 0, y: 2)
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
         .background(AppColors.background)
+        .animation(.easeInOut(duration: 0.2), value: isSearchFocused)
     }
     
     // MARK: - 地图视图（iOS 16 兼容版本）
@@ -191,7 +205,7 @@ struct LocationPickerView: View {
             )
     }
     
-    // MARK: - 地图控制按钮（右下角小按钮）
+    // MARK: - 地图控制按钮（右下角：放大缩小）
     
     private var mapControlButtons: some View {
         VStack {
@@ -229,6 +243,41 @@ struct LocationPickerView: View {
                 .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
             }
             .padding(.trailing, AppSpacing.sm)
+            .padding(.bottom, AppSpacing.sm)
+        }
+    }
+    
+    // MARK: - 定位按钮（左下角）
+    
+    private var locationButton: some View {
+        VStack {
+            Spacer()
+            
+            HStack {
+                Button(action: {
+                    useCurrentLocation()
+                }) {
+                    ZStack {
+                        if isLoadingLocation {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(AppColors.primary)
+                        }
+                    }
+                    .frame(width: 32, height: 32)
+                    .background(AppColors.cardBackground.opacity(0.9))
+                    .cornerRadius(AppCornerRadius.small)
+                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                }
+                .disabled(isLoadingLocation)
+                
+                Spacer()
+            }
+            .padding(.leading, AppSpacing.sm)
             .padding(.bottom, AppSpacing.sm)
         }
     }
@@ -277,68 +326,156 @@ struct LocationPickerView: View {
         VStack(spacing: 0) {
             // 指针图标
             ZStack {
-                // 外圈光晕
+                // 外圈光晕（脉冲动画）
                 Circle()
-                    .fill(AppColors.primary.opacity(0.2))
-                    .frame(width: 60, height: 60)
-                    .scaleEffect(isDragging ? 1.3 : 1.0)
+                    .fill(AppColors.primary.opacity(0.15))
+                    .frame(width: 70, height: 70)
+                    .scaleEffect(isDragging ? 1.4 : 1.0)
+                
+                // 内圈光晕
+                Circle()
+                    .fill(AppColors.primary.opacity(0.25))
+                    .frame(width: 50, height: 50)
+                    .scaleEffect(isDragging ? 1.2 : 1.0)
                 
                 // 指针主体
                 VStack(spacing: 0) {
                     // 圆形头部
                     ZStack {
+                        // 外圈
                         Circle()
-                            .fill(AppColors.primary)
-                            .frame(width: 32, height: 32)
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppColors.primary, AppColors.primary.opacity(0.85)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 36, height: 36)
                         
+                        // 内圈白点
                         Circle()
                             .fill(.white)
-                            .frame(width: 12, height: 12)
+                            .frame(width: 14, height: 14)
+                            .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
                     }
                     
                     // 三角形尾部
                     Triangle()
-                        .fill(AppColors.primary)
-                        .frame(width: 16, height: 20)
-                        .offset(y: -4)
+                        .fill(
+                            LinearGradient(
+                                colors: [AppColors.primary, AppColors.primary.opacity(0.9)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 18, height: 22)
+                        .offset(y: -5)
                 }
-                .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 4)
+                .shadow(color: AppColors.primary.opacity(0.4), radius: 6, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
             }
-            .offset(y: isDragging ? -15 : -8)
+            .offset(y: isDragging ? -18 : -10)
             
             // 地面阴影
             Ellipse()
-                .fill(Color.black.opacity(isDragging ? 0.15 : 0.25))
-                .frame(width: isDragging ? 16 : 24, height: isDragging ? 4 : 8)
-                .offset(y: isDragging ? 5 : 0)
+                .fill(
+                    RadialGradient(
+                        colors: [Color.black.opacity(isDragging ? 0.2 : 0.35), Color.clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: isDragging ? 12 : 16
+                    )
+                )
+                .frame(width: isDragging ? 20 : 32, height: isDragging ? 6 : 10)
+                .offset(y: isDragging ? 6 : 0)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
+        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: isDragging)
     }
     
     // MARK: - 搜索结果列表
     
     private var searchResultsList: some View {
         VStack(spacing: 0) {
+            // 标题栏
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("搜索结果")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    if searchCompleter.isSearching || isSelectingResult {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    } else {
+                        Text("(\(searchCompleter.searchResults.count))")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textSecondary.opacity(0.7))
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    showSearchResults = false
+                    searchText = ""
+                    searchCompleter.searchResults = []
+                    isSearchFocused = false
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(AppColors.cardBackground)
+            
+            Divider()
+            
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(searchCompleter.searchResults.prefix(8), id: \.self) { result in
+                    ForEach(Array(searchCompleter.searchResults.prefix(8).enumerated()), id: \.element) { index, result in
                         Button(action: {
                             selectSearchResult(result)
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .foregroundColor(AppColors.primary)
-                                    .frame(width: 24)
+                                // 位置图标（UK地址使用特殊样式）
+                                ZStack {
+                                    Circle()
+                                        .fill(isUKLocation(result) ? AppColors.primary.opacity(0.15) : AppColors.background)
+                                        .frame(width: 36, height: 36)
+                                    
+                                    Image(systemName: isUKLocation(result) ? "mappin.circle.fill" : "mappin.and.ellipse")
+                                        .foregroundColor(isUKLocation(result) ? AppColors.primary : AppColors.textSecondary)
+                                        .font(.system(size: 16))
+                                }
                                 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(result.title)
-                                        .font(AppTypography.body)
-                                        .foregroundColor(AppColors.textPrimary)
-                                        .lineLimit(1)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 6) {
+                                        Text(result.title)
+                                            .font(.system(size: 15, weight: .medium))
+                                            .foregroundColor(AppColors.textPrimary)
+                                            .lineLimit(1)
+                                        
+                                        // UK 标识
+                                        if isUKLocation(result) {
+                                            Text("UK")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(AppColors.primary)
+                                                .cornerRadius(3)
+                                        }
+                                    }
                                     
                                     if !result.subtitle.isEmpty {
                                         Text(result.subtitle)
-                                            .font(AppTypography.caption)
+                                            .font(.system(size: 13))
                                             .foregroundColor(AppColors.textSecondary)
                                             .lineLimit(1)
                                     }
@@ -346,30 +483,28 @@ struct LocationPickerView: View {
                                 
                                 Spacer()
                                 
-                                // UK 标识
-                                if isUKLocation(result) {
-                                    Text("UK")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(AppColors.primary)
-                                        .cornerRadius(4)
-                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(AppColors.textSecondary.opacity(0.5))
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 14)
                             .padding(.vertical, 12)
+                            .background(AppColors.cardBackground)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
-                        Divider()
-                            .padding(.leading, 52)
+                        if index < min(searchCompleter.searchResults.count, 8) - 1 {
+                            Divider()
+                                .padding(.leading, 62)
+                        }
                     }
                 }
             }
-            .frame(maxHeight: 280)
+            .frame(maxHeight: 320)
             .background(AppColors.cardBackground)
             .cornerRadius(AppCornerRadius.medium)
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.top, 4)
@@ -384,37 +519,58 @@ struct LocationPickerView: View {
             HStack(spacing: 12) {
                 if isLoadingAddress {
                     ProgressView()
-                        .frame(width: 24, height: 24)
+                        .frame(width: 28, height: 28)
                 } else {
-                    Image(systemName: currentAddress.isEmpty ? "mappin.slash" : "mappin.circle.fill")
-                        .foregroundColor(currentAddress.isEmpty ? AppColors.textSecondary : AppColors.primary)
-                        .font(.system(size: 24))
+                    ZStack {
+                        Circle()
+                            .fill(currentAddress.isEmpty ? AppColors.background : AppColors.primary.opacity(0.15))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: currentAddress.isEmpty ? "mappin.slash" : "mappin.circle.fill")
+                            .foregroundColor(currentAddress.isEmpty ? AppColors.textSecondary : AppColors.primary)
+                            .font(.system(size: 20))
+                    }
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     if isLoadingAddress {
                         Text(LocalizationKey.locationGettingAddress.localized)
-                            .font(AppTypography.body)
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                     } else if currentAddress.isEmpty {
                         Text(LocalizationKey.locationDragToSelect.localized)
-                            .font(AppTypography.body)
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                     } else {
                         Text(currentAddress)
-                            .font(AppTypography.body)
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(2)
                     }
                     
-                    Text(formatCoordinate(region.center))
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "location")
+                            .font(.system(size: 10))
+                        Text(formatCoordinate(region.center))
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(AppColors.textSecondary)
                 }
                 
                 Spacer()
+                
+                // 拖动状态指示
+                if isDragging {
+                    Text("移动中")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppColors.primary)
+                        .cornerRadius(AppCornerRadius.small)
+                }
             }
-            .padding(12)
+            .padding(14)
             .background(AppColors.cardBackground)
             .cornerRadius(AppCornerRadius.medium)
             .overlay(
@@ -422,8 +578,35 @@ struct LocationPickerView: View {
                     .stroke(currentAddress.isEmpty ? Color.clear : AppColors.primary.opacity(0.3), lineWidth: 1)
             )
             
+            // 热门UK城市快捷选择
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(popularUKCities, id: \.name) { city in
+                        Button(action: {
+                            selectPopularCity(city)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "building.2")
+                                    .font(.system(size: 11))
+                                Text(city.name)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(AppColors.background)
+                            .cornerRadius(AppCornerRadius.small)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppCornerRadius.small)
+                                    .stroke(AppColors.separator, lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+            }
+            
             // 快捷按钮行
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 // 使用当前位置按钮
                 Button(action: {
                     useCurrentLocation()
@@ -432,7 +615,7 @@ struct LocationPickerView: View {
                         Image(systemName: "location.fill")
                             .font(.system(size: 14))
                         Text(LocalizationKey.locationCurrentLocation.localized)
-                            .font(AppTypography.caption)
+                            .font(.system(size: 13, weight: .semibold))
                         if isLoadingLocation {
                             ProgressView()
                                 .scaleEffect(0.6)
@@ -441,9 +624,16 @@ struct LocationPickerView: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(AppColors.primary)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [AppColors.primary, AppColors.primary.opacity(0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .cornerRadius(AppCornerRadius.medium)
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
                 .disabled(isLoadingLocation)
                 
@@ -455,13 +645,17 @@ struct LocationPickerView: View {
                         Image(systemName: "globe")
                             .font(.system(size: 14))
                         Text(LocalizationKey.locationOnlineRemote.localized)
-                            .font(AppTypography.caption)
+                            .font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundColor(AppColors.primary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 14)
                     .background(AppColors.primaryLight)
                     .cornerRadius(AppCornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .stroke(AppColors.primary.opacity(0.2), lineWidth: 1)
+                    )
                 }
             }
             
@@ -471,23 +665,70 @@ struct LocationPickerView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(AppColors.error)
                     Text(error)
-                        .font(AppTypography.caption)
+                        .font(.system(size: 13))
                         .foregroundColor(AppColors.error)
                     Spacer()
-                    Button("关闭") {
-                        locationError = nil
+                    Button(action: { locationError = nil }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppColors.error)
                     }
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.error)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
                 .background(AppColors.error.opacity(0.1))
                 .cornerRadius(AppCornerRadius.small)
             }
         }
         .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
+        .background(
+            AppColors.cardBackground
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
+        )
+    }
+    
+    // MARK: - 热门UK城市数据
+    
+    private var popularUKCities: [(name: String, lat: Double, lon: Double)] {
+        [
+            ("London", 51.5074, -0.1278),
+            ("Birmingham", 52.4862, -1.8904),
+            ("Manchester", 53.4808, -2.2426),
+            ("Leeds", 53.8008, -1.5491),
+            ("Liverpool", 53.4084, -2.9916),
+            ("Bristol", 51.4545, -2.5879),
+            ("Edinburgh", 55.9533, -3.1883),
+            ("Glasgow", 55.8642, -4.2518)
+        ]
+    }
+    
+    /// 选择热门城市
+    private func selectPopularCity(_ city: (name: String, lat: Double, lon: Double)) {
+        HapticFeedback.light()
+        isInitializing = true
+        
+        let coordinate = CLLocationCoordinate2D(latitude: city.lat, longitude: city.lon)
+        
+        withAnimation(.easeInOut(duration: 0.5)) {
+            region = MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
+        
+        currentAddress = city.name
+        
+        // 刷新地图
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            mapRefreshId = UUID()
+        }
+        
+        // 延迟清除初始化标志并更新详细地址
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            isInitializing = false
+            updateAddressForCurrentCenter()
+            HapticFeedback.success()
+        }
     }
     
     // MARK: - Helper Methods

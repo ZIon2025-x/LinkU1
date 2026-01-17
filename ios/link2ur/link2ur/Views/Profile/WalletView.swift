@@ -227,17 +227,11 @@ struct PointsAccountCard: View {
             }
         }
         .padding(AppSpacing.xl)
-        .cardStyle(cornerRadius: AppCornerRadius.large)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    AppColors.primary.opacity(0.1),
-                    AppColors.primary.opacity(0.05)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background(AppColors.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
+        // 使用非常柔和的阴影，减少容器边界感
+        .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
     }
 }
 

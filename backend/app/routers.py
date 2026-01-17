@@ -44,7 +44,7 @@ from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
 from pydantic import BaseModel
-from sqlalchemy import or_, and_, select
+from sqlalchemy import or_, and_, select, func
 
 from app.security import verify_password
 from app.security import create_access_token
@@ -2678,6 +2678,36 @@ def get_my_profile(
             if not language_preference:  # 如果清理后为空字符串，设为默认值
                 language_preference = 'en'
         
+        # 计算进行中的任务数
+        # 1. 作为发布者或接受者的任务，状态为 in_progress
+        from app.models import Task, TaskParticipant
+        
+        # 普通任务（作为发布者或接受者）
+        regular_in_progress_count = db.query(Task).filter(
+            (Task.poster_id == current_user.id) | (Task.taker_id == current_user.id),
+            Task.status == "in_progress",
+            Task.is_multi_participant == False  # 排除多人任务，因为多人任务通过参与者统计
+        ).count()
+        
+        # 2. 多人任务：作为参与者，参与者状态为 in_progress 且任务状态为 in_progress
+        multi_participant_in_progress_count = db.query(func.count(TaskParticipant.id)).join(
+            Task, TaskParticipant.task_id == Task.id
+        ).filter(
+            TaskParticipant.user_id == current_user.id,
+            TaskParticipant.status == "in_progress",
+            Task.status == "in_progress",
+            Task.is_multi_participant == True
+        ).scalar() or 0
+        
+        # 3. 多人任务：作为发布者（expert_creator_id），任务状态为 in_progress
+        multi_task_creator_in_progress_count = db.query(Task).filter(
+            Task.expert_creator_id == current_user.id,
+            Task.status == "in_progress",
+            Task.is_multi_participant == True
+        ).count()
+        
+        in_progress_tasks_count = regular_in_progress_count + multi_participant_in_progress_count + multi_task_creator_in_progress_count
+        
         formatted_user = {
             "id": current_user.id,
             "name": getattr(current_user, 'name', ''),
@@ -2688,7 +2718,7 @@ def get_my_profile(
             "avatar": getattr(current_user, 'avatar', ''),
             "created_at": getattr(current_user, 'created_at', None),
             "user_type": "normal_user",
-            "task_count": getattr(current_user, 'task_count', 0),
+            "task_count": in_progress_tasks_count,  # 修改为进行中的任务数，而不是所有任务数
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating,
             "residence_city": residence_city,
