@@ -336,6 +336,7 @@
 "notifications.mark_all_read" = "Mark All as Read";
 "notification.agree" = "Agree";
 "notification.reject" = "Reject";
+"notification.expired" = "Expired";
 "notification.no_notifications" = "No Notifications";
 "notification.no_notifications_message" = "No notification messages received yet";
 

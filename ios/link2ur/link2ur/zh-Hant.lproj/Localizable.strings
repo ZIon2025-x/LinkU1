@@ -484,6 +484,9 @@
 // MARK: - Notification
 "notification.system_messages" = "系統訊息";
 "notification.view_all_notifications" = "查看全部通知訊息";
+"notification.agree" = "同意";
+"notification.reject" = "拒絕";
+"notification.expired" = "已過期";
 
 // MARK: - Customer Service (Extended)
 "customer_service.queue_position" = "排隊位置: 第 %d 位";

@@ -394,6 +394,7 @@ public enum LocalizationKey: String {
     // MARK: - Notification
     case notificationAgree = "notification.agree"
     case notificationReject = "notification.reject"
+    case notificationExpired = "notification.expired"  // 优化：议价已过期
     case notificationNoNotifications = "notification.no_notifications"
     case notificationNoNotificationsMessage = "notification.no_notifications_message"
     

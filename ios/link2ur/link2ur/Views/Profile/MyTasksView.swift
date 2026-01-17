@@ -381,15 +381,18 @@ struct MyTasksApplicationCard: View {
             }
         }
         .padding(AppSpacing.md)
+        .background(AppColors.cardBackground) // 内容区域背景
         .background(
-            RoundedRectangle(cornerRadius: AppCornerRadius.large)
+            RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
                 .fill(AppColors.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
+                        .stroke(AppColors.separator.opacity(0.3), lineWidth: 0.5)
+                )
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                .stroke(AppColors.separator.opacity(0.3), lineWidth: 0.5)
-        )
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: 0, y: AppShadow.small.y)
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)) // 优化：确保圆角边缘干净
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
+        // 移除阴影，使用更轻量的视觉分隔
     }
 }
 
@@ -504,15 +507,18 @@ struct EnhancedTaskCard: View {
             }
         }
         .padding(AppSpacing.md)
+        .background(AppColors.cardBackground) // 内容区域背景
         .background(
-            RoundedRectangle(cornerRadius: AppCornerRadius.large)
+            RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
                 .fill(AppColors.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
+                        .stroke(AppColors.separator.opacity(0.3), lineWidth: 0.5)
+                )
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                .stroke(AppColors.separator.opacity(0.3), lineWidth: 0.5)
-        )
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: 0, y: AppShadow.small.y)
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)) // 优化：确保圆角边缘干净
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
+        // 移除阴影，使用更轻量的视觉分隔
     }
     
     private func getTaskLevelColor(_ level: String) -> Color {

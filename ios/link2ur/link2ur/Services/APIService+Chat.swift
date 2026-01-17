@@ -184,12 +184,16 @@ struct TokenResponse: Decodable {
     let tokenReject: String?
     let taskId: Int?
     let applicationId: Int?
+    let expiresAt: String?  // 优化：真实过期时间
+    let taskStatus: String?  // 优化：任务状态，用于判断是否已过期
     
     enum CodingKeys: String, CodingKey {
         case tokenAccept = "token_accept"
         case tokenReject = "token_reject"
         case taskId = "task_id"
         case applicationId = "application_id"
+        case expiresAt = "expires_at"
+        case taskStatus = "task_status"
     }
 }
 

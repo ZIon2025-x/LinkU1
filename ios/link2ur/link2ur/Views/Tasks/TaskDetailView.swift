@@ -125,6 +125,7 @@ struct TaskDetailView: View {
                     paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                     approvedApplicantName: $approvedApplicantName,
                     showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
+                    showNegotiatePriceDialog: $showNegotiatePriceDialog,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -442,8 +443,6 @@ struct TaskDetailView: View {
     }
     
     /// 记录任务交互（用于推荐系统，带防抖和异步优化）
-    @State private var viewStartTime: Date? // 增强：记录任务详情页查看开始时间
-    
     private func recordTaskInteraction(type: String, duration: Int? = nil) {
         guard appState.isAuthenticated else { return }
         
@@ -973,6 +972,7 @@ struct TaskDetailContentView: View {
     @Binding var paymentEphemeralKeySecret: String?
     @Binding var approvedApplicantName: String?
     @Binding var showConfirmCompletionSuccess: Bool
+    @Binding var showNegotiatePriceDialog: Bool // 议价选择对话框
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1083,6 +1083,7 @@ struct TaskDetailContentView: View {
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
+                        showNegotiatePriceDialog: $showNegotiatePriceDialog,
                         taskId: taskId,
                         viewModel: viewModel
                     )
@@ -1521,6 +1522,7 @@ struct TaskActionButtonsView: View {
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
     @Binding var showConfirmCompletionSuccess: Bool
+    @Binding var showNegotiatePriceDialog: Bool // 议价选择对话框
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState

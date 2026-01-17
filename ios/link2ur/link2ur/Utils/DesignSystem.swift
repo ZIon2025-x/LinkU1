@@ -142,13 +142,19 @@ extension View {
         modifier(CardStyle(cornerRadius: cornerRadius, shadow: shadow, useMaterial: useMaterial, padding: padding, backgroundColor: backgroundColor))
     }
     
-    /// 优化的卡片背景 - 确保圆角边缘干净，无灰色泄露
+    /// 优化的卡片背景 - 确保圆角边缘干净，无灰色泄露，无容器感
     func cardBackground(cornerRadius: CGFloat = AppCornerRadius.medium, style: RoundedCornerStyle = .continuous) -> some View {
-        self.background(
-            RoundedRectangle(cornerRadius: cornerRadius, style: style)
-                .fill(AppColors.cardBackground)
-        )
-        .compositingGroup() // 组合渲染，确保圆角边缘干净
+        self.background(AppColors.cardBackground) // 内容区域背景
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: style)
+                    .fill(AppColors.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: style)
+                            .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: style)) // 优化：确保圆角边缘干净
+            .compositingGroup() // 组合渲染，确保圆角边缘干净
     }
     
     // 玻璃态效果

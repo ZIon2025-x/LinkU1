@@ -8,6 +8,7 @@ public struct ContentView: View {
     @State private var timer: Timer?
     @State private var hasStartedAnimation: Bool = false // 标记是否已启动动画
     @State private var showOnboarding = false // 是否显示引导教程
+    @State private var hasCheckedOnboarding = false // 优化：防止重复检查引导教程状态
     
     public var body: some View {
         Group {
@@ -138,8 +139,11 @@ public struct ContentView: View {
             }
         }
         .onAppear {
-            // 检查是否已经看过引导教程
-            checkOnboardingStatus()
+            // 优化：只在首次出现时检查引导教程状态，避免重复检查
+            if !hasCheckedOnboarding {
+                checkOnboardingStatus()
+                hasCheckedOnboarding = true
+            }
         }
         // 移除 onAppear 中的 checkLoginStatus 调用
         // AppState 的 init() 中已经调用了 checkLoginStatus()，避免重复调用
@@ -205,12 +209,27 @@ public struct ContentView: View {
     
     // 检查引导教程状态
     private func checkOnboardingStatus() {
+        // 优化：同步读取 UserDefaults，确保获取最新值
+        UserDefaults.standard.synchronize()
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
+        
+        // 调试日志
+        print("📱 [ContentView] 检查引导教程状态: hasSeenOnboarding = \(hasSeenOnboarding)")
+        
         if !hasSeenOnboarding {
             // 延迟显示引导教程，确保登录状态检查完成
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                showOnboarding = true
+                // 再次检查，防止在延迟期间状态已改变
+                let currentStatus = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
+                if !currentStatus {
+                    print("📱 [ContentView] 显示引导教程")
+                    showOnboarding = true
+                } else {
+                    print("📱 [ContentView] 引导教程已在延迟期间被标记为已看过，跳过显示")
+                }
             }
+        } else {
+            print("📱 [ContentView] 用户已看过引导教程，跳过显示")
         }
     }
     

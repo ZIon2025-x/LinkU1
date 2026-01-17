@@ -332,12 +332,18 @@ struct ExpertCard: View {
                 .foregroundColor(AppColors.textQuaternary)
         }
         .padding(AppSpacing.md)
+        .background(AppColors.cardBackground) // 内容区域背景
         .background(
             RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
                 .fill(AppColors.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
+                        .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
+                )
         )
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)) // 优化：确保圆角边缘干净
         .compositingGroup() // 组合渲染，确保圆角边缘干净
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        // 移除阴影，使用更轻量的视觉分隔
     }
 }
 

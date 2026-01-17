@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UIKit
 
 struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
@@ -35,6 +36,7 @@ struct TasksView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
+                // 优化：确保VStack不会裁剪子视图
                     // 搜索栏 - 更现代的设计
                     HStack(spacing: 12) {
                         HStack(spacing: AppSpacing.sm) {
@@ -125,6 +127,7 @@ struct TasksView: View {
                                 GridItem(.flexible(), spacing: AppSpacing.md),
                                 GridItem(.flexible(), spacing: AppSpacing.md)
                             ], spacing: AppSpacing.md) {
+                                // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
                                 ForEach(allTasks, id: \.id) { task in
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                         TaskCard(
@@ -135,9 +138,10 @@ struct TasksView: View {
                                                 recordTaskSkip(taskId: task.id)
                                             }
                                         )
-                                        .drawingGroup() // 优化复杂卡片渲染性能
+                                        // 移除 drawingGroup，避免影响长按交互
                                     }
-                                    .buttonStyle(ScaleButtonStyle())
+                                    .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                                    .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
                                     .id(task.id) // 确保稳定的id，优化视图复用
                                     .onAppear {
                                         // 性能优化：只在接近最后一个任务时加载更多（提前3个）
@@ -179,7 +183,11 @@ struct TasksView: View {
                             }
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.md)
+                            // 优化：在Grid底部添加额外padding，确保最后一个卡片长按时不被裁剪
+                            .padding(.bottom, AppSpacing.lg)
                         }
+                        // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
+                        .scrollContentBackground(.hidden)
                         // 注意：不能在 ScrollView 上使用 drawingGroup，会阻止点击事件
                     }
                 }
@@ -385,6 +393,41 @@ struct TasksView: View {
             allTasks = mergedTasks
         }
     }
+    
+    // 增强：记录跳过任务（用于推荐系统负反馈）
+    private func recordTaskSkip(taskId: Int) {
+        guard appState.isAuthenticated else { return }
+        
+        // 异步非阻塞方式记录交互
+        DispatchQueue.global(qos: .utility).async {
+            let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
+            let metadata: [String: Any] = [
+                "source": "task_list",
+                "action": "not_interested"
+            ]
+            
+            var cancellable: AnyCancellable?
+            cancellable = APIService.shared.recordTaskInteraction(
+                taskId: taskId,
+                interactionType: "skip",
+                deviceType: deviceType,
+                isRecommended: false,
+                metadata: metadata
+            )
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        Logger.warning("记录跳过任务失败: \(error.localizedDescription)", category: .api)
+                    }
+                    cancellable = nil
+                },
+                receiveValue: { _ in
+                    Logger.debug("已记录跳过任务: taskId=\(taskId)", category: .api)
+                }
+            )
+            _ = cancellable
+        }
+    }
 }
 
 // 任务卡片组件 - Web风格（垂直布局）
@@ -392,6 +435,8 @@ struct TaskCard: View {
     let task: Task
     var isRecommended: Bool = false  // 是否为推荐任务
     var onNotInterested: (() -> Void)? = nil  // 增强：不感兴趣回调
+    var enableLongPress: Bool = true  // 是否启用长按功能（首页暂时禁用）
+    @State private var showNotInterestedAlert = false  // 优化：使用alert替代contextMenu，避免被容器裁剪
     
     // 任务类型 SF Symbols 映射（符合 Apple HIG）
     private let taskTypeIcons: [String: String] = [
@@ -599,22 +644,42 @@ struct TaskCard: View {
             }
             .padding(AppSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.cardBackground) // 内容区域背景
         }
         .background(
+            // 优化：使用与容器背景色一致的背景，避免长按时露出灰色
             RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
                 .fill(AppColors.cardBackground)
+                .overlay(
+                    // 使用细微边框替代阴影，减少"镶嵌"感
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                        .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
+                )
         )
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)) // 优化：确保圆角边缘干净，不露出底层
         .compositingGroup() // 组合渲染，确保圆角边缘干净
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
-        .contextMenu {
-            // 增强：长按菜单 - 不感兴趣
-            if let onNotInterested = onNotInterested {
-                Button(role: .destructive) {
-                    onNotInterested()
-                } label: {
-                    Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
-                }
+        // 移除阴影，使用更轻量的视觉分隔
+        .contentShape(Rectangle()) // 优化：确保整个卡片区域都可以被点击和长按
+        // 任务大厅：使用 contextMenu（原生体验更好）
+        // 首页：暂时禁用长按功能
+        .modifier(LongPressModifier(
+            enableLongPress: enableLongPress,
+            onNotInterested: onNotInterested,
+            showAlert: $showNotInterestedAlert
+        ))
+        .alert(LocalizationKey.tasksNotInterested.localized, isPresented: $showNotInterestedAlert) {
+            Button(role: .destructive) {
+                onNotInterested?()
+            } label: {
+                Text(LocalizationKey.tasksNotInterested.localized)
             }
+            Button(role: .cancel) {
+                // 取消，不做任何操作
+            } label: {
+                Text(LocalizationKey.commonCancel.localized)
+            }
+        } message: {
+            Text("确定要将此任务标记为不感兴趣吗？")
         }
         .overlay(alignment: .topTrailing) {
             // 任务等级标签（VIP/Super）- 右上角
@@ -781,38 +846,26 @@ struct StatusBadge: View {
     }
 }
 
-    // 增强：记录跳过任务（用于推荐系统负反馈）
-    private func recordTaskSkip(taskId: Int) {
-        guard appState.isAuthenticated else { return }
-        
-        // 异步非阻塞方式记录交互
-        DispatchQueue.global(qos: .utility).async {
-            let deviceType = DeviceInfo.isPad ? "tablet" : "mobile"
-            let metadata: [String: Any] = [
-                "source": "task_list",
-                "action": "not_interested"
-            ]
-            
-            var cancellable: AnyCancellable?
-            cancellable = APIService.shared.recordTaskInteraction(
-                taskId: taskId,
-                interactionType: "skip",
-                deviceType: deviceType,
-                isRecommended: false,
-                metadata: metadata
-            )
-            .sink(
-                receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        Logger.warning("记录跳过任务失败: \(error.localizedDescription)", category: .api)
+// 长按手势修饰符 - 根据 enableLongPress 决定使用 contextMenu 还是禁用
+struct LongPressModifier: ViewModifier {
+    let enableLongPress: Bool
+    let onNotInterested: (() -> Void)?
+    @Binding var showAlert: Bool
+    
+    func body(content: Content) -> some View {
+        if enableLongPress, onNotInterested != nil {
+            // 任务大厅：使用 contextMenu
+            content
+                .contextMenu {
+                    Button(role: .destructive) {
+                        onNotInterested?()
+                    } label: {
+                        Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
                     }
-                    cancellable = nil
-                },
-                receiveValue: { _ in
-                    Logger.debug("已记录跳过任务: taskId=\(taskId)", category: .api)
                 }
-            )
-            _ = cancellable
+        } else {
+            // 首页：禁用长按功能
+            content
         }
     }
 }

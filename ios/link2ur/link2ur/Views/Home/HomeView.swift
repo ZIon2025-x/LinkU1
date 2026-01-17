@@ -215,6 +215,7 @@ struct RecommendedContentView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppSpacing.lg) {
+                // 优化：确保LazyVStack不会裁剪子视图
                 // 顶部欢迎区域（符合 Apple HIG，使用系统字体和间距）
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack(alignment: .top, spacing: AppSpacing.md) {
@@ -269,6 +270,8 @@ struct RecommendedContentView: View {
                     .frame(height: AppSpacing.xl)
             }
         }
+        // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
+        .scrollContentBackground(.hidden)
         .refreshable {
             // 手动下拉刷新首页所有内容（推荐任务、热门活动、最新动态）
             NotificationCenter.default.post(name: .refreshHomeContent, object: nil)
@@ -1120,7 +1123,17 @@ struct SearchTaskCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .cardBackground(cornerRadius: AppCornerRadius.medium)
+        .background(AppColors.cardBackground) // 内容区域背景
+        .background(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                .fill(AppColors.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                        .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)) // 优化：确保圆角边缘干净
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
     }
 }
 
@@ -1185,7 +1198,17 @@ struct SearchExpertCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .cardBackground(cornerRadius: AppCornerRadius.medium)
+        .background(AppColors.cardBackground) // 内容区域背景
+        .background(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                .fill(AppColors.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                        .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)) // 优化：确保圆角边缘干净
+        .compositingGroup() // 组合渲染，确保圆角边缘干净
     }
 }
 
@@ -1241,7 +1264,7 @@ struct SearchFleaMarketCard: View {
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(AppSpacing.md)
-        .cardBackground(cornerRadius: AppCornerRadius.medium)
+        .cardBackground(cornerRadius: AppCornerRadius.medium) // 使用优化后的 cardBackground modifier
     }
 }
 
@@ -1450,7 +1473,7 @@ struct RecommendedTasksSection: View {
     }
     
     var body: some View {
-            VStack(alignment: .leading, spacing: AppSpacing.md) {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
                 Text(LocalizationKey.homeRecommendedTasks.localized)
                     .font(AppTypography.title3) // 使用 title3
@@ -1497,12 +1520,14 @@ struct RecommendedTasksSection: View {
                                     onNotInterested: {
                                         // 增强：记录跳过任务（用于推荐系统负反馈）
                                         recordTaskSkip(taskId: task.id)
-                                    }
+                                    },
+                                    enableLongPress: false  // 首页暂时禁用长按功能
                                 )
                                 .frame(width: 200)
                             }
-                            .buttonStyle(ScaleButtonStyle())
-                            .drawingGroup() // 优化复杂视图的渲染性能
+                            .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                            .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
+                            // 移除 drawingGroup，避免影响长按交互
                             .id(task.id) // 确保稳定的视图标识
                             .onAppear {
                                 // 记录推荐任务的查看交互（用于推荐系统优化）
@@ -1512,11 +1537,17 @@ struct RecommendedTasksSection: View {
                             }
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
+                    // 优化：第一个任务对齐屏幕边缘，和banner、活动卡片一致
+                    .padding(.leading, AppSpacing.md)  // 左侧只保留标准padding，和banner对齐
+                    .padding(.trailing, AppSpacing.lg)  // 右侧保留额外padding，确保最后一个卡片长按时不被裁剪
                 }
+                // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
+                .scrollContentBackground(.hidden)
                 .animation(.easeInOut(duration: 0.1), value: viewModel.tasks.count) // 更快的过渡动画
             }
         }
+        // 优化：移除VStack的裁剪限制，允许子视图（特别是contextMenu）超出边界
+        .fixedSize(horizontal: false, vertical: true) // 确保VStack不会裁剪子视图
         .task {
             // 只在首次加载时加载推荐任务，不自动刷新
             if viewModel.tasks.isEmpty && !viewModel.isLoading {

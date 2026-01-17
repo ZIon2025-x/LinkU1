@@ -729,6 +729,7 @@
 "notification.system_message" = "系统消息";
 "notification.agree" = "同意";
 "notification.reject" = "拒绝";
+"notification.expired" = "已过期";
 "notification.no_notifications" = "暂无通知";
 "notification.no_notifications_message" = "还没有收到任何通知消息";
 "notification.task_cancelled_cannot_send" = "任务已取消，无法发送消息";

@@ -2045,6 +2045,8 @@ async def negotiate_application(
             )
             
             # ⚠️ 额外存储 notification_id -> tokens 映射，方便前端通过 notification_id 获取 token
+            # 优化：在存储时也保存过期时间，方便API返回
+            expires_at_iso = format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             redis_client.setex(
                 f"negotiation_tokens_by_notification:{notification_id}",
                 300,  # 5分钟
@@ -2052,7 +2054,8 @@ async def negotiate_application(
                     "token_accept": token_accept,
                     "token_reject": token_reject,
                     "task_id": task_id,
-                    "application_id": application_id
+                    "application_id": application_id,
+                    "expires_at": expires_at_iso  # 优化：保存过期时间
                 })
             )
         
@@ -2156,11 +2159,49 @@ async def get_negotiation_tokens(
                 detail="Token数据格式错误"
             )
         
+        # 优化：从token数据中获取过期时间（如果存在）
+        expires_at = None
+        if token_data.get("token_accept"):
+            # 尝试从accept token的Redis数据中获取过期时间
+            accept_token_key = f"negotiation_token:{token_data.get('token_accept')}"
+            accept_token_data_str = redis_client.get(accept_token_key)
+            if accept_token_data_str:
+                if isinstance(accept_token_data_str, bytes):
+                    accept_token_data_str = accept_token_data_str.decode('utf-8')
+                try:
+                    accept_token_data = json.loads(accept_token_data_str)
+                    expires_at = accept_token_data.get("expires_at")
+                except:
+                    pass
+        
+        # 如果没有从token中获取到，基于创建时间+5分钟计算
+        if not expires_at:
+            notification_created = notification.created_at
+            if notification_created:
+                from datetime import timedelta
+                expires_at_dt = notification_created + timedelta(seconds=300)  # 5分钟
+                expires_at = format_iso_utc(expires_at_dt)
+        
+        # 优化：获取任务状态，如果任务已进入进行中或更后面的状态，议价应该显示为已过期
+        task_status = None
+        task_id = token_data.get("task_id")
+        if task_id:
+            try:
+                task_query = select(models.Task).where(models.Task.id == task_id)
+                task_result = await db.execute(task_query)
+                task = task_result.scalar_one_or_none()
+                if task:
+                    task_status = task.status
+            except Exception as e:
+                logger.warning(f"获取任务状态失败: {e}")
+        
         return {
             "token_accept": token_data.get("token_accept"),
             "token_reject": token_data.get("token_reject"),
-            "task_id": token_data.get("task_id"),
-            "application_id": token_data.get("application_id")
+            "task_id": task_id,
+            "application_id": token_data.get("application_id"),
+            "expires_at": expires_at,  # 优化：返回真实过期时间
+            "task_status": task_status  # 优化：返回任务状态，用于判断是否已过期
         }
     
     except HTTPException:
