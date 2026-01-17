@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import re
+import json
 from typing import Optional
 
 from app.database import get_db
@@ -166,7 +167,6 @@ def generate_html(
     # 生成结构化数据JSON
     structured_data_json = ""
     if structured_data:
-        import json
         structured_data_json = f'<script type="application/ld+json">{json.dumps(structured_data, ensure_ascii=False)}</script>'
     
     # 如果没有提供body内容，生成默认内容
@@ -482,10 +482,22 @@ async def ssr_task_detail(
         # 清理描述中的HTML标签（用于显示）
         clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
         
-        # 获取任务图片
+        # 获取任务图片（images 是 JSON 字符串，需要解析）
         image_url = ""
-        if task.images and len(task.images) > 0:
-            image_url = task.images[0]
+        if task.images:
+            try:
+                if isinstance(task.images, str):
+                    images_list = json.loads(task.images)
+                elif isinstance(task.images, list):
+                    images_list = task.images
+                else:
+                    images_list = []
+                
+                if images_list and len(images_list) > 0:
+                    image_url = images_list[0]
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.warning(f"解析任务图片失败: task_id={task_id}, images={task.images}, error={e}")
+                image_url = ""
         
         page_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
         
@@ -501,7 +513,6 @@ async def ssr_task_detail(
             {f'<img src="{image_url}" alt="{task.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
             <div class="content">
                 <p><strong>任务类型：</strong>{task.task_type or "未指定"}</p>
-                <p><strong>分类：</strong>{task.category or "未分类"}</p>
                 <p><strong>位置：</strong>{task.location or "未指定"}</p>
                 <p><strong>奖励：</strong>{reward_text}</p>
                 {f'<p><strong>截止时间：</strong>{task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "未指定"}</p>' if task.deadline else ''}
@@ -569,7 +580,8 @@ async def ssr_task_detail(
         )
         
     except Exception as e:
-        logger.error(f"SSR 任务详情失败: {e}")
+        import traceback
+        logger.error(f"SSR 任务详情失败: task_id={task_id}, error={e}, traceback={traceback.format_exc()}")
         return HTMLResponse(
             content=generate_html(
                 title="Link²Ur - 任务平台",

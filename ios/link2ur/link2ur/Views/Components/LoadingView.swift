@@ -46,9 +46,11 @@ struct LoadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            // 旋转动画
             withAnimation(Animation.linear(duration: 0.8).repeatForever(autoreverses: false)) {
                 isAnimating = true
             }
+            // 脉冲动画
             withAnimation(Animation.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
                 pulseScale = 1.15
             }
@@ -63,7 +65,10 @@ struct CompactLoadingView: View {
     var body: some View {
         Circle()
             .trim(from: 0, to: 0.7)
-            .stroke(AppColors.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .stroke(
+                AppColors.primary,
+                style: StrokeStyle(lineWidth: 2, lineCap: .round)
+            )
             .frame(width: 20, height: 20)
             .rotationEffect(Angle(degrees: isAnimating ? 360 : 0))
             .onAppear {
@@ -78,7 +83,9 @@ struct CompactLoadingView: View {
 struct FullScreenLoadingView: View {
     var body: some View {
         ZStack {
-            AppColors.background.ignoresSafeArea()
+            AppColors.background
+                .ignoresSafeArea()
+            
             LoadingView()
         }
     }
@@ -100,7 +107,12 @@ struct DotsLoadingView: View {
         }
         .onAppear {
             for index in 0..<3 {
-                withAnimation(Animation.easeInOut(duration: 0.5).repeatForever(autoreverses: true).delay(Double(index) * 0.15)) {
+                withAnimation(
+                    Animation
+                        .easeInOut(duration: 0.5)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.15)
+                ) {
                     animatingDots[index] = true
                 }
             }
@@ -108,21 +120,76 @@ struct DotsLoadingView: View {
     }
 }
 
+/// 骨架加载视图（带渐变效果）
+struct ShimmerLoadingView: View {
+    @State private var isAnimating = false
+    let height: CGFloat
+    let cornerRadius: CGFloat
+    
+    init(height: CGFloat = 16, cornerRadius: CGFloat = AppCornerRadius.small) {
+        self.height = height
+        self.cornerRadius = cornerRadius
+    }
+    
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(AppColors.fill)
+            .frame(height: height)
+            .overlay(
+                GeometryReader { geometry in
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.clear,
+                            Color.white.opacity(0.4),
+                            Color.clear
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geometry.size.width * 2)
+                    .offset(x: isAnimating ? geometry.size.width : -geometry.size.width)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .onAppear {
+                withAnimation(Animation.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    isAnimating = true
+                }
+            }
+    }
+}
+
 /// 成功动画视图
 struct SuccessAnimationView: View {
     @State private var isAnimating = false
+    @State private var checkmarkProgress: CGFloat = 0
     
     var body: some View {
         ZStack {
-            Circle().stroke(AppColors.success.opacity(0.2), lineWidth: 3).frame(width: 60, height: 60)
-            Circle().trim(from: 0, to: isAnimating ? 1 : 0)
+            // 成功圆环
+            Circle()
+                .stroke(AppColors.success.opacity(0.2), lineWidth: 3)
+                .frame(width: 60, height: 60)
+            
+            // 动画圆环
+            Circle()
+                .trim(from: 0, to: isAnimating ? 1 : 0)
                 .stroke(AppColors.success, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .frame(width: 60, height: 60).rotationEffect(.degrees(-90))
-            Image(systemName: "checkmark").font(.system(size: 28, weight: .bold))
-                .foregroundColor(AppColors.success).scaleEffect(isAnimating ? 1 : 0).opacity(isAnimating ? 1 : 0)
+                .frame(width: 60, height: 60)
+                .rotationEffect(.degrees(-90))
+            
+            // 勾选标记
+            Image(systemName: "checkmark")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(AppColors.success)
+                .scaleEffect(isAnimating ? 1 : 0)
+                .opacity(isAnimating ? 1 : 0)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0)) { isAnimating = true }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0)) {
+                isAnimating = true
+            }
+            // 触发成功触觉反馈
             HapticFeedback.success()
         }
     }
@@ -135,19 +202,98 @@ struct ErrorAnimationView: View {
     
     var body: some View {
         ZStack {
-            Circle().fill(AppColors.error.opacity(0.1)).frame(width: 60, height: 60)
-            Circle().stroke(AppColors.error, lineWidth: 3).frame(width: 60, height: 60)
-            Image(systemName: "xmark").font(.system(size: 28, weight: .bold))
-                .foregroundColor(AppColors.error).scaleEffect(isAnimating ? 1 : 0)
+            // 错误圆环
+            Circle()
+                .fill(AppColors.error.opacity(0.1))
+                .frame(width: 60, height: 60)
+            
+            Circle()
+                .stroke(AppColors.error, lineWidth: 3)
+                .frame(width: 60, height: 60)
+            
+            // X标记
+            Image(systemName: "xmark")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(AppColors.error)
+                .scaleEffect(isAnimating ? 1 : 0)
         }
         .offset(x: shake)
         .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.5, blendDuration: 0)) { isAnimating = true }
-            withAnimation(.spring(response: 0.1, dampingFraction: 0.3, blendDuration: 0).repeatCount(3, autoreverses: true)) { shake = 10 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.5, blendDuration: 0)) { shake = 0 }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5, blendDuration: 0)) {
+                isAnimating = true
             }
+            // 抖动动画
+            withAnimation(.spring(response: 0.1, dampingFraction: 0.3, blendDuration: 0).repeatCount(3, autoreverses: true)) {
+                shake = 10
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.5, blendDuration: 0)) {
+                    shake = 0
+                }
+            }
+            // 触发错误触觉反馈
             HapticFeedback.error()
         }
     }
+}
+
+// MARK: - 预览
+
+#Preview("Loading Views") {
+    ScrollView {
+        VStack(spacing: 40) {
+            Group {
+                Text("标准加载")
+                    .font(AppTypography.bodyBold)
+                LoadingView(message: "加载中...")
+                    .frame(height: 100)
+            }
+            
+            Divider()
+            
+            Group {
+                Text("简洁加载")
+                    .font(AppTypography.bodyBold)
+                CompactLoadingView()
+            }
+            
+            Divider()
+            
+            Group {
+                Text("点状加载")
+                    .font(AppTypography.bodyBold)
+                DotsLoadingView()
+            }
+            
+            Divider()
+            
+            Group {
+                Text("骨架加载")
+                    .font(AppTypography.bodyBold)
+                VStack(spacing: 8) {
+                    ShimmerLoadingView(height: 20)
+                    ShimmerLoadingView(height: 16)
+                        .frame(width: 200)
+                }
+            }
+            
+            Divider()
+            
+            Group {
+                Text("成功动画")
+                    .font(AppTypography.bodyBold)
+                SuccessAnimationView()
+            }
+            
+            Divider()
+            
+            Group {
+                Text("错误动画")
+                    .font(AppTypography.bodyBold)
+                ErrorAnimationView()
+            }
+        }
+        .padding()
+    }
+    .background(AppColors.background)
 }
