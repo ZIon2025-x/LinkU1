@@ -55,7 +55,7 @@ IOS_LINK_PREVIEW_PATTERNS = [
 def is_ios_link_preview(user_agent: str) -> bool:
     """
     检测是否是 iOS/macOS 的链接预览请求
-    这些请求来自 LPMetadataProvider，需要返回 SSR HTML
+    这些请求来自 LPMetadataProvider 或 iOS 分享扩展，需要返回 SSR HTML
     """
     if not user_agent:
         return False
@@ -65,16 +65,26 @@ def is_ios_link_preview(user_agent: str) -> bool:
         if re.search(pattern, user_agent, re.IGNORECASE):
             # 确保不是 Safari 浏览器（Safari 会执行 JS，不需要 SSR）
             if 'Safari' not in user_agent:
-                logger.debug(f"检测到 iOS 链接预览请求（模式匹配）: User-Agent={user_agent[:150]}")
+                logger.info(f"SSR iOS链接预览: 模式匹配={pattern}, user_agent={user_agent[:150]}")
                 return True
     
-    # 策略2：如果 User-Agent 很短且不包含常见浏览器标识，可能是链接预览
+    # 策略2：iOS 应用内 WebView 链接预览
+    # 特征：包含 "Mobile/" 但不包含 "Safari"
+    # 正常 Safari 浏览器的 User-Agent: ...Mobile/15E148 Safari/605.1.15
+    # iOS 链接预览的 User-Agent: ...Mobile/15E148（没有 Safari）
+    if 'Mobile/' in user_agent and 'Safari' not in user_agent:
+        # 确保是 iOS 设备（包含 iPhone 或 iPad 或 iPod）
+        if re.search(r'iPhone|iPad|iPod', user_agent, re.IGNORECASE):
+            logger.info(f"SSR iOS链接预览: iOS WebView（无Safari）, user_agent={user_agent[:150]}")
+            return True
+    
+    # 策略3：如果 User-Agent 很短且不包含常见浏览器标识，可能是链接预览
     # iOS 链接预览的 User-Agent 通常比较短，且不包含浏览器标识
     common_browsers = ['Safari', 'Chrome', 'Firefox', 'Edge', 'Opera', 'Mozilla']
     if len(user_agent) < 100 and not any(browser in user_agent for browser in common_browsers):
         # 但排除明显的爬虫（它们已经在 NON_JS_CRAWLERS 中处理）
         if not any(re.search(pattern, user_agent, re.IGNORECASE) for pattern in NON_JS_CRAWLERS):
-            logger.debug(f"检测到可能的 iOS 链接预览请求（短 User-Agent）: User-Agent={user_agent[:150]}")
+            logger.info(f"SSR iOS链接预览: 短User-Agent, user_agent={user_agent[:150]}")
             return True
     
     return False
