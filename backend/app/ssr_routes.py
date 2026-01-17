@@ -25,8 +25,9 @@ ssr_router = APIRouter(tags=["SSR"])
 # 这些爬虫通常只读取HTML，不执行JavaScript
 NON_JS_CRAWLERS = [
     r'MicroMessenger',      # 微信（不执行JS）
-    r'WeChat',              # 微信
+    r'WeChat',              # 微信（包括 WeChatShareExtensionNew）
     r'Weixin',              # 微信
+    r'WeChatShareExtension', # 微信分享扩展
     r'facebookexternalhit', # Facebook（不执行JS）
     r'Facebot',             # Facebook
     r'Twitterbot',          # Twitter（不执行JS）
@@ -105,9 +106,11 @@ def is_non_js_crawler(user_agent: str) -> bool:
         return False
     for pattern in NON_JS_CRAWLERS:
         if re.search(pattern, user_agent, re.IGNORECASE):
+            logger.info(f"SSR爬虫检测: 匹配模式={pattern}, user_agent={user_agent[:150]}")
             return True
     # 也检测 iOS 链接预览请求
     if is_ios_link_preview(user_agent):
+        logger.info(f"SSR爬虫检测: iOS链接预览, user_agent={user_agent[:150]}")
         return True
     return False
 
@@ -475,12 +478,39 @@ async def ssr_task_detail(
                 status_code=404
             )
         
+        # 获取奖励信息（转换为 float 以便 JSON 序列化）
+        reward_decimal = task.agreed_reward or task.base_reward or task.reward or 0
+        reward = float(reward_decimal) if reward_decimal else 0
+        reward_text = f"£{reward:.2f}" if reward > 0 else "面议"
+        
         # 构建分享信息
         title = f"{task.title} - Link²Ur任务平台"
-        description = task.description or "在 Link²Ur 查看任务详情"
         
-        # 清理描述中的HTML标签（用于显示）
-        clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
+        # 清理任务描述中的HTML标签
+        raw_description = task.description or ""
+        clean_task_desc = re.sub(r'<[^>]+>', '', raw_description) if raw_description else ""
+        
+        # 构建包含关键信息的分享描述（地点、任务类型、金额 + 描述预览）
+        task_type_text = task.task_type or "未指定"
+        location_text = task.location or "未指定"
+        
+        # 分享描述格式：📍地点 | 💼类型 | 💰金额 | 描述预览
+        share_desc_parts = []
+        share_desc_parts.append(f"📍{location_text}")
+        share_desc_parts.append(f"💼{task_type_text}")
+        share_desc_parts.append(f"💰{reward_text}")
+        
+        # 添加描述预览（限制长度，为其他信息留空间）
+        if clean_task_desc:
+            desc_preview = clean_task_desc[:80].replace('\n', ' ').strip()
+            if len(clean_task_desc) > 80:
+                desc_preview += "..."
+            share_desc_parts.append(desc_preview)
+        
+        # 组合分享描述（限制总长度200字符）
+        clean_description = " | ".join(share_desc_parts)
+        if len(clean_description) > 200:
+            clean_description = clean_description[:197] + "..."
         
         # 获取任务图片（images 是 JSON 字符串，需要解析）
         image_url = ""
@@ -500,11 +530,6 @@ async def ssr_task_detail(
                 image_url = ""
         
         page_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
-        
-        # 获取奖励信息（转换为 float 以便 JSON 序列化）
-        reward_decimal = task.agreed_reward or task.base_reward or task.reward or 0
-        reward = float(reward_decimal) if reward_decimal else 0
-        reward_text = f"£{reward:.2f}" if reward > 0 else "面议"
         
         # 构建完整的HTML内容
         body_content = f'''
@@ -880,9 +905,10 @@ async def ssr_activity_detail(
         
         page_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
         
-        # 获取价格信息
-        price = activity.discounted_price_per_participant or activity.original_price_per_participant or 0
-        price_text = f"£{price}" if price > 0 else "免费"
+        # 获取价格信息（转换为 float 以便 JSON 序列化）
+        price_decimal = activity.discounted_price_per_participant or activity.original_price_per_participant or 0
+        price = float(price_decimal) if price_decimal else 0
+        price_text = f"£{price:.2f}" if price > 0 else "免费"
         
         # 构建完整的HTML内容
         body_content = f'''
@@ -953,7 +979,8 @@ async def ssr_activity_detail(
         )
         
     except Exception as e:
-        logger.error(f"SSR 活动详情失败: {e}")
+        import traceback
+        logger.error(f"SSR 活动详情失败: activity_id={activity_id}, error={e}, traceback={traceback.format_exc()}")
         return HTMLResponse(
             content=generate_html(
                 title="Link²Ur - 活动平台",
