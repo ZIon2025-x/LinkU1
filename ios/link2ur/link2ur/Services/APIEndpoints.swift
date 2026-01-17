@@ -220,6 +220,7 @@ enum APIEndpoints {
             "/api/forum/notifications/\(id)/read"
         }
         static let markAllNotificationsRead = "/api/forum/notifications/read-all"
+        static let myCategoryRequests = "/api/forum/categories/requests/my"
     }
     
     // MARK: - Flea Market (跳蚤市场)

@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct ForumView: View {
     @StateObject private var viewModel = ForumViewModel()
@@ -6,6 +7,7 @@ struct ForumView: View {
     @EnvironmentObject var appState: AppState
     @State private var showLogin = false
     @State private var showVerification = false
+    @State private var showCategoryRequest = false
     
     // 检查用户是否已登录且已通过学生认证
     private var isStudentVerified: Bool {
@@ -126,13 +128,30 @@ struct ForumView: View {
         .sheet(isPresented: $showVerification) {
             StudentVerificationView()
         }
+        .sheet(isPresented: $showCategoryRequest) {
+            ForumCategoryRequestView()
+        }
         .onChange(of: showVerification) { isShowing in
             // 当认证页面关闭时，重新加载认证状态
             if !isShowing && appState.isAuthenticated {
                 verificationViewModel.loadStatus()
             }
         }
-    }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    if !appState.isAuthenticated {
+                        showLogin = true
+                    } else {
+                        showCategoryRequest = true
+                    }
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(AppColors.primary)
+                }
+            }
+        }
 }
 
 // MARK: - 未登录提示视图
@@ -262,22 +281,29 @@ struct CategoryCard: View {
                                 .aspectRatio(contentMode: .fit)
                         } placeholder: {
                             Image(systemName: "folder.fill")
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.system(size: 24, weight: .semibold))
                                 .foregroundColor(.white)
                         }
-                        .frame(width: 32, height: 32)
+                        .frame(width: 36, height: 36)
+                        .clipped()
                     } else {
                         // 如果是 emoji 或其他文本，直接显示
+                        // 使用更大的frame并确保居中，避免emoji被裁剪
                         Text(icon)
-                            .font(.system(size: 32))
-                            .frame(width: 32, height: 32)
+                            .font(.system(size: 36))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                     }
                 } else {
                     Image(systemName: "folder.fill")
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(.system(size: 24, weight: .semibold))
                         .foregroundColor(.white)
                 }
             }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large))
             
             // 信息区域
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -399,3 +425,397 @@ struct CategoryCard: View {
     }
 }
 
+// MARK: - 申请新建板块视图
+
+struct ForumCategoryRequestView: View {
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
+    @StateObject private var apiService = APIService.shared
+    
+    @State private var categoryName = ""
+    @State private var categoryDescription = ""
+    @State private var categoryIcon = ""
+    @State private var isLoading = false
+    @State private var showSuccessAlert = false
+    @State private var errorMessage: String?
+    @State private var hasSubmitted = false // 防重复提交
+    @FocusState private var focusedField: Field?
+    
+    // 字符限制
+    private let maxNameLength = 100
+    private let maxDescriptionLength = 500
+    private let maxIconLength = 200
+    
+    enum Field {
+        case name, description, icon
+    }
+    
+    // 计算属性：字符计数
+    private var nameCharacterCount: Int {
+        categoryName.count
+    }
+    
+    private var descriptionCharacterCount: Int {
+        categoryDescription.count
+    }
+    
+    private var iconCharacterCount: Int {
+        categoryIcon.count
+    }
+    
+    // 验证状态
+    private var isNameValid: Bool {
+        !categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private var isDescriptionValid: Bool {
+        descriptionCharacterCount <= maxDescriptionLength
+    }
+    
+    private var isIconValid: Bool {
+        iconCharacterCount <= maxIconLength
+    }
+    
+    private var canSubmit: Bool {
+        isNameValid && isDescriptionValid && isIconValid && !isLoading && !hasSubmitted
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: AppSpacing.lg) {
+                        // 说明文字
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(AppColors.primary)
+                                Text("申请说明")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                            
+                            Text("填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textSecondary)
+                                .lineSpacing(4)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.primary.opacity(0.05))
+                        .cornerRadius(AppCornerRadius.medium)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.top, AppSpacing.md)
+                        
+                        // 表单
+                        VStack(spacing: AppSpacing.md) {
+                            // 板块名称
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                HStack {
+                                    Text("板块名称")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(AppColors.textPrimary)
+                                    Text("*")
+                                        .foregroundColor(AppColors.error)
+                                }
+                                
+                                TextField("请输入板块名称", text: $categoryName)
+                                    .font(.system(size: 15))
+                                    .padding(AppSpacing.md)
+                                    .background(AppColors.cardBackground)
+                                    .cornerRadius(AppCornerRadius.medium)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                            .stroke(
+                                                focusedField == .name 
+                                                    ? AppColors.primary 
+                                                    : (isNameValid ? AppColors.separator : AppColors.error),
+                                                lineWidth: focusedField == .name ? 1.5 : 1
+                                            )
+                                    )
+                                    .focused($focusedField, equals: .name)
+                                    .onChange(of: categoryName) { newValue in
+                                        // 限制字符长度
+                                        if newValue.count > maxNameLength {
+                                            categoryName = String(newValue.prefix(maxNameLength))
+                                        }
+                                    }
+                                
+                                // 字符计数
+                                HStack {
+                                    Spacer()
+                                    Text("\(nameCharacterCount)/\(maxNameLength)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(
+                                            nameCharacterCount > maxNameLength 
+                                                ? AppColors.error 
+                                                : AppColors.textSecondary
+                                        )
+                                }
+                            }
+                            
+                            // 板块描述
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                Text("板块描述")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                ZStack(alignment: .topLeading) {
+                                    TextEditor(text: $categoryDescription)
+                                        .font(.system(size: 15))
+                                        .frame(minHeight: 100)
+                                        .padding(AppSpacing.sm)
+                                        .background(AppColors.cardBackground)
+                                        .cornerRadius(AppCornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                .stroke(
+                                                    focusedField == .description 
+                                                        ? AppColors.primary 
+                                                        : (isDescriptionValid ? AppColors.separator : AppColors.error),
+                                                    lineWidth: focusedField == .description ? 1.5 : 1
+                                                )
+                                        )
+                                        .focused($focusedField, equals: .description)
+                                        .onChange(of: categoryDescription) { newValue in
+                                            // 限制字符长度
+                                            if newValue.count > maxDescriptionLength {
+                                                categoryDescription = String(newValue.prefix(maxDescriptionLength))
+                                            }
+                                        }
+                                    
+                                    if categoryDescription.isEmpty {
+                                        Text("请简要描述这个板块的用途和讨论主题")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(AppColors.textTertiary)
+                                            .padding(.top, AppSpacing.sm + 4)
+                                            .padding(.leading, AppSpacing.sm + 4)
+                                            .allowsHitTesting(false)
+                                    }
+                                }
+                                
+                                // 字符计数
+                                HStack {
+                                    Spacer()
+                                    Text("\(descriptionCharacterCount)/\(maxDescriptionLength)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(
+                                            descriptionCharacterCount > maxDescriptionLength 
+                                                ? AppColors.error 
+                                                : AppColors.textSecondary
+                                        )
+                                }
+                            }
+                            
+                            // 板块图标（可选）
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                Text("板块图标（可选）")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                Text("可以输入一个 emoji 表情作为板块图标，例如：💬、📚、🎮 等")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                TextField("例如：💬", text: $categoryIcon)
+                                    .font(.system(size: 24))
+                                    .multilineTextAlignment(.center)
+                                    .padding(AppSpacing.md)
+                                    .background(AppColors.cardBackground)
+                                    .cornerRadius(AppCornerRadius.medium)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                            .stroke(
+                                                focusedField == .icon 
+                                                    ? AppColors.primary 
+                                                    : (isIconValid ? AppColors.separator : AppColors.error),
+                                                lineWidth: focusedField == .icon ? 1.5 : 1
+                                            )
+                                    )
+                                    .focused($focusedField, equals: .icon)
+                                    .onChange(of: categoryIcon) { newValue in
+                                        // 限制字符长度
+                                        if newValue.count > maxIconLength {
+                                            categoryIcon = String(newValue.prefix(maxIconLength))
+                                        }
+                                    }
+                                
+                                // 字符计数（仅当有输入时显示）
+                                if !categoryIcon.isEmpty {
+                                    HStack {
+                                        Spacer()
+                                        Text("\(iconCharacterCount)/\(maxIconLength)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(
+                                                iconCharacterCount > maxIconLength 
+                                                    ? AppColors.error 
+                                                    : AppColors.textSecondary
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        
+                        // 提交按钮
+                        Button(action: {
+                            submitRequest()
+                        }) {
+                            HStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("提交申请")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                canSubmit
+                                    ? AppColors.primary
+                                    : AppColors.textTertiary
+                            )
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        .disabled(!canSubmit)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.top, AppSpacing.sm)
+                        
+                        // 错误提示
+                        if let errorMessage = errorMessage {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(AppColors.error)
+                                Text(errorMessage)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppColors.error)
+                            }
+                            .padding(AppSpacing.md)
+                            .background(AppColors.error.opacity(0.1))
+                            .cornerRadius(AppCornerRadius.medium)
+                            .padding(.horizontal, AppSpacing.md)
+                        }
+                    }
+                    .padding(.bottom, AppSpacing.xl)
+                }
+            }
+            .navigationTitle("申请新建板块")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+            }
+            .alert("申请已提交", isPresented: $showSuccessAlert) {
+                Button("确定") {
+                    dismiss()
+                }
+            } message: {
+                Text("您的申请已成功提交，管理员将在审核后通知您结果。")
+            }
+        }
+    }
+    
+    private func submitRequest() {
+        // 防重复提交检查
+        guard !hasSubmitted && !isLoading else { return }
+        
+        // 验证输入
+        let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            errorMessage = "请输入板块名称"
+            return
+        }
+        
+        guard trimmedName.count <= maxNameLength else {
+            errorMessage = "板块名称不能超过\(maxNameLength)个字符"
+            return
+        }
+        
+        guard categoryDescription.count <= maxDescriptionLength else {
+            errorMessage = "板块描述不能超过\(maxDescriptionLength)个字符"
+            return
+        }
+        
+        guard categoryIcon.count <= maxIconLength else {
+            errorMessage = "图标不能超过\(maxIconLength)个字符"
+            return
+        }
+        
+        isLoading = true
+        hasSubmitted = true
+        errorMessage = nil
+        
+        // 构建申请数据（移除nil值，并去除首尾空格）
+        var requestData: [String: Any] = [
+            "name": trimmedName,
+            "type": "general" // 默认申请普通板块
+        ]
+        
+        let trimmedDescription = categoryDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedDescription.isEmpty {
+            requestData["description"] = trimmedDescription
+        }
+        
+        let trimmedIcon = categoryIcon.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedIcon.isEmpty {
+            requestData["icon"] = trimmedIcon
+        }
+        
+        // 调用API提交申请
+        apiService.request(
+            ForumCategoryRequestResponse.self,
+            "/api/forum/categories/request",
+            method: "POST",
+            body: requestData
+        )
+        .sink(
+            receiveCompletion: { completion in
+                DispatchQueue.main.async {
+                    isLoading = false
+                    if case .failure(let error) = completion {
+                        hasSubmitted = false // 失败后允许重新提交
+                        // 解析错误信息，提供更友好的提示
+                        if let apiError = error as? APIError {
+                            switch apiError {
+                            case .httpError(let code):
+                                if code == 400 {
+                                    errorMessage = "提交失败，请检查输入内容是否正确"
+                                } else if code == 401 {
+                                    errorMessage = "登录已过期，请重新登录"
+                                } else {
+                                    errorMessage = error.userFriendlyMessage
+                                }
+                            default:
+                                errorMessage = error.userFriendlyMessage
+                            }
+                        } else {
+                            errorMessage = error.userFriendlyMessage
+                        }
+                    }
+                }
+            },
+            receiveValue: { response in
+                DispatchQueue.main.async {
+                    isLoading = false
+                    showSuccessAlert = true
+                    // 清空表单
+                    categoryName = ""
+                    categoryDescription = ""
+                    categoryIcon = ""
+                    hasSubmitted = false // 成功后重置，允许再次提交
+                }
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+}

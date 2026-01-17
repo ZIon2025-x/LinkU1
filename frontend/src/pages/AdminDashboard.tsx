@@ -44,6 +44,8 @@ import api, {
   createForumCategory,
   updateForumCategory,
   deleteForumCategory,
+  getCategoryRequests,
+  reviewCategoryRequest,
   getForumPosts,
   getForumPost,
   createForumPost,
@@ -320,6 +322,16 @@ const AdminDashboard: React.FC = () => {
   // 论坛板块管理相关状态
   const [forumCategories, setForumCategories] = useState<any[]>([]);
   const [showForumCategoryModal, setShowForumCategoryModal] = useState(false);
+  
+  // 板块申请管理相关状态
+  const [categoryRequests, setCategoryRequests] = useState<any[]>([]);
+  const [loadingCategoryRequests, setLoadingCategoryRequests] = useState(false);
+  const [categoryRequestStatusFilter, setCategoryRequestStatusFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [selectedCategoryRequest, setSelectedCategoryRequest] = useState<any>(null);
+  const [showCategoryRequestReviewModal, setShowCategoryRequestReviewModal] = useState(false);
+  const [categoryRequestReviewAction, setCategoryRequestReviewAction] = useState<'approve' | 'reject'>('approve');
+  const [categoryRequestReviewComment, setCategoryRequestReviewComment] = useState('');
+  const [reviewingCategoryRequest, setReviewingCategoryRequest] = useState(false);
   const [forumCategoryForm, setForumCategoryForm] = useState({
     id: undefined as number | undefined,
     name: '',
@@ -489,6 +501,8 @@ const AdminDashboard: React.FC = () => {
       } else if (activeTab === 'forum-categories') {
         const categoriesData = await getForumCategories(false);
         setForumCategories(categoriesData.categories || []);
+      } else if (activeTab === 'forum-category-requests') {
+        await loadCategoryRequests();
       } else if (activeTab === 'forum-posts') {
         // 确保板块列表已加载
         if (forumCategories.length === 0) {
@@ -5789,6 +5803,318 @@ const AdminDashboard: React.FC = () => {
     </div>
   ), [forumCategories, showForumCategoryModal, forumCategoryForm, handleCreateForumCategory, handleUpdateForumCategory, handleDeleteForumCategory, handleEditForumCategory, setForumCategoryForm, setShowForumCategoryModal]);
 
+  // 加载板块申请列表
+  const loadCategoryRequests = useCallback(async () => {
+    setLoadingCategoryRequests(true);
+    try {
+      const status = categoryRequestStatusFilter === 'all' ? undefined : categoryRequestStatusFilter;
+      const requests = await getCategoryRequests(status);
+      setCategoryRequests(requests || []);
+    } catch (error: any) {
+      message.error('加载板块申请失败');
+    } finally {
+      setLoadingCategoryRequests(false);
+    }
+  }, [categoryRequestStatusFilter]);
+
+  // 审核板块申请
+  const handleReviewCategoryRequest = async () => {
+    if (!selectedCategoryRequest) return;
+    
+    if (categoryRequestReviewAction === 'reject' && !categoryRequestReviewComment.trim()) {
+      message.warning('拒绝申请时请填写审核意见');
+      return;
+    }
+
+    setReviewingCategoryRequest(true);
+    try {
+      await reviewCategoryRequest(
+        selectedCategoryRequest.id,
+        categoryRequestReviewAction,
+        categoryRequestReviewComment.trim() || undefined
+      );
+      message.success(categoryRequestReviewAction === 'approve' ? '申请已批准' : '申请已拒绝');
+      setShowCategoryRequestReviewModal(false);
+      setCategoryRequestReviewComment('');
+      await loadCategoryRequests();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setReviewingCategoryRequest(false);
+    }
+  };
+
+  // 打开审核模态框
+  const handleOpenReviewModal = (request: any, action: 'approve' | 'reject') => {
+    setSelectedCategoryRequest(request);
+    setCategoryRequestReviewAction(action);
+    setCategoryRequestReviewComment('');
+    setShowCategoryRequestReviewModal(true);
+  };
+
+  // 渲染板块申请管理
+  const renderCategoryRequests = useCallback(() => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>板块申请管理</h2>
+        <button
+          onClick={loadCategoryRequests}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#007bff',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          刷新
+        </button>
+      </div>
+
+      {/* 状态筛选 */}
+      <div style={{
+        background: 'white',
+        padding: '15px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setCategoryRequestStatusFilter(status)}
+              style={{
+                padding: '8px 16px',
+                border: 'none',
+                background: categoryRequestStatusFilter === status ? '#007bff' : '#f0f0f0',
+                color: categoryRequestStatusFilter === status ? 'white' : '#333',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: categoryRequestStatusFilter === status ? '600' : '400'
+              }}
+            >
+              {status === 'all' ? '全部' : status === 'pending' ? '待审核' : status === 'approved' ? '已通过' : '已拒绝'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 申请列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {loadingCategoryRequests ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <div>加载中...</div>
+          </div>
+        ) : categoryRequests.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+            暂无申请数据
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>图标</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>板块名称</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>申请人</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>申请时间</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categoryRequests.map((request: any) => (
+                <tr key={request.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{request.id}</td>
+                  <td style={{ padding: '12px', fontSize: '20px' }}>{request.icon || '-'}</td>
+                  <td style={{ padding: '12px', fontWeight: '500' }}>{request.name}</td>
+                  <td style={{ padding: '12px', color: '#666', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {request.description || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {request.requester_name || request.requester_id || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {dayjs(request.created_at).format('YYYY-MM-DD HH:mm')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: request.status === 'approved' ? '#d4edda' : request.status === 'rejected' ? '#f8d7da' : '#fff3cd',
+                      color: request.status === 'approved' ? '#155724' : request.status === 'rejected' ? '#721c24' : '#856404',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {request.status === 'pending' ? '待审核' : request.status === 'approved' ? '已通过' : '已拒绝'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {request.status === 'pending' ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleOpenReviewModal(request, 'approve')}
+                          style={{
+                            padding: '4px 8px',
+                            border: '1px solid #28a745',
+                            background: 'white',
+                            color: '#28a745',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          批准
+                        </button>
+                        <button
+                          onClick={() => handleOpenReviewModal(request, 'reject')}
+                          style={{
+                            padding: '4px 8px',
+                            border: '1px solid #dc3545',
+                            background: 'white',
+                            color: '#dc3545',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          拒绝
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#999', fontSize: '12px' }}>
+                        {request.admin_name ? `审核人: ${request.admin_name}` : '-'}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 审核模态框 */}
+      {showCategoryRequestReviewModal && selectedCategoryRequest && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            minWidth: '500px',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+              {categoryRequestReviewAction === 'approve' ? '批准申请' : '拒绝申请'}
+            </h3>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>板块名称</label>
+              <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: '4px' }}>
+                {selectedCategoryRequest.name}
+              </div>
+            </div>
+
+            {selectedCategoryRequest.description && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>板块描述</label>
+                <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: '4px' }}>
+                  {selectedCategoryRequest.description}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                审核意见 {categoryRequestReviewAction === 'reject' && <span style={{ color: 'red' }}>*</span>}
+              </label>
+              <textarea
+                value={categoryRequestReviewComment}
+                onChange={(e) => setCategoryRequestReviewComment(e.target.value)}
+                placeholder={categoryRequestReviewAction === 'approve' ? '请输入审核意见（可选）' : '请输入拒绝原因（必填）'}
+                rows={4}
+                maxLength={500}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px',
+                  resize: 'vertical'
+                }}
+              />
+              <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                {categoryRequestReviewComment.length}/500
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                onClick={() => {
+                  setShowCategoryRequestReviewModal(false);
+                  setCategoryRequestReviewComment('');
+                }}
+                disabled={reviewingCategoryRequest}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#333',
+                  borderRadius: '4px',
+                  cursor: reviewingCategoryRequest ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReviewCategoryRequest}
+                disabled={reviewingCategoryRequest || (categoryRequestReviewAction === 'reject' && !categoryRequestReviewComment.trim())}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: categoryRequestReviewAction === 'approve' ? '#28a745' : '#dc3545',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: reviewingCategoryRequest || (categoryRequestReviewAction === 'reject' && !categoryRequestReviewComment.trim()) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  opacity: reviewingCategoryRequest || (categoryRequestReviewAction === 'reject' && !categoryRequestReviewComment.trim()) ? 0.6 : 1
+                }}
+              >
+                {reviewingCategoryRequest ? '处理中...' : categoryRequestReviewAction === 'approve' ? '批准' : '拒绝'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ), [categoryRequests, loadingCategoryRequests, categoryRequestStatusFilter, showCategoryRequestReviewModal, selectedCategoryRequest, categoryRequestReviewAction, categoryRequestReviewComment, reviewingCategoryRequest, loadCategoryRequests, handleOpenReviewModal, handleReviewCategoryRequest]);
+
   const renderForumPosts = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -9364,6 +9690,12 @@ const AdminDashboard: React.FC = () => {
               📁 论坛板块管理
             </button>
             <button 
+              className={getTabButtonClassName(activeTab === 'forum-category-requests')}
+              onClick={() => handleTabChange('forum-category-requests')}
+            >
+              📋 板块申请管理
+            </button>
+            <button 
               className={getTabButtonClassName(activeTab === 'forum-posts')}
               onClick={() => handleTabChange('forum-posts')}
             >
@@ -9529,6 +9861,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
             {activeTab === 'forum-categories' && renderForumCategories()}
+            {activeTab === 'forum-category-requests' && renderCategoryRequests()}
             {activeTab === 'forum-posts' && renderForumPosts()}
             {activeTab === 'reports' && renderReports()}
             {activeTab === 'task-disputes' && renderTaskDisputes()}

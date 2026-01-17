@@ -375,3 +375,46 @@ struct ForumSearchResponse: Codable {
     let total: Int
 }
 
+// 申请新建板块响应
+struct ForumCategoryRequestResponse: Codable {
+    let message: String
+    let id: Int
+}
+
+// 板块申请详情
+struct ForumCategoryRequestDetail: Codable, Identifiable {
+    let id: Int
+    let requesterId: String
+    let name: String
+    let description: String?
+    let icon: String?
+    let type: String
+    let country: String?
+    let universityCode: String?
+    let status: String
+    let adminId: String?
+    let reviewedAt: String?
+    let reviewComment: String?
+    let createdAt: String
+    let updatedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, icon, type, country, status
+        case requesterId = "requester_id"
+        case universityCode = "university_code"
+        case adminId = "admin_id"
+        case reviewedAt = "reviewed_at"
+        case reviewComment = "review_comment"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    var statusText: String {
+        switch status {
+        case "pending": return "待审核"
+        case "approved": return "已通过"
+        case "rejected": return "已拒绝"
+        default: return status
+        }
+    }
+}

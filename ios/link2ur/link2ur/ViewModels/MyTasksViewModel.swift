@@ -181,7 +181,7 @@ class MyTasksViewModel: ObservableObject {
     private var lastUpdateTime: Date?
     
     // 缓存统计数据，避免重复计算
-    private var cachedStats: (total: Int, posted: Int, taken: Int, completed: Int, pending: Int)?
+    private var cachedStats: (total: Int, posted: Int, taken: Int, completed: Int, pending: Int, inProgress: Int)?
     private var lastTasksCount: Int = 0
     private var lastApplicationsCount: Int = 0
     private var lastUserId: String?
@@ -212,6 +212,11 @@ class MyTasksViewModel: ObservableObject {
         return cachedStats?.pending ?? 0
     }
     
+    var inProgressTasksCount: Int {
+        updateStatsIfNeeded()
+        return cachedStats?.inProgress ?? 0
+    }
+    
     private func updateStatsIfNeeded() {
         // 如果数据没有变化，使用缓存
         if cachedStats != nil,
@@ -226,6 +231,7 @@ class MyTasksViewModel: ObservableObject {
         let posted: Int
         let taken: Int
         let completed = tasks.filter { $0.status == .completed }.count
+        let inProgress = tasks.filter { $0.status == .inProgress }.count
         let pending = applications.filter { app in
             app.status == "pending" && app.taskStatus != "cancelled"
         }.count
@@ -249,7 +255,7 @@ class MyTasksViewModel: ObservableObject {
             taken = 0
         }
         
-        cachedStats = (total, posted, taken, completed, pending)
+        cachedStats = (total, posted, taken, completed, pending, inProgress)
         lastTasksCount = tasks.count
         lastApplicationsCount = applications.count
         lastUserId = currentUserId

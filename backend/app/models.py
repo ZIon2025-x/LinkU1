@@ -2057,6 +2057,38 @@ class ForumCategory(Base):
     )
 
 
+class ForumCategoryRequest(Base):
+    """论坛板块申请表"""
+    __tablename__ = "forum_category_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    requester_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    icon = Column(String(200), nullable=True)
+    type = Column(String(20), default='general', server_default=text("'general'"))  # general, root, university
+    country = Column(String(10), nullable=True)  # 国家代码（如 UK），仅 type=root 时使用
+    university_code = Column(String(50), nullable=True)  # 大学编码（如 UOB），仅 type=university 时使用
+    status = Column(String(20), default="pending", nullable=False, server_default=text("'pending'"))  # pending, approved, rejected
+    admin_id = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核的管理员ID
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    review_comment = Column(Text, nullable=True)  # 审核意见
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    requester = relationship("User", foreign_keys=[requester_id])
+    admin = relationship("AdminUser", foreign_keys=[admin_id])
+    
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'approved', 'rejected')", name="check_forum_category_request_status"),
+        CheckConstraint("type IN ('general', 'root', 'university')", name="check_forum_category_request_type"),
+        Index("idx_forum_category_requests_requester", requester_id),
+        Index("idx_forum_category_requests_status", status),
+        Index("idx_forum_category_requests_created", created_at),
+    )
+
+
 class ForumPost(Base):
     """主题帖表"""
     __tablename__ = "forum_posts"

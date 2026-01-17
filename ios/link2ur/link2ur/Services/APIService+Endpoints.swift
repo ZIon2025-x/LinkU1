@@ -501,6 +501,13 @@ extension APIService {
         return request(ForumReplyOut.self, APIEndpoints.Forum.replies(postId), method: "POST", body: bodyDict)
     }
     
+    // MARK: - 板块申请管理（用户端）
+    
+    /// 获取我的板块申请列表（普通用户）
+    func getMyCategoryRequests() -> AnyPublisher<[ForumCategoryRequestDetail], APIError> {
+        return request([ForumCategoryRequestDetail].self, APIEndpoints.Forum.myCategoryRequests)
+    }
+    
     /// 点赞/取消点赞
     func toggleForumLike(targetType: String, targetId: Int) -> AnyPublisher<ForumLikeResponse, APIError> {
         let body: [String: Any] = ["target_type": targetType, "target_id": targetId]

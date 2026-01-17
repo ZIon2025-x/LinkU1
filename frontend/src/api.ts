@@ -2584,6 +2584,22 @@ export const deleteForumCategory = async (categoryId: number) => {
   return res.data;
 };
 
+// 板块申请管理（管理员）
+export const getCategoryRequests = async (status?: 'pending' | 'approved' | 'rejected') => {
+  const params = status ? { status } : {};
+  const res = await api.get('/api/forum/categories/requests', { params });
+  return res.data;
+};
+
+export const reviewCategoryRequest = async (requestId: number, action: 'approve' | 'reject', reviewComment?: string) => {
+  const params: any = { action };
+  if (reviewComment) {
+    params.review_comment = reviewComment;
+  }
+  const res = await api.put(`/api/forum/categories/requests/${requestId}/review`, null, { params });
+  return res.data;
+};
+
 // 帖子相关
 export const getForumPosts = async (params: {
   category_id?: number;

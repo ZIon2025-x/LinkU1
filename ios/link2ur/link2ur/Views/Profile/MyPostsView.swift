@@ -19,14 +19,28 @@ struct MyPostsView: View {
                     .padding(.top, AppSpacing.sm)
                     .padding(.bottom, AppSpacing.md)
                 
-                // 内容区域 - 直接根据selectedCategory显示，不使用TabView避免渲染问题
-                CategoryContentView(
-                    viewModel: viewModel,
-                    category: viewModel.selectedCategory,
-                    appState: appState
-                )
-                .id(viewModel.selectedCategory.rawValue) // 确保切换分类时视图更新
-                .animation(.easeInOut(duration: 0.2), value: viewModel.selectedCategory) // 优化动画性能
+                // 内容区域 - 使用TabView支持手势滑动
+                TabView(selection: Binding(
+                    get: { viewModel.selectedCategory.rawValue },
+                    set: { newValue in
+                        if let category = MyItemsCategory(rawValue: newValue) {
+                            // 使用触觉反馈
+                            HapticFeedback.selection()
+                            // 不使用动画，让TabView自然滑动
+                            viewModel.selectedCategory = category
+                        }
+                    }
+                )) {
+                    ForEach(MyItemsCategory.allCases, id: \.self) { category in
+                        CategoryContentView(
+                            viewModel: viewModel,
+                            category: category,
+                            appState: appState
+                        )
+                        .tag(category.rawValue)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 .onChange(of: viewModel.selectedCategory) { newCategory in
                     print("🔍 [MyPostsView] selectedCategory 变化: \(newCategory), 时间: \(Date())")
                 }

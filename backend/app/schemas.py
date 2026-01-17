@@ -2567,6 +2567,79 @@ class ForumCategoryUpdate(BaseModel):
     university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
 
 
+class ForumCategoryRequestCreate(BaseModel):
+    """申请新建板块"""
+    name: str = Field(..., min_length=1, max_length=100, description="板块名称")
+    description: Optional[str] = Field(None, max_length=500, description="板块描述（最多500字符）")
+    icon: Optional[str] = Field(None, max_length=200, description="板块图标（emoji或URL）")
+    type: str = Field("general", regex="^(general|root|university)$", description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    
+    @validator('name')
+    def validate_name(cls, v):
+        """验证板块名称：去除首尾空格，检查是否只包含空格"""
+        v = v.strip()
+        if not v:
+            raise ValueError('板块名称不能为空')
+        if len(v) < 1:
+            raise ValueError('板块名称至少需要1个字符')
+        if len(v) > 100:
+            raise ValueError('板块名称不能超过100个字符')
+        return v
+    
+    @validator('description')
+    def validate_description(cls, v):
+        """验证板块描述"""
+        if v is not None:
+            v = v.strip()
+            if len(v) > 500:
+                raise ValueError('板块描述不能超过500个字符')
+        return v
+    
+    @validator('icon')
+    def validate_icon(cls, v):
+        """验证图标：检查是否为emoji或有效URL"""
+        if v is not None:
+            v = v.strip()
+            if len(v) > 200:
+                raise ValueError('图标不能超过200个字符')
+            # 简单检查：如果是URL，应该以http://或https://开头
+            if v.startswith('http://') or v.startswith('https://'):
+                # URL验证可以在这里添加更严格的检查
+                pass
+            # 否则假设是emoji（可以添加更严格的emoji验证）
+        return v
+
+
+class ForumCategoryRequestOut(BaseModel):
+    """申请新建板块输出"""
+    id: int
+    requester_id: str
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    type: str
+    country: Optional[str] = None
+    university_code: Optional[str] = None
+    status: str
+    admin_id: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    review_comment: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumCategoryRequestResponse(BaseModel):
+    """申请新建板块响应"""
+    message: str
+    id: int
+    
+    class Config:
+        from_attributes = True
+
+
 class ForumCategoryOut(ForumCategoryBase):
     id: int
     post_count: int

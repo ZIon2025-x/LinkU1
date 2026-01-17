@@ -130,22 +130,17 @@ struct HomeView: View {
             // 点击空白区域关闭键盘
             .keyboardDismissable()
             .onReceive(resetNotification) { _ in
-                // 只重置到默认状态（推荐页面），不清空导航路径
-                // 这样用户可以从子页面返回到首页，导航栈保持可用
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedTab = 1
-                }
+                // 不重置 selectedTab，保持用户选择的标签页状态
+                // 只处理导航路径相关的重置（如果需要）
+                print("🔍 [HomeView] 收到重置通知，但保持 selectedTab 状态: \(selectedTab)")
             }
             .onChange(of: appState.shouldResetHomeView) { shouldReset in
                 print("🔍 [HomeView] shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
-                print("🔍 [HomeView] 当前 navigationPath.count: \(navigationPath.count)")
+                print("🔍 [HomeView] 当前 navigationPath.count: \(navigationPath.count), selectedTab: \(selectedTab)")
                 if shouldReset {
-                    print("🔍 [HomeView] ⚠️ 执行首页重置 - selectedTab: \(selectedTab) -> 1")
-                    // 只重置到默认状态（推荐页面），不清空导航路径
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedTab = 1
-                    }
-                    // 重置标志
+                    print("🔍 [HomeView] ⚠️ 执行首页重置，但保持 selectedTab 状态: \(selectedTab)")
+                    // 不重置 selectedTab，保持用户选择的标签页状态
+                    // 只重置标志
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         print("🔍 [HomeView] 重置 shouldResetHomeView 标志为 false")
                         appState.shouldResetHomeView = false

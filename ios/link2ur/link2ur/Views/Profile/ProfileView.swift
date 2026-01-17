@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var tasksViewModel = MyTasksViewModel()
     @State private var showLogoutAlert = false
     @State private var showLogin = false
     
@@ -118,9 +119,9 @@ struct ProfileView: View {
     
     private var statsSection: some View {
         HStack(spacing: 0) {
-            StatItem(label: "进行中", value: "\(appState.currentUser?.taskCount ?? 0)", color: AppColors.primary)
+            StatItem(label: "进行中", value: "\(tasksViewModel.inProgressTasksCount)", color: AppColors.primary)
             Divider().frame(height: 30)
-            StatItem(label: "已完成", value: "\(appState.currentUser?.completedTaskCount ?? 0)", color: AppColors.success)
+            StatItem(label: "已完成", value: "\(tasksViewModel.completedTasksCount)", color: AppColors.success)
             Divider().frame(height: 30)
             StatItem(
                 label: "信用分",
@@ -133,6 +134,20 @@ struct ProfileView: View {
         .cornerRadius(AppCornerRadius.large)
         .padding(.horizontal, AppSpacing.md)
         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .onAppear {
+            // 当视图出现时，加载任务数据以获取准确的统计
+            if let userId = appState.currentUser?.id {
+                tasksViewModel.currentUserId = String(userId)
+                tasksViewModel.loadTasks(forceRefresh: false)
+            }
+        }
+        .onChange(of: appState.currentUser?.id) { newUserId in
+            // 当用户ID变化时更新
+            if let userId = newUserId {
+                tasksViewModel.currentUserId = String(userId)
+                tasksViewModel.loadTasks(forceRefresh: false)
+            }
+        }
     }
     
     private var myContentSection: some View {
