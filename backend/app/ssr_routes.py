@@ -501,9 +501,10 @@ async def ssr_task_detail(
         
         page_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
         
-        # 获取奖励信息
-        reward = task.agreed_reward or task.base_reward or task.reward or 0
-        reward_text = f"£{reward}" if reward > 0 else "面议"
+        # 获取奖励信息（转换为 float 以便 JSON 序列化）
+        reward_decimal = task.agreed_reward or task.base_reward or task.reward or 0
+        reward = float(reward_decimal) if reward_decimal else 0
+        reward_text = f"£{reward:.2f}" if reward > 0 else "面议"
         
         # 构建完整的HTML内容
         body_content = f'''
