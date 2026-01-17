@@ -903,10 +903,9 @@ async def ssr_activity_detail(
         price = float(price_decimal) if price_decimal else 0
         price_text = f"£{price:.2f}" if price > 0 else "免费"
         
-        # 计算剩余人数
+        # 获取人数信息
         max_participants = activity.max_participants or 0
-        current_participants = activity.current_participants or 0
-        remaining_spots = max(0, max_participants - current_participants)
+        min_participants = activity.min_participants or 1
         
         # 构建分享信息
         title = f"{activity.title} - Link²Ur活动"
@@ -915,15 +914,15 @@ async def ssr_activity_detail(
         raw_description = activity.description or ""
         clean_activity_desc = re.sub(r'<[^>]+>', '', raw_description) if raw_description else ""
         
-        # 构建包含关键信息的分享描述（地点、金额、剩余人数 + 描述预览）
+        # 构建包含关键信息的分享描述（地点、金额、人数 + 描述预览）
         location_text = activity.location or "未指定"
         
-        # 分享描述格式：📍地点 | 💰金额 | 👥剩余名额 | 描述预览
+        # 分享描述格式：📍地点 | 💰金额 | 👥人数 | 描述预览
         share_desc_parts = []
         share_desc_parts.append(f"📍{location_text}")
         share_desc_parts.append(f"💰{price_text}/人")
         if max_participants > 0:
-            share_desc_parts.append(f"👥剩余{remaining_spots}名额")
+            share_desc_parts.append(f"👥{min_participants}-{max_participants}人")
         
         # 添加描述预览（限制长度，为其他信息留空间）
         if clean_activity_desc:
