@@ -527,7 +527,7 @@ async def get_leaderboards(
     location: Optional[str] = Query(None, description="地区筛选"),
     status: Optional[str] = Query("active", description="状态筛选：active（公开接口仅支持active）"),
     keyword: Optional[str] = Query(None, description="关键词搜索（榜单名称、描述）"),
-    sort: str = Query("latest", regex="^(latest|hot|votes|items)$", description="排序方式：latest(最新), hot(热门), votes(投票数), items(竞品数)"),
+    sort: str = Query("latest", pattern="^(latest|hot|votes|items)$", description="排序方式：latest(最新), hot(热门), votes(投票数), items(竞品数)"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -749,7 +749,7 @@ async def get_leaderboard_detail(
 @router.post("/{leaderboard_id}/review")
 async def review_leaderboard(
     leaderboard_id: int,
-    action: str = Query(..., regex="^(approve|reject)$"),
+    action: str = Query(..., pattern="^(approve|reject)$"),
     comment: Optional[str] = None,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -1035,7 +1035,7 @@ async def submit_item(
 @router.get("/{leaderboard_id}/items", response_model=schemas.LeaderboardItemListResponse)
 async def get_leaderboard_items(
     leaderboard_id: int,
-    sort: str = Query("vote_score", regex="^(vote_score|net_votes|upvotes|created_at)$"),
+    sort: str = Query("vote_score", pattern="^(vote_score|net_votes|upvotes|created_at)$"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
@@ -1423,7 +1423,7 @@ async def get_item_votes(
 @rate_limit("api_write", limit=30, window=60)  # 30次/分钟
 async def vote_item(
     item_id: int,
-    vote_type: str = Query(..., regex="^(upvote|downvote|remove)$"),
+    vote_type: str = Query(..., pattern="^(upvote|downvote|remove)$"),
     comment: Optional[str] = Query(None, max_length=500, description="投票留言（可选，最多500字）"),
     is_anonymous: bool = Query(False, description="是否匿名投票/留言"),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -1912,7 +1912,7 @@ async def report_item(
 
 @router.get("/admin/reports")
 async def get_reports_admin(
-    report_type: str = Query(..., regex="^(leaderboard|item)$", description="举报类型：leaderboard(榜单), item(竞品)"),
+    report_type: str = Query(..., pattern="^(leaderboard|item)$", description="举报类型：leaderboard(榜单), item(竞品)"),
     status: Optional[str] = Query("all", description="状态筛选：pending, reviewed, dismissed, all"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -2013,8 +2013,8 @@ async def get_reports_admin(
 @router.post("/admin/reports/{report_id}/review")
 async def review_report(
     report_id: int,
-    report_type: str = Query(..., regex="^(leaderboard|item)$", description="举报类型"),
-    action: str = Query(..., regex="^(reviewed|dismissed)$", description="处理动作：reviewed(已处理), dismissed(已驳回)"),
+    report_type: str = Query(..., pattern="^(leaderboard|item)$", description="举报类型"),
+    action: str = Query(..., pattern="^(reviewed|dismissed)$", description="处理动作：reviewed(已处理), dismissed(已驳回)"),
     admin_comment: Optional[str] = None,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),

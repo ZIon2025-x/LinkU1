@@ -2572,7 +2572,7 @@ class ForumCategoryRequestCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="板块名称")
     description: Optional[str] = Field(None, max_length=500, description="板块描述（最多500字符）")
     icon: Optional[str] = Field(None, max_length=200, description="板块图标（emoji或URL）")
-    type: str = Field("general", regex="^(general|root|university)$", description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    type: str = Field("general", pattern="^(general|root|university)$", description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
     
     @validator('name')
     def validate_name(cls, v):
@@ -2614,6 +2614,8 @@ class ForumCategoryRequestOut(BaseModel):
     """申请新建板块输出"""
     id: int
     requester_id: str
+    requester_name: Optional[str] = None  # 申请人姓名
+    requester_avatar: Optional[str] = None  # 申请人头像
     name: str
     description: Optional[str] = None
     icon: Optional[str] = None
@@ -2622,6 +2624,7 @@ class ForumCategoryRequestOut(BaseModel):
     university_code: Optional[str] = None
     status: str
     admin_id: Optional[str] = None
+    admin_name: Optional[str] = None  # 审核管理员姓名
     reviewed_at: Optional[datetime.datetime] = None
     review_comment: Optional[str] = None
     created_at: datetime.datetime

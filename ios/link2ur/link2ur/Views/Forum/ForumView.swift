@@ -8,6 +8,7 @@ struct ForumView: View {
     @State private var showLogin = false
     @State private var showVerification = false
     @State private var showCategoryRequest = false
+    @State private var showMyCategoryRequests = false
     
     // 检查用户是否已登录且已通过学生认证
     private var isStudentVerified: Bool {
@@ -131,6 +132,9 @@ struct ForumView: View {
         .sheet(isPresented: $showCategoryRequest) {
             ForumCategoryRequestView()
         }
+        .sheet(isPresented: $showMyCategoryRequests) {
+            MyCategoryRequestsView()
+        }
         .onChange(of: showVerification) { isShowing in
             // 当认证页面关闭时，重新加载认证状态
             if !isShowing && appState.isAuthenticated {
@@ -139,16 +143,30 @@ struct ForumView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    if !appState.isAuthenticated {
-                        showLogin = true
-                    } else {
-                        showCategoryRequest = true
+                HStack(spacing: 12) {
+                    // 查看我的申请按钮
+                    if appState.isAuthenticated {
+                        Button(action: {
+                            showMyCategoryRequests = true
+                        }) {
+                            Image(systemName: "list.bullet.rectangle")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(AppColors.primary)
+                        }
                     }
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(AppColors.primary)
+                    
+                    // 申请新建板块按钮
+                    Button(action: {
+                        if !appState.isAuthenticated {
+                            showLogin = true
+                        } else {
+                            showCategoryRequest = true
+                        }
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(AppColors.primary)
+                    }
                 }
             }
         }
@@ -818,4 +836,231 @@ struct ForumCategoryRequestView: View {
     }
     
     private var cancellables = Set<AnyCancellable>()
+}
+
+
+// MARK: - 我的板块申请视图
+
+struct MyCategoryRequestsView: View {
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
+    @StateObject private var apiService = APIService.shared
+    
+    @State private var requests: [ForumCategoryRequestDetail] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var selectedStatus: String? = nil
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    var filteredRequests: [ForumCategoryRequestDetail] {
+        if let status = selectedStatus {
+            return requests.filter { $0.status == status }
+        }
+        return requests
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // 状态筛选器
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: AppSpacing.sm) {
+                            StatusFilterButton(title: "全部", status: nil, selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: "待审核", status: "pending", selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: "已通过", status: "approved", selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: "已拒绝", status: "rejected", selectedStatus: $selectedStatus)
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                    }
+                    .background(AppColors.cardBackground)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 2)
+                    
+                    if isLoading && requests.isEmpty {
+                        ProgressView()
+                            .padding()
+                    } else if let errorMessage = errorMessage {
+                        VStack(spacing: AppSpacing.md) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(AppColors.error)
+                            Text(errorMessage)
+                                .font(.system(size: 16))
+                                .foregroundColor(AppColors.textSecondary)
+                                .multilineTextAlignment(.center)
+                            Button("重试") {
+                                loadRequests()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
+                    } else if filteredRequests.isEmpty {
+                        EmptyStateView(
+                            icon: "tray.fill",
+                            title: "暂无申请",
+                            message: selectedStatus == nil ? "您还没有提交过板块申请。" : "没有找到相关状态的申请。"
+                        )
+                    } else {
+                        List {
+                            ForEach(filteredRequests) { request in
+                                CategoryRequestCard(request: request)
+                                    .listRowBackground(AppColors.cardBackground)
+                                    .listRowSeparator(.hidden)
+                                    .padding(.vertical, AppSpacing.xs)
+                            }
+                        }
+                        .listStyle(.plain)
+                        .refreshable {
+                            loadRequests()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("我的申请")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                loadRequests()
+            }
+        }
+    }
+    
+    private func loadRequests() {
+        isLoading = true
+        errorMessage = nil
+        
+        apiService.getMyCategoryRequests()
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                self.isLoading = false
+                if case .failure(let error) = completion {
+                    self.errorMessage = error.userFriendlyMessage
+                }
+            } receiveValue: { requests in
+                self.requests = requests
+            }
+            .store(in: &cancellables)
+    }
+}
+
+struct StatusFilterButton: View {
+    let title: String
+    let status: String?
+    @Binding var selectedStatus: String?
+    
+    var isSelected: Bool {
+        selectedStatus == status
+    }
+    
+    var body: some View {
+        Button(action: {
+            selectedStatus = status
+        }) {
+            Text(title)
+                .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+                .foregroundColor(isSelected ? .white : AppColors.textPrimary)
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.sm)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? AppColors.primary : AppColors.background)
+                )
+        }
+    }
+}
+
+struct CategoryRequestCard: View {
+    let request: ForumCategoryRequestDetail
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                // Icon
+                if let icon = request.icon, !icon.isEmpty {
+                    Text(icon)
+                        .font(.system(size: 28))
+                        .frame(width: 48, height: 48)
+                        .background(AppColors.primary.opacity(0.1))
+                        .cornerRadius(AppCornerRadius.medium)
+                } else {
+                    Image(systemName: "text.bubble.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppColors.textSecondary)
+                        .frame(width: 48, height: 48)
+                        .background(AppColors.separator.opacity(0.2))
+                        .cornerRadius(AppCornerRadius.medium)
+                }
+                
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Text(request.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    if let description = request.description, !description.isEmpty {
+                        Text(description)
+                            .font(.system(size: 13))
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(2)
+                    }
+                }
+                
+                Spacer()
+                
+                Text(request.statusText)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(request.statusColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(request.statusColor.opacity(0.1))
+                    .cornerRadius(AppCornerRadius.small)
+            }
+            
+            if request.status != "pending" {
+                if let reviewComment = request.reviewComment, !reviewComment.isEmpty {
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        Text("审核意见")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(AppColors.textSecondary)
+                        Text(reviewComment)
+                            .font(.system(size: 13))
+                            .foregroundColor(AppColors.textPrimary)
+                            .padding(AppSpacing.sm)
+                            .background(AppColors.background)
+                            .cornerRadius(AppCornerRadius.small)
+                    }
+                }
+                
+                if let reviewedAt = request.reviewedAt {
+                    HStack {
+                        Text("审核时间: \(reviewedAt.formatDate())")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textTertiary)
+                        Spacer()
+                    }
+                }
+            } else {
+                HStack {
+                    Text("申请时间: \(request.createdAt.formatDate())")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textTertiary)
+                    Spacer()
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
 }

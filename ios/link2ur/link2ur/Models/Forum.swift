@@ -385,6 +385,8 @@ struct ForumCategoryRequestResponse: Codable {
 struct ForumCategoryRequestDetail: Codable, Identifiable {
     let id: Int
     let requesterId: String
+    let requesterName: String?
+    let requesterAvatar: String?
     let name: String
     let description: String?
     let icon: String?
@@ -393,6 +395,7 @@ struct ForumCategoryRequestDetail: Codable, Identifiable {
     let universityCode: String?
     let status: String
     let adminId: String?
+    let adminName: String?
     let reviewedAt: String?
     let reviewComment: String?
     let createdAt: String
@@ -401,8 +404,11 @@ struct ForumCategoryRequestDetail: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, name, description, icon, type, country, status
         case requesterId = "requester_id"
+        case requesterName = "requester_name"
+        case requesterAvatar = "requester_avatar"
         case universityCode = "university_code"
         case adminId = "admin_id"
+        case adminName = "admin_name"
         case reviewedAt = "reviewed_at"
         case reviewComment = "review_comment"
         case createdAt = "created_at"
@@ -415,6 +421,15 @@ struct ForumCategoryRequestDetail: Codable, Identifiable {
         case "approved": return "已通过"
         case "rejected": return "已拒绝"
         default: return status
+        }
+    }
+    
+    var statusColor: Color {
+        switch status {
+        case "pending": return .orange
+        case "approved": return .green
+        case "rejected": return .red
+        default: return .gray
         }
     }
 }

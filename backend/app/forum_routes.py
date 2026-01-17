@@ -1924,7 +1924,12 @@ async def request_new_category(
 
 @router.get("/categories/requests", response_model=List[schemas.ForumCategoryRequestOut])
 async def get_category_requests(
-    status: Optional[str] = Query(None, regex="^(pending|approved|rejected)$"),
+    status: Optional[str] = Query(None, pattern="^(pending|approved|rejected)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None, description="搜索板块名称或申请人"),
+    sort_by: Optional[str] = Query("created_at", pattern="^(created_at|reviewed_at|status)$"),
+    sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1934,37 +1939,125 @@ async def get_category_requests(
         selectinload(models.ForumCategoryRequest.admin)
     )
     
+    # 状态筛选
+    if status:
+        query = query.where(models.ForumCategoryRequest.status == status)
+    
+    # 搜索功能
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                models.ForumCategoryRequest.name.ilike(search_term),
+                models.ForumCategoryRequest.requester_id.ilike(search_term)
+            )
+        )
+    
+    # 排序
+    if sort_by == "reviewed_at":
+        order_col = models.ForumCategoryRequest.reviewed_at
+    elif sort_by == "status":
+        order_col = models.ForumCategoryRequest.status
+    else:
+        order_col = models.ForumCategoryRequest.created_at
+    
+    if sort_order == "asc":
+        query = query.order_by(asc(order_col))
+    else:
+        query = query.order_by(desc(order_col))
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    requests = result.scalars().all()
+    
+    # 构建响应，包含申请人和管理员信息
+    response = []
+    for req in requests:
+        request_dict = {
+            "id": req.id,
+            "requester_id": req.requester_id,
+            "requester_name": req.requester.name if req.requester else None,
+            "requester_avatar": req.requester.avatar if req.requester else None,
+            "name": req.name,
+            "description": req.description,
+            "icon": req.icon,
+            "type": req.type,
+            "country": req.country,
+            "university_code": req.university_code,
+            "status": req.status,
+            "admin_id": req.admin_id,
+            "admin_name": req.admin.name if req.admin else None,
+            "reviewed_at": req.reviewed_at,
+            "review_comment": req.review_comment,
+            "created_at": req.created_at,
+            "updated_at": req.updated_at
+        }
+        response.append(schemas.ForumCategoryRequestOut(**request_dict))
+    
+    return response
+
+
+@router.get("/categories/requests/my", response_model=List[schemas.ForumCategoryRequestOut])
+async def get_my_category_requests(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None, pattern="^(pending|approved|rejected)$"),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的板块申请列表（普通用户）"""
+    query = select(models.ForumCategoryRequest).options(
+        selectinload(models.ForumCategoryRequest.requester),
+        selectinload(models.ForumCategoryRequest.admin)
+    ).where(models.ForumCategoryRequest.requester_id == current_user.id)
+    
+    # 状态筛选
     if status:
         query = query.where(models.ForumCategoryRequest.status == status)
     
     query = query.order_by(desc(models.ForumCategoryRequest.created_at))
     
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
     result = await db.execute(query)
     requests = result.scalars().all()
     
-    return requests
-
-
-@router.get("/categories/requests/my", response_model=List[schemas.ForumCategoryRequestOut])
-async def get_my_category_requests(
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取我的板块申请列表（普通用户）"""
-    result = await db.execute(
-        select(models.ForumCategoryRequest)
-        .where(models.ForumCategoryRequest.requester_id == current_user.id)
-        .order_by(desc(models.ForumCategoryRequest.created_at))
-    )
-    requests = result.scalars().all()
+    # 构建响应
+    response = []
+    for req in requests:
+        request_dict = {
+            "id": req.id,
+            "requester_id": req.requester_id,
+            "requester_name": req.requester.name if req.requester else None,
+            "requester_avatar": req.requester.avatar if req.requester else None,
+            "name": req.name,
+            "description": req.description,
+            "icon": req.icon,
+            "type": req.type,
+            "country": req.country,
+            "university_code": req.university_code,
+            "status": req.status,
+            "admin_id": req.admin_id,
+            "admin_name": req.admin.name if req.admin else None,
+            "reviewed_at": req.reviewed_at,
+            "review_comment": req.review_comment,
+            "created_at": req.created_at,
+            "updated_at": req.updated_at
+        }
+        response.append(schemas.ForumCategoryRequestOut(**request_dict))
     
-    return requests
+    return response
 
 
 @router.put("/categories/requests/{request_id}/review")
 async def review_category_request(
     request_id: int,
-    action: str = Query(..., regex="^(approve|reject)$"),
+    action: str = Query(..., pattern="^(approve|reject)$"),
     review_comment: Optional[str] = None,
     request: Request = None,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
@@ -2070,6 +2163,69 @@ async def review_category_request(
     try:
         await db.commit()
         await db.refresh(category_request)
+        
+        # 发送通知给申请人
+        try:
+            from app.models import Notification
+            from app.utils.time_utils import get_utc_time
+            
+            if action == "approve":
+                # 创建站内通知
+                notification = Notification(
+                    user_id=category_request.requester_id,
+                    type="forum_category_approved",
+                    title="板块申请已通过",
+                    content=f"您申请的板块「{category_request.name}」已通过审核，板块已创建。",
+                    related_id=str(category_request.id)
+                )
+                db.add(notification)
+                
+                # 发送推送通知
+                try:
+                    send_push_notification_async_safe(
+                        async_db=db,
+                        user_id=category_request.requester_id,
+                        title="板块申请已通过",
+                        body=f"您申请的板块「{category_request.name}」已通过审核",
+                        notification_type="forum_category_approved",
+                        data={
+                            "request_id": request_id,
+                            "category_name": category_request.name
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"发送板块申请通过推送通知失败: {e}")
+            else:
+                # 创建站内通知
+                notification = Notification(
+                    user_id=category_request.requester_id,
+                    type="forum_category_rejected",
+                    title="板块申请已拒绝",
+                    content=f"您申请的板块「{category_request.name}」已被拒绝。{review_comment or '无审核意见'}",
+                    related_id=str(category_request.id)
+                )
+                db.add(notification)
+                
+                # 发送推送通知
+                try:
+                    send_push_notification_async_safe(
+                        async_db=db,
+                        user_id=category_request.requester_id,
+                        title="板块申请已拒绝",
+                        body=f"您申请的板块「{category_request.name}」已被拒绝",
+                        notification_type="forum_category_rejected",
+                        data={
+                            "request_id": request_id,
+                            "category_name": category_request.name
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"发送板块申请拒绝推送通知失败: {e}")
+            
+            await db.commit()
+        except Exception as e:
+            logger.error(f"发送板块申请审核通知失败: {str(e)}", exc_info=True)
+            # 通知失败不影响主流程
         
         logger.info(
             f"管理员 {current_admin.id} 审核板块申请完成: "
@@ -2266,7 +2422,7 @@ async def get_posts(
     category_id: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    sort: str = Query("last_reply", regex="^(latest|last_reply|hot|replies|likes)$"),
+    sort: str = Query("last_reply", pattern="^(latest|last_reply|hot|replies|likes)$"),
     q: Optional[str] = Query(None),
     is_deleted: Optional[bool] = Query(None, description="是否已删除（管理员筛选）"),
     is_visible: Optional[bool] = Query(None, description="是否可见（管理员筛选）"),
@@ -4565,7 +4721,7 @@ async def create_report(
 
 @router.get("/reports", response_model=schemas.ForumReportListResponse)
 async def get_reports(
-    status_filter: Optional[str] = Query(None, regex="^(pending|processed|rejected)$"),
+    status_filter: Optional[str] = Query(None, pattern="^(pending|processed|rejected)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_admin: models.AdminUser = Depends(get_current_admin_async),
@@ -5269,7 +5425,7 @@ async def get_my_favorites(
 
 @router.get("/my/likes")
 async def get_my_likes(
-    target_type: Optional[str] = Query(None, regex="^(post|reply)$"),
+    target_type: Optional[str] = Query(None, pattern="^(post|reply)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
@@ -6032,7 +6188,7 @@ async def get_user_hot_posts(
 
 @router.get("/leaderboard/posts")
 async def get_top_posts_leaderboard(
-    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    period: str = Query("all", pattern="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -6099,7 +6255,7 @@ async def get_top_posts_leaderboard(
 
 @router.get("/leaderboard/favorites")
 async def get_top_favorites_leaderboard(
-    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    period: str = Query("all", pattern="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -6167,7 +6323,7 @@ async def get_top_favorites_leaderboard(
 
 @router.get("/leaderboard/likes")
 async def get_top_likes_leaderboard(
-    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    period: str = Query("all", pattern="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):

@@ -1147,7 +1147,7 @@ def get_task_detail(
 def get_recommendations(
     current_user=Depends(get_current_user_secure_sync_csrf),
     limit: int = Query(20, ge=1, le=50),
-    algorithm: str = Query("hybrid", regex="^(content_based|collaborative|hybrid)$"),
+    algorithm: str = Query("hybrid", pattern="^(content_based|collaborative|hybrid)$"),
     task_type: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
@@ -1243,7 +1243,7 @@ def get_task_match_score(
 @router.post("/tasks/{task_id}/interaction")
 def record_task_interaction(
     task_id: int,
-    interaction_type: str = Body(..., regex="^(view|click|apply|skip)$"),
+    interaction_type: str = Body(..., pattern="^(view|click|apply|skip)$"),
     duration_seconds: Optional[int] = Body(None),
     device_type: Optional[str] = Body(None),
     is_recommended: Optional[bool] = Body(None),
@@ -1438,7 +1438,7 @@ def get_recommendation_optimization(
 @router.post("/recommendations/{task_id}/feedback")
 def submit_recommendation_feedback(
     task_id: int,
-    feedback_type: str = Body(..., regex="^(like|dislike|not_interested|helpful)$"),
+    feedback_type: str = Body(..., pattern="^(like|dislike|not_interested|helpful)$"),
     recommendation_id: Optional[str] = Body(None),
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),

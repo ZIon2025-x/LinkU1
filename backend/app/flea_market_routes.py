@@ -2345,7 +2345,7 @@ async def report_item(
 
 @flea_market_router.get("/admin/reports", response_model=dict)
 async def get_flea_market_reports(
-    status_filter: Optional[str] = Query(None, regex="^(pending|reviewing|resolved|rejected)$"),
+    status_filter: Optional[str] = Query(None, pattern="^(pending|reviewing|resolved|rejected)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_admin: models.AdminUser = Depends(get_current_admin_async),

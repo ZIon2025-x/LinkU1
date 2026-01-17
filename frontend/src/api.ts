@@ -2585,8 +2585,17 @@ export const deleteForumCategory = async (categoryId: number) => {
 };
 
 // 板块申请管理（管理员）
-export const getCategoryRequests = async (status?: 'pending' | 'approved' | 'rejected') => {
-  const params = status ? { status } : {};
+export const getCategoryRequests = async (
+  status?: 'pending' | 'approved' | 'rejected',
+  page: number = 1,
+  pageSize: number = 20,
+  search?: string,
+  sortBy: string = 'created_at',
+  sortOrder: 'asc' | 'desc' = 'desc'
+) => {
+  const params: any = { page, page_size: pageSize, sort_by: sortBy, sort_order: sortOrder };
+  if (status) params.status = status;
+  if (search) params.search = search;
   const res = await api.get('/api/forum/categories/requests', { params });
   return res.data;
 };
@@ -2597,6 +2606,18 @@ export const reviewCategoryRequest = async (requestId: number, action: 'approve'
     params.review_comment = reviewComment;
   }
   const res = await api.put(`/api/forum/categories/requests/${requestId}/review`, null, { params });
+  return res.data;
+};
+
+// 获取我的板块申请列表（普通用户）
+export const getMyCategoryRequests = async (
+  page: number = 1,
+  pageSize: number = 20,
+  status?: 'pending' | 'approved' | 'rejected'
+) => {
+  const params: any = { page, page_size: pageSize };
+  if (status) params.status = status;
+  const res = await api.get('/api/forum/categories/requests/my', { params });
   return res.data;
 };
 
