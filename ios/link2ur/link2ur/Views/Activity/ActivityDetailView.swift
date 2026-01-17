@@ -146,7 +146,8 @@ struct ActivityDetailView: View {
             ActivityApplyView(activityId: activityId, viewModel: viewModel)
         }
         .sheet(isPresented: $showShareSheet) {
-            if let activity = viewModel.selectedActivity {
+            if let activity = viewModel.selectedActivity, !activity.title.isEmpty {
+                // 确保活动数据完整后再显示分享视图
                 ActivityShareSheet(
                     activity: activity,
                     activityId: activityId,
@@ -161,6 +162,16 @@ struct ActivityDetailView: View {
                         loadShareImage()
                     }
                 }
+            } else {
+                // 如果活动数据未就绪，显示加载状态
+                VStack(spacing: AppSpacing.lg) {
+                    CompactLoadingView()
+                    Text(LocalizationKey.commonLoading.localized)
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .presentationDetents([.medium])
             }
         }
         .sheet(isPresented: $showLogin) {
@@ -913,6 +924,10 @@ struct ActivityShareSheet: View {
     let isShareImageLoading: Bool
     @Environment(\.dismiss) var dismiss
     
+    // 使用 @State 确保标题和描述在视图更新时正确传递
+    @State private var shareTitle: String = ""
+    @State private var shareDescription: String = ""
+    
     // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签（weixin:title, weixin:description, weixin:image）
     // 前端页面已经设置了这些标签，微信会直接抓取
     private var shareUrl: URL {
@@ -926,6 +941,16 @@ struct ActivityShareSheet: View {
         }
         // 如果URL构建失败，返回默认URL
         return URL(string: "https://www.link2ur.com")!
+    }
+    
+    // 计算属性：确保标题始终是最新的
+    private var currentTitle: String {
+        return shareTitle.isEmpty ? getShareTitle(for: activity) : shareTitle
+    }
+    
+    // 计算属性：确保描述始终是最新的
+    private var currentDescription: String {
+        return shareDescription.isEmpty ? getShareDescription(for: activity) : shareDescription
     }
     
     var body: some View {
@@ -981,15 +1006,15 @@ struct ActivityShareSheet: View {
                 // 标题和描述
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     TranslatableText(
-                        activity.title,
+                        currentTitle,
                         font: AppTypography.bodyBold,
                         foregroundColor: AppColors.textPrimary,
                         lineLimit: 2
                     )
                     
-                    if !activity.description.isEmpty {
+                    if !currentDescription.isEmpty {
                         TranslatableText(
-                            activity.description,
+                            currentDescription,
                             font: AppTypography.caption,
                             foregroundColor: AppColors.textSecondary,
                             lineLimit: 2
@@ -1012,13 +1037,9 @@ struct ActivityShareSheet: View {
             .padding(.horizontal, AppSpacing.md)
             
             // 自定义分享面板（类似小红书）
-            // 确保使用正确的activity数据
-            let shareTitle = getShareTitle(for: activity)
-            let shareDescription = getShareDescription(for: activity)
-            
             CustomSharePanel(
-                title: shareTitle,
-                description: shareDescription,
+                title: currentTitle,
+                description: currentDescription,
                 url: shareUrl,
                 image: shareImage,
                 taskType: nil,
@@ -1031,13 +1052,24 @@ struct ActivityShareSheet: View {
                     dismiss()
                 }
             )
-            .onAppear {
-                // 调试日志
-                Logger.debug("分享活动 - ID: \(activity.id), Title: \(shareTitle), Description: \(shareDescription.prefix(50))...", category: .ui)
-            }
             .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
+        .onAppear {
+            // 确保在视图出现时更新标题和描述
+            shareTitle = getShareTitle(for: activity)
+            shareDescription = getShareDescription(for: activity)
+            // 调试日志
+            Logger.debug("分享活动 - ID: \(activity.id), Title: \(shareTitle), Description: \(shareDescription.prefix(50))...", category: .ui)
+        }
+        .onChange(of: activity.title) { newTitle in
+            // 当活动标题更新时，同步更新分享标题
+            shareTitle = getShareTitle(for: activity)
+        }
+        .onChange(of: activity.description) { newDescription in
+            // 当活动描述更新时，同步更新分享描述
+            shareDescription = getShareDescription(for: activity)
+        }
     }
     
     /// 获取分享标题（如果title是默认值，使用其他信息构建）

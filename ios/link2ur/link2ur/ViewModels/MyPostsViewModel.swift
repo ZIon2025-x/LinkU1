@@ -47,6 +47,7 @@ enum MyItemsCategory: Int, CaseIterable, Hashable {
 
 class MyPostsViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
+    private let cacheManager = CacheManager.shared
     
     // 各分类的数据
     @Published var sellingItems: [FleaMarketItem] = []
@@ -69,6 +70,16 @@ class MyPostsViewModel: ObservableObject {
     private var hasLoadedOnce = false
     private var lastLoadTime: Date?
     private let minLoadInterval: TimeInterval = 5 // 最小加载间隔（秒）
+    
+    // 缓存键
+    private func cacheKey(for category: MyItemsCategory, userId: String) -> String {
+        switch category {
+        case .selling: return "my_items_selling_\(userId)"
+        case .purchased: return "my_items_purchased"
+        case .favorites: return "my_items_favorites"
+        case .sold: return "my_items_sold_\(userId)"
+        }
+    }
     
     // 兼容旧代码
     var items: [FleaMarketItem] {
@@ -95,6 +106,38 @@ class MyPostsViewModel: ObservableObject {
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    /// 从缓存加载所有分类的数据（供 View 调用，优先内存缓存，快速响应）
+    func loadAllCategoriesFromCache(userId: String) {
+        // 先快速检查内存缓存（同步，很快）
+        if let cached: [FleaMarketItem] = cacheManager.load([FleaMarketItem].self, forKey: cacheKey(for: .selling, userId: userId)) {
+            if !cached.isEmpty {
+                self.sellingItems = cached
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条在售商品", category: .cache)
+            }
+        }
+        
+        if let cached: [FleaMarketItem] = cacheManager.load([FleaMarketItem].self, forKey: cacheKey(for: .purchased, userId: userId)) {
+            if !cached.isEmpty {
+                self.purchasedItems = cached
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条购买记录", category: .cache)
+            }
+        }
+        
+        if let cached: [FleaMarketItem] = cacheManager.load([FleaMarketItem].self, forKey: cacheKey(for: .favorites, userId: userId)) {
+            if !cached.isEmpty {
+                self.favoriteItems = cached
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条收藏商品", category: .cache)
+            }
+        }
+        
+        if let cached: [FleaMarketItem] = cacheManager.load([FleaMarketItem].self, forKey: cacheKey(for: .sold, userId: userId)) {
+            if !cached.isEmpty {
+                self.soldItems = cached
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条已售商品", category: .cache)
+            }
+        }
     }
     
     deinit {
@@ -153,7 +196,11 @@ class MyPostsViewModel: ObservableObject {
                 guard let self = self else { return }
                 // 优化：在主线程更新UI，但数据处理在后台线程
                 DispatchQueue.main.async { [weak self] in
-                    self?.sellingItems = response.items
+                    guard let self = self else { return }
+                    self.sellingItems = response.items
+                    // 保存到缓存
+                    self.cacheManager.save(response.items, forKey: self.cacheKey(for: .selling, userId: userId))
+                    Logger.debug("✅ 已缓存 \(response.items.count) 条在售商品", category: .cache)
                 }
             })
             .store(in: &cancellables)
@@ -189,7 +236,11 @@ class MyPostsViewModel: ObservableObject {
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
                 DispatchQueue.main.async { [weak self] in
-                    self?.purchasedItems = response.items
+                    guard let self = self else { return }
+                    self.purchasedItems = response.items
+                    // 保存到缓存
+                    self.cacheManager.save(response.items, forKey: self.cacheKey(for: .purchased, userId: ""))
+                    Logger.debug("✅ 已缓存 \(response.items.count) 条购买记录", category: .cache)
                 }
             })
             .store(in: &cancellables)
@@ -225,7 +276,11 @@ class MyPostsViewModel: ObservableObject {
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
                 DispatchQueue.main.async { [weak self] in
-                    self?.favoriteItems = response.items
+                    guard let self = self else { return }
+                    self.favoriteItems = response.items
+                    // 保存到缓存
+                    self.cacheManager.save(response.items, forKey: self.cacheKey(for: .favorites, userId: ""))
+                    Logger.debug("✅ 已缓存 \(response.items.count) 条收藏商品", category: .cache)
                 }
             })
             .store(in: &cancellables)
@@ -261,7 +316,11 @@ class MyPostsViewModel: ObservableObject {
                 guard let self = self else { return }
                 // 优化：在主线程更新UI
                 DispatchQueue.main.async { [weak self] in
-                    self?.soldItems = response.items
+                    guard let self = self else { return }
+                    self.soldItems = response.items
+                    // 保存到缓存
+                    self.cacheManager.save(response.items, forKey: self.cacheKey(for: .sold, userId: userId))
+                    Logger.debug("✅ 已缓存 \(response.items.count) 条已售商品", category: .cache)
                 }
             })
             .store(in: &cancellables)

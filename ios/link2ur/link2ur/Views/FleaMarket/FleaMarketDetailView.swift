@@ -720,7 +720,7 @@ struct PurchaseSheet: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            KeyboardAvoidingScrollView(extraPadding: 20) {
                 VStack(spacing: 24) {
                     // 商品预览卡片
                     HStack(spacing: 16) {

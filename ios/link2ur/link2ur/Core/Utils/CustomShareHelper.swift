@@ -233,8 +233,8 @@ public class CustomShareHelper {
         DispatchQueue.global(qos: .userInitiated).async {
             var shareItems: [Any] = []
             
-            // 1. 使用自定义的 UIActivityItemSource 提供正确的标题和描述
-            // 这样微信等应用可以从 LPLinkMetadata 获取正确的标题和描述
+            // 重要：ShareItemSource 必须放在第一位，确保微信等应用优先读取它
+            // 微信会按照数组索引顺序尝试读取分享项，第一个 UIActivityItemSource 会被优先使用
             let shareItem = ShareItemSource(
                 url: url,
                 title: title,
@@ -243,14 +243,10 @@ public class CustomShareHelper {
             )
             shareItems.append(shareItem)
             
-            // 2. URL（作为后备，某些应用可能需要直接URL）
-            shareItems.append(url)
+            // 注意：不要添加额外的 URL 或文本项，因为 ShareItemSource 已经处理了所有情况
+            // 添加多个 URL 会导致微信读取错误的项（可能是第二个 URL 而不是 ShareItemSource）
             
-            // 3. 文本（作为后备，用于复制链接等）
-            let shareText = "\(title)\n\n\(description)\n\n\(url.absoluteString)"
-            shareItems.append(shareText)
-            
-            // 4. 图片（压缩后添加）- 在后台线程压缩
+            // 只在有图片时添加图片项（作为独立项，用于某些需要直接图片的应用）
             if let image = image {
                 let compressedImage = compressImageForSharing(image, maxWidth: 800)
                 shareItems.append(compressedImage)
@@ -472,28 +468,38 @@ public class CustomShareHelper {
     // MARK: - 系统分享面板
     
     private static func shareWithSystemSheet(title: String, description: String, url: URL, image: UIImage?) {
-        // 优化：优先使用URL，系统会自动抓取网页的meta标签
-        // 这样可以避免处理大图片导致的延迟
-        var shareItems: [Any] = []
+        // 添加调试日志
+        Logger.debug("系统分享面板 - Title: \(title), Description: \(String(description.prefix(50)))...", category: .ui)
         
-        // 1. URL（最重要，系统会异步加载预览）
-        shareItems.append(url)
-        
-        // 2. 文本（作为后备，如果URL无法访问时使用）
-        let shareText = "\(title)\n\n\(description)\n\n\(url.absoluteString)"
-        shareItems.append(shareText)
-        
-        // 3. 图片（可选，如果图片太大可能会影响性能）
-        // 优化：压缩图片以减少处理时间
-        if let image = image {
-            // 压缩图片到合理大小（最大宽度800px）
-            let compressedImage = compressImageForSharing(image, maxWidth: 800)
-            shareItems.append(compressedImage)
-        }
-        
-        // 异步显示分享面板，避免阻塞主线程
-        DispatchQueue.main.async {
-            ShareHelper.presentShareSheet(items: shareItems)
+        // 优化：在后台线程准备分享项，避免阻塞主线程
+        DispatchQueue.global(qos: .userInitiated).async {
+            var shareItems: [Any] = []
+            
+            // 重要：ShareItemSource 必须放在第一位，确保微信等应用优先读取它
+            // 微信会按照数组索引顺序尝试读取分享项，第一个 UIActivityItemSource 会被优先使用
+            // ShareItemSource 会正确处理微信分享，返回 URL 让微信从网页抓取 meta 标签
+            let shareItem = ShareItemSource(
+                url: url,
+                title: title,
+                description: description,
+                image: image
+            )
+            shareItems.append(shareItem)
+            
+            // 注意：不要添加额外的 URL 或文本项，因为 ShareItemSource 已经处理了所有情况
+            // 添加多个 URL 会导致微信读取错误的项（可能是第二个 URL 而不是 ShareItemSource）
+            // 微信会从 ShareItemSource 返回的 URL 抓取网页的 meta 标签（weixin:title, weixin:description 等）
+            
+            // 只在有图片时添加图片项（作为独立项，用于某些需要直接图片的应用）
+            if let image = image {
+                let compressedImage = compressImageForSharing(image, maxWidth: 800)
+                shareItems.append(compressedImage)
+            }
+            
+            // 回到主线程显示分享面板
+            DispatchQueue.main.async {
+                ShareHelper.presentShareSheet(items: shareItems)
+            }
         }
     }
     
@@ -552,6 +558,31 @@ class ShareItemSource: NSObject, UIActivityItemSource {
     let itemDescription: String
     let image: UIImage?
     
+    // 预先生成的 LPLinkMetadata，避免重复创建
+    private lazy var cachedMetadata: LPLinkMetadata = {
+        let metadata = LPLinkMetadata()
+        
+        // 设置 URL（关键：让系统知道这是哪个链接的元数据）
+        metadata.url = url
+        metadata.originalURL = url
+        
+        // 设置标题（会显示在链接预览中）
+        metadata.title = title
+        
+        // 如果有图片，设置为预览图
+        if let image = image {
+            metadata.imageProvider = NSItemProvider(object: image)
+            metadata.iconProvider = NSItemProvider(object: image)
+        } else {
+            // 没有图片时，尝试使用 App Logo
+            if let logoImage = UIImage(named: "Logo") ?? UIImage(named: "AppIcon") {
+                metadata.iconProvider = NSItemProvider(object: logoImage)
+            }
+        }
+        
+        return metadata
+    }()
+    
     init(url: URL, title: String, description: String, image: UIImage?) {
         self.url = url
         self.title = title
@@ -560,69 +591,68 @@ class ShareItemSource: NSObject, UIActivityItemSource {
         super.init()
     }
     
-    // 占位符
+    // 占位符 - 返回 URL，系统会根据这个类型决定显示什么
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
         return url
     }
     
     // 实际分享的内容
     func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        // 添加调试日志
+        let activityName = activityType?.rawValue ?? "nil"
+        Logger.debug("ShareItemSource - activityType: \(activityName), Title: \(title)", category: .ui)
+        
         // 检测是否是微信分享
         if ShareHelper.isWeChatShare(activityType) {
-            // 微信分享：返回URL，让微信自动抓取网页的 weixin:title, weixin:description, weixin:image 等标签
-            // 注意：如果网页的meta标签是默认值，微信会显示默认值
-            // 这是微信的限制，无法通过iOS端直接传递描述
-            Logger.debug("微信分享 - 返回URL，微信将从网页meta标签抓取: \(url.absoluteString)", category: .ui)
+            // 微信分享：
+            // 1. 微信会从 URL 抓取网页的 meta 标签（weixin:title, weixin:description, weixin:image）
+            // 2. 如果网页是 SPA（如 React），微信爬虫可能无法正确读取动态设置的 meta 标签
+            // 3. 解决方案：确保前端使用 SSR 或预渲染，或者集成微信 SDK 直接传递参数
+            Logger.debug("微信分享 - URL: \(url.absoluteString)", category: .ui)
+            Logger.debug("微信分享 - 期望标题: \(title)", category: .ui)
+            Logger.debug("微信分享 - 期望描述: \(String(itemDescription.prefix(80)))...", category: .ui)
             return url
         }
         
-        // 对于邮件应用，返回 URL 以便显示为链接
+        // 对于复制链接，返回包含完整信息的文本
+        if activityType == .copyToPasteboard {
+            return "\(title)\n\n\(itemDescription)\n\n\(url.absoluteString)" as String
+        }
+        
+        // 对于短信，返回带格式的文本
+        if activityType == .message {
+            return "\(title)\n\(itemDescription)\n\(url.absoluteString)" as String
+        }
+        
+        // 对于邮件，返回 URL（邮件应用会使用 LPLinkMetadata 显示预览）
         if activityType == .mail {
             return url
         }
         
-        // 对于其他支持 LPLinkMetadata 的应用（如 iMessage），返回 URL
-        if activityType == nil {
+        // 对于 AirDrop，返回 URL
+        if activityType == .airDrop {
             return url
         }
         
-        // 对于复制链接、短信等，返回包含完整信息的文本
-        if activityType == .copyToPasteboard || activityType == .message {
-            return "\(title)\n\n\(itemDescription)\n\n\(url.absoluteString)" as String
-        }
-        
+        // 对于其他所有应用（包括第三方应用），返回 URL
+        // 应用会使用 LPLinkMetadata 来显示预览（如果支持）
         return url
     }
     
-    // 提供富链接预览元数据（用于 iMessage 等原生 App）
+    // 提供富链接预览元数据（用于 iMessage、邮件等原生 App）
+    // 注意：微信不使用 LPLinkMetadata，会直接从 URL 抓取网页 meta 标签
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
-        let metadata = LPLinkMetadata()
-        
-        // 设置标题（会显示在链接预览中）
-        metadata.title = title
-        
-        // 注意：LPLinkMetadata 没有直接的 description 属性
-        // 微信不支持 LPLinkMetadata，会直接从 URL 抓取 meta 标签
-        // 对于支持 LPLinkMetadata 的应用（如 iMessage、邮件等），会使用我们提供的标题和图片
-        
-        // 如果有图片，设置为预览图
-        if let image = image {
-            metadata.imageProvider = NSItemProvider(object: image)
-            metadata.iconProvider = NSItemProvider(object: image)
-        }
-        
-        // 重要：不设置 url 或 originalURL，避免系统尝试自动获取元数据
-        // 系统会自动从 activityViewController 返回的 URL 中识别链接信息
-        // 我们只提供手动设置的元数据（title 和 image），避免网络请求
-        
-        // 添加调试日志
-        Logger.debug("ShareItemSource - 提供元数据: Title=\(title), Description=\(String(itemDescription.prefix(50)))...", category: .ui)
-        
-        return metadata
+        Logger.debug("ShareItemSource - 提供 LPLinkMetadata: Title=\(title), URL=\(url.absoluteString)", category: .ui)
+        return cachedMetadata
     }
     
-    // 分享主题
+    // 分享主题（用于邮件主题等）
     func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
         return title
+    }
+    
+    // 数据类型标识符（帮助系统识别内容类型）
+    func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return "public.url"
     }
 }

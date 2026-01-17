@@ -41,10 +41,7 @@ struct StripePaymentView: View {
                 VStack(spacing: 24) {
                     if viewModel.isLoading {
                         VStack(spacing: 16) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                            Text(LocalizationKey.paymentLoadingForm.localized)
-                                .foregroundColor(AppColors.textSecondary)
+                            LoadingView(message: LocalizationKey.paymentLoadingForm.localized)
                         }
                         .frame(maxWidth: .infinity, minHeight: 400)
                     } else if viewModel.paymentSuccess {
@@ -58,9 +55,7 @@ struct StripePaymentView: View {
                         approvalPaymentFallbackView
                     } else {
                         VStack(spacing: 16) {
-                            ProgressView()
-                            Text(LocalizationKey.paymentPreparing.localized)
-                                .foregroundColor(AppColors.textSecondary)
+                            LoadingView(message: LocalizationKey.paymentPreparing.localized)
                         }
                         .frame(maxWidth: .infinity, minHeight: 400)
                     }
@@ -473,8 +468,7 @@ struct StripePaymentView: View {
             } else {
                 // 加载状态
                 VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
+                    CompactLoadingView()
                     Text(LocalizationKey.paymentPreparingPayment.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
@@ -510,8 +504,7 @@ struct StripePaymentView: View {
             } else {
                 // 加载状态
                 VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
+                    CompactLoadingView()
                     Text(LocalizationKey.paymentPreparingPayment.localized)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
@@ -522,8 +515,7 @@ struct StripePaymentView: View {
         } else {
             // 默认加载状态
             VStack(spacing: 16) {
-                ProgressView()
-                    .scaleEffect(1.2)
+                CompactLoadingView()
                 Text(LocalizationKey.paymentPreparingPayment.localized)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
@@ -649,8 +641,7 @@ struct StripePaymentView: View {
                 Spacer()
                 
                 if viewModel.isLoadingCoupons {
-                    ProgressView()
-                        .scaleEffect(0.8)
+                    CompactLoadingView()
                 }
             }
             

@@ -174,3 +174,86 @@ struct AutoScrollScrollView<Content: View>: View {
         }
     }
 }
+
+/// 带焦点追踪的键盘避让ScrollView（增强版）
+/// 自动滚动到当前焦点的输入框
+struct FocusAwareScrollView<Content: View, FocusField: Hashable>: View {
+    @StateObject private var keyboardObserver = KeyboardHeightObserver()
+    let content: (ScrollViewProxy) -> Content
+    let focusedField: FocusField?
+    var showsIndicators: Bool
+    var extraPadding: CGFloat
+    
+    init(
+        focusedField: FocusField?,
+        showsIndicators: Bool = true,
+        extraPadding: CGFloat = 20,
+        @ViewBuilder content: @escaping (ScrollViewProxy) -> Content
+    ) {
+        self.focusedField = focusedField
+        self.showsIndicators = showsIndicators
+        self.extraPadding = extraPadding
+        self.content = content
+    }
+    
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: showsIndicators) {
+                VStack(spacing: 0) {
+                    content(proxy)
+                    
+                    // 底部间距，确保内容在键盘上方可见
+                    if keyboardObserver.keyboardHeight > 0 {
+                        Spacer()
+                            .frame(height: keyboardObserver.keyboardHeight + extraPadding)
+                            .transition(.opacity)
+                    }
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: focusedField) { newField in
+                if let field = newField {
+                    // 焦点变化时，延迟滚动以确保键盘已经显示
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(field, anchor: .center)
+                        }
+                    }
+                }
+            }
+            .onChange(of: keyboardObserver.keyboardHeight) { height in
+                // 键盘高度变化时，如果有焦点，滚动到焦点位置
+                if height > 0, let field = focusedField {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(field, anchor: .center)
+                        }
+                    }
+                }
+            }
+        }
+        .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
+    }
+}
+
+// MARK: - View 扩展
+
+extension View {
+    /// 隐藏键盘
+    func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
+    /// 添加键盘工具栏（带完成按钮）
+    func keyboardDismissToolbar() -> some View {
+        self.toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
+    }
+    
+}

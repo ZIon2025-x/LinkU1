@@ -79,6 +79,11 @@ struct MyPostsView: View {
             // 标记视图为可见（在导航栈顶部）
             isViewVisible = true
             
+            // 先尝试从缓存加载（立即显示）
+            if let userId = appState.currentUser?.id {
+                viewModel.loadAllCategoriesFromCache(userId: String(userId))
+            }
+            
             // 检查是否需要加载数据
             let hasData = !viewModel.sellingItems.isEmpty || 
                          !viewModel.purchasedItems.isEmpty || 
@@ -223,7 +228,12 @@ struct CategoryContentView: View {
     var body: some View {
         Group {
             if isLoading && items.isEmpty {
-                LoadingView()
+                // 使用列表骨架屏
+                ScrollView {
+                    ListSkeleton(itemCount: 5, itemHeight: 150)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                }
             } else if items.isEmpty {
                 EmptyStateView(
                     icon: category.icon,
@@ -234,13 +244,14 @@ struct CategoryContentView: View {
                 ScrollView {
                     // 改为单列显示，卡片更大
                     LazyVStack(spacing: AppSpacing.md) {
-                        ForEach(items, id: \.id) { item in
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
                                 MyItemCard(item: item, category: category)
                                     .drawingGroup() // 优化复杂卡片渲染性能
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle提供更好的交互反馈
                             .id(item.id) // 确保稳定的id，优化视图复用
+                            .listItemAppear(index: index, totalItems: items.count) // 添加错落入场动画
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)

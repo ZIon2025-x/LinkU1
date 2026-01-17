@@ -104,7 +104,7 @@ struct MyTasksView: View {
         VStack {
             Spacer()
             VStack(spacing: AppSpacing.md) {
-                ProgressView()
+                CompactLoadingView()
                 Text(LocalizationKey.myTasksLoadingCompleted.localized)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
@@ -136,7 +136,7 @@ struct MyTasksView: View {
     private var loadingView: some View {
         VStack {
             Spacer()
-            ProgressView()
+            LoadingView()
             Spacer()
         }
     }
@@ -154,11 +154,12 @@ struct MyTasksView: View {
             Spacer()
         } else {
             ScrollView {
-                LazyVStack(spacing: AppSpacing.md) {
-                    ForEach(viewModel.getPendingApplications()) { application in
-                        MyTasksApplicationCard(application: application)
-                    }
+            LazyVStack(spacing: AppSpacing.md) {
+                ForEach(Array(viewModel.getPendingApplications().enumerated()), id: \.element.id) { index, application in
+                    MyTasksApplicationCard(application: application)
+                        .listItemAppear(index: index, totalItems: viewModel.getPendingApplications().count) // 添加错落入场动画
                 }
+            }
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, AppSpacing.sm)
             }
@@ -185,10 +186,11 @@ struct MyTasksView: View {
     private var tasksListView: some View {
         ScrollView {
             LazyVStack(spacing: AppSpacing.md) {
-                ForEach(viewModel.getFilteredTasks()) { task in
+                ForEach(Array(viewModel.getFilteredTasks().enumerated()), id: \.element.id) { index, task in
                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                         EnhancedTaskCard(task: task, currentUserId: viewModel.currentUserId)
                     }
+                    .listItemAppear(index: index, totalItems: viewModel.getFilteredTasks().count) // 添加错落入场动画
                     .buttonStyle(PlainButtonStyle())
                     .onAppear {
                         print("🔍 [MyTasksView] 任务卡片出现: \(task.id), 标题: \(task.title)")

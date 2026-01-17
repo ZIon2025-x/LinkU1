@@ -267,5 +267,11 @@ extension String {
         return digest.map { String(format: "%02x", $0) }.joined()
         #endif
     }
+    
+    /// 格式化日期字符串（ISO8601 格式）为可读的日期格式
+    /// 使用用户本地时区和系统 locale
+    func formatDate() -> String {
+        return DateFormatterHelper.shared.formatShortDateTime(self)
+    }
 }
 

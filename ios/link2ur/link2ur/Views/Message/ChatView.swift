@@ -204,9 +204,8 @@ struct ChatView: View {
                                     )
                                 
                                 if viewModel.isSending {
-                                    ProgressView()
+                                    CompactLoadingView()
                                         .tint(.white)
-                                        .scaleEffect(0.8)
                                 } else {
                                     Image(systemName: "arrow.up")
                                         .font(.system(size: 16, weight: .semibold))
@@ -465,8 +464,7 @@ struct MessageBubble: View {
                         if !isFromCurrentUser {
                             HStack(spacing: 6) {
                                 if isTranslating {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
+                                    CompactLoadingView()
                                     Text(LocalizationKey.translationTranslating.localized)
                                         .font(AppTypography.caption2)
                                         .foregroundColor(AppColors.textTertiary)

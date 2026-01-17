@@ -230,7 +230,9 @@ extension View {
     }
 }
 
-// 按钮样式 - 主要按钮（现代简洁设计）
+// MARK: - 按钮样式系统 - 丝滑流畅的交互体验
+
+// 按钮样式 - 主要按钮（现代简洁设计 + 丝滑弹性动画）
 struct PrimaryButtonStyle: ButtonStyle {
     var cornerRadius: CGFloat = AppCornerRadius.medium
     var padding: CGFloat = AppSpacing.md
@@ -246,7 +248,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .background(
                 Group {
                     if useGradient {
-                        RoundedRectangle(cornerRadius: cornerRadius)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     gradient: Gradient(colors: AppColors.gradientPrimary),
@@ -255,14 +257,15 @@ struct PrimaryButtonStyle: ButtonStyle {
                                 )
                             )
                     } else {
-                        RoundedRectangle(cornerRadius: cornerRadius)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(AppColors.primary)
                     }
                 }
             )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .brightness(configuration.isPressed ? -0.05 : 0)
+            // 使用丝滑的弹性动画
+            .animation(.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0), value: configuration.isPressed)
             .onChange(of: configuration.isPressed) { isPressed in
                 if isPressed {
                     HapticFeedback.light()
@@ -271,7 +274,7 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// 按钮样式 - 次要按钮（现代简洁设计）
+// 按钮样式 - 次要按钮（现代简洁设计 + 丝滑弹性动画）
 struct SecondaryButtonStyle: ButtonStyle {
     var cornerRadius: CGFloat = AppCornerRadius.medium
     var height: CGFloat = 50
@@ -284,16 +287,16 @@ struct SecondaryButtonStyle: ButtonStyle {
             .frame(height: height)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(AppColors.primaryLight)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(configuration.isPressed ? AppColors.primary.opacity(0.15) : AppColors.primaryLight)
                     .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(AppColors.primary.opacity(0.2), lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(AppColors.primary.opacity(configuration.isPressed ? 0.4 : 0.2), lineWidth: 1.5)
                     )
             )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            // 使用丝滑的弹性动画
+            .animation(.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0), value: configuration.isPressed)
             .onChange(of: configuration.isPressed) { isPressed in
                 if isPressed {
                     HapticFeedback.light()
@@ -302,16 +305,104 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
-// 缩放按钮样式 - 用于卡片等点击效果（优化性能）
+// 缩放按钮样式 - 用于卡片等点击效果（丝滑弹性动画）
 struct ScaleButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.97  // 按下时的缩放比例
+    var enableHaptic: Bool = true  // 是否启用触觉反馈
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            // 使用丝滑的弹性动画 - 更快的响应，更自然的回弹
+            .animation(.spring(response: 0.25, dampingFraction: 0.7, blendDuration: 0), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { isPressed in
+                if isPressed && enableHaptic {
+                    HapticFeedback.selection()
+                }
+            }
+    }
+}
+
+// 弹跳按钮样式 - 用于强调性操作（如收藏、点赞）
+struct BounceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
+            // 使用更有弹性的动画
+            .animation(.spring(response: 0.3, dampingFraction: 0.5, blendDuration: 0), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { isPressed in
+                if isPressed {
+                    HapticFeedback.light()
+                }
+            }
+    }
+}
+
+// 轻触按钮样式 - 用于列表项、导航按钮（极轻量反馈）
+struct LightTouchButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.99 : 1.0)
+            // 使用快速响应的弹性动画
+            .animation(.spring(response: 0.2, dampingFraction: 0.8, blendDuration: 0), value: configuration.isPressed)
+    }
+}
+
+// 图标按钮样式 - 用于工具栏图标按钮
+struct IconButtonStyle: ButtonStyle {
+    var size: CGFloat = 44  // 符合HIG的最小触摸目标
+    var backgroundColor: Color = .clear
+    var pressedBackgroundColor: Color = AppColors.fill
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(width: size, height: size)
+            .background(
+                Circle()
+                    .fill(configuration.isPressed ? pressedBackgroundColor : backgroundColor)
+            )
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            // 使用弹性动画
+            .animation(.spring(response: 0.25, dampingFraction: 0.6, blendDuration: 0), value: configuration.isPressed)
             .onChange(of: configuration.isPressed) { isPressed in
                 if isPressed {
                     HapticFeedback.selection()
+                }
+            }
+    }
+}
+
+// 浮动操作按钮样式
+struct FloatingButtonStyle: ButtonStyle {
+    var size: CGFloat = 56
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(width: size, height: size)
+            .background(
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(
+                        color: AppColors.primary.opacity(configuration.isPressed ? 0.2 : 0.35),
+                        radius: configuration.isPressed ? 8 : 12,
+                        x: 0,
+                        y: configuration.isPressed ? 4 : 6
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            // 使用丝滑弹性动画
+            .animation(.spring(response: 0.3, dampingFraction: 0.6, blendDuration: 0), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { isPressed in
+                if isPressed {
+                    HapticFeedback.medium()
                 }
             }
     }

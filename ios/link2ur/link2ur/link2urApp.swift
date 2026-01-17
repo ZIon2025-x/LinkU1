@@ -33,6 +33,9 @@ struct link2urApp: App {
                     // 初始化 Stripe
                     StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
                     
+                    // 预热触觉反馈引擎，提高首次交互响应速度
+                    HapticFeedback.prepareAll()
+                    
                     // 索引快速操作到 Spotlight
                     SpotlightIndexer.shared.indexQuickActions()
                 }

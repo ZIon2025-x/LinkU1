@@ -67,12 +67,10 @@ struct LeaderboardDetailView: View {
                             
                             // 5. 竞品列表
                             if viewModel.isLoading {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                    Spacer()
-                                }
-                                .padding(.top, AppSpacing.xl)
+                                // 使用列表骨架屏
+                                ListSkeleton(itemCount: 5, itemHeight: 120)
+                                    .padding(.horizontal, AppSpacing.md)
+                                    .padding(.top, AppSpacing.xl)
                             } else if viewModel.items.isEmpty {
                                 EmptyStateView(icon: "tray", title: LocalizationKey.leaderboardNoItems.localized, message: LocalizationKey.leaderboardNoItemsMessage.localized)
                                     .frame(height: 300)
@@ -88,6 +86,7 @@ struct LeaderboardDetailView: View {
                                         }
                                         .buttonStyle(ScaleButtonStyle())
                                         .environmentObject(appState)
+                                        .listItemAppear(index: index, totalItems: viewModel.items.count) // 添加错落入场动画
                                     }
                                 }
                                 .padding(.horizontal, AppSpacing.md)

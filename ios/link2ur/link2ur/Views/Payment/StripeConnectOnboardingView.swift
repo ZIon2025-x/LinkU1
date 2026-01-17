@@ -70,9 +70,7 @@ struct StripeConnectOnboardingView: View {
     
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-            Text(LocalizationKey.commonLoading.localized)
+            LoadingView(message: LocalizationKey.commonLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

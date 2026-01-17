@@ -73,10 +73,11 @@ struct TaskExpertListView: View {
                     // 内容区域
                     Group {
                         if viewModel.isLoading && viewModel.experts.isEmpty {
-                            VStack {
-                                Spacer()
-                                ProgressView()
-                                Spacer()
+                            // 使用列表骨架屏
+                            ScrollView {
+                                ListSkeleton(itemCount: 5, itemHeight: 100)
+                                    .padding(.horizontal, AppSpacing.md)
+                                    .padding(.vertical, AppSpacing.sm)
                             }
                         } else if viewModel.experts.isEmpty {
                             VStack {
@@ -91,11 +92,12 @@ struct TaskExpertListView: View {
                         } else {
                             ScrollView {
                                 LazyVStack(spacing: AppSpacing.md) {
-                                    ForEach(viewModel.experts) { expert in
+                                    ForEach(Array(viewModel.experts.enumerated()), id: \.element.id) { index, expert in
                                         NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
                                             ExpertCard(expert: expert)
                                         }
                                         .buttonStyle(ScaleButtonStyle())
+                                        .listItemAppear(index: index, totalItems: viewModel.experts.count) // 添加错落入场动画
                                     }
                                 }
                                 .padding(.horizontal, AppSpacing.md)

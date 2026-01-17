@@ -748,3 +748,158 @@ async def ssr_forum_post_detail(
             )
         )
 
+
+# ==================== 活动详情页 SSR ====================
+
+@ssr_router.get("/zh/activities/{activity_id}")
+@ssr_router.get("/en/activities/{activity_id}")
+@ssr_router.get("/activities/{activity_id}")
+async def ssr_activity_detail(
+    request: Request,
+    activity_id: int,
+    db: AsyncSession = Depends(get_async_db_dependency)
+):
+    """
+    活动详情页 SSR
+    - 如果是爬虫，返回包含正确 meta 标签的 HTML
+    - 如果是普通用户，重定向到前端 SPA
+    """
+    user_agent = request.headers.get("User-Agent", "")
+    
+    # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
+    if is_js_capable_crawler(user_agent):
+        path = request.url.path
+        if path.startswith("/zh/"):
+            frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
+        elif path.startswith("/en/"):
+            frontend_url = f"https://www.link2ur.com/en/activities/{activity_id}"
+        else:
+            frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
+        return RedirectResponse(url=frontend_url, status_code=302)
+    
+    # 如果不是不执行JS的爬虫，重定向到前端
+    if not is_non_js_crawler(user_agent):
+        path = request.url.path
+        if path.startswith("/zh/"):
+            frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
+        elif path.startswith("/en/"):
+            frontend_url = f"https://www.link2ur.com/en/activities/{activity_id}"
+        else:
+            frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
+        return RedirectResponse(url=frontend_url, status_code=302)
+    
+    # 获取活动信息
+    try:
+        result = await db.execute(
+            select(models.Activity).where(models.Activity.id == activity_id)
+        )
+        activity = result.scalar_one_or_none()
+        
+        if not activity:
+            return HTMLResponse(
+                content=generate_html(
+                    title="活动不存在 - Link²Ur",
+                    description="该活动可能已被删除或不存在",
+                    image_url="",
+                    page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
+                ),
+                status_code=404
+            )
+        
+        # 构建分享信息
+        title = f"{activity.title} - Link²Ur活动"
+        description = activity.description or "在 Link²Ur 查看活动详情"
+        
+        # 清理描述中的HTML标签
+        clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
+        
+        # 获取活动图片
+        image_url = ""
+        if activity.cover_image:
+            image_url = activity.cover_image
+        
+        page_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
+        
+        # 获取价格信息
+        price = activity.discounted_price_per_participant or activity.original_price_per_participant or 0
+        price_text = f"£{price}" if price > 0 else "免费"
+        
+        # 构建完整的HTML内容
+        body_content = f'''
+    <main>
+        <article>
+            <h1>{activity.title}</h1>
+            {f'<img src="{image_url}" alt="{activity.title}" style="max-width: 100%; margin: 20px 0;">' if image_url else ''}
+            <div class="content">
+                <p><strong>活动类型：</strong>{activity.task_type or "未指定"}</p>
+                <p><strong>位置：</strong>{activity.location or "未指定"}</p>
+                <p><strong>价格：</strong>{price_text}/人</p>
+                <p><strong>最小人数：</strong>{activity.min_participants or 1}人</p>
+                <p><strong>最大人数：</strong>{activity.max_participants or "不限"}人</p>
+                <div style="margin-top: 30px;">
+                    <h2>活动描述</h2>
+                    <p style="white-space: pre-wrap;">{clean_description[:2000]}{"..." if len(clean_description) > 2000 else ""}</p>
+                </div>
+            </div>
+            <div class="meta-info">
+                <p>活动ID: {activity.id} | 创建时间: {activity.created_at.strftime("%Y-%m-%d") if activity.created_at else "未知"}</p>
+                <p><a href="{page_url}">查看完整活动详情并报名</a></p>
+            </div>
+        </article>
+    </main>'''
+        
+        # 构建结构化数据
+        structured_data = {
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": activity.title,
+            "description": clean_description[:1000],
+            "eventStatus": "https://schema.org/EventScheduled",
+            "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode" if activity.location and activity.location.lower() != "online" else "https://schema.org/OnlineEventAttendanceMode",
+            "location": {
+                "@type": "Place",
+                "name": activity.location or "London",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": activity.location or "London",
+                    "addressCountry": "GB"
+                }
+            },
+            "organizer": {
+                "@type": "Organization",
+                "name": "Link²Ur",
+                "url": "https://www.link2ur.com"
+            },
+            "offers": {
+                "@type": "Offer",
+                "price": str(price),
+                "priceCurrency": "GBP",
+                "availability": "https://schema.org/InStock"
+            } if price > 0 else None,
+            "image": image_url if image_url else None
+        }
+        
+        logger.info(f"SSR 活动详情: activity_id={activity_id}, title={activity.title}, image={image_url}")
+        
+        return HTMLResponse(
+            content=generate_html(
+                title=title,
+                description=clean_description,
+                image_url=image_url,
+                page_url=page_url,
+                body_content=body_content,
+                structured_data=structured_data
+            )
+        )
+        
+    except Exception as e:
+        logger.error(f"SSR 活动详情失败: {e}")
+        return HTMLResponse(
+            content=generate_html(
+                title="Link²Ur - 活动平台",
+                description="发现精彩活动，与志同道合的人一起",
+                image_url="",
+                page_url=f"https://www.link2ur.com/zh/activities/{activity_id}"
+            )
+        )
+

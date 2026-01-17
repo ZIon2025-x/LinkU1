@@ -431,20 +431,22 @@ class MyTasksViewModel: ObservableObject {
         loadApplications()
     }
     
-    // 从缓存加载任务（公开方法，供 View 调用）
+    // 从缓存加载任务（公开方法，供 View 调用，优先内存缓存，快速响应）
     func loadTasksFromCache() {
-        // 加载任务缓存
+        // 先快速检查内存缓存（同步，很快）
         if let cachedTasks: [Task] = cacheManager.load([Task].self, forKey: cacheKey) {
             if !cachedTasks.isEmpty {
                 self.tasks = cachedTasks
                 self.cachedStats = nil
                 self.cachedFilteredTasks = nil
                 cacheHits += 1
-                Logger.debug("✅ 缓存命中：从缓存加载了 \(cachedTasks.count) 条任务", category: .cache)
-                return
+                Logger.debug("✅ 缓存命中：从内存缓存加载了 \(cachedTasks.count) 条任务", category: .cache)
+            } else {
+                cacheMisses += 1
             }
+        } else {
+            cacheMisses += 1
         }
-        cacheMisses += 1
         
         // 加载申请记录缓存
         if let cachedApplications: [UserTaskApplication] = cacheManager.load([UserTaskApplication].self, forKey: applicationsCacheKey) {

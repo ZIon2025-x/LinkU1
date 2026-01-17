@@ -4,7 +4,17 @@ import UIKit
 
 struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
-    @StateObject private var recommendedViewModel = TasksViewModel()  // 推荐任务 ViewModel
+    @StateObject private var recommendedViewModel: TasksViewModel = {
+        let vm = TasksViewModel()
+        // 初始化时立即从推荐任务缓存加载，避免刷新后推荐原因丢失
+        if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
+            if !cachedRecommendedTasks.isEmpty {
+                vm.tasks = cachedRecommendedTasks
+                Logger.success("初始化时从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+            }
+        }
+        return vm
+    }()  // 推荐任务 ViewModel
     @EnvironmentObject var appState: AppState  // 增强：用于检查登录状态
     @State private var searchText = ""
     @State private var showFilter = false
@@ -105,7 +115,12 @@ struct TasksView: View {
                     
                     // 内容区域
                     if (viewModel.isLoading || recommendedViewModel.isLoading) && allTasks.isEmpty {
-                        LoadingView()
+                        // 使用网格骨架屏，提供更好的加载体验
+                        ScrollView {
+                            GridSkeleton(columns: 2, rows: 4)
+                                .padding(.horizontal, AppSpacing.md)
+                                .padding(.vertical, AppSpacing.sm)
+                        }
                     } else if let error = viewModel.errorMessage, allTasks.isEmpty {
                         // 使用统一的错误状态组件
                         ErrorStateView(
@@ -352,26 +367,39 @@ struct TasksView: View {
     /// 优化：数据合并操作很快，直接在主线程处理即可
     /// 优化：只在数据真正变化时更新，避免不必要的视图重绘
     private func updateMergedTasks() {
-        // 使用 Set 去重，推荐任务优先
+        // 使用 Set 去重，推荐任务优先（保留推荐原因）
         var taskMap: [Int: Task] = [:]
         
-        // 先添加推荐任务
+        // 先添加推荐任务（保留推荐原因和 isRecommended 标记）
         for task in recommendedViewModel.tasks {
-            taskMap[task.id] = task
-        }
-        
-        // 再添加普通任务（如果不在推荐列表中）
-        for task in viewModel.tasks {
-            if taskMap[task.id] == nil {
+            // 确保推荐任务保留推荐原因
+            if task.isRecommended == true && task.recommendationReason != nil {
+                taskMap[task.id] = task
+            } else {
                 taskMap[task.id] = task
             }
         }
         
-        // 转换为数组，推荐任务在前
+        // 再添加普通任务（如果不在推荐列表中，或者普通任务没有推荐原因）
+        for task in viewModel.tasks {
+            if let existingTask = taskMap[task.id] {
+                // 如果推荐任务已存在，检查是否需要更新
+                // 如果普通任务有推荐原因但推荐任务没有，保留普通任务（可能是新推荐的）
+                if existingTask.recommendationReason == nil && task.recommendationReason != nil {
+                    taskMap[task.id] = task
+                }
+                // 否则保持推荐任务不变（推荐任务优先）
+            } else {
+                // 任务不在推荐列表中，添加普通任务
+                taskMap[task.id] = task
+            }
+        }
+        
+        // 转换为数组，推荐任务在前（保留推荐原因）
         var mergedTasks: [Task] = []
         var addedIds = Set<Int>()
         
-        // 先添加推荐任务
+        // 先添加推荐任务（保留推荐原因）
         for task in recommendedViewModel.tasks {
             if !addedIds.contains(task.id) {
                 mergedTasks.append(task)
@@ -379,7 +407,7 @@ struct TasksView: View {
             }
         }
         
-        // 再添加普通任务
+        // 再添加普通任务（如果不在推荐列表中）
         for task in viewModel.tasks {
             if !addedIds.contains(task.id) {
                 mergedTasks.append(task)

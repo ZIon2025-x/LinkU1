@@ -100,13 +100,24 @@ struct ForumPostDetailView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let post = viewModel.post {
+            if let post = viewModel.post, !post.title.isEmpty {
+                // 确保帖子数据完整后再显示分享视图
                 ForumPostShareSheet(
                     post: post,
                     postId: postId
                 )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+            } else {
+                // 如果帖子数据未就绪，显示加载状态
+                VStack(spacing: AppSpacing.lg) {
+                    CompactLoadingView()
+                    Text(LocalizationKey.commonLoading.localized)
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .presentationDetents([.medium])
             }
         }
         .sheet(isPresented: $showLogin) {
@@ -707,13 +718,28 @@ struct ForumPostShareSheet: View {
     let postId: Int
     @Environment(\.dismiss) var dismiss
     
+    // 使用 @State 确保标题和描述在视图更新时正确传递
+    @State private var shareTitle: String = ""
+    @State private var shareDescription: String = ""
+    
     // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签
+    // 注意：URL 格式必须与后端 SSR 路由匹配（/forum/post/{id} 不是 /forum/posts/{id}）
     private var shareUrl: URL {
-        let urlString = "https://www.link2ur.com/zh/forum/posts/\(postId)?v=2"
+        let urlString = "https://www.link2ur.com/zh/forum/post/\(postId)?v=2"
         if let url = URL(string: urlString) {
             return url
         }
         return URL(string: "https://www.link2ur.com")!
+    }
+    
+    // 计算属性：确保标题始终是最新的
+    private var currentTitle: String {
+        return shareTitle.isEmpty ? getShareTitle(for: post) : shareTitle
+    }
+    
+    // 计算属性：确保描述始终是最新的
+    private var currentDescription: String {
+        return shareDescription.isEmpty ? getShareDescription(for: post) : shareDescription
     }
     
     var body: some View {
@@ -744,18 +770,13 @@ struct ForumPostShareSheet: View {
                 
                 // 标题和描述
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(post.title)
+                    Text(currentTitle)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
-                    if let content = post.content, !content.isEmpty {
-                        Text(content)
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                            .lineLimit(2)
-                    } else if let preview = post.contentPreview, !preview.isEmpty {
-                        Text(preview)
+                    if !currentDescription.isEmpty {
+                        Text(currentDescription)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                             .lineLimit(2)
@@ -781,8 +802,8 @@ struct ForumPostShareSheet: View {
             
             // 自定义分享面板
             CustomSharePanel(
-                title: getShareTitle(for: post),
-                description: getShareDescription(for: post),
+                title: currentTitle,
+                description: currentDescription,
                 url: shareUrl,
                 image: nil,
                 taskType: nil,
@@ -795,6 +816,23 @@ struct ForumPostShareSheet: View {
             .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
+        .onAppear {
+            // 确保在视图出现时更新标题和描述
+            shareTitle = getShareTitle(for: post)
+            shareDescription = getShareDescription(for: post)
+        }
+        .onChange(of: post.title) { newTitle in
+            // 当帖子标题更新时，同步更新分享标题
+            shareTitle = getShareTitle(for: post)
+        }
+        .onChange(of: post.content) { newContent in
+            // 当帖子内容更新时，同步更新分享描述
+            shareDescription = getShareDescription(for: post)
+        }
+        .onChange(of: post.contentPreview) { newPreview in
+            // 当帖子预览更新时，同步更新分享描述
+            shareDescription = getShareDescription(for: post)
+        }
     }
     
     /// 获取分享标题

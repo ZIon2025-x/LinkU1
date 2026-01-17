@@ -101,6 +101,7 @@ class ChatViewModel: ObservableObject {
     
     // 使用依赖注入获取服务
     private let apiService: APIService
+    private let cacheManager = CacheManager.shared
     private var cancellables = Set<AnyCancellable>()
     let partnerId: String
     
@@ -112,8 +113,29 @@ class ChatViewModel: ObservableObject {
         self.partner = partner
         self.apiService = apiService ?? APIService.shared
         
-        // 尝试从缓存加载
-        loadFromCache()
+        // 先快速检查内存缓存（同步，很快）
+        if let cachedMessages: [Message] = cacheManager.load([Message].self, forKey: cacheKey) {
+            if !cachedMessages.isEmpty {
+                self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                Logger.debug("✅ 从内存缓存加载了 \(cachedMessages.count) 条消息", category: .cache)
+                return // 内存缓存命中，直接返回
+            }
+        }
+        
+        // 内存缓存未命中，异步加载磁盘缓存（如果存在）
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            // 磁盘缓存加载已经在 getDiskCache 中优化，不会阻塞太久
+            if let cachedMessages: [Message] = self.cacheManager.load([Message].self, forKey: self.cacheKey) {
+                if !cachedMessages.isEmpty {
+                    let sortedMessages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                    DispatchQueue.main.async {
+                        self.messages = sortedMessages
+                        Logger.debug("✅ 从磁盘缓存加载了 \(cachedMessages.count) 条消息", category: .cache)
+                    }
+                }
+            }
+        }
     }
     
     deinit {
@@ -123,19 +145,22 @@ class ChatViewModel: ObservableObject {
     // MARK: - 缓存管理
     
     private func loadFromCache() {
-        if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
-           let cachedMessages = try? JSONDecoder().decode([Message].self, from: cachedData) {
-            self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
-            Logger.debug("从缓存加载了 \(cachedMessages.count) 条消息", category: .cache)
+        // 先快速检查内存缓存（同步，很快）
+        if let cachedMessages: [Message] = cacheManager.load([Message].self, forKey: cacheKey) {
+            if !cachedMessages.isEmpty {
+                self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                Logger.debug("✅ 从缓存加载了 \(cachedMessages.count) 条消息", category: .cache)
+                return
+            }
         }
     }
     
     private func saveToCache() {
         // 只缓存最新的100条消息
         let messagesToCache = Array(messages.suffix(100))
-        if let data = try? JSONEncoder().encode(messagesToCache) {
-            UserDefaults.standard.set(data, forKey: cacheKey)
-            Logger.debug("缓存了 \(messagesToCache.count) 条消息", category: .cache)
+        if !messagesToCache.isEmpty {
+            cacheManager.save(messagesToCache, forKey: cacheKey)
+            Logger.debug("✅ 已缓存 \(messagesToCache.count) 条消息", category: .cache)
         }
     }
     
@@ -269,6 +294,7 @@ class TaskChatDetailViewModel: ObservableObject {
     private var currentCursor: String?
     
     private let apiService = APIService.shared
+    private let cacheManager = CacheManager.shared
     var cancellables = Set<AnyCancellable>() // 改为公开，以便在 View 中使用
     private let taskId: Int
     private let taskChat: TaskChatItem?
@@ -280,8 +306,28 @@ class TaskChatDetailViewModel: ObservableObject {
     init(taskId: Int, taskChat: TaskChatItem? = nil) {
         self.taskId = taskId
         self.taskChat = taskChat
-        // 从缓存加载
-        loadFromCache()
+        // 先快速检查内存缓存（同步，很快）
+        if let cachedMessages: [Message] = cacheManager.load([Message].self, forKey: cacheKey) {
+            if !cachedMessages.isEmpty {
+                self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                Logger.debug("✅ 从内存缓存加载了 \(cachedMessages.count) 条任务聊天消息", category: .cache)
+                return // 内存缓存命中，直接返回
+            }
+        }
+        
+        // 内存缓存未命中，异步加载磁盘缓存（如果存在）
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            if let cachedMessages: [Message] = self.cacheManager.load([Message].self, forKey: self.cacheKey) {
+                if !cachedMessages.isEmpty {
+                    let sortedMessages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                    DispatchQueue.main.async {
+                        self.messages = sortedMessages
+                        Logger.debug("✅ 从磁盘缓存加载了 \(cachedMessages.count) 条任务聊天消息", category: .cache)
+                    }
+                }
+            }
+        }
     }
     
     deinit {
@@ -291,19 +337,22 @@ class TaskChatDetailViewModel: ObservableObject {
     // MARK: - 缓存管理
     
     private func loadFromCache() {
-        if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
-           let cachedMessages = try? JSONDecoder().decode([Message].self, from: cachedData) {
-            self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
-            Logger.debug("从缓存加载了 \(cachedMessages.count) 条任务聊天消息", category: .cache)
+        // 先快速检查内存缓存（同步，很快）
+        if let cachedMessages: [Message] = cacheManager.load([Message].self, forKey: cacheKey) {
+            if !cachedMessages.isEmpty {
+                self.messages = cachedMessages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                Logger.debug("✅ 从缓存加载了 \(cachedMessages.count) 条任务聊天消息", category: .cache)
+                return
+            }
         }
     }
     
     private func saveToCache() {
         // 只缓存最新的100条消息
         let messagesToCache = Array(messages.suffix(100))
-        if let data = try? JSONEncoder().encode(messagesToCache) {
-            UserDefaults.standard.set(data, forKey: cacheKey)
-            Logger.debug("缓存了 \(messagesToCache.count) 条任务聊天消息", category: .cache)
+        if !messagesToCache.isEmpty {
+            cacheManager.save(messagesToCache, forKey: cacheKey)
+            Logger.debug("✅ 已缓存 \(messagesToCache.count) 条任务聊天消息", category: .cache)
         }
     }
     

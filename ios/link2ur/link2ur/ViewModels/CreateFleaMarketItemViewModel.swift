@@ -170,6 +170,8 @@ class CreateFleaMarketItemViewModel: ObservableObject {
                 }, receiveValue: { [weak self] response in
                     // 响应成功，可以访问 response.data.id 获取创建的商品 ID
                     self?.reset()
+                    // 清除我的商品缓存，因为创建了新商品
+                    CacheManager.shared.invalidateMyItemsCache()
                     completion(true)
                 })
                 .store(in: &self.cancellables)

@@ -778,56 +778,60 @@ struct VoteCommentModal: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(voteType == "upvote" ? LocalizationKey.leaderboardSupportReason.localized : LocalizationKey.leaderboardOpposeReason.localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppColors.textSecondary)
+            KeyboardAvoidingScrollView(extraPadding: 20) {
+                VStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(voteType == "upvote" ? LocalizationKey.leaderboardSupportReason.localized : LocalizationKey.leaderboardOpposeReason.localized)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(AppColors.textSecondary)
+                        
+                        TextEditor(text: $comment)
+                            .frame(height: 150)
+                            .padding(12)
+                            .scrollContentBackground(.hidden)
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(12)
+                            .overlay(
+                                Group {
+                                    if comment.isEmpty {
+                                        Text(LocalizationKey.leaderboardWriteReason.localized)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.textTertiary)
+                                            .padding(.leading, 16)
+                                            .padding(.top, 20)
+                                            .allowsHitTesting(false)
+                                    }
+                                },
+                                alignment: .topLeading
+                            )
+                    }
                     
-                    TextEditor(text: $comment)
-                        .frame(height: 150)
-                        .padding(12)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
-                        .overlay(
-                            Group {
-                                if comment.isEmpty {
-                                    Text(LocalizationKey.leaderboardWriteReason.localized)
-                                        .font(.system(size: 14))
-                                        .foregroundColor(AppColors.textTertiary)
-                                        .padding(.leading, 16)
-                                        .padding(.top, 20)
-                                        .allowsHitTesting(false)
-                                }
-                            },
-                            alignment: .topLeading
-                        )
-                }
-                
-                Toggle(isOn: $isAnonymous) {
-                    HStack {
-                        Image(systemName: isAnonymous ? "eye.slash.fill" : "eye.fill")
-                        Text(LocalizationKey.leaderboardAnonymousVote.localized)
-                            .font(.system(size: 15))
+                    Toggle(isOn: $isAnonymous) {
+                        HStack {
+                            Image(systemName: isAnonymous ? "eye.slash.fill" : "eye.fill")
+                            Text(LocalizationKey.leaderboardAnonymousVote.localized)
+                                .font(.system(size: 15))
+                        }
+                    }
+                    .tint(AppColors.primary)
+                    .padding(.horizontal, 4)
+                    
+                    Spacer(minLength: 40)
+                    
+                    Button(action: onConfirm) {
+                        Text(LocalizationKey.leaderboardSubmitVote.localized)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(voteType == "upvote" ? AppColors.success : AppColors.error)
+                            .cornerRadius(27)
+                            .shadow(color: (voteType == "upvote" ? AppColors.success : AppColors.error).opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                 }
-                .tint(AppColors.primary)
-                .padding(.horizontal, 4)
-                
-                Spacer()
-                
-                Button(action: onConfirm) {
-                    Text(LocalizationKey.leaderboardSubmitVote.localized)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(voteType == "upvote" ? AppColors.success : AppColors.error)
-                        .cornerRadius(27)
-                        .shadow(color: (voteType == "upvote" ? AppColors.success : AppColors.error).opacity(0.3), radius: 8, x: 0, y: 4)
-                }
+                .padding(24)
             }
-            .padding(24)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(voteType == "upvote" ? LocalizationKey.leaderboardSupport.localized : LocalizationKey.leaderboardOppose.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()

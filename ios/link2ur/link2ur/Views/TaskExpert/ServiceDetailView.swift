@@ -348,7 +348,7 @@ struct ApplyServiceSheet: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            KeyboardAvoidingScrollView(extraPadding: 20) {
                 VStack(spacing: 24) {
                     // 留言
                     VStack(alignment: .leading, spacing: 12) {
@@ -413,6 +413,7 @@ struct ApplyServiceSheet: View {
                 }
                 .padding(24)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(Color(UIColor.systemBackground))
             .navigationTitle("申请服务")
             .navigationBarTitleDisplayMode(.inline)

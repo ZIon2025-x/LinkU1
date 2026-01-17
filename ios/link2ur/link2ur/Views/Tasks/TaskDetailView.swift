@@ -91,7 +91,7 @@ struct TaskDetailView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.task == nil {
-                ProgressView()
+                LoadingView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let errorMessage = viewModel.errorMessage, viewModel.task == nil {
                 // 显示错误状态
@@ -259,7 +259,8 @@ struct TaskDetailView: View {
     
     @ViewBuilder
     private var shareSheetContent: some View {
-        if let task = viewModel.task {
+        if let task = viewModel.task, !task.description.isEmpty {
+            // 确保任务数据完整后再显示分享视图
             TaskShareSheet(
                 task: task,
                 taskId: taskId,
@@ -274,6 +275,16 @@ struct TaskDetailView: View {
                     loadShareImage()
                 }
             }
+        } else {
+            // 如果任务数据未就绪，显示加载状态
+            VStack(spacing: AppSpacing.lg) {
+                CompactLoadingView()
+                Text(LocalizationKey.commonLoading.localized)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .presentationDetents([.medium])
         }
     }
     
@@ -605,6 +616,9 @@ struct TaskShareSheet: View {
     let isShareImageLoading: Bool
     @Environment(\.dismiss) var dismiss
     
+    // 使用 @State 确保描述在视图更新时正确传递
+    @State private var shareDescription: String = ""
+    
     // 使用前端网页 URL，确保微信能抓取到正确的 meta 标签（weixin:title, weixin:description, weixin:image）
     // 前端页面已经设置了这些标签，微信会直接抓取
     private var shareUrl: URL {
@@ -616,6 +630,12 @@ struct TaskShareSheet: View {
         }
         // 如果URL构建失败，返回默认URL
         return URL(string: "https://www.link2ur.com")!
+    }
+    
+    // 计算属性：确保描述始终是最新的
+    private var currentDescription: String {
+        // 优先使用 @State 中的值，如果为空则使用 task.description
+        return shareDescription.isEmpty ? task.description : shareDescription
     }
     
     var body: some View {
@@ -645,8 +665,7 @@ struct TaskShareSheet: View {
                             .frame(height: 150)
                         
                         VStack(spacing: AppSpacing.sm) {
-                            ProgressView()
-                                .tint(AppColors.primary)
+                            CompactLoadingView()
                             Text(LocalizationKey.commonLoadingImage.localized)
                                 .font(AppTypography.caption)
                                 .foregroundColor(AppColors.textSecondary)
@@ -677,9 +696,9 @@ struct TaskShareSheet: View {
                         lineLimit: 2
                     )
                     
-                    if !task.description.isEmpty {
+                    if !currentDescription.isEmpty {
                         TranslatableText(
-                            task.description,
+                            currentDescription,
                             font: AppTypography.caption,
                             foregroundColor: AppColors.textSecondary,
                             lineLimit: 2
@@ -704,7 +723,7 @@ struct TaskShareSheet: View {
             // 自定义分享面板（类似小红书）
             CustomSharePanel(
                 title: task.title,
-                description: task.description,
+                description: currentDescription,
                 url: shareUrl,
                 image: shareImage,
                 taskType: task.taskType,
@@ -722,6 +741,14 @@ struct TaskShareSheet: View {
             .padding(.top, AppSpacing.md)
         }
         .background(AppColors.background)
+        .onAppear {
+            // 确保在视图出现时更新描述
+            shareDescription = task.description
+        }
+        .onChange(of: task.description) { newDescription in
+            // 当任务描述更新时，同步更新分享描述
+            shareDescription = newDescription
+        }
     }
 }
 

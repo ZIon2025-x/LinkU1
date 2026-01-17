@@ -15,7 +15,12 @@ struct ForumPostListView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.posts.isEmpty {
-                ProgressView()
+                // 使用列表骨架屏
+                ScrollView {
+                    ListSkeleton(itemCount: 5, itemHeight: 100)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                }
             } else if viewModel.posts.isEmpty {
                 EmptyStateView(
                     icon: "doc.text.magnifyingglass",
@@ -25,11 +30,12 @@ struct ForumPostListView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
-                        ForEach(viewModel.posts) { post in
+                        ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
                             NavigationLink(destination: ForumPostDetailView(postId: post.id)) {
                                 PostCard(post: post)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .listItemAppear(index: index, totalItems: viewModel.posts.count) // 添加错落入场动画
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)

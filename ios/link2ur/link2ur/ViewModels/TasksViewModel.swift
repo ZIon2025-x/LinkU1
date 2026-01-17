@@ -82,8 +82,9 @@ class TasksViewModel: ObservableObject {
         }
     }
     
-    /// 从缓存同步加载任务（用于初始化时立即显示，避免闪烁）
+    /// 从缓存加载任务（用于初始化时立即显示，优先内存缓存，快速响应）
     func loadTasksFromCache(category: String? = nil, city: String? = nil, status: String? = nil) {
+        // 先快速检查内存缓存（同步，很快）
         // 仅在没有搜索关键词时从缓存加载
         if let cachedTasks = CacheManager.shared.loadTasks(category: category, city: city) {
             let filteredCachedTasks = cachedTasks.filter { 
@@ -370,17 +371,18 @@ class TasksViewModel: ObservableObject {
             return
         }
         
-        // 如果强制刷新，清除缓存
+        // 如果强制刷新，只清除推荐任务缓存（不清除普通任务缓存）
         if forceRefresh {
-            CacheManager.shared.invalidateTasksCache()
-        }
-        
-        // 如果不是强制刷新，先尝试从推荐任务专用缓存加载
-        if !forceRefresh {
+            CacheManager.shared.invalidateRecommendedTasksCache()
+            isLoading = true
+            tasks = []
+        } else {
+            // 如果不是强制刷新，先尝试从推荐任务专用缓存加载
             if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: taskType, city: location, isRecommended: true) {
                 if !cachedRecommendedTasks.isEmpty {
+                    // 立即显示缓存的推荐任务（包含推荐原因）
                     self.tasks = cachedRecommendedTasks
-                    Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+                    Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务（包含推荐原因）", category: .cache)
                     
                     // 离线模式：如果有缓存数据，直接使用，不进行网络请求
                     if isOffline {
@@ -389,7 +391,8 @@ class TasksViewModel: ObservableObject {
                         return
                     }
                     
-                    // 在线模式：继续在后台刷新，不显示加载状态
+                    // 在线模式：继续在后台刷新，不显示加载状态（保持现有数据）
+                    isLoading = false
                 } else {
                     // 离线模式且无缓存：显示错误
                     if isOffline {
@@ -410,15 +413,6 @@ class TasksViewModel: ObservableObject {
                 isLoading = true
                 tasks = []
             }
-        } else {
-            // 强制刷新时，离线模式不支持
-            if isOffline {
-                self.errorMessage = "离线模式：无法强制刷新"
-                self.isLoading = false
-                return
-            }
-            isLoading = true
-            tasks = []
         }
         
         errorMessage = nil

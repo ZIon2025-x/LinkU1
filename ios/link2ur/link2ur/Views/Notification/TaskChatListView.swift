@@ -548,9 +548,7 @@ struct TaskChatView: View {
                                         .frame(width: 40, height: 40)
                                     
                                     if viewModel.isSending {
-                                        ProgressView()
-                                            .tint(.white)
-                                            .scaleEffect(0.8)
+                                        CompactLoadingView()
                                     } else {
                                         Image(systemName: "arrow.up")
                                             .font(.system(size: 16, weight: .semibold))

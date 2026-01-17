@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // 最新帖子信息（用于板块预览）
 struct LatestPostInfo: Codable {

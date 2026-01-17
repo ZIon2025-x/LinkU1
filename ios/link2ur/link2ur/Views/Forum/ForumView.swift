@@ -37,14 +37,24 @@ struct ForumView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.categories.isEmpty {
-                ProgressView()
+                // 使用骨架屏替代LoadingView，提供更好的加载体验
+                ScrollView {
+                    LazyVStack(spacing: AppSpacing.md) {
+                        ForEach(0..<5, id: \.self) { index in
+                            ForumCategorySkeleton()
+                                .listItemAppear(index: index, totalItems: 5)
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
+                }
             } else if visibleCategories.isEmpty {
                 if !appState.isAuthenticated {
                     // 未登录且没有可见板块
                     UnauthenticatedForumView(showLogin: $showLogin)
                 } else if verificationViewModel.isLoading {
                     // 加载认证状态中
-                    ProgressView()
+                    LoadingView()
                 } else if !isStudentVerified {
                     // 已登录但未认证，且没有 general 板块
                     UnverifiedForumView(
@@ -62,12 +72,13 @@ struct ForumView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
-                        // 显示可见的板块
-                        ForEach(visibleCategories) { category in
+                        // 显示可见的板块 - 添加错落入场动画
+                        ForEach(Array(visibleCategories.enumerated()), id: \.element.id) { index, category in
                             NavigationLink(destination: ForumPostListView(category: category)) {
                                 CategoryCard(category: category)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .listItemAppear(index: index, totalItems: visibleCategories.count)
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
@@ -170,6 +181,7 @@ struct ForumView: View {
                 }
             }
         }
+    }
 }
 
 // MARK: - 未登录提示视图
@@ -271,15 +283,16 @@ struct UnverifiedForumView: View {
     }
 }
 
-// 板块卡片 - 更现代的设计
+// 板块卡片 - 更现代的设计 + 丝滑交互
 struct CategoryCard: View {
     let category: ForumCategory
+    @State private var isAppeared = false
     
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            // 图标容器 - 渐变背景
+            // 图标容器 - 渐变背景 + 丝滑动画
             ZStack {
-                RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
                     .fill(
                         LinearGradient(
                             gradient: Gradient(colors: AppColors.gradientPrimary),
@@ -289,6 +302,8 @@ struct CategoryCard: View {
                     )
                     .frame(width: 64, height: 64)
                     .shadow(color: AppColors.primary.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .scaleEffect(isAppeared ? 1.0 : 0.8)
+                    .opacity(isAppeared ? 1.0 : 0.0)
                 
                 if let icon = category.icon, !icon.isEmpty {
                     // 检查是否是有效的 URL（以 http:// 或 https:// 开头）
@@ -409,6 +424,12 @@ struct CategoryCard: View {
         }
         .padding(AppSpacing.md)
         .cardStyle(cornerRadius: AppCornerRadius.large)
+        .onAppear {
+            // 图标入场动画
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0).delay(0.05)) {
+                isAppeared = true
+            }
+        }
     }
     
     /// 格式化论坛时间显示为 "01/Jan" 格式
@@ -448,7 +469,7 @@ struct CategoryCard: View {
 struct ForumCategoryRequestView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
-    @StateObject private var apiService = APIService.shared
+    private let apiService = APIService.shared
     
     @State private var categoryName = ""
     @State private var categoryDescription = ""
@@ -462,9 +483,9 @@ struct ForumCategoryRequestView: View {
     // 字符限制
     private let maxNameLength = 100
     private let maxDescriptionLength = 500
-    private let maxIconLength = 200
+    private let maxIconLength = 1 // emoji 只能输入一个
     
-    enum Field {
+    enum Field: Hashable {
         case name, description, icon
     }
     
@@ -504,7 +525,7 @@ struct ForumCategoryRequestView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                ScrollView {
+                KeyboardAvoidingScrollView(extraPadding: 20) {
                     VStack(spacing: AppSpacing.lg) {
                         // 说明文字
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -585,6 +606,7 @@ struct ForumCategoryRequestView: View {
                                         .font(.system(size: 15))
                                         .frame(minHeight: 100)
                                         .padding(AppSpacing.sm)
+                                        .scrollContentBackground(.hidden)
                                         .background(AppColors.cardBackground)
                                         .cornerRadius(AppCornerRadius.medium)
                                         .overlay(
@@ -654,23 +676,20 @@ struct ForumCategoryRequestView: View {
                                     )
                                     .focused($focusedField, equals: .icon)
                                     .onChange(of: categoryIcon) { newValue in
-                                        // 限制字符长度
-                                        if newValue.count > maxIconLength {
-                                            categoryIcon = String(newValue.prefix(maxIconLength))
+                                        // 限制只能输入一个 emoji（取第一个字符）
+                                        if newValue.count > 1 {
+                                            // 取第一个字符（支持复合 emoji，如带肤色的 emoji）
+                                            categoryIcon = String(newValue.prefix(1))
                                         }
                                     }
                                 
-                                // 字符计数（仅当有输入时显示）
+                                // 提示信息（仅当有输入时显示）
                                 if !categoryIcon.isEmpty {
                                     HStack {
                                         Spacer()
-                                        Text("\(iconCharacterCount)/\(maxIconLength)")
+                                        Text("已输入 1 个 emoji")
                                             .font(.system(size: 12))
-                                            .foregroundColor(
-                                                iconCharacterCount > maxIconLength 
-                                                    ? AppColors.error 
-                                                    : AppColors.textSecondary
-                                            )
+                                            .foregroundColor(AppColors.textSecondary)
                                     }
                                 }
                             }
@@ -719,7 +738,11 @@ struct ForumCategoryRequestView: View {
                             .padding(.horizontal, AppSpacing.md)
                         }
                     }
-                    .padding(.bottom, AppSpacing.xl)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    focusedField = nil
                 }
             }
             .navigationTitle("申请新建板块")
@@ -728,6 +751,13 @@ struct ForumCategoryRequestView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") {
                         dismiss()
+                    }
+                }
+                // 键盘上方的完成按钮
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        focusedField = nil
                     }
                 }
             }
@@ -794,48 +824,41 @@ struct ForumCategoryRequestView: View {
             method: "POST",
             body: requestData
         )
+        .receive(on: DispatchQueue.main)
         .sink(
             receiveCompletion: { completion in
-                DispatchQueue.main.async {
-                    isLoading = false
-                    if case .failure(let error) = completion {
-                        hasSubmitted = false // 失败后允许重新提交
-                        // 解析错误信息，提供更友好的提示
-                        if let apiError = error as? APIError {
-                            switch apiError {
-                            case .httpError(let code):
-                                if code == 400 {
-                                    errorMessage = "提交失败，请检查输入内容是否正确"
-                                } else if code == 401 {
-                                    errorMessage = "登录已过期，请重新登录"
-                                } else {
-                                    errorMessage = error.userFriendlyMessage
-                                }
-                            default:
-                                errorMessage = error.userFriendlyMessage
-                            }
+                isLoading = false
+                if case .failure(let error) = completion {
+                    hasSubmitted = false // 失败后允许重新提交
+                    // 解析错误信息，提供更友好的提示
+                    switch error {
+                    case .httpError(let code):
+                        if code == 400 {
+                            errorMessage = "提交失败，请检查输入内容是否正确"
+                        } else if code == 401 {
+                            errorMessage = "登录已过期，请重新登录"
                         } else {
                             errorMessage = error.userFriendlyMessage
                         }
+                    default:
+                        errorMessage = error.userFriendlyMessage
                     }
                 }
             },
             receiveValue: { response in
-                DispatchQueue.main.async {
-                    isLoading = false
-                    showSuccessAlert = true
-                    // 清空表单
-                    categoryName = ""
-                    categoryDescription = ""
-                    categoryIcon = ""
-                    hasSubmitted = false // 成功后重置，允许再次提交
-                }
+                isLoading = false
+                showSuccessAlert = true
+                // 清空表单
+                categoryName = ""
+                categoryDescription = ""
+                categoryIcon = ""
+                hasSubmitted = false // 成功后重置，允许再次提交
             }
         )
         .store(in: &cancellables)
     }
     
-    private var cancellables = Set<AnyCancellable>()
+    @State private var cancellables = Set<AnyCancellable>()
 }
 
 
@@ -844,14 +867,14 @@ struct ForumCategoryRequestView: View {
 struct MyCategoryRequestsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
-    @StateObject private var apiService = APIService.shared
+    private let apiService = APIService.shared
     
     @State private var requests: [ForumCategoryRequestDetail] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedStatus: String? = nil
     
-    private var cancellables = Set<AnyCancellable>()
+    @State private var cancellables = Set<AnyCancellable>()
     
     var filteredRequests: [ForumCategoryRequestDetail] {
         if let status = selectedStatus {
@@ -943,9 +966,9 @@ struct MyCategoryRequestsView: View {
         apiService.getMyCategoryRequests()
             .receive(on: DispatchQueue.main)
             .sink { completion in
-                self.isLoading = false
+                isLoading = false
                 if case .failure(let error) = completion {
-                    self.errorMessage = error.userFriendlyMessage
+                    errorMessage = error.userFriendlyMessage
                 }
             } receiveValue: { requests in
                 self.requests = requests

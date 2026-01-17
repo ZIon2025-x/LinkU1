@@ -27,13 +27,14 @@ struct NotificationListView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(viewModel.notifications) { notification in
+                        ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
                             // 判断是否是任务相关的通知，并提取任务ID
                             if isTaskRelated(notification: notification), let taskId = extractTaskId(from: notification) {
                                 NavigationLink(destination: TaskDetailView(taskId: taskId)) {
                                     NotificationRow(notification: notification)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle提供更好的交互反馈
+                                .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
                                 .simultaneousGesture(
                                     TapGesture().onEnded {
                                         // 点击时立即标记为已读
@@ -46,6 +47,7 @@ struct NotificationListView: View {
                                 )
                             } else {
                                 NotificationRow(notification: notification)
+                                    .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
                                     .onTapGesture {
                                         // 标记为已读
                                         print("🔔 [NotificationListView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
@@ -67,13 +69,15 @@ struct NotificationListView: View {
             }
         }
         .refreshable {
-            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
-            viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
+            // 下拉刷新时强制刷新
+            viewModel.loadNotifications(forceRefresh: true)
         }
         .onAppear {
-            // 加载所有未读通知和最近已读通知，确保用户可以查看所有未读通知
+            // 先尝试从缓存加载（立即显示）
+            viewModel.loadNotificationsFromCache()
+            // 后台刷新数据（不强制刷新，使用缓存优先策略）
             if viewModel.notifications.isEmpty {
-                viewModel.loadNotificationsWithRecentRead(recentReadLimit: 20)
+                viewModel.loadNotifications(forceRefresh: false)
             }
         }
     }

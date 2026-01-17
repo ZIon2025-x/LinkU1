@@ -3,6 +3,7 @@ import Combine
 
 class NotificationViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
+    private let cacheManager = CacheManager.shared
     @Published var notifications: [SystemNotification] = []
     @Published var forumNotifications: [ForumNotification] = []
     @Published var unifiedNotifications: [UnifiedNotification] = []
@@ -13,15 +14,50 @@ class NotificationViewModel: ObservableObject {
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     
+    // 缓存键
+    private let systemNotificationsCacheKey = "my_notifications_system"
+    private let forumNotificationsCacheKey = "my_notifications_forum"
+    
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+    }
+    
+    /// 从缓存加载通知（供 View 调用，优先内存缓存，快速响应）
+    func loadNotificationsFromCache() {
+        // 先快速检查内存缓存（同步，很快）
+        var hasCached = false
+        
+        if let cached: [SystemNotification] = cacheManager.load([SystemNotification].self, forKey: systemNotificationsCacheKey) {
+            if !cached.isEmpty {
+                self.notifications = cached
+                hasCached = true
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条系统通知", category: .cache)
+            }
+        }
+        
+        if let cached: [ForumNotification] = cacheManager.load([ForumNotification].self, forKey: forumNotificationsCacheKey) {
+            if !cached.isEmpty {
+                self.forumNotifications = cached
+                hasCached = true
+                Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条论坛通知", category: .cache)
+            }
+        }
+        
+        if hasCached {
+            updateUnifiedNotifications()
+        }
     }
     
     deinit {
         cancellables.removeAll()
     }
     
-    func loadNotifications() {
+    func loadNotifications(forceRefresh: Bool = false) {
+        // 如果不是强制刷新，先尝试从缓存加载
+        if !forceRefresh {
+            loadNotificationsFromCache()
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -40,9 +76,15 @@ class NotificationViewModel: ObservableObject {
                 self?.isLoading = false
                 // 由于使用了 .catch，错误已经被处理，这里不会收到 failure
             }, receiveValue: { [weak self] (systemNotifs, forumNotifs) in
-                self?.notifications = systemNotifs
-                self?.forumNotifications = forumNotifs
-                self?.updateUnifiedNotifications()
+                guard let self = self else { return }
+                self.notifications = systemNotifs
+                self.forumNotifications = forumNotifs
+                self.updateUnifiedNotifications()
+                
+                // 保存到缓存
+                self.cacheManager.save(systemNotifs, forKey: self.systemNotificationsCacheKey)
+                self.cacheManager.save(forumNotifs, forKey: self.forumNotificationsCacheKey)
+                Logger.debug("✅ 已缓存 \(systemNotifs.count) 条系统通知和 \(forumNotifs.count) 条论坛通知", category: .cache)
             })
             .store(in: &cancellables)
     }

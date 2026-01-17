@@ -66,9 +66,7 @@ struct ApplePayNativeView: View {
                 } else if viewModel.isLoading {
                     // 加载中
                     VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text("准备支付...")
+                        LoadingView(message: "准备支付...")
                             .foregroundColor(.secondary)
                     }
                 } else if viewModel.paymentSuccess {

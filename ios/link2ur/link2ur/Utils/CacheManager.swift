@@ -17,17 +17,47 @@ public class CacheManager {
     /// 线程安全锁
     private let lock = NSLock()
     
+    // MARK: - 缓存统计
+    
+    /// 缓存统计信息
+    public struct CacheStatistics {
+        public let totalHits: Int
+        public let totalMisses: Int
+        public let hitRate: Double
+        public let memoryCacheCount: Int
+        public let diskCacheCount: Int
+        public let totalCacheSize: Int64 // 字节
+        public let oldestCacheDate: Date?
+        public let newestCacheDate: Date?
+    }
+    
+    // 缓存统计计数器
+    private var cacheHits: Int = 0
+    private var cacheMisses: Int = 0
+    
     // 缓存过期时间（秒）- 根据数据类型设置不同过期时间
     private let defaultCacheExpirationTime: TimeInterval = 300 // 5分钟（默认）
     private let shortCacheExpirationTime: TimeInterval = 180 // 3分钟（频繁更新的数据）
     private let longCacheExpirationTime: TimeInterval = 600 // 10分钟（相对稳定的数据）
+    private let personalDataCacheExpirationTime: TimeInterval = 1800 // 30分钟（用户个人数据，如支付、提现、我的任务等）
     
     // 缓存大小限制（字节）
     private let maxCacheSize: Int64 = 50 * 1024 * 1024 // 50MB
     
     // 获取特定数据类型的缓存过期时间
     private func cacheExpirationTime(forKey key: String) -> TimeInterval {
-        if key.contains("tasks") || key.contains("activities") {
+        // 用户个人数据使用更长的缓存时间（30分钟），减少频繁加载
+        if key.contains("my_") || 
+           key.contains("payment") || 
+           key.contains("payout") || 
+           key.contains("balance") ||
+           key.contains("applications") ||
+           key.contains("my_tasks") ||
+           key.contains("my_posts") ||
+           key.contains("my_forum") ||
+           key.contains("my_items") {
+            return personalDataCacheExpirationTime // 个人数据缓存30分钟
+        } else if key.contains("tasks") || key.contains("activities") {
             return shortCacheExpirationTime // 任务和活动更新频繁
         } else if key.contains("leaderboards") || key.contains("task_experts") {
             return longCacheExpirationTime // 排行榜和达人相对稳定
@@ -79,6 +109,7 @@ public class CacheManager {
         
         // 先尝试从内存缓存获取
         if let cached = memoryCache.object(forKey: key as NSString) as? T {
+            cacheHits += 1
             return cached
         }
         
@@ -86,9 +117,11 @@ public class CacheManager {
         if let cached = getDiskCache(forKey: key, as: type) {
             // 回填到内存缓存
             memoryCache.setObject(cached, forKey: key as NSString)
+            cacheHits += 1
             return cached
         }
         
+        cacheMisses += 1
         return nil
     }
     
@@ -127,10 +160,12 @@ public class CacheManager {
         saveCacheTimestamp(forKey: key)
     }
     
-    /// 仅从磁盘缓存获取
+    /// 仅从磁盘缓存获取（同步版本，但优化了性能）
+    /// 注意：此方法在主线程调用时应该快速返回，大文件读取应该在后台线程
     public func getDiskCache<T: Decodable>(forKey key: String, as type: T.Type) -> T? {
         let fileURL = cacheDirectory.appendingPathComponent("\(key).json")
         
+        // 快速检查文件是否存在（不阻塞）
         guard fileManager.fileExists(atPath: fileURL.path) else {
             return nil
         }
@@ -138,11 +173,23 @@ public class CacheManager {
         // 检查缓存是否过期（使用旧版本的时间戳检查作为后备）
         if isCacheExpired(forKey: key) {
             Logger.warning("缓存已过期 [\(key)]，将清除", category: .cache)
-            clearCache(forKey: key)
+            // 异步清除，不阻塞主线程
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                self?.clearCache(forKey: key)
+            }
+            return nil
+        }
+        
+        // 检查文件大小，如果文件过大，异步读取
+        if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
+           let fileSize = attributes[.size] as? Int64,
+           fileSize > 1024 * 1024 { // 超过1MB的文件，不应该在主线程同步读取
+            Logger.warning("缓存文件过大 [\(key)]: \(fileSize) bytes，跳过同步读取", category: .cache)
             return nil
         }
         
         do {
+            // 对于小文件，同步读取是可以接受的
             let data = try Data(contentsOf: fileURL)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -151,7 +198,10 @@ public class CacheManager {
             if let cacheItem = try? decoder.decode(DiskCacheItemWrapper<T>.self, from: data) {
                 // 检查是否过期
                 if let expirationDate = cacheItem.expirationDate, expirationDate < Date() {
-                    try? fileManager.removeItem(at: fileURL)
+                    // 异步删除过期文件
+                    DispatchQueue.global(qos: .utility).async { [weak self] in
+                        try? self?.fileManager.removeItem(at: fileURL)
+                    }
                     return nil
                 }
                 return cacheItem.data
@@ -169,7 +219,7 @@ public class CacheManager {
     
     /// 保存数据到缓存（协议方法，兼容旧代码）
     /// 自动使用内存+磁盘缓存，使用默认过期策略
-    public func save<T: Codable>(_ data: T, forKey key: String) {
+    nonisolated public func save<T: Codable>(_ data: T, forKey key: String) {
         // 对于值类型（struct），只能存储到磁盘
         // 对于引用类型（class），可以同时存储到内存和磁盘
         // 使用 Mirror 来检查是否为类类型（引用类型）
@@ -195,15 +245,33 @@ public class CacheManager {
     }
     
     /// 从缓存加载数据（协议方法，兼容旧代码）
-    /// 优先从内存获取，然后从磁盘获取
-    public func load<T: Codable>(_ type: T.Type, forKey key: String) -> T? {
-        // 先尝试从内存获取（仅适用于引用类型）
+    /// 优先从内存获取（同步，快速），然后从磁盘获取（同步，但优化了性能）
+    nonisolated public func load<T: Codable>(_ type: T.Type, forKey key: String) -> T? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        // 先尝试从内存获取（同步，非常快，不会阻塞）
         if let cached = memoryCache.object(forKey: key as NSString) as? T {
+            cacheHits += 1
             return cached
         }
         
-        // 从磁盘获取
-        return getDiskCache(forKey: key, as: type)
+        // 从磁盘获取（同步，但已优化：大文件会跳过，过期文件异步删除）
+        if let cached = getDiskCache(forKey: key, as: type) {
+            // 回填到内存缓存，下次就能快速获取
+            // 使用 Mirror 检查是否为引用类型（class），只有引用类型才能存储到 NSCache
+            let isReferenceType = Mirror(reflecting: cached).displayStyle == .class
+            if isReferenceType {
+                // 对于引用类型，直接转换为 AnyObject（不需要条件转换，因为已经确认是引用类型）
+                let object = cached as AnyObject
+                memoryCache.setObject(object, forKey: key as NSString)
+            }
+            cacheHits += 1
+            return cached
+        }
+        
+        cacheMisses += 1
+        return nil
     }
     
     /// 清除指定缓存（内存 + 磁盘）
@@ -312,18 +380,59 @@ public class CacheManager {
     
     // MARK: - 缓存失效策略
     
-    /// 清除任务相关缓存
+    /// 清除任务相关缓存（不包括推荐任务缓存）
     func invalidateTasksCache() {
         do {
             let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            var clearedCount = 0
+            for file in files {
+                let fileName = file.lastPathComponent
+                // 只清除普通任务缓存，保留推荐任务缓存
+                // 推荐任务缓存键是 "recommended_tasks"，普通任务缓存键是 "tasks"
+                if fileName.contains("tasks") && !fileName.contains("recommended_tasks") {
+                    try? fileManager.removeItem(at: file)
+                    clearedCount += 1
+                }
+            }
+            Logger.success("已清除 \(clearedCount) 个普通任务缓存文件（保留推荐任务缓存）", category: .cache)
+        } catch {
+            Logger.error("清除任务缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除推荐任务缓存
+    func invalidateRecommendedTasksCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            var clearedCount = 0
+            for file in files {
+                let fileName = file.lastPathComponent
+                // 只清除推荐任务缓存
+                if fileName.contains("recommended_tasks") {
+                    try? fileManager.removeItem(at: file)
+                    clearedCount += 1
+                }
+            }
+            Logger.success("已清除 \(clearedCount) 个推荐任务缓存文件", category: .cache)
+        } catch {
+            Logger.error("清除推荐任务缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除所有任务缓存（包括推荐任务和普通任务）
+    func invalidateAllTasksCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            var clearedCount = 0
             for file in files {
                 if file.lastPathComponent.contains("tasks") {
                     try? fileManager.removeItem(at: file)
+                    clearedCount += 1
                 }
             }
-            Logger.success("任务缓存已清除", category: .cache)
+            Logger.success("已清除 \(clearedCount) 个任务缓存文件（包括推荐任务和普通任务）", category: .cache)
         } catch {
-            print("⚠️ 清除任务缓存失败: \(error.localizedDescription)")
+            Logger.error("清除所有任务缓存失败: \(error.localizedDescription)", category: .cache)
         }
     }
     
@@ -393,6 +502,96 @@ public class CacheManager {
         }
     }
     
+    // MARK: - 个人数据缓存失效
+    
+    /// 清除用户个人数据缓存（支付、提现、任务、商品等）
+    func invalidatePersonalDataCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            var clearedCount = 0
+            for file in files {
+                let fileName = file.lastPathComponent
+                // 清除所有个人数据相关的缓存
+                if fileName.contains("my_") ||
+                   fileName.contains("payment") ||
+                   fileName.contains("payout") ||
+                   fileName.contains("balance") ||
+                   fileName.contains("applications") ||
+                   fileName.contains("notifications") {
+                    try? fileManager.removeItem(at: file)
+                    clearedCount += 1
+                }
+            }
+            Logger.success("已清除 \(clearedCount) 个个人数据缓存文件", category: .cache)
+        } catch {
+            Logger.error("清除个人数据缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除我的任务相关缓存
+    func invalidateMyTasksCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                let fileName = file.lastPathComponent
+                if fileName.contains("my_tasks") || fileName.contains("my_applications") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("我的任务缓存已清除", category: .cache)
+        } catch {
+            Logger.error("清除我的任务缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除我的商品相关缓存
+    func invalidateMyItemsCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                let fileName = file.lastPathComponent
+                if fileName.contains("my_items") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("我的商品缓存已清除", category: .cache)
+        } catch {
+            Logger.error("清除我的商品缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除支付和提现相关缓存
+    func invalidatePaymentCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                let fileName = file.lastPathComponent
+                if fileName.contains("payment") || fileName.contains("payout") || fileName.contains("balance") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("支付和提现缓存已清除", category: .cache)
+        } catch {
+            Logger.error("清除支付缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
+    /// 清除通知相关缓存
+    func invalidateNotificationsCache() {
+        do {
+            let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: nil)
+            for file in files {
+                let fileName = file.lastPathComponent
+                if fileName.contains("notifications") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            Logger.success("通知缓存已清除", category: .cache)
+        } catch {
+            Logger.error("清除通知缓存失败: \(error.localizedDescription)", category: .cache)
+        }
+    }
+    
     /// 清除所有过期缓存
     func clearExpiredCache() {
         do {
@@ -419,19 +618,37 @@ public class CacheManager {
         }
     }
     
-    /// 获取缓存统计信息
+    /// 获取缓存统计信息（旧方法，保持兼容）
     func getCacheStats() -> (fileCount: Int, totalSize: Int64, oldestDate: Date?, newestDate: Date?) {
+        let stats = getStatistics()
+        return (
+            fileCount: stats.diskCacheCount,
+            totalSize: stats.totalCacheSize,
+            oldestDate: stats.oldestCacheDate,
+            newestDate: stats.newestCacheDate
+        )
+    }
+    
+    /// 获取完整的缓存统计信息
+    public func getStatistics() -> CacheStatistics {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let total = cacheHits + cacheMisses
+        let hitRate = total > 0 ? Double(cacheHits) / Double(total) : 0.0
+        
+        // 获取磁盘缓存信息
+        var diskCacheCount = 0
+        var totalSize: Int64 = 0
+        var dates: [Date] = []
+        
         do {
             let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])
-            
-            var totalSize: Int64 = 0
-            var dates: [Date] = []
-            var fileCount = 0
             
             for file in files {
                 // 只统计 JSON 文件
                 if file.lastPathComponent.hasSuffix(".json") {
-                    fileCount += 1
+                    diskCacheCount += 1
                     if let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize {
                         totalSize += Int64(size)
                     }
@@ -440,16 +657,31 @@ public class CacheManager {
                     }
                 }
             }
-            
-            return (
-                fileCount: fileCount,
-                totalSize: totalSize,
-                oldestDate: dates.min(),
-                newestDate: dates.max()
-            )
         } catch {
-            return (fileCount: 0, totalSize: 0, oldestDate: nil, newestDate: nil)
+            // 忽略错误
         }
+        
+        // 内存缓存数量（NSCache 不提供直接计数，这里估算）
+        let memoryCacheCount = memoryCache.countLimit // 这是限制，不是实际数量
+        
+        return CacheStatistics(
+            totalHits: cacheHits,
+            totalMisses: cacheMisses,
+            hitRate: hitRate,
+            memoryCacheCount: memoryCacheCount,
+            diskCacheCount: diskCacheCount,
+            totalCacheSize: totalSize,
+            oldestCacheDate: dates.min(),
+            newestCacheDate: dates.max()
+        )
+    }
+    
+    /// 重置缓存统计
+    public func resetStatistics() {
+        lock.lock()
+        defer { lock.unlock() }
+        cacheHits = 0
+        cacheMisses = 0
     }
     
     // MARK: - 缓存时间戳管理

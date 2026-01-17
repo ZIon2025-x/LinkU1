@@ -24,10 +24,14 @@ struct StripeConnectPaymentsView: View {
         .navigationTitle(LocalizationKey.paymentRecordsPaymentRecords.localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.loadTransactions()
+            // 先尝试从缓存加载（立即显示）
+            viewModel.loadTransactionsFromCache()
+            // 后台刷新数据（不强制刷新，使用缓存优先策略）
+            viewModel.loadTransactions(forceRefresh: false)
         }
         .refreshable {
-            viewModel.loadTransactions()
+            // 下拉刷新时强制刷新
+            viewModel.loadTransactions(forceRefresh: true)
         }
         .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
             Button(LocalizationKey.commonOk.localized, role: .cancel) { }
@@ -46,9 +50,7 @@ struct StripeConnectPaymentsView: View {
     
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-            Text(LocalizationKey.paymentRecordsLoading.localized)
+            LoadingView(message: LocalizationKey.paymentRecordsLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -221,37 +223,98 @@ struct StripeTransactionRowView: View {
 
 /// ViewModel 用于管理支付记录
 class StripeConnectPaymentsViewModel: ObservableObject {
-    @Published var transactions: [StripeConnectTransaction] = []
-    @Published var taskPayments: [TaskPaymentRecord] = []
+    @Published var transactions: [StripeConnectTransaction] = [] {
+        willSet {
+            // 数据更新时清除缓存，触发重新计算
+            _allPaymentRecords = []
+        }
+    }
+    @Published var taskPayments: [TaskPaymentRecord] = [] {
+        willSet {
+            // 数据更新时清除缓存，触发重新计算
+            _allPaymentRecords = []
+        }
+    }
     @Published var isLoading = false
     @Published var error: String?
     
     private let apiService = APIService.shared
+    private let cacheManager = CacheManager.shared
     private var cancellables = Set<AnyCancellable>()
     
+    // 缓存键
+    private let stripeTransactionsCacheKey = "my_payment_stripe_transactions"
+    private let taskPaymentsCacheKey = "my_payment_task_payments"
+    
     // 合并后的所有支付记录（包括 Stripe Connect 交易和任务付款）
+    // 使用缓存避免重复计算
+    private var _allPaymentRecords: [PaymentRecord] = []
+    
     var allPaymentRecords: [PaymentRecord] {
-        var records: [PaymentRecord] = []
-        
-        // 添加 Stripe Connect 交易记录
-        for transaction in transactions {
-            records.append(.stripeConnect(transaction))
+        // 如果缓存为空或数据已变化，重新计算
+        if _allPaymentRecords.isEmpty || 
+           _allPaymentRecords.count != transactions.count + taskPayments.count {
+            // 重新计算并缓存
+            var records: [PaymentRecord] = []
+            
+            // 添加 Stripe Connect 交易记录
+            for transaction in transactions {
+                records.append(.stripeConnect(transaction))
+            }
+            
+            // 添加任务付款记录
+            for payment in taskPayments {
+                records.append(.taskPayment(payment))
+            }
+            
+            // 按时间倒序排列（最新的在前）
+            _allPaymentRecords = records.sorted { record1, record2 in
+                let time1 = record1.createdAt
+                let time2 = record2.createdAt
+                return time1 > time2
+            }
         }
         
-        // 添加任务付款记录
-        for payment in taskPayments {
-            records.append(.taskPayment(payment))
-        }
-        
-        // 按时间倒序排列（最新的在前）
-        return records.sorted { record1, record2 in
-            let time1 = record1.createdAt
-            let time2 = record2.createdAt
-            return time1 > time2
+        return _allPaymentRecords
+    }
+    
+    /// 从缓存加载支付记录（供 View 调用，优先内存缓存，快速响应）
+    func loadTransactionsFromCache() {
+        // 异步加载缓存，避免阻塞主线程
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            var stripeTransactions: [StripeConnectTransaction] = []
+            var taskPayments: [TaskPaymentRecord] = []
+            
+            if let cached: [StripeConnectTransaction] = self.cacheManager.load([StripeConnectTransaction].self, forKey: self.stripeTransactionsCacheKey) {
+                if !cached.isEmpty {
+                    stripeTransactions = cached
+                    Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条 Stripe Connect 交易记录", category: .cache)
+                }
+            }
+            
+            if let cached: [TaskPaymentRecord] = self.cacheManager.load([TaskPaymentRecord].self, forKey: self.taskPaymentsCacheKey) {
+                if !cached.isEmpty {
+                    taskPayments = cached
+                    Logger.debug("✅ 从内存缓存加载了 \(cached.count) 条任务付款记录", category: .cache)
+                }
+            }
+            
+            // 更新 UI 在主线程
+            DispatchQueue.main.async {
+                self.transactions = stripeTransactions
+                self.taskPayments = taskPayments
+            }
         }
     }
     
-    func loadTransactions() {
+    func loadTransactions(forceRefresh: Bool = false) {
+        // 如果不是强制刷新，先尝试从缓存加载
+        if !forceRefresh {
+            loadTransactionsFromCache()
+        }
+        
         isLoading = true
         error = nil
         
@@ -320,8 +383,16 @@ class StripeConnectPaymentsViewModel: ObservableObject {
                 }
             },
             receiveValue: { [weak self] response in
-                self?.transactions = response.transactions
+                guard let self = self else { return }
+                self.transactions = response.transactions
                 print("✅ 成功加载 \(response.transactions.count) 条 Stripe Connect 交易记录")
+                
+                // 异步保存到缓存，避免阻塞主线程
+                DispatchQueue.global(qos: .utility).async {
+                    self.cacheManager.save(response.transactions, forKey: self.stripeTransactionsCacheKey)
+                    Logger.debug("✅ 已缓存 \(response.transactions.count) 条 Stripe Connect 交易记录", category: .cache)
+                }
+                
                 // 注意：不在 receiveValue 中调用 completion，避免重复调用
                 // completion 会在 receiveCompletion 中调用
             }
@@ -355,8 +426,16 @@ class StripeConnectPaymentsViewModel: ObservableObject {
                 }
             },
             receiveValue: { [weak self] response in
-                self?.taskPayments = response.payments
+                guard let self = self else { return }
+                self.taskPayments = response.payments
                 print("✅ 成功加载 \(response.payments.count) 条任务付款记录")
+                
+                // 异步保存到缓存，避免阻塞主线程
+                DispatchQueue.global(qos: .utility).async {
+                    self.cacheManager.save(response.payments, forKey: self.taskPaymentsCacheKey)
+                    Logger.debug("✅ 已缓存 \(response.payments.count) 条任务付款记录", category: .cache)
+                }
+                
                 // 注意：不在 receiveValue 中调用 completion，避免重复调用
                 // completion 会在 receiveCompletion 中调用
             }
@@ -379,16 +458,19 @@ enum PaymentRecord: Identifiable {
         }
     }
     
+    // 缓存日期解析结果，避免重复解析
+    private static let dateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
     var createdAt: Date {
         switch self {
         case .stripeConnect(let transaction):
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            return formatter.date(from: transaction.createdAt) ?? Date.distantPast
+            return PaymentRecord.dateFormatter.date(from: transaction.createdAt) ?? Date.distantPast
         case .taskPayment(let payment):
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            return formatter.date(from: payment.createdAt ?? "") ?? Date.distantPast
+            return PaymentRecord.dateFormatter.date(from: payment.createdAt ?? "") ?? Date.distantPast
         }
     }
 }

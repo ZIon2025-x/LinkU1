@@ -13,7 +13,12 @@ struct FleaMarketView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.items.isEmpty {
-                LoadingView()
+                // 使用网格骨架屏
+                ScrollView {
+                    GridSkeleton(columns: 2, rows: 4)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                }
             } else if viewModel.items.isEmpty {
             EmptyStateView(
                 icon: "cart.fill",
@@ -26,13 +31,14 @@ struct FleaMarketView: View {
                         GridItem(.flexible(), spacing: AppSpacing.sm),
                         GridItem(.flexible(), spacing: AppSpacing.sm)
                     ], spacing: AppSpacing.md) {
-                        ForEach(viewModel.items, id: \.id) { item in
+                        ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
                             NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
                                 ItemCard(item: item, isFavorited: viewModel.favoritedItemIds.contains(item.id))
                                     .drawingGroup() // 优化复杂卡片渲染性能
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .id(item.id) // 确保稳定的id，优化视图复用
+                            .listItemAppear(index: index, totalItems: viewModel.items.count) // 添加错落入场动画
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)

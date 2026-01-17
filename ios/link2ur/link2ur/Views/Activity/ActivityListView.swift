@@ -57,8 +57,12 @@ struct ActivityListView: View {
                 
                 // 活动列表
                 if viewModel.isLoading && viewModel.activities.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // 使用列表骨架屏
+                    ScrollView {
+                        ListSkeleton(itemCount: 5, itemHeight: 150)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                    }
                 } else if viewModel.activities.isEmpty {
                     EmptyStateView(
                         icon: "calendar.badge.plus",
@@ -68,7 +72,7 @@ struct ActivityListView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(viewModel.activities) { activity in
+                            ForEach(Array(viewModel.activities.enumerated()), id: \.element.id) { index, activity in
                                 NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
                                     ActivityCardView(
                                         activity: activity,
@@ -77,6 +81,7 @@ struct ActivityListView: View {
                                     )
                                 }
                                 .buttonStyle(ScaleButtonStyle())
+                                .listItemAppear(index: index, totalItems: viewModel.activities.count) // 添加错落入场动画
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)

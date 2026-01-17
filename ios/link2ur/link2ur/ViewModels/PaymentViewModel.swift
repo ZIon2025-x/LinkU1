@@ -430,6 +430,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         case .completed:
             Logger.info("支付成功", category: .api)
             paymentSuccess = true
+            // 清除支付缓存，因为有了新的支付记录
+            CacheManager.shared.invalidatePaymentCache()
         case .failed(let error):
             Logger.error("支付失败: \(error.localizedDescription)", category: .api)
             // 使用格式化的错误消息
@@ -545,6 +547,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             Logger.info("Apple Pay 支付成功", category: .api)
             paymentSuccess = true
             errorMessage = nil
+            // 清除支付缓存，因为有了新的支付记录
+            CacheManager.shared.invalidatePaymentCache()
         case .error:
             if let error = error {
                 Logger.error("Apple Pay 支付失败: \(error.localizedDescription)", category: .api)

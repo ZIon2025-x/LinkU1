@@ -56,12 +56,12 @@ struct HomeView: View {
                         
                         Spacer()
                         
-                        // 中间三个标签（符合 HIG 间距）
+                        // 中间三个标签（符合 HIG 间距）+ 丝滑切换动画
                         HStack(spacing: 0) {
                             TabButton(title: LocalizationKey.homeExperts.localized, isSelected: selectedTab == 0) {
                                 if selectedTab != 0 {
-                                    HapticFeedback.selection()
-                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                    HapticFeedback.tabSwitch()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75, blendDuration: 0)) {
                                         selectedTab = 0
                                     }
                                 }
@@ -69,8 +69,8 @@ struct HomeView: View {
                             
                             TabButton(title: LocalizationKey.homeRecommended.localized, isSelected: selectedTab == 1) {
                                 if selectedTab != 1 {
-                                    HapticFeedback.selection()
-                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                    HapticFeedback.tabSwitch()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75, blendDuration: 0)) {
                                         selectedTab = 1
                                     }
                                 }
@@ -78,8 +78,8 @@ struct HomeView: View {
                             
                             TabButton(title: LocalizationKey.homeNearby.localized, isSelected: selectedTab == 2) {
                                 if selectedTab != 2 {
-                                    HapticFeedback.selection()
-                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                    HapticFeedback.tabSwitch()
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75, blendDuration: 0)) {
                                         selectedTab = 2
                                     }
                                 }
@@ -205,7 +205,7 @@ struct HomeView: View {
     }
 }
 
-// 标签按钮组件（符合 Apple HIG）
+// 标签按钮组件（符合 Apple HIG + 丝滑动画）
 struct TabButton: View {
     let title: String
     let isSelected: Bool
@@ -215,25 +215,29 @@ struct TabButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Text(title)
-                    .font(AppTypography.body) // 使用 body
+                    .font(AppTypography.body)
                     .fontWeight(isSelected ? .semibold : .regular)
                     .foregroundColor(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
                     .scaleEffect(isSelected ? 1.05 : 1.0)
+                    // 丝滑的文字变换动画
+                    .animation(.spring(response: 0.25, dampingFraction: 0.75, blendDuration: 0), value: isSelected)
                 
-                // 选中时的下划线（符合 HIG）
+                // 选中时的下划线（符合 HIG）- 更丝滑的动画
                 ZStack {
                     Capsule()
                         .fill(isSelected ? AppColors.primary : Color.clear)
                         .frame(height: 3)
                         .frame(width: isSelected ? 28 : 0)
+                        .shadow(color: isSelected ? AppColors.primary.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
                 }
                 .frame(height: 3)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+                // 使用更丝滑的弹性动画
+                .animation(.spring(response: 0.28, dampingFraction: 0.7, blendDuration: 0), value: isSelected)
             }
         }
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(LightTouchButtonStyle())
     }
 }
 
@@ -335,7 +339,12 @@ struct NearbyTasksView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.tasks.isEmpty {
-                LoadingView()
+                // 使用列表骨架屏
+                ScrollView {
+                    ListSkeleton(itemCount: 5, itemHeight: 120)
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
+                }
             } else if viewModel.tasks.isEmpty {
                 EmptyStateView(
                     icon: "mappin.circle.fill",
@@ -345,11 +354,12 @@ struct NearbyTasksView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
-                        ForEach(viewModel.tasks) { task in
+                        ForEach(Array(viewModel.tasks.enumerated()), id: \.element.id) { index, task in
                             NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                 TaskCard(task: task)
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .listItemAppear(index: index, totalItems: viewModel.tasks.count) // 添加错落入场动画
                             .onAppear {
                                 // 当显示最后一个任务时，加载更多
                                 if task.id == viewModel.tasks.last?.id {
@@ -778,8 +788,7 @@ struct SearchView: View {
                 // 主内容区
                 if viewModel.isLoading {
                     Spacer()
-                    ProgressView()
-                        .scaleEffect(1.2)
+                    CompactLoadingView()
                     Spacer()
                 } else if viewModel.hasResults {
                     // 搜索结果
@@ -1529,11 +1538,17 @@ struct RecommendedTasksSection: View {
             .padding(.horizontal, AppSpacing.md)
             
             if viewModel.isLoading && viewModel.tasks.isEmpty {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .padding()
-                    Spacer()
+                // 使用水平滚动骨架屏
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.md) {
+                        ForEach(0..<5, id: \.self) { index in
+                            TaskCardSkeleton()
+                                .frame(width: 200)
+                                .listItemAppear(index: index, totalItems: 5)
+                        }
+                    }
+                    .padding(.leading, AppSpacing.md)
+                    .padding(.trailing, AppSpacing.lg)
                 }
             } else if viewModel.tasks.isEmpty {
                 EmptyStateView(
@@ -1560,10 +1575,10 @@ struct RecommendedTasksSection: View {
                                 )
                                 .frame(width: 200)
                             }
-                            .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                            .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle，提供丝滑按压反馈
                             .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
-                            // 移除 drawingGroup，避免影响长按交互
                             .id(task.id) // 确保稳定的视图标识
+                            .listItemAppear(index: index, totalItems: displayedTasks.count) // 添加错落入场动画
                             .onAppear {
                                 // 记录推荐任务的查看交互（用于推荐系统优化）
                                 if task.isRecommended == true {
@@ -1630,7 +1645,7 @@ struct RecentActivitiesSection: View {
             if viewModel.isLoading && viewModel.activities.isEmpty {
                 HStack {
                     Spacer()
-                    ProgressView()
+                    CompactLoadingView()
                         .padding()
                     Spacer()
                 }
@@ -1645,6 +1660,7 @@ struct RecentActivitiesSection: View {
                 // 限制最多显示15条
                 ForEach(Array(viewModel.activities.prefix(15).enumerated()), id: \.element.id) { index, activity in
                     ActivityRow(activity: activity)
+                        .listItemAppear(index: index, totalItems: min(15, viewModel.activities.count)) // 添加错落入场动画
                         .onAppear {
                             // 当显示最后3个项目时，加载更多（但不超过15条）
                             let displayedCount = min(15, viewModel.activities.count)
@@ -1810,11 +1826,16 @@ struct PopularActivitiesSection: View {
             .padding(.horizontal, AppSpacing.md)
             
             if viewModel.isLoading && viewModel.activities.isEmpty {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .padding()
-                    Spacer()
+                // 使用水平滚动骨架屏
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.md) {
+                        ForEach(0..<3, id: \.self) { index in
+                            ActivityCardSkeleton()
+                                .frame(width: 280)
+                                .listItemAppear(index: index, totalItems: 3)
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
                 }
             } else if viewModel.activities.isEmpty {
                 EmptyStateView(
@@ -1828,7 +1849,7 @@ struct PopularActivitiesSection: View {
                     HStack(spacing: AppSpacing.md) {
                         // 性能优化：缓存 prefix 结果，避免重复计算，并确保稳定的 id
                         let displayedActivities = Array(viewModel.activities.prefix(10))
-                        ForEach(displayedActivities, id: \.id) { activity in
+                        ForEach(Array(displayedActivities.enumerated()), id: \.element.id) { index, activity in
                             NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
                                 ActivityCardView(
                                     activity: activity,
@@ -1839,6 +1860,7 @@ struct PopularActivitiesSection: View {
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .id(activity.id) // 确保稳定的视图标识
+                            .listItemAppear(index: index, totalItems: displayedActivities.count) // 添加错落入场动画
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
@@ -1869,29 +1891,8 @@ struct BannerCarouselSection: View {
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.isLoading && viewModel.banners.isEmpty {
-                // 加载中占位 - 更美观的设计
-                RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                AppColors.cardBackground,
-                                AppColors.cardBackground.opacity(0.8)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 180)
-                    .padding(.horizontal, AppSpacing.md)
-                    .overlay(
-                        VStack(spacing: AppSpacing.sm) {
-                            ProgressView()
-                                .tint(AppColors.primary)
-                            Text(LocalizationKey.commonLoading.localized)
-                                .font(AppTypography.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                    )
+                // 使用骨架屏替代加载指示器
+                BannerSkeleton()
             } else if viewModel.banners.isEmpty {
                 // 无广告时不显示
                 Color.clear
@@ -1941,8 +1942,9 @@ class BannerCarouselViewModel: ObservableObject {
         loadBannersFromCache()
     }
     
-    /// 从缓存加载 Banner（同步，立即执行）
+    /// 从缓存加载 Banner（优先内存缓存，快速响应）
     private func loadBannersFromCache() {
+        // 先快速检查内存缓存（同步，很快）
         if let cachedBanners = CacheManager.shared.loadBanners(), !cachedBanners.isEmpty {
             var sortedBanners = cachedBanners.sorted { $0.order < $1.order }
             // 将硬编码的跳蚤市场Banner添加到最前面

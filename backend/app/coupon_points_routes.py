@@ -56,7 +56,8 @@ def get_account_info(
     
     # 计算累计获得（所有收入来源）
     # 1. 任务完成收入：用户作为接受人收到的转账金额（从 PaymentTransfer 表）
-    task_earnings = db.query(
+    # PaymentTransfer.amount 是 DECIMAL(12, 2)，单位为英镑，需要转换为便士
+    task_earnings_decimal = db.query(
         func.sum(models.PaymentTransfer.amount).label('total')
     ).filter(
         and_(
@@ -65,10 +66,14 @@ def get_account_info(
         )
     ).scalar() or Decimal('0.0')
     
+    # 将英镑转换为便士（乘以 100）
+    task_earnings_pence = int(task_earnings_decimal * 100)
+    
     # 2. 跳蚤市场收入：用户作为卖家完成的交易（也是通过任务系统，所以已包含在 task_earnings 中）
     # 注意：跳蚤市场交易会创建任务，所以收入已经包含在 PaymentTransfer 中
     
     # 3. 积分奖励收入（从积分交易记录中统计，如签到、邀请等）
+    # PointsTransaction.amount 已经是便士单位
     points_earnings = db.query(
         func.sum(func.abs(models.PointsTransaction.amount)).label('total')
     ).filter(
@@ -79,10 +84,11 @@ def get_account_info(
     ).scalar() or 0
     
     # 累计获得 = 任务收入（便士）+ 积分奖励收入（便士）
-    total_earned_pence = int(task_earnings * 100) + points_earnings
+    total_earned_pence = task_earnings_pence + points_earnings
     
     # 计算累计消费（所有支出来源）
     # 1. 任务支付：用户作为发布人支付的金额（包括Stripe和积分支付）
+    # PaymentHistory.final_amount 已经是便士单位（BigInteger）
     task_payments = db.query(
         func.sum(models.PaymentHistory.final_amount).label('total')
     ).filter(
@@ -93,6 +99,7 @@ def get_account_info(
     ).scalar() or 0
     
     # 2. 积分消费（从积分交易记录中统计）
+    # PointsTransaction.amount 已经是便士单位
     points_spent = db.query(
         func.sum(func.abs(models.PointsTransaction.amount)).label('total')
     ).filter(

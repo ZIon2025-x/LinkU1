@@ -144,7 +144,12 @@ struct MyForumPostsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if isLoading && posts.isEmpty {
-            LoadingView(message: LocalizationKey.commonLoading.localized)
+            // 使用列表骨架屏
+            ScrollView {
+                ListSkeleton(itemCount: 5, itemHeight: 100)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
+            }
         } else if posts.isEmpty {
             EmptyStateView(
                 icon: emptyIcon,
@@ -154,11 +159,12 @@ struct MyForumPostsView: View {
         } else {
             ScrollView {
                 LazyVStack(spacing: AppSpacing.md) {
-                    ForEach(posts) { post in
+                    ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
                         NavigationLink(destination: ForumPostDetailView(postId: post.id)) {
                             PostCard(post: post)
                         }
                         .buttonStyle(ScaleButtonStyle())
+                        .listItemAppear(index: index, totalItems: posts.count) // 添加错落入场动画
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)

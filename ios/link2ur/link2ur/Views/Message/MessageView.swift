@@ -542,7 +542,7 @@ struct LeaderboardItemDetailWrapperView: View {
             if let leaderboardId = leaderboardId {
                 LeaderboardItemDetailView(itemId: itemId, leaderboardId: leaderboardId)
             } else if viewModel.isLoading {
-                ProgressView()
+                LoadingView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // 如果无法获取leaderboardId，尝试使用默认值1，或者显示错误

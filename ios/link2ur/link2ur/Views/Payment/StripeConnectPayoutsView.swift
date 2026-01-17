@@ -25,12 +25,17 @@ struct StripeConnectPayoutsView: View {
         .navigationTitle(LocalizationKey.paymentPayoutManagement.localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.loadBalance()
-            viewModel.loadTransactions()
+            // 先尝试从缓存加载（立即显示）
+            viewModel.loadBalanceFromCache()
+            viewModel.loadTransactionsFromCache()
+            // 后台刷新数据（不强制刷新，使用缓存优先策略）
+            viewModel.loadBalance(forceRefresh: false)
+            viewModel.loadTransactions(forceRefresh: false)
         }
         .refreshable {
-            viewModel.loadBalance()
-            viewModel.loadTransactions()
+            // 下拉刷新时强制刷新
+            viewModel.loadBalance(forceRefresh: true)
+            viewModel.loadTransactions(forceRefresh: true)
         }
         .alert(LocalizationKey.errorError.localized, isPresented: $showError) {
             Button(LocalizationKey.commonOk.localized, role: .cancel) { }
@@ -60,9 +65,7 @@ struct StripeConnectPayoutsView: View {
     
     private var loadingView: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-            Text(LocalizationKey.commonLoading.localized)
+            LoadingView(message: LocalizationKey.commonLoading.localized)
                 .foregroundColor(AppColors.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -294,85 +297,87 @@ struct PayoutSheet: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
-                VStack(spacing: AppSpacing.lg) {
-                    // 可用余额提示
-                    if let balance = viewModel.balance {
-                        VStack(spacing: 8) {
-                            Text(LocalizationKey.paymentAvailableBalance.localized)
-                                .font(AppTypography.caption)
-                                .foregroundColor(AppColors.textSecondary)
-                            
-                            Text(formatAmount(balance.available, currency: balance.currency))
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(AppColors.primary)
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.lg) {
+                        // 可用余额提示
+                        if let balance = viewModel.balance {
+                            VStack(spacing: 8) {
+                                Text(LocalizationKey.paymentAvailableBalance.localized)
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                Text(formatAmount(balance.available, currency: balance.currency))
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppColors.primary)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                    }
-                    
-                    // 提现金额输入
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(LocalizationKey.paymentPayoutAmount.localized)
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.textPrimary)
                         
-                        HStack {
-                            Text(viewModel.balance?.currency ?? "GBP")
-                                .font(AppTypography.body)
-                                .foregroundColor(AppColors.textSecondary)
-                                .padding(.trailing, 8)
+                        // 提现金额输入
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(LocalizationKey.paymentPayoutAmount.localized)
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.textPrimary)
                             
-                            TextField("0.00", text: $amount)
-                                .keyboardType(.decimalPad)
-                                .font(AppTypography.title2)
-                                .focused($isAmountFocused)
-                        }
-                        .padding()
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                    }
-                    
-                    // 描述（可选）
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(LocalizationKey.paymentNoteOptional.localized)
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        TextField(LocalizationKey.paymentPayoutNote.localized, text: $description)
+                            HStack {
+                                Text(viewModel.balance?.currency ?? "GBP")
+                                    .font(AppTypography.body)
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .padding(.trailing, 8)
+                                
+                                TextField("0.00", text: $amount)
+                                    .keyboardType(.decimalPad)
+                                    .font(AppTypography.title2)
+                                    .focused($isAmountFocused)
+                            }
                             .padding()
                             .background(AppColors.cardBackground)
                             .cornerRadius(AppCornerRadius.medium)
-                    }
-                    
-                    Spacer()
-                    
-                    // 提现按钮
-                    Button(action: {
-                        createPayout()
-                    }) {
-                        HStack {
-                            if viewModel.isCreatingPayout {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 20))
-                                Text(LocalizationKey.paymentConfirmPayout.localized)
-                                    .font(AppTypography.title3)
-                            }
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(canCreatePayout ? AppColors.primary : AppColors.textTertiary)
-                        .cornerRadius(AppCornerRadius.large)
+                        
+                        // 描述（可选）
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(LocalizationKey.paymentNoteOptional.localized)
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            TextField(LocalizationKey.paymentPayoutNote.localized, text: $description)
+                                .padding()
+                                .background(AppColors.cardBackground)
+                                .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        Spacer(minLength: 40)
+                        
+                        // 提现按钮
+                        Button(action: {
+                            createPayout()
+                        }) {
+                            HStack {
+                                if viewModel.isCreatingPayout {
+                                    CompactLoadingView()
+                                } else {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 20))
+                                    Text(LocalizationKey.paymentConfirmPayout.localized)
+                                        .font(AppTypography.title3)
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(canCreatePayout ? AppColors.primary : AppColors.textTertiary)
+                            .cornerRadius(AppCornerRadius.large)
+                        }
+                        .disabled(!canCreatePayout || viewModel.isCreatingPayout)
+                        .padding(.bottom, AppSpacing.md)
                     }
-                    .disabled(!canCreatePayout || viewModel.isCreatingPayout)
-                    .padding(.bottom, AppSpacing.md)
+                    .padding(AppSpacing.lg)
                 }
-                .padding(AppSpacing.lg)
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle(LocalizationKey.paymentPayout.localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -598,9 +603,35 @@ class StripeConnectPayoutsViewModel: ObservableObject {
     @Published var showTransactionDetail = false
     
     private let apiService = APIService.shared
+    private let cacheManager = CacheManager.shared
     private var cancellables = Set<AnyCancellable>()
     
-    func loadBalance() {
+    // 缓存键
+    private let balanceCacheKey = "my_payout_balance"
+    private let transactionsCacheKey = "my_payout_transactions"
+    
+    /// 从缓存加载余额（供 View 调用，优先内存缓存，快速响应）
+    func loadBalanceFromCache() {
+        // 异步加载缓存，避免阻塞主线程
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            // 使用非隔离的缓存管理器方法，避免 main actor 隔离问题
+            let cachedBalance: StripeConnectBalance? = self.cacheManager.load(StripeConnectBalance.self, forKey: self.balanceCacheKey)
+            if let cachedBalance = cachedBalance {
+                DispatchQueue.main.async {
+                    self.balance = cachedBalance
+                    Logger.debug("✅ 从内存缓存加载了余额", category: .cache)
+                }
+            }
+        }
+    }
+    
+    func loadBalance(forceRefresh: Bool = false) {
+        // 如果不是强制刷新，先尝试从缓存加载
+        if !forceRefresh {
+            loadBalanceFromCache()
+        }
+        
         isLoadingBalance = true
         error = nil
         
@@ -627,15 +658,45 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                 }
             },
             receiveValue: { [weak self] balance in
-                self?.isLoadingBalance = false
-                self?.balance = balance
+                guard let self = self else { return }
+                self.isLoadingBalance = false
+                self.balance = balance
                 print("✅ 成功加载余额: 可用 \(balance.available) \(balance.currency)")
+                
+                // 异步保存到缓存，避免阻塞主线程
+                // 使用非隔离的缓存管理器方法，避免 main actor 隔离问题
+                let balanceToSave = balance
+                DispatchQueue.global(qos: .utility).async {
+                    self.cacheManager.save(balanceToSave, forKey: self.balanceCacheKey)
+                    Logger.debug("✅ 已缓存余额", category: .cache)
+                }
             }
         )
         .store(in: &cancellables)
     }
     
-    func loadTransactions() {
+    /// 从缓存加载提现记录（供 View 调用，优先内存缓存，快速响应）
+    func loadTransactionsFromCache() {
+        // 异步加载缓存，避免阻塞主线程
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            if let cachedTransactions: [StripeConnectTransaction] = self.cacheManager.load([StripeConnectTransaction].self, forKey: self.transactionsCacheKey) {
+                if !cachedTransactions.isEmpty {
+                    DispatchQueue.main.async {
+                        self.transactions = cachedTransactions
+                        Logger.debug("✅ 从内存缓存加载了 \(cachedTransactions.count) 条提现记录", category: .cache)
+                    }
+                }
+            }
+        }
+    }
+    
+    func loadTransactions(forceRefresh: Bool = false) {
+        // 如果不是强制刷新，先尝试从缓存加载
+        if !forceRefresh {
+            loadTransactionsFromCache()
+        }
+        
         isLoadingTransactions = true
         error = nil
         
@@ -668,9 +729,16 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                 }
             },
             receiveValue: { [weak self] response in
-                self?.isLoadingTransactions = false
-                self?.transactions = response.transactions
+                guard let self = self else { return }
+                self.isLoadingTransactions = false
+                self.transactions = response.transactions
                 print("✅ 成功加载 \(response.transactions.count) 条交易记录")
+                
+                // 异步保存到缓存，避免阻塞主线程
+                DispatchQueue.global(qos: .utility).async {
+                    self.cacheManager.save(response.transactions, forKey: self.transactionsCacheKey)
+                    Logger.debug("✅ 已缓存 \(response.transactions.count) 条提现记录", category: .cache)
+                }
             }
         )
         .store(in: &cancellables)
@@ -738,8 +806,11 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                 }
             },
             receiveValue: { [weak self] response in
-                self?.isCreatingPayout = false
+                guard let self = self else { return }
+                self.isCreatingPayout = false
                 print("✅ 成功创建提现: \(response.id)")
+                // 清除提现缓存，因为有了新的提现记录
+                self.cacheManager.invalidatePaymentCache()
                 completion(true)
             }
         )
@@ -1019,7 +1090,7 @@ struct AccountDetailsSheet: View {
                 
                 if viewModel.isLoadingAccountDetails {
                     VStack(spacing: 16) {
-                        ProgressView()
+                        CompactLoadingView()
                         Text(LocalizationKey.commonLoading.localized)
                             .foregroundColor(AppColors.textSecondary)
                     }

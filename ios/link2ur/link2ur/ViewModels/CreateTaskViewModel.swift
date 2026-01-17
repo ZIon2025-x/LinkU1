@@ -194,6 +194,10 @@ class CreateTaskViewModel: ObservableObject {
                     }
                 }, receiveValue: { [weak self] _ in
                     self?.reset()
+                    // 清除我的任务缓存，因为创建了新任务
+                    CacheManager.shared.invalidateMyTasksCache()
+                    // 发送通知刷新任务列表
+                    NotificationCenter.default.post(name: .taskUpdated, object: nil)
                     completion(true)
                 })
                 .store(in: &self.cancellables)

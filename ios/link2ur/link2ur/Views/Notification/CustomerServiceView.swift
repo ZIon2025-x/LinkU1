@@ -181,8 +181,7 @@ struct CustomerServiceView: View {
                                     }
                                 }) {
                                     if viewModel.isConnecting {
-                                        ProgressView()
-                                            .tint(AppColors.primary)
+                                        CompactLoadingView()
                                     } else {
                                         Image(systemName: "phone.fill")
                                             .font(.title3)
@@ -207,8 +206,7 @@ struct CustomerServiceView: View {
                             
                             Button(action: sendMessage) {
                                 if viewModel.isSending {
-                                    ProgressView()
-                                        .tint(AppColors.primary)
+                                    CompactLoadingView()
                                 } else {
                                     Image(systemName: "arrow.up.circle.fill")
                                         .font(.title2)
@@ -231,9 +229,7 @@ struct CustomerServiceView: View {
                         .ignoresSafeArea()
                     
                     VStack(spacing: AppSpacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(.white)
+                        CompactLoadingView()
                         Text(LocalizationKey.customerServiceConnecting.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(.white)
@@ -532,9 +528,7 @@ struct ChatHistoryView: View {
                     .ignoresSafeArea()
                 
                 if viewModel.isLoadingChats && viewModel.chats.isEmpty {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                        .tint(AppColors.primary)
+                    LoadingView()
                 } else if viewModel.chats.isEmpty {
                     VStack(spacing: AppSpacing.md) {
                         Image(systemName: "message.fill")
@@ -708,8 +702,7 @@ struct RatingSheetView: View {
                 // 提交按钮
                 Button(action: submitRating) {
                     if isSubmitting {
-                        ProgressView()
-                            .tint(.white)
+                        CompactLoadingView()
                     } else {
                         Text(LocalizationKey.customerServiceSubmitRating.localized)
                             .font(AppTypography.bodyBold)
