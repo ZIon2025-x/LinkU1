@@ -1,0 +1,235 @@
+/**
+ * 图片懒加载组件
+ * 使用 Intersection Observer API 实现图片懒加载
+ */
+import React, { useState, useRef, useEffect } from 'react';
+import { Spin } from 'antd';
+
+interface LazyImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  placeholder?: string;
+  width?: number | string;
+  height?: number | string;
+  style?: React.CSSProperties;
+  onLoad?: () => void;
+  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  onClick?: () => void;
+  title?: string;
+  onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void;
+  rootMargin?: string;
+}
+
+const LazyImage: React.FC<LazyImageProps> = ({ 
+  src, 
+  alt, 
+  className,
+  placeholder = '/placeholder.png',
+  width,
+  height,
+  style,
+  onLoad,
+  onError,
+  onClick,
+  title,
+  onMouseEnter,
+  onMouseLeave,
+  rootMargin = '50px'
+}) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const isAbsolutePositioned = style?.position === 'absolute';
+    if (isAbsolutePositioned) {
+      setIsInView(true);
+      return;
+    }
+    
+    if (!('IntersectionObserver' in window)) {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { 
+        rootMargin,
+        threshold: 0.01
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+      observer.disconnect();
+    };
+  }, [rootMargin, style?.position]);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    if (onLoad) {
+      onLoad();
+    }
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setHasError(true);
+    if (onError) {
+      onError(e);
+    }
+  };
+
+  if (hasError && placeholder) {
+    return (
+      <div
+        ref={imgRef}
+        style={{
+          position: 'relative',
+          width: width || '100%',
+          height: height || 'auto',
+          overflow: 'hidden',
+          ...style
+        }}
+        className={className}
+      >
+        <img
+          src={placeholder}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'cover',
+            display: 'block'
+          }}
+        />
+      </div>
+    );
+  }
+
+  const hasFixedSize = width && height;
+  const isAbsolutePositioned = style?.position === 'absolute';
+  
+  const imageStyleProps = [
+    'position', 'top', 'left', 'right', 'bottom',
+    'objectFit', 'objectPosition', 'opacity', 'zIndex',
+    'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
+    'width', 'height'
+  ];
+  
+  const containerWidth = isAbsolutePositioned 
+    ? '100%' 
+    : (style?.width || width || '100%');
+  const containerHeight = isAbsolutePositioned 
+    ? '100%' 
+    : (style?.height || (hasFixedSize ? height : (height || 'auto')));
+  
+  const containerStyle: React.CSSProperties = {
+    position: 'relative',
+    width: containerWidth,
+    height: containerHeight,
+    overflow: 'hidden',
+    borderRadius: style?.borderRadius || undefined,
+  };
+  
+  if (style) {
+    const styleKeys = Object.keys(style) as Array<keyof React.CSSProperties>;
+    styleKeys.forEach(key => {
+      if (!imageStyleProps.includes(key as string) && 
+          key !== 'borderRadius' && 
+          key !== 'width' && 
+          key !== 'height') {
+        const value = style[key];
+        if (value !== undefined) {
+          (containerStyle as any)[key] = value;
+        }
+      }
+    });
+  }
+  
+  const imgStyle: React.CSSProperties = {
+    opacity: isLoaded ? (style?.opacity !== undefined ? style.opacity : 1) : 0,
+    transition: 'opacity 0.3s ease-in-out',
+    width: isAbsolutePositioned 
+      ? (style?.width || '100%') 
+      : '100%',
+    height: isAbsolutePositioned 
+      ? (style?.height || '100%') 
+      : '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    objectFit: (style?.objectFit as any) || 'cover',
+    objectPosition: (style?.objectPosition as any) || 'center',
+    display: 'block',
+  };
+  
+  if (isAbsolutePositioned) {
+    imgStyle.position = 'absolute';
+    if (style?.top !== undefined) imgStyle.top = style.top;
+    if (style?.left !== undefined) imgStyle.left = style.left;
+    if (style?.right !== undefined) imgStyle.right = style.right;
+    if (style?.bottom !== undefined) imgStyle.bottom = style.bottom;
+    if (style?.zIndex !== undefined) imgStyle.zIndex = style.zIndex;
+    if (style?.minWidth !== undefined) imgStyle.minWidth = style.minWidth;
+    if (style?.minHeight !== undefined) imgStyle.minHeight = style.minHeight;
+  }
+  
+  return (
+    <div 
+      ref={imgRef}
+      style={containerStyle}
+      className={className}
+    >
+      {!isInView && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f0f0f0'
+        }}>
+          <Spin size="small" />
+        </div>
+      )}
+      {isInView && (
+        <img
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          loading="lazy"
+          onLoad={handleLoad}
+          onError={handleError}
+          style={imgStyle}
+        />
+      )}
+    </div>
+  );
+};
+
+export default LazyImage;

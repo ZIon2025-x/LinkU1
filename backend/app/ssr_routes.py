@@ -898,12 +898,44 @@ async def ssr_activity_detail(
                 status_code=404
             )
         
+        # 获取价格信息（转换为 float 以便 JSON 序列化）
+        price_decimal = activity.discounted_price_per_participant or activity.original_price_per_participant or 0
+        price = float(price_decimal) if price_decimal else 0
+        price_text = f"£{price:.2f}" if price > 0 else "免费"
+        
+        # 计算剩余人数
+        max_participants = activity.max_participants or 0
+        current_participants = activity.current_participants or 0
+        remaining_spots = max(0, max_participants - current_participants)
+        
         # 构建分享信息
         title = f"{activity.title} - Link²Ur活动"
-        description = activity.description or "在 Link²Ur 查看活动详情"
         
-        # 清理描述中的HTML标签
-        clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
+        # 清理活动描述中的HTML标签
+        raw_description = activity.description or ""
+        clean_activity_desc = re.sub(r'<[^>]+>', '', raw_description) if raw_description else ""
+        
+        # 构建包含关键信息的分享描述（地点、金额、剩余人数 + 描述预览）
+        location_text = activity.location or "未指定"
+        
+        # 分享描述格式：📍地点 | 💰金额 | 👥剩余名额 | 描述预览
+        share_desc_parts = []
+        share_desc_parts.append(f"📍{location_text}")
+        share_desc_parts.append(f"💰{price_text}/人")
+        if max_participants > 0:
+            share_desc_parts.append(f"👥剩余{remaining_spots}名额")
+        
+        # 添加描述预览（限制长度，为其他信息留空间）
+        if clean_activity_desc:
+            desc_preview = clean_activity_desc[:80].replace('\n', ' ').strip()
+            if len(clean_activity_desc) > 80:
+                desc_preview += "..."
+            share_desc_parts.append(desc_preview)
+        
+        # 组合分享描述（限制总长度200字符）
+        clean_description = " | ".join(share_desc_parts)
+        if len(clean_description) > 200:
+            clean_description = clean_description[:197] + "..."
         
         # 获取活动图片（Activity 使用 images 数组，不是 cover_image）
         image_url = ""
@@ -914,11 +946,6 @@ async def ssr_activity_detail(
                 image_url = first_image
         
         page_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
-        
-        # 获取价格信息（转换为 float 以便 JSON 序列化）
-        price_decimal = activity.discounted_price_per_participant or activity.original_price_per_participant or 0
-        price = float(price_decimal) if price_decimal else 0
-        price_text = f"£{price:.2f}" if price > 0 else "免费"
         
         # 构建完整的HTML内容
         body_content = f'''
