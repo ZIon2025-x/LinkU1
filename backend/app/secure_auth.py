@@ -25,8 +25,10 @@ settings = get_settings()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
-SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "1"))  # 默认1小时，保持与Cookie一致
-USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "1"))  # 默认1小时
+# 会话过期时间：移动端（非iOS原生应用）使用较长时间，Web端使用较短时间
+# iOS 原生应用会话在 create_session 和 get_session 中特殊处理，使用 365*24 小时（1年）
+SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))  # 默认24小时（优化：从1小时改为24小时，提升用户体验）
+USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "168"))  # 默认7天（优化：从1小时改为168小时，减少频繁登出）
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
 # 会话存储
@@ -635,31 +637,36 @@ def is_ios_app_request(request: Request) -> bool:
     3. User-Agent 不包含 "Safari" 或 "Version/"（排除浏览器）
     
     注意：iPhone/iPad 上的 Safari 浏览器不应该被识别为 iOS 应用
+    
+    iOS 应用会话将获得 1 年的有效期，普通会话使用 SESSION_EXPIRE_HOURS（默认24小时）
     """
     # 1. 必须要有 X-Platform 头
     platform = request.headers.get("X-Platform", "").lower()
-    if platform != "ios":
-        return False
-    
-    # 2. 检查 User-Agent
     user_agent = request.headers.get("user-agent", "").lower()
+    
+    # 调试日志：记录请求的关键 headers
+    logger.debug(f"[iOS检测] X-Platform={platform}, User-Agent={user_agent[:100]}")
+    
+    if platform != "ios":
+        logger.debug(f"[iOS检测] X-Platform 不是 'ios'，不是 iOS 应用")
+        return False
     
     # 排除 Safari 浏览器（Safari 的 User-Agent 通常包含 "Safari" 和 "Version/"）
     if "safari" in user_agent and "version/" in user_agent:
         # 这是 Safari 浏览器，不是 iOS 应用
-        logger.debug(f"检测到 Safari 浏览器，不是 iOS 应用: UA={user_agent[:80]}")
+        logger.debug(f"[iOS检测] 检测到 Safari 浏览器，不是 iOS 应用: UA={user_agent[:80]}")
         return False
     
     # 3. 检查是否包含 iOS 应用特定标识
     # iOS 应用的 User-Agent 应该包含 "Link2Ur-iOS" 或 "link2ur-ios"
     # 不应该仅仅因为包含 "link2ur" 就认为是应用（可能是网页）
     if "link2ur-ios" in user_agent or "link2ur/ios" in user_agent:
-        logger.info(f"检测到 iOS 原生应用请求: platform={platform}, UA={user_agent[:80]}")
+        logger.info(f"[iOS检测] ✅ 检测到 iOS 原生应用请求，将创建长期会话（1年）: platform={platform}, UA={user_agent[:80]}")
         return True
     
     # 如果只有 X-Platform 头但没有应用标识，也不认为是应用
     # 这可能是网页请求但设置了错误的头
-    logger.debug(f"X-Platform=ios 但缺少应用标识，不是 iOS 应用: UA={user_agent[:80]}")
+    logger.warning(f"[iOS检测] X-Platform=ios 但缺少应用标识（link2ur-ios），不是 iOS 应用: UA={user_agent[:80]}")
     return False
 
 def validate_session(request: Request) -> Optional[SessionInfo]:

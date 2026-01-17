@@ -69,8 +69,10 @@ public class APIService {
         request.httpMethod = method
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         
-        // 确保 X-Platform header 被设置（移动端验证必需）
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        // 后端通过 X-Platform 和 User-Agent 来识别 iOS 应用，创建 1 年有效期的会话
         request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
         
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
@@ -184,8 +186,10 @@ public class APIService {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // 确保 X-Platform header 被设置（移动端验证必需）
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        // 后端通过 X-Platform 和 User-Agent 来识别 iOS 应用，创建 1 年有效期的会话
         request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
         
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         // 检查是否是公开端点（不需要认证）
@@ -514,6 +518,10 @@ public class APIService {
         // 设置multipart/form-data
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
         
         // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
