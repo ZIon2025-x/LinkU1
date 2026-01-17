@@ -46,6 +46,8 @@ NON_JS_CRAWLERS = [
 IOS_LINK_PREVIEW_PATTERNS = [
     r'CFNetwork',           # iOS/macOS 网络框架
     r'Darwin',              # macOS/iOS 内核标识
+    r'LinkPresentation',     # iOS 链接预览框架
+    r'com\.apple\.',         # Apple 应用标识
 ]
 
 def is_ios_link_preview(user_agent: str) -> bool:
@@ -55,12 +57,24 @@ def is_ios_link_preview(user_agent: str) -> bool:
     """
     if not user_agent:
         return False
-    # 检查是否包含 CFNetwork 或 Darwin，但不是 Safari（Safari 会执行 JS）
+    
+    # 策略1：检查是否包含 iOS 链接预览的特征模式
     for pattern in IOS_LINK_PREVIEW_PATTERNS:
         if re.search(pattern, user_agent, re.IGNORECASE):
-            # 确保不是 Safari 浏览器
-            if 'Safari' not in user_agent or 'Mobile' not in user_agent:
+            # 确保不是 Safari 浏览器（Safari 会执行 JS，不需要 SSR）
+            if 'Safari' not in user_agent:
+                logger.debug(f"检测到 iOS 链接预览请求（模式匹配）: User-Agent={user_agent[:150]}")
                 return True
+    
+    # 策略2：如果 User-Agent 很短且不包含常见浏览器标识，可能是链接预览
+    # iOS 链接预览的 User-Agent 通常比较短，且不包含浏览器标识
+    common_browsers = ['Safari', 'Chrome', 'Firefox', 'Edge', 'Opera', 'Mozilla']
+    if len(user_agent) < 100 and not any(browser in user_agent for browser in common_browsers):
+        # 但排除明显的爬虫（它们已经在 NON_JS_CRAWLERS 中处理）
+        if not any(re.search(pattern, user_agent, re.IGNORECASE) for pattern in NON_JS_CRAWLERS):
+            logger.debug(f"检测到可能的 iOS 链接预览请求（短 User-Agent）: User-Agent={user_agent[:150]}")
+            return True
+    
     return False
 
 # 执行JavaScript的现代爬虫（让它们直接执行JS，不需要SSR）
@@ -793,6 +807,9 @@ async def ssr_activity_detail(
     """
     user_agent = request.headers.get("User-Agent", "")
     
+    # 调试日志：记录所有请求的 User-Agent（仅用于调试）
+    logger.debug(f"活动详情 SSR 请求: activity_id={activity_id}, User-Agent={user_agent[:100] if user_agent else 'None'}")
+    
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
     if is_js_capable_crawler(user_agent):
         path = request.url.path
@@ -806,6 +823,8 @@ async def ssr_activity_detail(
     
     # 如果不是不执行JS的爬虫，重定向到前端
     if not is_non_js_crawler(user_agent):
+        # 调试日志：记录被重定向的请求（用于排查 iOS 链接预览问题）
+        logger.debug(f"活动详情 SSR: 非爬虫请求，重定向到前端 - User-Agent={user_agent[:150] if user_agent else 'None'}")
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"

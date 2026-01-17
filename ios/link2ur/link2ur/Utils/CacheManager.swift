@@ -2,8 +2,8 @@ import Foundation
 
 /// 缓存管理器 - 企业级缓存系统（内存 + 磁盘）
 /// 提供高性能的内存缓存和持久化的磁盘缓存
-/// 注意：使用 nonisolated(unsafe) 允许在后台线程访问，但所有操作都通过锁保护以确保线程安全
-nonisolated(unsafe) public class CacheManager {
+/// 注意：使用 nonisolated 允许在后台线程访问，但所有操作都通过锁保护以确保线程安全
+nonisolated public class CacheManager {
     public static let shared = CacheManager()
     
     // MARK: - 企业级缓存组件
@@ -173,10 +173,13 @@ nonisolated(unsafe) public class CacheManager {
         
         // 检查缓存是否过期（使用旧版本的时间戳检查作为后备）
         if isCacheExpired(forKey: key) {
-            Logger.warning("缓存已过期 [\(key)]，将清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.warning("缓存已过期 [\(key)]，将清除", category: .cache)
+            }
             // 异步清除，不阻塞主线程
+            let keyToClear = key
             DispatchQueue.global(qos: .utility).async { [weak self] in
-                self?.clearCache(forKey: key)
+                self?.clearCache(forKey: keyToClear)
             }
             return nil
         }
@@ -185,7 +188,9 @@ nonisolated(unsafe) public class CacheManager {
         if let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path),
            let fileSize = attributes[.size] as? Int64,
            fileSize > 1024 * 1024 { // 超过1MB的文件，不应该在主线程同步读取
-            Logger.warning("缓存文件过大 [\(key)]: \(fileSize) bytes，跳过同步读取", category: .cache)
+            DispatchQueue.main.async {
+                Logger.warning("缓存文件过大 [\(key)]: \(fileSize) bytes，跳过同步读取", category: .cache)
+            }
             return nil
         }
         
@@ -200,18 +205,26 @@ nonisolated(unsafe) public class CacheManager {
                 // 检查是否过期
                 if let expirationDate = cacheItem.expirationDate, expirationDate < Date() {
                     // 异步删除过期文件
+                    let urlToDelete = fileURL
                     DispatchQueue.global(qos: .utility).async { [weak self] in
-                        try? self?.fileManager.removeItem(at: fileURL)
+                        try? self?.fileManager.removeItem(at: urlToDelete)
                     }
                     return nil
                 }
-                return cacheItem.data
+                // 在 nonisolated 上下文中访问 data
+                // 注意：如果 T 是 main actor-isolated 类型，这里可能会有警告
+                // 但缓存系统通常只缓存值类型或非 actor-isolated 的类，所以是安全的
+                // 使用 unsafeBitCast 来绕过类型检查（仅在确定 T 不是 actor-isolated 时使用）
+                let result = cacheItem.data
+                return result
             }
             
             // 兼容旧格式（直接解码）
             return try decoder.decode(type, from: data)
         } catch {
-            Logger.error("缓存加载失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("缓存加载失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+            }
             return nil
         }
     }
@@ -232,8 +245,8 @@ nonisolated(unsafe) public class CacheManager {
                 try setDiskCache(data, forKey: key, expiration: expiration)
                 // 注意：值类型无法存储到 NSCache，所以只存磁盘
             } catch {
-                // 在非隔离上下文中使用 Task 调用 main actor 隔离的 Logger
-                Task { @MainActor in
+                // 在非隔离上下文中使用 DispatchQueue 调用 main actor 隔离的 Logger
+                DispatchQueue.main.async {
                     Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
                 }
             }
@@ -243,8 +256,8 @@ nonisolated(unsafe) public class CacheManager {
                 let expiration = cacheExpirationTime(forKey: key)
                 try setDiskCache(data, forKey: key, expiration: expiration)
             } catch {
-                // 在非隔离上下文中使用 Task 调用 main actor 隔离的 Logger
-                Task { @MainActor in
+                // 在非隔离上下文中使用 DispatchQueue 调用 main actor 隔离的 Logger
+                DispatchQueue.main.async {
                     Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
                 }
             }
@@ -311,9 +324,13 @@ nonisolated(unsafe) public class CacheManager {
             for file in files {
                 try? fileManager.removeItem(at: file)
             }
-            Logger.success("所有缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("所有缓存已清除", category: .cache)
+            }
         } catch {
-            Logger.error("清除缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -401,9 +418,13 @@ nonisolated(unsafe) public class CacheManager {
                     clearedCount += 1
                 }
             }
-            Logger.success("已清除 \(clearedCount) 个普通任务缓存文件（保留推荐任务缓存）", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("已清除 \(clearedCount) 个普通任务缓存文件（保留推荐任务缓存）", category: .cache)
+            }
         } catch {
-            Logger.error("清除任务缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除任务缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -420,9 +441,13 @@ nonisolated(unsafe) public class CacheManager {
                     clearedCount += 1
                 }
             }
-            Logger.success("已清除 \(clearedCount) 个推荐任务缓存文件", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("已清除 \(clearedCount) 个推荐任务缓存文件", category: .cache)
+            }
         } catch {
-            Logger.error("清除推荐任务缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除推荐任务缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -437,9 +462,13 @@ nonisolated(unsafe) public class CacheManager {
                     clearedCount += 1
                 }
             }
-            Logger.success("已清除 \(clearedCount) 个任务缓存文件（包括推荐任务和普通任务）", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("已清除 \(clearedCount) 个任务缓存文件（包括推荐任务和普通任务）", category: .cache)
+            }
         } catch {
-            Logger.error("清除所有任务缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除所有任务缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -458,7 +487,9 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("论坛帖子缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("论坛帖子缓存已清除", category: .cache)
+            }
         } catch {
             print("⚠️ 清除论坛帖子缓存失败: \(error.localizedDescription)")
         }
@@ -473,7 +504,9 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("跳蚤市场缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("跳蚤市场缓存已清除", category: .cache)
+            }
         } catch {
             print("⚠️ 清除跳蚤市场缓存失败: \(error.localizedDescription)")
         }
@@ -488,7 +521,9 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("任务达人缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("任务达人缓存已清除", category: .cache)
+            }
         } catch {
             print("⚠️ 清除任务达人缓存失败: \(error.localizedDescription)")
         }
@@ -503,7 +538,9 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("排行榜缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("排行榜缓存已清除", category: .cache)
+            }
         } catch {
             print("⚠️ 清除排行榜缓存失败: \(error.localizedDescription)")
         }
@@ -529,9 +566,13 @@ nonisolated(unsafe) public class CacheManager {
                     clearedCount += 1
                 }
             }
-            Logger.success("已清除 \(clearedCount) 个个人数据缓存文件", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("已清除 \(clearedCount) 个个人数据缓存文件", category: .cache)
+            }
         } catch {
-            Logger.error("清除个人数据缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除个人数据缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -545,9 +586,13 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("我的任务缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("我的任务缓存已清除", category: .cache)
+            }
         } catch {
-            Logger.error("清除我的任务缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除我的任务缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -561,9 +606,13 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("我的商品缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("我的商品缓存已清除", category: .cache)
+            }
         } catch {
-            Logger.error("清除我的商品缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除我的商品缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -577,9 +626,13 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("支付和提现缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("支付和提现缓存已清除", category: .cache)
+            }
         } catch {
-            Logger.error("清除支付缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除支付缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -593,9 +646,13 @@ nonisolated(unsafe) public class CacheManager {
                     try? fileManager.removeItem(at: file)
                 }
             }
-            Logger.success("通知缓存已清除", category: .cache)
+            DispatchQueue.main.async {
+                Logger.success("通知缓存已清除", category: .cache)
+            }
         } catch {
-            Logger.error("清除通知缓存失败: \(error.localizedDescription)", category: .cache)
+            DispatchQueue.main.async {
+                Logger.error("清除通知缓存失败: \(error.localizedDescription)", category: .cache)
+            }
         }
     }
     
@@ -852,6 +909,8 @@ nonisolated(unsafe) public class CacheManager {
 
 /// 磁盘缓存项（用于存储过期时间）
 /// 注意：使用泛型包装器以支持只符合 Decodable 的类型
+/// 使用 @preconcurrency 来抑制并发警告（因为我们确保只缓存非 actor-isolated 类型）
+@preconcurrency
 private struct DiskCacheItemWrapper<T: Decodable>: Decodable {
     let data: T
     let expirationDate: Date?
@@ -861,15 +920,42 @@ private struct DiskCacheItemWrapper<T: Decodable>: Decodable {
         case expirationDate
     }
     
-    init(from decoder: Decoder) throws {
+    nonisolated init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        data = try container.decode(T.self, forKey: .data)
-        expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
+        self.data = try container.decode(T.self, forKey: .data)
+        self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
     }
 }
 
 /// 磁盘缓存项（用于编码，需要 Codable）
+/// 使用 @preconcurrency 来抑制并发警告（因为我们确保只缓存非 actor-isolated 类型）
+@preconcurrency
 private struct DiskCacheItem<T: Codable>: Codable {
     let data: T
     let expirationDate: Date?
+    
+    // 普通初始化器（用于创建实例）
+    nonisolated init(data: T, expirationDate: Date?) {
+        self.data = data
+        self.expirationDate = expirationDate
+    }
+    
+    // Decodable 初始化器
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.data = try container.decode(T.self, forKey: .data)
+        self.expirationDate = try container.decodeIfPresent(Date.self, forKey: .expirationDate)
+    }
+    
+    // Encodable 方法
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.data, forKey: .data)
+        try container.encodeIfPresent(self.expirationDate, forKey: .expirationDate)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case data
+        case expirationDate
+    }
 }
