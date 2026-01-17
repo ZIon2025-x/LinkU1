@@ -807,8 +807,8 @@ async def ssr_activity_detail(
     """
     user_agent = request.headers.get("User-Agent", "")
     
-    # 调试日志：记录所有请求的 User-Agent（仅用于调试）
-    logger.debug(f"活动详情 SSR 请求: activity_id={activity_id}, User-Agent={user_agent[:100] if user_agent else 'None'}")
+    # 调试日志：记录所有请求的 User-Agent（INFO 级别，方便排查）
+    logger.info(f"活动详情 SSR 请求: activity_id={activity_id}, User-Agent={user_agent[:200] if user_agent else 'None'}")
     
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
     if is_js_capable_crawler(user_agent):
@@ -823,8 +823,6 @@ async def ssr_activity_detail(
     
     # 如果不是不执行JS的爬虫，重定向到前端
     if not is_non_js_crawler(user_agent):
-        # 调试日志：记录被重定向的请求（用于排查 iOS 链接预览问题）
-        logger.debug(f"活动详情 SSR: 非爬虫请求，重定向到前端 - User-Agent={user_agent[:150] if user_agent else 'None'}")
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"

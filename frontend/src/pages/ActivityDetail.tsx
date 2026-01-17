@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { message } from 'antd';
 import { getActivityDetail, applyToActivity, getServiceTimeSlotsPublic, fetchCurrentUser } from '../api';
@@ -74,6 +74,146 @@ const ActivityDetail: React.FC = () => {
   useEffect(() => {
     loadActivity();
   }, [loadActivity]);
+
+  // 设置微信分享的 meta 标签（参考任务详情页的实现）
+  useLayoutEffect(() => {
+    if (!activity) return;
+
+    // 构建活动详情页的URL
+    const activityUrl = `${window.location.origin}${window.location.pathname}`;
+    
+    // 更新页面标题
+    const seoTitle = `${activity.title} - Link²Ur活动`;
+    document.title = seoTitle;
+    
+    // 构建分享描述
+    const descriptionPreview = activity.description 
+      ? activity.description.substring(0, 150).replace(/<[^>]*>/g, '').replace(/\n/g, ' ').trim() 
+      : '';
+    
+    // 构建完整的分享描述
+    const price = activity.discounted_price_per_participant || activity.original_price_per_participant || 0;
+    const priceStr = price > 0 ? `£${price.toFixed(2)}` : (language === 'zh' ? '免费' : 'Free');
+    const locationStr = activity.location || (language === 'zh' ? '未指定' : 'Not specified');
+    
+    let activityDescription = '';
+    if (language === 'zh') {
+      if (descriptionPreview) {
+        activityDescription = `${descriptionPreview} | 价格：${priceStr}/人 | 地点：${locationStr}`;
+      } else {
+        activityDescription = `活动 | 价格：${priceStr}/人 | 地点：${locationStr}`;
+      }
+    } else {
+      if (descriptionPreview) {
+        activityDescription = `${descriptionPreview} | Price: ${priceStr}/person | Location: ${locationStr}`;
+      } else {
+        activityDescription = `Activity | Price: ${priceStr}/person | Location: ${locationStr}`;
+      }
+    }
+    
+    // 限制总长度在200字符内（微信分享建议不超过200字符）
+    const seoDescription = activityDescription.substring(0, 200);
+    
+    // 更新meta标签的辅助函数
+    const updateMetaTag = (name: string, content: string, property?: boolean) => {
+      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      const existingTag = document.querySelector(selector);
+      if (existingTag) {
+        existingTag.remove();
+      }
+      const metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
+      }
+      metaTag.content = content;
+      document.head.insertBefore(metaTag, document.head.firstChild);
+    };
+    
+    // 强制更新meta描述
+    const allDescriptions = document.querySelectorAll('meta[name="description"]');
+    allDescriptions.forEach(tag => tag.remove());
+    const descTag = document.createElement('meta');
+    descTag.name = 'description';
+    descTag.content = seoDescription;
+    document.head.insertBefore(descTag, document.head.firstChild);
+    
+    // 强制更新og:description
+    const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+    allOgDescriptions.forEach(tag => tag.remove());
+    const ogDescTag = document.createElement('meta');
+    ogDescTag.setAttribute('property', 'og:description');
+    ogDescTag.content = seoDescription;
+    document.head.insertBefore(ogDescTag, document.head.firstChild);
+    
+    // 强制更新twitter:description
+    const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
+    allTwitterDescriptions.forEach(tag => tag.remove());
+    const twitterDescTag = document.createElement('meta');
+    twitterDescTag.name = 'twitter:description';
+    twitterDescTag.content = seoDescription;
+    document.head.insertBefore(twitterDescTag, document.head.firstChild);
+    
+    // 强制更新微信分享描述（微信优先读取weixin:description）
+    const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+    allWeixinDescriptions.forEach(tag => tag.remove());
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = seoDescription;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+    
+    // 同时设置微信分享标题（微信也会读取）
+    const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+    allWeixinTitles.forEach(tag => tag.remove());
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = seoTitle;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+    
+    // 更新Open Graph标签
+    updateMetaTag('og:type', 'website', true);
+    
+    // 强制更新og:title
+    const existingOgTitle = document.querySelector('meta[property="og:title"]');
+    if (existingOgTitle) {
+      existingOgTitle.remove();
+    }
+    updateMetaTag('og:title', seoTitle, true);
+    
+    updateMetaTag('og:url', activityUrl, true);
+    
+    // 设置分享图片（优先使用活动图片，否则使用默认logo图片）
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (activity.images && Array.isArray(activity.images) && activity.images.length > 0 && activity.images[0]) {
+      const activityImageUrl = activity.images[0];
+      if (activityImageUrl.startsWith('http://') || activityImageUrl.startsWith('https://')) {
+        shareImageUrl = activityImageUrl;
+      } else if (activityImageUrl.startsWith('/')) {
+        shareImageUrl = `${window.location.origin}${activityImageUrl}`;
+      } else {
+        shareImageUrl = `${window.location.origin}/${activityImageUrl}`;
+      }
+    }
+    
+    // 强制更新og:image
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:image:width', '1200', true);
+    updateMetaTag('og:image:height', '630', true);
+    updateMetaTag('og:image:type', 'image/png', true);
+    
+    // 强制更新微信分享图片
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    const weixinImageTag = document.createElement('meta');
+    weixinImageTag.setAttribute('name', 'weixin:image');
+    weixinImageTag.content = shareImageUrl;
+    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+  }, [activity, language]);
 
   // 处理申请活动
   const handleApply = async () => {

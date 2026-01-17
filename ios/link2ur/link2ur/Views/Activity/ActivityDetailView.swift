@@ -1153,35 +1153,39 @@ class ActivityShareItem: NSObject, UIActivityItemSource {
         return url
     }
     
-    // 实际分享的内容 - 根据分享目标返回不同内容
+    // 实际分享的内容 - 参考小红书做法：主要返回URL，让微信抓取网页的meta标签
     func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
-        // 构建包含详情的分享文本（包含标题、描述和链接）
-        let shareText = """
-        \(title)
+        // 检测是否是微信（使用统一的工具方法）
+        if ShareHelper.isWeChatShare(activityType) {
+            // 微信分享：返回URL，让微信自动抓取网页的 weixin:title, weixin:description, weixin:image 等标签
+            // 前端已经设置好了这些标签，微信会生成漂亮的分享卡片
+            return url
+        }
         
-        \(descriptionText.prefix(200))\(descriptionText.count > 200 ? "..." : "")
+        // 对于邮件应用，返回 URL 以便显示为链接
+        // 邮件应用支持 LPLinkMetadata，会调用 activityViewControllerLinkMetadata 获取富媒体预览
+        if activityType == .mail {
+            return url
+        }
         
-        👉 查看详情: \(url.absoluteString)
-        """
-        
-        // 对于支持 LPLinkMetadata 的应用（iMessage、邮件等），返回 URL
-        // 这样系统会调用 activityViewControllerLinkMetadata 获取富媒体预览（包含图片和描述）
-        if activityType == .mail || activityType == nil {
+        // 对于其他支持 LPLinkMetadata 的应用（如 iMessage），返回 URL
+        // 系统会调用 activityViewControllerLinkMetadata 获取富媒体预览
+        if activityType == nil {
             // nil 通常表示 iMessage 等原生应用
             return url
         }
         
-        // 对于不支持 LPLinkMetadata 的应用（微信、QQ、复制、短信等），返回包含详情的文本
-        // 这样用户可以看到完整信息
-        if activityType == .copyToPasteboard || 
-           activityType == .message ||
-           activityType == .postToWeibo ||
-           activityType == .postToTencentWeibo {
-            return shareText
-        }
+        // 对于不支持 LPLinkMetadata 的应用（如复制、短信等），返回包含完整详情的文本
+        let descriptionPreview = descriptionText.prefix(200)
+        let descriptionSuffix = descriptionText.count > 200 ? "..." : ""
+        let shareText = """
+        \(title)
         
-        // 其他情况也返回 URL，让系统尝试使用 LPLinkMetadata
-        return url
+        \(descriptionPreview)\(descriptionSuffix)
+        
+        👉 查看详情: \(url.absoluteString)
+        """
+        return shareText
     }
     
     // 提供富链接预览元数据（用于 iMessage 等原生 App）
