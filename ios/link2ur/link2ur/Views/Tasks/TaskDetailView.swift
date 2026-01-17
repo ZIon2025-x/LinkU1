@@ -623,7 +623,7 @@ struct TaskShareSheet: View {
     // 前端页面已经设置了这些标签，微信会直接抓取
     private var shareUrl: URL {
         // 使用前端域名，确保微信能抓取到正确的 meta 标签
-        // 使用固定版本号而不是时间戳，避免每次分享都生成新URL导致系统多次尝试获取元数据
+        // 使用固定版本号（v=3 绕过微信缓存）
         let urlString = "https://www.link2ur.com/zh/tasks/\(taskId)?v=2"
         if let url = URL(string: urlString) {
             return url

@@ -611,14 +611,14 @@ class StripeConnectPayoutsViewModel: ObservableObject {
     private let transactionsCacheKey = "my_payout_transactions"
     
     /// 从缓存加载余额（供 View 调用，优先内存缓存，快速响应）
-    func loadBalanceFromCache() {
+    nonisolated func loadBalanceFromCache() {
         // 异步加载缓存，避免阻塞主线程
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             // 使用非隔离的缓存管理器方法，避免 main actor 隔离问题
-            let cachedBalance: StripeConnectBalance? = self.cacheManager.load(StripeConnectBalance.self, forKey: self.balanceCacheKey)
-            if let cachedBalance = cachedBalance {
-                DispatchQueue.main.async {
+            // 注意：如果 StripeConnectBalance 的 Codable 是 main actor 隔离的，我们需要在主线程解码
+            Task { @MainActor in
+                if let cachedBalance = self.cacheManager.load(StripeConnectBalance.self, forKey: self.balanceCacheKey) {
                     self.balance = cachedBalance
                     Logger.debug("✅ 从内存缓存加载了余额", category: .cache)
                 }
@@ -668,7 +668,9 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                 let balanceToSave = balance
                 DispatchQueue.global(qos: .utility).async {
                     self.cacheManager.save(balanceToSave, forKey: self.balanceCacheKey)
-                    Logger.debug("✅ 已缓存余额", category: .cache)
+                    Task { @MainActor in
+                        Logger.debug("✅ 已缓存余额", category: .cache)
+                    }
                 }
             }
         )

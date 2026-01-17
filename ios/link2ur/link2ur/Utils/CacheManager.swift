@@ -2,7 +2,8 @@ import Foundation
 
 /// 缓存管理器 - 企业级缓存系统（内存 + 磁盘）
 /// 提供高性能的内存缓存和持久化的磁盘缓存
-public class CacheManager {
+/// 注意：使用 nonisolated(unsafe) 允许在后台线程访问，但所有操作都通过锁保护以确保线程安全
+nonisolated(unsafe) public class CacheManager {
     public static let shared = CacheManager()
     
     // MARK: - 企业级缓存组件
@@ -45,7 +46,7 @@ public class CacheManager {
     private let maxCacheSize: Int64 = 50 * 1024 * 1024 // 50MB
     
     // 获取特定数据类型的缓存过期时间
-    private func cacheExpirationTime(forKey key: String) -> TimeInterval {
+    nonisolated private func cacheExpirationTime(forKey key: String) -> TimeInterval {
         // 用户个人数据使用更长的缓存时间（30分钟），减少频繁加载
         if key.contains("my_") || 
            key.contains("payment") || 
@@ -140,7 +141,7 @@ public class CacheManager {
     }
     
     /// 仅存储到磁盘缓存（支持过期时间）
-    public func setDiskCache<T: Codable>(_ object: T, forKey key: String, expiration: TimeInterval? = nil) throws {
+    nonisolated public func setDiskCache<T: Codable>(_ object: T, forKey key: String, expiration: TimeInterval? = nil) throws {
         let cacheItem = DiskCacheItem(
             data: object,
             expirationDate: expiration.map { Date().addingTimeInterval($0) }
@@ -162,7 +163,7 @@ public class CacheManager {
     
     /// 仅从磁盘缓存获取（同步版本，但优化了性能）
     /// 注意：此方法在主线程调用时应该快速返回，大文件读取应该在后台线程
-    public func getDiskCache<T: Decodable>(forKey key: String, as type: T.Type) -> T? {
+    nonisolated public func getDiskCache<T: Decodable>(forKey key: String, as type: T.Type) -> T? {
         let fileURL = cacheDirectory.appendingPathComponent("\(key).json")
         
         // 快速检查文件是否存在（不阻塞）
@@ -231,7 +232,10 @@ public class CacheManager {
                 try setDiskCache(data, forKey: key, expiration: expiration)
                 // 注意：值类型无法存储到 NSCache，所以只存磁盘
             } catch {
-                Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+                // 在非隔离上下文中使用 Task 调用 main actor 隔离的 Logger
+                Task { @MainActor in
+                    Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+                }
             }
         } else {
             // 值类型：只存储到磁盘
@@ -239,7 +243,10 @@ public class CacheManager {
                 let expiration = cacheExpirationTime(forKey: key)
                 try setDiskCache(data, forKey: key, expiration: expiration)
             } catch {
-                Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+                // 在非隔离上下文中使用 Task 调用 main actor 隔离的 Logger
+                Task { @MainActor in
+                    Logger.error("缓存保存失败 [\(key)]: \(error.localizedDescription)", category: .cache)
+                }
             }
         }
     }
@@ -323,7 +330,7 @@ public class CacheManager {
     }
     
     /// 检查并清理缓存（如果超过大小限制）
-    private func checkAndCleanCacheIfNeeded() {
+    nonisolated private func checkAndCleanCacheIfNeeded() {
         do {
             let files = try fileManager.contentsOfDirectory(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])
             
@@ -686,13 +693,13 @@ public class CacheManager {
     
     // MARK: - 缓存时间戳管理
     
-    private func saveCacheTimestamp(forKey key: String) {
+    nonisolated private func saveCacheTimestamp(forKey key: String) {
         let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
         let timestamp = String(Date().timeIntervalSince1970)
         try? timestamp.write(to: timestampURL, atomically: true, encoding: .utf8)
     }
     
-    private func getCacheTimestamp(forKey key: String) -> Date? {
+    nonisolated private func getCacheTimestamp(forKey key: String) -> Date? {
         let timestampURL = cacheDirectory.appendingPathComponent("\(key)_timestamp.txt")
         guard let timestampString = try? String(contentsOf: timestampURL, encoding: .utf8),
               let timestamp = Double(timestampString) else {

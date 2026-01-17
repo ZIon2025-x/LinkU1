@@ -813,10 +813,13 @@ async def ssr_activity_detail(
         # 清理描述中的HTML标签
         clean_description = re.sub(r'<[^>]+>', '', description) if description else ""
         
-        # 获取活动图片
+        # 获取活动图片（Activity 使用 images 数组，不是 cover_image）
         image_url = ""
-        if activity.cover_image:
-            image_url = activity.cover_image
+        if activity.images and len(activity.images) > 0:
+            # images 是 JSONB 数组，取第一张图片
+            first_image = activity.images[0] if isinstance(activity.images, list) else None
+            if first_image:
+                image_url = first_image
         
         page_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
         

@@ -201,6 +201,54 @@
       "destination": "https://api.link2ur.com/uploads/$1"
     },
     {
+      "source": "/zh/tasks/:id",
+      "destination": "https://api.link2ur.com/zh/tasks/:id"
+    },
+    {
+      "source": "/en/tasks/:id",
+      "destination": "https://api.link2ur.com/en/tasks/:id"
+    },
+    {
+      "source": "/tasks/:id",
+      "destination": "https://api.link2ur.com/tasks/:id"
+    },
+    {
+      "source": "/zh/activities/:id",
+      "destination": "https://api.link2ur.com/zh/activities/:id"
+    },
+    {
+      "source": "/en/activities/:id",
+      "destination": "https://api.link2ur.com/en/activities/:id"
+    },
+    {
+      "source": "/activities/:id",
+      "destination": "https://api.link2ur.com/activities/:id"
+    },
+    {
+      "source": "/zh/forum/post/:id",
+      "destination": "https://api.link2ur.com/zh/forum/post/:id"
+    },
+    {
+      "source": "/en/forum/post/:id",
+      "destination": "https://api.link2ur.com/en/forum/post/:id"
+    },
+    {
+      "source": "/forum/post/:id",
+      "destination": "https://api.link2ur.com/forum/post/:id"
+    },
+    {
+      "source": "/zh/leaderboard/custom/:id",
+      "destination": "https://api.link2ur.com/zh/leaderboard/custom/:id"
+    },
+    {
+      "source": "/en/leaderboard/custom/:id",
+      "destination": "https://api.link2ur.com/en/leaderboard/custom/:id"
+    },
+    {
+      "source": "/leaderboard/custom/:id",
+      "destination": "https://api.link2ur.com/leaderboard/custom/:id"
+    },
+    {
       "source": "/static/(.*)",
       "destination": "/static/$1"
     },
