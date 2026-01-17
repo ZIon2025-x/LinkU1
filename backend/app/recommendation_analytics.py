@@ -11,6 +11,7 @@ from sqlalchemy import func, and_, desc, text
 
 from app.models import UserTaskInteraction, Task, User, TaskHistory
 from app.redis_cache import redis_cache
+from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class RecommendationAnalytics:
         Returns:
             性能分析报告
         """
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = get_utc_time() - timedelta(days=days)
         
         # 1. 推荐任务统计
         recommended_stats = self._get_recommended_task_stats(start_date)
@@ -58,7 +59,7 @@ class RecommendationAnalytics:
             "user_engagement": engagement,
             "quality_metrics": quality,
             "algorithm_comparison": algorithm_comparison,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": get_utc_time().isoformat()
         }
     
     def _get_recommended_task_stats(self, start_date: datetime) -> Dict:
@@ -221,7 +222,7 @@ class RecommendationAnalytics:
     
     def get_top_recommended_tasks(self, days: int = 7, limit: int = 10) -> List[Dict]:
         """获取最受欢迎的推荐任务"""
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = get_utc_time() - timedelta(days=days)
         
         # 统计推荐任务的交互次数
         top_tasks = self.db.query(

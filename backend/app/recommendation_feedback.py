@@ -47,7 +47,7 @@ class RecommendationFeedbackManager:
         """
         try:
             # 检查今天是否已记录过（避免重复）
-            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = get_utc_time().replace(hour=0, minute=0, second=0, microsecond=0)
             existing = self.db.query(RecommendationFeedback).filter(
                 RecommendationFeedback.user_id == user_id,
                 RecommendationFeedback.task_id == task_id,

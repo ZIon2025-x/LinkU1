@@ -143,13 +143,28 @@ class RecommendationCacheStrategy:
                 logger.info(f"清除用户缓存: user_id={user_id}")
             
             if cluster_id:
-                # 清除聚类缓存
+                # 清除聚类缓存（使用 scan 代替 keys）
                 pattern = f"cluster_recommendations:{cluster_id}:*"
-                keys = redis_cache.keys(pattern)
-                if keys:
-                    redis_cache.delete(*keys)
+                deleted_count = 0
+                try:
+                    cursor = 0
+                    while True:
+                        cursor, keys = redis_cache.scan(cursor, match=pattern, count=100)
+                        if keys:
+                            redis_cache.delete(*keys)
+                            deleted_count += len(keys)
+                        if cursor == 0:
+                            break
+                except AttributeError:
+                    # 降级到 keys（开发环境）
+                    keys = redis_cache.keys(pattern)
+                    if keys:
+                        redis_cache.delete(*keys)
+                        deleted_count = len(keys)
+                
+                if deleted_count > 0:
                     self._cache_stats["invalidations"] += 1
-                    logger.info(f"清除聚类缓存: cluster_id={cluster_id}, count={len(keys)}")
+                    logger.info(f"清除聚类缓存: cluster_id={cluster_id}, count={deleted_count}")
             
             if task_id:
                 # 清除包含该任务的推荐缓存（需要遍历，但可以优化）

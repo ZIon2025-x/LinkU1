@@ -11,6 +11,7 @@ from sqlalchemy import func, and_, text
 
 from app.models import UserTaskInteraction, Task, User
 from app.redis_cache import redis_cache
+from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class RecommendationHealthChecker:
         """
         health_status = {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": get_utc_time().isoformat(),
             "checks": {}
         }
         
@@ -77,7 +78,7 @@ class RecommendationHealthChecker:
         """检查数据收集"""
         try:
             # 检查最近24小时的数据收集量
-            recent_time = datetime.utcnow() - timedelta(hours=24)
+            recent_time = get_utc_time() - timedelta(hours=24)
             interaction_count = self.db.query(func.count(UserTaskInteraction.id)).filter(
                 UserTaskInteraction.interaction_time >= recent_time
             ).scalar() or 0
@@ -188,14 +189,14 @@ class RecommendationHealthChecker:
         """检查数据库性能"""
         try:
             # 检查推荐相关查询的性能
-            start_time = datetime.utcnow()
+            start_time = get_utc_time()
             
             # 执行一个简单的推荐相关查询
             self.db.query(UserTaskInteraction).filter(
-                UserTaskInteraction.interaction_time >= datetime.utcnow() - timedelta(hours=1)
+                UserTaskInteraction.interaction_time >= get_utc_time() - timedelta(hours=1)
             ).limit(1).all()
             
-            query_time = (datetime.utcnow() - start_time).total_seconds()
+            query_time = (get_utc_time() - start_time).total_seconds()
             
             status = "healthy"
             message = f"数据库性能正常（查询耗时: {query_time:.3f}秒）"
@@ -225,7 +226,7 @@ class RecommendationHealthChecker:
         """检查推荐质量"""
         try:
             # 检查最近24小时的推荐效果
-            recent_time = datetime.utcnow() - timedelta(hours=24)
+            recent_time = get_utc_time() - timedelta(hours=24)
             
             # 推荐任务的点击率
             views = self.db.query(func.count(UserTaskInteraction.id)).filter(

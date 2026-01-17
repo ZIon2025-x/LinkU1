@@ -306,11 +306,7 @@ struct NotificationRow: View {
                         
                         // 优化：显示真实过期时间
                         if let expiresAt = expiresAt {
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd HH:mm"
-                            formatter.timeZone = TimeZone.current
-                            formatter.locale = Locale.current
-                            Text("过期时间: \(formatter.string(from: expiresAt))")
+                            Text("过期时间: \(formatExpiresAt(expiresAt))")
                                 .font(AppTypography.caption2)
                                 .foregroundColor(AppColors.textTertiary)
                         }
@@ -405,6 +401,15 @@ struct NotificationRow: View {
     
     private func formatTime(_ timeString: String) -> String {
         return DateFormatterHelper.shared.formatTime(timeString)
+    }
+    
+    // 优化：格式化过期时间显示
+    private func formatExpiresAt(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        formatter.timeZone = TimeZone.current
+        formatter.locale = Locale.current
+        return formatter.string(from: date)
     }
     
     private func loadNegotiationTokens() {

@@ -105,7 +105,7 @@ class RecommendationFallback:
         from app.models import UserTaskInteraction
         from sqlalchemy import and_, or_
         
-        recent_time = datetime.utcnow() - timedelta(hours=24)
+        recent_time = get_utc_time() - timedelta(hours=24)
         
         # 统计任务交互数
         query = self.db.query(

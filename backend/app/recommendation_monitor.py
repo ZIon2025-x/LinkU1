@@ -11,6 +11,7 @@ from sqlalchemy import func, and_, desc
 
 from app.models import UserTaskInteraction, Task, User
 from app.redis_cache import redis_cache
+from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class RecommendationMonitor:
         Returns:
             包含各项指标的字典
         """
-        start_date = datetime.utcnow() - timedelta(days=days)
+        start_date = get_utc_time() - timedelta(days=days)
         
         # 1. 推荐任务总数
         total_recommendations = self._count_recommendations(start_date)
@@ -62,7 +63,7 @@ class RecommendationMonitor:
             "avg_match_score": round(avg_match_score, 4),
             "algorithm_distribution": algorithm_distribution,
             "user_engagement": user_engagement,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": get_utc_time().isoformat()
         }
         
         # 更新Prometheus指标

@@ -178,32 +178,84 @@ public struct ContentView: View {
             return
         }
         
+        print("🔔 [ContentView] 处理推送通知点击，类型: \(notificationType), userInfo: \(userInfo)")
+        
         // 根据通知类型进行跳转
         switch notificationType {
-        case "task_application", "task_completed", "task_confirmed":
+        case "task_application", "task_completed", "task_confirmed", "application_accepted":
             // 跳转到任务详情
-            if let taskIdString = userInfo["task_id"] as? String,
-               let taskId = Int(taskIdString) {
-                // TODO: 实现跳转到任务详情页
-                print("跳转到任务详情: \(taskId)")
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 跳转到任务详情: \(taskId)")
+                navigateToTask(id: taskId)
             }
         case "forum_reply":
             // 跳转到论坛帖子
             if let postIdString = userInfo["post_id"] as? String,
                let postId = Int(postIdString) {
-                // TODO: 实现跳转到论坛帖子详情页
-                print("跳转到论坛帖子: \(postId)")
+                print("🔔 [ContentView] 跳转到论坛帖子: \(postId)")
+                navigateToPost(id: postId)
             }
         case "application_message_reply":
             // 跳转到任务聊天
-            if let taskIdString = userInfo["task_id"] as? String,
-               let taskId = Int(taskIdString) {
-                // TODO: 实现跳转到任务聊天页
-                print("跳转到任务聊天: \(taskId)")
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 跳转到任务聊天: \(taskId)")
+                navigateToTask(id: taskId)
+            }
+        case "flea_market_purchase_accepted", "flea_market_purchase_request", "flea_market_direct_purchase":
+            // 跳蚤市场相关通知，跳转到对应任务
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 跳蚤市场通知，跳转到任务: \(taskId)")
+                navigateToTask(id: taskId)
             }
         default:
             // 其他通知类型，跳转到通知列表
-            print("跳转到通知列表")
+            print("🔔 [ContentView] 未知通知类型，跳转到通知列表")
+        }
+    }
+    
+    // 从 userInfo 中提取任务 ID（支持多种格式）
+    private func extractTaskId(from userInfo: [AnyHashable: Any]) -> Int? {
+        // 优先尝试从 data 字典中获取
+        if let data = userInfo["data"] as? [String: Any],
+           let taskIdValue = data["task_id"] {
+            return parseTaskId(taskIdValue)
+        }
+        
+        // 直接从 userInfo 获取
+        if let taskIdValue = userInfo["task_id"] {
+            return parseTaskId(taskIdValue)
+        }
+        
+        // 尝试从 related_id 获取（某些通知使用这个字段）
+        if let relatedIdValue = userInfo["related_id"] {
+            return parseTaskId(relatedIdValue)
+        }
+        
+        return nil
+    }
+    
+    // 解析任务 ID（支持 Int 和 String 类型）
+    private func parseTaskId(_ value: Any) -> Int? {
+        if let intValue = value as? Int {
+            return intValue
+        }
+        if let stringValue = value as? String {
+            return Int(stringValue)
+        }
+        return nil
+    }
+    
+    // 导航到任务详情页
+    private func navigateToTask(id: Int) {
+        if let url = DeepLinkHandler.generateURL(for: .task(id: id)) {
+            DeepLinkHandler.shared.handle(url)
+        }
+    }
+    
+    // 导航到论坛帖子详情页
+    private func navigateToPost(id: Int) {
+        if let url = DeepLinkHandler.generateURL(for: .post(id: id)) {
+            DeepLinkHandler.shared.handle(url)
         }
     }
     

@@ -74,27 +74,35 @@ class RecommendationComputeCache:
     
     def get_popular_tasks(self, limit: int = 30) -> List[Dict]:
         """获取热门任务（全局缓存，所有用户共享）"""
-        cache_key = f"popular_tasks:{limit}"
+        cache_key = f"popular_task_ids:{limit}"
         
-        # 尝试从缓存获取
+        task_ids = None
+        # 尝试从缓存获取任务ID（只缓存ID，避免序列化SQLAlchemy对象）
         try:
             cached = redis_cache.get(cache_key)
             if cached:
-                import pickle
                 import json
-                # redis_cache.get() 已经反序列化，可能是 bytes、str 或 Python 对象
                 if isinstance(cached, bytes):
-                    try:
-                        return pickle.loads(cached)
-                    except:
-                        return json.loads(cached.decode('utf-8'))
+                    task_ids = json.loads(cached.decode('utf-8'))
                 elif isinstance(cached, str):
-                    return json.loads(cached)
-                else:
-                    # 已经是 Python 对象
-                    return cached
+                    task_ids = json.loads(cached)
+                elif isinstance(cached, list):
+                    task_ids = cached
         except Exception as e:
             logger.warning(f"读取热门任务缓存失败: {e}")
+        
+        # 如果有缓存的任务ID，查询任务对象
+        if task_ids:
+            tasks = self.db.query(Task).filter(
+                Task.id.in_(task_ids),
+                Task.status == "open"
+            ).all()
+            # 按缓存顺序排序
+            task_dict = {task.id: task for task in tasks}
+            return [
+                {"task": task_dict[tid], "score": 0.8, "reason": "热门任务"}
+                for tid in task_ids if tid in task_dict
+            ]
         
         # 缓存未命中，查询数据库
         recent_time = get_utc_time() - timedelta(hours=24)
@@ -105,10 +113,11 @@ class RecommendationComputeCache:
         
         result = [{"task": task, "score": 0.8, "reason": "热门任务"} for task in tasks]
         
-        # 缓存结果（15分钟，因为热门任务变化较快）
+        # 只缓存任务ID（避免序列化SQLAlchemy对象的问题）
         try:
-            import pickle
-            redis_cache.setex(cache_key, 900, pickle.dumps(result, protocol=pickle.HIGHEST_PROTOCOL))
+            import json
+            task_ids_to_cache = [task.id for task in tasks]
+            redis_cache.setex(cache_key, 900, json.dumps(task_ids_to_cache))
         except Exception as e:
             logger.warning(f"缓存热门任务失败: {e}")
         
@@ -256,8 +265,9 @@ def optimize_hybrid_recommendation(
     is_new_user = compute_cache.is_new_user()
     excluded_task_ids = compute_cache.get_excluded_task_ids()
     
-    # 1. 基于内容的推荐
-    content_weight = 0.3 if is_new_user else 0.35
+    # 1. 基于内容的推荐（权重：30%，新用户时降低到25%）
+    # 总权重100%：新用户 25+15+15+15+10+12+8=100 | 老用户 30+25+10+15+10+2+8=100
+    content_weight = 0.25 if is_new_user else 0.30
     content_based = engine._content_based_recommend(
         compute_cache.user, limit=50, task_type=task_type, location=location, keyword=keyword
     )
@@ -269,8 +279,8 @@ def optimize_hybrid_recommendation(
             scores[task_id] = scores.get(task_id, 0) + item["score"] * content_weight
             reasons[task_id] = item["reason"]
     
-    # 2. 协同过滤推荐
-    collaborative_weight = 0.2 if is_new_user else 0.25
+    # 2. 协同过滤推荐（权重：25%，新用户时降低到15%）
+    collaborative_weight = 0.15 if is_new_user else 0.25
     if engine._has_enough_data(compute_cache.user.id):
         collaborative = engine._collaborative_filtering_recommend(
             compute_cache.user, limit=50, task_type=task_type, location=location, keyword=keyword
@@ -283,8 +293,8 @@ def optimize_hybrid_recommendation(
                 if task_id not in reasons:
                     reasons[task_id] = item["reason"]
     
-    # 3. 新任务优先推荐
-    new_task_weight = 0.2 if is_new_user else 0.15
+    # 3. 新任务优先推荐（权重：10%，新用户时提高到15%）
+    new_task_weight = 0.15 if is_new_user else 0.10
     new_tasks = engine._new_task_boost_recommend(
         compute_cache.user, limit=30, task_type=task_type, location=location, keyword=keyword
     )
@@ -316,16 +326,15 @@ def optimize_hybrid_recommendation(
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
     
-    # 6. 热门任务推荐（权重从8%降低到2%，仅作为补充策略）
+    # 6. 热门任务推荐
     # 注意：热门任务主要用于解决冷启动问题和增加多样性
     # 权重根据用户数据量动态调整
-    is_new_user = compute_cache.is_new_user()
     if is_new_user:
-        # 新用户：热门任务权重稍高（10%），帮助发现兴趣
-        popular_weight = 0.10
+        # 新用户：热门任务权重稍高（12%），帮助发现兴趣
+        popular_weight = 0.12
     else:
-        # 老用户：热门任务权重更低（5%），更精准个性化
-        popular_weight = 0.05
+        # 老用户：热门任务权重更低（2%），更精准个性化
+        popular_weight = 0.02
     
     popular = compute_cache.get_popular_tasks(limit=30)
     # 应用用户特定的排除和筛选（在内存中过滤，避免重复查询）

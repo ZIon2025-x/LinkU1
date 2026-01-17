@@ -12,6 +12,7 @@ from app.database import SessionLocal
 from app.task_recommendation import TaskRecommendationEngine, get_task_recommendations
 from app.redis_cache import redis_cache
 from app.models import User, Task
+from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,7 @@ if CELERY_AVAILABLE:
             from sqlalchemy import func, desc
             
             # 计算过去24小时最受欢迎的任务
-            recent_time = datetime.utcnow() - timedelta(hours=24)
+            recent_time = get_utc_time() - timedelta(hours=24)
             
             popular_tasks = db.query(
                 Task.id,

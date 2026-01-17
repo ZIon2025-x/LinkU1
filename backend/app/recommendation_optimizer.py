@@ -215,5 +215,5 @@ def optimize_recommendation_system(db: Session) -> Dict:
     return {
         "algorithm_weights": weights,
         "diversity_threshold": diversity_threshold,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": get_utc_time().isoformat()
     }

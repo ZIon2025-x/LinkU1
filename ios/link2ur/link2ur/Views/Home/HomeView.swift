@@ -11,6 +11,10 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath() // 使用 NavigationPath 管理导航状态
     @State private var navigateToActivityId: Int? = nil // 用于深度链接导航到活动详情
     @State private var showActivityDetail = false // 控制是否显示活动详情页
+    @State private var navigateToTaskId: Int? = nil // 用于深度链接导航到任务详情
+    @State private var showTaskDetail = false // 控制是否显示任务详情页
+    @State private var navigateToPostId: Int? = nil // 用于深度链接导航到帖子详情
+    @State private var showPostDetail = false // 控制是否显示帖子详情页
     
     // 监听重置通知
     private let resetNotification = NotificationCenter.default.publisher(for: .resetHomeView)
@@ -146,6 +150,16 @@ struct HomeView: View {
                     ActivityDetailView(activityId: activityId)
                 }
             }
+            .navigationDestination(isPresented: $showTaskDetail) {
+                if let taskId = navigateToTaskId {
+                    TaskDetailView(taskId: taskId)
+                }
+            }
+            .navigationDestination(isPresented: $showPostDetail) {
+                if let postId = navigateToPostId {
+                    ForumPostDetailView(postId: postId)
+                }
+            }
         }
     }
     
@@ -158,13 +172,18 @@ struct HomeView: View {
             navigateToActivityId = id
             showActivityDetail = true
         case .task(let id):
-            // 导航到任务详情页（使用NavigationLink，这里暂时不处理）
-            print("🔗 [HomeView] 收到任务深度链接: \(id)")
+            // 导航到任务详情页
+            print("🔗 [HomeView] 处理任务深度链接: \(id)")
+            navigateToTaskId = id
+            showTaskDetail = true
         case .post(let id):
-            // 导航到论坛帖子详情页（使用NavigationLink，这里暂时不处理）
-            print("🔗 [HomeView] 收到帖子深度链接: \(id)")
+            // 导航到论坛帖子详情页
+            print("🔗 [HomeView] 处理帖子深度链接: \(id)")
+            navigateToPostId = id
+            showPostDetail = true
         default:
             // 其他类型的链接暂时不处理
+            print("🔗 [HomeView] 未知深度链接类型")
             break
         }
         

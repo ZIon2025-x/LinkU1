@@ -12,6 +12,7 @@ from app.database import SessionLocal
 from app.models import User, UserTaskInteraction
 from app.task_recommendation import TaskRecommendationEngine
 from app.recommendation_cache_strategy import get_cache_strategy
+from app.crud import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class RecommendationAsyncOptimizer:
         try:
             from sqlalchemy import func
             
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = get_utc_time() - timedelta(days=days)
             
             # 获取活跃用户（按交互次数排序）
             active_users = db.query(

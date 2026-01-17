@@ -419,10 +419,29 @@ class UserClusteringManager:
         """
         try:
             pattern = f"cluster_recommendations:{cluster_id}:*"
-            keys = redis_cache.keys(pattern)
-            if keys:
-                redis_cache.delete(*keys)
-                logger.info(f"清除聚类缓存: cluster_id={cluster_id}, count={len(keys)}")
+            deleted_count = 0
+            
+            # 使用 scan 代替 keys 命令，避免阻塞 Redis
+            cursor = 0
+            while True:
+                cursor, keys = redis_cache.scan(cursor, match=pattern, count=100)
+                if keys:
+                    redis_cache.delete(*keys)
+                    deleted_count += len(keys)
+                if cursor == 0:
+                    break
+            
+            if deleted_count > 0:
+                logger.info(f"清除聚类缓存: cluster_id={cluster_id}, count={deleted_count}")
+        except AttributeError:
+            # 如果 redis_cache 不支持 scan，降级到 keys（开发环境）
+            try:
+                keys = redis_cache.keys(pattern)
+                if keys:
+                    redis_cache.delete(*keys)
+                    logger.info(f"清除聚类缓存(keys): cluster_id={cluster_id}, count={len(keys)}")
+            except Exception as e:
+                logger.warning(f"清除聚类缓存失败: {e}")
         except Exception as e:
             logger.warning(f"清除聚类缓存失败: {e}")
 

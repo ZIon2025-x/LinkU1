@@ -24,6 +24,21 @@ class TaskRecommendationEngine:
     
     def __init__(self, db: Session):
         self.db = db
+        # 用户信息缓存（避免N+1查询）
+        self._user_cache: Dict[str, User] = {}
+        self._new_user_cache: Dict[str, bool] = {}
+        # 排除任务ID缓存（避免重复查询）
+        self._excluded_task_ids_cache: Dict[str, set] = {}
+    
+    def _get_excluded_task_ids(self, user_id: str) -> set:
+        """获取排除任务ID（带实例缓存）"""
+        if user_id in self._excluded_task_ids_cache:
+            return self._excluded_task_ids_cache[user_id]
+        
+        from app.recommendation_utils import get_excluded_task_ids
+        excluded_ids = get_excluded_task_ids(self.db, user_id)
+        self._excluded_task_ids_cache[user_id] = excluded_ids
+        return excluded_ids
     
     def recommend_tasks(
         self, 
@@ -56,51 +71,42 @@ class TaskRecommendationEngine:
         filter_key = f"{task_type or 'all'}:{location or 'all'}:{keyword or 'all'}"
         cache_key = f"recommendations:{user_id}:{algorithm}:{limit}:{filter_key}"
         
-        # 优化：使用智能缓存策略
+        # 优化：使用智能缓存策略（三级缓存降级）
+        cached = None
         try:
+            # 第一级：尝试使用智能缓存策略
             from app.recommendation_cache_strategy import get_cache_strategy
             cache_strategy = get_cache_strategy()
             cached = cache_strategy.get_recommendations(
                 user_id, algorithm, limit, task_type, location, keyword, "personal"
             )
-            if cached:
-                # 记录缓存命中
-                try:
-                    from app.recommendation_metrics import record_recommendation_cache_hit
-                    record_recommendation_cache_hit(algorithm)
-                except Exception:
-                    pass
-                return cached
         except ImportError:
-            # 如果缓存策略模块不可用，使用原始方法
+            # 第二级：尝试使用优化缓存模块
             try:
                 from app.recommendation_cache import get_cached_recommendations, get_cache_key
                 optimized_cache_key = get_cache_key(user_id, algorithm, limit, task_type, location, keyword)
                 cached = get_cached_recommendations(optimized_cache_key)
-                if cached:
-                    try:
-                        from app.recommendation_metrics import record_recommendation_cache_hit
-                        record_recommendation_cache_hit(algorithm)
-                    except Exception:
-                        pass
-                    return cached
+            except ImportError:
+                # 第三级：使用原始 Redis 缓存
+                try:
+                    raw_cached = redis_cache.get(cache_key)
+                    if raw_cached:
+                        cached = json.loads(raw_cached) if isinstance(raw_cached, (str, bytes)) else raw_cached
+                except Exception as e:
+                    logger.warning(f"读取推荐缓存失败: {e}，继续计算推荐")
+            except Exception as e:
+                logger.warning(f"读取优化缓存失败: {e}，继续计算推荐")
+        except Exception as e:
+            logger.warning(f"读取缓存策略失败: {e}，继续计算推荐")
+        
+        # 缓存命中处理
+        if cached:
+            try:
+                from app.recommendation_metrics import record_recommendation_cache_hit
+                record_recommendation_cache_hit(algorithm)
             except Exception:
                 pass
-        except ImportError:
-            # 如果优化缓存模块不可用，使用原始方法
-            try:
-                cached = redis_cache.get(cache_key)
-                if cached:
-                    try:
-                        from app.recommendation_metrics import record_recommendation_cache_hit
-                        record_recommendation_cache_hit(algorithm)
-                    except Exception:
-                        pass
-                    return json.loads(cached)
-            except Exception as e:
-                logger.warning(f"读取推荐缓存失败: {e}，继续计算推荐")
-        except Exception as e:
-            logger.warning(f"读取推荐缓存失败: {e}，继续计算推荐")
+            return cached
         
         # 优化：尝试从用户聚类获取共享推荐（避免重复计算）
         try:
@@ -190,8 +196,8 @@ class TaskRecommendationEngine:
                 recommendations = []
         
         # 最终过滤：确保排除所有不应推荐的任务
-        from app.recommendation_utils import get_excluded_task_ids, filter_recommendations, ensure_minimum_recommendations
-        excluded_task_ids = get_excluded_task_ids(self.db, user_id)
+        from app.recommendation_utils import filter_recommendations, ensure_minimum_recommendations
+        excluded_task_ids = self._get_excluded_task_ids(user_id)
         recommendations = filter_recommendations(recommendations, excluded_task_ids)
         
         # 确保推荐结果达到最小数量
@@ -286,8 +292,7 @@ class TaskRecommendationEngine:
             user_vector = self._get_default_preference_vector(user)
         
         # 4. 获取应该排除的任务ID（用户已发布、已接受、已申请、已完成的任务）
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         # 5. 获取所有开放任务（应用筛选条件）
         query = self.db.query(Task).filter(
@@ -539,8 +544,8 @@ class TaskRecommendationEngine:
                     })
             
             # 最终过滤：确保排除所有不应推荐的任务
-            from app.recommendation_utils import filter_recommendations, get_excluded_task_ids
-            excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+            from app.recommendation_utils import filter_recommendations
+            excluded_task_ids = self._get_excluded_task_ids(user.id)
             result = filter_recommendations(result, excluded_task_ids)
             
             # 确保推荐结果达到最小数量
@@ -558,8 +563,9 @@ class TaskRecommendationEngine:
             
             return result
         
-        # 1. 基于内容的推荐（权重：35%，新用户时降低到30%）
-        content_weight = 0.3 if is_new_user else 0.35
+        # 1. 基于内容的推荐（权重：30%，新用户时降低到25%）
+        # 总权重100%：新用户 25+15+15+15+10+12+8=100 | 老用户 30+25+10+15+10+2+8=100
+        content_weight = 0.25 if is_new_user else 0.30
         content_based = self._content_based_recommend(
             user, limit=50, task_type=task_type, location=location, keyword=keyword
         )
@@ -568,8 +574,8 @@ class TaskRecommendationEngine:
             scores[task_id] = scores.get(task_id, 0) + item["score"] * content_weight
             reasons[task_id] = item["reason"]
         
-        # 2. 协同过滤推荐（权重：25%，新用户时降低到20%）
-        collaborative_weight = 0.2 if is_new_user else 0.25
+        # 2. 协同过滤推荐（权重：25%，新用户时降低到15%）
+        collaborative_weight = 0.15 if is_new_user else 0.25
         if self._has_enough_data(user.id):
             collaborative = self._collaborative_filtering_recommend(
                 user, limit=50, task_type=task_type, location=location, keyword=keyword
@@ -580,8 +586,8 @@ class TaskRecommendationEngine:
                 if task_id not in reasons:
                     reasons[task_id] = item["reason"]
         
-        # 3. 新任务优先曝光（权重：15%，新用户时提高到20%）
-        new_task_weight = 0.2 if is_new_user else 0.15
+        # 3. 新任务优先曝光（权重：10%，新用户时提高到15%）
+        new_task_weight = 0.15 if is_new_user else 0.10
         new_tasks = self._new_task_boost_recommend(
             user, limit=30, task_type=task_type, location=location, keyword=keyword
         )
@@ -623,15 +629,15 @@ class TaskRecommendationEngine:
             if task_id not in reasons:
                 reasons[task_id] = item["reason"]
         
-        # 6. 热门任务推荐（权重：2%，从8%降低）
+        # 6. 热门任务推荐
         # 注意：热门任务主要用于解决冷启动问题和增加多样性
         # 对于有足够数据的用户，热门任务权重会自动降低
         if is_new_user:
-            # 新用户：热门任务权重稍高（10%），帮助发现兴趣
-            popular_weight = 0.10
+            # 新用户：热门任务权重稍高（12%），帮助发现兴趣
+            popular_weight = 0.12
         else:
-            # 老用户：热门任务权重更低（5%），更精准个性化
-            popular_weight = 0.05
+            # 老用户：热门任务权重更低（2%），更精准个性化
+            popular_weight = 0.02
         
         popular = self._popular_tasks_recommend(limit=30, user=user)
         # 应用筛选条件（即使热门任务也会根据用户筛选条件过滤）
@@ -659,8 +665,8 @@ class TaskRecommendationEngine:
                 reasons[task_id] = item["reason"]
         
         # 获取应该排除的任务ID
-        from app.recommendation_utils import get_excluded_task_ids, filter_recommendations
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        from app.recommendation_utils import filter_recommendations
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         # 从分数中排除已排除的任务
         filtered_scores = {
@@ -714,7 +720,7 @@ class TaskRecommendationEngine:
         
         # 最终过滤：确保排除所有不应推荐的任务
         from app.recommendation_utils import filter_recommendations
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         result = filter_recommendations(result, excluded_task_ids)
         
         # 确保推荐结果达到最小数量
@@ -833,8 +839,7 @@ class TaskRecommendationEngine:
     def _location_based_recommend(self, user: User, limit: int) -> List[Dict]:
         """基于地理位置的推荐（增强版：支持多城市、常去地点、GPS距离）"""
         # 获取应该排除的任务ID
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         # 1. 获取用户常去的地点（增强：新增）
         frequent_locations = self._get_user_frequent_locations(user.id)
@@ -1032,8 +1037,7 @@ class TaskRecommendationEngine:
     
     def _social_based_recommend(self, user: User, limit: int) -> List[Dict]:
         """基于社交关系的推荐（新增功能）"""
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         scored_tasks = {}
         reasons = {}
@@ -1115,8 +1119,7 @@ class TaskRecommendationEngine:
         school_user_ids_list = [uid[0] for uid in school_user_ids]
         
         # 获取这些用户发布的任务
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
@@ -1141,8 +1144,7 @@ class TaskRecommendationEngine:
         high_rated_user_ids = [u.id for u in high_rated_users]
         
         # 获取这些用户发布的任务
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
@@ -1171,8 +1173,7 @@ class TaskRecommendationEngine:
         local_user_ids = [u.id for u in high_rated_local_users]
         
         # 获取这些用户发布的任务
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         tasks = self.db.query(Task).filter(
             Task.status == "open",
@@ -1195,8 +1196,7 @@ class TaskRecommendationEngine:
         
         # 如果提供了用户，排除该用户不应看到的任务
         if user:
-            from app.recommendation_utils import get_excluded_task_ids
-            excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+            excluded_task_ids = self._get_excluded_task_ids(user.id)
             query = query.filter(
                 Task.poster_id != user.id,
                 ~Task.id.in_(excluded_task_ids) if excluded_task_ids else True
@@ -1209,8 +1209,7 @@ class TaskRecommendationEngine:
     def _time_based_recommend(self, user: User, limit: int) -> List[Dict]:
         """基于时间匹配的推荐（增强版：考虑用户活跃时间段和当前时间段）"""
         # 获取应该排除的任务ID
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         # 1. 获取用户活跃时间段（增强：新增）
         active_time_slots = self._get_user_active_time_slots(user.id)
@@ -1284,20 +1283,26 @@ class TaskRecommendationEngine:
         if not user.created_at:
             return False
         
-        now = get_utc_time()
-        days_since_registration = (now - user.created_at).days if hasattr(user.created_at, 'days') else 999
-        
-        return days_since_registration <= 7
+        try:
+            now = get_utc_time()
+            delta = now - user.created_at
+            days_since_registration = delta.days
+            return days_since_registration <= 7
+        except (TypeError, AttributeError):
+            return False
     
     def _is_new_task(self, task: Task) -> bool:
         """判断是否为新任务（发布24小时内）"""
         if not task.created_at:
             return False
         
-        now = get_utc_time()
-        hours_since_creation = (now - task.created_at).total_seconds() / 3600 if hasattr(task.created_at, 'total_seconds') else 999
-        
-        return hours_since_creation <= 24
+        try:
+            now = get_utc_time()
+            delta = now - task.created_at
+            hours_since_creation = delta.total_seconds() / 3600
+            return hours_since_creation <= 24
+        except (TypeError, AttributeError):
+            return False
     
     def _is_new_user_task(self, task: Task) -> bool:
         """判断是否为新用户发布的任务（发布者注册7天内且任务发布24小时内）"""
@@ -1308,13 +1313,29 @@ class TaskRecommendationEngine:
         if not self._is_new_task(task):
             return False
         
-        # 检查发布者是否为新用户（优化：可以缓存用户信息）
-        # 注意：这里每次查询用户信息，如果性能有问题可以考虑缓存
-        poster = self.db.query(User).filter(User.id == task.poster_id).first()
+        # 优化：使用缓存避免N+1查询
+        poster_id = task.poster_id
+        
+        # 先检查"是否新用户"缓存
+        if poster_id in self._new_user_cache:
+            return self._new_user_cache[poster_id]
+        
+        # 再检查用户对象缓存
+        if poster_id in self._user_cache:
+            poster = self._user_cache[poster_id]
+        else:
+            # 缓存未命中，查询数据库
+            poster = self.db.query(User).filter(User.id == poster_id).first()
+            if poster:
+                self._user_cache[poster_id] = poster
+        
         if not poster:
+            self._new_user_cache[poster_id] = False
             return False
         
-        return self._is_new_user(poster)
+        is_new = self._is_new_user(poster)
+        self._new_user_cache[poster_id] = is_new
+        return is_new
     
     def _new_task_boost_recommend(
         self,
@@ -1331,8 +1352,7 @@ class TaskRecommendationEngine:
         recent_time = now - timedelta(hours=24)
         
         # 获取应该排除的任务ID
-        from app.recommendation_utils import get_excluded_task_ids
-        excluded_task_ids = get_excluded_task_ids(self.db, user.id)
+        excluded_task_ids = self._get_excluded_task_ids(user.id)
         
         # 构建查询
         query = self.db.query(Task).filter(
