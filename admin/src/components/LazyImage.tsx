@@ -1,6 +1,6 @@
 /**
  * 图片懒加载组件
- * 使用 Intersection Observer API 实现图片懒加载
+ * 使用 Intersection Observer API 实现图片懒加载，提升页面性能
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { Spin } from 'antd';
@@ -19,7 +19,7 @@ interface LazyImageProps {
   title?: string;
   onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void;
-  rootMargin?: string;
+  rootMargin?: string; // Intersection Observer 的 rootMargin
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({ 
@@ -44,12 +44,14 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    // 如果图片是绝对定位的，直接加载（因为绝对定位的图片通常需要立即显示）
     const isAbsolutePositioned = style?.position === 'absolute';
     if (isAbsolutePositioned) {
       setIsInView(true);
       return;
     }
     
+    // 如果浏览器不支持 Intersection Observer，直接加载图片
     if (!('IntersectionObserver' in window)) {
       setIsInView(true);
       return;
@@ -66,7 +68,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
       },
       { 
         rootMargin,
-        threshold: 0.01
+        threshold: 0.01 // 图片进入视口1%时开始加载
       }
     );
 
@@ -96,6 +98,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
     }
   };
 
+  // 如果图片加载失败，显示占位符
   if (hasError && placeholder) {
     return (
       <div
@@ -128,9 +131,14 @@ const LazyImage: React.FC<LazyImageProps> = ({
     );
   }
 
+  // 判断是否使用固定尺寸（传入了 width 和 height）
   const hasFixedSize = width && height;
+  
+  // 分离容器样式和图片样式
+  // 如果style中包含position: absolute，说明图片需要绝对定位，应该应用到img而不是容器
   const isAbsolutePositioned = style?.position === 'absolute';
   
+  // 图片相关的样式属性（当图片绝对定位时，这些属性应该应用到img而不是容器）
   const imageStyleProps = [
     'position', 'top', 'left', 'right', 'bottom',
     'objectFit', 'objectPosition', 'opacity', 'zIndex',
@@ -138,6 +146,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     'width', 'height'
   ];
   
+  // 构建容器样式，排除图片相关的样式属性
+  // 当图片绝对定位时，容器应该填充父容器（100%宽高），并保持relative作为定位上下文
+  // 如果 style 中有 width 和 height，优先使用它们来保持容器的宽高比（特别是对于圆形头像）
   const containerWidth = isAbsolutePositioned 
     ? '100%' 
     : (style?.width || width || '100%');
@@ -150,12 +161,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
     width: containerWidth,
     height: containerHeight,
     overflow: 'hidden',
+    // 如果 style 中有 borderRadius，应用到容器以保持圆形
     borderRadius: style?.borderRadius || undefined,
   };
   
+  // 将非图片相关的样式应用到容器（但排除已经在上面处理的属性）
   if (style) {
     const styleKeys = Object.keys(style) as Array<keyof React.CSSProperties>;
     styleKeys.forEach(key => {
+      // 排除图片相关的样式属性，以及已经手动设置的属性
       if (!imageStyleProps.includes(key as string) && 
           key !== 'borderRadius' && 
           key !== 'width' && 
@@ -168,15 +182,18 @@ const LazyImage: React.FC<LazyImageProps> = ({
     });
   }
   
+  // 图片样式：合并传入的图片相关样式和默认样式
+  // 优先使用 style 中的 width/height，然后是 props 中的 width/height，最后是默认值
+  // 对于圆形头像，图片应该填充整个容器
   const imgStyle: React.CSSProperties = {
     opacity: isLoaded ? (style?.opacity !== undefined ? style.opacity : 1) : 0,
     transition: 'opacity 0.3s ease-in-out',
     width: isAbsolutePositioned 
       ? (style?.width || '100%') 
-      : '100%',
+      : '100%', // 图片填充容器宽度
     height: isAbsolutePositioned 
       ? (style?.height || '100%') 
-      : '100%',
+      : '100%', // 图片填充容器高度
     maxWidth: '100%',
     maxHeight: '100%',
     objectFit: (style?.objectFit as any) || 'cover',
@@ -184,6 +201,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
     display: 'block',
   };
   
+  // 如果是绝对定位，应用定位相关样式
   if (isAbsolutePositioned) {
     imgStyle.position = 'absolute';
     if (style?.top !== undefined) imgStyle.top = style.top;

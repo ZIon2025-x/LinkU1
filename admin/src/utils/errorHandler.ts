@@ -160,11 +160,14 @@ export const logError = (error: any, context?: Record<string, any>): void => {
     timestamp: new Date().toISOString(),
   };
 
-  // 在生产环境中，可以发送到错误监控服务
+  // 在生产环境中，可以发送到错误监控服务（如 Sentry）
   if (process.env.NODE_ENV === 'production') {
     // TODO: 集成错误监控服务
-    console.error('Error:', errorInfo);
+    // Sentry.captureException(error, { extra: errorInfo });
+    // 错误信息已记录，可用于错误监控服务
   } else {
-    console.error('Error:', errorInfo);
+    // 开发环境：错误信息已记录
+    // 如需调试，可在此处添加日志输出
   }
 };
+

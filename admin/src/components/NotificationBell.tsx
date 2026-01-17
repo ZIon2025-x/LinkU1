@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { getUnreadStaffNotifications } from '../api';
+import { getUnreadStaffNotifications, getUnreadAdminNotifications } from '../api';
 
 interface NotificationBellProps {
   userType: 'customer_service' | 'admin';
@@ -17,11 +17,18 @@ const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(
   const loadUnreadCount = async () => {
     try {
       setLoading(true);
-      const response = await getUnreadStaffNotifications();
-      setUnreadCount(response.unread_count || 0);
+      let response;
+      if (userType === 'admin') {
+        // 管理员使用管理员专用通知API
+        response = await getUnreadAdminNotifications();
+        setUnreadCount(response.unread_count || 0);
+      } else {
+        // 客服使用客服专用API
+        response = await getUnreadStaffNotifications();
+        setUnreadCount(response.unread_count || 0);
+      }
     } catch (error) {
-      console.error('加载未读通知失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

@@ -33,7 +33,9 @@ export async function compressImage(
     // 如果文件已经很小，直接返回
     if (file.size <= (compressionOptions.maxSizeMB || 1) * 1024 * 1024) {
       // 检查是否需要调整尺寸
+      // 使用 Promise 包装，避免阻塞
       return new Promise((resolve, reject) => {
+        // 延迟到下一个事件循环，避免阻塞 UI
         setTimeout(() => {
           const img = new Image();
           const objectUrl = URL.createObjectURL(file);
@@ -77,7 +79,7 @@ export async function compressImage(
     });
     return compressedFile;
   } catch (error) {
-    // 如果压缩失败，返回原文件
+        // 如果压缩失败，返回原文件
     return file;
   }
 }
@@ -99,10 +101,11 @@ export async function compressImages(
       const compressedFile = await compressImage(file, options);
       compressedFiles.push(compressedFile);
     } catch (error) {
-      // 如果压缩失败，使用原文件
+            // 如果压缩失败，使用原文件
       compressedFiles.push(file);
     }
   }
   
   return compressedFiles;
 }
+

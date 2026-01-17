@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getStaffNotifications, markStaffNotificationRead, markAllStaffNotificationsRead } from '../api';
 import dayjs from 'dayjs';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 interface StaffNotification {
   id: number;
@@ -19,7 +20,7 @@ interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   userType: 'customer_service' | 'admin';
-  onNotificationRead?: () => void;
+  onNotificationRead?: () => void; // 添加回调函数
 }
 
 const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, userType, onNotificationRead }) => {
@@ -34,16 +35,17 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
       setNotifications(response.notifications || []);
       setUnreadCount(response.unread_count || 0);
     } catch (error) {
-      console.error('加载通知失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
     if (isOpen) {
+      // 打开时立即加载
       loadNotifications();
       
+      // 打开后定期刷新通知列表（每10秒刷新一次，比红点的30秒更频繁）
       const interval = setInterval(() => {
         loadNotifications();
       }, 10000);
@@ -55,25 +57,27 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
   const handleMarkAsRead = async (notificationId: number) => {
     try {
       await markStaffNotificationRead(notificationId);
+      // 重新加载提醒列表（确保显示正确的已读/未读状态）
       await loadNotifications();
+      // 通知父组件更新未读数量
       if (onNotificationRead) {
         onNotificationRead();
       }
     } catch (error) {
-      console.error('标记已读失败:', error);
-    }
+          }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllStaffNotificationsRead();
+      // 重新加载提醒列表（现在会显示已读的提醒）
       await loadNotifications();
+      // 通知父组件更新未读数量
       if (onNotificationRead) {
         onNotificationRead();
       }
     } catch (error) {
-      console.error('全部标记已读失败:', error);
-    }
+          }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -100,10 +104,6 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
       default:
         return '#007bff';
     }
-  };
-
-  const formatTime = (dateString: string) => {
-    return dayjs(dateString).format('MM-DD HH:mm');
   };
 
   if (!isOpen) return null;
@@ -223,7 +223,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
                     fontSize: '12px',
                     color: '#666'
                   }}>
-                    {formatTime(notification.created_at)}
+                    {TimeHandlerV2.formatUtcToLocal(notification.created_at, 'MM-DD HH:mm')}
                   </span>
                 </div>
                 
