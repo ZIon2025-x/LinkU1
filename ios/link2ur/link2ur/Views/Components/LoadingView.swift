@@ -1,30 +1,41 @@
 import SwiftUI
 
-// 统一的加载状态视图组件
+// 统一的加载状态视图组件 - 系统蓝风格
 struct LoadingView: View {
     var message: String? = nil
-    @State private var opacity = 0.0
+    @State private var isAnimating = false
     
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            ProgressView()
-                .scaleEffect(1.2)
-                .tint(AppColors.primary)
+        VStack(spacing: 24) {
+            ZStack {
+                // 背景环
+                Circle()
+                    .stroke(AppColors.primary.opacity(0.08), lineWidth: 2.5)
+                    .frame(width: 40, height: 40)
+                
+                // 动画环 - 使用系统蓝主色
+                Circle()
+                    .trim(from: 0, to: 0.7)
+                    .stroke(
+                        LinearGradient(colors: [AppColors.primary, AppColors.primary.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 40, height: 40)
+                    .rotationEffect(Angle(degrees: isAnimating ? 360 : 0))
+                    .onAppear {
+                        withAnimation(Animation.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                            isAnimating = true
+                        }
+                    }
+            }
             
             if let message = message {
                 Text(message)
-                    .font(AppTypography.subheadline)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundColor(AppColors.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(AppSpacing.xl)
-        .opacity(opacity)
-        .onAppear {
-            withAnimation(.easeIn(duration: 0.3)) {
-                opacity = 1.0
-            }
-        }
     }
 }
 

@@ -8,279 +8,12 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
+                backgroundView
                 
                 if appState.isAuthenticated {
-                    // 已登录：显示用户信息和功能菜单
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // 用户信息卡片（顶部大卡片）- 更现代的设计
-                            VStack(spacing: AppSpacing.lg) {
-                                // 头像 - 带渐变边框
-                                ZStack {
-                                    // 外层渐变圆圈
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: AppColors.gradientPrimary),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 110, height: 110)
-                                        .shadow(color: AppColors.primary.opacity(0.4), radius: 16, x: 0, y: 8)
-                                    
-                                    // 内层白色圆圈
-                                    Circle()
-                                        .fill(Color.white)
-                                        .frame(width: 104, height: 104)
-                                    
-                                    AvatarView(
-                                        urlString: appState.currentUser?.avatar,
-                                        size: 100,
-                                        placeholder: Image(systemName: "person.fill")
-                                    )
-                                }
-                                
-                                // 用户名和邮箱 - 符合 HIG
-                                VStack(spacing: AppSpacing.sm) {
-                                    Text(appState.currentUser?.name ?? LocalizationKey.profileUser.localized)
-                                        .font(AppTypography.title2)
-                                        .foregroundColor(AppColors.textPrimary)
-                                    
-                                    if let email = appState.currentUser?.email, !email.isEmpty {
-                                        Text(email)
-                                            .font(AppTypography.subheadline)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    } else if let phone = appState.currentUser?.phone, !phone.isEmpty {
-                                        Text(phone)
-                                            .font(AppTypography.subheadline)
-                                            .foregroundColor(AppColors.textSecondary)
-                                    }
-                                    
-                                    // 用户等级标签 - 渐变设计
-                                    if let userLevel = appState.currentUser?.userLevel {
-                                        Text(userLevel.uppercased())
-                                            .font(AppTypography.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, AppSpacing.md)
-                                            .padding(.vertical, 6)
-                                            .background(
-                                                Capsule()
-                                                    .fill(
-                                                        LinearGradient(
-                                                            gradient: Gradient(colors: AppColors.gradientWarning),
-                                                            startPoint: .leading,
-                                                            endPoint: .trailing
-                                                        )
-                                                    )
-                                            )
-                                            .shadow(color: AppColors.warning.opacity(0.3), radius: 8, x: 0, y: 4)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, AppSpacing.xl)
-                            .padding(.horizontal, AppSpacing.md)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        AppColors.primary.opacity(0.12),
-                                        AppColors.primary.opacity(0.06),
-                                        AppColors.primary.opacity(0.02)
-                                    ]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            
-                            // 功能列表 - 符合 HIG
-                            VStack(spacing: AppSpacing.sm) {
-                                Group {
-                                    NavigationLink(destination: MyTasksView()) {
-                                        ProfileRow(
-                                            icon: "doc.text.fill",
-                                            title: LocalizationKey.profileMyTasks.localized,
-                                            subtitle: LocalizationKey.profileMyTasksSubtitle.localized,
-                                            color: AppColors.primary
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: MyPostsView()) {
-                                        ProfileRow(
-                                            icon: "cart.fill",
-                                            title: LocalizationKey.profileMyPosts.localized,
-                                            subtitle: LocalizationKey.profileMyPostsSubtitle.localized,
-                                            color: AppColors.warning
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: WalletView()) {
-                                        ProfileRow(
-                                            icon: "wallet.pass.fill",
-                                            title: LocalizationKey.profileMyWallet.localized,
-                                            subtitle: LocalizationKey.profileMyWalletSubtitle.localized,
-                                            color: AppColors.success
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: MyServiceApplicationsView()) {
-                                        ProfileRow(
-                                            icon: "hand.raised.fill",
-                                            title: LocalizationKey.profileMyApplications.localized,
-                                            subtitle: LocalizationKey.profileMyApplicationsSubtitle.localized,
-                                            color: Color.purple
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: CouponPointsView()) {
-                                        ProfileRow(
-                                            icon: "star.fill",
-                                            title: LocalizationKey.profilePointsCoupons.localized,
-                                            subtitle: LocalizationKey.profilePointsCouponsSubtitle.localized,
-                                            color: Color.orange
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: StudentVerificationView()) {
-                                        ProfileRow(
-                                            icon: "person.badge.shield.checkmark.fill",
-                                            title: LocalizationKey.profileStudentVerification.localized,
-                                            subtitle: LocalizationKey.profileStudentVerificationSubtitle.localized,
-                                            color: Color.blue
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: ActivityListView()) {
-                                        ProfileRow(
-                                            icon: "calendar.badge.plus",
-                                            title: LocalizationKey.profileActivity.localized,
-                                            subtitle: LocalizationKey.profileActivitySubtitle.localized,
-                                            color: Color.green
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: SettingsView()) {
-                                        ProfileRow(
-                                            icon: "gearshape.fill",
-                                            title: LocalizationKey.profileSettings.localized,
-                                            subtitle: LocalizationKey.profileSettingsSubtitle.localized,
-                                            color: AppColors.textSecondary
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                    
-                                    NavigationLink(destination: TaskPreferencesView()) {
-                                        ProfileRow(
-                                            icon: "target",
-                                            title: "任务偏好",
-                                            subtitle: "设置您感兴趣的任务类型和地点",
-                                            color: Color.blue
-                                        )
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .cardStyle()
-                                }
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.md)
-                            
-                            // 退出登录按钮 - 现代化破坏性操作设计
-                            Button(action: {
-                                HapticFeedback.warning()
-                                showLogoutAlert = true
-                            }) {
-                                HStack(spacing: 8) {
-                                    IconStyle.icon("rectangle.portrait.and.arrow.right", size: 18, weight: .semibold)
-                                    Text(LocalizationKey.profileLogout.localized)
-                                        .font(AppTypography.bodyBold)
-                                }
-                                .foregroundColor(AppColors.error)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(AppColors.error.opacity(0.08))
-                                .cornerRadius(AppCornerRadius.large)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                                        .stroke(AppColors.error.opacity(0.15), lineWidth: 1)
-                                )
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-                            .padding(.top, AppSpacing.xl)
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.bottom, AppSpacing.xxl)
-                        }
-                    }
+                    authenticatedContent
                 } else {
-                    // 未登录：显示登录界面
-                    VStack(spacing: AppSpacing.xl) {
-                        Spacer()
-                        
-                        // Logo
-                        Image("Logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 120, height: 120)
-                            .padding(.bottom, AppSpacing.lg)
-                        
-                        // 欢迎文字 - 符合 HIG
-                        VStack(spacing: AppSpacing.sm) {
-                            Text(LocalizationKey.profileWelcome.localized)
-                                .font(AppTypography.title2)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text(LocalizationKey.profileLoginPrompt.localized)
-                                .font(AppTypography.subheadline)
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        // 登录按钮 - 渐变设计
-                        Button(action: {
-                            showLogin = true
-                        }) {
-                            HStack(spacing: AppSpacing.sm) {
-                                Text(LocalizationKey.authLogin.localized)
-                                    .font(AppTypography.bodyBold)
-                                
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: AppColors.gradientPrimary),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(AppCornerRadius.large)
-                            .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
-                        }
-                        .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.large, useGradient: true))
-                        .padding(.horizontal, AppSpacing.xl)
-                        .padding(.bottom, AppSpacing.xl)
-                    }
+                    unauthenticatedContent
                 }
             }
             .navigationTitle(LocalizationKey.tabsProfile.localized)
@@ -310,6 +43,267 @@ struct ProfileView: View {
             }
         }
     }
+    
+    // MARK: - 子视图
+    
+    private var backgroundView: some View {
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            VStack {
+                LinearGradient(colors: [AppColors.primary.opacity(0.15), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 300)
+                Spacer()
+            }
+            .ignoresSafeArea()
+        }
+    }
+    
+    private var authenticatedContent: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                userInfoSection
+                statsSection
+                myContentSection
+                systemSection
+                logoutButton
+            }
+            .padding(.bottom, 20)
+        }
+    }
+    
+    private var userInfoSection: some View {
+        VStack(spacing: AppSpacing.lg) {
+            ZStack {
+                Circle()
+                    .fill(.white)
+                    .frame(width: 104, height: 104)
+                    .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+                
+                AvatarView(
+                    urlString: appState.currentUser?.avatar,
+                    size: 96,
+                    placeholder: Image(systemName: "person.crop.circle.fill")
+                )
+                .clipShape(Circle())
+            }
+            
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(appState.currentUser?.name ?? LocalizationKey.profileUser.localized)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    if let isVerified = appState.currentUser?.isVerified, isVerified == 1 {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(.blue)
+                            .font(.system(size: 18))
+                    }
+                }
+                
+                Text(appState.currentUser?.email ?? appState.currentUser?.phone ?? "未绑定联系方式")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(AppColors.primary.opacity(0.05))
+                    .cornerRadius(20)
+            }
+        }
+        .padding(.top, 40)
+        .padding(.horizontal, AppSpacing.md)
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var statsSection: some View {
+        HStack(spacing: 0) {
+            StatItem(label: "进行中", value: "\(appState.currentUser?.taskCount ?? 0)", color: AppColors.primary)
+            Divider().frame(height: 30)
+            StatItem(label: "已完成", value: "\(appState.currentUser?.completedTaskCount ?? 0)", color: AppColors.success)
+            Divider().frame(height: 30)
+            StatItem(
+                label: "信用分",
+                value: creditScoreDisplay,
+                color: AppColors.warning
+            )
+        }
+        .padding(.vertical, 16)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .padding(.horizontal, AppSpacing.md)
+        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+    }
+    
+    private var myContentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("我的内容")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
+                .padding(.horizontal, AppSpacing.sm)
+            
+            VStack(spacing: 0) {
+                NavigationLink(destination: MyTasksView()) {
+                    ProfileRow(icon: "list.bullet.rectangle.fill", title: LocalizationKey.profileMyTasks.localized, subtitle: "管理我发布和接受的任务", color: AppColors.primary)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: MyPostsView()) {
+                    ProfileRow(icon: "shippingbox.fill", title: LocalizationKey.profileMyPosts.localized, subtitle: "闲置物品交易记录", color: Color.orange)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: MyForumPostsView()) {
+                    ProfileRow(icon: "doc.text.fill", title: "我的帖子", subtitle: "查看我在论坛发布的讨论", color: Color.blue)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: WalletView()) {
+                    ProfileRow(icon: "creditcard.fill", title: LocalizationKey.profileMyWallet.localized, subtitle: "余额、充值与提现", color: AppColors.success)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: CouponPointsView()) {
+                    ProfileRow(icon: "ticket.fill", title: LocalizationKey.profilePointsCoupons.localized, subtitle: "积分明细与优惠券", color: Color.pink)
+                }
+            }
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        }
+        .padding(.horizontal, AppSpacing.md)
+    }
+    
+    private var systemSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("系统与验证")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(AppColors.textPrimary)
+                .padding(.horizontal, AppSpacing.sm)
+            
+            VStack(spacing: 0) {
+                NavigationLink(destination: StudentVerificationView()) {
+                    ProfileRow(icon: "graduationcap.fill", title: LocalizationKey.profileStudentVerification.localized, subtitle: "获取学生专属认证标识", color: Color.indigo)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: ActivityListView()) {
+                    ProfileRow(icon: "calendar.badge.clock", title: LocalizationKey.profileActivity.localized, subtitle: "查看我参与的线下活动", color: Color.orange)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: TaskPreferencesView()) {
+                    ProfileRow(icon: "heart.text.square.fill", title: "任务偏好", subtitle: "个性化定制推荐内容", color: Color.red)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: MyServiceApplicationsView()) {
+                    ProfileRow(icon: "bolt.shield.fill", title: LocalizationKey.profileMyApplications.localized, subtitle: "达人/服务商申请状态", color: Color.purple)
+                }
+                Divider().padding(.leading, 56)
+                
+                NavigationLink(destination: SettingsView()) {
+                    ProfileRow(icon: "gearshape.fill", title: LocalizationKey.profileSettings.localized, subtitle: "个人资料、密码与安全", color: Color.gray)
+                }
+            }
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        }
+        .padding(.horizontal, AppSpacing.md)
+    }
+    
+    /// 信用分显示值（百分制）
+    /// 直接使用平均评分转换为百分制，后续由后端计算
+    private var creditScoreDisplay: String {
+        guard let avgRating = appState.currentUser?.avgRating, avgRating > 0 else {
+            return "--"
+        }
+        
+        // 将 0-5 分制的平均评分转换为 0-100 分制
+        // 例如：5.0 分 = 100 分，4.0 分 = 80 分，3.0 分 = 60 分
+        let creditScore = (avgRating / 5.0) * 100.0
+        
+        return "\(Int(creditScore))"
+    }
+    
+    private var logoutButton: some View {
+        Button(action: {
+            HapticFeedback.warning()
+            showLogoutAlert = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "power")
+                    .fontWeight(.bold)
+                Text(LocalizationKey.profileLogout.localized)
+                    .fontWeight(.bold)
+            }
+            .foregroundColor(AppColors.error)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(AppColors.error.opacity(0.08))
+            .cornerRadius(AppCornerRadius.large)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                    .strokeBorder(AppColors.error.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle())
+        .padding(.top, 8)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.bottom, 40)
+    }
+    
+    private var unauthenticatedContent: some View {
+        VStack(spacing: AppSpacing.xl) {
+            Spacer()
+            
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .padding(.bottom, AppSpacing.lg)
+            
+            VStack(spacing: AppSpacing.sm) {
+                Text(LocalizationKey.profileWelcome.localized)
+                    .font(AppTypography.title2)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(LocalizationKey.profileLoginPrompt.localized)
+                    .font(AppTypography.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                showLogin = true
+            }) {
+                HStack(spacing: AppSpacing.sm) {
+                    Text(LocalizationKey.authLogin.localized)
+                        .font(AppTypography.bodyBold)
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: AppColors.gradientPrimary),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(AppCornerRadius.large)
+                .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+            }
+            .buttonStyle(PrimaryButtonStyle(cornerRadius: AppCornerRadius.large, useGradient: true))
+            .padding(.horizontal, AppSpacing.xl)
+            .padding(.bottom, AppSpacing.xl)
+        }
+    }
 }
 
 // 个人中心行组件 - 更现代的设计
@@ -320,47 +314,29 @@ struct ProfileRow: View {
     let color: Color
     
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            // 图标容器 - 渐变背景
+        HStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [color.opacity(0.2), color.opacity(0.1)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 48, height: 48)
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 38, height: 38)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(color)
+                    .font(.system(size: 16, weight: .bold))
             }
             
-            // 文本内容
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text(title)
-                    .font(AppTypography.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                if let subtitle = subtitle {
-                    Text(subtitle)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-            }
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundColor(AppColors.textTertiary)
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.large)
-        .contentShape(Rectangle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
+

@@ -95,6 +95,8 @@ struct ForumPost: Codable, Identifiable {
     let isPinned: Bool
     let isFeatured: Bool
     let isLocked: Bool
+    let isLiked: Bool?
+    let isFavorited: Bool?
     let createdAt: String
     let lastReplyAt: String?
     
@@ -108,6 +110,8 @@ struct ForumPost: Codable, Identifiable {
         case isPinned = "is_pinned"
         case isFeatured = "is_featured"
         case isLocked = "is_locked"
+        case isLiked = "is_liked"
+        case isFavorited = "is_favorited"
         case createdAt = "created_at"
         case lastReplyAt = "last_reply_at"
     }
@@ -149,19 +153,22 @@ struct ForumPost: Codable, Identifiable {
         } else if let favoriteCountInt = try? container.decode(Int.self, forKey: .favoriteCount) {
             favoriteCount = favoriteCountInt
         } else {
-            // 字段不存在，使用默认值 0
+            // 字段不存在（如 ForumPostListItem），使用默认值 0
             favoriteCount = 0
         }
         
-        isPinned = try container.decode(Bool.self, forKey: .isPinned)
-        isFeatured = try container.decode(Bool.self, forKey: .isFeatured)
-        isLocked = try container.decode(Bool.self, forKey: .isLocked)
+        // 这些字段在某些响应中可能不存在（如 ForumPostListItem）
+        isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        isFeatured = try container.decodeIfPresent(Bool.self, forKey: .isFeatured) ?? false
+        isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+        isLiked = try container.decodeIfPresent(Bool.self, forKey: .isLiked)
+        isFavorited = try container.decodeIfPresent(Bool.self, forKey: .isFavorited)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         lastReplyAt = try container.decodeIfPresent(String.self, forKey: .lastReplyAt)
     }
     
     // 手动初始化器（用于从搜索结果构造）
-    init(id: Int, title: String, content: String?, contentPreview: String?, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, createdAt: String, lastReplyAt: String?) {
+    init(id: Int, title: String, content: String?, contentPreview: String?, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, isLiked: Bool? = nil, isFavorited: Bool? = nil, createdAt: String, lastReplyAt: String?) {
         self.id = id
         self.title = title
         self.content = content
@@ -175,6 +182,8 @@ struct ForumPost: Codable, Identifiable {
         self.isPinned = isPinned
         self.isFeatured = isFeatured
         self.isLocked = isLocked
+        self.isLiked = isLiked
+        self.isFavorited = isFavorited
         self.createdAt = createdAt
         self.lastReplyAt = lastReplyAt
     }
@@ -189,6 +198,84 @@ struct ForumPostListResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case posts, total, page
         case pageSize = "page_size"
+    }
+}
+
+// 收藏项（包含帖子信息）
+struct ForumFavoriteItem: Codable {
+    let id: Int
+    let post: ForumPost
+    let createdAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, post
+        case createdAt = "created_at"
+    }
+}
+
+// 收藏列表响应
+struct ForumFavoriteListResponse: Codable {
+    let favorites: [ForumFavoriteItem]
+    let total: Int
+    let page: Int
+    let pageSize: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case favorites, total, page
+        case pageSize = "page_size"
+    }
+    
+    // 转换为 ForumPostListResponse 格式
+    var toPostListResponse: ForumPostListResponse {
+        ForumPostListResponse(
+            posts: favorites.map { $0.post },
+            total: total,
+            page: page,
+            pageSize: pageSize
+        )
+    }
+}
+
+// 喜欢项（包含帖子或回复信息）
+struct ForumLikeItem: Codable {
+    let targetType: String
+    let post: ForumPost?
+    let reply: ForumReply?
+    let createdAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case targetType = "target_type"
+        case post, reply
+        case createdAt = "created_at"
+    }
+}
+
+// 喜欢列表响应
+struct ForumLikeListResponse: Codable {
+    let likes: [ForumLikeItem]
+    let total: Int
+    let page: Int
+    let pageSize: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case likes, total, page
+        case pageSize = "page_size"
+    }
+    
+    // 转换为 ForumPostListResponse 格式（只包含帖子）
+    var toPostListResponse: ForumPostListResponse {
+        let posts = likes.compactMap { item -> ForumPost? in
+            if item.targetType == "post" {
+                return item.post
+            }
+            return nil
+        }
+        return ForumPostListResponse(
+            posts: posts,
+            total: total,
+            page: page,
+            pageSize: pageSize
+        )
     }
 }
 

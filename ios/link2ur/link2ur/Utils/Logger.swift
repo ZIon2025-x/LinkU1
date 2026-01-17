@@ -41,24 +41,24 @@ struct Logger {
         let timestamp = DateFormatter.logFormatter.string(from: Date())
         let logMessage = "[\(timestamp)] [\(category.rawValue)] \(level.rawValue) \(fileName):\(line) \(function) - \(message)"
         
-        // 使用 os.log 进行系统级日志记录
-        let log = OSLog(subsystem: subsystem, category: category.rawValue)
-        
-        switch level {
-        case .debug:
-            os_log("%{public}@", log: log, type: .debug, logMessage)
-        case .info:
-            os_log("%{public}@", log: log, type: .info, logMessage)
-        case .warning:
-            os_log("%{public}@", log: log, type: .default, logMessage)
-        case .error:
-            os_log("%{public}@", log: log, type: .error, logMessage)
-        case .success:
-            os_log("%{public}@", log: log, type: .info, logMessage)
-        }
-        
-        // 同时输出到控制台（仅 DEBUG 模式）
+        // 使用 print 输出到 Xcode 控制台（os_log 也会输出，会导致重复）
+        // 只使用 print，避免日志重复
         print(logMessage)
+        
+        // 注意：os_log 虽然功能更强大（支持筛选、性能更好），但在 Xcode 控制台会和 print 同时显示
+        // 如果需要使用 os_log（例如在 Console.app 中查看），可以取消下面的注释，但会导致控制台日志重复
+        // switch level {
+        // case .debug:
+        //     os_log("%{public}@", log: log, type: .debug, logMessage)
+        // case .info:
+        //     os_log("%{public}@", log: log, type: .info, logMessage)
+        // case .warning:
+        //     os_log("%{public}@", log: log, type: .default, logMessage)
+        // case .error:
+        //     os_log("%{public}@", log: log, type: .error, logMessage)
+        // case .success:
+        //     os_log("%{public}@", log: log, type: .info, logMessage)
+        // }
         #endif
     }
     

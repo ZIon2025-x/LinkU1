@@ -181,7 +181,20 @@ struct PostCard: View {
                 HStack(spacing: 12) {
                     CompactStatItem(icon: "eye", count: post.viewCount)
                     CompactStatItem(icon: "bubble.right", count: post.replyCount)
-                    CompactStatItem(icon: "heart", count: post.likeCount)
+                    CompactStatItem(
+                        icon: "heart",
+                        count: post.likeCount,
+                        isActive: post.isLiked ?? false,
+                        activeColor: AppColors.error
+                    )
+                    if post.isFavorited == true {
+                        CompactStatItem(
+                            icon: "star",
+                            count: post.favoriteCount,
+                            isActive: true,
+                            activeColor: AppColors.warning
+                        )
+                    }
                 }
             }
             .padding(.top, 4)

@@ -9,6 +9,21 @@ class ForumViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    // 我的帖子相关状态
+    @Published var myPosts: [ForumPost] = []
+    @Published var isLoadingMyPosts = false
+    @Published var errorMessageMyPosts: String?
+    
+    // 我收藏的帖子相关状态
+    @Published var favoritedPosts: [ForumPost] = []
+    @Published var isLoadingFavoritedPosts = false
+    @Published var errorMessageFavoritedPosts: String?
+    
+    // 我喜欢的帖子相关状态
+    @Published var likedPosts: [ForumPost] = []
+    @Published var isLoadingLikedPosts = false
+    @Published var errorMessageLikedPosts: String?
+    
     // 使用依赖注入获取服务
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
@@ -154,6 +169,158 @@ class ForumViewModel: ObservableObject {
             })
             .store(in: &cancellables)
     }
+    
+    /// 加载我的帖子
+    func loadMyPosts(page: Int = 1) {
+        guard !isLoadingMyPosts || page > 1 else { return }
+        isLoadingMyPosts = true
+        
+        apiService.getMyPosts(page: page, pageSize: 20)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingMyPosts = false
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "加载我的帖子")
+                    self?.errorMessageMyPosts = error.userFriendlyMessage
+                } else {
+                    self?.errorMessageMyPosts = nil
+                }
+            }, receiveValue: { [weak self] response in
+                if page == 1 {
+                    self?.myPosts = response.posts
+                } else {
+                    self?.myPosts.append(contentsOf: response.posts)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 加载我收藏的帖子
+    func loadFavoritedPosts(page: Int = 1) {
+        guard !isLoadingFavoritedPosts || page > 1 else { return }
+        isLoadingFavoritedPosts = true
+        
+        let endpoint = "/api/forum/my/favorites?page=\(page)&page_size=20"
+        apiService.request(ForumFavoriteListResponse.self, endpoint, method: "GET")
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingFavoritedPosts = false
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "加载我收藏的帖子")
+                    self?.errorMessageFavoritedPosts = error.userFriendlyMessage
+                } else {
+                    self?.errorMessageFavoritedPosts = nil
+                }
+            }, receiveValue: { [weak self] response in
+                let posts = response.favorites.map { $0.post }
+                if page == 1 {
+                    self?.favoritedPosts = posts
+                } else {
+                    self?.favoritedPosts.append(contentsOf: posts)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 加载我喜欢的帖子
+    func loadLikedPosts(page: Int = 1) {
+        guard !isLoadingLikedPosts || page > 1 else { return }
+        isLoadingLikedPosts = true
+        
+        let endpoint = "/api/forum/my/likes?target_type=post&page=\(page)&page_size=20"
+        apiService.request(ForumLikeListResponse.self, endpoint, method: "GET")
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingLikedPosts = false
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "加载我喜欢的帖子")
+                    self?.errorMessageLikedPosts = error.userFriendlyMessage
+                } else {
+                    self?.errorMessageLikedPosts = nil
+                }
+            }, receiveValue: { [weak self] response in
+                // 只提取帖子类型的喜欢（过滤掉回复）
+                let posts = response.likes.compactMap { item -> ForumPost? in
+                    if item.targetType == "post" {
+                        return item.post
+                    }
+                    return nil
+                }
+                if page == 1 {
+                    self?.likedPosts = posts
+                } else {
+                    self?.likedPosts.append(contentsOf: posts)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Async Methods for Refreshable
+    
+    @MainActor
+    func loadMyPostsAsync() async {
+        isLoadingMyPosts = true
+        errorMessageMyPosts = nil
+        
+        do {
+            let response = try await apiService.getMyPosts(page: 1, pageSize: 20).async()
+            myPosts = response.posts
+            isLoadingMyPosts = false
+        } catch {
+            isLoadingMyPosts = false
+            if let apiError = error as? APIError {
+                ErrorHandler.shared.handle(apiError, context: "加载我的帖子")
+                errorMessageMyPosts = apiError.userFriendlyMessage
+            } else {
+                errorMessageMyPosts = "加载失败，请稍后重试"
+            }
+        }
+    }
+    
+    @MainActor
+    func loadFavoritedPostsAsync() async {
+        isLoadingFavoritedPosts = true
+        errorMessageFavoritedPosts = nil
+        
+        do {
+            let endpoint = "/api/forum/my/favorites?page=1&page_size=20"
+            let response = try await apiService.request(ForumFavoriteListResponse.self, endpoint, method: "GET").async()
+            favoritedPosts = response.favorites.map { $0.post }
+            isLoadingFavoritedPosts = false
+        } catch {
+            isLoadingFavoritedPosts = false
+            if let apiError = error as? APIError {
+                ErrorHandler.shared.handle(apiError, context: "加载我收藏的帖子")
+                errorMessageFavoritedPosts = apiError.userFriendlyMessage
+            } else {
+                errorMessageFavoritedPosts = "加载失败，请稍后重试"
+            }
+        }
+    }
+    
+    @MainActor
+    func loadLikedPostsAsync() async {
+        isLoadingLikedPosts = true
+        errorMessageLikedPosts = nil
+        
+        do {
+            let endpoint = "/api/forum/my/likes?target_type=post&page=1&page_size=20"
+            let response = try await apiService.request(ForumLikeListResponse.self, endpoint, method: "GET").async()
+            // 只提取帖子类型的喜欢（过滤掉回复）
+            likedPosts = response.likes.compactMap { item -> ForumPost? in
+                if item.targetType == "post" {
+                    return item.post
+                }
+                return nil
+            }
+            isLoadingLikedPosts = false
+        } catch {
+            isLoadingLikedPosts = false
+            if let apiError = error as? APIError {
+                ErrorHandler.shared.handle(apiError, context: "加载我喜欢的帖子")
+                errorMessageLikedPosts = apiError.userFriendlyMessage
+            } else {
+                errorMessageLikedPosts = "加载失败，请稍后重试"
+            }
+        }
+    }
 }
 
 class ForumPostDetailViewModel: ObservableObject {
@@ -218,7 +385,7 @@ class ForumPostDetailViewModel: ObservableObject {
     }
     
     func toggleLike(targetType: String, targetId: Int, completion: @escaping (Bool, Int) -> Void) {
-        let body = ["target_type": targetType, "target_id": targetId] as [String : Any] as [String : Any]
+        let body = ["target_type": targetType, "target_id": targetId] as [String : Any]
         apiService.request(ForumLikeResponse.self, "/api/forum/likes", method: "POST", body: body)
             .sink(receiveCompletion: { _ in }, receiveValue: { response in
                 completion(response.liked, response.likeCount)

@@ -76,6 +76,14 @@ struct SettingsView: View {
                             Text(LocalizationKey.appPrivacyPolicy.localized)
                         }
                     }
+                    
+                    NavigationLink(destination: CookiePolicyView()) {
+                        HStack {
+                            Image(systemName: "cookie")
+                                .foregroundColor(AppColors.primary)
+                            Text("Cookie Policy")
+                        }
+                    }
                 }
                 
                 // 关于

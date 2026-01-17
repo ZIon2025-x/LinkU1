@@ -10,30 +10,46 @@ struct LeaderboardView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
+                // 顶部装饰：荣耀感光辉
+                LinearGradient(colors: [Color.orange.opacity(0.1), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 200)
+                    .ignoresSafeArea()
+                
                 if viewModel.isLoading && viewModel.leaderboards.isEmpty {
-                    ProgressView()
+                    LoadingView()
                 } else if viewModel.leaderboards.isEmpty {
                     EmptyStateView(
-                        icon: "trophy.fill",
-                        title: "暂无排行榜",
-                        message: "还没有排行榜，快来创建第一个吧！"
+                        icon: "crown.fill",
+                        title: "虚位以待",
+                        message: "目前还没有排行榜，开启第一个传奇吧"
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(viewModel.leaderboards) { leaderboard in
-                                NavigationLink(destination: LeaderboardDetailView(leaderboardId: leaderboard.id)) {
-                                    LeaderboardCard(leaderboard: leaderboard)
+                        VStack(spacing: 24) {
+                            // 冠亚季军特殊展示区域
+                            topThreeSection
+                            
+                            // 普通列表
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("更多排行榜")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .padding(.horizontal, AppSpacing.md)
+                                
+                                LazyVStack(spacing: AppSpacing.md) {
+                                    ForEach(viewModel.leaderboards) { leaderboard in
+                                        NavigationLink(destination: LeaderboardDetailView(leaderboardId: leaderboard.id)) {
+                                            LeaderboardCard(leaderboard: leaderboard)
+                                        }
+                                    }
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal, AppSpacing.md)
                             }
                         }
-                        .padding(.horizontal, AppSpacing.md)
                         .padding(.vertical, AppSpacing.sm)
                     }
                 }
             }
-            .navigationTitle("排行榜")
+            .navigationTitle("荣誉排行榜")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -63,80 +79,105 @@ struct LeaderboardCard: View {
     let leaderboard: CustomLeaderboard
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 封面和标题
-            HStack(spacing: AppSpacing.md) {
-                if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
-                    AsyncImage(url: URL(string: coverImage)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.small)
-                            .fill(AppColors.primaryLight)
-                    }
-                    .frame(width: 80, height: 80)
-                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.7)]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 80, height: 80)
-                        
-                        Image(systemName: "trophy.fill")
-                            .font(.title)
-                            .foregroundColor(.white)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 16) {
+                // 排名封面
+                ZStack {
+                    if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
+                        AsyncImage(url: URL(string: coverImage)) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle().fill(AppColors.primary.opacity(0.1))
+                        }
+                    } else {
+                        Rectangle().fill(AppColors.primaryGradient)
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.white.opacity(0.8))
+                            .font(.title2)
                     }
                 }
+                .frame(width: 70, height: 70)
+                .cornerRadius(12)
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(leaderboard.name)
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                     
-                    if let description = leaderboard.description {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                            .lineLimit(2)
-                    }
-                    
-                    if let location = leaderboard.location {
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.caption2)
-                            Text(location)
-                                .font(.caption)
-                        }
+                    Text(leaderboard.description ?? "没有描述")
+                        .font(.system(size: 13))
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 12) {
+                        Label("\(leaderboard.voteCount)", systemImage: "flame.fill")
+                            .foregroundColor(.orange)
+                        Label("\(leaderboard.itemCount) 项", systemImage: "list.number")
+                            .foregroundColor(AppColors.primary)
                     }
+                    .font(.system(size: 11, weight: .bold))
                 }
                 
                 Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(AppColors.textTertiary)
             }
-            
-            Divider()
-            
-            // 统计信息
-            HStack(spacing: 24) {
-                Label("\(leaderboard.itemCount)", systemImage: "square.grid.2x2")
-                Label("\(leaderboard.voteCount)", systemImage: "hand.thumbsup")
-                Label("\(leaderboard.viewCount)", systemImage: "eye")
-            }
-            .font(.caption)
-            .foregroundColor(AppColors.textSecondary)
+            .padding(16)
         }
-        .padding(AppSpacing.md)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+    }
+}
+
+extension LeaderboardView {
+    private var topThreeSection: some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            // 第2名
+            rankColumn(rank: 2, name: "热门任务", score: "2.3k", color: Color.gray.opacity(0.3))
+            
+            // 第1名
+            rankColumn(rank: 1, name: "年度达人", score: "5.8k", color: .orange.opacity(0.3), height: 160)
+            
+            // 第3名
+            rankColumn(rank: 3, name: "校园互助", score: "1.9k", color: .brown.opacity(0.3))
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.top, 20)
+    }
+    
+    private func rankColumn(rank: Int, name: String, score: String, color: Color, height: CGFloat = 130) -> some View {
+        VStack(spacing: 12) {
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(color)
+                    .frame(height: height)
+                
+                VStack(spacing: 8) {
+                    Image(systemName: rank == 1 ? "crown.fill" : "medal.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(rank == 1 ? .orange : (rank == 2 ? .gray : .brown))
+                    
+                    Text(name)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                    
+                    Text(score)
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .foregroundColor(AppColors.primary)
+                }
+                .padding(.bottom, 20)
+            }
+            
+            Text("NO.\(rank)")
+                .font(.system(size: 11, weight: .black))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

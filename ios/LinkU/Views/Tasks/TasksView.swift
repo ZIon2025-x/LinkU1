@@ -126,7 +126,7 @@ struct TaskCard: View {
             // 标签和位置
             HStack(spacing: 8) {
                 // 状态标签
-                StatusBadge(status: task.status)
+                TaskStatusBadge(status: task.status)
                 
                 // 分类标签
                 Text(task.category)
@@ -170,8 +170,8 @@ struct TaskCard: View {
     }
 }
 
-// 状态标签组件
-struct StatusBadge: View {
+// 状态标签组件（特定于任务状态）
+struct TaskStatusBadge: View {
     let status: TaskStatus
     
     var body: some View {
@@ -196,32 +196,5 @@ struct StatusBadge: View {
         case .completed: return AppColors.textSecondary
         case .cancelled: return AppColors.error
         }
-    }
-}
-
-// 空状态视图
-struct EmptyStateView: View {
-    let icon: String
-    let title: String
-    let message: String
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 60))
-                .foregroundColor(AppColors.textSecondary.opacity(0.5))
-            
-            Text(title)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(AppColors.textPrimary)
-            
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, AppSpacing.xl)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

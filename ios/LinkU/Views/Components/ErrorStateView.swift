@@ -11,33 +11,46 @@ struct ErrorStateView: View {
     }
     
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 50))
-                .foregroundColor(AppColors.error.opacity(0.7))
+        VStack(spacing: 24) {
+            ZStack {
+                Circle()
+                    .fill(AppColors.error.opacity(0.08))
+                    .frame(width: 100, height: 100)
+                
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .font(.system(size: 44))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(AppColors.error)
+            }
             
-            Text("出错了")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(AppColors.textPrimary)
-            
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, AppSpacing.xl)
+            VStack(spacing: 8) {
+                Text("哎呀，出错了")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(message)
+                    .font(.system(size: 15))
+                    .foregroundColor(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
             
             if let retryAction = retryAction {
                 Button(action: retryAction) {
-                    Text("重试")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, AppSpacing.lg)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.primary)
-                        .cornerRadius(AppCornerRadius.medium)
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("点击重试")
+                    }
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(AppColors.primaryGradient)
+                    .cornerRadius(AppCornerRadius.medium)
+                    .shadow(color: AppColors.primary.opacity(0.2), radius: 10, x: 0, y: 5)
                 }
-                .padding(.top, AppSpacing.sm)
+                .bouncyButton()
+                .padding(.top, 8)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

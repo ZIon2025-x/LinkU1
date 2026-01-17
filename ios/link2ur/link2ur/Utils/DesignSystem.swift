@@ -4,15 +4,27 @@ import SwiftUI
 
 // MARK: 颜色系统（完全符合 Apple HIG，使用系统颜色）
 struct AppColors {
-    // 主色调 - 使用系统蓝色（自适应深色模式）
-    static let primary = Color.accentColor
-    static let primaryLight = Color.accentColor.opacity(0.1)
+    // 主色调 - 采用标准系统蓝色 (Apple System Blue)
+    // 这种蓝色最符合 iOS 原生审美，且具有极高的辨识度与专业感
+    static let primary = Color.blue
+    static let primaryLight = Color.blue.opacity(0.1)
     
-    // 渐变配色 - 使用系统颜色创建渐变
+    // 渐变配色 - 采用系统蓝到深蓝色调的专业渐变
     static let gradientPrimary = [
-        Color.accentColor,
-        Color.accentColor.opacity(0.8)
+        Color.blue,
+        Color(red: 0.0, green: 0.35, blue: 0.85) // 稍微深一点的蓝色
     ]
+    static let primaryGradient = LinearGradient(
+        colors: gradientPrimary,
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    // 品牌辅助色 - 采用与系统蓝完美契合的活力配色
+    static let accent = Color.orange // 充满活力的强调色
+    static let gold = Color(red: 1.0, green: 0.8, blue: 0.0) // 阳光金
+    static let accentPink = Color.pink.opacity(0.05) // 极淡粉紫，用于柔和背景
+    
     static let gradientSuccess = [
         Color.green,
         Color.green.opacity(0.8)
@@ -22,16 +34,17 @@ struct AppColors {
         Color.orange.opacity(0.8)
     ]
     
-    // 背景色 - 完全使用系统背景（自动适配深色模式）
+    // 背景色 - 采用更细腻的分层
     static let background = Color(UIColor.systemGroupedBackground)
-    static let cardBackground = Color(UIColor.secondarySystemGroupedBackground)
+    static let secondaryBackground = Color(UIColor.secondarySystemGroupedBackground)
+    static let cardBackground = Color(UIColor.systemBackground)
     static let elevatedBackground = Color(UIColor.tertiarySystemGroupedBackground)
     static let surface = Color(UIColor.systemBackground)
     
-    // 文字颜色 - 使用系统标签颜色（自动适配深色模式）
-    static let textPrimary = Color.primary
-    static let textSecondary = Color.secondary
-    static let textTertiary = Color(UIColor.tertiaryLabel)
+    // 文字颜色 - 降低对比度，减少视觉疲劳，提升高级感
+    static let textPrimary = Color.primary.opacity(0.9)
+    static let textSecondary = Color.secondary.opacity(0.7)
+    static let textTertiary = Color.secondary.opacity(0.5)
     static let textQuaternary = Color(UIColor.quaternaryLabel)
     
     // 语义化颜色 - 使用系统颜色
@@ -76,10 +89,15 @@ struct AppCornerRadius {
 // MARK: 阴影系统（符合 Apple HIG，轻量阴影）
 struct AppShadow {
     static let none = Shadow(color: .clear, radius: 0, x: 0, y: 0)
-    static let tiny = Shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-    static let small = Shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
-    static let medium = Shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-    static let large = Shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+    static let tiny = Shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
+    static let small = Shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+    static let medium = Shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+    static let large = Shadow(color: Color.black.opacity(0.12), radius: 15, x: 0, y: 8)
+    
+    // 弥散阴影 (Colored Soft Shadows)
+    static func primary(opacity: Double = 0.25) -> Shadow {
+        Shadow(color: AppColors.primary.opacity(opacity), radius: 15, x: 0, y: 8)
+    }
 }
 
 struct Shadow {

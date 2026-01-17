@@ -30,6 +30,11 @@ extension Notification.Name {
     public static let dataDidUpdate = Notification.Name("dataDidUpdate")
     public static let cacheDidUpdate = Notification.Name("cacheDidUpdate")
     
+    // 论坛相关
+    public static let forumPostUpdated = Notification.Name("forumPostUpdated")
+    public static let forumPostLiked = Notification.Name("forumPostLiked")
+    public static let forumPostFavorited = Notification.Name("forumPostFavorited")
+    
     // 错误处理（避免与 ErrorHandler.swift 重复）
     public static let errorDidOccur = Notification.Name("errorDidOccur")
 }

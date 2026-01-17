@@ -9,30 +9,48 @@ struct ForumView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
+                // 装饰背景
+                VStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.05))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 50)
+                        .offset(x: -150, y: -100)
+                    Spacer()
+                }
+                .ignoresSafeArea()
+                
                 if viewModel.isLoading && viewModel.categories.isEmpty {
-                    ProgressView()
+                    LoadingView()
                 } else if viewModel.categories.isEmpty {
                     EmptyStateView(
                         icon: "bubble.left.and.bubble.right.fill",
-                        title: "暂无板块",
-                        message: "论坛板块加载中..."
+                        title: "发现新世界",
+                        message: "这里暂时还没有讨论，去其他地方看看吧"
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
+                        LazyVStack(spacing: 20) {
+                            // 热门话题 Banner
+                            hotTopicBanner
+                            
+                            Text("讨论板块")
+                                .font(.system(size: 20, weight: .black, design: .rounded))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, AppSpacing.sm)
+                            
                             ForEach(viewModel.categories) { category in
                                 NavigationLink(destination: ForumPostListView(category: category)) {
                                     CategoryCard(category: category)
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
+                        .padding(.vertical, AppSpacing.md)
                     }
                 }
             }
-            .navigationTitle("论坛")
+            .navigationTitle("社区论坛")
             .refreshable {
                 viewModel.loadCategories()
             }
@@ -43,6 +61,37 @@ struct ForumView: View {
             }
         }
     }
+    
+    // 热门话题 Banner
+    private var hotTopicBanner: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppColors.primaryGradient)
+                .frame(height: 80)
+            
+            HStack(spacing: 12) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("热门话题")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("发现最新讨论")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(.horizontal, 16)
+        }
+    }
 }
 
 // 板块卡片
@@ -50,52 +99,58 @@ struct CategoryCard: View {
     let category: ForumCategory
     
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            // 图标
+        HStack(spacing: 16) {
+            // 图标容器：使用品牌色渐变背景
             ZStack {
-                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                    .fill(AppColors.primaryLight)
-                    .frame(width: 60, height: 60)
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(AppColors.primary.opacity(0.1))
+                    .frame(width: 64, height: 64)
                 
                 if let icon = category.icon, !icon.isEmpty {
                     AsyncImage(url: URL(string: icon)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
+                        image.resizable().aspectRatio(contentMode: .fit)
                     } placeholder: {
-                        Image(systemName: "folder.fill")
+                        Image(systemName: "bubbles.and.sparkles.fill")
+                            .symbolRenderingMode(.hierarchical)
                             .foregroundColor(AppColors.primary)
                     }
-                    .frame(width: 30, height: 30)
+                    .frame(width: 32, height: 32)
                 } else {
-                    Image(systemName: "folder.fill")
+                    Image(systemName: "quote.bubble.fill")
+                        .font(.system(size: 24, weight: .bold))
+                        .symbolRenderingMode(.hierarchical)
                         .foregroundColor(AppColors.primary)
-                        .font(.title2)
                 }
             }
             
-            // 信息
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(category.name)
-                    .font(.headline)
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 
                 if let description = category.description {
                     Text(description)
-                        .font(.subheadline)
+                        .font(.system(size: 13))
                         .foregroundColor(AppColors.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
                 
-                HStack(spacing: 16) {
-                    Label("\(category.postCount)", systemImage: "doc.text")
-                        .font(.caption)
-                        .foregroundColor(AppColors.textSecondary)
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "text.bubble.fill")
+                        Text("\(category.postCount) 帖子")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppColors.primary.opacity(0.08))
+                    .cornerRadius(6)
                     
                     if let lastPostAt = category.lastPostAt {
-                        Text(formatTime(lastPostAt))
-                            .font(.caption)
-                            .foregroundColor(AppColors.textSecondary)
+                        Text("活跃于 \(formatTime(lastPostAt))")
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textTertiary)
                     }
                 }
             }
@@ -103,13 +158,13 @@ struct CategoryCard: View {
             Spacer()
             
             Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(AppColors.textTertiary)
         }
-        .padding(AppSpacing.md)
+        .padding(16)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
     }
     
     private func formatTime(_ timeString: String) -> String {

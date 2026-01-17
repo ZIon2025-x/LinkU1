@@ -8,44 +8,46 @@ struct EmptyStateView: View {
     @State private var isAnimating = false
     
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
-            // 图标 - 简洁设计，带微动画
+        VStack(spacing: 24) {
+            // 图标 - 分层系统蓝风格设计
             ZStack {
                 Circle()
-                    .fill(AppColors.primaryLight)
-                    .frame(width: 80, height: 80)
-                    .scaleEffect(isAnimating ? 1.05 : 1.0)
+                    .fill(AppColors.primary.opacity(0.05))
+                    .frame(width: 100, height: 100)
+                    .scaleEffect(isAnimating ? 1.1 : 1.0)
+                
+                Circle()
+                    .fill(AppColors.primary.opacity(0.08))
+                    .frame(width: 70, height: 70)
+                    .scaleEffect(isAnimating ? 0.9 : 1.0)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 36, weight: .medium))
-                    .foregroundColor(AppColors.primary)
-                    .offset(y: isAnimating ? -4 : 0)
+                    .font(.system(size: 40))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(AppColors.primary)
+                    .offset(y: isAnimating ? -5 : 0)
             }
             .onAppear {
-                withAnimation(
-                    .easeInOut(duration: 2.0)
-                    .repeatForever(autoreverses: true)
-                ) {
+                withAnimation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true)) {
                     isAnimating = true
                 }
             }
             
-            VStack(spacing: AppSpacing.sm) {
+            VStack(spacing: 8) {
                 Text(title)
-                    .font(AppTypography.title3)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(AppColors.textPrimary)
                 
                 Text(message)
-                    .font(AppTypography.subheadline)
+                    .font(.system(size: 15))
                     .foregroundColor(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, AppSpacing.xl)
+                    .padding(.horizontal, 40)
+                    .lineSpacing(4)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(AppSpacing.xl)
-        .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 }
 

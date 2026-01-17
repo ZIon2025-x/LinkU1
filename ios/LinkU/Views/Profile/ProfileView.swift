@@ -10,21 +10,23 @@ struct ProfileView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
+                // 背景装饰
+                VStack {
+                    LinearGradient(colors: [AppColors.primary.opacity(0.15), .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 300)
+                    Spacer()
+                }
+                .ignoresSafeArea()
+                
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // 用户信息卡片
+                    VStack(spacing: 24) {
+                        // 用户信息：现代简约风
                         VStack(spacing: 16) {
-                            // 头像
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [AppColors.primary, AppColors.primary.opacity(0.7)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 80, height: 80)
+                                    .fill(.white)
+                                    .frame(width: 94, height: 94)
+                                    .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
                                 
                                 if let user = appState.currentUser, let avatar = user.avatar, !avatar.isEmpty {
                                     AsyncImage(url: URL(string: avatar)) { image in
@@ -32,165 +34,182 @@ struct ProfileView: View {
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
                                     } placeholder: {
-                                        Image(systemName: "person.fill")
-                                            .foregroundColor(.white)
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .foregroundStyle(AppColors.primary.opacity(0.1))
                                     }
-                                    .frame(width: 80, height: 80)
+                                    .frame(width: 86, height: 86)
                                     .clipShape(Circle())
                                 } else {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.white)
+                                    Circle()
+                                        .fill(AppColors.primaryGradient)
+                                        .frame(width: 86, height: 86)
+                                        .overlay(
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.white)
+                                        )
                                 }
                             }
                             
-                            // 用户名和邮箱
-                            VStack(spacing: 4) {
-                                Text(appState.currentUser?.username ?? "用户")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
+                            VStack(spacing: 6) {
+                                Text(appState.currentUser?.username ?? "Link²U 用户")
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
                                     .foregroundColor(AppColors.textPrimary)
                                 
-                                Text(appState.currentUser?.email ?? "")
-                                    .font(.subheadline)
+                                Text(appState.currentUser?.email ?? "未绑定邮箱")
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(AppColors.textSecondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(20)
                             }
                         }
-                        .padding(.vertical, AppSpacing.xl)
-                        .frame(maxWidth: .infinity)
-                        .background(AppColors.cardBackground)
+                        .padding(.top, 40)
                         
-                        // 功能列表
-                        VStack(spacing: 0) {
-                            NavigationLink(destination: MyTasksView()) {
-                                ProfileRow(
-                                    icon: "doc.text.fill",
-                                    title: "我的任务",
-                                    color: AppColors.primary
-                                ) {}
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Divider()
-                                .padding(.leading, 60)
-                            
-                            NavigationLink(destination: MyPostsView()) {
-                                ProfileRow(
-                                    icon: "cart.fill",
-                                    title: "我的发布",
-                                    color: AppColors.warning
-                                ) {}
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Divider()
-                                .padding(.leading, 60)
-                            
-                            NavigationLink(destination: WalletView()) {
-                                ProfileRow(
-                                    icon: "wallet.pass.fill",
-                                    title: "我的钱包",
-                                    color: AppColors.success
-                                ) {}
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Divider()
-                                .padding(.leading, 60)
-                            
-                            NavigationLink(destination: MyServiceApplicationsView()) {
-                                ProfileRow(
-                                    icon: "hand.raised.fill",
-                                    title: "我的申请",
-                                    color: Color(red: 0.5, green: 0.3, blue: 0.8)
-                                ) {}
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Divider()
-                                .padding(.leading, 60)
-                            
-                            NavigationLink(destination: SettingsView()) {
-                                ProfileRow(
-                                    icon: "gearshape.fill",
-                                    title: "设置",
-                                    color: AppColors.textSecondary
-                                ) {}
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                        // 数据概览（新增，提升设计感）
+                        HStack(spacing: 0) {
+                            StatItem(title: "进行中", value: "3")
+                            Divider().frame(height: 30)
+                            StatItem(title: "已完成", value: "12")
+                            Divider().frame(height: 30)
+                            StatItem(title: "信用分", value: "98")
                         }
+                        .padding(.vertical, 16)
                         .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.medium)
-                        .padding(.top, AppSpacing.md)
+                        .cornerRadius(AppCornerRadius.large)
                         .padding(.horizontal, AppSpacing.md)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
                         
-                        // 退出登录按钮
-                        Button(action: {
-                            showLogoutAlert = true
-                        }) {
-                            HStack {
-                                Spacer()
-                                Text("退出登录")
-                                    .fontWeight(.medium)
-                                    .foregroundColor(AppColors.error)
-                                Spacer()
+                        // 功能模块：分段式设计
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("我的内容")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(.horizontal, AppSpacing.sm)
+                            
+                            VStack(spacing: 0) {
+                                NavigationLink(destination: MyTasksView()) {
+                                    ProfileRow(icon: "list.bullet.rectangle.fill", title: "我的任务", color: AppColors.primary)
+                                }
+                                Divider().padding(.leading, 56)
+                                NavigationLink(destination: MyPostsView()) {
+                                    ProfileRow(icon: "shippingbox.fill", title: "我的发布", color: Color(hex: "FF6B6B"))
+                                }
+                                Divider().padding(.leading, 56)
+                                NavigationLink(destination: WalletView()) {
+                                    ProfileRow(icon: "creditcard.fill", title: "我的钱包", color: AppColors.success)
+                                }
                             }
-                            .padding(.vertical, AppSpacing.md)
                             .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.medium)
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
                         }
-                        .padding(.top, AppSpacing.lg)
                         .padding(.horizontal, AppSpacing.md)
-                        .padding(.bottom, AppSpacing.xl)
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("系统设置")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(.horizontal, AppSpacing.sm)
+                            
+                            VStack(spacing: 0) {
+                                NavigationLink(destination: MyServiceApplicationsView()) {
+                                    ProfileRow(icon: "bolt.shield.fill", title: "达人申请", color: Color.purple)
+                                }
+                                Divider().padding(.leading, 56)
+                                NavigationLink(destination: SettingsView()) {
+                                    ProfileRow(icon: "gearshape.fill", title: "设置中心", color: Color.gray)
+                                }
+                            }
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        
+                        // 退出按钮：醒目的卡片
+                        Button(action: { showLogoutAlert = true }) {
+                            HStack {
+                                Image(systemName: "power")
+                                    .fontWeight(.bold)
+                                Text("退出当前账号")
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundColor(AppColors.error)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(AppColors.error.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.large)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                                    .strokeBorder(AppColors.error.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.top, 8)
+                        .padding(.bottom, 40)
                     }
                 }
             }
-            .navigationTitle("我的")
-            .alert("确认退出", isPresented: $showLogoutAlert) {
+            .navigationBarHidden(true)
+            .alert("退出确认", isPresented: $showLogoutAlert) {
                 Button("取消", role: .cancel) {}
-                Button("退出", role: .destructive) {
-                    appState.logout()
-                }
+                Button("确定退出", role: .destructive) { appState.logout() }
             } message: {
-                Text("确定要退出登录吗？")
+                Text("您确定要退出当前登录的账号吗？")
             }
         }
     }
 }
 
-// 个人中心行组件
+// 数据统计项组件
+struct StatItem: View {
+    let title: String
+    let value: String
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.textPrimary)
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// 个人中心行组件：优化图标容器和间距
 struct ProfileRow: View {
     let icon: String
     let title: String
     let color: Color
-    let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
-                        .fill(color.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: icon)
-                        .foregroundColor(color)
-                        .font(.system(size: 18))
-                }
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 38, height: 38)
                 
-                Text(title)
-                    .font(.body)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(AppColors.textSecondary)
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                    .font(.system(size: 16, weight: .bold))
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.md)
+            
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(AppColors.textPrimary)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(AppColors.textTertiary)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }

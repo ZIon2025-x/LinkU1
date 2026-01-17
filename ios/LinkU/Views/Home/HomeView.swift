@@ -2,277 +2,250 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
+    @State private var searchText = ""
     
     var body: some View {
         NavigationView {
-            ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
+            ZStack(alignment: .top) {
+                // 背景渐变：升级为多层弥散光晕
+                AppColors.background.ignoresSafeArea()
                 
-                ScrollView {
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.15))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 60)
+                        .offset(x: 180, y: -100)
+                    
+                    Circle()
+                        .fill(AppColors.accentPink.opacity(0.1))
+                        .frame(width: 250, height: 250)
+                        .blur(radius: 50)
+                        .offset(x: -150, y: 100)
+                }
+                .ignoresSafeArea()
+                
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: AppSpacing.lg) {
-                        // 顶部欢迎区域
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("你好，\(appState.currentUser?.username ?? "Link²Urer") 👋")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppColors.textPrimary)
-                                
-                                Text("今天想做点什么？")
-                                    .font(.subheadline)
-                                    .foregroundColor(AppColors.textSecondary)
-                            }
-                            
-                            Spacer()
-                            
-                            NavigationLink(destination: MessageView()) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(systemName: "bell.fill")
-                                        .font(.title3)
-                                        .foregroundColor(AppColors.textPrimary)
-                                    
-                                    Circle()
-                                        .fill(AppColors.error)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 2, y: -2)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.top, AppSpacing.sm)
+                        // 1. 顶部 Header (个性化欢迎)
+                        headerSection
                         
-                        // 快捷操作
-                        VStack(spacing: AppSpacing.sm) {
-                            HStack(spacing: AppSpacing.md) {
-                                NavigationLink(destination: CreateTaskView()) {
-                                    ShortcutButtonContent(
-                                        title: "发布任务",
-                                        icon: "plus.circle.fill",
-                                        gradient: [AppColors.primary, AppColors.primary.opacity(0.8)]
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                NavigationLink(destination: CreateFleaMarketItemView()) {
-                                    ShortcutButtonContent(
-                                        title: "发布商品",
-                                        icon: "tag.fill",
-                                        gradient: [AppColors.warning, AppColors.warning.opacity(0.8)]
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                            
-                            HStack(spacing: AppSpacing.md) {
-                                NavigationLink(destination: ForumView()) {
-                                    ShortcutButtonContent(
-                                        title: "论坛",
-                                        icon: "bubble.left.and.bubble.right.fill",
-                                        gradient: [AppColors.success, AppColors.success.opacity(0.8)]
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                NavigationLink(destination: LeaderboardView()) {
-                                    ShortcutButtonContent(
-                                        title: "排行榜",
-                                        icon: "trophy.fill",
-                                        gradient: [Color(red: 0.9, green: 0.7, blue: 0.2), Color(red: 0.9, green: 0.7, blue: 0.2).opacity(0.8)]
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.md)
+                        // 2. 搜索框 (现代感设计)
+                        searchSection
                         
-                        // 推荐任务
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            HStack {
-                                Text("推荐任务")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppColors.textPrimary)
-                                
-                                Spacer()
-                                
-                                NavigationLink(destination: TasksView()) {
-                                    Text("查看全部")
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                .font(.subheadline)
-                                .foregroundColor(AppColors.primary)
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: AppSpacing.md) {
-                                    ForEach(0..<5) { _ in
-                                        RecommendedTaskCard()
-                                    }
-                                }
-                                .padding(.horizontal, AppSpacing.md)
-                            }
-                        }
+                        // 3. 核心功能金刚区 (快捷操作)
+                        quickActionsSection
                         
-                        // 最新动态
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
-                            Text("最新动态")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.textPrimary)
-                                .padding(.horizontal, AppSpacing.md)
-                            
-                            ForEach(0..<3) { _ in
-                                ActivityRow()
-                            }
-                        }
-                        .padding(.bottom, AppSpacing.xl)
+                        // 4. 推荐任务 (横向滑动)
+                        recommendedSection
+                        
+                        // 5. 最新动态 (垂直列表)
+                        recentActivitySection
                     }
+                    .padding(.bottom, 100)
                 }
             }
             .navigationBarHidden(true)
         }
     }
-}
-
-// 快捷按钮内容组件
-struct ShortcutButtonContent: View {
-    let title: String
-    let icon: String
-    let gradient: [Color]
     
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 32))
-                .foregroundColor(.white)
+    // MARK: - Subviews
+    
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("下午好,")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(AppColors.textSecondary)
+                
+                Text("\(appState.currentUser?.username ?? "Link²Urer") 👋")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+            }
             
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
+            Spacer()
+            
+            NavigationLink(destination: MessageView()) {
+                Image(systemName: "bell.badge.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.system(size: 22))
+                    .foregroundColor(AppColors.primary)
+                    .padding(12)
+                    .glassStyle(cornerRadius: AppCornerRadius.round)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 100)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: gradient),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(AppCornerRadius.large)
-        .shadow(color: gradient[0].opacity(0.3), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.top, AppSpacing.sm)
     }
-}
-
-// 快捷按钮组件（用于需要action的情况）
-struct ShortcutButton: View {
-    let title: String
-    let icon: String
-    let gradient: [Color]
-    let action: () -> Void
     
-    var body: some View {
-        Button(action: action) {
-            ShortcutButtonContent(title: title, icon: icon, gradient: gradient)
+    private var searchSection: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(AppColors.textSecondary)
+            TextField("搜索任务、达人或动态...", text: $searchText)
+                .font(.system(size: 15))
+        }
+        .padding()
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, AppSpacing.md)
+    }
+    
+    private var quickActionsSection: some View {
+        VStack(spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.md) {
+                quickActionButton(title: "发布任务", icon: "plus.circle.fill", color: AppColors.primary, dest: AnyView(CreateTaskView()))
+                quickActionButton(title: "发布商品", icon: "tag.fill", color: AppColors.accentOrange, dest: AnyView(CreateFleaMarketItemView()))
+            }
+            
+            HStack(spacing: AppSpacing.md) {
+                quickActionButton(title: "热门论坛", icon: "bubble.left.and.bubble.right.fill", color: AppColors.success, dest: AnyView(ForumView()))
+                quickActionButton(title: "排行榜", icon: "trophy.fill", color: AppColors.accentPurple, dest: AnyView(LeaderboardView()))
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+    }
+    
+    private func quickActionButton(title: String, icon: String, color: Color, dest: AnyView) -> some View {
+        NavigationLink(destination: dest) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(color)
+                }
+                
+                Text(title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Spacer()
+            }
+            .padding(12)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.medium)
+            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .bouncyButton()
+    }
+    
+    private var recommendedSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Text("为你推荐")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                Spacer()
+                NavigationLink(destination: TasksView()) {
+                    Text("更多")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(AppColors.primary)
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppSpacing.md) {
+                    ForEach(0..<5) { _ in
+                        ModernTaskCard()
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.bottom, 8)
+            }
+        }
+    }
+    
+    private var recentActivitySection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("最新动态")
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .padding(.horizontal, AppSpacing.md)
+            
+            ForEach(0..<3) { _ in
+                ActivityRow()
+            }
         }
     }
 }
 
-// 推荐任务卡片组件
-struct RecommendedTaskCard: View {
+// MARK: - Modern Task Card
+struct ModernTaskCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.primaryLight)
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: "doc.text.fill")
-                        .foregroundColor(AppColors.primary)
-                }
-                
+                Image(systemName: "sparkles")
+                    .foregroundColor(AppColors.accentOrange)
+                    .font(.system(size: 12, weight: .bold))
+                Text("急需")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(AppColors.accentOrange)
                 Spacer()
-                
-                Text("¥ 150")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(AppColors.error)
+                PriceTag(price: 150, fontSize: 16)
             }
             
-            Text("急需一名翻译人员")
-                .font(.headline)
+            Text("英语文档翻译")
+                .font(.system(size: 17, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
-                .lineLimit(1)
             
-            Text("需要在明天下午前完成一份英语文档翻译...")
-                .font(.caption)
+            Text("需要明天下午前完成一份关于金融科技的文档翻译...")
+                .font(.system(size: 13))
                 .foregroundColor(AppColors.textSecondary)
                 .lineLimit(2)
             
+            Spacer(minLength: 8)
+            
             HStack {
-                HStack(spacing: 4) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.caption2)
-                    Text("上海")
-                        .font(.caption)
-                }
-                .foregroundColor(AppColors.textSecondary)
-                
+                Label("上海", systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
                 Spacer()
-                
                 Text("2小时前")
-                    .font(.caption2)
-                    .foregroundColor(AppColors.textSecondary)
+                    .font(.system(size: 10))
+                    .foregroundColor(AppColors.textTertiary)
             }
         }
-        .padding(AppSpacing.md)
-        .frame(width: 200)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.medium)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .padding(16)
+        .frame(width: 200, height: 180)
+        .cardStyle(radius: AppCornerRadius.large)
     }
 }
 
-// 动态行组件
+// MARK: - Modern Activity Row
 struct ActivityRow: View {
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
+        HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(AppColors.primaryLight)
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: "person.circle.fill")
-                    .foregroundColor(AppColors.primary)
-                    .font(.title3)
+                    .fill(AppColors.primaryGradient)
+                    .frame(width: 52, height: 52)
+                Image(systemName: "person.fill")
+                    .foregroundColor(.white)
+                    .font(.system(size: 24))
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("用户 User123 发布了新商品")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("全新的 iPhone 15 Pro Max，未拆封...")
-                    .font(.caption)
+                Text("用户 User123")
+                    .font(.system(size: 15, weight: .bold))
+                Text("发布了新商品：iPhone 15 Pro Max")
+                    .font(.system(size: 13))
                     .foregroundColor(AppColors.textSecondary)
-                    .lineLimit(1)
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(AppColors.textSecondary)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(AppColors.textTertiary)
         }
-        .padding(AppSpacing.md)
+        .padding(16)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.medium)
         .padding(.horizontal, AppSpacing.md)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
     }
 }

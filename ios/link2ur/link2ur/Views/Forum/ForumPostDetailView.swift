@@ -10,6 +10,8 @@ struct ForumPostDetailView: View {
     @State private var favoriteCount = 0
     @State private var showLogin = false
     @State private var showShareSheet = false
+    @State private var isTogglingLike = false
+    @State private var isTogglingFavorite = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -118,6 +120,8 @@ struct ForumPostDetailView: View {
             if let post = viewModel.post {
                 likeCount = post.likeCount
                 favoriteCount = post.favoriteCount
+                isLiked = post.isLiked ?? false
+                isFavorited = post.isFavorited ?? false
             }
         }
     }
@@ -233,8 +237,82 @@ struct ForumPostDetailView: View {
     private func postStats(post: ForumPost) -> some View {
         HStack(spacing: 24) {
             statItem(icon: "eye", count: post.viewCount, label: LocalizationKey.forumView.localized)
-            statItem(icon: "heart", count: likeCount, label: LocalizationKey.forumLike.localized, active: isLiked, activeColor: AppColors.error)
-            statItem(icon: "star", count: favoriteCount, label: LocalizationKey.forumFavorite.localized, active: isFavorited, activeColor: AppColors.warning)
+            
+            // 喜欢按钮（可点击）
+            Button(action: {
+                guard !isTogglingLike else { return }
+                if appState.isAuthenticated {
+                    isTogglingLike = true
+                    viewModel.toggleLike(targetType: "post", targetId: postId) { liked, newCount in
+                        isLiked = liked
+                        likeCount = newCount
+                        isTogglingLike = false
+                        if liked {
+                            HapticFeedback.success()
+                        } else {
+                            HapticFeedback.light()
+                        }
+                        // 发送通知，更新列表
+                        NotificationCenter.default.post(
+                            name: .forumPostLiked,
+                            object: nil,
+                            userInfo: ["postId": postId, "liked": liked]
+                        )
+                        NotificationCenter.default.post(name: .forumPostUpdated)
+                    }
+                } else {
+                    showLogin = true
+                }
+            }) {
+                ZStack {
+                    statItem(icon: "heart", count: likeCount, label: LocalizationKey.forumLike.localized, active: isLiked, activeColor: AppColors.error)
+                    if isTogglingLike {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(isTogglingLike)
+            
+            // 收藏按钮（可点击）
+            Button(action: {
+                guard !isTogglingFavorite else { return }
+                if appState.isAuthenticated {
+                    isTogglingFavorite = true
+                    viewModel.toggleFavorite(postId: postId) { favorited in
+                        isFavorited = favorited
+                        if favorited {
+                            favoriteCount += 1
+                            HapticFeedback.success()
+                        } else {
+                            favoriteCount = max(0, favoriteCount - 1)
+                            HapticFeedback.light()
+                        }
+                        isTogglingFavorite = false
+                        // 发送通知，更新列表
+                        NotificationCenter.default.post(
+                            name: .forumPostFavorited,
+                            object: nil,
+                            userInfo: ["postId": postId, "favorited": favorited]
+                        )
+                        NotificationCenter.default.post(name: .forumPostUpdated)
+                    }
+                } else {
+                    showLogin = true
+                }
+            }) {
+                ZStack {
+                    statItem(icon: "star", count: favoriteCount, label: LocalizationKey.forumFavorite.localized, active: isFavorited, activeColor: AppColors.warning)
+                    if isTogglingFavorite {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(isTogglingFavorite)
+            
             Spacer()
         }
         .padding(.horizontal, 20)

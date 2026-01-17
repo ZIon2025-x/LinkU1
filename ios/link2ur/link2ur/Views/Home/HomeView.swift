@@ -25,6 +25,22 @@ struct HomeView: View {
                 AppColors.background
                     .ignoresSafeArea()
                 
+                // 装饰性背景：增加品牌氛围
+                ZStack {
+                    Circle()
+                        .fill(AppColors.primary.opacity(0.12))
+                        .frame(width: 300, height: 300)
+                        .blur(radius: 60)
+                        .offset(x: 180, y: -100)
+                    
+                    Circle()
+                        .fill(AppColors.accentPink.opacity(0.08))
+                        .frame(width: 250, height: 250)
+                        .blur(radius: 50)
+                        .offset(x: -150, y: 100)
+                }
+                .ignoresSafeArea()
+                
                 VStack(spacing: 0) {
                     // 自定义顶部导航栏（符合 Apple HIG，使用系统背景和间距）
                     HStack(spacing: 0) {
@@ -237,25 +253,28 @@ struct RecommendedContentView: View {
                 // 优化：确保LazyVStack不会裁剪子视图
                 // 顶部欢迎区域（符合 Apple HIG，使用系统字体和间距）
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    HStack(alignment: .top, spacing: AppSpacing.md) {
+                    HStack(alignment: .center, spacing: AppSpacing.md) {
                         VStack(alignment: .leading, spacing: AppSpacing.xs) {
                             Text(String(format: LocalizationKey.homeGreeting.localized, appState.currentUser?.name ?? LocalizationKey.appUser.localized))
-                                .font(AppTypography.title2) // 使用 title2
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(AppColors.textPrimary)
                             
                             Text(LocalizationKey.homeWhatToDo.localized)
-                                .font(AppTypography.body) // 使用 body
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(AppColors.textSecondary)
                         }
                         
                         Spacer()
                         
                         // 装饰性图标（使用 SF Symbols）
-                        IconStyle.icon("sparkles", size: IconStyle.large)
-                            .foregroundColor(AppColors.primary)
+                        Image(systemName: "sparkles")
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppColors.primary)
                             .frame(width: 48, height: 48)
-                            .background(AppColors.primaryLight)
+                            .background(.ultraThinMaterial)
                             .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)
@@ -932,7 +951,9 @@ struct SearchKeywordTag: View {
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, AppSpacing.xs)
-            .cardBackground(cornerRadius: AppCornerRadius.pill)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.pill)
+            .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
         }
     }
 }

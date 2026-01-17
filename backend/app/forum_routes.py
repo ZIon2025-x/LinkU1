@@ -5075,11 +5075,18 @@ async def get_my_likes(
                         "author": {
                             "id": author_info.id,
                             "name": author_info.name,
-                            "avatar": author_info.avatar or None
+                            "avatar": author_info.avatar or None,
+                            "is_admin": author_info.is_admin or False
                         },
                         "view_count": post.view_count,
                         "reply_count": post.reply_count,
                         "like_count": post.like_count,
+                        "favorite_count": post.favorite_count,
+                        "is_pinned": post.is_pinned,
+                        "is_featured": post.is_featured,
+                        "is_locked": post.is_locked,
+                        "is_visible": post.is_visible,
+                        "is_deleted": post.is_deleted,
                         "created_at": post.created_at,
                         "last_reply_at": post.last_reply_at
                     },

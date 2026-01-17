@@ -5,15 +5,17 @@ struct CompactStatItem: View {
     let icon: String
     let count: Int
     var color: Color = AppColors.textTertiary
+    var isActive: Bool = false
+    var activeColor: Color = AppColors.primary
     
     var body: some View {
         HStack(spacing: 4) {
-            IconStyle.icon(icon, size: 12)
+            IconStyle.icon(isActive ? "\(icon).fill" : icon, size: 12)
             Text(count.formatCount())
                 .font(AppTypography.caption2)
                 .fontWeight(.medium)
         }
-        .foregroundColor(color)
+        .foregroundColor(isActive ? activeColor : color)
     }
 }
 
