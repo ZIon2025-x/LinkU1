@@ -3674,53 +3674,6 @@ def mark_notification_read_api(
     return crud.mark_notification_read(db, notification_id, current_user.id)
 
 
-@router.post("/users/location")
-def update_user_location(
-    location_data: dict = Body(...),
-    current_user=Depends(get_current_user_secure_sync_csrf),
-    db: Session = Depends(get_db),
-):
-    """
-    更新用户的GPS位置信息（用于基于位置的推荐）
-    
-    请求体:
-    {
-        "latitude": 52.471681,   # 纬度
-        "longitude": -1.932035   # 经度
-    }
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    latitude = location_data.get("latitude")
-    longitude = location_data.get("longitude")
-    
-    if latitude is None or longitude is None:
-        raise HTTPException(status_code=400, detail="latitude and longitude are required")
-    
-    try:
-        latitude = float(latitude)
-        longitude = float(longitude)
-    except (ValueError, TypeError):
-        raise HTTPException(status_code=400, detail="Invalid latitude or longitude format")
-    
-    # 验证坐标范围
-    if not (-90 <= latitude <= 90):
-        raise HTTPException(status_code=400, detail="Latitude must be between -90 and 90")
-    if not (-180 <= longitude <= 180):
-        raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180")
-    
-    # 更新用户位置
-    success = crud.update_user_location(db, current_user.id, latitude, longitude)
-    
-    if success:
-        logger.info(f"[USER_LOCATION] 用户 {current_user.id} 更新位置: lat={latitude:.6f}, lon={longitude:.6f}")
-        return {"message": "Location updated successfully", "latitude": latitude, "longitude": longitude}
-    else:
-        logger.warning(f"[USER_LOCATION] 用户 {current_user.id} 更新位置失败")
-        raise HTTPException(status_code=500, detail="Failed to update location")
-
-
 @router.post("/users/device-token")
 def register_device_token(
     request: Request,

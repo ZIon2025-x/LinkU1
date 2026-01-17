@@ -939,13 +939,9 @@ class TaskRecommendationEngine:
         tasks = query.limit(limit * 2).all()  # 获取更多任务，后续按距离排序
         
         # 5. 如果有GPS位置，按距离排序（增强：新增）
-        # 优先使用请求传递的位置，如果没有则使用用户模型中存储的位置
+        # 使用请求传递的位置坐标（位置信息不再存储在用户模型中）
         user_lat = self._current_latitude
         user_lon = self._current_longitude
-        if user_lat is None or user_lon is None:
-            # 回退到用户模型中的位置（如果有的话）
-            user_lat = float(user.latitude) if hasattr(user, 'latitude') and user.latitude else None
-            user_lon = float(user.longitude) if hasattr(user, 'longitude') and user.longitude else None
         if user_lat and user_lon:
             scored_tasks = []
             for task in tasks:
