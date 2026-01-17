@@ -40,6 +40,29 @@ NON_JS_CRAWLERS = [
     r'CCBot',               # Common Crawl（不执行JS）
 ]
 
+# iOS/macOS 链接预览请求的 User-Agent 模式
+# 当用户在 iOS 分享面板中选择微信等应用时，系统会尝试获取链接预览
+# 这些请求不执行 JavaScript，需要返回 SSR HTML
+IOS_LINK_PREVIEW_PATTERNS = [
+    r'CFNetwork',           # iOS/macOS 网络框架
+    r'Darwin',              # macOS/iOS 内核标识
+]
+
+def is_ios_link_preview(user_agent: str) -> bool:
+    """
+    检测是否是 iOS/macOS 的链接预览请求
+    这些请求来自 LPMetadataProvider，需要返回 SSR HTML
+    """
+    if not user_agent:
+        return False
+    # 检查是否包含 CFNetwork 或 Darwin，但不是 Safari（Safari 会执行 JS）
+    for pattern in IOS_LINK_PREVIEW_PATTERNS:
+        if re.search(pattern, user_agent, re.IGNORECASE):
+            # 确保不是 Safari 浏览器
+            if 'Safari' not in user_agent or 'Mobile' not in user_agent:
+                return True
+    return False
+
 # 执行JavaScript的现代爬虫（让它们直接执行JS，不需要SSR）
 # 这些爬虫可以执行JavaScript，直接访问前端SPA即可
 JS_CAPABLE_CRAWLERS = [
@@ -61,12 +84,16 @@ def is_non_js_crawler(user_agent: str) -> bool:
     """
     检测是否是不执行JavaScript的爬虫（需要SSR）
     这些爬虫只读取HTML，不执行JavaScript，所以需要服务端渲染
+    也包括 iOS/macOS 的链接预览请求
     """
     if not user_agent:
         return False
     for pattern in NON_JS_CRAWLERS:
         if re.search(pattern, user_agent, re.IGNORECASE):
             return True
+    # 也检测 iOS 链接预览请求
+    if is_ios_link_preview(user_agent):
+        return True
     return False
 
 def is_js_capable_crawler(user_agent: str) -> bool:

@@ -227,34 +227,22 @@ public class CustomShareHelper {
         image: UIImage?
     ) {
         // 添加调试日志
-        Logger.debug("降级到系统分享面板 - Title: \(title), Description: \(String(description.prefix(50)))...", category: .ui)
+        Logger.debug("降级到系统分享面板 - Title: \(title), URL: \(url.absoluteString)", category: .ui)
         
         // 优化：在后台线程准备分享项，避免阻塞主线程
         DispatchQueue.global(qos: .userInitiated).async {
-            var shareItems: [Any] = []
-            
-            // 重要：ShareItemSource 必须放在第一位，确保微信等应用优先读取它
-            // 微信会按照数组索引顺序尝试读取分享项，第一个 UIActivityItemSource 会被优先使用
+            // 只使用 ShareItemSource，它已经包含了所有需要的信息（URL、标题、描述、图片）
+            // 不要添加其他项，避免系统分享面板混淆
             let shareItem = ShareItemSource(
                 url: url,
                 title: title,
                 description: description,
                 image: image
             )
-            shareItems.append(shareItem)
-            
-            // 注意：不要添加额外的 URL 或文本项，因为 ShareItemSource 已经处理了所有情况
-            // 添加多个 URL 会导致微信读取错误的项（可能是第二个 URL 而不是 ShareItemSource）
-            
-            // 只在有图片时添加图片项（作为独立项，用于某些需要直接图片的应用）
-            if let image = image {
-                let compressedImage = compressImageForSharing(image, maxWidth: 800)
-                shareItems.append(compressedImage)
-            }
             
             // 回到主线程显示分享面板
             DispatchQueue.main.async {
-                ShareHelper.presentShareSheet(items: shareItems)
+                ShareHelper.presentShareSheet(items: [shareItem])
             }
         }
     }
@@ -469,36 +457,25 @@ public class CustomShareHelper {
     
     private static func shareWithSystemSheet(title: String, description: String, url: URL, image: UIImage?) {
         // 添加调试日志
-        Logger.debug("系统分享面板 - Title: \(title), Description: \(String(description.prefix(50)))...", category: .ui)
+        Logger.debug("系统分享面板 - Title: \(title), URL: \(url.absoluteString)", category: .ui)
         
         // 优化：在后台线程准备分享项，避免阻塞主线程
         DispatchQueue.global(qos: .userInitiated).async {
-            var shareItems: [Any] = []
-            
-            // 重要：ShareItemSource 必须放在第一位，确保微信等应用优先读取它
-            // 微信会按照数组索引顺序尝试读取分享项，第一个 UIActivityItemSource 会被优先使用
-            // ShareItemSource 会正确处理微信分享，返回 URL 让微信从网页抓取 meta 标签
+            // 只使用 ShareItemSource，它已经包含了所有需要的信息
+            // ShareItemSource 会正确处理各种分享目标：
+            // - 微信：返回 URL，让微信从网页抓取 meta 标签（weixin:title, weixin:description 等）
+            // - iMessage/邮件：使用 LPLinkMetadata 显示富链接预览
+            // - 复制/短信：返回格式化的文本
             let shareItem = ShareItemSource(
                 url: url,
                 title: title,
                 description: description,
                 image: image
             )
-            shareItems.append(shareItem)
-            
-            // 注意：不要添加额外的 URL 或文本项，因为 ShareItemSource 已经处理了所有情况
-            // 添加多个 URL 会导致微信读取错误的项（可能是第二个 URL 而不是 ShareItemSource）
-            // 微信会从 ShareItemSource 返回的 URL 抓取网页的 meta 标签（weixin:title, weixin:description 等）
-            
-            // 只在有图片时添加图片项（作为独立项，用于某些需要直接图片的应用）
-            if let image = image {
-                let compressedImage = compressImageForSharing(image, maxWidth: 800)
-                shareItems.append(compressedImage)
-            }
             
             // 回到主线程显示分享面板
             DispatchQueue.main.async {
-                ShareHelper.presentShareSheet(items: shareItems)
+                ShareHelper.presentShareSheet(items: [shareItem])
             }
         }
     }
@@ -559,29 +536,54 @@ class ShareItemSource: NSObject, UIActivityItemSource {
     let image: UIImage?
     
     // 预先生成的 LPLinkMetadata，避免重复创建
+    // 提供完整的元数据，让系统知道这个 URL 的所有信息
     private lazy var cachedMetadata: LPLinkMetadata = {
         let metadata = LPLinkMetadata()
         
-        // 设置 URL（关键：让系统知道这是哪个链接的元数据）
+        // 设置 URL（让系统知道这是哪个链接的元数据）
         metadata.url = url
         metadata.originalURL = url
         
         // 设置标题（会显示在链接预览中）
-        metadata.title = title
+        // 确保标题不为空，否则系统可能显示 URL
+        metadata.title = title.isEmpty ? "Link²Ur" : title
         
-        // 如果有图片，设置为预览图
-        if let image = image {
-            metadata.imageProvider = NSItemProvider(object: image)
-            metadata.iconProvider = NSItemProvider(object: image)
-        } else {
-            // 没有图片时，尝试使用 App Logo
-            if let logoImage = UIImage(named: "Logo") ?? UIImage(named: "AppIcon") {
-                metadata.iconProvider = NSItemProvider(object: logoImage)
-            }
-        }
+        // 创建一个简单的占位图片（确保始终有图片）
+        let placeholderImage = createPlaceholderImage()
+        let finalImage = image ?? UIImage(named: "Logo") ?? UIImage(named: "AppIcon") ?? placeholderImage
+        
+        metadata.imageProvider = NSItemProvider(object: finalImage)
+        metadata.iconProvider = NSItemProvider(object: finalImage)
+        
+        Logger.debug("LPLinkMetadata 初始化 - Title: \(metadata.title ?? "nil"), URL: \(url.absoluteString), HasImage: \(image != nil)", category: .ui)
         
         return metadata
     }()
+    
+    // 创建一个简单的占位图片
+    private func createPlaceholderImage() -> UIImage {
+        let size = CGSize(width: 120, height: 120)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            // 绘制蓝色背景
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            // 绘制 "L" 字母
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 60, weight: .bold),
+                .foregroundColor: UIColor.white
+            ]
+            let text = "L" as NSString
+            let textSize = text.size(withAttributes: attributes)
+            let textRect = CGRect(
+                x: (size.width - textSize.width) / 2,
+                y: (size.height - textSize.height) / 2,
+                width: textSize.width,
+                height: textSize.height
+            )
+            text.draw(in: textRect, withAttributes: attributes)
+        }
+    }
     
     init(url: URL, title: String, description: String, image: UIImage?) {
         self.url = url
@@ -605,12 +607,10 @@ class ShareItemSource: NSObject, UIActivityItemSource {
         // 检测是否是微信分享
         if ShareHelper.isWeChatShare(activityType) {
             // 微信分享：
-            // 1. 微信会从 URL 抓取网页的 meta 标签（weixin:title, weixin:description, weixin:image）
-            // 2. 如果网页是 SPA（如 React），微信爬虫可能无法正确读取动态设置的 meta 标签
-            // 3. 解决方案：确保前端使用 SSR 或预渲染，或者集成微信 SDK 直接传递参数
+            // 微信会从 URL 抓取网页的 meta 标签（weixin:title, weixin:description, weixin:image）
+            // 后端 SSR 路由已经为微信爬虫返回正确的 meta 标签
             Logger.debug("微信分享 - URL: \(url.absoluteString)", category: .ui)
             Logger.debug("微信分享 - 期望标题: \(title)", category: .ui)
-            Logger.debug("微信分享 - 期望描述: \(String(itemDescription.prefix(80)))...", category: .ui)
             return url
         }
         
@@ -635,14 +635,14 @@ class ShareItemSource: NSObject, UIActivityItemSource {
         }
         
         // 对于其他所有应用（包括第三方应用），返回 URL
-        // 应用会使用 LPLinkMetadata 来显示预览（如果支持）
         return url
     }
     
     // 提供富链接预览元数据（用于 iMessage、邮件等原生 App）
-    // 注意：微信不使用 LPLinkMetadata，会直接从 URL 抓取网页 meta 标签
+    // 关键：不设置 URL，这样 iOS 不会尝试从网络获取信息，直接使用我们提供的元数据
+    // 微信不使用 LPLinkMetadata，会直接从 URL 抓取网页 meta 标签
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
-        Logger.debug("ShareItemSource - 提供 LPLinkMetadata: Title=\(title), URL=\(url.absoluteString)", category: .ui)
+        Logger.debug("ShareItemSource - 提供 LPLinkMetadata: Title=\(title)", category: .ui)
         return cachedMetadata
     }
     
