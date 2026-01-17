@@ -247,16 +247,30 @@ def optimize_hybrid_recommendation(
     limit: int,
     task_type: Optional[str] = None,
     location: Optional[str] = None,
-    keyword: Optional[str] = None
+    keyword: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None
 ) -> Tuple[Dict[int, float], Dict[int, str]]:
     """
     优化的混合推荐（减少重复计算）
+    
+    Args:
+        compute_cache: 计算缓存管理器
+        limit: 推荐数量
+        task_type: 任务类型筛选
+        location: 地点筛选
+        keyword: 关键词筛选
+        latitude: 用户当前纬度（用于基于位置的推荐）
+        longitude: 用户当前经度（用于基于位置的推荐）
     
     返回:
         (scores, reasons) - 任务ID到分数和理由的映射
     """
     from app.task_recommendation import TaskRecommendationEngine
     engine = TaskRecommendationEngine(compute_cache.db)
+    # 设置当前请求的GPS位置
+    engine._current_latitude = latitude
+    engine._current_longitude = longitude
     
     scores = {}
     reasons = {}

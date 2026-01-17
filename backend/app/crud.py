@@ -93,6 +93,56 @@ def get_all_users(db: Session):
     return db.query(models.User).all()
 
 
+def update_user_location(db: Session, user_id: str, latitude: float, longitude: float) -> bool:
+    """
+    更新用户的GPS位置信息（用于基于位置的推荐）
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        latitude: 纬度
+        longitude: 经度
+    
+    Returns:
+        是否更新成功
+    """
+    try:
+        from decimal import Decimal
+        
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user:
+            return False
+        
+        # 检查位置是否有显著变化（避免频繁更新）
+        # 如果位置变化小于0.001度（约100米），跳过更新
+        if user.latitude and user.longitude:
+            lat_diff = abs(float(user.latitude) - latitude)
+            lon_diff = abs(float(user.longitude) - longitude)
+            if lat_diff < 0.001 and lon_diff < 0.001:
+                return True  # 位置变化不大，无需更新
+        
+        # 更新用户位置
+        user.latitude = Decimal(str(latitude))
+        user.longitude = Decimal(str(longitude))
+        user.location_updated_at = get_utc_time()
+        
+        db.commit()
+        
+        # 更新Redis缓存中的用户信息（如果有）
+        try:
+            from app.redis_cache import invalidate_user_cache
+            invalidate_user_cache(user_id)
+        except Exception:
+            pass
+        
+        return True
+    except Exception as e:
+        db.rollback()
+        import logging
+        logging.getLogger(__name__).warning(f"更新用户位置失败: {e}")
+        return False
+
+
 def update_user_statistics(db: Session, user_id: str):
     """自动更新用户的统计信息：task_count, completed_task_count 和 avg_rating
     同时同步更新对应的 TaskExpert 和 FeaturedTaskExpert 数据（如果存在）"""

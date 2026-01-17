@@ -29,6 +29,9 @@ class TaskRecommendationEngine:
         self._new_user_cache: Dict[str, bool] = {}
         # 排除任务ID缓存（避免重复查询）
         self._excluded_task_ids_cache: Dict[str, set] = {}
+        # 当前请求的GPS位置（用于基于位置的推荐）
+        self._current_latitude: Optional[float] = None
+        self._current_longitude: Optional[float] = None
     
     def _get_excluded_task_ids(self, user_id: str) -> set:
         """获取排除任务ID（带实例缓存）"""
@@ -47,10 +50,12 @@ class TaskRecommendationEngine:
         algorithm: str = "hybrid",
         task_type: Optional[str] = None,
         location: Optional[str] = None,
-        keyword: Optional[str] = None
+        keyword: Optional[str] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None
     ) -> List[Dict]:
         """
-        为用户推荐任务（支持筛选条件）
+        为用户推荐任务（支持筛选条件和GPS位置）
         
         Args:
             user_id: 用户ID
@@ -59,6 +64,8 @@ class TaskRecommendationEngine:
             task_type: 任务类型筛选
             location: 地点筛选
             keyword: 关键词筛选
+            latitude: 用户当前纬度（用于基于位置的推荐）
+            longitude: 用户当前经度（用于基于位置的推荐）
         
         Returns:
             推荐任务列表，包含任务对象和推荐分数
@@ -66,6 +73,10 @@ class TaskRecommendationEngine:
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             return []
+        
+        # 存储当前请求的GPS位置（用于内部方法）
+        self._current_latitude = latitude
+        self._current_longitude = longitude
         
         # 构建缓存键（包含筛选条件）
         filter_key = f"{task_type or 'all'}:{location or 'all'}:{keyword or 'all'}"
@@ -106,7 +117,8 @@ class TaskRecommendationEngine:
                 record_recommendation_cache_hit(algorithm)
             except Exception:
                 pass
-            return cached
+            # 缓存的数据可能只包含task_id，需要转换为完整的Task对象
+            return self._hydrate_cached_recommendations(cached)
         
         # 优化：尝试从用户聚类获取共享推荐（避免重复计算）
         try:
@@ -129,7 +141,8 @@ class TaskRecommendationEngine:
                     cache_recommendations(optimized_cache_key, cluster_recommendations, ttl=1800)
                 except Exception:
                     pass
-                return cluster_recommendations
+                # 聚类推荐也可能只包含task_id，需要转换为完整的Task对象
+                return self._hydrate_cached_recommendations(cluster_recommendations)
         except ImportError:
             # 如果聚类模块不可用，继续正常流程
             pass
@@ -256,6 +269,53 @@ class TaskRecommendationEngine:
             logger.warning(f"写入推荐缓存失败: {e}，继续返回结果")
         
         return recommendations
+    
+    def _hydrate_cached_recommendations(self, cached: List[Dict]) -> List[Dict]:
+        """
+        将缓存的推荐数据转换为完整的Task对象格式
+        
+        缓存中存储的格式可能是:
+        - {"task_id": ..., "score": ..., "reason": ...}  (只包含ID)
+        - {"task": <Task对象>, "score": ..., "reason": ...}  (包含完整对象)
+        
+        返回格式:
+        - {"task": <Task对象>, "score": ..., "reason": ...}
+        """
+        if not cached:
+            return []
+        
+        # 检查第一个元素的格式
+        first_item = cached[0] if cached else {}
+        
+        # 如果已经包含完整的Task对象，直接返回
+        if "task" in first_item and hasattr(first_item.get("task"), "id"):
+            return cached
+        
+        # 如果只包含task_id，需要查询数据库获取完整的Task对象
+        if "task_id" in first_item:
+            task_ids = [item.get("task_id") for item in cached if item.get("task_id")]
+            if not task_ids:
+                return []
+            
+            # 批量查询任务
+            tasks = self.db.query(Task).filter(Task.id.in_(task_ids)).all()
+            task_dict = {task.id: task for task in tasks}
+            
+            # 重建推荐结果
+            result = []
+            for item in cached:
+                task_id = item.get("task_id")
+                if task_id and task_id in task_dict:
+                    result.append({
+                        "task": task_dict[task_id],
+                        "score": item.get("score", 0.5),
+                        "reason": item.get("reason", "为您推荐")
+                    })
+            return result
+        
+        # 如果格式不识别，返回空列表并记录警告
+        logger.warning(f"无法识别的缓存推荐格式: {first_item.keys()}")
+        return []
     
     def _content_based_recommend(
         self, 
@@ -487,7 +547,8 @@ class TaskRecommendationEngine:
             )
             compute_cache = RecommendationComputeCache(self.db, user)
             scores, reasons = optimize_hybrid_recommendation(
-                compute_cache, limit, task_type, location, keyword
+                compute_cache, limit, task_type, location, keyword,
+                latitude=self._current_latitude, longitude=self._current_longitude
             )
             # 使用优化版本的结果（已经排除了任务）
             filtered_scores = scores
@@ -878,14 +939,24 @@ class TaskRecommendationEngine:
         tasks = query.limit(limit * 2).all()  # 获取更多任务，后续按距离排序
         
         # 5. 如果有GPS位置，按距离排序（增强：新增）
-        if user.latitude and user.longitude:
+        # 优先使用请求传递的位置，如果没有则使用用户模型中存储的位置
+        user_lat = self._current_latitude
+        user_lon = self._current_longitude
+        if user_lat is None or user_lon is None:
+            # 回退到用户模型中的位置（如果有的话）
+            user_lat = float(user.latitude) if hasattr(user, 'latitude') and user.latitude else None
+            user_lon = float(user.longitude) if hasattr(user, 'longitude') and user.longitude else None
+        if user_lat and user_lon:
             scored_tasks = []
             for task in tasks:
                 try:
                     if task.latitude and task.longitude:
+                        # 转换 DECIMAL 为 float
+                        task_lat = float(task.latitude)
+                        task_lon = float(task.longitude)
                         distance = self._calculate_distance(
-                            user.latitude, user.longitude,
-                            task.latitude, task.longitude
+                            user_lat, user_lon,
+                            task_lat, task_lon
                         )
                         # 如果距离计算失败（返回inf），使用默认分数
                         if distance == float('inf'):
@@ -1948,10 +2019,12 @@ def get_task_recommendations(
     algorithm: str = "hybrid",
     task_type: Optional[str] = None,
     location: Optional[str] = None,
-    keyword: Optional[str] = None
+    keyword: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None
 ) -> List[Dict]:
     """
-    获取任务推荐的便捷函数（支持筛选）
+    获取任务推荐的便捷函数（支持筛选和GPS位置）
     
     Args:
         db: 数据库会话
@@ -1961,13 +2034,16 @@ def get_task_recommendations(
         task_type: 任务类型筛选
         location: 地点筛选
         keyword: 关键词筛选
+        latitude: 用户当前纬度（用于基于位置的推荐）
+        longitude: 用户当前经度（用于基于位置的推荐）
     
     Returns:
         推荐任务列表
     """
     engine = TaskRecommendationEngine(db)
     return engine.recommend_tasks(
-        user_id, limit, algorithm, task_type, location, keyword
+        user_id, limit, algorithm, task_type, location, keyword,
+        latitude=latitude, longitude=longitude
     )
 
 

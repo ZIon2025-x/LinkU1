@@ -1151,10 +1151,12 @@ def get_recommendations(
     task_type: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
+    latitude: Optional[float] = Query(None, ge=-90, le=90),
+    longitude: Optional[float] = Query(None, ge=-180, le=180),
     db: Session = Depends(get_db),
 ):
     """
-    获取个性化任务推荐（支持筛选条件）
+    获取个性化任务推荐（支持筛选条件和GPS位置）
     
     Args:
         limit: 返回任务数量（1-50）
@@ -1165,8 +1167,11 @@ def get_recommendations(
         task_type: 任务类型筛选
         location: 地点筛选
         keyword: 关键词筛选
+        latitude: 用户当前纬度（用于基于位置的推荐）
+        longitude: 用户当前经度（用于基于位置的推荐）
     """
     try:
+        # 将GPS位置直接传递给推荐算法（无需存储到数据库）
         recommendations = get_task_recommendations(
             db=db,
             user_id=current_user.id,
@@ -1174,7 +1179,9 @@ def get_recommendations(
             algorithm=algorithm,
             task_type=task_type,
             location=location,
-            keyword=keyword
+            keyword=keyword,
+            latitude=latitude,
+            longitude=longitude
         )
         
         # 转换为响应格式
@@ -3665,6 +3672,53 @@ def mark_notification_read_api(
     db: Session = Depends(get_db),
 ):
     return crud.mark_notification_read(db, notification_id, current_user.id)
+
+
+@router.post("/users/location")
+def update_user_location(
+    location_data: dict = Body(...),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    更新用户的GPS位置信息（用于基于位置的推荐）
+    
+    请求体:
+    {
+        "latitude": 52.471681,   # 纬度
+        "longitude": -1.932035   # 经度
+    }
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    latitude = location_data.get("latitude")
+    longitude = location_data.get("longitude")
+    
+    if latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="latitude and longitude are required")
+    
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid latitude or longitude format")
+    
+    # 验证坐标范围
+    if not (-90 <= latitude <= 90):
+        raise HTTPException(status_code=400, detail="Latitude must be between -90 and 90")
+    if not (-180 <= longitude <= 180):
+        raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180")
+    
+    # 更新用户位置
+    success = crud.update_user_location(db, current_user.id, latitude, longitude)
+    
+    if success:
+        logger.info(f"[USER_LOCATION] 用户 {current_user.id} 更新位置: lat={latitude:.6f}, lon={longitude:.6f}")
+        return {"message": "Location updated successfully", "latitude": latitude, "longitude": longitude}
+    else:
+        logger.warning(f"[USER_LOCATION] 用户 {current_user.id} 更新位置失败")
+        raise HTTPException(status_code=500, detail="Failed to update location")
 
 
 @router.post("/users/device-token")
