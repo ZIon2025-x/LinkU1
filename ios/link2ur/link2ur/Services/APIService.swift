@@ -436,6 +436,10 @@ public class APIService {
         refreshRequest.httpMethod = "POST"
         refreshRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // ⚠️ 关键：设置 iOS 应用识别 headers（用于后端识别 iOS 应用，使用宽松的 IP 验证策略）
+        refreshRequest.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        refreshRequest.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        
         // 发送当前的 session_id（后端会验证并刷新）
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
             refreshRequest.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")

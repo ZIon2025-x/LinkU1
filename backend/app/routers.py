@@ -479,9 +479,9 @@ def verify_email(
         from app.secure_auth import is_ios_app_request
         is_ios_app = is_ios_app_request(request)
         
-        # 生成刷新令牌
+        # 生成刷新令牌（iOS应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
         # 创建会话（iOS 应用会话将长期有效）
         session = SecureAuthManager.create_session(

@@ -845,8 +845,15 @@ def clear_user_session_cookie(response: Response) -> Response:
 
 # ==================== 用户Refresh Token功能 ====================
 
-def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerprint: str = "") -> str:
-    """创建用户refresh token，绑定IP和设备指纹（只允许一个设备）"""
+def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerprint: str = "", is_ios_app: bool = False) -> str:
+    """创建用户refresh token，绑定IP和设备指纹（只允许一个设备）
+    
+    Args:
+        user_id: 用户ID
+        ip_address: IP地址
+        device_fingerprint: 设备指纹
+        is_ios_app: 是否为iOS应用（iOS应用使用更长的过期时间）
+    """
     import secrets
     from datetime import datetime, timedelta
     from app.utils.time_utils import get_utc_time
@@ -854,8 +861,13 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     # 生成refresh token
     refresh_token = secrets.token_urlsafe(32)
     
-    # 设置过期时间（12小时）
-    expire_time = get_utc_time() + timedelta(hours=12)
+    # 设置过期时间：iOS应用1年，其他12小时
+    if is_ios_app:
+        expire_hours = 365 * 24  # 1年
+        logger.info(f"[SECURE_AUTH] iOS 应用 refresh token，设置长期过期时间: {expire_hours}小时（1年）")
+    else:
+        expire_hours = 12  # 12小时
+    expire_time = get_utc_time() + timedelta(hours=expire_hours)
     
     # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS and redis_client:
@@ -874,17 +886,18 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
         redis_key = f"user_refresh_token:{user_id}:{refresh_token}"
         redis_client.setex(
             redis_key, 
-            int(12 * 3600),  # 12小时
+            int(expire_hours * 3600),  # 根据设备类型设置TTL
             json.dumps({
                 "user_id": user_id,
                 "ip_address": ip_address,
                 "device_fingerprint": device_fingerprint,
                 "created_at": format_iso_utc(get_utc_time()),
                 "expires_at": format_iso_utc(expire_time),
-                "last_used": None  # 记录最后使用时间，用于频率限制
+                "last_used": None,  # 记录最后使用时间，用于频率限制
+                "is_ios_app": is_ios_app  # 记录是否为iOS应用
             })
         )
-        logger.info(f"[SECURE_AUTH] 创建用户refresh token: {user_id}, IP: {ip_address}, 设备: {device_fingerprint}")
+        logger.info(f"[SECURE_AUTH] 创建用户refresh token: {user_id}, IP: {ip_address}, 设备: {device_fingerprint}, iOS: {is_ios_app}, 过期时间: {expire_hours}小时")
     
     return refresh_token
 
@@ -923,6 +936,11 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     
     user_id = data.get('user_id')
     
+    # 确定是否为iOS应用（优先使用存储的标志，其次使用传入的参数）
+    token_is_ios_app = data.get('is_ios_app', False) or is_ios_app
+    # 计算正确的TTL（iOS应用1年，其他12小时）
+    token_ttl_seconds = 365 * 24 * 3600 if token_is_ios_app else 12 * 3600
+    
     # 检查是否过期
     expires_at_str = data.get('expires_at')
     if expires_at_str:
@@ -937,7 +955,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     stored_ip = data.get('ip_address', '')
     if not ip_address or ip_address == "unknown":
         # 当前IP地址未知或为空
-        if is_ios_app:
+        if token_is_ios_app:
             # iOS应用允许IP未知的情况（某些网络环境可能无法获取IP）
             logger.info(f"[SECURE_AUTH] refresh token IP地址未知（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}")
         elif stored_ip:
@@ -949,12 +967,12 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
             redis_client.delete(key_str)
             return None
     elif stored_ip and stored_ip != ip_address:
-        if is_ios_app:
+        if token_is_ios_app:
             # iOS应用允许IP地址变化（用户可能切换WiFi/移动网络）
             logger.info(f"[SECURE_AUTH] refresh token IP地址变化（iOS应用允许）- 用户: {user_id}, 存储IP: {stored_ip}, 当前IP: {ip_address}")
             # 更新存储的IP地址为当前IP
             data['ip_address'] = ip_address
-            redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+            redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))
         else:
             logger.error(f"[SECURE_AUTH] refresh token IP地址不匹配，拒绝访问并撤销token")
             logger.error(f"  用户ID: {user_id}")
@@ -967,7 +985,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         # 如果存储的IP为空但当前有IP，更新存储的IP
         logger.info(f"[SECURE_AUTH] refresh token 更新IP地址 - 用户: {user_id}, 当前IP: {ip_address}")
         data['ip_address'] = ip_address
-        redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+        redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))
     
     # ========== 设备指纹验证：使用相似度检查 ==========
     stored_device = data.get('device_fingerprint', '')
@@ -982,14 +1000,14 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
             return None
     elif stored_device and stored_device != device_fingerprint:
         # 检查指纹相似度（允许部分变化）
-        is_mobile = is_ios_app  # iOS应用视为移动端
-        threshold = 0.4 if is_mobile else 0.7
+        # iOS应用使用更宽松的阈值，因为设备指纹可能因系统更新等原因变化
+        threshold = 0.4 if token_is_ios_app else 0.7
         
         if is_fingerprint_similar(stored_device, device_fingerprint, threshold):
             logger.info(f"[SECURE_AUTH] refresh token 设备指纹相似 (阈值: {threshold})，允许访问并更新指纹 - 用户: {user_id}")
             # 更新设备指纹
             data['device_fingerprint'] = device_fingerprint
-            redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+            redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))
         else:
             logger.error(f"[SECURE_AUTH] refresh token 设备指纹差异过大，拒绝访问并撤销token")
             logger.error(f"  用户ID: {user_id}")
@@ -1003,7 +1021,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
         # 如果存储的设备指纹为空但当前有指纹，更新存储的指纹
         logger.info(f"[SECURE_AUTH] refresh token 更新设备指纹 - 用户: {user_id}, 当前设备: {device_fingerprint}")
         data['device_fingerprint'] = device_fingerprint
-        redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+        redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))
     
     # 检查频率限制（20分钟内最多使用一次）
     last_used_str = data.get('last_used')
@@ -1016,9 +1034,9 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     # 更新最后使用时间
     current_time = get_utc_time()
     data['last_used'] = format_iso_utc(current_time)
-    redis_client.setex(key_str, int(12 * 3600), json.dumps(data))
+    redis_client.setex(key_str, token_ttl_seconds, json.dumps(data))
     
-    logger.debug(f"[SECURE_AUTH] refresh token验证通过 - 用户: {user_id}, IP: {ip_address}")
+    logger.debug(f"[SECURE_AUTH] refresh token验证通过 - 用户: {user_id}, IP: {ip_address}, iOS: {token_is_ios_app}")
     return user_id
 
 

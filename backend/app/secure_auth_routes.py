@@ -138,9 +138,9 @@ def secure_login(
         if is_ios_app:
             logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis
+        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
         # 创建新会话（iOS 应用会话将长期有效）
         session = SecureAuthManager.create_session(
@@ -264,10 +264,10 @@ def refresh_session(
                     from app.secure_auth import is_ios_app_request
                     is_ios_app = is_ios_app_request(request)
                     
-                    # 撤销旧的refresh_token，生成新的
+                    # 撤销旧的refresh_token，生成新的（iOS应用使用更长的过期时间）
                     from app.secure_auth import create_user_refresh_token, revoke_user_refresh_token
                     revoke_user_refresh_token(refresh_token)
-                    new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+                    new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
                     
                     # 创建新会话
                     user_agent = request.headers.get("user-agent", "")
@@ -328,9 +328,10 @@ def refresh_session(
         session.last_activity = get_utc_time()
         SecureAuthManager._store_session(session)
         
-        # 生成并存储新的刷新令牌到Redis
+        # 生成并存储新的刷新令牌到Redis（使用会话中的iOS标识）
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id, get_client_ip(request), get_device_fingerprint(request))
+        is_ios_app = session.is_ios_app if hasattr(session, 'is_ios_app') else False
+        refresh_token = create_user_refresh_token(user.id, get_client_ip(request), get_device_fingerprint(request), is_ios_app=is_ios_app)
         
         # 设置新的安全Cookie（复用现有会话）
         CookieManager.set_session_cookies(
@@ -413,12 +414,16 @@ def refresh_session_with_token(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
-        # 验证成功后，撤销旧的refresh_token，生成新的refresh_token
+        # 检测是否为 iOS 应用（需要在创建 refresh token 前检测）
+        from app.secure_auth import is_ios_app_request
+        is_ios_app = is_ios_app_request(request)
+        
+        # 验证成功后，撤销旧的refresh_token，生成新的refresh_token（iOS应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token, revoke_user_refresh_token
         revoke_user_refresh_token(refresh_token)
         
         # 创建新的refresh_token（这会自动删除用户的所有旧refresh token）
-        new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
         # 创建新会话 - refresh token应该总是创建新会话
         # 先撤销现有会话，然后创建新会话
@@ -426,10 +431,6 @@ def refresh_session_with_token(
         if existing_session_id:
             SecureAuthManager.revoke_session(existing_session_id)
             logger.info(f"撤销现有会话: {existing_session_id[:8]}...")
-        
-        # 检测是否为 iOS 应用
-        from app.secure_auth import is_ios_app_request
-        is_ios_app = is_ios_app_request(request)
         
         # 创建新会话
         session = SecureAuthManager.create_session(
@@ -1492,9 +1493,9 @@ def login_with_phone_verification_code(
         if is_ios_app:
             logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录（手机验证码）: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis
+        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
         # 创建新会话（iOS 应用会话将长期有效）
         session = SecureAuthManager.create_session(
@@ -1710,9 +1711,9 @@ def login_with_verification_code(
         if is_ios_app:
             logger.info(f"[SECURE_AUTH] 检测到 iOS 应用登录（手机验证码）: user_id={user.id}")
         
-        # 生成并存储刷新令牌到Redis
+        # 生成并存储刷新令牌到Redis（iOS应用使用更长的过期时间）
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint, is_ios_app=is_ios_app)
         
         # 创建新会话（iOS 应用会话将长期有效）
         session = SecureAuthManager.create_session(

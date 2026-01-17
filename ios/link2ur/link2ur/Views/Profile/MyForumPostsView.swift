@@ -32,33 +32,44 @@ struct MyForumPostsView: View {
                     .padding(.top, AppSpacing.sm)
                     .padding(.bottom, AppSpacing.md)
                 
-                // 内容区域
-                Group {
-                    switch selectedTab {
-                    case .posted:
-                        postsContent(
-                            posts: viewModel.myPosts,
-                            isLoading: viewModel.isLoadingMyPosts,
-                            errorMessage: viewModel.errorMessageMyPosts,
-                            emptyMessage: "您还没有发布过帖子",
-                            emptyIcon: "doc.text.fill"
-                        )
-                    case .favorited:
-                        postsContent(
-                            posts: viewModel.favoritedPosts,
-                            isLoading: viewModel.isLoadingFavoritedPosts,
-                            errorMessage: viewModel.errorMessageFavoritedPosts,
-                            emptyMessage: "您还没有收藏过帖子",
-                            emptyIcon: "star.fill"
-                        )
-                    case .liked:
-                        postsContent(
-                            posts: viewModel.likedPosts,
-                            isLoading: viewModel.isLoadingLikedPosts,
-                            errorMessage: viewModel.errorMessageLikedPosts,
-                            emptyMessage: "您还没有喜欢过帖子",
-                            emptyIcon: "heart.fill"
-                        )
+                // 内容区域 - 使用 TabView 支持滑动切换
+                TabView(selection: $selectedTab) {
+                    // 我发布的
+                    postsContent(
+                        posts: viewModel.myPosts,
+                        isLoading: viewModel.isLoadingMyPosts,
+                        errorMessage: viewModel.errorMessageMyPosts,
+                        emptyMessage: "您还没有发布过帖子",
+                        emptyIcon: "doc.text.fill"
+                    )
+                    .tag(MyForumPostsTab.posted)
+                    
+                    // 我收藏的
+                    postsContent(
+                        posts: viewModel.favoritedPosts,
+                        isLoading: viewModel.isLoadingFavoritedPosts,
+                        errorMessage: viewModel.errorMessageFavoritedPosts,
+                        emptyMessage: "您还没有收藏过帖子",
+                        emptyIcon: "star.fill"
+                    )
+                    .tag(MyForumPostsTab.favorited)
+                    
+                    // 我喜欢的
+                    postsContent(
+                        posts: viewModel.likedPosts,
+                        isLoading: viewModel.isLoadingLikedPosts,
+                        errorMessage: viewModel.errorMessageLikedPosts,
+                        emptyMessage: "您还没有喜欢过帖子",
+                        emptyIcon: "heart.fill"
+                    )
+                    .tag(MyForumPostsTab.liked)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
+                .onChange(of: selectedTab) { newTab in
+                    // TabView 滑动时会触发此回调，确保数据已加载
+                    if !hasDataForTab(newTab) {
+                        loadDataForTab(newTab)
                     }
                 }
             }
@@ -71,11 +82,16 @@ struct MyForumPostsView: View {
         .task {
             if !hasLoadedOnce {
                 loadDataForCurrentTab()
+                // 预加载相邻标签的数据
+                preloadAdjacentTabs()
                 hasLoadedOnce = true
             }
         }
-        .onChange(of: selectedTab) { _ in
-            loadDataForCurrentTab()
+        .onChange(of: selectedTab) { newTab in
+            // 当切换标签时，加载当前标签数据并预加载相邻标签
+            loadDataForTab(newTab)
+            preloadAdjacentTabs(for: newTab)
+            HapticFeedback.selection()
         }
         .refreshable {
             await loadDataForCurrentTabAsync(forceRefresh: true)
@@ -86,6 +102,7 @@ struct MyForumPostsView: View {
             let currentPosts = getCurrentPosts()
             if currentPosts.isEmpty && !hasLoadedOnce {
                 loadDataForCurrentTab()
+                preloadAdjacentTabs()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .forumPostUpdated)) { _ in
@@ -147,23 +164,40 @@ struct MyForumPostsView: View {
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, AppSpacing.sm)
             }
+            .scrollIndicators(.hidden)
         }
     }
     
     private func loadDataForCurrentTab(forceRefresh: Bool = false) {
-        switch selectedTab {
+        loadDataForTab(selectedTab, forceRefresh: forceRefresh)
+    }
+    
+    private func loadDataForTab(_ tab: MyForumPostsTab, forceRefresh: Bool = false) {
+        // 如果数据已存在且不是强制刷新，则跳过加载
+        switch tab {
         case .posted:
-            if forceRefresh || viewModel.myPosts.isEmpty {
+            if forceRefresh || (viewModel.myPosts.isEmpty && !viewModel.isLoadingMyPosts) {
                 viewModel.loadMyPosts()
             }
         case .favorited:
-            if forceRefresh || viewModel.favoritedPosts.isEmpty {
+            if forceRefresh || (viewModel.favoritedPosts.isEmpty && !viewModel.isLoadingFavoritedPosts) {
                 viewModel.loadFavoritedPosts()
             }
         case .liked:
-            if forceRefresh || viewModel.likedPosts.isEmpty {
+            if forceRefresh || (viewModel.likedPosts.isEmpty && !viewModel.isLoadingLikedPosts) {
                 viewModel.loadLikedPosts()
             }
+        }
+    }
+    
+    private func hasDataForTab(_ tab: MyForumPostsTab) -> Bool {
+        switch tab {
+        case .posted:
+            return !viewModel.myPosts.isEmpty
+        case .favorited:
+            return !viewModel.favoritedPosts.isEmpty
+        case .liked:
+            return !viewModel.likedPosts.isEmpty
         }
     }
     
@@ -187,6 +221,43 @@ struct MyForumPostsView: View {
             return viewModel.favoritedPosts
         case .liked:
             return viewModel.likedPosts
+        }
+    }
+    
+    // 预加载相邻标签的数据，提升用户体验
+    private func preloadAdjacentTabs(for tab: MyForumPostsTab? = nil) {
+        let currentTab = tab ?? selectedTab
+        let allTabs = MyForumPostsTab.allCases
+        guard let currentIndex = allTabs.firstIndex(of: currentTab) else { return }
+        
+        // 预加载下一个标签的数据
+        if currentIndex < allTabs.count - 1 {
+            let nextTab = allTabs[currentIndex + 1]
+            preloadTabData(for: nextTab)
+        }
+        
+        // 预加载上一个标签的数据
+        if currentIndex > 0 {
+            let previousTab = allTabs[currentIndex - 1]
+            preloadTabData(for: previousTab)
+        }
+    }
+    
+    // 预加载指定标签的数据（如果尚未加载）
+    private func preloadTabData(for tab: MyForumPostsTab) {
+        switch tab {
+        case .posted:
+            if viewModel.myPosts.isEmpty && !viewModel.isLoadingMyPosts {
+                viewModel.loadMyPosts()
+            }
+        case .favorited:
+            if viewModel.favoritedPosts.isEmpty && !viewModel.isLoadingFavoritedPosts {
+                viewModel.loadFavoritedPosts()
+            }
+        case .liked:
+            if viewModel.likedPosts.isEmpty && !viewModel.isLoadingLikedPosts {
+                viewModel.loadLikedPosts()
+            }
         }
     }
 }
@@ -215,6 +286,7 @@ struct ForumPostsTabSelector: View {
         .padding(4)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.large)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedTab)
     }
 }
 
