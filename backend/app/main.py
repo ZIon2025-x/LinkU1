@@ -749,6 +749,45 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"初始化 Prometheus 指标失败: {e}")
     
+    # ========== 一次性清理：清除 Celery 堆积的任务结果（部署后可删除此段代码）==========
+    # TODO: 2026-01-19 部署完成后删除此段代码
+    try:
+        from app.redis_cache import get_redis_client
+        cleanup_redis = get_redis_client()
+        if cleanup_redis:
+            # 检查是否已经清理过（使用标记避免重复清理）
+            cleanup_marker = "celery_cleanup_done_v1"
+            if not cleanup_redis.exists(cleanup_marker):
+                logger.info("🧹 开始一次性清理 Celery 堆积的任务结果...")
+                
+                # 清理 celery-task-meta-* (任务结果)
+                task_meta_keys = cleanup_redis.keys("celery-task-meta-*")
+                task_meta_count = len(task_meta_keys) if task_meta_keys else 0
+                if task_meta_keys:
+                    # 批量删除，每次100个
+                    for i in range(0, len(task_meta_keys), 100):
+                        batch = task_meta_keys[i:i+100]
+                        cleanup_redis.delete(*batch)
+                
+                # 清理 _kombu* (消息队列元数据)
+                kombu_keys = cleanup_redis.keys("_kombu*")
+                kombu_count = len(kombu_keys) if kombu_keys else 0
+                if kombu_keys:
+                    for i in range(0, len(kombu_keys), 100):
+                        batch = kombu_keys[i:i+100]
+                        cleanup_redis.delete(*batch)
+                
+                # 设置标记，24小时后过期（防止重复清理，但允许下次部署再清理）
+                cleanup_redis.setex(cleanup_marker, 86400, "1")
+                
+                total_cleaned = task_meta_count + kombu_count
+                logger.info(f"✅ Celery 清理完成: 删除了 {task_meta_count} 个任务结果 + {kombu_count} 个队列元数据 = {total_cleaned} 个 key")
+            else:
+                logger.debug("Celery 清理已在本次部署中执行过，跳过")
+    except Exception as e:
+        logger.warning(f"Celery 清理失败（不影响应用运行）: {e}")
+    # ========== 一次性清理代码结束 ==========
+    
     # 启动定时任务调度器 - 优先使用 Celery，备用 TaskScheduler
     import threading
     import time
