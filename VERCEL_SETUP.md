@@ -225,15 +225,24 @@ echo $?  # 0 = 无更改, 非0 = 有更改
 
 ### Frontend 项目
 - [ ] 创建 Vercel 项目，Root Directory: `frontend`
-- [ ] 配置 Ignore Build Step: `git diff HEAD^ HEAD --quiet -- frontend/`
+- [ ] 配置 Ignore Build Step: `git show --name-only --pretty=format:"" HEAD | grep -q "^frontend/" && exit 1 || exit 0`
 - [ ] 设置环境变量（REACT_APP_API_URL, REACT_APP_WS_URL, REACT_APP_MAIN_SITE_URL）
 
 ### Admin 项目
 - [ ] 创建 Vercel 项目，Root Directory: `admin`
-- [ ] 配置 Ignore Build Step: `git diff HEAD^ HEAD --quiet -- admin/`
+- [ ] 配置 Ignore Build Step: `git show --name-only --pretty=format:"" HEAD | grep -q "^admin/" && exit 1 || exit 0`
 - [ ] 设置环境变量（REACT_APP_API_URL, REACT_APP_WS_URL, REACT_APP_MAIN_SITE_URL）
 
 ### Service 项目
 - [ ] 创建 Vercel 项目，Root Directory: `service`
-- [ ] 配置 Ignore Build Step: `git diff HEAD^ HEAD --quiet -- service/`
+- [ ] 配置 Ignore Build Step: `git show --name-only --pretty=format:"" HEAD | grep -q "^service/" && exit 1 || exit 0`
 - [ ] 设置环境变量（REACT_APP_API_URL, REACT_APP_WS_URL, REACT_APP_MAIN_SITE_URL）
+
+**重要说明**：Vercel 的 "Ignore Build Step" 逻辑是：
+- 命令返回 **0** → **跳过构建**
+- 命令返回 **非0** → **构建**
+
+命令逻辑：
+- `grep -q "^service/"` 找到文件时返回0，没找到时返回非0
+- `&& exit 1`：找到文件时退出码为1 → **构建**
+- `|| exit 0`：没找到文件时退出码为0 → **跳过**
