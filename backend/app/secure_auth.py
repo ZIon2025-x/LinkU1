@@ -458,47 +458,13 @@ class SecureAuthManager:
     
     @staticmethod
     def cleanup_expired_sessions():
-        """清理过期会话"""
-        if USE_REDIS and redis_client:
-            # 主动清理Redis中的过期会话
-            try:
-                # 获取所有会话键
-                session_keys = redis_client.keys("session:*")
-                cleaned_count = 0
-                
-                for key in session_keys:
-                    # 确保key是字符串
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    data = safe_redis_get(key_str)
-                    if data:
-                        # 检查会话是否过期
-                        # 首先检查是否被标记为不活跃
-                        if not data.get('is_active', True):
-                            # 删除不活跃的会话
-                            redis_client.delete(key_str)
-                            # 从用户会话列表中移除
-                            user_id = data.get('user_id')
-                            if user_id:
-                                redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
-                            cleaned_count += 1
-                        else:
-                            # 检查时间过期
-                            last_activity_str = data.get('last_activity', data.get('created_at'))
-                            if last_activity_str:
-                                last_activity = parse_iso_utc(last_activity_str)
-                                if get_utc_time() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
-                                    # 删除过期会话
-                                    redis_client.delete(key_str)
-                                    # 从用户会话列表中移除
-                                    user_id = data.get('user_id')
-                                    if user_id:
-                                        redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
-                                    cleaned_count += 1
-                
-                logger.info(f"Redis清理了 {cleaned_count} 个过期会话")
-            except Exception as e:
-                logger.error(f"Redis清理过期会话失败: {e}")
-            return
+        """清理过期会话
+        
+        注意: Redis 使用 TTL 自动过期，无需手动清理
+        撤销会话时直接删除键，不使用 is_active 标记
+        """
+        # Redis TTL 自动处理，无需操作
+        pass
         
         # 内存存储的清理逻辑
         now = get_utc_time()
@@ -1080,98 +1046,5 @@ def revoke_all_user_refresh_tokens(user_id: str) -> int:
     return 0
 
 
-def cleanup_expired_sessions_aggressive() -> int:
-    """激进清理过期会话与refresh token。
-    规则：
-    - 优先依据数据中的 expires_at 判断是否过期；
-    - 若无 expires_at，则回退到 last_activity 超过60分钟（安全阈值）；
-    - 追加清理 user_refresh_token:*，同样按 expires_at 判断。
-    """
-    if not USE_REDIS or not redis_client:
-        return 0
-    
-    cleaned_count = 0
-    current_time = get_utc_time()
-    
-    try:
-        # 清理普通用户会话
-        session_pattern = "session:*"
-        session_keys = redis_client.keys(session_pattern)
-        
-        for key in session_keys:
-            try:
-                data = safe_redis_get(key)
-                if data:
-                    # 1) 优先按 expires_at 判断
-                    expires_at_str = data.get('expires_at')
-                    should_delete = False
-                    if expires_at_str:
-                        try:
-                            expires_at = parse_iso_utc(expires_at_str)
-                            if current_time > expires_at:
-                                should_delete = True
-                        except Exception:
-                            # 解析失败则回退到last_activity规则
-                            pass
-                    # 2) 回退规则：基于last_activity的60分钟阈值
-                    if not should_delete:
-                        last_activity_str = data.get('last_activity', data.get('created_at'))
-                        if last_activity_str:
-                            last_activity = parse_iso_utc(last_activity_str)
-                            if current_time - last_activity > timedelta(minutes=60):
-                                should_delete = True
-
-                    if should_delete:
-                        redis_client.delete(key)
-                        # 同时清理用户会话集合中的引用
-                        user_id = data.get('user_id')
-                        if user_id:
-                            redis_client.srem(f"user_sessions:{user_id}", key.split(':')[1])
-                        cleaned_count += 1
-            except Exception as e:
-                logger.warning(f"[SECURE_AUTH] 清理会话失败 {key}: {e}")
-                continue
-        
-        # 清理用户会话集合
-        user_sessions_pattern = "user_sessions:*"
-        user_sessions_keys = redis_client.keys(user_sessions_pattern)
-        
-        for key in user_sessions_keys:
-            try:
-                # 检查集合是否为空，如果为空则删除
-                if redis_client.scard(key) == 0:
-                    redis_client.delete(key)
-                    cleaned_count += 1
-            except Exception as e:
-                logger.warning(f"[SECURE_AUTH] 清理用户会话集合失败 {key}: {e}")
-                continue
-
-        # 追加：清理用户 refresh token（user_refresh_token:*）
-        refresh_pattern = "user_refresh_token:*"
-        refresh_keys = redis_client.keys(refresh_pattern)
-        for key in refresh_keys:
-            try:
-                data = safe_redis_get(key)
-                if not data:
-                    continue
-                expires_at_str = data.get('expires_at')
-                if not expires_at_str:
-                    continue
-                try:
-                    expires_at = parse_iso_utc(expires_at_str)
-                    if current_time > expires_at:
-                        redis_client.delete(key)
-                        cleaned_count += 1
-                except Exception:
-                    # 忽略解析错误
-                    continue
-            except Exception as e:
-                logger.warning(f"[SECURE_AUTH] 清理refresh token失败 {key}: {e}")
-                continue
-        
-        logger.info(f"[SECURE_AUTH] 激进清理完成，清理了 {cleaned_count} 个过期会话")
-        return cleaned_count
-        
-    except Exception as e:
-        logger.error(f"[SECURE_AUTH] 激进清理失败: {e}")
-        return 0
+## 已删除未使用的 cleanup_expired_sessions_aggressive 函数
+# Redis TTL 机制会自动处理会话过期，无需手动清理

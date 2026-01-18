@@ -434,36 +434,14 @@ class ServiceAuthManager:
     
     @staticmethod
     def cleanup_expired_sessions():
-        """清理过期会话（公共方法）"""
+        """清理过期会话（公共方法）
+        
+        注意: Redis 使用 TTL 自动过期，无需手动清理
+        """
         try:
             if USE_REDIS and redis_client:
-                # 主动清理Redis中的过期会话
-                pattern = "service_session:*"
-                keys = redis_client.keys(pattern)
-                cleaned_count = 0
-                
-                for key in keys:
-                    # 确保key是字符串
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    data = safe_redis_get(key_str)
-                    if data:
-                        # 检查会话是否过期
-                        # 首先检查是否被标记为不活跃
-                        if not data.get('is_active', True):
-                            # 删除不活跃的会话
-                            redis_client.delete(key_str)
-                            cleaned_count += 1
-                        else:
-                            # 检查时间过期
-                            last_activity_str = data.get('last_activity', data.get('created_at'))
-                            if last_activity_str:
-                                last_activity = parse_iso_utc(last_activity_str)
-                                if get_utc_time() - last_activity > timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
-                                    # 删除过期会话
-                                    redis_client.delete(key_str)
-                                    cleaned_count += 1
-                
-                logger.info(f"[SERVICE_AUTH] Redis清理了 {cleaned_count} 个过期会话")
+                # Redis TTL 自动处理，无需操作
+                pass
             else:
                 # 清理内存中的过期会话
                 current_time = get_utc_time()

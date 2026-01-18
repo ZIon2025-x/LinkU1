@@ -654,22 +654,20 @@ def update_all_users_statistics():
 
 
 def run_background_task():
-    """运行后台任务循环"""
+    """运行后台任务循环
+    
+    注意：大部分任务已由 Celery Beat 接管，这里只保留未被 Celery 覆盖的任务
+    - cancel_expired_tasks: 已由 Celery cancel-expired-tasks 处理
+    - update_all_users_statistics: 已由 Celery update-all-users-statistics 处理
+    - update_all_task_experts_bio: 仍在此执行（每天一次）
+    """
     import datetime
     global _shutdown_flag
-    task_counter = 0
     last_bio_update_date = None  # 记录上次更新 bio 的日期
     
     while not _shutdown_flag:
         try:
-            # 取消过期任务（每分钟执行）
-            cancel_expired_tasks()
-
-            # 更新所有用户统计信息（每10分钟执行一次）
-            if task_counter % 10 == 0:
-                update_all_users_statistics()
-
-            # 更新所有任务达人的 bio（每天执行一次）
+            # 更新所有任务达人的 bio（每天执行一次，Celery 未覆盖此任务）
             current_date = datetime.date.today()
             if last_bio_update_date != current_date:
                 logger.info("开始更新所有任务达人的 bio...")
@@ -677,57 +675,32 @@ def run_background_task():
                 last_bio_update_date = current_date
                 logger.info("任务达人 bio 更新完成")
 
-            task_counter += 1
-            # 每1分钟检查一次
-            time.sleep(60)
+            # 每10分钟检查一次（降低频率，因为只需要每天执行一次）
+            time.sleep(600)  # 10分钟
         except Exception as e:
             logger.error(f"后台任务循环出错: {e}")
-            time.sleep(60)  # 出错时等待1分钟后重试
+            time.sleep(600)  # 出错时等待10分钟后重试
 
 
 def cleanup_all_sessions_unified():
     """
     统一的会话清理函数
-    清理所有类型的过期会话（用户、客服、管理员）和用户Redis数据
+    
+    注意: Redis 使用 TTL 自动过期，无需手动清理会话
+    此函数保留仅用于接口兼容性
     """
-    try:
-        from app.secure_auth import SecureAuthManager
-        from app.service_auth import ServiceAuthManager
-        from app.admin_auth import AdminAuthManager
-        from app.user_redis_cleanup import user_redis_cleanup
-        
-        # 清理用户会话
-        SecureAuthManager.cleanup_expired_sessions()
-        
-        # 清理客服会话
-        ServiceAuthManager.cleanup_expired_sessions()
-        
-        # 清理管理员会话
-        AdminAuthManager.cleanup_expired_sessions()
-        
-        # 清理用户Redis数据
-        user_redis_cleanup.cleanup_all_user_data()
-        
-    except Exception as e:
-        logger.error(f"统一会话清理失败: {e}")
+    # Redis TTL 自动处理，无需操作
+    pass
 
 
 def run_session_cleanup_task():
     """
-    运行会话清理任务（已优化：降低频率，改为每小时执行一次）
-    注意：此任务与 CleanupTasks._cleanup_expired_sessions 功能重叠，
-    但保留此任务作为独立线程，频率已降低以避免重复清理
+    ⚠️ 已废弃：Redis 使用 TTL 自动过期，无需手动清理会话
+    保留此函数仅用于兼容性，实际不执行任何操作
     """
-    global _shutdown_flag
-    while not _shutdown_flag:
-        try:
-            # 使用统一的清理函数
-            cleanup_all_sessions_unified()
-            # 改为每小时清理一次（降低频率，避免与 CleanupTasks 重复）
-            time.sleep(3600)  # 1小时
-        except Exception as e:
-            logger.error(f"会话清理任务出错: {e}")
-            time.sleep(3600)  # 出错时等待1小时后重试
+    # 不再启动循环，直接返回
+    logger.debug("run_session_cleanup_task 已废弃，Redis TTL 自动处理会话过期")
+    pass
 
 
 

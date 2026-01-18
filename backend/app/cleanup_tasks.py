@@ -143,78 +143,20 @@ class CleanupTasks:
             logger.error(f"清理任务执行失败: {e}")
     
     async def _cleanup_expired_sessions(self):
-        """
-        清理过期会话（每小时执行一次，使用分布式锁）
-        注意：此任务已与 run_session_cleanup_task 合并，降低频率以避免重复清理
-        """
-        lock_key = "scheduled_task:cleanup_expired_sessions:lock"
-        lock_ttl = 3600  # 1小时
+        """清理过期会话
         
-        # 尝试获取分布式锁
-        if not get_redis_distributed_lock(lock_key, lock_ttl):
-            logger.debug("清理过期会话：其他实例正在执行，跳过")
-            return
-        
-        try:
-            # 统一调用清理函数（与 run_session_cleanup_task 使用相同的逻辑）
-            from app.main import cleanup_all_sessions_unified
-            cleanup_all_sessions_unified()
-            
-        except Exception as e:
-            logger.error(f"清理过期会话失败: {e}")
-        finally:
-            # 释放锁
-            release_redis_distributed_lock(lock_key)
+        注意: Redis 使用 TTL 自动过期，无需手动清理
+        """
+        # Redis TTL 自动处理，无需操作
+        pass
     
     async def _cleanup_expired_cache(self):
-        """清理过期缓存"""
-        try:
-            from app.redis_cache import redis_cache
-            
-            if redis_cache.enabled:
-                # 清理过期的缓存键
-                patterns = [
-                    "user:*",
-                    "user_tasks:*",
-                    "user_profile:*",
-                    "user_notifications:*",
-                    "user_reviews:*",
-                    "tasks:*",
-                    "task_detail:*",
-                    "notifications:*",
-                    "system_settings:*"
-                ]
-                
-                total_cleaned = 0
-                for pattern in patterns:
-                    # 获取所有匹配的键
-                    keys = redis_cache.redis_client.keys(pattern)
-                    if keys:
-                        # 检查每个键的TTL
-                        for key in keys:
-                            ttl = redis_cache.get_ttl(key)
-                            if ttl == -1:  # 没有设置TTL的键
-                                # 检查键的内容是否包含时间戳
-                                data = redis_cache.get(key)
-                                if data and isinstance(data, dict):
-                                    # 如果数据包含时间戳，检查是否过期
-                                    if 'created_at' in data or 'last_activity' in data:
-                                        time_str = data.get('last_activity', data.get('created_at'))
-                                        if time_str:
-                                            try:
-                                                created_time = parse_iso_utc(time_str)
-                                                # 如果超过7天，删除
-                                                if get_utc_time() - created_time > timedelta(days=7):
-                                                    redis_cache.delete(key)
-                                                    total_cleaned += 1
-                                            except:
-                                                pass
-                
-                if total_cleaned > 0:
-                    logger.info(f"清理了 {total_cleaned} 个过期缓存项")
-                    
-        except Exception as e:
-            logger.error(f"清理过期缓存失败: {e}")
+        """清理过期缓存
+        
+        注意: Redis 使用 TTL 自动过期，无需手动清理
+        """
+        # Redis TTL 自动处理，无需操作
+        pass
     
     async def _cleanup_completed_tasks_files(self):
         """清理已完成超过3天的任务的图片和文件（每天检查一次，使用分布式锁）"""

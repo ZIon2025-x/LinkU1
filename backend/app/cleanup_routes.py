@@ -8,9 +8,6 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 
 from app.deps import get_sync_db
-from app.secure_auth import SecureAuthManager
-from app.service_auth import ServiceAuthManager
-from app.admin_auth import AdminAuthManager
 from app.cleanup_tasks import cleanup_tasks
 from app.user_redis_cleanup import user_redis_cleanup
 
@@ -20,32 +17,14 @@ router = APIRouter()
 
 @router.post("/cleanup/sessions")
 def cleanup_sessions(db: Session = Depends(get_sync_db)):
-    """手动清理过期会话"""
-    try:
-        logger.info("开始手动清理过期会话")
-        
-        # 清理用户会话
-        SecureAuthManager.cleanup_expired_sessions()
-        
-        # 清理客服会话
-        ServiceAuthManager.cleanup_expired_sessions()
-        
-        # 清理管理员会话
-        AdminAuthManager.cleanup_expired_sessions()
-        
-        logger.info("手动清理过期会话完成")
-        
-        return {
-            "message": "过期会话清理完成",
-            "status": "success"
-        }
-        
-    except Exception as e:
-        logger.error(f"手动清理过期会话失败: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"清理失败: {str(e)}"
-        )
+    """手动清理过期会话
+    
+    注意: Redis 使用 TTL 自动过期，此接口仅保留兼容性
+    """
+    return {
+        "message": "Redis 使用 TTL 自动过期，无需手动清理",
+        "status": "success"
+    }
 
 @router.post("/cleanup/cache")
 def cleanup_cache(db: Session = Depends(get_sync_db)):
@@ -159,21 +138,14 @@ def get_user_data_stats(db: Session = Depends(get_sync_db)):
 
 @router.post("/cleanup/all")
 def cleanup_all(db: Session = Depends(get_sync_db)):
-    """清理所有过期数据"""
+    """清理所有过期数据
+    
+    注意: 会话由 Redis TTL 自动过期，此接口仅清理缓存数据
+    """
     try:
-        logger.info("开始清理所有过期数据")
-        
-        # 清理会话
-        SecureAuthManager.cleanup_expired_sessions()
-        ServiceAuthManager.cleanup_expired_sessions()
-        AdminAuthManager.cleanup_expired_sessions()
-        
-        # 清理用户Redis数据
-        user_result = user_redis_cleanup.cleanup_all_user_data()
-        
-        # 清理其他缓存
         from app.redis_cache import redis_cache
-        total_cleaned = user_result['total']
+        total_cleaned = 0
+        
         if redis_cache.enabled:
             patterns = [
                 "tasks:*",
@@ -186,13 +158,10 @@ def cleanup_all(db: Session = Depends(get_sync_db)):
                 cleaned = redis_cache.delete_pattern(pattern)
                 total_cleaned += cleaned
         
-        logger.info(f"清理所有过期数据完成，清理了 {total_cleaned} 个数据项")
-        
         return {
-            "message": f"所有过期数据清理完成，清理了 {total_cleaned} 个数据项",
+            "message": f"缓存清理完成，清理了 {total_cleaned} 个数据项（会话由 Redis TTL 自动管理）",
             "status": "success",
-            "cleaned_count": total_cleaned,
-            "user_data": user_result
+            "cleaned_count": total_cleaned
         }
         
     except Exception as e:

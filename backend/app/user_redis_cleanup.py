@@ -72,7 +72,10 @@ class UserRedisCleanup:
         return 0
     
     def cleanup_all_user_data(self, user_id: str = None) -> Dict[str, int]:
-        """清理所有用户数据"""
+        """清理所有用户数据
+        
+        注意：核心清理函数已禁用，Redis TTL 会自动处理过期数据
+        """
         result = {
             'sessions': 0,
             'refresh_tokens': 0,
@@ -81,18 +84,17 @@ class UserRedisCleanup:
         }
         
         try:
-            # 清理会话数据
+            # 这些函数已禁用，会直接返回 0
             result['sessions'] = self.cleanup_user_sessions(user_id)
-            
-            # 清理refresh token数据
             result['refresh_tokens'] = self.cleanup_refresh_tokens(user_id)
-            
-            # 清理缓存数据
             result['cache'] = self.cleanup_user_cache(user_id)
-            
             result['total'] = result['sessions'] + result['refresh_tokens'] + result['cache']
             
-            logger.info(f"[USER_REDIS_CLEANUP] 用户数据清理完成: {result}")
+            # 只有实际清理了数据才记录 INFO 日志
+            if result['total'] > 0:
+                logger.info(f"[USER_REDIS_CLEANUP] 用户数据清理完成: {result}")
+            # 否则不记录，减少日志噪音
+            
             return result
             
         except Exception as e:
