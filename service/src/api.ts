@@ -247,4 +247,84 @@ export const getCustomerServiceUserDetail = async (userId: string) => {
   return response.data;
 };
 
+// 审核取消请求
+export const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected', comment: string) => {
+  const response = await api.post(`/api/customer-service/cancel-requests/${requestId}/review`, {
+    status,
+    comment
+  });
+  return response.data;
+};
+
+// 提交管理请求
+export const submitAdminRequest = async (requestData: {
+  type: string;
+  title: string;
+  description: string;
+  priority: string;
+}) => {
+  const response = await api.post(API_ENDPOINTS.CS_ADMIN_REQUESTS, requestData);
+  return response.data;
+};
+
+// 获取任务详情
+export const getTaskDetail = async (taskId: number) => {
+  const response = await api.get(`/api/tasks/${taskId}`);
+  return response.data;
+};
+
+// 检查聊天超时状态
+export const checkChatTimeoutStatus = async (chatId: string) => {
+  const response = await api.get(`/api/customer-service/chats/${chatId}/timeout-status`);
+  return response.data;
+};
+
+// 超时结束对话
+export const timeoutEndChat = async (chatId: string) => {
+  const response = await api.post(`/api/customer-service/chats/${chatId}/timeout-end`);
+  return response.data;
+};
+
+// 清理旧聊天记录
+export const cleanupOldChats = async (serviceId: string) => {
+  const response = await api.post(`/api/customer-service/cleanup-old-chats/${serviceId}`);
+  return response.data;
+};
+
+// 获取客服个人信息
+export const getServiceProfile = async () => {
+  const response = await api.get(API_ENDPOINTS.CS_PROFILE);
+  return response.data;
+};
+
+// 发送公告
+export const sendAnnouncement = async (title: string, content: string) => {
+  const response = await api.post('/api/users/notifications/send-announcement', {
+    title,
+    content
+  });
+  return response.data;
+};
+
+// 更新用户状态（ban/unban/suspend/unsuspend）
+export const updateUserStatus = async (userId: string, status: {
+  is_banned?: number;
+  is_suspended?: number;
+}) => {
+  const response = await api.post(`/api/admin/user/${userId}/set_status`, status);
+  return response.data;
+};
+
+// 设置用户等级
+export const setUserLevel = async (userId: string, levelData: any) => {
+  const response = await api.post(`/api/admin/user/${userId}/set_level`, levelData);
+  return response.data;
+};
+
+// 删除任务
+export const deleteTask = async (taskId: number) => {
+  const response = await api.delete(`/api/admin/tasks/${taskId}/delete`);
+  return response.data;
+};
+
 export default api;

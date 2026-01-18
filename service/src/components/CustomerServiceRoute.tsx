@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config';
+import { getServiceProfile } from '../api';
 
 interface CustomerServiceRouteProps {
   children: React.ReactNode;
@@ -15,20 +15,12 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
       try {
         // 直接使用API验证，不需要检测Cookie
         // 后端会自动验证HttpOnly Cookie
-        const response = await fetch(`${API_BASE_URL}/api/auth/service/profile`, {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const service = await response.json();
-          setIsAuthorized(true);
-        } else {
-          setIsAuthorized(false);
-                  }
+        await getServiceProfile();
+        setIsAuthorized(true);
       } catch (error) {
         // 认证失败
         setIsAuthorized(false);
-              } finally {
+      } finally {
         setLoading(false);
       }
     };

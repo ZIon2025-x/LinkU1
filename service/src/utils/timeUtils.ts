@@ -263,10 +263,10 @@ export class TimeHandlerV2 {
    */
   static async getTimezoneInfo(): Promise<TimezoneInfo | null> {
     try {
-      const response = await fetch('/api/users/timezone/info');
-      return await response.json();
+      const response = await api.get('/api/users/timezone/info');
+      return response.data;
     } catch (error) {
-            return null;
+      return null;
     }
   }
 

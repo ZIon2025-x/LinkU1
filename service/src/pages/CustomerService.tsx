@@ -18,7 +18,13 @@ import api, {
   getTaskDetail,
   checkChatTimeoutStatus,
   timeoutEndChat,
-  cleanupOldChats
+  cleanupOldChats,
+  getServiceProfile,
+  sendAnnouncement as sendAnnouncementAPI,
+  updateUserStatus,
+  setUserLevel,
+  deleteTask as deleteTaskAPI,
+  customerServiceLogout
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -372,20 +378,11 @@ const CustomerService: React.FC = () => {
     try {
       // 新的认证系统使用Cookie认证，不需要检查localStorage
       // 直接通过API检查客服认证状态
-      const response = await fetch(`${API_BASE_URL}/api/auth/service/profile`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const service = await response.json();
-        setCurrentUser(service);
-        return;
-      }
-      
+      const service = await getServiceProfile();
+      setCurrentUser(service);
+    } catch (error) {
       // 如果认证失败，重定向到客服登录页面
       navigate('/login');
-    } catch (error) {
-            navigate('/login');
     }
   };
 
@@ -442,36 +439,12 @@ const CustomerService: React.FC = () => {
     }
 
     try {
-      // 这里需要实现发送公告的API
-      // 暂时使用通知API作为示例
-      
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      const response = await fetch(`${API_BASE_URL}/api/users/notifications/send-announcement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify({
-          title: '平台公告',
-          content: announcement
-        })
-      });
-
-      if (response.ok) {
-        message.success('公告发送成功');
-        setAnnouncement('');
-      } else {
-        message.error('公告发送失败');
-      }
-    } catch (error) {
-            message.error('发送公告失败');
+      await sendAnnouncementAPI('平台公告', announcement);
+      message.success('公告发送成功');
+      setAnnouncement('');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '发送公告失败';
+      message.error(errorMsg);
     }
   };
 
@@ -484,89 +457,66 @@ const CustomerService: React.FC = () => {
       }
 
       // 2. 调用客服登出API
-      const response = await fetch(`${API_BASE_URL}/api/auth/service/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      await customerServiceLogout();
 
-      if (response.ok) {
-        // 3. 清理本地状态
-        setCurrentUser(null);
-        setIsOnline(false);
-        
-        // 4. 关闭WebSocket连接
-        if (ws) {
-          ws.close();
-          setWs(null);
-        }
-        
-        // 5. 关闭通知WebSocket连接
-        if (notificationWs) {
-          notificationWs.close();
-          setNotificationWs(null);
-        }
-        
-        // 6. 清理超时检查
-        if (timeoutCheckInterval) {
-          clearInterval(timeoutCheckInterval);
-          setTimeoutCheckInterval(null);
-        }
-        
-        // 7. 跳转到登录页面
-        navigate('/login');
-      } else {
-                message.error('登出失败，请重试');
+      // 3. 清理本地状态
+      setCurrentUser(null);
+      setIsOnline(false);
+      
+      // 4. 关闭WebSocket连接
+      if (ws) {
+        ws.close();
+        setWs(null);
       }
-    } catch (error) {
-            message.error('登出时发生错误，请重试');
+      
+      // 5. 关闭通知WebSocket连接
+      if (notificationWs) {
+        notificationWs.close();
+        setNotificationWs(null);
+      }
+      
+      // 6. 清理超时检查
+      if (timeoutCheckInterval) {
+        clearInterval(timeoutCheckInterval);
+        setTimeoutCheckInterval(null);
+      }
+      
+      // 7. 跳转到登录页面
+      navigate('/login');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '登出时发生错误，请重试';
+      message.error(errorMsg);
     }
   };
 
   const handleUserAction = async (userId: string, action: string, value?: any) => {
     try {
-      let endpoint = '';
-      let body = {};
-
       switch (action) {
         case 'ban':
-          endpoint = `/api/admin/user/${userId}/set_status`;
-          body = { is_banned: 1 };
+          await updateUserStatus(userId, { is_banned: 1 });
           break;
         case 'unban':
-          endpoint = `/api/admin/user/${userId}/set_status`;
-          body = { is_banned: 0 };
+          await updateUserStatus(userId, { is_banned: 0 });
           break;
         case 'suspend':
-          endpoint = `/api/admin/user/${userId}/set_status`;
-          body = { is_suspended: 1 };
+          await updateUserStatus(userId, { is_suspended: 1 });
           break;
         case 'unsuspend':
-          endpoint = `/api/admin/user/${userId}/set_status`;
-          body = { is_suspended: 0 };
+          await updateUserStatus(userId, { is_suspended: 0 });
           break;
         case 'setLevel':
-          endpoint = `/api/admin/user/${userId}/set_level`;
-          body = value;
+          await setUserLevel(userId, value);
           break;
+        default:
+          message.error('未知操作');
+          return;
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
-        message.success('操作成功');
-        loadData(); // 重新加载数据
-      } else {
-        message.error('操作失败');
-      }
-    } catch (error) {
-            message.error('操作失败');
+      message.success('操作成功');
+      loadData(); // 重新加载数据
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '操作失败';
+      message.error(errorMsg);
     }
   };
 
@@ -595,28 +545,12 @@ const CustomerService: React.FC = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 获取 CSRF token
-          const csrfToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf_token='))
-            ?.split('=')[1];
-          
-          const response = await fetch(`/api/admin/tasks/${taskId}/delete`, {
-            method: 'DELETE',
-            headers: {
-              ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-            },
-            credentials: 'include'  // 使用Cookie认证
-          });
-
-          if (response.ok) {
-            message.success('任务删除成功');
-            loadData(); // 重新加载数据
-          } else {
-            message.error('任务删除失败');
-          }
-        } catch (error) {
-                    message.error('删除任务失败');
+          await deleteTaskAPI(taskId);
+          message.success('任务删除成功');
+          loadData(); // 重新加载数据
+        } catch (error: any) {
+          const errorMsg = error?.response?.data?.detail || error?.message || '删除任务失败';
+          message.error(errorMsg);
         }
       }
     });
