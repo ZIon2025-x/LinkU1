@@ -1793,3 +1793,99 @@ def login_with_verification_code(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"登录失败: {str(e)}"
         )
+
+
+@secure_auth_router.get("/session-diagnose", response_model=Dict[str, Any])
+def diagnose_session(request: Request):
+    """诊断当前会话状态 - 用于排查登录问题"""
+    from app.secure_auth import SecureAuthManager, is_ios_app_request
+    from app.redis_cache import get_redis_client
+    
+    redis_client = get_redis_client()
+    
+    # 获取 session_id
+    session_id = request.cookies.get("session_id")
+    session_source = "cookie"
+    if not session_id:
+        session_id = request.headers.get("X-Session-ID")
+        session_source = "header"
+    
+    # 获取 refresh_token
+    refresh_token = request.cookies.get("refresh_token")
+    refresh_source = "cookie"
+    if not refresh_token:
+        refresh_token = request.headers.get("X-Refresh-Token")
+        refresh_source = "header" if refresh_token else None
+    
+    # 检测请求信息
+    is_ios = is_ios_app_request(request)
+    platform = request.headers.get("X-Platform", "unknown")
+    user_agent = request.headers.get("user-agent", "")[:100]
+    client_ip = get_client_ip(request)
+    
+    result = {
+        "request_info": {
+            "is_ios_app": is_ios,
+            "platform": platform,
+            "user_agent": user_agent,
+            "client_ip": client_ip[:20] + "..." if len(client_ip) > 20 else client_ip,
+        },
+        "session": {
+            "has_session_id": bool(session_id),
+            "source": session_source if session_id else None,
+            "session_id_prefix": session_id[:8] + "..." if session_id else None,
+        },
+        "refresh_token": {
+            "has_token": bool(refresh_token),
+            "source": refresh_source,
+            "token_prefix": refresh_token[:8] + "..." if refresh_token else None,
+        },
+        "redis_status": {
+            "connected": redis_client is not None,
+        }
+    }
+    
+    # 如果有 session_id，检查 Redis 中的状态
+    if session_id and redis_client:
+        try:
+            session_data = redis_client.get(f"session:{session_id}")
+            if session_data:
+                import json
+                data = json.loads(session_data.decode() if isinstance(session_data, bytes) else session_data)
+                ttl = redis_client.ttl(f"session:{session_id}")
+                result["session"]["exists_in_redis"] = True
+                result["session"]["is_ios_app_flag"] = data.get("is_ios_app", False)
+                result["session"]["is_active"] = data.get("is_active", False)
+                result["session"]["user_id"] = data.get("user_id", "unknown")
+                result["session"]["ttl_seconds"] = ttl
+                result["session"]["ttl_hours"] = round(ttl / 3600, 2) if ttl > 0 else 0
+            else:
+                result["session"]["exists_in_redis"] = False
+                result["session"]["diagnosis"] = "Session不存在于Redis中，可能已过期或被删除"
+        except Exception as e:
+            result["session"]["redis_error"] = str(e)
+    
+    # 如果有 refresh_token，检查 Redis 中的状态
+    if refresh_token and redis_client:
+        try:
+            pattern = f"user_refresh_token:*:{refresh_token}"
+            keys = redis_client.keys(pattern)
+            if keys:
+                key = keys[0].decode() if isinstance(keys[0], bytes) else keys[0]
+                token_data = redis_client.get(key)
+                if token_data:
+                    import json
+                    data = json.loads(token_data.decode() if isinstance(token_data, bytes) else token_data)
+                    ttl = redis_client.ttl(key)
+                    result["refresh_token"]["exists_in_redis"] = True
+                    result["refresh_token"]["is_ios_app_flag"] = data.get("is_ios_app", False)
+                    result["refresh_token"]["user_id"] = data.get("user_id", "unknown")
+                    result["refresh_token"]["ttl_seconds"] = ttl
+                    result["refresh_token"]["ttl_hours"] = round(ttl / 3600, 2) if ttl > 0 else 0
+            else:
+                result["refresh_token"]["exists_in_redis"] = False
+                result["refresh_token"]["diagnosis"] = "Refresh token不存在于Redis中，可能已过期或在其他设备登录时被删除"
+        except Exception as e:
+            result["refresh_token"]["redis_error"] = str(e)
+    
+    return result

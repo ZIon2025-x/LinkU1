@@ -73,6 +73,14 @@ celery_app.conf.update(
     # 默认重试配置（可在任务级别覆盖）
     task_default_retry_delay=60,  # 默认重试延迟60秒
     task_max_retries=3,  # 默认最大重试3次
+    
+    # ========== Redis 清理配置（重要！防止 Redis 数据堆积）==========
+    # 任务结果过期时间：1小时后自动删除（定时任务不需要长期保留结果）
+    result_expires=3600,  # 1小时 = 3600秒
+    # 大多数定时任务不需要存储结果（减少 Redis 写入）
+    task_ignore_result=True,
+    # 不存储任务发送时间（减少 Redis 数据量）
+    task_send_sent_event=False,
 )
 
 # Celery Beat定时任务配置

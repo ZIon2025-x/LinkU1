@@ -1002,6 +1002,8 @@ def cleanup_task_files(db: Session, task_id: int):
     """
     清理任务相关的所有图片和文件（公开和私密）
     使用新的image_cleanup模块统一处理
+    
+    返回: 删除的文件数量
     """
     from app.image_cleanup import delete_task_images
     import logging
@@ -1010,7 +1012,9 @@ def cleanup_task_files(db: Session, task_id: int):
     
     try:
         deleted_count = delete_task_images(task_id, include_private=True)
-        logger.info(f"任务 {task_id} 已清理 {deleted_count} 个文件")
+        # 只在真正删除了文件时才记录日志，减少日志噪音
+        if deleted_count > 0:
+            logger.info(f"任务 {task_id} 已清理 {deleted_count} 个文件")
         return deleted_count
     except Exception as e:
         logger.error(f"清理任务文件失败 {task_id}: {e}")
@@ -1905,7 +1909,6 @@ def cancel_expired_tasks(db: Session):
     try:
         # 获取当前UTC时间
         now_utc = get_utc_time()
-        logger.info(f"开始检查过期任务，当前UTC时间: {now_utc}")
 
         # 使用数据库查询直接找到过期的任务，避免逐个检查
         # 处理两种情况：deadline有时区信息和没有时区信息
@@ -1929,7 +1932,12 @@ def cancel_expired_tasks(db: Session):
             )
         ).all()
 
-        logger.info(f"找到 {len(expired_tasks)} 个过期任务")
+        # 优化：只在发现过期任务时才记录日志，减少每分钟的日志噪音
+        if not expired_tasks:
+            logger.debug(f"没有过期任务需要处理")
+            return 0
+        
+        logger.info(f"检查过期任务：找到 {len(expired_tasks)} 个过期任务")
 
         cancelled_count = 0
         for task in expired_tasks:
@@ -2081,7 +2089,8 @@ def cancel_expired_tasks(db: Session):
 
         # 提交所有更改
         db.commit()
-        logger.info(f"成功取消 {cancelled_count} 个过期任务")
+        if cancelled_count > 0:
+            logger.info(f"成功取消 {cancelled_count} 个过期任务")
         return cancelled_count
         
     except Exception as e:
@@ -2275,9 +2284,13 @@ def cleanup_cancelled_tasks(db: Session):
 
 
 def cleanup_completed_tasks_files(db: Session):
-    """清理已完成超过3天的任务的图片和文件（公开和私密）"""
+    """清理已完成超过3天的任务的图片和文件（公开和私密）
+    
+    优化：只处理有图片的任务，清理后将images字段设为空，避免重复处理
+    """
     from app.models import Task
     from datetime import timedelta
+    from sqlalchemy import or_, and_
     import logging
     
     logger = logging.getLogger(__name__)
@@ -2289,39 +2302,59 @@ def cleanup_completed_tasks_files(db: Session):
     # 处理时区：将 three_days_ago 转换为 naive datetime（与数据库中的 completed_at 格式一致）
     three_days_ago_naive = three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else three_days_ago
     
-    # 查找已完成超过3天的任务
-    # completed_at 在数据库中通常是 naive datetime
+    # 查找已完成超过3天且有图片的任务（优化：跳过已清理过的任务）
+    # images 字段不为空、不为 null、不为 "[]" 才需要处理
     completed_tasks = (
         db.query(Task)
         .filter(
             Task.status == "completed",
             Task.completed_at.isnot(None),
-            Task.completed_at <= three_days_ago_naive
+            Task.completed_at <= three_days_ago_naive,
+            # 只处理有图片的任务
+            Task.images.isnot(None),
+            Task.images != "",
+            Task.images != "[]",
+            Task.images != "null"
         )
         .all()
     )
     
-    logger.info(f"找到 {len(completed_tasks)} 个已完成超过3天的任务，开始清理文件（公开和私密）")
+    if not completed_tasks:
+        logger.debug("没有需要清理的已完成任务")
+        return 0
+    
+    logger.info(f"找到 {len(completed_tasks)} 个已完成超过3天且有图片的任务，开始清理")
     
     cleaned_count = 0
     for task in completed_tasks:
         try:
-            cleanup_task_files(db, task.id)
+            deleted_files = cleanup_task_files(db, task.id)
             # 同时清理关联的商品图片（如果是跳蚤市场任务）
             if task.task_type == "Second-hand & Rental":
                 cleanup_flea_market_item_files_for_task(db, task.id)
+            
+            # 清理后将 images 字段设为空，避免下次重复处理
+            task.images = "[]"
+            db.commit()
+            
             cleaned_count += 1
-            logger.info(f"成功清理任务 {task.id} 的文件")
+            if deleted_files > 0:
+                logger.info(f"任务 {task.id} 清理了 {deleted_files} 个文件")
         except Exception as e:
             logger.error(f"清理任务 {task.id} 文件失败: {e}")
+            db.rollback()
             continue
     
-    logger.info(f"完成清理，共清理 {cleaned_count} 个任务的文件")
+    if cleaned_count > 0:
+        logger.info(f"完成清理，共处理 {cleaned_count} 个已完成任务")
     return cleaned_count
 
 
 def cleanup_expired_tasks_files(db: Session):
-    """清理过期任务（已取消或deadline已过超过3天）的图片和文件"""
+    """清理过期任务（已取消或deadline已过超过3天）的图片和文件
+    
+    优化：只处理有图片的任务，清理后将images字段设为空，避免重复处理
+    """
     from app.models import Task, TaskHistory
     from datetime import timedelta, datetime as dt, timezone
     from app.utils.time_utils import get_utc_time
@@ -2335,9 +2368,15 @@ def cleanup_expired_tasks_files(db: Session):
     now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
-    # 优化：批量查询所有已取消任务的取消时间，避免 N+1 查询
-    # 1. 先获取所有已取消的任务ID
-    cancelled_task_ids = db.query(Task.id).filter(Task.status == "cancelled").all()
+    # 优化：只查询有图片的已取消任务
+    # 1. 先获取所有已取消且有图片的任务ID
+    cancelled_task_ids = db.query(Task.id).filter(
+        Task.status == "cancelled",
+        Task.images.isnot(None),
+        Task.images != "",
+        Task.images != "[]",
+        Task.images != "null"
+    ).all()
     cancelled_task_ids = [tid[0] for tid in cancelled_task_ids]
     
     # 2. 批量查询这些任务的最新取消时间（一次性查询，避免 N+1）
@@ -2379,13 +2418,18 @@ def cleanup_expired_tasks_files(db: Session):
                 if cancel_time <= three_days_ago:
                     expired_tasks.append(task)
     
-    # 2. 查找deadline已过超过3天的open任务
+    # 2. 查找deadline已过超过3天且有图片的open任务
     deadline_expired_tasks = (
         db.query(Task)
         .filter(
             Task.status == "open",
             Task.deadline.isnot(None),
-            Task.deadline <= three_days_ago
+            Task.deadline <= three_days_ago,
+            # 只处理有图片的任务
+            Task.images.isnot(None),
+            Task.images != "",
+            Task.images != "[]",
+            Task.images != "null"
         )
         .all()
     )
@@ -2396,19 +2440,33 @@ def cleanup_expired_tasks_files(db: Session):
         if task.id not in task_ids:
             expired_tasks.append(task)
     
-    logger.info(f"找到 {len(expired_tasks)} 个过期超过3天的任务，开始清理文件")
+    if not expired_tasks:
+        logger.debug("没有需要清理的过期任务")
+        return 0
+    
+    logger.info(f"找到 {len(expired_tasks)} 个过期超过3天且有图片的任务，开始清理")
     
     cleaned_count = 0
+    total_files_deleted = 0
     for task in expired_tasks:
         try:
-            cleanup_task_files(db, task.id)
+            deleted_files = cleanup_task_files(db, task.id)
+            total_files_deleted += deleted_files
+            
+            # 清理后将 images 字段设为空，避免下次重复处理
+            task.images = "[]"
+            db.commit()
+            
             cleaned_count += 1
-            logger.info(f"成功清理过期任务 {task.id} 的文件")
+            if deleted_files > 0:
+                logger.info(f"过期任务 {task.id} 清理了 {deleted_files} 个文件")
         except Exception as e:
             logger.error(f"清理过期任务 {task.id} 文件失败: {e}")
+            db.rollback()
             continue
     
-    logger.info(f"完成清理，共清理 {cleaned_count} 个过期任务的文件")
+    if cleaned_count > 0:
+        logger.info(f"完成清理，共处理 {cleaned_count} 个过期任务，删除 {total_files_deleted} 个文件")
     return cleaned_count
 
 
@@ -2727,6 +2785,10 @@ def cleanup_expired_flea_market_items(db: Session):
         )
         .all()
     )
+    
+    if not expired_items:
+        logger.debug(f"没有超过{AUTO_DELETE_DAYS}天未刷新的商品需要清理")
+        return 0
     
     logger.info(f"找到 {len(expired_items)} 个超过{AUTO_DELETE_DAYS}天未刷新的商品，开始清理")
     

@@ -285,6 +285,7 @@ class SecureAuthManager:
             # 从 Redis 获取会话
             data = safe_redis_get(f"session:{session_id}")
             if not data:
+                logger.warning(f"[SECURE_AUTH] Session未找到 - session_id: {session_id[:8] if session_id else 'None'}... (可能已过期或被删除)")
                 return None
             session = SessionInfo(
                 user_id=data["user_id"],
@@ -675,10 +676,12 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     
     # 1. 尝试主要Cookie名称
     session_id = request.cookies.get("session_id")
+    session_source = "cookie"
     
     # 2. 如果Cookie中没有，尝试从请求头获取（仅作为最后的备用方案）
     if not session_id:
         session_id = request.headers.get("X-Session-ID")
+        session_source = "header"
     
     # 3. 如果还是没有，尝试从Authorization头获取（仅用于移动端JWT认证）
     if not session_id:
@@ -696,6 +699,8 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     
     session = SecureAuthManager.get_session(session_id, update_activity=True)  # 更新活动时间（内部有5分钟防抖机制）
     if not session:
+        # 诊断日志：session在Redis中不存在
+        logger.warning(f"[SECURE_AUTH] validate_session失败 - session_id来源: {session_source}, session_id: {session_id[:8] if session_id else 'None'}..., IP: {current_ip}")
         return None
     
     # ========== IP地址验证：iOS应用使用更宽松的策略 ==========
