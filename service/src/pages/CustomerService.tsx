@@ -757,7 +757,7 @@ const CustomerService: React.FC = () => {
     }
   };
 
-  const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
+  const handleReviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
       // 准备请求体，确保数据格式正确
       const requestBody: { status: string; admin_comment?: string | null } = {
@@ -2949,13 +2949,13 @@ const CustomerService: React.FC = () => {
             </div>
             <div className="modal-actions">
               <button 
-                onClick={() => reviewCancelRequest(selectedCancelRequest.id, 'approved')} 
+                onClick={() => handleReviewCancelRequest(selectedCancelRequest.id, 'approved')} 
                 className="btn-success"
               >
                 通过
               </button>
               <button 
-                onClick={() => reviewCancelRequest(selectedCancelRequest.id, 'rejected')} 
+                onClick={() => handleReviewCancelRequest(selectedCancelRequest.id, 'rejected')} 
                 className="btn-danger"
               >
                 拒绝
