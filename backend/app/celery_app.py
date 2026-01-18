@@ -1,9 +1,15 @@
 """
 Celery应用配置
 用于定时任务调度（Celery Beat）
+
+Redis 分离策略：
+- 后端会话/认证数据使用 db=0（关键数据，不能丢失）
+- Celery 任务队列使用 db=1（临时数据，可丢失重试）
+这样避免 Celery 的大量临时消息影响用户会话
 """
 
 import os
+import re
 from celery import Celery
 from celery.schedules import crontab
 
@@ -11,11 +17,36 @@ from celery.schedules import crontab
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"
 
+# Celery专用Redis URL（使用db=1，与会话数据分离）
+# 优先使用 CELERY_REDIS_URL 环境变量，否则从 REDIS_URL 派生
+CELERY_REDIS_URL = os.getenv("CELERY_REDIS_URL", "")
+
+if not CELERY_REDIS_URL and REDIS_URL:
+    # 从 REDIS_URL 派生 Celery Redis URL，使用 db=1
+    # 支持的格式：
+    # - redis://host:port/0 -> redis://host:port/1
+    # - redis://host:port -> redis://host:port/1
+    # - redis://:password@host:port/0 -> redis://:password@host:port/1
+    if REDIS_URL.endswith('/0'):
+        CELERY_REDIS_URL = REDIS_URL[:-1] + '1'  # 替换 /0 为 /1
+    elif re.search(r'/\d+$', REDIS_URL):
+        # 已经有其他 db 编号，替换为 /1
+        CELERY_REDIS_URL = re.sub(r'/\d+$', '/1', REDIS_URL)
+    else:
+        # 没有 db 编号，添加 /1
+        CELERY_REDIS_URL = REDIS_URL.rstrip('/') + '/1'
+
+# 日志输出（仅在启动时）
+import logging
+logger = logging.getLogger(__name__)
+if USE_REDIS:
+    logger.info(f"[Celery] 使用独立 Redis 数据库: {CELERY_REDIS_URL[:30]}... (与会话数据分离)")
+
 # 创建Celery应用
 celery_app = Celery(
     'linku_tasks',
-    broker=REDIS_URL if USE_REDIS else 'memory://',
-    backend=REDIS_URL if USE_REDIS else 'cache+memory://',
+    broker=CELERY_REDIS_URL if USE_REDIS else 'memory://',
+    backend=CELERY_REDIS_URL if USE_REDIS else 'cache+memory://',
     include=[
         'app.customer_service_tasks',
         'app.celery_tasks',

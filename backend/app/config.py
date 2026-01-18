@@ -28,10 +28,15 @@ class Config:
     CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))
 
     # Redis配置
+    # 主Redis URL（用于会话、认证等关键数据）
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+    
+    # Celery专用Redis URL（用于任务队列，使用db=1避免与会话数据冲突）
+    # 如果未设置，则从REDIS_URL派生使用db=1
+    CELERY_REDIS_URL = os.getenv("CELERY_REDIS_URL", "")
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
     USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"  # 默认使用Redis
     

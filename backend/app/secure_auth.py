@@ -924,7 +924,9 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     keys = redis_client.keys(pattern)
     
     if not keys:
+        # 诊断：检查Redis中该用户是否有任何refresh token
         logger.warning(f"[SECURE_AUTH] verify_user_refresh_token: 未找到refresh token: {refresh_token[:8]}...")
+        logger.warning(f"[SECURE_AUTH] 诊断: Redis中查找模式 '{pattern}' 无匹配 - 可能原因: 1)服务器/Redis重启 2)token已过期被清理 3)在其他设备登录导致被删除")
         return None
     
     # 获取token数据
