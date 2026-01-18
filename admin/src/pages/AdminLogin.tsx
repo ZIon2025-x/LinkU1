@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message, Typography } from 'antd';
 import { UserOutlined, LockOutlined, SafetyOutlined, MailOutlined } from '@ant-design/icons';
+import { FormInstance } from 'antd/es/form';
 import api from '../api';
 
 const { Title, Text } = Typography;
@@ -308,22 +309,28 @@ const AdminLogin: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item style={{ marginBottom: 16 }}>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  block
-                  disabled={!verificationForm.getFieldValue('code') || verificationForm.getFieldValue('code')?.length !== 6}
-                  style={{
-                    height: 48,
-                    fontSize: 16,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    border: 'none',
-                  }}
-                >
-                  {loading ? '验证中...' : '验证'}
-                </Button>
+              <Form.Item shouldUpdate style={{ marginBottom: 16 }}>
+                {() => {
+                  const codeValue = verificationForm.getFieldValue('code') || '';
+                  const isValid = codeValue.length === 6 && /^\d+$/.test(codeValue);
+                  return (
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={loading}
+                      block
+                      disabled={!isValid || loading}
+                      style={{
+                        height: 48,
+                        fontSize: 16,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        border: 'none',
+                      }}
+                    >
+                      {loading ? '验证中...' : '验证'}
+                    </Button>
+                  );
+                }}
               </Form.Item>
 
               <div style={{ display: 'flex', gap: 12 }}>

@@ -155,6 +155,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 from app.middleware.security import security_headers_middleware
 app.middleware("http")(security_headers_middleware)
 
+# 管理员安全中间件 - 专门保护 admin 子域名
+from app.admin_security_middleware import admin_security_middleware
+app.middleware("http")(admin_security_middleware)
+
 # 安全监控中间件（暂时禁用以解决异步/同步混用问题）
 # @app.middleware("http")
 # async def security_monitoring_middleware(request: Request, call_next):

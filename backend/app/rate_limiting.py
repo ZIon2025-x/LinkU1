@@ -220,8 +220,10 @@ RATE_LIMITS = {
     # 客服相关
     "customer_service": {"limit": 20, "window": 60},  # 20次/分钟
     
-    # 管理员操作
-    "admin_operation": {"limit": 50, "window": 60},  # 50次/分钟
+    # 管理员操作（加强限制）
+    "admin_operation": {"limit": 100, "window": 60},  # 100次/分钟
+    "admin_sensitive_operation": {"limit": 20, "window": 60},  # 敏感操作 20次/分钟
+    "admin_verification_code": {"limit": 3, "window": 300},  # 验证码 3次/5分钟
 }
 
 def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int] = None):

@@ -14,6 +14,7 @@ from app.service_auth import ServiceAuthManager, create_service_session_cookie, 
 from app.separate_auth_deps import get_current_admin, get_current_service, get_current_user
 from app.config import Config
 from app.utils.time_utils import format_iso_utc, get_utc_time
+from app.rate_limiting import rate_limit
 from datetime import datetime
 import logging
 
@@ -38,6 +39,7 @@ def find_admin_by_username_or_id(db: Session, username_or_id: str):
     return admin
 
 @router.post("/admin/login", response_model=schemas.AdminLoginResponse)
+@rate_limit("admin_login")
 def admin_login(
     login_data: schemas.AdminUserLoginNew,
     request: Request,
@@ -252,6 +254,7 @@ def admin_refresh(
         )
 
 @router.post("/admin/send-verification-code")
+@rate_limit("admin_verification_code")
 def send_admin_verification_code(
     login_data: schemas.AdminUserLoginNew,
     background_tasks: BackgroundTasks,
@@ -326,6 +329,7 @@ def send_admin_verification_code(
     }
 
 @router.post("/admin/verify-code")
+@rate_limit("admin_verification_code")
 def verify_admin_code(
     verification_data: schemas.AdminVerificationRequest,
     request: Request,
