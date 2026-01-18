@@ -43,17 +43,17 @@ Frontend、Admin 和 Service 三个子项目需要配置为独立的 Vercel 项�
 
 在 Vercel Dashboard → Frontend 项目 → Settings → Git → Ignore Build Step
 
-添加以下命令（推荐版本，处理首次提交）：
+添加以下命令（推荐版本，最可靠）：
 
 ```bash
-# 检查当前提交中是否有 frontend 文件变化
-git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^frontend/" || exit 1
+# 使用 git show 检查当前提交的文件（不依赖上一个提交，适用于浅克隆）
+git show --name-only --pretty=format:"" HEAD | grep -q "^frontend/" || exit 1
 ```
 
 **说明**：
 - 如果当前提交中有 `frontend/` 文件夹的文件变化，命令返回 0 → **构建**
 - 如果没有变化，命令返回 1 → **跳过构建**
-- 这个命令不依赖 `HEAD^`，适用于首次提交
+- 使用 `git show` 而不是 `git diff`，因为 Vercel 使用浅克隆，`git diff` 可能无法正常工作
 
 **备选方案**（如果上面的命令不工作）：
 
@@ -74,8 +74,8 @@ fi
 添加以下命令：
 
 ```bash
-# 检查当前提交中是否有 admin 文件变化
-git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^admin/" || exit 1
+# 使用 git show 检查当前提交的文件（最可靠）
+git show --name-only --pretty=format:"" HEAD | grep -q "^admin/" || exit 1
 ```
 
 #### Service 项目的 Ignore Build Step
@@ -85,8 +85,8 @@ git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^admin/" || exit 1
 添加以下命令：
 
 ```bash
-# 检查当前提交中是否有 service 文件变化
-git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^service/" || exit 1
+# 使用 git show 检查当前提交的文件（最可靠）
+git show --name-only --pretty=format:"" HEAD | grep -q "^service/" || exit 1
 ```
 
 ### 3. 环境变量配置
