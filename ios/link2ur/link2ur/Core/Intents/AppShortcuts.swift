@@ -123,10 +123,46 @@ struct ViewForumIntent: AppIntent {
     }
 }
 
+/// 打开应用快捷指令
+@available(iOS 16.0, *)
+struct OpenAppIntent: AppIntent {
+    static var title: LocalizedStringResource = LocalizedStringResource("shortcuts.open_app", defaultValue: "Open Link²Ur")
+    static var description = IntentDescription(LocalizedStringResource("shortcuts.open_app_description", defaultValue: "Open Link²Ur app"))
+    static var openAppWhenRun: Bool = true
+    
+    func perform() async throws -> some IntentResult {
+        // 直接打开应用（不需要额外操作）
+        return .result()
+    }
+}
+
 /// 应用快捷指令配置
 @available(iOS 16.0, *)
 struct Link2UrShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        // 打开应用 - 支持多种说法
+        AppShortcut(
+            intent: OpenAppIntent(),
+            phrases: [
+                // 中文短语
+                "打开 ${applicationName}",
+                "打开 link to you",
+                "打开 link2ur",
+                "打开 link 2 u r",
+                "启动 ${applicationName}",
+                "运行 ${applicationName}",
+                // English phrases
+                "Open ${applicationName}",
+                "Open link to you",
+                "Open link2ur",
+                "Open link 2 u r",
+                "Launch ${applicationName}",
+                "Start ${applicationName}"
+            ],
+            shortTitle: LocalizedStringResource("shortcuts.open_app", defaultValue: "Open Link²Ur"),
+            systemImageName: "app.badge"
+        )
+        
         // 发布任务 - 支持中英文短语
         AppShortcut(
             intent: PublishTaskIntent(),

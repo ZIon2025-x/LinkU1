@@ -24,5 +24,19 @@
 		<string>twitter</string>
 		<string>weibosdk</string>
 	</array>
+	<!-- Spotlight 搜索关键词 - 让用户可以通过这些关键词搜索到应用 -->
+	<key>CFBundleKeywords</key>
+	<array>
+		<string>link2ur</string>
+		<string>link to you</string>
+		<string>link 2 u r</string>
+		<string>link²ur</string>
+		<string>任务</string>
+		<string>跳蚤市场</string>
+		<string>论坛</string>
+		<string>task</string>
+		<string>flea market</string>
+		<string>forum</string>
+	</array>
 </dict>
 </plist>

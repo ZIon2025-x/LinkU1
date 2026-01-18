@@ -465,7 +465,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
-				INFOPLIST_KEY_NSCameraUsageDescription = "该应用程序将使用相机拍摄您的身份证件照片。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -502,7 +501,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Link²Ur";
-				INFOPLIST_KEY_NSCameraUsageDescription = "该应用程序将使用相机拍摄您的身份证件照片。";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location information to select task/item locations on the map, or use your current location. You can also choose to manually enter locations.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

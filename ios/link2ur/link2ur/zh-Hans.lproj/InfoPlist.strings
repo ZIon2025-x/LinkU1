@@ -9,3 +9,5 @@
 
 "NSFaceIDUsageDescription" = "我们使用 Face ID 来安全地验证您的身份并登录您的账户。这为您提供了一种快速且安全的方式来访问您的账户，无需输入密码。";
 
+
+"NSCameraUsageDescription" = "该应用程序将使用相机拍摄您的身份证件照片。";

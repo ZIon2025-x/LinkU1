@@ -9,3 +9,5 @@
 
 "NSFaceIDUsageDescription" = "We use Face ID to securely authenticate and log you into your account. This provides a quick and secure way to access your account without entering your password.";
 
+
+"NSCameraUsageDescription" = "This app will use the camera to take photos of your ID documents.";
