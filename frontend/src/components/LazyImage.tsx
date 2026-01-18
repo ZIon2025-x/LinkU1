@@ -20,6 +20,9 @@ interface LazyImageProps {
   onMouseEnter?: (e: React.MouseEvent<HTMLElement>) => void;
   onMouseLeave?: (e: React.MouseEvent<HTMLElement>) => void;
   rootMargin?: string; // Intersection Observer 的 rootMargin
+  srcSet?: string; // 响应式图片源集合
+  sizes?: string; // 响应式图片尺寸
+  fetchPriority?: 'high' | 'low' | 'auto'; // 图片加载优先级
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({ 
@@ -36,12 +39,42 @@ const LazyImage: React.FC<LazyImageProps> = ({
   title,
   onMouseEnter,
   onMouseLeave,
-  rootMargin = '50px'
+  rootMargin = '50px',
+  srcSet,
+  sizes,
+  fetchPriority = 'auto'
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // 优化图片 URL：尝试使用 WebP 格式（如果浏览器支持）
+  const optimizedSrc = useMemo(() => {
+    if (!src) return src;
+    
+    // 如果已经指定了 srcSet，直接返回原 src
+    if (srcSet) return src;
+    
+    // 检查浏览器是否支持 WebP
+    const supportsWebP = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    };
+    
+    // 如果浏览器支持 WebP 且原图不是 WebP，尝试使用 WebP 版本
+    if (supportsWebP() && !src.toLowerCase().endsWith('.webp')) {
+      // 尝试将 .jpg/.jpeg/.png 替换为 .webp
+      const webpSrc = src.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+      // 注意：这里假设服务器支持 WebP，实际使用时需要确保服务器确实提供 WebP 版本
+      // 如果服务器不支持，图片加载会失败并回退到原图
+      return webpSrc;
+    }
+    
+    return src;
+  }, [src, srcSet]);
 
   useEffect(() => {
     // 如果图片是绝对定位的，直接加载（因为绝对定位的图片通常需要立即显示）
@@ -236,13 +269,23 @@ const LazyImage: React.FC<LazyImageProps> = ({
       )}
       {isInView && (
         <img
-          src={src}
+          src={optimizedSrc}
           alt={alt}
           width={width}
           height={height}
+          srcSet={srcSet}
+          sizes={sizes}
           loading="lazy"
+          fetchPriority={fetchPriority}
           onLoad={handleLoad}
-          onError={handleError}
+          onError={(e) => {
+            // 如果 WebP 加载失败，回退到原图
+            if (optimizedSrc !== src && (e.currentTarget.src === optimizedSrc)) {
+              e.currentTarget.src = src;
+              return;
+            }
+            handleError(e);
+          }}
           style={imgStyle}
         />
       )}

@@ -14,6 +14,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import { useThrottle } from '../hooks/useThrottle';
 import LazyImage from './LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
+import { logger } from '../utils/logger';
 import {
   MODAL_OVERLAY_STYLE,
   LOADING_CONTAINER_STYLE,
@@ -228,7 +229,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     const handlePaymentSuccess = (event: MessageEvent) => {
       // 检查消息类型和任务ID是否匹配
       if (event.data?.type === 'payment_success' && event.data?.taskId === taskId) {
-        console.log('收到支付成功消息，刷新任务数据:', event.data);
+        logger.log('收到支付成功消息，刷新任务数据:', event.data);
         // 延迟一下确保后端状态已更新
         setTimeout(() => {
           if (taskId) {
@@ -245,7 +246,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       // 也监听 storage 事件（用于跨标签页通信）
       const handleStorageChange = (e: StorageEvent) => {
         if (e.key === `payment_success_${taskId}` && e.newValue === 'true') {
-          console.log('收到支付成功存储事件，刷新任务数据');
+          logger.log('收到支付成功存储事件，刷新任务数据');
           setTimeout(() => {
             if (taskId) {
               loadTaskData();
@@ -261,7 +262,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       // 检查是否有已存在的支付成功标记
       const paymentSuccess = localStorage.getItem(`payment_success_${taskId}`);
       if (paymentSuccess === 'true') {
-        console.log('检测到已存在的支付成功标记，刷新任务数据');
+        logger.log('检测到已存在的支付成功标记，刷新任务数据');
         setTimeout(() => {
           if (taskId) {
             loadTaskData();

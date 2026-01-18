@@ -25,6 +25,7 @@ import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
 import LazyImage from '../components/LazyImage';
 import { loadTaskTranslationsBatch } from '../utils/taskTranslationBatch';
+import { logger } from '../utils/logger';
 import styles from './Home.module.css';
 
 // 配置dayjs插件
@@ -682,7 +683,7 @@ const Home: React.FC = () => {
           const taskIds = sortedTasks.map((t: any) => t.id);
           loadTaskTranslationsBatch(taskIds, language, 'title').catch(err => {
             // 静默失败，不影响主流程
-            console.debug('批量预加载任务翻译失败:', err);
+            logger.debug('批量预加载任务翻译失败:', err);
           });
         }
       })

@@ -6,6 +6,8 @@ import reportWebVitals from './reportWebVitals';
 import { autoFixHttp2 } from './utils/http2Fix';
 import { setupNetworkMonitoring } from './utils/networkDiagnostics';
 import { initWebVitalsMonitoring } from './utils/webVitalsReporter';
+// 初始化日志工具（禁用生产环境的 console.log）
+import './utils/logger';
 
 // 应用 HTTP/2 修复
 autoFixHttp2();

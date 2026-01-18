@@ -8,6 +8,7 @@ import { loadConnectAndInitialize } from '@stripe/connect-js';
 import api from '../../api';
 import StripeConnectAccountInfo from './StripeConnectAccountInfo';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { logger } from '../../utils/logger';
 
 // 从环境变量获取 Stripe Publishable Key
 const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
@@ -68,7 +69,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
             link.href.includes('stripe.com/app/express')) {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Blocked navigation to Stripe external page:', link.href);
+          logger.log('Blocked navigation to Stripe external page:', link.href);
           // 显示提示信息
           if (onError) {
             onError(t('wallet.stripe.useEmbeddedComponent'));
@@ -83,7 +84,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
     const checkLocation = () => {
       if (window.location.href.includes('connect.stripe.com') || 
           window.location.href.includes('stripe.com/app/express')) {
-        console.log('Detected navigation to Stripe external page, blocking...');
+        logger.log('Detected navigation to Stripe external page, blocking...');
         // 阻止跳转并返回
         window.history.back();
         if (onError) {
@@ -104,7 +105,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           window.location.href.includes('stripe.com/app/express')) {
         e.preventDefault();
         window.history.pushState(null, '', window.location.pathname);
-        console.log('Blocked popstate navigation to Stripe external page');
+        logger.log('Blocked popstate navigation to Stripe external page');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -252,7 +253,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         }
       } catch (err: any) {
         // 忽略错误，继续检查
-        console.log('Periodic account status check:', err.response?.status || err.message);
+        logger.log('Periodic account status check:', err.response?.status || err.message);
       }
     }, 3000);
 
@@ -287,7 +288,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
       console.error('Error checking account status:', err);
       // 如果是 404，说明没有账户，这是正常的
       if (err.response?.status === 404) {
-        console.log('No Stripe Connect account found');
+        logger.log('No Stripe Connect account found');
       }
     }
   };
@@ -364,7 +365,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                       clientSecret = sessionResponse.data.client_secret;
                     }
                   } catch (sessionErr: any) {
-                    console.log('Account session endpoint failed, trying onboarding-session:', sessionErr);
+                    logger.log('Account session endpoint failed, trying onboarding-session:', sessionErr);
                   }
                   
                   // 如果 account_session 失败，尝试 onboarding-session
@@ -518,7 +519,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
               onStepChange={(stepChange) => {
                 // 监听步骤变化，用于分析和调试
                 // stepChange.step 包含当前步骤名称，如 'business_type', 'external_account' 等
-                console.log('Onboarding step changed:', stepChange.step);
+                logger.log('Onboarding step changed:', stepChange.step);
               }}
               // 根据官方文档，这些是可选的配置
               // collectionOptions 可以控制收集哪些要求

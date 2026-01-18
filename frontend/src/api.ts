@@ -229,12 +229,14 @@ api.interceptors.response.use(
     
     return response;
   },
-  async error => {
-    // 记录API错误性能（已记录，可用于后续分析）
+  async (error: AxiosError) => {
+    // 记录API错误性能
     const metadata = error.config ? (error.config as any).metadata : undefined;
     if (metadata?.startTime) {
       const duration = performance.now() - metadata.startTime;
-      // API错误性能数据已记录
+      logger.warn(`API请求失败: ${error.config?.url} 耗时 ${duration.toFixed(2)}ms`, error);
+    } else {
+      logger.error('API请求错误:', error);
     }
     
     // 处理速率限制错误（429）
@@ -470,17 +472,17 @@ export async function getTaskRecommendations(
         });
         params.latitude = position.coords.latitude;
         params.longitude = position.coords.longitude;
-        console.debug('发送GPS位置到推荐API:', params.latitude, params.longitude);
+        // GPS位置已添加到请求参数
       } catch (geoError) {
         // 位置获取失败不影响推荐请求
-        console.debug('获取位置失败，继续推荐请求:', geoError);
+        // 静默处理地理位置获取错误
       }
     }
     
     const response = await api.get('/recommendations', { params });
     return response.data;
   } catch (error: any) {
-    console.error('获取推荐失败:', error);
+    logger.error('获取推荐失败:', error);
     throw error;
   }
 }
@@ -494,7 +496,7 @@ export async function getTaskMatchScore(taskId: number) {
     const response = await api.get(`/tasks/${taskId}/match-score`);
     return response.data;
   } catch (error: any) {
-    console.error('获取匹配分数失败:', error);
+    logger.error('获取匹配分数失败:', error);
     throw error;
   }
 }
@@ -554,7 +556,7 @@ export async function recordTaskInteraction(
       };
     } catch (e) {
       // 如果获取设备信息失败，不影响主流程
-      console.warn('获取设备信息失败:', e);
+      logger.warn('获取设备信息失败:', e);
     }
     
     if (Object.keys(metadata).length > 0) {
@@ -564,7 +566,7 @@ export async function recordTaskInteraction(
     await api.post(`/tasks/${taskId}/interaction`, requestData);
   } catch (error: any) {
     // 静默失败，不影响用户体验
-    console.warn('记录交互失败:', error);
+    logger.warn('记录交互失败:', error);
   }
 }
 
@@ -586,7 +588,7 @@ export async function submitRecommendationFeedback(
     });
   } catch (error: any) {
     // 静默失败，不影响用户体验
-    console.warn('提交推荐反馈失败:', error);
+    logger.warn('提交推荐反馈失败:', error);
   }
 }
 
@@ -1819,7 +1821,7 @@ export const requestExitFromTask = async (
 export const startMultiParticipantTask = async (taskId: string | number, isAdmin: boolean = false) => {
   // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
   if (isAdmin) {
-    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    logger.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
     throw new Error('管理员功能已移至管理员子域名');
   }
   const res = await api.post(`/api/expert/tasks/${taskId}/start`);
@@ -1834,7 +1836,7 @@ export const approveParticipant = async (
 ) => {
   // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
   if (isAdmin) {
-    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    logger.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
     throw new Error('管理员功能已移至管理员子域名');
   }
   const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/approve`);
@@ -1849,7 +1851,7 @@ export const rejectParticipant = async (
 ) => {
   // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
   if (isAdmin) {
-    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    logger.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
     throw new Error('管理员功能已移至管理员子域名');
   }
   const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/reject`);
@@ -1864,7 +1866,7 @@ export const approveExitRequest = async (
 ) => {
   // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
   if (isAdmin) {
-    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    logger.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
     throw new Error('管理员功能已移至管理员子域名');
   }
   const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/exit/approve`);
@@ -1879,7 +1881,7 @@ export const rejectExitRequest = async (
 ) => {
   // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
   if (isAdmin) {
-    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    logger.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
     throw new Error('管理员功能已移至管理员子域名');
   }
   const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/exit/reject`);

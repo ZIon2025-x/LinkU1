@@ -6,6 +6,7 @@ import ForgotPasswordModal from './ForgotPasswordModal';
 import VerificationModal from './VerificationModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import Captcha, { CaptchaRef } from './Captcha';
+import { logger } from '../utils/logger';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -60,26 +61,26 @@ const LoginModal: React.FC<LoginModalProps> = ({
     
     const fetchCaptchaConfig = async () => {
       try {
-        console.log('正在获取 CAPTCHA 配置...');
+        logger.log('正在获取 CAPTCHA 配置...');
         const res = await api.get('/api/secure-auth/captcha-site-key');
-        console.log('CAPTCHA 配置获取结果:', res.data);
+        logger.log('CAPTCHA 配置获取结果:', res.data);
         if (res.data.enabled && res.data.site_key) {
           setCaptchaSiteKey(res.data.site_key);
           setCaptchaType(res.data.type || 'recaptcha');
           setCaptchaEnabled(true);
-          console.log('CAPTCHA 已启用:', { 
+          logger.log('CAPTCHA 已启用:', { 
             siteKey: res.data.site_key, 
             type: res.data.type,
             enabled: true
           });
         } else {
-          console.log('CAPTCHA 未启用或未配置:', res.data);
+          logger.log('CAPTCHA 未启用或未配置:', res.data);
           setCaptchaEnabled(false);
           setCaptchaSiteKey(null);
         }
       } catch (error) {
         // CAPTCHA 未配置或获取失败，继续使用（开发环境）
-        console.error('CAPTCHA 配置获取失败:', error);
+        logger.error('CAPTCHA 配置获取失败:', error);
         setCaptchaEnabled(false);
         setCaptchaSiteKey(null);
       }
@@ -468,7 +469,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      console.log('发送手机验证码请求:', { phone: phone.trim(), captchaToken: captchaToken ? `${captchaToken.substring(0, 20)}...` : 'null' });
+      logger.log('发送手机验证码请求:', { phone: phone.trim(), captchaToken: captchaToken ? `${captchaToken.substring(0, 20)}...` : 'null' });
       const res = await api.post('/api/secure-auth/send-phone-verification-code', {
         phone: phone.trim(),
         captcha_token: captchaToken || null,
@@ -1095,7 +1096,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {(() => {
             // 调试：记录显示条件
             if (isLogin && (loginMethod === 'code' || loginMethod === 'phone') && !codeSent) {
-              console.log('CAPTCHA 显示条件检查:', {
+              logger.log('CAPTCHA 显示条件检查:', {
                 isLogin,
                 loginMethod,
                 codeSent,
@@ -1123,7 +1124,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 onVerify={(token) => {
                   setCaptchaToken(token);
                   setError(''); // 清除错误
-                  console.log('CAPTCHA 验证成功，token 已设置:', token ? `${token.substring(0, 20)}...` : 'null');
+                  logger.log('CAPTCHA 验证成功，token 已设置:', token ? `${token.substring(0, 20)}...` : 'null');
                 }}
                 onError={(error) => {
                   setError('人机验证失败，请重试');

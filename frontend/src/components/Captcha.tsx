@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { logger } from '../utils/logger';
 
 interface CaptchaProps {
   onVerify: (token: string) => void;
@@ -220,7 +221,7 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       try {
         window.hcaptcha.reset(widgetId as string);
         setIsVerified(false);
-        console.log('hCaptcha 已重置');
+        logger.log('hCaptcha 已重置');
       } catch (e) {
         console.error('重置 hCaptcha 失败:', e);
       }
@@ -228,7 +229,7 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       try {
         window.grecaptcha.reset(widgetId as number);
         setIsVerified(false);
-        console.log('reCAPTCHA 已重置');
+        logger.log('reCAPTCHA 已重置');
       } catch (e) {
         console.error('重置 reCAPTCHA 失败:', e);
       }

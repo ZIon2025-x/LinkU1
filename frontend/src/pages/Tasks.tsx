@@ -28,6 +28,7 @@ import { WS_BASE_URL } from '../config';
 import { useTaskSorting } from '../hooks/useTaskSorting';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import { Grid, GridImperativeAPI } from 'react-window';
+import { logger } from '../utils/logger';
 import LazyImage from '../components/LazyImage';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -542,7 +543,7 @@ const Tasks: React.FC = () => {
         const taskIds = tasksList.map((t: any) => t.id);
         loadTaskTranslationsBatch(taskIds, language, 'title').catch(err => {
           // 静默失败，不影响主流程
-          console.debug('批量预加载任务翻译失败:', err);
+          logger.debug('批量预加载任务翻译失败:', err);
         });
       }
       

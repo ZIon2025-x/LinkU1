@@ -9,6 +9,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import SEOHead from '../components/SEOHead';
 import HreflangManager from '../components/HreflangManager';
+import { logger } from '../utils/logger';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -288,16 +289,16 @@ const Login: React.FC = () => {
 
   // 密码登录
   const onFinish = async (values: any) => {
-    console.log('登录表单提交:', { email: values.email, passwordLength: values.password?.length });
+    logger.log('登录表单提交:', { email: values.email, passwordLength: values.password?.length });
     setLoading(true);
     setErrorMsg(''); // 清空之前的错误信息
     try {
-      console.log('发送登录请求...');
+      logger.log('发送登录请求...');
       const res = await api.post('/api/secure-auth/login', {
         email: values.email,
         password: values.password,
       });
-      console.log('登录响应:', res.status, res.data);
+      logger.log('登录响应:', res.status, res.data);
       
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
       
@@ -438,7 +439,7 @@ const Login: React.FC = () => {
             layout="vertical" 
             onFinish={onFinish}
             onFinishFailed={(errorInfo) => {
-              console.log('表单验证失败:', errorInfo);
+              logger.log('表单验证失败:', errorInfo);
               setErrorMsg('请填写完整的登录信息');
             }}
           >
@@ -455,7 +456,7 @@ const Login: React.FC = () => {
                 block 
                 loading={loading}
                 onClick={() => {
-                  console.log('登录按钮被点击');
+                  logger.log('登录按钮被点击');
                 }}
               >
                 {t('common.login')}

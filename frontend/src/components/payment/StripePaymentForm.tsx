@@ -8,6 +8,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { Button, message, Spin } from 'antd';
 import api from '../../api';
+import { logger } from '../../utils/logger';
 
 // 初始化 Stripe
 // 注意：如果使用标准 React，需要 REACT_APP_ 前缀
@@ -51,7 +52,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
 
     // 防止重复提交
     if (processing || paymentSucceeded) {
-      console.log('⚠️ 支付已处理中或已成功，忽略重复提交');
+      logger.log('⚠️ 支付已处理中或已成功，忽略重复提交');
       return;
     }
 
@@ -80,7 +81,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       if (confirmError) {
         // 检查是否是 PaymentIntent 已经成功的错误
         if (confirmError.message && confirmError.message.includes('already succeeded')) {
-          console.log('✅ PaymentIntent 已经成功，可能是重复提交');
+          logger.log('✅ PaymentIntent 已经成功，可能是重复提交');
           setPaymentSucceeded(true);
           message.success('支付已成功！');
           onSuccess();
@@ -103,7 +104,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       // 支付成功（嵌入式模式需要检查 paymentIntent 状态）
       // 在重定向模式下，用户会被重定向到 return_url，不会到达这里
       if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ 支付成功，PaymentIntent ID:', paymentIntent.id, '状态:', paymentIntent.status);
+        logger.log('✅ 支付成功，PaymentIntent ID:', paymentIntent.id, '状态:', paymentIntent.status);
         setPaymentSucceeded(true); // 标记支付已成功，防止重复提交
         message.success('支付成功！');
         onSuccess();
@@ -114,7 +115,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
         onError('支付需要额外验证，请完成验证');
       } else {
         // 其他状态（如 processing）
-        console.log('⚠️ 支付状态不是 succeeded:', paymentIntent?.status, 'PaymentIntent ID:', paymentIntent?.id);
+        logger.log('⚠️ 支付状态不是 succeeded:', paymentIntent?.status, 'PaymentIntent ID:', paymentIntent?.id);
         // 即使状态不是 succeeded，也可能正在处理中，等待 webhook
         if (paymentIntent?.status === 'processing') {
           message.info('支付正在处理中，请稍候...');
@@ -130,7 +131,7 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       // 检查是否是 PaymentIntent 已经成功的错误
       const errorMessage = err.message || '支付处理出错';
       if (errorMessage.includes('already succeeded') || errorMessage.includes('already been confirmed')) {
-        console.log('✅ PaymentIntent 已经成功（从异常中检测）');
+        logger.log('✅ PaymentIntent 已经成功（从异常中检测）');
         setPaymentSucceeded(true);
         message.success('支付已成功！');
         onSuccess();
