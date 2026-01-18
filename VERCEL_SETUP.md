@@ -43,16 +43,29 @@ Frontend、Admin 和 Service 三个子项目需要配置为独立的 Vercel 项�
 
 在 Vercel Dashboard → Frontend 项目 → Settings → Git → Ignore Build Step
 
-添加以下命令：
+添加以下命令（推荐版本，处理首次提交）：
 
 ```bash
-# 检查 frontend 文件夹是否有更改
-git diff HEAD^ HEAD --quiet -- frontend/
+# 检查当前提交中是否有 frontend 文件变化
+git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^frontend/" || exit 1
 ```
 
 **说明**：
-- 如果 `frontend/` 文件夹有更改，命令返回非零退出码 → **构建**
-- 如果 `frontend/` 文件夹没有更改，命令返回 0 → **跳过构建**
+- 如果当前提交中有 `frontend/` 文件夹的文件变化，命令返回 0 → **构建**
+- 如果没有变化，命令返回 1 → **跳过构建**
+- 这个命令不依赖 `HEAD^`，适用于首次提交
+
+**备选方案**（如果上面的命令不工作）：
+
+```bash
+# 检查是否有上一个提交，如果有则比较，如果没有则检查当前提交
+if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+  git diff HEAD^ HEAD --quiet -- frontend/
+else
+  git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^frontend/"
+  exit $((1 - $?))
+fi
+```
 
 #### Admin 项目的 Ignore Build Step
 
@@ -61,13 +74,9 @@ git diff HEAD^ HEAD --quiet -- frontend/
 添加以下命令：
 
 ```bash
-# 检查 admin 文件夹是否有更改
-git diff HEAD^ HEAD --quiet -- admin/
+# 检查当前提交中是否有 admin 文件变化
+git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^admin/" || exit 1
 ```
-
-**说明**：
-- 如果 `admin/` 文件夹有更改，命令返回非零退出码 → **构建**
-- 如果 `admin/` 文件夹没有更改，命令返回 0 → **跳过构建**
 
 #### Service 项目的 Ignore Build Step
 
@@ -76,8 +85,8 @@ git diff HEAD^ HEAD --quiet -- admin/
 添加以下命令：
 
 ```bash
-# 检查 service 文件夹是否有更改
-git diff HEAD^ HEAD --quiet -- service/
+# 检查当前提交中是否有 service 文件变化
+git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^service/" || exit 1
 ```
 
 ### 3. 环境变量配置
