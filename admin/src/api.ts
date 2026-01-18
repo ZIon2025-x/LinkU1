@@ -68,14 +68,67 @@ api.interceptors.request.use(async config => {
   return config;
 });
 
+// Token刷新管理
+let isRefreshing = false;
+let refreshPromise: Promise<any> | null = null;
+
 // 响应拦截器
 api.interceptors.response.use(
   response => response,
   async error => {
+    // 处理401错误 - token刷新
     if (error.response?.status === 401) {
-      // 未授权，重定向到登录页
-      window.location.href = '/login';
+      const originalRequest = error.config;
+      
+      // 跳过刷新token的API，避免无限循环
+      const skipRefreshApis = [
+        '/api/auth/admin/login',
+        '/api/auth/admin/refresh',
+        '/api/auth/admin/verify-code',
+        '/api/auth/admin/send-verification-code',
+        '/api/csrf/token'
+      ];
+      
+      if (originalRequest && !skipRefreshApis.some(skipApi => originalRequest.url?.includes(skipApi))) {
+        // 如果正在刷新，等待刷新完成
+        if (isRefreshing && refreshPromise) {
+          try {
+            await refreshPromise;
+            // 刷新成功后，重试原始请求
+            return api.request(originalRequest);
+          } catch (refreshError) {
+            // 刷新失败，跳转到登录页
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+            return Promise.reject(refreshError);
+          }
+        }
+        
+        // 开始刷新token
+        isRefreshing = true;
+        refreshPromise = api.post('/api/auth/admin/refresh');
+        
+        try {
+          await refreshPromise;
+          // 清除CSRF token缓存
+          clearCSRFToken();
+          // 刷新成功后，重试原始请求
+          isRefreshing = false;
+          refreshPromise = null;
+          return api.request(originalRequest);
+        } catch (refreshError) {
+          // 刷新失败，跳转到登录页
+          isRefreshing = false;
+          refreshPromise = null;
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          return Promise.reject(refreshError);
+        }
+      }
     }
+    
     return Promise.reject(error);
   }
 );

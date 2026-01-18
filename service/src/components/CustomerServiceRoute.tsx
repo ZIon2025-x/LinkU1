@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import { getServiceProfile } from '../api';
 
 interface CustomerServiceRouteProps {
@@ -29,20 +30,17 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
     checkAuth();
   }, []);
 
-  // 在认证完成前，不显示任何内容
+  // 在认证完成前，显示加载状态
   if (loading || isAuthorized === null) {
-    // 显示加载状态
     return (
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        fontSize: '16px',
-        color: '#666',
-        background: '#f5f5f5'
+        background: '#f0f2f5'
       }}>
-        验证权限中...
+        <Spin size="large" tip="验证权限中..." />
       </div>
     );
   }
