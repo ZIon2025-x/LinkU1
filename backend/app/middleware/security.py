@@ -18,13 +18,24 @@ async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
     
     # CSP 策略（SPA 场景，避免内联脚本）
+    # 从配置中获取允许的 API 域名
+    from app.config import Config
+    api_domain = "https://api.link2ur.com" if Config.IS_PRODUCTION else "http://localhost:8000"
+    
+    # 构建允许的连接源列表
+    connect_sources = ["'self'", api_domain, "wss://api.link2ur.com"]
+    # 添加允许的 HTTPS 源
+    for origin in Config.ALLOWED_ORIGINS:
+        if origin.startswith('https://'):
+            connect_sources.append(origin)
+    
     csp = (
         "default-src 'self'; "
         "script-src 'self' 'strict-dynamic'; "  # 不使用 nonce，避免内联脚本
-        "style-src 'self'; "  # 逐步移除 'unsafe-inline'，使用外部样式或 CSS-in-JS
-        "img-src 'self' data: https:; "
+        "style-src 'self' 'unsafe-inline'; "  # 暂时保留 unsafe-inline 以兼容现有代码
+        "img-src 'self' data: https: blob:; "
         "font-src 'self' data:; "
-        "connect-src 'self' https://api.example.com wss:; "
+        f"connect-src {' '.join(connect_sources)}; "
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
@@ -55,8 +66,10 @@ async def security_headers_middleware(request: Request, call_next):
         "accelerometer=()"
     )
     
-    # 如果使用HTTPS，添加HSTS（HTTP Strict Transport Security）
-    if request.url.scheme == "https":
+    # 添加HSTS（HTTP Strict Transport Security）
+    # 生产环境始终添加，开发环境只在 HTTPS 时添加
+    from app.config import Config
+    if Config.IS_PRODUCTION or request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     
     return response

@@ -5823,6 +5823,56 @@ def set_customer_service_online(
         db.refresh(current_user)
         logger.info(f"[CUSTOMER_SERVICE] 验证更新后状态: {current_user.is_online}")
         
+        # 清理僵尸对话：自动结束那些创建时间超过10分钟且只有系统消息的对话
+        try:
+            from app.models import CustomerServiceChat, CustomerServiceMessage
+            from app.utils.time_utils import get_utc_time
+            from datetime import timedelta
+            from sqlalchemy import func
+            
+            now = get_utc_time()
+            threshold_time = now - timedelta(minutes=10)  # 10分钟阈值
+            
+            # 查找所有进行中的对话
+            active_chats = (
+                db.query(CustomerServiceChat)
+                .filter(
+                    CustomerServiceChat.service_id == current_user.id,
+                    CustomerServiceChat.is_ended == 0,
+                    CustomerServiceChat.created_at < threshold_time
+                )
+                .all()
+            )
+            
+            cleaned_count = 0
+            for chat in active_chats:
+                # 检查是否有非系统消息
+                has_real_message = (
+                    db.query(CustomerServiceMessage)
+                    .filter(
+                        CustomerServiceMessage.chat_id == chat.chat_id,
+                        CustomerServiceMessage.sender_type != 'system'
+                    )
+                    .first()
+                ) is not None
+                
+                # 如果只有系统消息，自动结束对话
+                if not has_real_message:
+                    chat.is_ended = 1
+                    chat.ended_at = now
+                    chat.ended_reason = "auto_cleanup"
+                    chat.ended_by = "system"
+                    chat.ended_type = "auto"
+                    cleaned_count += 1
+                    logger.info(f"[CUSTOMER_SERVICE] 自动清理僵尸对话: {chat.chat_id}")
+            
+            if cleaned_count > 0:
+                db.commit()
+                logger.info(f"[CUSTOMER_SERVICE] 客服上线时清理了 {cleaned_count} 个僵尸对话")
+        except Exception as cleanup_error:
+            logger.warning(f"[CUSTOMER_SERVICE] 清理僵尸对话时出错: {cleanup_error}")
+            # 不影响上线操作，继续执行
+        
         return {"message": "客服已设置为在线状态", "is_online": current_user.is_online}
     except Exception as e:
         logger.error(f"[CUSTOMER_SERVICE] 设置在线状态失败: {e}")

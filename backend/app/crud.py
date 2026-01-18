@@ -4072,21 +4072,61 @@ def get_user_customer_service_chats(db: Session, user_id: str) -> list:
 
 def get_service_customer_service_chats(db: Session, service_id: str) -> list:
     """获取客服的所有对话 - 进行中对话置顶，已结束对话沉底且最多50个"""
-    from sqlalchemy import or_
+    from sqlalchemy import or_, exists, and_
+    from datetime import timedelta
 
-    from app.models import CustomerServiceChat
+    from app.models import CustomerServiceChat, CustomerServiceMessage
 
     # 分别查询进行中和已结束的对话
     # 1. 进行中的对话 - 按最后消息时间降序排列
-    active_chats = (
+    # 过滤掉只有系统消息且创建时间超过10分钟的对话（用户未真正连接）
+    active_chats_query = (
         db.query(CustomerServiceChat)
         .filter(
             CustomerServiceChat.service_id == service_id,
             CustomerServiceChat.is_ended == 0,
         )
-        .order_by(CustomerServiceChat.last_message_at.desc())
-        .all()
     )
+    
+    # 获取所有进行中的对话
+    all_active_chats = active_chats_query.all()
+    
+    if not all_active_chats:
+        active_chats = []
+    else:
+        # 批量查询所有对话的非系统消息（更高效）
+        chat_ids = [chat.chat_id for chat in all_active_chats]
+        chats_with_real_messages = set(
+            db.query(CustomerServiceMessage.chat_id)
+            .filter(
+                CustomerServiceMessage.chat_id.in_(chat_ids),
+                CustomerServiceMessage.sender_type != 'system'
+            )
+            .distinct()
+            .all()
+        )
+        # 转换为字符串集合以便快速查找
+        chats_with_real_messages = {chat_id[0] for chat_id in chats_with_real_messages}
+        
+        # 过滤掉只有系统消息且创建时间超过10分钟的对话
+        # 与客服上线时的清理逻辑保持一致
+        now = get_utc_time()
+        threshold_time = now - timedelta(minutes=10)  # 10分钟阈值
+        
+        active_chats = []
+        for chat in all_active_chats:
+            has_real_message = chat.chat_id in chats_with_real_messages
+            
+            # 如果只有系统消息，检查创建时间
+            if not has_real_message:
+                # 如果创建时间超过10分钟，说明用户没有真正连接，不显示
+                if chat.created_at and chat.created_at < threshold_time:
+                    continue
+            
+            active_chats.append(chat)
+        
+        # 按最后消息时间降序排列
+        active_chats.sort(key=lambda x: x.last_message_at if x.last_message_at else x.created_at, reverse=True)
 
     # 2. 已结束的对话 - 按结束时间降序排列，最多50个
     ended_chats = (

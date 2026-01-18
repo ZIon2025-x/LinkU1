@@ -128,10 +128,19 @@ asyncpg_logger = logging.getLogger("asyncpg")
 asyncpg_logger.addFilter(AsyncPGConnectionFilter())
 
 
+# API 文档配置 - 生产环境禁用文档访问
+from app.config import Config
+docs_url = None if Config.IS_PRODUCTION else "/docs"
+redoc_url = None if Config.IS_PRODUCTION else "/redoc"
+openapi_url = None if Config.IS_PRODUCTION else "/openapi.json"
+
 app = FastAPI(
     title="Link²Ur Task Platform",
     description="A simple task platform for students, freelancers, and job seekers.",
     version="0.1.0",
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url,
 )
 
 # 添加CORS中间件 - 使用安全配置

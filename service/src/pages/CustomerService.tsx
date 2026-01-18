@@ -30,6 +30,7 @@ import NotificationBell, { NotificationBellRef } from '../components/Notificatio
 import NotificationModal from '../components/NotificationModal';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from '../components/LazyImage';
+import { formatImageUrl } from '../utils/imageUtils';
 import './CustomerService.css';
 
 // 时区检测和转换工具函数
@@ -1451,7 +1452,7 @@ const CustomerService: React.FC = () => {
           <div className="status-header">
             <div className="service-avatar">
               <LazyImage 
-                src="/static/service.png"
+                src={formatImageUrl("/static/service.png")}
                 alt="客服头像" 
                 className="avatar-image"
                 width={60}
@@ -1838,7 +1839,7 @@ const CustomerService: React.FC = () => {
                       }}
                     >
                       <LazyImage 
-                        src={session.user_avatar} 
+                        src={formatImageUrl(session.user_avatar)} 
                         alt="用户头像" 
                         width={40}
                         height={40}
@@ -1932,7 +1933,7 @@ const CustomerService: React.FC = () => {
                       }}
                     >
                       <LazyImage 
-                        src={session.user_avatar} 
+                        src={formatImageUrl(session.user_avatar)} 
                         alt="用户头像" 
                         width={40}
                         height={40}
@@ -2002,7 +2003,7 @@ const CustomerService: React.FC = () => {
                 gap: 12
               }}>
                 <LazyImage 
-                  src={selectedSession.user_avatar}
+                  src={formatImageUrl(selectedSession.user_avatar)}
                   alt="用户头像" 
                   width={40}
                   height={40}
@@ -2014,7 +2015,7 @@ const CustomerService: React.FC = () => {
                     // 如果用户头像加载失败，使用默认头像
                     const img = e.currentTarget as HTMLImageElement;
                     if (img) {
-                      img.src = '/static/avatar1.png';
+                      img.src = formatImageUrl('/static/avatar1.png');
                     }
                   }}
                 />
