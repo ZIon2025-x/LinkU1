@@ -31,215 +31,45 @@ class UserRedisCleanup:
             logger.error(f"[USER_REDIS_CLEANUP] Redis客户端初始化失败: {e}")
     
     def cleanup_user_sessions(self, user_id: str = None) -> int:
-        """清理用户会话数据"""
-        if not self.redis_client:
-            return 0
+        """清理用户会话数据
         
-        try:
-            cleaned_count = 0
-            
-            if user_id:
-                # 清理特定用户的会话
-                patterns = [
-                    f"session:*",  # 所有会话
-                    f"user_sessions:{user_id}",  # 用户会话列表
-                ]
-            else:
-                # 清理所有用户会话
-                patterns = [
-                    "session:*",
-                    "user_sessions:*",
-                ]
-            
-            for pattern in patterns:
-                keys = self.redis_client.keys(pattern)
-                for key in keys:
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    
-                    # 检查是否是会话数据
-                    if key_str.startswith("session:"):
-                        data = self._get_redis_data(key_str)
-                        # 如果数据无法解析或已过期，删除
-                        if data is None or self._is_session_expired(data):
-                            self.redis_client.delete(key_str)
-                            cleaned_count += 1
-                            if data is None:
-                                logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的会话数据: {key_str}")
-                            else:
-                                logger.info(f"[USER_REDIS_CLEANUP] 删除过期会话: {key_str}")
-                    
-                    # 检查是否是用户会话列表
-                    elif key_str.startswith("user_sessions:"):
-                        # 清理空的用户会话列表
-                        if self.redis_client.scard(key_str) == 0:
-                            self.redis_client.delete(key_str)
-                            cleaned_count += 1
-                            logger.info(f"[USER_REDIS_CLEANUP] 删除空会话列表: {key_str}")
-            
-            logger.info(f"[USER_REDIS_CLEANUP] 清理了 {cleaned_count} 个用户会话相关数据")
-            return cleaned_count
-            
-        except Exception as e:
-            logger.error(f"[USER_REDIS_CLEANUP] 清理用户会话失败: {e}")
-            return 0
+        ⚠️ 已禁用：Redis 使用 setex 设置了 TTL，会自动删除过期 key，不需要手动清理。
+        手动清理会导致以下问题：
+        1. 过期判断可能和实际 TTL 不一致（如 iOS 应用使用1年有效期）
+        2. 遍历大量 key 性能差
+        3. 可能误删还在有效期内的会话
+        
+        如果需要清理特定用户的会话，请使用 SecureAuthManager.revoke_user_sessions(user_id)
+        """
+        # ⚠️ 已禁用，直接返回 0
+        logger.debug("[USER_REDIS_CLEANUP] cleanup_user_sessions 已禁用（Redis TTL 会自动处理）")
+        return 0
     
     def cleanup_refresh_tokens(self, user_id: str = None) -> int:
-        """清理refresh token数据"""
-        if not self.redis_client:
-            return 0
+        """清理refresh token数据
         
-        try:
-            cleaned_count = 0
-            
-            if user_id:
-                # 清理特定用户的refresh token
-                patterns = [
-                    f"refresh_token:*",  # 所有refresh token
-                    f"user_refresh_tokens:{user_id}",  # 用户refresh token列表
-                ]
-            else:
-                # 清理所有refresh token（包括客服的）
-                patterns = [
-                    "refresh_token:*",
-                    "user_refresh_tokens:*",
-                    "service_refresh_token:*",  # 客服refresh token
-                ]
-            
-            for pattern in patterns:
-                keys = self.redis_client.keys(pattern)
-                for key in keys:
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    
-                    # 检查是否是refresh token数据
-                    if key_str.startswith("refresh_token:") or key_str.startswith("service_refresh_token:"):
-                        data = self._get_redis_data(key_str)
-                        # 如果数据无法解析或已过期，删除
-                        if data is None or self._is_refresh_token_expired(data):
-                            self.redis_client.delete(key_str)
-                            cleaned_count += 1
-                            if data is None:
-                                logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的refresh token数据: {key_str}")
-                            else:
-                                logger.info(f"[USER_REDIS_CLEANUP] 删除过期refresh token: {key_str}")
-                    
-                    # 检查是否是用户refresh token列表
-                    elif key_str.startswith("user_refresh_tokens:"):
-                        # 清理空的用户refresh token列表
-                        if self.redis_client.scard(key_str) == 0:
-                            self.redis_client.delete(key_str)
-                            cleaned_count += 1
-                            logger.info(f"[USER_REDIS_CLEANUP] 删除空refresh token列表: {key_str}")
-            
-            logger.info(f"[USER_REDIS_CLEANUP] 清理了 {cleaned_count} 个refresh token相关数据")
-            return cleaned_count
-            
-        except Exception as e:
-            logger.error(f"[USER_REDIS_CLEANUP] 清理refresh token失败: {e}")
-            return 0
+        ⚠️ 已禁用：Redis 使用 setex 设置了 TTL，会自动删除过期 key，不需要手动清理。
+        refresh token 创建时已设置正确的过期时间（iOS 1年，其他12小时）。
+        
+        如果需要撤销特定用户的 token，请使用 revoke_all_user_refresh_tokens(user_id)
+        """
+        # ⚠️ 已禁用，直接返回 0
+        logger.debug("[USER_REDIS_CLEANUP] cleanup_refresh_tokens 已禁用（Redis TTL 会自动处理）")
+        return 0
     
     def cleanup_user_cache(self, user_id: str = None) -> int:
-        """清理用户缓存数据"""
-        if not self.redis_client:
-            return 0
+        """清理用户缓存数据
         
-        try:
-            cleaned_count = 0
-            
-            if user_id:
-                # 清理特定用户的缓存
-                patterns = [
-                    f"user:{user_id}",
-                    f"user_tasks:{user_id}*",
-                    f"user_profile:{user_id}",
-                    f"user_notifications:{user_id}",
-                    f"user_reviews:{user_id}",
-                ]
-            else:
-                # 清理所有用户缓存
-                patterns = [
-                    "user:*",
-                    "user_tasks:*",
-                    "user_profile:*",
-                    "user_notifications:*",
-                    "user_reviews:*",
-                ]
-            
-            for pattern in patterns:
-                keys = self.redis_client.keys(pattern)
-                for key in keys:
-                    key_str = key.decode() if isinstance(key, bytes) else key
-                    
-                    # 尝试获取数据
-                    data = self._get_redis_data(key_str)
-                    
-                    if data is None:
-                        # ⚠️ 数据无法解析，记录详细信息（脱敏）并删除
-                        try:
-                            import hashlib
-                            import re
-                            import random
-                            
-                            # 获取原始数据用于日志
-                            raw_data = self.redis_client.get(key_str)
-                            data_type = type(raw_data).__name__ if raw_data else "None"
-                            data_size = len(raw_data) if raw_data else 0
-                            
-                            # 计算哈希值，而不是记录完整内容
-                            data_hash = hashlib.sha256(raw_data).hexdigest()[:16] if raw_data else "empty"
-                            
-                            # 脱敏预览（仅前100字节，且脱敏）
-                            preview = ""
-                            if raw_data:
-                                try:
-                                    preview_str = str(raw_data)[:100]
-                                    # 脱敏敏感信息
-                                    preview_str = re.sub(r'([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', 
-                                                        r'\1***@\2', preview_str)
-                                    preview_str = re.sub(r'(\d{3})\d{4}(\d{4})', r'\1****\2', preview_str)
-                                    preview = preview_str
-                                except:
-                                    preview = "<binary data>"
-                            else:
-                                preview = "empty"
-                            
-                            # ⚠️ 采样日志：只记录部分无法解析的数据，避免日志放大
-                            # 如果是 pickle 格式的旧数据（SQLAlchemy 对象），这是正常的清理行为
-                            is_pickle_old_format = (
-                                isinstance(raw_data, bytes) and 
-                                raw_data.startswith(b'\x80') and  # pickle 魔数
-                                key_str.startswith('user:')  # 用户缓存键
-                            )
-                            
-                            if is_pickle_old_format:
-                                # 旧格式数据，使用 debug 级别，不记录为警告
-                                logger.debug(
-                                    f"[USER_REDIS_CLEANUP] 清理旧格式pickle数据: {key_str}, "
-                                    f"类型: {data_type}, 大小: {data_size}"
-                                )
-                            elif random.random() < 0.1:  # 10%采样率
-                                # 其他无法解析的数据，记录为警告
-                                logger.warning(
-                                    f"[USER_REDIS_CLEANUP] 无法解析的缓存数据: {key_str}, "
-                                    f"类型: {data_type}, 大小: {data_size}, 哈希: {data_hash}, 预览: {preview}"
-                                )
-                            
-                            # 删除无法解析的数据
-                            self.redis_client.delete(key_str)
-                            cleaned_count += 1
-                        except Exception as e:
-                            logger.error(f"[USER_REDIS_CLEANUP] 删除损坏的缓存数据失败 {key_str}: {e}")
-                    elif self._is_cache_expired(data):
-                        # 数据可以解析但已过期，删除
-                        self.redis_client.delete(key_str)
-                        cleaned_count += 1
-                        logger.info(f"[USER_REDIS_CLEANUP] 删除过期缓存: {key_str}")
-            
-            logger.info(f"[USER_REDIS_CLEANUP] 清理了 {cleaned_count} 个用户缓存数据")
-            return cleaned_count
-            
-        except Exception as e:
-            logger.error(f"[USER_REDIS_CLEANUP] 清理用户缓存失败: {e}")
-            return 0
+        ⚠️ 已禁用：
+        1. Redis 缓存使用 TTL 自动过期
+        2. 现在基本没有旧格式（pickle）数据需要迁移
+        3. 遍历大量 key 性能差
+        
+        如果需要清理特定用户的缓存，请使用 redis_cache.clear_user_cache(user_id)
+        """
+        # ⚠️ 已禁用，直接返回 0
+        logger.debug("[USER_REDIS_CLEANUP] cleanup_user_cache 已禁用（Redis TTL 会自动处理）")
+        return 0
     
     def cleanup_all_user_data(self, user_id: str = None) -> Dict[str, int]:
         """清理所有用户数据"""
@@ -512,7 +342,10 @@ class UserRedisCleanup:
             logger.error(f"[USER_REDIS_CLEANUP] 迁移失败 {key}: {e}")
     
     def _is_session_expired(self, data: Dict[str, Any]) -> bool:
-        """检查会话是否过期"""
+        """检查会话是否过期
+        
+        ⚠️ 注意：iOS 应用会话使用 1 年有效期，不能使用固定的 24 小时判断！
+        """
         try:
             # 首先检查是否被标记为不活跃
             if not data.get('is_active', True):
@@ -523,8 +356,17 @@ class UserRedisCleanup:
                 return True
             
             last_activity = parse_iso_utc(last_activity_str)
-            # 会话24小时过期
-            return get_utc_time() - last_activity > timedelta(hours=24)
+            
+            # ⚠️ iOS 应用会话使用 1 年有效期，其他会话使用 24 小时
+            is_ios_app = data.get('is_ios_app', False)
+            if is_ios_app:
+                # iOS 应用：1年有效期
+                expire_hours = 365 * 24
+            else:
+                # 普通会话：24小时
+                expire_hours = 24
+            
+            return get_utc_time() - last_activity > timedelta(hours=expire_hours)
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 检查会话过期失败: {e}")
             return True
