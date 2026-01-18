@@ -557,7 +557,7 @@ struct PayoutTransactionRowView: View {
 }
 
 /// Stripe Connect 余额模型
-struct StripeConnectBalance: Codable {
+struct StripeConnectBalance: Codable, Sendable {
     let available: Double
     let pending: Double
     let total: Double
@@ -573,9 +573,30 @@ struct StripeConnectBalance: Codable {
         case availableBreakdown = "available_breakdown"
         case pendingBreakdown = "pending_breakdown"
     }
+    
+    // 显式标记为 nonisolated，允许在非主线程使用
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.available = try container.decode(Double.self, forKey: .available)
+        self.pending = try container.decode(Double.self, forKey: .pending)
+        self.total = try container.decode(Double.self, forKey: .total)
+        self.currency = try container.decode(String.self, forKey: .currency)
+        self.availableBreakdown = try container.decode([BalanceBreakdown].self, forKey: .availableBreakdown)
+        self.pendingBreakdown = try container.decode([BalanceBreakdown].self, forKey: .pendingBreakdown)
+    }
+    
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(available, forKey: .available)
+        try container.encode(pending, forKey: .pending)
+        try container.encode(total, forKey: .total)
+        try container.encode(currency, forKey: .currency)
+        try container.encode(availableBreakdown, forKey: .availableBreakdown)
+        try container.encode(pendingBreakdown, forKey: .pendingBreakdown)
+    }
 }
 
-struct BalanceBreakdown: Codable {
+struct BalanceBreakdown: Codable, Sendable {
     let amount: Double
     let currency: String
     let sourceTypes: [String: Int]?
@@ -584,6 +605,21 @@ struct BalanceBreakdown: Codable {
         case amount
         case currency
         case sourceTypes = "source_types"
+    }
+    
+    // 显式标记为 nonisolated，允许在非主线程使用
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.amount = try container.decode(Double.self, forKey: .amount)
+        self.currency = try container.decode(String.self, forKey: .currency)
+        self.sourceTypes = try container.decodeIfPresent([String: Int].self, forKey: .sourceTypes)
+    }
+    
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(amount, forKey: .amount)
+        try container.encode(currency, forKey: .currency)
+        try container.encodeIfPresent(sourceTypes, forKey: .sourceTypes)
     }
 }
 

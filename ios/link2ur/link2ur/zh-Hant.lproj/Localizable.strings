@@ -198,6 +198,7 @@
 "student_verification.verification" = "學生認證";
 "student_verification.submit" = "提交認證";
 "student_verification.upload_document" = "上傳證件";
+"student_verification.description" = "學生認證可以讓您享受更多平台特權和服務";
 
 // MARK: - Customer Service
 "customer_service.customer_service" = "客服中心";

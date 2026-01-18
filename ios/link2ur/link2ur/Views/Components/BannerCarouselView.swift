@@ -222,6 +222,9 @@ struct InternalLinkView: View {
                 } else {
                     ActivityListView()
                 }
+            } else if linkUrl.contains("/student-verification") {
+                // 学生认证页面
+                StudentVerificationView()
             } else {
                 // 默认跳转到首页
                 HomeView()

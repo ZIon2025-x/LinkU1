@@ -3,7 +3,7 @@ import Foundation
 /// 缓存管理器 - 企业级缓存系统（内存 + 磁盘）
 /// 提供高性能的内存缓存和持久化的磁盘缓存
 /// 注意：使用 nonisolated 允许在后台线程访问，但所有操作都通过锁保护以确保线程安全
-nonisolated public class CacheManager {
+nonisolated public class CacheManager: @unchecked Sendable {
     public static let shared = CacheManager()
     
     // MARK: - 企业级缓存组件
@@ -911,8 +911,8 @@ nonisolated public class CacheManager {
 /// 注意：使用泛型包装器以支持只符合 Decodable 的类型
 /// 使用 @preconcurrency 来抑制并发警告（因为我们确保只缓存非 actor-isolated 类型）
 @preconcurrency
-private struct DiskCacheItemWrapper<T: Decodable>: Decodable {
-    let data: T
+private struct DiskCacheItemWrapper<T: Decodable>: Decodable, @unchecked Sendable {
+    nonisolated(unsafe) let data: T
     let expirationDate: Date?
     
     enum CodingKeys: String, CodingKey {
@@ -930,8 +930,8 @@ private struct DiskCacheItemWrapper<T: Decodable>: Decodable {
 /// 磁盘缓存项（用于编码，需要 Codable）
 /// 使用 @preconcurrency 来抑制并发警告（因为我们确保只缓存非 actor-isolated 类型）
 @preconcurrency
-private struct DiskCacheItem<T: Codable>: Codable {
-    let data: T
+private struct DiskCacheItem<T: Codable>: Codable, @unchecked Sendable {
+    nonisolated(unsafe) let data: T
     let expirationDate: Date?
     
     // 普通初始化器（用于创建实例）

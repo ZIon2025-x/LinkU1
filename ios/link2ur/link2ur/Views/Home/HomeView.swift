@@ -1937,6 +1937,19 @@ class BannerCarouselViewModel: ObservableObject {
         )
     }
     
+    // 硬编码的学生认证Banner（始终显示在第二个位置）
+    private var hardcodedStudentVerificationBanner: Banner {
+        Banner(
+            id: -2, // 使用负数ID，避免与后端Banner冲突
+            imageUrl: "local:StudentVerificationBanner", // 使用本地Assets中的学生认证图片
+            title: LocalizationKey.studentVerificationVerification.localized,
+            subtitle: LocalizationKey.studentVerificationDescription.localized,
+            linkUrl: "/student-verification",
+            linkType: "internal",
+            order: -998 // 确保始终是第二个
+        )
+    }
+    
     init() {
         // 初始化时立即从缓存加载数据，避免视图渲染时显示加载状态
         loadBannersFromCache()
@@ -1947,7 +1960,8 @@ class BannerCarouselViewModel: ObservableObject {
         // 先快速检查内存缓存（同步，很快）
         if let cachedBanners = CacheManager.shared.loadBanners(), !cachedBanners.isEmpty {
             var sortedBanners = cachedBanners.sorted { $0.order < $1.order }
-            // 将硬编码的跳蚤市场Banner添加到最前面
+            // 将硬编码的Banner添加到最前面（学生认证在第二个位置）
+            sortedBanners.insert(self.hardcodedStudentVerificationBanner, at: 0)
             sortedBanners.insert(self.hardcodedFleaMarketBanner, at: 0)
             self.banners = sortedBanners
             Logger.success("初始化时从缓存加载了 \(cachedBanners.count) 个 Banner", category: .cache)
@@ -1974,9 +1988,9 @@ class BannerCarouselViewModel: ObservableObject {
                     if case .failure(let error) = completion {
                         self.errorMessage = error.localizedDescription
                         Logger.error("加载广告失败: \(error.localizedDescription)", category: .api)
-                        // 如果之前没有缓存数据，显示硬编码的跳蚤市场Banner
+                        // 如果之前没有缓存数据，显示硬编码的Banner
                         if self.banners.isEmpty {
-                            self.banners = [self.hardcodedFleaMarketBanner]
+                            self.banners = [self.hardcodedFleaMarketBanner, self.hardcodedStudentVerificationBanner]
                         }
                     }
                 },
@@ -1985,7 +1999,8 @@ class BannerCarouselViewModel: ObservableObject {
                     // 将后端返回的Banner排序
                     var serverBanners = response.banners.sorted { $0.order < $1.order }
                     
-                    // 将硬编码的跳蚤市场Banner添加到最前面
+                    // 将硬编码的Banner添加到最前面（学生认证在第二个位置）
+                    serverBanners.insert(self.hardcodedStudentVerificationBanner, at: 0)
                     serverBanners.insert(self.hardcodedFleaMarketBanner, at: 0)
                     
                     // 保存到缓存
