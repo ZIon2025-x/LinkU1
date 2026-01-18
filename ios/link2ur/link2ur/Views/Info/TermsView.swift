@@ -35,7 +35,7 @@ struct TermsView: View {
                 InfoBox(
                     title: isChinese ? "主体信息" : "Entity Information",
                     content: [
-                        isChinese ? "运营方（\"我们\"\"Link²Ur\"）：Link²Ur" : "Operator (\"We\" \"Link²Ur\"): Link²Ur",
+                        isChinese ? "运营方（\"我们\"\"Link²Ur\"）：LINK2UR LTD" : "Operator (\"We\" \"Link²Ur\"): LINK2UR LTD",
                         isChinese ? "联系：info@link2ur.com" : "Contact: info@link2ur.com"
                     ]
                 )
@@ -44,13 +44,12 @@ struct TermsView: View {
                 TermsSection(
                     title: isChinese ? "1. 服务性质" : "1. Nature of Service",
                     content: [
-                        isChinese ? "本服务为早期测试版（Beta/MVP），旨在撮合与沟通，不在平台内提供收付款或资金托管。我们可随时变更、暂停或终止访问。" : "This service is an early beta version (Beta/MVP) designed for matching and communication, and does not provide payment or fund custody within the platform. We may change, suspend or terminate access at any time.",
+                        isChinese ? "Link²Ur 是一个在线任务撮合平台，连接任务发布者与任务接受者。我们提供信息撮合服务，并通过 Stripe 支付系统处理平台内的支付交易。我们可随时变更、暂停或终止访问。" : "Link²Ur is an online task matching platform connecting task posters with task takers. We provide information matching services and process in-platform payment transactions through the Stripe payment system. We may change, suspend or terminate access at any time.",
                         isChinese ? "测试阶段声明：当前平台处于测试阶段，功能可能不完善，服务可能不稳定。用户使用本平台即表示理解并接受测试阶段可能存在的风险。" : "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
-                        isChinese ? "支付限制：目前平台无线上支付渠道，不支持在线支付功能。所有交易均需用户线下自行完成，平台不参与任何资金流转。" : "Payment Limitations: The platform currently has no online payment channels and does not support online payment functions. All transactions must be completed offline by users themselves, and the platform does not participate in any fund flows."
+                        isChinese ? "支付系统：平台使用 Stripe 支付系统处理在线支付。所有支付均通过 Stripe 安全处理，平台作为托管方，在任务完成后将资金转给任务接受者。" : "Payment System: The platform uses the Stripe payment system to process online payments. All payments are securely processed through Stripe, and the platform acts as an escrow service, transferring funds to task takers upon task completion."
                     ],
                     warnings: [
-                        isChinese ? "测试阶段声明：当前平台处于测试阶段，功能可能不完善，服务可能不稳定。用户使用本平台即表示理解并接受测试阶段可能存在的风险。" : "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
-                        isChinese ? "支付限制：目前平台无线上支付渠道，不支持在线支付功能。所有交易均需用户线下自行完成，平台不参与任何资金流转。" : "Payment Limitations: The platform currently has no online payment channels and does not support online payment functions. All transactions must be completed offline by users themselves, and the platform does not participate in any fund flows."
+                        isChinese ? "测试阶段声明：当前平台处于测试阶段，功能可能不完善，服务可能不稳定。用户使用本平台即表示理解并接受测试阶段可能存在的风险。" : "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase."
                     ]
                 )
                 
@@ -71,14 +70,12 @@ struct TermsView: View {
                 TermsSection(
                     title: isChinese ? "3. 平台定位与站外交易" : "3. Platform Position and Off-Platform Transactions",
                     content: [
-                        isChinese ? "我们是撮合型在线平台，不是任何任务/项目的雇主、承包商或代理。平台仅提供信息撮合服务，不参与实际交易执行。" : "We are a matching online platform, not an employer, contractor or agent for any tasks/projects. The platform only provides information matching services and does not participate in actual transaction execution.",
+                        isChinese ? "我们是撮合型在线平台，不是任何任务/项目的雇主、承包商或代理。平台提供信息撮合服务和平台内支付处理服务。" : "We are a matching online platform, not an employer, contractor or agent for any tasks/projects. The platform provides information matching services and in-platform payment processing services.",
                         isChinese ? "站外交易（Off-Platform Transactions）：双方可线下或通过其他渠道自行支付/结算。与站外交易相关的合同、质量、交付、退款、税费与纠纷，均由交易双方自行承担与处理；除非因我们自身过错，我们对站外交易不承担责任或担保。建议双方保留书面约定与凭证并自行进行尽职调查。" : "Off-Platform Transactions: Parties may pay/settle offline or through other channels. We are not responsible for or guarantee off-platform transactions related to contracts, quality, delivery, refunds, taxes and disputes, unless due to our own fault. We recommend parties maintain written agreements and records and conduct their own due diligence.",
-                        isChinese ? "雇佣关系声明：平台与用户之间不存在雇佣关系。用户以自雇/个体户形式提供服务，用户对其提供的服务承担全部责任，包括但不限于服务质量、税务申报、保险等。平台不对用户的服务质量、安全或任何损失承担责任。" : "Employment Relationship Statement: There is no employment relationship between the platform and users. Users provide services as self-employed/independent contractors and bear full responsibility for their services, including but not limited to service quality, tax reporting, insurance, etc. The platform is not responsible for users' service quality, safety or any losses.",
-                        isChinese ? "线下交易免责：对于用户之间进行的线下交易，平台不承担任何责任。用户应自行评估交易风险，平台不对交易结果、服务质量、资金安全等承担任何责任。" : "Offline Transaction Disclaimer: For offline transactions between users, the platform assumes no responsibility. Users should assess transaction risks themselves, and the platform bears no responsibility for transaction outcomes, service quality, fund safety, etc."
+                        isChinese ? "雇佣关系声明：平台与用户之间不存在雇佣关系。用户以自雇/个体户形式提供服务，用户对其提供的服务承担全部责任，包括但不限于服务质量、税务申报、保险等。平台不对用户的服务质量、安全或任何损失承担责任。" : "Employment Relationship Statement: There is no employment relationship between the platform and users. Users provide services as self-employed/independent contractors and bear full responsibility for their services, including but not limited to service quality, tax reporting, insurance, etc. The platform is not responsible for users' service quality, safety or any losses."
                     ],
                     warnings: [
-                        isChinese ? "雇佣关系声明：平台与用户之间不存在雇佣关系。用户以自雇/个体户形式提供服务，用户对其提供的服务承担全部责任，包括但不限于服务质量、税务申报、保险等。平台不对用户的服务质量、安全或任何损失承担责任。" : "Employment Relationship Statement: There is no employment relationship between the platform and users. Users provide services as self-employed/independent contractors and bear full responsibility for their services, including but not limited to service quality, tax reporting, insurance, etc. The platform is not responsible for users' service quality, safety or any losses.",
-                        isChinese ? "线下交易免责：对于用户之间进行的线下交易，平台不承担任何责任。用户应自行评估交易风险，平台不对交易结果、服务质量、资金安全等承担任何责任。" : "Offline Transaction Disclaimer: For offline transactions between users, the platform assumes no responsibility. Users should assess transaction risks themselves, and the platform bears no responsibility for transaction outcomes, service quality, fund safety, etc."
+                        isChinese ? "雇佣关系声明：平台与用户之间不存在雇佣关系。用户以自雇/个体户形式提供服务，用户对其提供的服务承担全部责任，包括但不限于服务质量、税务申报、保险等。平台不对用户的服务质量、安全或任何损失承担责任。" : "Employment Relationship Statement: There is no employment relationship between the platform and users. Users provide services as self-employed/independent contractors and bear full responsibility for their services, including but not limited to service quality, tax reporting, insurance, etc. The platform is not responsible for users' service quality, safety or any losses."
                     ]
                 )
                 
@@ -86,14 +83,34 @@ struct TermsView: View {
                 TermsSection(
                     title: isChinese ? "4. 费用与平台规则" : "4. Fees and Platform Rules",
                     content: [
-                        isChinese ? "测试阶段我们不向用户收取平台服务费；如未来收费，将在页面显著公示并更新本条款。" : "During the testing phase, we do not charge platform service fees to users; if we charge fees in the future, we will prominently display them on the page and update these terms.",
+                        isChinese ? "平台服务费：平台会从每笔任务支付中收取一定比例的服务费（具体费率以平台公示为准）。服务费在支付时自动扣除，剩余金额将作为托管金额，在任务完成后转给任务接受者。" : "Platform Service Fee: The platform charges a percentage service fee from each task payment (specific rates are displayed on the platform). The service fee is automatically deducted at payment, and the remaining amount is held in escrow and transferred to the task taker upon task completion.",
+                        isChinese ? "服务费计算规则：微型任务（任务金额 < 10镑）固定收取 1 镑作为微型任务服务费；普通任务（任务金额 ≥ 10镑）按任务金额的 10% 收取服务费。服务费包括但不限于：支付转账手续费、平台运营成本、人力成本、风险保障金以及其他平台运营所需的合理费用。具体费率以平台公示为准。" : "Service Fee Calculation Rules: Micro tasks (task amount < £10) charge a fixed fee of £1 as the micro task service fee; regular tasks (task amount ≥ £10) charge 10% of the task amount as the service fee. The service fee includes but is not limited to: payment transfer fees, platform operating costs, human resource costs, risk guarantee funds, and other reasonable costs required for platform operations. Specific rates are displayed on the platform.",
+                        isChinese ? "支付处理：所有支付通过 Stripe 支付系统处理。平台作为托管方，在任务发布者支付后，资金将托管在平台账户中，待任务完成后转给任务接受者。" : "Payment Processing: All payments are processed through the Stripe payment system. The platform acts as an escrow service, holding funds in the platform account after the task poster pays, and transferring them to the task taker upon task completion.",
                         isChinese ? "评价与内容：禁止虚假/有误导性的评价、刷评或组织\"好评任务\"。我们可删除相关内容并限制或终止账号。" : "Reviews and Content: Prohibited are false/misleading reviews, review manipulation or organizing \"positive review tasks\". We may delete related content and restrict or terminate accounts."
                     ]
                 )
                 
-                // 5. 用户行为与禁止事项
+                // 5. 支付与退款
                 TermsSection(
-                    title: isChinese ? "5. 用户行为与禁止事项" : "5. User Behavior and Prohibited Activities",
+                    title: isChinese ? "5. 支付与退款" : "5. Payment and Refund",
+                    content: [
+                        isChinese ? "支付方式：平台支持通过 Stripe 支付系统进行在线支付，包括信用卡、借记卡等多种支付方式。" : "Payment Methods: The platform supports online payments through the Stripe payment system, including credit cards, debit cards and other payment methods.",
+                        isChinese ? "支付流程：任务发布者在接受申请后，需要通过 Stripe 支付系统完成支付。支付成功后，资金将托管在平台账户中。" : "Payment Process: After accepting an application, task posters need to complete payment through the Stripe payment system. Once payment is successful, funds will be held in the platform account.",
+                        isChinese ? "资金托管：平台提供资金托管服务，确保任务发布者的资金安全。资金将在任务完成后转给任务接受者。" : "Escrow Service: The platform provides escrow services to ensure the security of task poster funds. Funds will be transferred to the task taker upon task completion.",
+                        isChinese ? "任务确认完成步骤：任务完成后，任务发布者需要确认任务完成。确认完成后，资金将从托管账户转给任务接受者。确认完成是一个重要的时间节点，将影响退款政策的适用。" : "Task Completion Confirmation: After a task is completed, the task poster needs to confirm task completion. Once confirmed, funds will be transferred from the escrow account to the task taker. The completion confirmation is an important milestone that affects the applicability of the refund policy.",
+                        isChinese ? "确认完成前的退款政策：在任务发布者确认任务完成之前，任务发布者可以申请退款。退款申请需要提供双边证据，包括但不限于：（1）任务状态截图；（2）双方沟通记录（站内消息、邮件等）；（3）任务描述与实际交付结果的对比；（4）时间证明（如任务截止时间与实际完成时间的对比）；（5）其他相关证据。平台将在收到申请后 3-5 个工作日内进行审核，必要时可能联系双方了解情况。如果双方无法达成一致，平台将根据任务完成情况、沟通记录、证据材料等因素进行裁决。" : "Refund Policy Before Completion Confirmation: Before the task poster confirms task completion, the task poster may apply for a refund. Refund applications require evidence from both parties, including but not limited to: (1) Task status screenshots; (2) Communication records between both parties (in-platform messages, emails, etc.); (3) Comparison between task description and actual delivery results; (4) Time proof (such as comparison between task deadline and actual completion time); (5) Other relevant evidence. The platform will review within 3-5 business days after receiving the application, and may contact both parties if necessary. If both parties cannot reach an agreement, the platform will make a decision based on factors such as task completion status, communication records, evidence materials, etc.",
+                        isChinese ? "确认完成后的申诉政策：任务发布者确认任务完成后，原则上不再接受退款申请。如果任务发布者认为存在严重问题（如任务接受者存在欺诈、违约等严重行为），可以向平台提出申诉。申诉需要提供充分的证据，证明任务接受者存在严重违规行为。平台将根据申诉内容和证据进行审核，但不保证能够追回款项。平台保留根据具体情况决定是否处理申诉的权利，且不承担任何追回款项的保证或责任。" : "Appeal Policy After Completion Confirmation: After the task poster confirms task completion, refund applications will generally not be accepted. If the task poster believes there are serious issues (such as fraud, breach of contract, or other serious misconduct by the task taker), they may file an appeal with the platform. Appeals require sufficient evidence proving serious violations by the task taker. The platform will review based on the appeal content and evidence, but does not guarantee that funds can be recovered. The platform reserves the right to decide whether to process appeals based on specific circumstances and assumes no guarantee or responsibility for recovering funds.",
+                        isChinese ? "退款处理：如果退款申请获得批准，平台将在 5-10 个工作日内通过原支付方式退回款项（扣除已产生的平台服务费）。如果任务已部分完成，平台可能根据已完成部分的价值，批准部分退款，服务费按比例扣除。" : "Refund Processing: If a refund application is approved, the platform will refund through the original payment method within 5-10 business days (deducting platform service fees already incurred). If the task is partially completed, the platform may approve a partial refund based on the value of the completed portion, with service fees deducted proportionally.",
+                        isChinese ? "支付安全：平台使用 Stripe 支付系统，符合 PCI DSS 安全标准，确保支付信息安全。平台不会存储您的完整支付凭证。" : "Payment Security: The platform uses the Stripe payment system, which complies with PCI DSS security standards to ensure payment information security. The platform does not store your complete payment credentials."
+                    ],
+                    warnings: [
+                        isChinese ? "重要提示：任务确认完成是一个不可逆的步骤。一旦确认完成，资金将转给任务接受者，退款将变得非常困难。请在确认完成前仔细检查任务完成情况，确保任务符合您的要求。" : "Important Notice: Task completion confirmation is an irreversible step. Once confirmed, funds will be transferred to the task taker, and refunds will become very difficult. Please carefully check task completion before confirming to ensure the task meets your requirements."
+                    ]
+                )
+                
+                // 6. 用户行为与禁止事项
+                TermsSection(
+                    title: isChinese ? "6. 用户行为与禁止事项" : "6. User Behavior and Prohibited Activities",
                     content: [
                         isChinese ? "不得：（1）发布违法、侵权、欺诈、误导或有害内容；（2）发布需持证却无资质的任务；（3）抓取、攻击、绕过访问控制或试图破坏系统；（4）进行洗钱、制裁规避或其他金融犯罪。" : "You may not: (1) publish illegal, infringing, fraudulent, misleading or harmful content; (2) publish tasks requiring licenses without proper qualifications; (3) scrape, attack, bypass access controls or attempt to damage the system; (4) engage in money laundering, sanctions evasion or other financial crimes.",
                         isChinese ? "如违规，我们可删除内容、限制/终止访问，并在必要时向监管或执法机构报告。" : "If violated, we may delete content, restrict/terminate access, and report to regulatory or law enforcement agencies when necessary.",
@@ -104,9 +121,9 @@ struct TermsView: View {
                     ]
                 )
                 
-                // 6-10. 其他章节
+                // 7-11. 其他章节
                 TermsSection(
-                    title: isChinese ? "6. 知识产权与用户内容" : "6. Intellectual Property and User Content",
+                    title: isChinese ? "7. 知识产权与用户内容" : "7. Intellectual Property and User Content",
                     content: [
                         isChinese ? "平台及其内容的所有权利归我们或许可方所有。" : "All rights to the platform and its content belong to us or our licensors.",
                         isChinese ? "您保留上传内容的权利，但为提供、运营与推广服务之目的，您授予我们全球范围、非独占、免版税、可转授权的使用许可（用于展示、备份、审核、索引与推广）。" : "You retain rights to uploaded content, but for the purpose of providing, operating and promoting the service, you grant us a worldwide, non-exclusive, royalty-free, sublicensable license (for display, backup, review, indexing and promotion).",
@@ -115,15 +132,15 @@ struct TermsView: View {
                 )
                 
                 TermsSection(
-                    title: isChinese ? "7. 隐私与数据（UK GDPR）" : "7. Privacy and Data (UK GDPR)",
+                    title: isChinese ? "8. 隐私与数据（UK GDPR）" : "8. Privacy and Data (UK GDPR)",
                     content: [
                         isChinese ? "我们作为**数据控制者（controller）**处理账户、日志与沟通数据，仅在\"提供服务、保障安全、改进体验\"的范围内处理，详见下方《隐私通知（Beta）》；您可行使访问、更正、删除、限制处理、数据可携、反对处理、撤回同意等权利；亦可向 ICO 投诉。" : "We act as a **data controller** processing account, log and communication data, only within the scope of \"providing services, ensuring security, improving experience\", as detailed in the Privacy Notice (Beta) below; you may exercise rights of access, rectification, erasure, restriction of processing, data portability, objection to processing, withdrawal of consent, etc.; you may also complain to the ICO.",
-                        isChinese ? "站外支付由相关第三方或交易对方处理；我们不接触完整支付凭证。" : "Off-platform payments are handled by relevant third parties or transaction counterparts; we do not access complete payment credentials."
+                        isChinese ? "支付处理：平台使用 Stripe 支付系统处理支付。Stripe 作为支付处理方，会收集和处理必要的支付信息。我们仅接收支付状态和必要的对账信息，不接触完整的支付凭证（如完整信用卡号）。所有支付数据的安全由 Stripe 负责，符合 PCI DSS 标准。" : "Payment Processing: The platform uses the Stripe payment system to process payments. Stripe, as the payment processor, collects and processes necessary payment information. We only receive payment status and necessary reconciliation information, and do not access complete payment credentials (such as full credit card numbers). All payment data security is handled by Stripe in compliance with PCI DSS standards."
                     ]
                 )
                 
                 TermsSection(
-                    title: isChinese ? "8. 免责声明与责任限制" : "8. Disclaimer and Limitation of Liability",
+                    title: isChinese ? "9. 免责声明与责任限制" : "9. Disclaimer and Limitation of Liability",
                     content: [
                         isChinese ? "服务按\"现状（as is） / 可用性（as available）\"提供，不保证不间断或无错误。" : "The service is provided \"as is\" / \"as available\" without warranty of uninterrupted or error-free operation.",
                         isChinese ? "我们不对间接、后果性、惩罚性损害或利润/商誉损失承担责任。" : "We are not liable for indirect, consequential, punitive damages or loss of profits/goodwill.",
@@ -132,7 +149,7 @@ struct TermsView: View {
                 )
                 
                 TermsSection(
-                    title: isChinese ? "9. 终止与数据保留" : "9. Termination and Data Retention",
+                    title: isChinese ? "10. 终止与数据保留" : "10. Termination and Data Retention",
                     content: [
                         isChinese ? "您或我们可随时终止测试访问。为遵守法定义务与正当目的，我们可能在最短必要期限内保留日志及记录（具体见《隐私通知（Beta）》）。" : "You or we may terminate test access at any time. To comply with legal obligations and legitimate purposes, we may retain logs and records for the shortest necessary period (as detailed in the Privacy Notice (Beta)).",
                         isChinese ? "终止不影响既有权利与义务。" : "Termination does not affect existing rights and obligations."
@@ -161,7 +178,7 @@ struct TermsView: View {
                     title: isChinese ? "12. 跳蚤市场服务条款" : "12. Flea Market Service Terms",
                     content: [
                         isChinese ? "跳蚤市场服务说明：平台提供跳蚤市场功能，允许用户发布、浏览、购买和出售二手商品。跳蚤市场旨在促进用户之间的二手商品交易。" : "Flea Market Service Description: The platform provides flea market functionality, allowing users to post, browse, purchase, and sell second-hand items. The flea market aims to facilitate second-hand goods transactions among users.",
-                        isChinese ? "平台定位：平台仅提供信息发布和撮合服务，不参与实际交易过程。平台不是交易的任何一方，也不是买家的代理人、卖家的代理人或双方的中间人。所有交易均由买卖双方在线下或通过其他渠道自行完成，平台不提供支付、物流或资金托管服务。" : "Platform Position: The platform only provides information publishing and matching services and does not participate in actual transaction processes. The platform is not a party to any transaction, nor is it an agent for buyers, sellers, or an intermediary between parties. All transactions are completed offline or through other channels by buyers and sellers themselves; the platform does not provide payment, logistics, or fund custody services.",
+                        isChinese ? "平台定位：平台仅提供信息发布和撮合服务，不参与实际交易过程。平台不是交易的任何一方，也不是买家的代理人、卖家的代理人或双方的中间人。跳蚤市场交易由买卖双方在线下或通过其他渠道自行完成，平台不提供支付、物流或资金托管服务。" : "Platform Position: The platform only provides information publishing and matching services and does not participate in actual transaction processes. The platform is not a party to any transaction, nor is it an agent for buyers, sellers, or an intermediary between parties. Flea market transactions are completed offline or through other channels by buyers and sellers themselves; the platform does not provide payment, logistics, or fund custody services for flea market transactions.",
                         isChinese ? "商品信息责任：卖家必须确保其发布的商品信息真实、准确、完整，包括但不限于商品描述、价格、状态、图片等。卖家不得发布虚假、误导性信息或隐瞒商品的重要缺陷。如商品信息不实，卖家应承担相应责任。" : "Product Information Responsibility: Sellers must ensure that the product information they publish is true, accurate, and complete, including but not limited to product descriptions, prices, conditions, images, etc. Sellers must not publish false, misleading information or conceal important defects of products. If product information is inaccurate, sellers shall bear corresponding responsibility.",
                         isChinese ? "禁止交易的商品：用户不得在跳蚤市场中发布或交易以下商品：（1）法律法规禁止交易的商品（如武器、毒品、受保护动植物等）；（2）假冒伪劣商品；（3）侵犯他人知识产权的商品；（4）危险品、易燃易爆品；（5）活体动物（除非符合相关法规）；（6）其他违反法律法规或平台规则的商品。" : "Prohibited Items: Users must not publish or trade the following items in the flea market: (1) items prohibited by laws and regulations (such as weapons, drugs, protected animals and plants, etc.); (2) counterfeit or substandard goods; (3) items that infringe others' intellectual property; (4) dangerous goods, flammable or explosive items; (5) live animals (unless in compliance with relevant regulations); (6) other items that violate laws, regulations, or platform rules.",
                         isChinese ? "交易风险提示：所有交易均由买卖双方自行完成，平台不对以下事项承担责任：（1）商品质量、真伪、完整性或适用性；（2）交易双方的履约能力或信用状况；（3）交易过程中的资金安全；（4）商品交付、物流或运输过程中的损失；（5）因交易产生的任何纠纷、损失或损害；（6）因商品缺陷、不符合描述或交易纠纷导致的退货、退款或赔偿。" : "Transaction Risk Notice: All transactions are completed by buyers and sellers themselves; the platform does not assume responsibility for: (1) product quality, authenticity, completeness, or suitability; (2) the performance capability or credit status of transaction parties; (3) fund safety during transactions; (4) losses during product delivery, logistics, or transportation; (5) any disputes, losses, or damages arising from transactions; (6) returns, refunds, or compensation due to product defects, non-conformity with descriptions, or transaction disputes.",
@@ -188,9 +205,9 @@ struct TermsView: View {
                 TermsSection(
                     title: isChinese ? "14. 消费者条款附录（如用户为消费者时适用）" : "14. Consumer Terms Appendix (Applicable when user is a consumer)",
                     content: [
-                        isChinese ? "您作为消费者使用我们的免费撮合服务时，我们会在界面提供关键信息（平台身份、联系方式、主要功能与任何重要限制）。" : "When you use our free matching service as a consumer, we will provide key information on the interface (platform identity, contact information, main functions and any important limitations).",
-                        isChinese ? "目前测试期我们不向消费者收费，因此不触发付费数字服务的冷静期/退款机制；一旦未来对消费者收费，我们将遵守相关消费者法规（包括信息披露、取消权与禁止隐藏费用/虚假评论等），并在收费前以显著方式告知。" : "Currently during the testing period we do not charge consumers, so the cooling-off/refund mechanism for paid digital services is not triggered; once we charge consumers in the future, we will comply with relevant consumer regulations (including information disclosure, cancellation rights and prohibition of hidden fees/false reviews, etc.) and notify prominently before charging.",
-                        isChinese ? "消费者权利：根据英国《消费者权益法2015》（Consumer Rights Act 2015），作为消费者的用户享有以下权利：（1）获得清晰、准确的服务信息；（2）在服务不符合描述时要求补救或退款；（3）在服务存在缺陷时要求修复或赔偿；（4）在冷静期内取消某些服务合同的权利。请注意，本平台目前仅提供免费的信息撮合服务，不涉及付费服务，因此某些消费者保护条款可能不适用。" : "Consumer Rights: Under the UK Consumer Rights Act 2015, users who are consumers have the following rights: (1) to receive clear and accurate service information; (2) to request remedies or refunds when services do not match descriptions; (3) to request repairs or compensation when services have defects; (4) to cancel certain service contracts during the cooling-off period. Please note that this platform currently only provides free information matching services and does not involve paid services, so certain consumer protection provisions may not apply.",
+                        isChinese ? "您作为消费者使用我们的撮合服务时，我们会在界面提供关键信息（平台身份、联系方式、主要功能与任何重要限制）。" : "When you use our matching service as a consumer, we will provide key information on the interface (platform identity, contact information, main functions and any important limitations).",
+                        isChinese ? "平台服务费：平台会从任务支付中收取服务费（具体费率见第4条）。平台本身不向消费者直接收费，服务费从任务发布者支付给任务接受者的金额中扣除。我们遵守相关消费者法规（包括信息披露、取消权与禁止隐藏费用/虚假评论等）。" : "Platform Service Fee: The platform charges a service fee from task payments (specific rates are detailed in Section 4). The platform itself does not charge consumers directly; the service fee is deducted from the amount paid by task posters to task takers. We comply with relevant consumer regulations (including information disclosure, cancellation rights and prohibition of hidden fees/false reviews, etc.).",
+                        isChinese ? "消费者权利：根据英国《消费者权益法2015》（Consumer Rights Act 2015），作为消费者的用户享有以下权利：（1）获得清晰、准确的服务信息；（2）在服务不符合描述时要求补救或退款；（3）在服务存在缺陷时要求修复或赔偿；（4）在冷静期内取消某些服务合同的权利。平台提供支付处理和资金托管服务，消费者享有相应的退款权利（详见第5条支付与退款）。" : "Consumer Rights: Under the UK Consumer Rights Act 2015, users who are consumers have the following rights: (1) to receive clear and accurate service information; (2) to request remedies or refunds when services do not match descriptions; (3) to request repairs or compensation when services have defects; (4) to cancel certain service contracts during the cooling-off period. The platform provides payment processing and escrow services, and consumers have corresponding refund rights (see Section 5 on Payment and Refund for details).",
                         isChinese ? "消费者投诉：如您作为消费者对我们的服务有投诉，请首先通过 info@link2ur.com 联系我们。如问题未得到解决，您可以向英国消费者服务机构（Citizens Advice）或相关监管机构投诉。" : "Consumer Complaints: If you have complaints about our services as a consumer, please first contact us at info@link2ur.com. If the issue is not resolved, you may complain to UK consumer service organizations (Citizens Advice) or relevant regulatory authorities."
                     ]
                 )
