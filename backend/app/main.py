@@ -249,6 +249,9 @@ app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安�
 # 旧的管理员认证路由已删除，使用新的独立认证系统
 app.include_router(separate_auth_router, prefix="/api/auth", tags=["独立认证系统"])  # 新增独立认证系统
 app.include_router(cs_auth_router, tags=["客服认证"])  # 客服认证路由
+# 管理员 2FA 路由
+from app.admin_2fa_routes import router as admin_2fa_router
+app.include_router(admin_2fa_router, prefix="/api/auth", tags=["管理员-2FA"])
 app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
 

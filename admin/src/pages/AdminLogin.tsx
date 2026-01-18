@@ -26,6 +26,8 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [verificationForm] = Form.useForm();
+  // 使用 Form.useWatch 监听验证码字段变化
+  const codeValue = Form.useWatch('code', verificationForm) || '';
   const [loginData, setLoginData] = useState<AdminLoginData>({
     username_or_id: '',
     password: ''
@@ -309,28 +311,25 @@ const AdminLogin: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item shouldUpdate style={{ marginBottom: 16 }}>
-                {() => {
-                  const codeValue = verificationForm.getFieldValue('code') || '';
-                  const isValid = codeValue.length === 6 && /^\d+$/.test(codeValue);
-                  return (
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={loading}
-                      block
-                      disabled={!isValid || loading}
-                      style={{
-                        height: 48,
-                        fontSize: 16,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        border: 'none',
-                      }}
-                    >
-                      {loading ? '验证中...' : '验证'}
-                    </Button>
-                  );
-                }}
+              <Form.Item style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  block
+                  disabled={codeValue.length !== 6 || !/^\d+$/.test(codeValue) || loading}
+                  style={{
+                    height: 48,
+                    fontSize: 16,
+                    background: codeValue.length === 6 && /^\d+$/.test(codeValue) && !loading
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                      : '#d9d9d9',
+                    border: 'none',
+                    cursor: codeValue.length === 6 && /^\d+$/.test(codeValue) && !loading ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {loading ? '验证中...' : '验证'}
+                </Button>
               </Form.Item>
 
               <div style={{ display: 'flex', gap: 12 }}>

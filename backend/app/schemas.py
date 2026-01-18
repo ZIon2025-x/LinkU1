@@ -156,6 +156,8 @@ class AdminVerificationRequest(BaseModel):
 class AdminUserLoginNew(BaseModel):
     username_or_id: str
     password: str
+    totp_code: Optional[str] = None  # 2FA 验证码（如果启用了 2FA）
+    backup_code: Optional[str] = None  # 备份代码（如果无法使用 Authenticator）
 
 class AdminLoginResponse(BaseModel):
     message: str
@@ -171,6 +173,21 @@ class AdminProfileResponse(BaseModel):
     is_active: bool
     created_at: str
     last_login: Optional[str] = None
+    totp_enabled: bool = False  # 2FA 是否已启用
+
+
+class Admin2FAVerifySetup(BaseModel):
+    """2FA 设置验证"""
+    secret: str
+    code: str  # 6 位 TOTP 验证码
+
+
+class Admin2FADisable(BaseModel):
+    """禁用 2FA"""
+    password: Optional[str] = None  # 密码验证
+    totp_code: Optional[str] = None  # 或 TOTP 代码验证
+    backup_code: Optional[str] = None  # 或备份代码验证
+
 
 class AdminChangePassword(BaseModel):
     old_password: str

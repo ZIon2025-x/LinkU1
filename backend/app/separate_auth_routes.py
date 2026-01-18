@@ -15,6 +15,7 @@ from app.separate_auth_deps import get_current_admin, get_current_service, get_c
 from app.config import Config
 from app.utils.time_utils import format_iso_utc, get_utc_time
 from app.rate_limiting import rate_limit
+from app.two_factor_auth import TwoFactorAuth
 from datetime import datetime
 import logging
 
@@ -76,16 +77,52 @@ def admin_login(
             detail="用户名或密码错误"
         )
     
-    # 检查是否启用了邮箱验证
-    if AdminVerificationManager.is_verification_enabled():
+    # 检查是否启用了 2FA
+    if admin.totp_enabled and admin.totp_secret:
+        logger.info(f"[ADMIN_AUTH] 管理员已启用 2FA，需要验证码: {admin.id}")
+        
+        # 验证 2FA 代码
+        if not login_data.totp_code and not login_data.backup_code:
+            raise HTTPException(
+                status_code=status.HTTP_202_ACCEPTED,
+                detail="需要 2FA 验证码，请使用 Authenticator 应用或备份代码",
+                headers={"X-Requires-2FA": "true"}
+            )
+        
+        # 验证 TOTP 代码或备份代码
+        totp_valid = False
+        if login_data.totp_code:
+            totp_valid = TwoFactorAuth.verify_totp(admin.totp_secret, login_data.totp_code)
+            if totp_valid:
+                logger.info(f"[ADMIN_AUTH] 管理员 2FA TOTP 验证成功: {admin.id}")
+        
+        if not totp_valid and login_data.backup_code:
+            # 验证备份代码
+            backup_valid, updated_backup_codes = TwoFactorAuth.verify_backup_code(
+                admin.totp_backup_codes, login_data.backup_code
+            )
+            if backup_valid:
+                logger.info(f"[ADMIN_AUTH] 管理员 2FA 备份代码验证成功: {admin.id}")
+                # 更新备份代码（移除已使用的）
+                admin.totp_backup_codes = updated_backup_codes
+                db.commit()
+                totp_valid = True
+        
+        if not totp_valid:
+            logger.warning(f"[ADMIN_AUTH] 管理员 2FA 验证失败: {admin.id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="2FA 验证码错误"
+            )
+    
+    # 检查是否启用了邮箱验证（如果未启用 2FA）
+    elif AdminVerificationManager.is_verification_enabled():
         logger.info(f"[ADMIN_AUTH] 管理员邮箱验证已启用，需要验证码: {admin.id}")
         raise HTTPException(
             status_code=status.HTTP_202_ACCEPTED,
             detail="需要邮箱验证码，请先调用发送验证码接口",
             headers={"X-Requires-Verification": "true"}
         )
-    
-    # 如果未启用邮箱验证，直接登录
     
     # 先撤销该管理员的所有旧refresh token
     from app.admin_auth import revoke_all_admin_refresh_tokens

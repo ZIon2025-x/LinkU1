@@ -475,6 +475,10 @@ class AdminUser(Base):
     is_super_admin = Column(Integer, default=0)  # 1=超级管理员, 0=普通管理员
     created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 创建时间
     last_login = Column(DateTime(timezone=True), nullable=True)  # 最后登录时间
+    # 双因素认证 (2FA) 相关字段
+    totp_secret = Column(String(32), nullable=True)  # TOTP 密钥（Base32 编码）
+    totp_enabled = Column(Integer, default=0)  # 1=已启用 2FA, 0=未启用
+    totp_backup_codes = Column(Text, nullable=True)  # 备份代码（JSON 数组，加密存储）
 
 
 class StaffNotification(Base):
