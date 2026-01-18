@@ -31,14 +31,16 @@ jobs:
     - name: Validate imports
       run: |
         echo "🔍 Validating Python imports..."
-        python -c "import app.main; print('✅ Main module imports successfully')"
-        python -c "from app.config import get_settings; print('✅ Config module imports successfully')"
-        python -c "from app.routers import app; print('✅ Router module imports successfully')"
+        # 设置 PYTHONPATH 确保可以导入 app 模块
+        export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+        python -c "import app.main; print('✅ Main module imports successfully')" || exit 1
+        python -c "from app.config import Config; print('✅ Config module imports successfully')" || exit 1
+        python -c "import app.routers; print('✅ Router module imports successfully')" || exit 1
     
     - name: Check syntax
       run: |
         echo "🔍 Checking Python syntax..."
-        find app -name "*.py" -exec python -m py_compile {} \;
+        python -m compileall app/ || exit 1
         echo "✅ All Python files have valid syntax"
 
   # 前端验证

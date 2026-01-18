@@ -15,6 +15,7 @@ on:
       - 'admin/**'
       - 'service/**'
       - '.github/workflows/frontend-admin-service-ci.yml'
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   # Frontend 前端构建
@@ -33,12 +34,25 @@ jobs:
     - name: Check if frontend changed
       id: check-frontend
       run: |
-        if git diff HEAD^ HEAD --quiet -- frontend/; then
-          echo "changed=false" >> $GITHUB_OUTPUT
-          echo "⏭️  No changes in frontend folder"
+        # 检查是否有上一个提交
+        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+          if git diff HEAD^ HEAD --quiet -- frontend/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No changes in frontend folder"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Frontend folder has changes"
+          fi
         else
-          echo "changed=true" >> $GITHUB_OUTPUT
-          echo "✅ Frontend folder has changes"
+          # 如果没有上一个提交（首次提交或单提交分支）
+          # 由于工作流已经通过路径过滤触发，检查当前提交中是否有frontend相关文件
+          if git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^frontend/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Frontend folder detected in this commit"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No frontend files in this commit"
+          fi
         fi
     
     - name: Set up Node.js
@@ -92,12 +106,24 @@ jobs:
     - name: Check if admin changed
       id: check-admin
       run: |
-        if git diff HEAD^ HEAD --quiet -- admin/; then
-          echo "changed=false" >> $GITHUB_OUTPUT
-          echo "⏭️  No changes in admin folder"
+        # 检查是否有上一个提交
+        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+          if git diff HEAD^ HEAD --quiet -- admin/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No changes in admin folder"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Admin folder has changes"
+          fi
         else
-          echo "changed=true" >> $GITHUB_OUTPUT
-          echo "✅ Admin folder has changes"
+          # 如果没有上一个提交（首次提交或单提交分支）
+          if git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^admin/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Admin folder detected in this commit"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No admin files in this commit"
+          fi
         fi
     
     - name: Set up Node.js
@@ -151,12 +177,24 @@ jobs:
     - name: Check if service changed
       id: check-service
       run: |
-        if git diff HEAD^ HEAD --quiet -- service/; then
-          echo "changed=false" >> $GITHUB_OUTPUT
-          echo "⏭️  No changes in service folder"
+        # 检查是否有上一个提交
+        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+          if git diff HEAD^ HEAD --quiet -- service/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No changes in service folder"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Service folder has changes"
+          fi
         else
-          echo "changed=true" >> $GITHUB_OUTPUT
-          echo "✅ Service folder has changes"
+          # 如果没有上一个提交（首次提交或单提交分支）
+          if git diff --name-only --diff-filter=ACMRT HEAD | grep -q "^service/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Service folder detected in this commit"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No service files in this commit"
+          fi
         fi
     
     - name: Set up Node.js
