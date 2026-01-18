@@ -5,6 +5,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import apiInstance from '../api';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -263,7 +264,7 @@ export class TimeHandlerV2 {
    */
   static async getTimezoneInfo(): Promise<TimezoneInfo | null> {
     try {
-      const response = await api.get('/api/users/timezone/info');
+      const response = await apiInstance.get('/api/users/timezone/info');
       return response.data;
     } catch (error) {
       return null;
