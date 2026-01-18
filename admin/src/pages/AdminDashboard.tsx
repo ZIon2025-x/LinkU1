@@ -9718,7 +9718,8 @@ const AdminDashboard: React.FC = () => {
     green: { background: '#28a745' },
     cyan: { background: '#17a2b8' },
     purple: { background: '#6f42c1' },
-    orange: { background: '#ff6b35' }
+    orange: { background: '#ff6b35' },
+    blue: { background: '#1890ff' }
   }), []);
 
   return (
