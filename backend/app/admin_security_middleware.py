@@ -153,28 +153,35 @@ async def admin_security_middleware(request: Request, call_next):
     
     # 3. 加强速率限制（对管理员路由使用更严格的限制）
     # 这里可以添加额外的速率限制检查
-    rate_limit_info = rate_limiter.check_rate_limit(
-        request,
-        "admin_operation",
-        limit=100,  # 每分钟 100 次
-        window=60
-    )
-    
-    if not rate_limit_info["allowed"]:
+    try:
+        rate_limit_info = rate_limiter.check_rate_limit(
+            request,
+            "admin_operation",
+            limit=100,  # 每分钟 100 次
+            window=60
+        )
+        # 如果没有抛出异常，说明允许访问，继续处理
+    except HTTPException as e:
+        # 如果抛出 HTTPException，说明超过速率限制
         log_admin_access(request, "RATE_LIMIT_EXCEEDED", "blocked")
         logger.warning(
             f"[ADMIN_SECURITY] 管理员路由访问被阻止 - 速率限制 | "
             f"Path: {path} | IP: {client_ip}"
         )
+        # 从异常中提取 retry_after 信息
+        retry_after = 60
+        if isinstance(e.detail, dict) and "retry_after" in e.detail:
+            retry_after = e.detail["retry_after"]
+        
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={
                 "detail": "请求过于频繁，请稍后再试",
                 "error_code": "ADMIN_RATE_LIMIT",
-                "retry_after": rate_limit_info.get("retry_after", 60)
+                "retry_after": retry_after
             },
             headers={
-                "Retry-After": str(rate_limit_info.get("retry_after", 60))
+                "Retry-After": str(retry_after)
             }
         )
     
