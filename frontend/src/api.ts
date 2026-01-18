@@ -364,6 +364,7 @@ api.interceptors.response.use(
         // 检查当前URL路径来确定用户类型
         if (window.location.pathname.includes('/admin')) {
           refreshEndpoint = '/api/auth/admin/refresh';
+        }
         
         // 对于用户，先尝试使用refresh端点（需要session仍然有效）
         // 如果失败，再尝试使用refresh-token端点（使用refresh_token重新创建session）

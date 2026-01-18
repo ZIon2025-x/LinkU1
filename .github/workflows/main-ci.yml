@@ -51,8 +51,23 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # 需要获取上一个提交来比较
+    
+    - name: Check if frontend changed
+      id: check-frontend
+      run: |
+        if git diff HEAD^ HEAD --quiet -- frontend/; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "⏭️  No changes in frontend folder, skipping validation"
+          exit 0
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "✅ Frontend folder has changes, proceeding with validation"
+        fi
     
     - name: Set up Node.js
+      if: steps.check-frontend.outputs.changed == 'true'
       uses: actions/setup-node@v4
       with:
         node-version: '18'
@@ -60,15 +75,18 @@ jobs:
         cache-dependency-path: frontend/package-lock.json
     
     - name: Install dependencies
+      if: steps.check-frontend.outputs.changed == 'true'
       run: npm ci
     
     - name: TypeScript check
+      if: steps.check-frontend.outputs.changed == 'true'
       run: |
         echo "🔍 Running TypeScript type checking..."
         npx tsc --noEmit
         echo "✅ TypeScript compilation successful"
     
     - name: Build test
+      if: steps.check-frontend.outputs.changed == 'true'
       run: |
         echo "🔍 Testing build process..."
         npm run build
