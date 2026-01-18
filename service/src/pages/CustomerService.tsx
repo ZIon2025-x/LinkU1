@@ -1166,11 +1166,9 @@ const CustomerService: React.FC = () => {
       const taskData = await getTaskDetail(taskId);
       setSelectedTask(taskData);
       setShowTaskDetailModal(true);
-      } else {
-        message.error('获取任务详情失败');
-      }
-    } catch (error) {
-            message.error('获取任务详情失败');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '获取任务详情失败';
+      message.error(errorMsg);
     } finally {
       setLoadingTaskDetail(false);
     }
