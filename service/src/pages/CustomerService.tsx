@@ -813,20 +813,13 @@ const CustomerService: React.FC = () => {
     }
   };
 
-  const submitAdminRequest = async () => {
+  const handleSubmitAdminRequest = async () => {
     if (!selectedRequestType || !requestTitle || !requestDescription) {
-      alert('请填写完整的请求信息');
+      message.warning('请填写完整的请求信息');
       return;
     }
 
     try {
-      
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
       await submitAdminRequestAPI({
         type: selectedRequestType,
         title: requestTitle,
