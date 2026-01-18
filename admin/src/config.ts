@@ -59,4 +59,11 @@ export const API_ENDPOINTS = {
   
   // 争议处理
   DISPUTES: '/api/admin/disputes',
+  
+  // 2FA (双因素认证)
+  TWO_FA_SETUP: '/api/auth/admin/2fa/setup',
+  TWO_FA_VERIFY_SETUP: '/api/auth/admin/2fa/verify-setup',
+  TWO_FA_STATUS: '/api/auth/admin/2fa/status',
+  TWO_FA_DISABLE: '/api/auth/admin/2fa/disable',
+  TWO_FA_REGENERATE_BACKUP_CODES: '/api/auth/admin/2fa/regenerate-backup-codes',
 } as const;

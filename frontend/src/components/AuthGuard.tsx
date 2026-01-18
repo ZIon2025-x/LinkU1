@@ -43,9 +43,6 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     // 根据当前角色重定向到相应的登录页
     let loginPath = '/login';
     switch (role) {
-      case 'admin':
-        loginPath = '/admin/login';
-        break;
       case 'service':
         loginPath = '/service/login';
         break;
@@ -61,9 +58,6 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     // 根据当前角色重定向到相应的登录页
     let loginPath = '/login';
     switch (role) {
-      case 'admin':
-        loginPath = '/admin/login';
-        break;
       case 'service':
         loginPath = '/service/login';
         break;
@@ -76,13 +70,6 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
 
   return <>{children}</>;
 };
-
-// 管理员专用保护组件
-export const AdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AuthGuard requiredRole="admin" redirectTo="/admin/login">
-    {children}
-  </AuthGuard>
-);
 
 // 客服专用保护组件
 export const ServiceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (

@@ -1037,38 +1037,6 @@ export async function createTaskDispute(taskId: number, reason: string) {
   return res.data;
 }
 
-// 管理员获取任务争议列表
-export async function getAdminTaskDisputes(params?: {
-  skip?: number;
-  limit?: number;
-  status?: string;
-  keyword?: string;
-}) {
-  const res = await api.get('/api/admin/task-disputes', { params });
-  return res.data;
-}
-
-// 管理员获取任务争议详情
-export async function getAdminTaskDisputeDetail(disputeId: number) {
-  const res = await api.get(`/api/admin/task-disputes/${disputeId}`);
-  return res.data;
-}
-
-// 管理员解决争议
-export async function resolveTaskDispute(disputeId: number, resolutionNote: string) {
-  const res = await api.post(`/api/admin/task-disputes/${disputeId}/resolve`, {
-    resolution_note: resolutionNote
-  });
-  return res.data;
-}
-
-// 管理员驳回争议
-export async function dismissTaskDispute(disputeId: number, resolutionNote: string) {
-  const res = await api.post(`/api/admin/task-disputes/${disputeId}/dismiss`, {
-    resolution_note: resolutionNote
-  });
-  return res.data;
-}
 
 // 任务发布者同意接受者
 export async function approveTaskTaker(taskId: number) {
@@ -1110,119 +1078,8 @@ export async function getUserReceivedReviews(userId: string) {
   return res.data;
 }
 
-// 客服管理相关API
-export async function getAdminUsers() {
-  const res = await api.get('/api/admin/users');
-  return res.data;
-}
 
-export async function getAdminTasks(params?: {
-  skip?: number;
-  limit?: number;
-  status?: string;
-  task_type?: string;
-  location?: string;
-  keyword?: string;
-}) {
-  const res = await api.get('/api/admin/tasks', { params });
-  return res.data;
-}
 
-export async function getAdminTaskDetail(taskId: number) {
-  const res = await api.get(`/api/admin/tasks/${taskId}`);
-  return res.data;
-}
-
-export async function updateAdminTask(taskId: number, taskUpdate: any) {
-  const res = await api.put(`/api/admin/tasks/${taskId}`, taskUpdate);
-  return res.data;
-}
-
-export async function deleteAdminTask(taskId: number) {
-  const res = await api.delete(`/api/admin/tasks/${taskId}`);
-  return res.data;
-}
-
-export async function batchUpdateAdminTasks(taskIds: number[], taskUpdate: any) {
-  const res = await api.post('/api/admin/tasks/batch-update', {
-    task_ids: taskIds,
-    ...taskUpdate
-  });
-  return res.data;
-}
-
-export async function batchDeleteAdminTasks(taskIds: number[]) {
-  const res = await api.post('/api/admin/tasks/batch-delete', {
-    task_ids: taskIds
-  });
-  return res.data;
-}
-
-// 客服管理相关API
-export async function getAdminCustomerServiceRequests(params?: {
-  status?: string;
-  priority?: string;
-}) {
-  const res = await api.get('/api/admin/customer-service-requests', { params });
-  return res.data;
-}
-
-export async function getAdminCustomerServiceRequestDetail(requestId: number) {
-  const res = await api.get(`/api/admin/customer-service-requests/${requestId}`);
-  return res.data;
-}
-
-export async function updateAdminCustomerServiceRequest(requestId: number, updateData: any) {
-  const res = await api.put(`/api/admin/customer-service-requests/${requestId}`, updateData);
-  return res.data;
-}
-
-export async function getAdminCustomerServiceChatMessages() {
-  const res = await api.get('/api/admin/customer-service-chat');
-  return res.data;
-}
-
-export async function sendAdminCustomerServiceChatMessage(content: string) {
-  const res = await api.post('/api/admin/customer-service-chat', { content });
-  return res.data;
-}
-
-export async function getAdminMessages() {
-  const res = await api.get('/api/admin/messages');
-  return res.data;
-}
-
-export async function setUserLevel(userId: string, level: string) {
-  const res = await api.post(`/api/admin/user/${userId}/set_level`, level);
-  return res.data;
-}
-
-export async function setUserStatus(userId: string, status: {
-  is_banned?: number;
-  is_suspended?: number;
-  suspend_until?: string;
-}) {
-  const res = await api.post(`/api/admin/user/${userId}/set_status`, status);
-  return res.data;
-}
-
-export async function setTaskLevel(taskId: number, level: string) {
-  const res = await api.post(`/api/admin/task/${taskId}/set_level`, level);
-  return res.data;
-}
-
-export async function sendAnnouncement(title: string, content: string) {
-  const res = await api.post('/api/users/notifications/send-announcement', {
-    title,
-    content
-  });
-  return res.data;
-}
-
-export async function getAdminPayments() {
-  const res = await api.get('/api/admin/payments');
-  return res.data;
-}
 
 // 客服相关API
 export const assignCustomerService = async () => {
@@ -1324,127 +1181,6 @@ export const getPublicStats = async () => {
   }
 };
 
-export const getDashboardStats = async () => {
-  const res = await api.get('/api/admin/dashboard/stats');
-  return res.data;
-};
-
-// 管理员通知相关API
-export const getAdminNotifications = async () => {
-  const res = await api.get('/api/auth/admin/notifications');
-  return res.data;
-};
-
-export const getUnreadAdminNotifications = async () => {
-  const res = await api.get('/api/auth/admin/notifications/unread');
-  return res.data;
-};
-
-export const markAdminNotificationRead = async (notificationId: number) => {
-  const res = await api.post(`/api/auth/admin/notifications/${notificationId}/read`);
-  return res.data;
-};
-
-export const markAllAdminNotificationsRead = async () => {
-  const res = await api.post('/api/auth/admin/notifications/read-all');
-  return res.data;
-};
-
-// 管理员refresh token
-export const adminRefreshToken = async () => {
-  const res = await api.post('/api/auth/admin/refresh');
-  return res.data;
-};
-
-// 管理员退出登录
-export const adminLogout = async () => {
-  try {
-    const res = await api.post('/api/auth/admin/logout');
-    // 清除所有cookie（前端也清除一次，确保完全清除）
-    document.cookie.split(";").forEach((c) => {
-      const eqPos = c.indexOf("=");
-      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-      // 清除所有可能的cookie
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
-    });
-    return res.data;
-  } catch (error) {
-    // 即使API调用失败，也清除前端cookie
-    document.cookie.split(";").forEach((c) => {
-      const eqPos = c.indexOf("=");
-      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
-    });
-    throw error;
-  }
-};
-
-export const getUsersForAdmin = async (page: number = 1, size: number = 20, search?: string) => {
-  const params = new URLSearchParams();
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  if (search) {
-    params.append('search', search);
-  }
-  const res = await api.get(`/api/admin/users?${params.toString()}`);
-  return res.data;
-};
-
-export const updateUserByAdmin = async (userId: string, userData: any) => {
-  const res = await api.patch(`/api/admin/users/${userId}`, userData);
-  return res.data;
-};
-
-export const createCustomerService = async (csData: {
-  name: string;
-  email: string;
-  password: string;
-}) => {
-  const res = await api.post('/api/admin/customer-service', csData);
-  return res.data;
-};
-
-export const deleteCustomerService = async (csId: number) => {
-  const res = await api.delete(`/api/admin/customer-service/${csId}`);
-  return res.data;
-};
-
-export const getCustomerServicesForAdmin = async (page: number = 1, size: number = 20) => {
-  const params = new URLSearchParams();
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  const res = await api.get(`/api/admin/customer-service?${params.toString()}`);
-  return res.data;
-};
-
-// 管理员管理相关API
-export const createAdminUser = async (adminData: {
-  name: string;
-  username: string;
-  email: string;
-  password: string;
-  is_super_admin?: number;
-}) => {
-  const res = await api.post('/api/admin/admin-user', adminData);
-  return res.data;
-};
-
-export const deleteAdminUser = async (adminId: string) => {
-  const res = await api.delete(`/api/admin/admin-user/${adminId}`);
-  return res.data;
-};
-
-export const getAdminUsersForAdmin = async (page: number = 1, size: number = 20) => {
-  const params = new URLSearchParams();
-  params.append('page', page.toString());
-  params.append('size', size.toString());
-  const res = await api.get(`/api/admin/admin-users?${params.toString()}`);
-  return res.data;
-};
 
 // 员工提醒相关API
 export const sendStaffNotification = async (notification: {
@@ -1478,100 +1214,12 @@ export const markAllStaffNotificationsRead = async () => {
   return res.data;
 };
 
-export const sendAdminNotification = async (notification: {
-  title: string;
-  content: string;
-  user_ids: string[];  // 现在ID是字符串类型
-  type?: string;
-}) => {
-  const res = await api.post('/api/admin/notifications/send', notification);
-  return res.data;
-};
-
-export const updateTaskByAdmin = async (taskId: number, taskData: any) => {
-  const res = await api.patch(`/api/admin/tasks/${taskId}`, taskData);
-  return res.data;
-};
-
-export const deleteTaskByAdmin = async (taskId: number) => {
-  const res = await api.delete(`/api/admin/tasks/${taskId}`);
-  return res.data;
-};
-
-export const notifyCustomerService = async (csId: number, message: string) => {
-  const res = await api.post(`/api/admin/customer-service/${csId}/notify`, message);
-  return res.data;
-};
-
-// 后台管理员登录
-export const adminLogin = async (loginData: { username: string; password: string }) => {
-  const res = await api.post('/api/admin/login', loginData);
-  return res.data;
-};
-
-// 系统设置相关API
-export const getSystemSettings = async () => {
-  const res = await api.get('/api/admin/system-settings');
-  return res.data;
-};
-
-export const updateSystemSettings = async (settings: {
-  vip_enabled: boolean;
-  super_vip_enabled: boolean;
-  vip_task_threshold: number;
-  super_vip_task_threshold: number;
-  vip_price_threshold: number;
-  super_vip_price_threshold: number;
-  vip_button_visible: boolean;
-  vip_auto_upgrade_enabled: boolean;
-  vip_benefits_description: string;
-  super_vip_benefits_description: string;
-  // VIP晋升超级VIP的条件
-  vip_to_super_task_count_threshold: number;
-  vip_to_super_rating_threshold: number;
-  vip_to_super_completion_rate_threshold: number;
-  vip_to_super_enabled: boolean;
-}) => {
-  const res = await api.put('/api/admin/system-settings', settings);
-  return res.data;
-};
 
 export const getPublicSystemSettings = async () => {
   const res = await api.get('/api/system-settings/public');
   return res.data;
 };
 
-// 积分设置相关API
-export const getPointsSettings = async () => {
-  const res = await api.get('/api/admin/settings/points');
-  return res.data;
-};
-
-export const updatePointsSettings = async (settings: {
-  points_task_complete_bonus: number;
-}) => {
-  const res = await api.put('/api/admin/settings/points', settings);
-  return res.data;
-};
-
-// 签到设置相关API
-export const getCheckinSettings = async () => {
-  const res = await api.get('/api/admin/checkin/settings');
-  return res.data;
-};
-
-export const updateCheckinSettings = async (settings: {
-  daily_base_points: number;
-}) => {
-  const res = await api.put('/api/admin/checkin/settings', settings);
-  return res.data;
-};
-
-// 任务积分调整API
-export const updateTaskPointsReward = async (taskId: number, pointsReward: number | null) => {
-  const res = await api.put(`/api/admin/tasks/${taskId}/points-reward`, { points_reward: pointsReward });
-  return res.data;
-};
 
 // 检查客服可用性
 export const checkCustomerServiceAvailability = async () => {
@@ -1706,78 +1354,7 @@ export const getPublicJobPositions = async (params?: {
   return res.data;
 };
 
-// ==================== 任务达人管理 API ====================
-
-// 管理员 API - 获取任务达人列表
-export const getTaskExperts = async (params?: {
-  page?: number;
-  size?: number;
-  category?: string;
-  is_active?: number;
-}) => {
-  const res = await api.get('/api/admin/task-experts', { params });
-  return res.data;
-};
-
-// 管理员 API - 获取单个任务达人详情
-export const getTaskExpertForAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}`);
-  return res.data;
-};
-
-// 管理员 API - 创建任务达人
-export const createTaskExpert = async (expertData: any) => {
-  const res = await api.post('/api/admin/task-expert', expertData);
-  return res.data;
-};
-
-// 管理员 API - 更新任务达人
-export const updateTaskExpert = async (expertId: string, expertData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}`, expertData);
-  return res.data;
-};
-
-// 管理员 API - 删除任务达人
-export const deleteTaskExpert = async (expertId: string) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}`);
-  return res.data;
-};
-
-// 管理员 API - 获取任务达人的服务列表
-export const getExpertServicesAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}/services`);
-  return res.data;
-};
-
-// 管理员 API - 更新任务达人的服务
-export const updateExpertServiceAdmin = async (expertId: string, serviceId: number, serviceData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}/services/${serviceId}`, serviceData);
-  return res.data;
-};
-
-// 管理员 API - 删除任务达人的服务
-export const deleteExpertServiceAdmin = async (expertId: string, serviceId: number) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}/services/${serviceId}`);
-  return res.data;
-};
-
-// 管理员 API - 获取任务达人的活动列表
-export const getExpertActivitiesAdmin = async (expertId: string) => {
-  const res = await api.get(`/api/admin/task-expert/${expertId}/activities`);
-  return res.data;
-};
-
-// 管理员 API - 更新任务达人的活动
-export const updateExpertActivityAdmin = async (expertId: string, activityId: number, activityData: any) => {
-  const res = await api.put(`/api/admin/task-expert/${expertId}/activities/${activityId}`, activityData);
-  return res.data;
-};
-
-// 管理员 API - 删除任务达人的活动
-export const deleteExpertActivityAdmin = async (expertId: string, activityId: number) => {
-  const res = await api.delete(`/api/admin/task-expert/${expertId}/activities/${activityId}`);
-  return res.data;
-};
+// ==================== 任务达人功能 API ====================
 
 // 公开 API - 获取任务达人列表（用于前端展示）
 export const getPublicTaskExperts = async (category?: string, location?: string) => {
@@ -1987,22 +1564,6 @@ export const getMyTaskExpertApplications = async (params?: { status?: string; se
   return res.data;
 };
 
-// 管理员 - 任务达人申请审核
-export const getTaskExpertApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/admin/task-expert-applications', { params });
-  return res.data;
-};
-
-export const reviewTaskExpertApplication = async (applicationId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
-  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/review`, data);
-  return res.data;
-};
-
-// 根据已批准的申请创建任务达人
-export const createExpertFromApplication = async (applicationId: number) => {
-  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/create-featured-expert`);
-  return res.data;
-};
 
 export const counterOfferServiceApplication = async (applicationId: number, counterData: {
   counter_price: number;
@@ -2033,16 +1594,6 @@ export const getMyProfileUpdateRequest = async () => {
   return res.data;
 };
 
-// 管理员 - 任务达人信息修改请求审核
-export const getProfileUpdateRequests = async (params?: { status?: string; limit?: number; offset?: number }) => {
-  const res = await api.get('/api/admin/task-expert-profile-update-requests', { params });
-  return res.data;
-};
-
-export const reviewProfileUpdateRequest = async (requestId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
-  const res = await api.post(`/api/admin/task-expert-profile-update-requests/${requestId}/review`, data);
-  return res.data;
-};
 
 // 翻译API - 翻译单个文本
 export const translateText = async (
@@ -2120,61 +1671,6 @@ export const getTaskTranslationsBatch = async (
   return res.data;
 };
 
-// ==================== 邀请码管理 API ====================
-
-// 创建邀请码
-export const createInvitationCode = async (data: {
-  code: string;
-  name?: string;
-  description?: string;
-  reward_type: 'points' | 'coupon' | 'both';
-  points_reward?: number;
-  coupon_id?: number;
-  max_uses?: number;
-  valid_from: string;
-  valid_until: string;
-  is_active?: boolean;
-}) => {
-  const res = await api.post('/api/admin/invitation-codes', data);
-  return res.data;
-};
-
-// 获取邀请码列表
-export const getInvitationCodes = async (params?: {
-  page?: number;
-  limit?: number;
-  status?: 'active' | 'inactive';
-}) => {
-  const res = await api.get('/api/admin/invitation-codes', { params });
-  return res.data;
-};
-
-// 获取邀请码详情
-export const getInvitationCodeDetail = async (invitationId: number) => {
-  const res = await api.get(`/api/admin/invitation-codes/${invitationId}`);
-  return res.data;
-};
-
-// 更新邀请码
-export const updateInvitationCode = async (invitationId: number, data: {
-  name?: string;
-  description?: string;
-  is_active?: boolean;
-  max_uses?: number;
-  valid_from?: string;
-  valid_until?: string;
-  points_reward?: number;
-  coupon_id?: number;
-}) => {
-  const res = await api.put(`/api/admin/invitation-codes/${invitationId}`, data);
-  return res.data;
-};
-
-// 删除邀请码
-export const deleteInvitationCode = async (invitationId: number) => {
-  const res = await api.delete(`/api/admin/invitation-codes/${invitationId}`);
-  return res.data;
-};
 
 // ==================== 积分系统 API ====================
 
@@ -2223,26 +1719,6 @@ export const getPaymentHistory = async (params?: {
 // 多人任务相关API
 // ===========================================
 
-// 管理员：创建官方多人任务
-export const createOfficialMultiParticipantTask = async (taskData: {
-  title: string;
-  description: string;
-  deadline: string;
-  location: string;
-  task_type: string;
-  max_participants: number;
-  min_participants: number;
-  reward_type: 'cash' | 'points' | 'both';
-  reward?: number;
-  points_reward?: number;
-  completion_rule: 'all' | 'any';
-  reward_distribution: 'equal' | 'custom';
-  auto_accept: boolean;
-  images?: string[];
-}) => {
-  const res = await api.post('/api/admin/tasks/multi-participant', taskData);
-  return res.data;
-};
 
 // 任务达人：创建活动（新API）
 export const createExpertActivity = async (activityData: {
@@ -2427,93 +1903,89 @@ export const requestExitFromTask = async (
   return res.data;
 };
 
-// 管理员/任务达人：开始任务
+// 开始任务（支持任务达人和管理员，但管理员功能已移至子域名）
 export const startMultiParticipantTask = async (taskId: string | number, isAdmin: boolean = false) => {
-  const endpoint = isAdmin 
-    ? `/api/admin/tasks/${taskId}/start`
-    : `/api/expert/tasks/${taskId}/start`;
-  const res = await api.post(endpoint);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  if (isAdmin) {
+    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    throw new Error('管理员功能已移至管理员子域名');
+  }
+  const res = await api.post(`/api/expert/tasks/${taskId}/start`);
   return res.data;
 };
 
-// 管理员/任务达人：批准参与者申请
+// 批准参与者申请（支持任务达人和管理员，但管理员功能已移至子域名）
 export const approveParticipant = async (
   taskId: string | number,
   participantId: number,
   isAdmin: boolean = false
 ) => {
-  const endpoint = isAdmin
-    ? `/api/admin/tasks/${taskId}/participants/${participantId}/approve`
-    : `/api/expert/tasks/${taskId}/participants/${participantId}/approve`;
-  const res = await api.post(endpoint);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  if (isAdmin) {
+    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    throw new Error('管理员功能已移至管理员子域名');
+  }
+  const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/approve`);
   return res.data;
 };
 
-// 管理员/任务达人：拒绝参与者申请
+// 拒绝参与者申请（支持任务达人和管理员，但管理员功能已移至子域名）
 export const rejectParticipant = async (
   taskId: string | number,
   participantId: number,
   isAdmin: boolean = false
 ) => {
-  const endpoint = isAdmin
-    ? `/api/admin/tasks/${taskId}/participants/${participantId}/reject`
-    : `/api/expert/tasks/${taskId}/participants/${participantId}/reject`;
-  const res = await api.post(endpoint);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  if (isAdmin) {
+    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    throw new Error('管理员功能已移至管理员子域名');
+  }
+  const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/reject`);
   return res.data;
 };
 
-// 管理员/任务达人：批准退出申请
+// 批准退出申请（支持任务达人和管理员，但管理员功能已移至子域名）
 export const approveExitRequest = async (
   taskId: string | number,
   participantId: number,
   isAdmin: boolean = false
 ) => {
-  const endpoint = isAdmin
-    ? `/api/admin/tasks/${taskId}/participants/${participantId}/exit/approve`
-    : `/api/expert/tasks/${taskId}/participants/${participantId}/exit/approve`;
-  const res = await api.post(endpoint);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  if (isAdmin) {
+    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    throw new Error('管理员功能已移至管理员子域名');
+  }
+  const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/exit/approve`);
   return res.data;
 };
 
-// 管理员/任务达人：拒绝退出申请
+// 拒绝退出申请（支持任务达人和管理员，但管理员功能已移至子域名）
 export const rejectExitRequest = async (
   taskId: string | number,
   participantId: number,
   isAdmin: boolean = false
 ) => {
-  const endpoint = isAdmin
-    ? `/api/admin/tasks/${taskId}/participants/${participantId}/exit/reject`
-    : `/api/expert/tasks/${taskId}/participants/${participantId}/exit/reject`;
-  const res = await api.post(endpoint);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  if (isAdmin) {
+    console.warn('管理员功能已移至 admin.link2ur.com，请使用管理员子域名');
+    throw new Error('管理员功能已移至管理员子域名');
+  }
+  const res = await api.post(`/api/expert/tasks/${taskId}/participants/${participantId}/exit/reject`);
   return res.data;
 };
 
-// 管理员：完成任务并分配奖励（平均分配）
+// 完成任务并分配奖励（平均分配）- 仅支持任务达人，管理员功能已移至子域名
 export const completeTaskAndDistributeRewardsEqual = async (
   taskId: string | number,
   data: {
     idempotency_key: string;
   }
 ) => {
-  const res = await api.post(`/api/admin/tasks/${taskId}/complete`, data);
+  // 注意：管理员功能已移至 admin.link2ur.com，这里只支持任务达人
+  const res = await api.post(`/api/expert/tasks/${taskId}/complete`, data);
   return res.data;
 };
 
-// 管理员：完成任务并分配奖励（自定义分配）
-export const completeTaskAndDistributeRewardsCustom = async (
-  taskId: string | number,
-  data: {
-    idempotency_key: string;
-    rewards: Array<{
-      participant_id: number;
-      reward_amount?: number;
-      points_amount?: number;
-    }>;
-  }
-) => {
-  const res = await api.post(`/api/admin/tasks/${taskId}/complete/custom`, data);
-  return res.data;
-};
 
 // ==================== 论坛 API ====================
 
@@ -2544,70 +2016,6 @@ export const getForumCategory = async (categoryId: number) => {
   return res.data;
 };
 
-// 创建板块（管理员）
-export const createForumCategory = async (category: {
-  name: string;
-  description?: string;
-  icon?: string;
-  sort_order?: number;
-  is_visible?: boolean;
-  is_admin_only?: boolean;
-  // 学校板块访问控制字段
-  type?: 'general' | 'root' | 'university';
-  country?: string;
-  university_code?: string;
-}) => {
-  const res = await api.post('/api/forum/categories', category);
-  return res.data;
-};
-
-// 更新板块（管理员）
-export const updateForumCategory = async (categoryId: number, category: {
-  name?: string;
-  description?: string;
-  icon?: string;
-  sort_order?: number;
-  is_visible?: boolean;
-  is_admin_only?: boolean;
-  // 学校板块访问控制字段
-  type?: 'general' | 'root' | 'university';
-  country?: string;
-  university_code?: string;
-}) => {
-  const res = await api.put(`/api/forum/categories/${categoryId}`, category);
-  return res.data;
-};
-
-// 删除板块（管理员）
-export const deleteForumCategory = async (categoryId: number) => {
-  const res = await api.delete(`/api/forum/categories/${categoryId}`);
-  return res.data;
-};
-
-// 板块申请管理（管理员）
-export const getCategoryRequests = async (
-  status?: 'pending' | 'approved' | 'rejected',
-  page: number = 1,
-  pageSize: number = 20,
-  search?: string,
-  sortBy: string = 'created_at',
-  sortOrder: 'asc' | 'desc' = 'desc'
-) => {
-  const params: any = { page, page_size: pageSize, sort_by: sortBy, sort_order: sortOrder };
-  if (status) params.status = status;
-  if (search) params.search = search;
-  const res = await api.get('/api/forum/categories/requests', { params });
-  return res.data;
-};
-
-export const reviewCategoryRequest = async (requestId: number, action: 'approve' | 'reject', reviewComment?: string) => {
-  const params: any = { action };
-  if (reviewComment) {
-    params.review_comment = reviewComment;
-  }
-  const res = await api.put(`/api/forum/categories/requests/${requestId}/review`, null, { params });
-  return res.data;
-};
 
 // 获取我的板块申请列表（普通用户）
 export const getMyCategoryRequests = async (
@@ -2881,157 +2289,6 @@ export const getCategoryForumStats = async (categoryId: number) => {
   return res.data;
 };
 
-// 管理员论坛管理API
-export const pinForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/pin`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const unpinForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/forum/posts/${postId}/pin`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const featureForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/feature`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const unfeatureForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/forum/posts/${postId}/feature`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const lockForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/lock`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const unlockForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/forum/posts/${postId}/lock`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const restoreForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/restore`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const hideForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/hide`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const unhideForumPost = async (postId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.post(`/api/forum/posts/${postId}/unhide`, {}, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 论坛举报管理API（管理员）
-export const getForumReports = async (params?: {
-  status_filter?: 'pending' | 'processed' | 'rejected';
-  page?: number;
-  page_size?: number;
-}) => {
-  const res = await api.get('/api/forum/reports', { params });
-  return res.data;
-};
-
-export const processForumReport = async (reportId: number, data: {
-  status: 'processed' | 'rejected';
-  action?: string;
-}) => {
-  const token = await getCSRFToken();
-  const res = await api.put(`/api/forum/admin/reports/${reportId}/process`, data, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 跳蚤市场举报管理API（管理员）
-export const getFleaMarketReports = async (params?: {
-  status_filter?: 'pending' | 'reviewing' | 'resolved' | 'rejected';
-  page?: number;
-  page_size?: number;
-}) => {
-  const res = await api.get('/api/flea-market/admin/reports', { params });
-  return res.data;
-};
-
-export const processFleaMarketReport = async (reportId: number, data: {
-  status: 'resolved' | 'rejected';
-  admin_comment?: string;
-}) => {
-  const token = await getCSRFToken();
-  const res = await api.put(`/api/flea-market/admin/reports/${reportId}/process`, data, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 跳蚤市场商品管理API（管理员）
-export const getFleaMarketItemsAdmin = async (params?: {
-  page?: number;
-  page_size?: number;
-  category?: string;
-  keyword?: string;
-  status_filter?: string;
-  seller_id?: string;
-}) => {
-  const res = await api.get('/api/flea-market/admin/items', { params });
-  return res.data;
-};
-
-export const updateFleaMarketItemAdmin = async (itemId: string, data: {
-  title?: string;
-  description?: string;
-  price?: number;
-  images?: string[];
-  location?: string;
-  category?: string;
-  status?: string;
-}) => {
-  const token = await getCSRFToken();
-  const res = await api.put(`/api/flea-market/admin/items/${itemId}`, data, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-export const deleteFleaMarketItemAdmin = async (itemId: string) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/flea-market/admin/items/${itemId}`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
 
 // ==================== 自定义排行榜API ====================
 
@@ -3171,67 +2428,6 @@ export const reportLeaderboardItem = async (itemId: number, data: { reason: stri
   return res.data;
 };
 
-export const getLeaderboardVotesAdmin = async (params?: {
-  item_id?: number;
-  leaderboard_id?: number;
-  is_anonymous?: boolean;
-  keyword?: string;
-  limit?: number;
-  offset?: number;
-}) => {
-  const res = await api.get('/api/custom-leaderboards/admin/votes', { params });
-  return res.data;
-};
-
-// 获取所有状态的榜单列表（管理员专用）
-export const getCustomLeaderboardsAdmin = async (params?: {
-  location?: string;
-  status?: 'all' | 'active' | 'pending' | 'rejected';
-  limit?: number;
-  offset?: number;
-}) => {
-  const res = await api.get('/api/custom-leaderboards/admin/all', { params });
-  return res.data;
-};
-
-// 审核榜单（管理员专用）
-export const reviewCustomLeaderboard = async (
-  leaderboardId: number,
-  action: 'approve' | 'reject',
-  comment?: string
-) => {
-  const token = localStorage.getItem('csrf_token');
-  const res = await api.post(
-    `/api/custom-leaderboards/${leaderboardId}/review`,
-    null,
-    {
-      params: { action, comment },
-      headers: { 'X-CSRF-Token': token }
-    }
-  );
-  return res.data;
-};
-
-// 获取竞品列表（管理员专用）
-export const getLeaderboardItemsAdmin = async (params?: {
-  leaderboard_id?: number;
-  status?: 'all' | 'approved';
-  keyword?: string;
-  limit?: number;
-  offset?: number;
-}) => {
-  const res = await api.get('/api/custom-leaderboards/admin/items', { params });
-  return res.data;
-};
-
-// 删除竞品（管理员专用）
-export const deleteLeaderboardItemAdmin = async (itemId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/custom-leaderboards/admin/items/${itemId}`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
 
 // ==================== 学生认证 API ====================
 
@@ -3294,109 +2490,5 @@ export const getBanners = async () => {
   return res.data;
 };
 
-// 获取 Banner 列表（管理员）
-export const getBannersAdmin = async (params?: {
-  page?: number;
-  limit?: number;
-  is_active?: boolean;
-}) => {
-  const res = await api.get('/api/admin/banners', { params });
-  return res.data;
-};
-
-// 获取 Banner 详情（管理员）
-export const getBannerDetailAdmin = async (bannerId: number) => {
-  const res = await api.get(`/api/admin/banners/${bannerId}`);
-  return res.data;
-};
-
-// 创建 Banner（管理员）
-export const createBanner = async (data: {
-  image_url: string;
-  title: string;
-  subtitle?: string;
-  link_url?: string;
-  link_type?: 'internal' | 'external';
-  order?: number;
-  is_active?: boolean;
-}) => {
-  const token = await getCSRFToken();
-  const res = await api.post('/api/admin/banners', data, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 更新 Banner（管理员）
-export const updateBanner = async (bannerId: number, data: {
-  image_url?: string;
-  title?: string;
-  subtitle?: string;
-  link_url?: string;
-  link_type?: 'internal' | 'external';
-  order?: number;
-  is_active?: boolean;
-}) => {
-  const token = await getCSRFToken();
-  const res = await api.put(`/api/admin/banners/${bannerId}`, data, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 删除 Banner（管理员）
-export const deleteBanner = async (bannerId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.delete(`/api/admin/banners/${bannerId}`, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 切换 Banner 状态（管理员）
-export const toggleBannerStatus = async (bannerId: number) => {
-  const token = await getCSRFToken();
-  const res = await api.patch(`/api/admin/banners/${bannerId}/toggle-status`, null, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 批量删除 Banner（管理员）
-export const batchDeleteBanners = async (bannerIds: number[]) => {
-  const token = await getCSRFToken();
-  const res = await api.post('/api/admin/banners/batch-delete', bannerIds, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 批量更新 Banner 排序（管理员）
-export const batchUpdateBannerOrder = async (orderUpdates: Array<{ id: number; order: number }>) => {
-  const token = await getCSRFToken();
-  const res = await api.put('/api/admin/banners/batch-update-order', orderUpdates, {
-    headers: { 'X-CSRF-Token': token }
-  });
-  return res.data;
-};
-
-// 上传 Banner 图片（管理员）
-export const uploadBannerImage = async (file: File, bannerId?: number) => {
-  const token = await getCSRFToken();
-  const formData = new FormData();
-  formData.append('image', file);
-  const params: any = {};
-  if (bannerId) {
-    params.banner_id = bannerId;
-  }
-  const res = await api.post('/api/admin/banners/upload-image', formData, {
-    params,
-    headers: {
-      'X-CSRF-Token': token,
-      'Content-Type': 'multipart/form-data'
-    }
-  });
-  return res.data;
-};
 
 export default api; 

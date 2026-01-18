@@ -1084,4 +1084,53 @@ export const uploadImage = async (file: File) => {
   return res.data;
 };
 
+// ==================== 2FA (双因素认证) API ====================
+
+/**
+ * 获取 2FA 设置信息（生成 QR 码）
+ */
+export async function get2FASetup(): Promise<any> {
+  const response = await api.get('/api/auth/admin/2fa/setup');
+  return response.data;
+}
+
+/**
+ * 验证并启用 2FA
+ */
+export async function verify2FASetup(secret: string, code: string): Promise<any> {
+  const response = await api.post('/api/auth/admin/2fa/verify-setup', {
+    secret,
+    code
+  });
+  return response.data;
+}
+
+/**
+ * 获取 2FA 状态
+ */
+export async function get2FAStatus(): Promise<any> {
+  const response = await api.get('/api/auth/admin/2fa/status');
+  return response.data;
+}
+
+/**
+ * 禁用 2FA
+ */
+export async function disable2FA(password?: string, totpCode?: string, backupCode?: string): Promise<any> {
+  const response = await api.post('/api/auth/admin/2fa/disable', {
+    password,
+    totp_code: totpCode,
+    backup_code: backupCode
+  });
+  return response.data;
+}
+
+/**
+ * 重新生成备份代码
+ */
+export async function regenerate2FABackupCodes(): Promise<any> {
+  const response = await api.post('/api/auth/admin/2fa/regenerate-backup-codes');
+  return response.data;
+}
+
 export default api;

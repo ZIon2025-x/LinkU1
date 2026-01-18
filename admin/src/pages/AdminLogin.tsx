@@ -48,21 +48,31 @@ const AdminLogin: React.FC = () => {
     try {
       const response = await api.post('/api/auth/admin/login', values);
       
-      // 检查是否需要邮箱验证码
+      // 检查是否需要 2FA 验证码
       if (response.status === 202) {
-        // 发送验证码
-        const verificationResponse = await api.post('/api/auth/admin/send-verification-code', values);
+        const requires2FA = response.headers['x-requires-2fa'] === 'true';
+        const requiresVerification = response.headers['x-requires-verification'] === 'true';
         
-        // 保存管理员ID并切换到验证码输入步骤
-        setVerificationData(prev => ({
-          ...prev,
-          admin_id: verificationResponse.data.admin_id
-        }));
-        setStep('verification');
-        setSuccess('验证码已发送到管理员邮箱，请检查邮箱并输入验证码');
-        message.success('验证码已发送到管理员邮箱');
+        if (requires2FA) {
+          // 需要 2FA 验证码
+          setStep('verification');
+          setSuccess('请输入 Authenticator 应用中的 6 位验证码');
+          message.info('请输入 2FA 验证码');
+        } else if (requiresVerification) {
+          // 需要邮箱验证码
+          const verificationResponse = await api.post('/api/auth/admin/send-verification-code', values);
+          
+          // 保存管理员ID并切换到验证码输入步骤
+          setVerificationData(prev => ({
+            ...prev,
+            admin_id: verificationResponse.data.admin_id
+          }));
+          setStep('verification');
+          setSuccess('验证码已发送到管理员邮箱，请检查邮箱并输入验证码');
+          message.success('验证码已发送到管理员邮箱');
+        }
       } else {
-        // 正常登录成功（未启用邮箱验证）
+        // 正常登录成功（未启用 2FA 和邮箱验证）
         // 登录成功后获取CSRF token
         try {
           await api.get('/api/csrf/token');
@@ -74,14 +84,21 @@ const AdminLogin: React.FC = () => {
         navigate('/');
       }
     } catch (error: any) {
-      let errorMsg = '登录失败';
-      if (error?.response?.data?.detail) {
-        errorMsg = error.response.data.detail;
-      } else if (error?.message) {
-        errorMsg = error.message;
+      // 检查是否是 2FA 验证失败
+      if (error?.response?.status === 202 && error?.response?.headers['x-requires-2fa'] === 'true') {
+        setStep('verification');
+        setSuccess('请输入 Authenticator 应用中的 6 位验证码');
+        message.info('请输入 2FA 验证码');
+      } else {
+        let errorMsg = '登录失败';
+        if (error?.response?.data?.detail) {
+          errorMsg = error.response.data.detail;
+        } else if (error?.message) {
+          errorMsg = error.message;
+        }
+        setError(errorMsg);
+        message.error(errorMsg);
       }
-      setError(errorMsg);
-      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -153,25 +170,6 @@ const AdminLogin: React.FC = () => {
 
   return (
     <>
-      {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
-      <h1 style={{
-        position: 'absolute',
-        top: '-100px',
-        left: '-100px',
-        width: '1px',
-        height: '1px',
-        padding: '0',
-        margin: '0',
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        border: '0',
-        fontSize: '1px',
-        color: 'transparent',
-        background: 'transparent'
-      }}>
-        管理员登录
-      </h1>
       
       <div style={{
         minHeight: '100vh',

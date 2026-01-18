@@ -1712,127 +1712,7 @@ async def get_categories(
     return {"categories": categories}
 
 
-@router.get("/categories/{category_id}", response_model=schemas.ForumCategoryOut)
-@measure_api_performance("get_forum_category")
-@cache_response(ttl=300, key_prefix="forum_category")  # 缓存5分钟
-async def get_category(
-    category_id: int,
-    current_user: Optional[models.User] = Depends(get_current_user_optional),
-    request: Request = None,
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取板块详情"""
-    # 检查是否为管理员
-    is_admin = False
-    try:
-        await get_current_admin_async(request, db)
-        is_admin = True
-    except HTTPException:
-        pass
-    
-    result = await db.execute(
-        select(models.ForumCategory).where(models.ForumCategory.id == category_id)
-    )
-    category = result.scalar_one_or_none()
-    
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="板块不存在"
-        )
-    
-    # 检查板块可见性（学校板块需要权限，管理员可以绕过）
-    if not is_admin:
-        await assert_forum_visible(current_user, category_id, db, raise_exception=True)
-    
-    return category
-
-
-@router.post("/categories", response_model=schemas.ForumCategoryOut)
-async def create_category(
-    category: schemas.ForumCategoryCreate,
-    request: Request,
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """创建板块（管理员）"""
-    # 检查名称是否已存在
-    existing = await db.execute(
-        select(models.ForumCategory).where(models.ForumCategory.name == category.name)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="板块名称已存在"
-        )
-    
-    # 验证学校板块字段
-    category_type = category.type or 'general'
-    if category_type == 'university':
-        if not category.university_code:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="university类型板块必须提供university_code"
-            )
-        # 验证大学编码是否存在
-        university = await db.execute(
-            select(models.University).where(models.University.code == category.university_code)
-        )
-        if not university.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"大学编码 '{category.university_code}' 不存在"
-            )
-        # university类型板块不应有country字段
-        if category.country:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="university类型板块不应设置country字段"
-            )
-    elif category_type == 'root':
-        if not category.country:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="root类型板块必须提供country字段"
-            )
-        # root类型板块不应有university_code字段
-        if category.university_code:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="root类型板块不应设置university_code字段"
-            )
-    else:  # general
-        # general类型板块不应有country和university_code字段
-        if category.country or category.university_code:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="general类型板块不应设置country或university_code字段"
-            )
-    
-    db_category = models.ForumCategory(**category.model_dump())
-    db.add(db_category)
-    await db.flush()
-    
-    # 如果创建的是学校板块或 is_admin_only 板块，清理所有用户的可见板块缓存
-    if (db_category.type in ('root', 'university') or db_category.is_admin_only):
-        clear_all_forum_visibility_cache(f"新板块 {db_category.id} 已创建")
-    
-    # 记录管理员操作日志
-    await log_admin_operation(
-        operator_id=current_admin.id,
-        operation_type="create_category",
-        target_type="category",
-        target_id=db_category.id,
-        action="create",
-        request=request,
-        db=db
-    )
-    
-    await db.commit()
-    await db.refresh(db_category)
-    
-    return db_category
-
+# ==================== 板块申请相关路由（必须在 /categories/{category_id} 之前） ====================
 
 @router.post("/categories/request", response_model=schemas.ForumCategoryRequestResponse)
 async def request_new_category(
@@ -1883,38 +1763,40 @@ async def request_new_category(
         if existing_request.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="您已提交过相同名称的申请，请等待审核或选择其他名称"
+                detail="您已提交过相同名称的申请，请等待审核"
             )
         
-        # 创建申请记录（使用规范化后的名称）
-        category_request = models.ForumCategoryRequest(
+        # 创建申请
+        new_request = models.ForumCategoryRequest(
             requester_id=current_user.id,
             name=normalized_name,
             description=request_data.description.strip() if request_data.description else None,
             icon=request_data.icon.strip() if request_data.icon else None,
             type=request_data.type,
+            country=request_data.country,
+            university_code=request_data.university_code,
             status="pending"
         )
         
-        db.add(category_request)
+        db.add(new_request)
         await db.commit()
-        await db.refresh(category_request)
+        await db.refresh(new_request)
         
-        logger.info(
-            f"用户 {current_user.id} ({current_user.name}) 申请新建板块: "
-            f"request_id={category_request.id}, name={normalized_name}, "
-            f"description_length={len(request_data.description) if request_data.description else 0}, "
-            f"icon={request_data.icon}, type={request_data.type}"
-        )
+        logger.info(f"用户 {current_user.id} 提交了板块申请: {normalized_name}")
         
-        return schemas.ForumCategoryRequestResponse(
-            message="您的申请已成功提交，管理员将在审核后通知您结果。",
-            id=category_request.id
-        )
+        return {
+            "message": "申请已提交，等待管理员审核",
+            "request": {
+                "id": new_request.id,
+                "name": new_request.name,
+                "status": new_request.status,
+                "created_at": new_request.created_at
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"创建板块申请失败: {str(e)}", exc_info=True)
+        logger.error(f"提交板块申请失败: {e}")
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -2064,11 +1946,8 @@ async def review_category_request(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """审核板块申请（管理员）"""
-    # 获取申请
     result = await db.execute(
-        select(models.ForumCategoryRequest)
-        .where(models.ForumCategoryRequest.id == request_id)
-        .options(selectinload(models.ForumCategoryRequest.requester))
+        select(models.ForumCategoryRequest).where(models.ForumCategoryRequest.id == request_id)
     )
     category_request = result.scalar_one_or_none()
     
@@ -2081,168 +1960,179 @@ async def review_category_request(
     if category_request.status != "pending":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"该申请已被{category_request.status}，无法重复审核"
+            detail="该申请已被审核"
         )
     
-    # 更新申请状态
-    category_request.status = "approved" if action == "approve" else "rejected"
-    category_request.admin_id = current_admin.id
-    category_request.reviewed_at = get_utc_time()
-    category_request.review_comment = review_comment
-    
-    # 如果通过，自动创建板块
     if action == "approve":
-        try:
-            # 再次检查板块名称是否已存在
-            existing = await db.execute(
-                select(models.ForumCategory).where(models.ForumCategory.name == category_request.name)
-            )
-            if existing.scalar_one_or_none():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="板块名称已存在，无法创建"
-                )
-            
-            # 创建板块
-            new_category = models.ForumCategory(
-                name=category_request.name,
-                description=category_request.description,
-                icon=category_request.icon,
-                type=category_request.type,
-                country=category_request.country,
-                university_code=category_request.university_code,
-                is_visible=True,
-                is_admin_only=False
-            )
-            
-            db.add(new_category)
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"创建板块失败: {str(e)}", exc_info=True)
-            await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="创建板块时发生错误，请稍后重试"
-            )
-        
-        # 记录管理员操作日志
-        await log_admin_operation(
-            operator_id=current_admin.id,
-            operation_type="approve_category_request",
-            target_type="category_request",
-            target_id=request_id,
-            action="approve",
-            reason=review_comment,
-            request=request,
-            db=db
+        # 批准申请，创建新板块
+        new_category = models.ForumCategory(
+            name=category_request.name,
+            description=category_request.description,
+            icon=category_request.icon,
+            type=category_request.type,
+            country=category_request.country,
+            university_code=category_request.university_code,
+            is_visible=True,
+            sort_order=0
         )
+        db.add(new_category)
         
-        logger.info(
-            f"管理员 {current_admin.id} 审核通过板块申请: "
-            f"request_id={request_id}, category_name={category_request.name}"
-        )
+        category_request.status = "approved"
+        category_request.admin_id = current_admin.id
+        category_request.reviewed_at = get_utc_time()
+        category_request.review_comment = review_comment
+        
+        await db.commit()
+        await db.refresh(new_category)
+        await db.refresh(category_request)
+        
+        logger.info(f"管理员 {current_admin.id} 批准了板块申请 {request_id}，创建了板块 {new_category.id}")
+        
+        return {
+            "message": "申请已批准，新板块已创建",
+            "category": schemas.ForumCategoryOut.model_validate(new_category),
+            "request": schemas.ForumCategoryRequestOut.model_validate(category_request)
+        }
     else:
-        # 记录拒绝操作
-        await log_admin_operation(
-            operator_id=current_admin.id,
-            operation_type="reject_category_request",
-            target_type="category_request",
-            target_id=request_id,
-            action="reject",
-            reason=review_comment,
-            request=request,
-            db=db
-        )
+        # 拒绝申请
+        category_request.status = "rejected"
+        category_request.admin_id = current_admin.id
+        category_request.reviewed_at = get_utc_time()
+        category_request.review_comment = review_comment
         
-        logger.info(
-            f"管理员 {current_admin.id} 拒绝板块申请: "
-            f"request_id={request_id}, category_name={category_request.name}, reason={review_comment}"
-        )
-    
-    try:
         await db.commit()
         await db.refresh(category_request)
         
-        # 发送通知给申请人
-        try:
-            from app.models import Notification
-            from app.utils.time_utils import get_utc_time
-            
-            if action == "approve":
-                # 创建站内通知
-                notification = Notification(
-                    user_id=category_request.requester_id,
-                    type="forum_category_approved",
-                    title="板块申请已通过",
-                    content=f"您申请的板块「{category_request.name}」已通过审核，板块已创建。",
-                    related_id=str(category_request.id)
-                )
-                db.add(notification)
-                
-                # 发送推送通知
-                try:
-                    send_push_notification_async_safe(
-                        async_db=db,
-                        user_id=category_request.requester_id,
-                        title="板块申请已通过",
-                        body=f"您申请的板块「{category_request.name}」已通过审核",
-                        notification_type="forum_category_approved",
-                        data={
-                            "request_id": request_id,
-                            "category_name": category_request.name
-                        }
-                    )
-                except Exception as e:
-                    logger.warning(f"发送板块申请通过推送通知失败: {e}")
-            else:
-                # 创建站内通知
-                notification = Notification(
-                    user_id=category_request.requester_id,
-                    type="forum_category_rejected",
-                    title="板块申请已拒绝",
-                    content=f"您申请的板块「{category_request.name}」已被拒绝。{review_comment or '无审核意见'}",
-                    related_id=str(category_request.id)
-                )
-                db.add(notification)
-                
-                # 发送推送通知
-                try:
-                    send_push_notification_async_safe(
-                        async_db=db,
-                        user_id=category_request.requester_id,
-                        title="板块申请已拒绝",
-                        body=f"您申请的板块「{category_request.name}」已被拒绝",
-                        notification_type="forum_category_rejected",
-                        data={
-                            "request_id": request_id,
-                            "category_name": category_request.name
-                        }
-                    )
-                except Exception as e:
-                    logger.warning(f"发送板块申请拒绝推送通知失败: {e}")
-            
-            await db.commit()
-        except Exception as e:
-            logger.error(f"发送板块申请审核通知失败: {str(e)}", exc_info=True)
-            # 通知失败不影响主流程
-        
-        logger.info(
-            f"管理员 {current_admin.id} 审核板块申请完成: "
-            f"request_id={request_id}, action={action}, status={category_request.status}"
-        )
+        logger.info(f"管理员 {current_admin.id} 拒绝了板块申请 {request_id}")
         
         return {
-            "message": f"申请已{category_request.status}",
-            "request": schemas.ForumCategoryRequestOut.from_orm(category_request)
+            "message": "申请已拒绝",
+            "request": schemas.ForumCategoryRequestOut.model_validate(category_request)
         }
-    except Exception as e:
-        logger.error(f"审核板块申请失败: {str(e)}", exc_info=True)
-        await db.rollback()
+
+
+# ==================== 板块详情路由（必须在 /categories/requests 之后） ====================
+
+@router.get("/categories/{category_id}", response_model=schemas.ForumCategoryOut)
+@measure_api_performance("get_forum_category")
+@cache_response(ttl=300, key_prefix="forum_category")  # 缓存5分钟
+async def get_category(
+    category_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取板块详情"""
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
+    result = await db.execute(
+        select(models.ForumCategory).where(models.ForumCategory.id == category_id)
+    )
+    category = result.scalar_one_or_none()
+    
+    if not category:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="审核申请时发生错误，请稍后重试"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="板块不存在"
         )
+    
+    # 检查板块可见性（学校板块需要权限，管理员可以绕过）
+    if not is_admin:
+        await assert_forum_visible(current_user, category_id, db, raise_exception=True)
+    
+    return category
+
+
+@router.post("/categories", response_model=schemas.ForumCategoryOut)
+async def create_category(
+    category: schemas.ForumCategoryCreate,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """创建板块（管理员）"""
+    # 检查名称是否已存在
+    existing = await db.execute(
+        select(models.ForumCategory).where(models.ForumCategory.name == category.name)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="板块名称已存在"
+        )
+    
+    # 验证学校板块字段
+    category_type = category.type or 'general'
+    if category_type == 'university':
+        if not category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块必须提供university_code"
+            )
+        # 验证大学编码是否存在
+        university = await db.execute(
+            select(models.University).where(models.University.code == category.university_code)
+        )
+        if not university.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"大学编码 '{category.university_code}' 不存在"
+            )
+        # university类型板块不应有country字段
+        if category.country:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块不应设置country字段"
+            )
+    elif category_type == 'root':
+        if not category.country:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块必须提供country字段"
+            )
+        # root类型板块不应有university_code字段
+        if category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块不应设置university_code字段"
+            )
+    else:  # general
+        # general类型板块不应有country和university_code字段
+        if category.country or category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="general类型板块不应设置country或university_code字段"
+            )
+    
+    db_category = models.ForumCategory(**category.model_dump())
+    db.add(db_category)
+    await db.flush()
+    
+    # 如果创建的是学校板块或 is_admin_only 板块，清理所有用户的可见板块缓存
+    if (db_category.type in ('root', 'university') or db_category.is_admin_only):
+        clear_all_forum_visibility_cache(f"新板块 {db_category.id} 已创建")
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.id,
+        operation_type="create_category",
+        target_type="category",
+        target_id=db_category.id,
+        action="create",
+        request=request,
+        db=db
+    )
+    
+    await db.commit()
+    await db.refresh(db_category)
+    
+    return db_category
 
 
 @router.put("/categories/{category_id}", response_model=schemas.ForumCategoryOut)

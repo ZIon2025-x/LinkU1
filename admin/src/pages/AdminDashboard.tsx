@@ -93,6 +93,7 @@ import NotificationModal from '../components/NotificationModal';
 import TaskManagement from '../components/TaskManagement';
 import CustomerServiceManagement from '../components/CustomerServiceManagement';
 import SystemSettings from '../components/SystemSettings';
+import TwoFactorAuthSettings from '../components/TwoFactorAuthSettings';
 import JobPositionManagement from './JobPositionManagement';
 import dayjs from 'dayjs';
 
@@ -298,6 +299,7 @@ const AdminDashboard: React.FC = () => {
   const [showTaskManagement, setShowTaskManagement] = useState(false);
   const [showCustomerServiceManagement, setShowCustomerServiceManagement] = useState(false);
   const [showSystemSettings, setShowSystemSettings] = useState(false);
+  const [show2FASettings, setShow2FASettings] = useState(false);
 
   // 邀请码管理相关状态
   const [invitationCodes, setInvitationCodes] = useState<any[]>([]);
@@ -9722,22 +9724,6 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 style={{ 
-          position: 'absolute',
-          top: '-100px',
-          left: '-100px',
-          width: '1px',
-          height: '1px',
-          padding: '0',
-          margin: '0',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          whiteSpace: 'nowrap',
-          border: '0',
-          fontSize: '1px',
-          color: 'transparent',
-          background: 'transparent'
-        }}>管理后台</h1>
         <h2 className={styles.headerTitle}>管理后台</h2>
         <div className={styles.headerActions}>
           {/* 提醒按钮 */}
@@ -9897,6 +9883,13 @@ const AdminDashboard: React.FC = () => {
               onClick={() => setShowSystemSettings(true)}
             >
               ⚙️ 系统设置
+            </button>
+            <button 
+              className={getTabButtonClassName(false, 'blue')}
+              style={{ ...specialButtonStyles.blue, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+              onClick={() => setShow2FASettings(true)}
+            >
+              🔐 2FA 设置
             </button>
             <button 
               className={getTabButtonClassName(false, 'orange')}
@@ -10222,6 +10215,14 @@ const AdminDashboard: React.FC = () => {
       {showSystemSettings && (
         <SystemSettings
           onClose={() => setShowSystemSettings(false)}
+        />
+      )}
+
+      {/* 2FA 设置弹窗 */}
+      {show2FASettings && (
+        <TwoFactorAuthSettings
+          visible={show2FASettings}
+          onClose={() => setShow2FASettings(false)}
         />
       )}
 
