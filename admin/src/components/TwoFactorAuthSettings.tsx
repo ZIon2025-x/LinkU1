@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input, message, Typography, Space, Alert, Divider } from 'antd';
-import { SafetyOutlined, QrcodeOutlined, ReloadOutlined, DisableOutlined } from '@ant-design/icons';
+import { SafetyOutlined, QrcodeOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons';
 import { get2FASetup, verify2FASetup, get2FAStatus, disable2FA, regenerate2FABackupCodes } from '../api';
 import { getErrorMessage } from '../utils/errorHandler';
 
@@ -198,7 +198,7 @@ const TwoFactorAuthSettings: React.FC<TwoFactorAuthSettingsProps> = ({ visible, 
 
               <Button
                 danger
-                icon={<DisableOutlined />}
+                icon={<StopOutlined />}
                 onClick={() => setShowDisableModal(true)}
                 block
               >
