@@ -26,8 +26,8 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [verificationForm] = Form.useForm();
-  // 使用 Form.useWatch 监听验证码字段变化
-  const codeValue = Form.useWatch('code', verificationForm) || '';
+  // 使用 state 跟踪验证码输入值，确保实时更新
+  const [codeValue, setCodeValue] = useState<string>('');
   const [loginData, setLoginData] = useState<AdminLoginData>({
     username_or_id: '',
     password: ''
@@ -146,6 +146,7 @@ const AdminLogin: React.FC = () => {
     setStep('login');
     setError('');
     setSuccess('');
+    setCodeValue(''); // 清空验证码输入
     setVerificationData({ admin_id: '', code: '' });
     verificationForm.resetFields();
   };
@@ -302,6 +303,12 @@ const AdminLogin: React.FC = () => {
                   prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
                   placeholder="000000"
                   maxLength={6}
+                  value={codeValue}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCodeValue(value);
+                    verificationForm.setFieldsValue({ code: value });
+                  }}
                   style={{
                     textAlign: 'center',
                     fontSize: 24,
