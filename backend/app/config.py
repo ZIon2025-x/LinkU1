@@ -105,16 +105,16 @@ class Config:
     IS_PRODUCTION = ENVIRONMENT == "production"
     
     if IS_PRODUCTION:
-        # 生产环境：允许主站和管理后台
+        # 生产环境：允许主站、管理后台和客服系统
         ALLOWED_ORIGINS = os.getenv(
             "ALLOWED_ORIGINS", 
-            "https://www.link2ur.com,https://link2ur.com,https://admin.link2ur.com"
+            "https://www.link2ur.com,https://link2ur.com,https://admin.link2ur.com,https://service.link2ur.com"
         ).split(",")
     else:
-        # 开发环境：允许本地开发服务器（主站3000，管理后台3001）
+        # 开发环境：允许本地开发服务器（主站3000，管理后台3001，客服系统3002）
         ALLOWED_ORIGINS = os.getenv(
             "ALLOWED_ORIGINS", 
-            "http://localhost:3000,http://localhost:3001,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:3001"
+            "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002"
         ).split(",")
     
     # 过滤空字符串

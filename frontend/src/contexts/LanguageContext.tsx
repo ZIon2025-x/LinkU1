@@ -49,7 +49,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     if (typeof window === 'undefined') return false;
     const path = window.location.pathname;
     // 检查是否是管理员页面或客服页面
-    return path.includes('/admin') || path.includes('/customer-service') || path.includes('/service');
+    return path.includes('/admin');
   };
 
   // 在组件挂载后，尝试从用户资料获取语言偏好（只在初始化时执行一次）

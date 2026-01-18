@@ -33,8 +33,7 @@ const CustomerServiceLogin: React.FC = () => {
       
       // 立即跳转，让路由组件处理认证检查
       // 不依赖Cookie检测，因为Cookie设置可能有延迟
-      // 使用正确的语言前缀路径
-      navigate('/en/customer-service', { replace: true });
+      navigate('/', { replace: true });
     } catch (error: any) {
       let errorMsg = '登录失败';
       if (error?.response?.data?.detail) {
@@ -82,24 +81,14 @@ const CustomerServiceLogin: React.FC = () => {
         maxWidth: '400px'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{
-            position: 'absolute',
-            top: '-100px',
-            left: '-100px',
-            width: '1px',
-            height: '1px',
-            padding: '0',
-            margin: '0',
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: '0',
-            fontSize: '1px',
-            color: 'transparent',
-            background: 'transparent'
+          <h2 style={{
+            color: '#333',
+            fontSize: '24px',
+            fontWeight: '600',
+            marginBottom: '8px'
           }}>
             客服登录
-          </h1>
+          </h2>
           <p style={{
             color: '#666',
             fontSize: '14px'
@@ -218,26 +207,6 @@ const CustomerServiceLogin: React.FC = () => {
           </button>
         </form>
 
-        <div style={{
-          textAlign: 'center',
-          marginTop: '24px',
-          paddingTop: '24px',
-          borderTop: '1px solid #e1e5e9'
-        }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#667eea',
-              fontSize: '14px',
-              cursor: 'pointer',
-              textDecoration: 'underline'
-            }}
-          >
-            返回首页
-          </button>
-        </div>
       </div>
     </div>
   );

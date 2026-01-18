@@ -307,7 +307,6 @@ api.interceptors.response.use(
       const skipRefreshApis = [
         '/api/secure-auth/refresh',
         '/api/secure-auth/refresh-token',
-        '/api/customer-service/refresh',
         '/api/admin/refresh',
         '/api/users/messages/mark-chat-read'
       ];
@@ -365,9 +364,6 @@ api.interceptors.response.use(
         // 检查当前URL路径来确定用户类型
         if (window.location.pathname.includes('/admin')) {
           refreshEndpoint = '/api/auth/admin/refresh';
-        } else if (window.location.pathname.includes('/customer-service') || window.location.pathname.includes('/service')) {
-          refreshEndpoint = '/api/auth/service/refresh';
-        }
         
         // 对于用户，先尝试使用refresh端点（需要session仍然有效）
         // 如果失败，再尝试使用refresh-token端点（使用refresh_token重新创建session）
@@ -391,9 +387,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           
           // 如果refresh端点失败（session已过期），尝试使用refresh-token端点
-          if (!window.location.pathname.includes('/admin') && 
-              !window.location.pathname.includes('/customer-service') && 
-              !window.location.pathname.includes('/service')) {
+          if (!window.location.pathname.includes('/admin')) {
             try {
               refreshPromise = api.post('/api/secure-auth/refresh-token');
               const refreshTokenResponse = await refreshPromise;
@@ -1087,20 +1081,6 @@ export const assignCustomerService = async () => {
   return response.data;
 };
 
-export const getCustomerServiceSessions = async () => {
-  const response = await api.get('/api/customer-service/chats');
-  return response.data;
-};
-
-export const getCustomerServiceMessages = async (chatId: string) => {
-  const response = await api.get(`/api/customer-service/chats/${chatId}/messages`);
-  return response.data;
-};
-
-export const markCustomerServiceMessagesRead = async (chatId: string) => {
-  const response = await api.post(`/api/customer-service/chats/${chatId}/mark-read`);
-  return response.data;
-};
 
 // 标记普通聊天的消息为已读
 export const markChatMessagesAsRead = async (contactId: string) => {
@@ -1118,41 +1098,7 @@ export const getContactUnreadCounts = async () => {
   return response.data;
 };
 
-export const sendCustomerServiceMessage = async (chatId: string, content: string) => {
-  const response = await api.post(`/api/customer-service/chats/${chatId}/messages`, { content });
-  return response.data;
-};
 
-export const setCustomerServiceOnline = async () => {
-  
-  try {
-    const response = await api.post('/api/customer-service/online');
-    return response.data;
-  } catch (error: any) {
-            throw error;
-  }
-};
-
-export const setCustomerServiceOffline = async () => {
-  
-  try {
-    const response = await api.post('/api/customer-service/offline');
-    return response.data;
-  } catch (error: any) {
-            throw error;
-  }
-};
-
-export const getCustomerServiceStatus = async () => {
-  const response = await api.get('/api/customer-service/status');
-  return response.data;
-};
-
-// 结束对话和评分相关API
-export const endCustomerServiceSession = async (chatId: string) => {
-  const response = await api.post(`/api/customer-service/chats/${chatId}/end`);
-  return response.data;
-};
 
 export const rateCustomerService = async (chatId: string, rating: number, comment?: string) => {
   const response = await api.post(`/api/user/customer-service/chats/${chatId}/rate`, { rating, comment });
@@ -1164,10 +1110,6 @@ export const getMyCustomerServiceSessions = async () => {
   return res.data;
 };
 
-export const customerServiceLogout = async () => {
-  const res = await api.post('/api/customer-service/logout');
-  return res.data;
-};
 
 // 管理后台相关API
 // 获取公开的平台统计数据（仅用户总数）
@@ -1182,37 +1124,6 @@ export const getPublicStats = async () => {
 };
 
 
-// 员工提醒相关API
-export const sendStaffNotification = async (notification: {
-  recipient_id: string;
-  recipient_type: string;
-  title: string;
-  content: string;
-  notification_type?: string;
-}) => {
-  const res = await api.post('/api/admin/staff-notification', notification);
-  return res.data;
-};
-
-export const getStaffNotifications = async () => {
-  const res = await api.get('/api/users/staff/notifications');
-  return res.data;
-};
-
-export const getUnreadStaffNotifications = async () => {
-  const res = await api.get('/api/users/staff/notifications/unread');
-  return res.data;
-};
-
-export const markStaffNotificationRead = async (notificationId: number) => {
-  const res = await api.post(`/api/users/staff/notifications/${notificationId}/read`);
-  return res.data;
-};
-
-export const markAllStaffNotificationsRead = async () => {
-  const res = await api.post('/api/users/staff/notifications/read-all');
-  return res.data;
-};
 
 
 export const getPublicSystemSettings = async () => {

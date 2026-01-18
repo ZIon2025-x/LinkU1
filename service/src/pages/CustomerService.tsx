@@ -2,7 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import api, { getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
+import api, { 
+  getCustomerServiceSessions, 
+  getCustomerServiceMessages, 
+  getCustomerServiceStatus, 
+  setCustomerServiceOnline, 
+  setCustomerServiceOffline, 
+  markCustomerServiceMessagesRead,
+  getCancelRequests,
+  getAdminRequests,
+  getAdminChatMessages,
+  sendAdminChatMessage,
+  reviewCancelRequest,
+  submitAdminRequest as submitAdminRequestAPI,
+  getTaskDetail,
+  checkChatTimeoutStatus,
+  timeoutEndChat,
+  cleanupOldChats
+} from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -170,7 +187,7 @@ const CustomerService: React.FC = () => {
   // WebSocket连接测试函数
   const testWebSocketConnection = () => {
     // 客服使用Cookie认证，无需检查token
-    const testUrl = `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser?.id}`;
+    const testUrl = `${WS_BASE_URL}/ws/chat/${currentUser?.id}`;
     
     const testSocket = new WebSocket(testUrl);
     
@@ -355,7 +372,7 @@ const CustomerService: React.FC = () => {
     try {
       // 新的认证系统使用Cookie认证，不需要检查localStorage
       // 直接通过API检查客服认证状态
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/service/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/service/profile`, {
         credentials: 'include'
       });
       
@@ -366,9 +383,9 @@ const CustomerService: React.FC = () => {
       }
       
       // 如果认证失败，重定向到客服登录页面
-      navigate('/en/customer-service/login');
+      navigate('/login');
     } catch (error) {
-            navigate('/en/customer-service/login');
+            navigate('/login');
     }
   };
 
@@ -434,7 +451,7 @@ const CustomerService: React.FC = () => {
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/users/notifications/send-announcement`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/notifications/send-announcement`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -467,7 +484,7 @@ const CustomerService: React.FC = () => {
       }
 
       // 2. 调用客服登出API
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/service/logout`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/service/logout`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -496,7 +513,7 @@ const CustomerService: React.FC = () => {
         }
         
         // 7. 跳转到登录页面
-        navigate('/service/login');
+        navigate('/login');
       } else {
                 message.error('登出失败，请重试');
       }
@@ -632,7 +649,7 @@ const CustomerService: React.FC = () => {
     if (!currentUser) return;
     
     // 客服使用Cookie认证，无需token
-    const notificationSocket = new WebSocket(`${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser.id}`);
+    const notificationSocket = new WebSocket(`${WS_BASE_URL}/ws/chat/${currentUser.id}`);
     
     notificationSocket.onopen = () => {
       // 通知WebSocket连接已建立
@@ -781,15 +798,8 @@ const CustomerService: React.FC = () => {
 
   const loadCancelRequests = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CS_CANCEL_REQUESTS}`, {
-        credentials: 'include'  // 使用Cookie认证
-      });
-      if (response.ok) {
-        const requestsData = await response.json();
-        setCancelRequests(requestsData);
-      } else {
-        setCancelRequests([]);
-      }
+      const requestsData = await getCancelRequests();
+      setCancelRequests(Array.isArray(requestsData) ? requestsData : []);
     } catch (error) {
       setCancelRequests([]);
     }
@@ -797,15 +807,8 @@ const CustomerService: React.FC = () => {
 
   const loadAdminRequests = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CS_ADMIN_REQUESTS}`, {
-        credentials: 'include'  // 使用Cookie认证
-      });
-      if (response.ok) {
-        const requestsData = await response.json();
-        setAdminRequests(requestsData);
-      } else {
-        setAdminRequests([]);
-      }
+      const requestsData = await getAdminRequests();
+      setAdminRequests(Array.isArray(requestsData) ? requestsData : []);
     } catch (error) {
       setAdminRequests([]);
     }
@@ -813,17 +816,10 @@ const CustomerService: React.FC = () => {
 
   const loadAdminChatMessages = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
-        credentials: 'include'  // 使用Cookie认证
-      });
-      if (response.ok) {
-        const messagesData = await response.json();
-        setAdminChatMessages(messagesData);
-      } else {
-                setAdminChatMessages([]);
-      }
+      const messagesData = await getAdminChatMessages();
+      setAdminChatMessages(Array.isArray(messagesData) ? messagesData : []);
     } catch (error) {
-            setAdminChatMessages([]);
+      setAdminChatMessages([]);
     }
   };
 
@@ -841,8 +837,8 @@ const CustomerService: React.FC = () => {
       }
       // 如果 adminComment 为空，不包含该字段，让后端使用默认值 None
       
-      // 使用 api 实例，自动处理 CSRF token 和错误
-      const result = await api.post(`/api/customer-service/cancel-requests/${requestId}/review`, requestBody);
+      // 使用统一的 API 函数
+      await reviewCancelRequest(requestId, status, adminComment.trim() || '');
       
       setSelectedCancelRequest(null);
       setAdminComment('');
@@ -897,35 +893,23 @@ const CustomerService: React.FC = () => {
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
       
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CS_ADMIN_REQUESTS}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify({
-          type: selectedRequestType,
-          title: requestTitle,
-          description: requestDescription,
-          priority: requestPriority
-        })
+      await submitAdminRequestAPI({
+        type: selectedRequestType,
+        title: requestTitle,
+        description: requestDescription,
+        priority: requestPriority
       });
-
-      if (response.ok) {
-        setShowRequestForm(false);
-        setSelectedRequestType('');
-        setRequestTitle('');
-        setRequestDescription('');
-        setRequestPriority('medium');
-        await loadAdminRequests(); // 重新加载管理请求列表
-        alert('管理请求已提交成功');
-      } else {
-        const errorData = await response.json();
-                alert('提交失败: ' + (errorData.detail || '未知错误'));
-      }
-    } catch (error) {
-            alert('提交失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      
+      setShowRequestForm(false);
+      setSelectedRequestType('');
+      setRequestTitle('');
+      setRequestDescription('');
+      setRequestPriority('medium');
+      await loadAdminRequests(); // 重新加载管理请求列表
+      message.success('管理请求已提交成功');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '提交失败';
+      message.error(errorMsg);
     }
   };
 
@@ -933,36 +917,15 @@ const CustomerService: React.FC = () => {
     if (!newAdminMessage.trim()) {
       return;
     }
-
+    
     try {
-      
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify({
-          content: newAdminMessage
-        })
-      });
-
-      if (response.ok) {
-        setNewAdminMessage('');
-        await loadAdminChatMessages(); // 重新加载聊天记录
-      } else {
-        const errorData = await response.json();
-                alert('发送失败: ' + (errorData.detail || '未知错误'));
-      }
-    } catch (error) {
-            alert('发送失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      await sendAdminChatMessage(newAdminMessage);
+      setNewAdminMessage('');
+      await loadAdminChatMessages(); // 重新加载聊天记录
+      message.success('消息发送成功');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '发送失败';
+      message.error(errorMsg);
     }
   };
 
@@ -1010,55 +973,34 @@ const CustomerService: React.FC = () => {
   };
 
   // 检查对话超时状态
-  const checkChatTimeoutStatus = async (chatId: string) => {
+  const handleCheckChatTimeoutStatus = async (chatId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chats/${chatId}/timeout-status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'  // 使用Cookie认证
-      });
-      
-      if (response.ok) {
-        const status = await response.json();
-        setChatTimeoutStatus(status);
-        return status;
-      } else {
-                // 如果获取超时状态失败，清除当前状态
-        setChatTimeoutStatus(null);
-        return null;
-      }
+      const status = await checkChatTimeoutStatus(chatId);
+      setChatTimeoutStatus(status);
+      return status;
     } catch (error) {
-            // 如果检查失败，清除当前状态
+      // 如果检查失败，清除当前状态
       setChatTimeoutStatus(null);
       return null;
     }
   };
 
   // 超时结束对话
-  const timeoutEndChat = async (chatId: string) => {
+  const handleTimeoutEndChat = async (chatId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chats/${chatId}/timeout-end`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'  // 使用Cookie认证
-      });
+      await timeoutEndChat(chatId);
       
+      // 先更新本地状态，避免状态不一致
+      setSessions(prevSessions => 
+        prevSessions.map(session => 
+          session.chat_id === chatId 
+            ? { ...session, is_ended: 1, ended_at: new Date().toISOString() }
+            : session
+        )
+      );
       
-      if (response.ok) {
-        // 先更新本地状态，避免状态不一致
-        setSessions(prevSessions => 
-          prevSessions.map(session => 
-            session.chat_id === chatId 
-              ? { ...session, is_ended: 1, ended_at: new Date().toISOString() }
-              : session
-          )
-        );
-        
-        // 清除当前选中的会话
+      // 如果当前选中的会话被结束，清除选中状态
+      if (selectedSession?.chat_id === chatId) {
         setSelectedSession(null);
         setChatMessages([]);
         setChatTimeoutStatus(null);
@@ -1068,36 +1010,19 @@ const CustomerService: React.FC = () => {
           clearInterval(timeoutCheckInterval);
           setTimeoutCheckInterval(null);
         }
-        
-        // 尝试解析响应，如果失败也不影响成功流程
-        try {
-          const result = await response.json();
-        } catch (parseError) {
-        }
-        
-        // 显示成功消息
-        alert('对话已超时结束，用户已收到通知');
-        
-        // 异步重新加载会话列表以确保数据同步
-        setTimeout(() => {
-          loadSessions();
-        }, 100);
-        
-        return { success: true };
-      } else {
-        // 尝试解析错误响应
-        let errorMessage = '未知错误';
-        try {
-          const errorData = await response.json();
-                    errorMessage = errorData.detail || '未知错误';
-        } catch (parseError) {
-                    errorMessage = response.statusText || '未知错误';
-        }
-        alert('超时结束失败: ' + errorMessage);
-        return null;
       }
-    } catch (error) {
-            alert('超时结束失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      
+      message.success('对话已超时结束，用户已收到通知');
+      
+      // 异步重新加载会话列表以确保数据同步
+      setTimeout(() => {
+        loadSessions();
+      }, 100);
+      
+      return { success: true };
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || '超时结束失败';
+      message.error(errorMsg);
       return null;
     }
   };
@@ -1166,7 +1091,7 @@ const CustomerService: React.FC = () => {
       // 重新检查超时状态（因为发送了新消息）
       if (selectedSession.is_ended === 0) {
         setTimeout(() => {
-          checkChatTimeoutStatus(selectedSession.chat_id);
+          handleCheckChatTimeoutStatus(selectedSession.chat_id);
         }, 1000); // 延迟1秒检查，确保后端已处理消息
       }
       
@@ -1226,7 +1151,7 @@ const CustomerService: React.FC = () => {
       // 重新检查超时状态（因为发送了新消息）
       if (selectedSession.is_ended === 0) {
         setTimeout(() => {
-          checkChatTimeoutStatus(selectedSession.chat_id);
+          handleCheckChatTimeoutStatus(selectedSession.chat_id);
         }, 1000); // 延迟1秒检查，确保后端已处理消息
       }
     } catch (error) {
@@ -1238,14 +1163,9 @@ const CustomerService: React.FC = () => {
   const fetchTaskDetail = async (taskId: number) => {
     setLoadingTaskDetail(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/tasks/${taskId}`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const taskData = await response.json();
-        setSelectedTask(taskData);
-        setShowTaskDetailModal(true);
+      const taskData = await getTaskDetail(taskId);
+      setSelectedTask(taskData);
+      setShowTaskDetailModal(true);
       } else {
         message.error('获取任务详情失败');
       }
@@ -1323,11 +1243,11 @@ const CustomerService: React.FC = () => {
     // 如果会话未结束，启动超时检查
     if (session.is_ended === 0) {
       // 立即检查一次超时状态
-      await checkChatTimeoutStatus(session.chat_id);
+      await handleCheckChatTimeoutStatus(session.chat_id);
       
       // 设置定时器，每10秒检查一次超时状态，确保及时更新
       const interval = setInterval(async () => {
-        await checkChatTimeoutStatus(session.chat_id);
+        await handleCheckChatTimeoutStatus(session.chat_id);
       }, 10000); // 10秒检查一次，提高响应速度
       
       setTimeoutCheckInterval(interval);
@@ -1355,7 +1275,7 @@ const CustomerService: React.FC = () => {
 
       const connectWebSocket = () => {
         // 使用Cookie认证，无需在URL中传递token
-        const wsUrl = `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser.id}`;
+        const wsUrl = `${WS_BASE_URL}/ws/chat/${currentUser.id}`;
         socket = new WebSocket(wsUrl);
         setWsConnectionStatus('connecting');
         
@@ -1929,23 +1849,12 @@ const CustomerService: React.FC = () => {
                     cancelText: '取消',
                     onOk: async () => {
                       try {
-                        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cleanup-old-chats/${currentUser.id}`, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          },
-                          credentials: 'include'  // 使用Cookie认证
-                        });
-                        
-                        if (response.ok) {
-                          const result = await response.json();
-                          message.success(result.message || '清理成功');
-                          loadSessions(); // 重新加载会话列表
-                        } else {
-                          message.error('清理失败');
-                        }
-                      } catch (error) {
-                                                message.error('清理失败，请重试');
+                        await cleanupOldChats(currentUser.id);
+                        message.success('清理成功');
+                        loadSessions(); // 重新加载会话列表
+                      } catch (error: any) {
+                        const errorMsg = error?.response?.data?.detail || error?.message || '清理失败';
+                        message.error(errorMsg);
                       }
                     }
                   });
@@ -2233,7 +2142,7 @@ const CustomerService: React.FC = () => {
                         okText: '确定',
                         cancelText: '取消',
                         onOk: () => {
-                          timeoutEndChat(selectedSession.chat_id);
+                          handleTimeoutEndChat(selectedSession.chat_id);
                         }
                       });
                     }}
@@ -2805,7 +2714,7 @@ const CustomerService: React.FC = () => {
 
             <div className="modal-actions">
               <button
-                onClick={submitAdminRequest}
+                onClick={handleSubmitAdminRequest}
                 className="btn-primary"
               >
                 提交请求
@@ -2832,25 +2741,6 @@ const CustomerService: React.FC = () => {
   return (
     <div className="customer-service">
       <div className="header">
-        {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
-        <h1 style={{
-          position: 'absolute',
-          top: '-100px',
-          left: '-100px',
-          width: '1px',
-          height: '1px',
-          padding: '0',
-          margin: '0',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          whiteSpace: 'nowrap',
-          border: '0',
-          fontSize: '1px',
-          color: 'transparent',
-          background: 'transparent'
-        }}>
-          客服管理系统
-        </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* 客服在线状态控制 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

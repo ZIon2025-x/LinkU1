@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { antdTheme } from './styles/theme';
 import ProtectedRoute from './components/ProtectedRoute';
-import CustomerServiceRoute from './components/CustomerServiceRoute';
 import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
 import QueryPreservingRedirect from './components/QueryPreservingRedirect';
@@ -70,8 +69,6 @@ const TaskExperts = lazyWithRetry(() => import('./pages/TaskExperts'));
 const TaskExpertsIntro = lazyWithRetry(() => import('./pages/TaskExpertsIntro'));
 const TaskExpertDashboard = lazyWithRetry(() => import('./pages/TaskExpertDashboard'));
 const MyServiceApplications = lazyWithRetry(() => import('./pages/MyServiceApplications'));
-const CustomerService = lazyWithRetry(() => import('./pages/CustomerService'));
-const CustomerServiceLogin = lazyWithRetry(() => import('./pages/CustomerServiceLogin'));
 const VIP = lazyWithRetry(() => import('./pages/VIP'));
 const Wallet = lazyWithRetry(() => import('./pages/Wallet'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
@@ -267,7 +264,6 @@ const LanguageRoutes: React.FC = () => {
               <Settings />
             </ProtectedRoute>
           } />
-          <Route path={`/${lang}/customer-service/login`} element={<CustomerServiceLogin />} />
           <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
           <Route path={`/${lang}/verify-email`} element={<VerifyEmail />} />
           <Route path={`/${lang}/reset-password/:token`} element={<ResetPassword />} />
@@ -277,11 +273,6 @@ const LanguageRoutes: React.FC = () => {
             </ProtectedRoute>
           } />
           <Route path={`/${lang}/student-verification/verify/:token`} element={<VerifyStudentEmail />} />
-          <Route path={`/${lang}/customer-service`} element={
-            <CustomerServiceRoute>
-              <CustomerService />
-            </CustomerServiceRoute>
-          } />
           {/* 新的独立认证路由 */}
           <Route path={`/${lang}/service`} element={
             <ServiceGuard>
@@ -319,8 +310,6 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
       <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
       <Route path="/settings" element={<Navigate to={`/${DEFAULT_LANGUAGE}/settings`} replace />} />
-      <Route path="/customer-service/login" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service/login`} replace />} />
-      <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
       <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />
       <Route path="/student-verification/verify/:token" element={<ParamRedirect basePath="/student-verification/verify/:token" />} />

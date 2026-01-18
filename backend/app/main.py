@@ -192,9 +192,11 @@ async def custom_cors_middleware(request: Request, call_next):
         "https://www.link2ur.com", 
         "https://link2ur.com",
         "https://admin.link2ur.com",  # 管理后台子域名
+        "https://service.link2ur.com",  # 客服系统子域名
         "https://api.link2ur.com",
         "http://localhost:3000",
         "http://localhost:3001",  # 管理后台开发端口
+        "http://localhost:3002",  # 客服系统开发端口
         "http://localhost:8080"
     ]
     

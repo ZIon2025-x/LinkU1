@@ -33,7 +33,7 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     if (typeof window === 'undefined') return false;
     const path = window.location.pathname;
     // 检查是否是管理员页面或客服页面
-    return path.includes('/admin') || path.includes('/customer-service') || path.includes('/service');
+    return path.includes('/admin');
   };
 
   // 获取用户信息（只在非管理员/客服页面时调用）

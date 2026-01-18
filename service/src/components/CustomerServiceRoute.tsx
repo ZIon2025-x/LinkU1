@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import api from '../api';
+import { API_BASE_URL } from '../config';
 
 interface CustomerServiceRouteProps {
   children: React.ReactNode;
@@ -15,7 +15,6 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
       try {
         // 直接使用API验证，不需要检测Cookie
         // 后端会自动验证HttpOnly Cookie
-        const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
         const response = await fetch(`${API_BASE_URL}/api/auth/service/profile`, {
           credentials: 'include'
         });
@@ -58,7 +57,7 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
 
   if (!isAuthorized) {
     // 无权限，重定向到客服登录页面
-    return <Navigate to="/en/customer-service/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // 有权限，显示子组件
