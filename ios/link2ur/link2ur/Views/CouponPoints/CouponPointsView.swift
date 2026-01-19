@@ -496,7 +496,7 @@ struct CouponsView: View {
                             // 可领取优惠券标题
                             HStack {
                                 Text("可领取优惠券")
-                                    .font(AppTypography.headline)
+                                    .font(AppTypography.bodyBold)
                                     .foregroundColor(AppColors.textPrimary)
                                 Spacer()
                             }

@@ -4,26 +4,51 @@
 
 ### 可能的原因
 
-1. **Vercel "Ignore Build Step" 配置错误**
+1. **⚠️ vercel.json 路由语法错误（最常见）**
+   - 使用了正则表达式语法 `(.*)` 而不是 path-to-regexp 语法
+   - 使用了转义语法 `\\.` 而不是 path-to-regexp 语法
+   - 错误信息：`Invalid route source pattern - The source property follows the syntax from path-to-regexp, not the RegExp syntax`
+
+2. **Vercel "Ignore Build Step" 配置错误**
    - 命令逻辑反了（返回 0 应该跳过，但配置成了构建）
    - 命令语法错误
    - 命令在错误的目录执行
 
-2. **Vercel 项目配置不正确**
+3. **Vercel 项目配置不正确**
    - Root Directory 设置错误
    - Build Command 或 Output Directory 配置错误
    - 环境变量缺失
 
-3. **构建过程出错**
+4. **构建过程出错**
    - 依赖安装失败
    - TypeScript 编译错误
    - 构建命令执行失败
 
-4. **GitHub 集成问题**
+5. **GitHub 集成问题**
    - Vercel GitHub App 权限不足
    - Webhook 配置错误
 
 ## 诊断步骤
+
+### 0. ⚠️ 检查 vercel.json 路由语法（优先检查）
+
+如果看到错误信息 `Invalid route source pattern`，说明 `vercel.json` 中使用了错误的路由语法。
+
+**常见错误**：
+- ❌ `"source": "/static/(.*\\.(js|css|png))"` - 使用了正则表达式转义语法
+- ❌ `"source": "/api/(.*)"` - 使用了正则表达式语法 `(.*)`
+- ✅ `"source": "/api/:path*"` - 正确的 path-to-regexp 语法
+
+**修复方法**：
+- 将所有 `(.*)` 改为 `:path*`
+- 将所有 `\\.` 改为 `.` 或使用 path-to-regexp 语法
+- 在 destination 中使用 `:path*` 而不是 `$1`
+
+**已修复的问题**（在 `frontend/vercel.json` 中）：
+- ✅ 修复了 `/static/(.*\\.(js|css|...))` → `/static/:path*`
+- ✅ 修复了 `/api/(.*)` → `/api/:path*`
+- ✅ 修复了 `/uploads/(.*)` → `/uploads/:path*`
+- ✅ 修复了 `/(.*)` → `/:path*`
 
 ### 1. 检查 Vercel 项目配置
 
@@ -148,7 +173,56 @@ npm run build
 
 ## 解决方案
 
-### 方案 1：修复 "Ignore Build Step" 配置（最可能的问题）
+### 方案 0：修复 vercel.json 路由语法（如果看到 "Invalid route source pattern" 错误）
+
+**问题**：`vercel.json` 中使用了正则表达式语法，但 Vercel 要求使用 path-to-regexp 语法。
+
+**修复步骤**：
+
+1. **检查 vercel.json 文件**
+   - 查找所有使用 `(.*)` 的地方
+   - 查找所有使用 `\\.` 转义的地方
+
+2. **修复语法**
+   - `(.*)` → `:path*`
+   - `\\.` → `.` 或使用 path-to-regexp 语法
+   - destination 中的 `$1` → `:path*`
+
+3. **示例修复**：
+
+```json
+// ❌ 错误
+{
+  "source": "/static/(.*\\.(js|css|png))",
+  "destination": "/static/$1"
+}
+
+// ✅ 正确
+{
+  "source": "/static/:path*",
+  "destination": "/static/:path*"
+}
+```
+
+```json
+// ❌ 错误
+{
+  "source": "/api/(.*)",
+  "destination": "https://api.example.com/api/$1"
+}
+
+// ✅ 正确
+{
+  "source": "/api/:path*",
+  "destination": "https://api.example.com/api/:path*"
+}
+```
+
+4. **验证修复**
+   - 提交更改
+   - 查看 Vercel 部署日志，确认不再有 "Invalid route source pattern" 错误
+
+### 方案 1：修复 "Ignore Build Step" 配置
 
 #### ⚠️ 重要：配置差异问题
 
