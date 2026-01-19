@@ -290,6 +290,16 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         configuration.appearance = appearance
         
+        // 配置 returnURL，用于 WeChat Pay 等需要跳转的支付方式回调
+        // 格式：yourapp://stripe-redirect
+        // 这允许用户在完成微信支付后返回到应用
+        if let returnURL = URL(string: "link2ur://stripe-redirect") {
+            configuration.returnURL = returnURL
+            Logger.debug("PaymentSheet 已配置 returnURL: \(returnURL.absoluteString)", category: .api)
+        } else {
+            Logger.warning("无法创建 returnURL", category: .api)
+        }
+        
         // 创建 Payment Sheet（弹出式）
         let paymentSheet = PaymentSheet(
             paymentIntentClientSecret: clientSecret,

@@ -57,22 +57,20 @@
 # backend/app/coupon_points_routes.py (已更新)
 payment_intent = stripe.PaymentIntent.create(
     amount=final_amount,
-    currency="gbp",  # 或 "cny" 如果主要面向中国用户
+    currency="gbp",  # GBP 是英国支持的货币，WeChat Pay 会自动换算成 CNY 显示给用户
     # 明确指定支付方式类型，确保 WeChat Pay 可用
+    # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
     payment_method_types=["card", "wechat_pay"],
-    # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
-    automatic_payment_methods={
-        "enabled": True,
-    },
     # ...
 )
 ```
 
 **重要**：
 - ✅ 后端已明确指定 `payment_method_types=["card", "wechat_pay"]`
-- ⚠️ 如果主要面向中国用户，建议将货币改为 `"cny"`，因为 WeChat Pay 的默认货币是 CNY
+- ✅ 不能同时使用 `payment_method_types` 和 `automatic_payment_methods`（会报错）
+- ✅ 使用 GBP 货币，WeChat Pay 会自动换算成 CNY 显示给用户
 - ⚠️ 必须确保 Stripe Dashboard 中已启用 WeChat Pay
-- ⚠️ 必须确保账户所在国家/地区支持 WeChat Pay
+- ⚠️ 必须确保账户所在国家/地区支持 WeChat Pay（英国 GB 在支持列表中）
 
 ### 3. iOS 端配置（可选优化）
 
@@ -137,10 +135,15 @@ available_payment_methods = payment_intent.payment_method_types
 3. PaymentSheet 弹出，显示所有可用的支付方式（包括 WeChat Pay）
 4. 用户可以选择 WeChat Pay 完成支付
 
-### 如果添加独立选项
+### 如果添加独立选项（当前实现）
 1. 用户可以在支付方式选择卡片中选择"微信支付"
-2. 点击支付按钮后，PaymentSheet 弹出并自动选择 WeChat Pay
-3. 用户完成支付
+2. 点击"使用微信支付"按钮后，PaymentSheet 弹出
+3. **重要**：PaymentSheet 会显示所有可用的支付方式（包括 WeChat Pay、Card 等）
+4. 用户需要在 PaymentSheet 中**手动选择 WeChat Pay 选项**
+5. 选择 WeChat Pay 后，会跳转到微信应用完成支付
+6. 支付完成后，通过 returnURL 返回到应用
+
+**注意**：PaymentSheet 不会自动选择 WeChat Pay，用户需要手动选择。这是 Stripe PaymentSheet 的设计，它会显示所有可用的支付方式供用户选择。
 
 ## ⚠️ 注意事项
 

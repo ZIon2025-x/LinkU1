@@ -881,11 +881,10 @@ def create_task_payment(
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
-            # 这会自动包含所有可用的支付方式，包括 WeChat Pay（如果已在 Dashboard 中启用）
-            automatic_payment_methods={
-                "enabled": True,
-            },
+            # 明确指定支付方式类型，确保 WeChat Pay 可用
+            # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
+            # 必须在 Stripe Dashboard 中启用 WeChat Pay
+            payment_method_types=["card", "wechat_pay"],
             # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
             # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             metadata={
@@ -900,6 +899,15 @@ def create_task_payment(
             },
             description=f"任务 #{task_id} 任务金额支付 - {task.title}",
         )
+        
+        # 记录 PaymentIntent 的支付方式类型，用于调试
+        payment_method_types = payment_intent.get("payment_method_types", [])
+        logger.info(f"PaymentIntent 创建的支付方式类型: {payment_method_types}")
+        if "wechat_pay" in payment_method_types:
+            logger.info("✅ PaymentIntent 包含 WeChat Pay")
+        else:
+            logger.warning(f"⚠️ PaymentIntent 不包含 WeChat Pay，当前支付方式: {payment_method_types}")
+            logger.warning("请检查 Stripe Dashboard 中是否已启用 WeChat Pay")
         
         # 创建支付历史记录（待支付状态）
         # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
