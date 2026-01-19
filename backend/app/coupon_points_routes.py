@@ -850,8 +850,8 @@ def create_task_payment(
         # is optional because Stripe enables its functionality by default.
         # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
         # 
-        # 为了确保 WeChat Pay 可用，明确指定 payment_method_types
-        # 这样 PaymentSheet 会显示所有指定的支付方式
+        # 尝试包含 WeChat Pay，如果不可用则回退到只使用 card
+        # 这样 PaymentSheet 会显示所有可用的支付方式
         # 
         # 交易市场托管模式（Marketplace/Escrow）：
         # - 支付时：资金先到平台账户（不立即转账给任务接受人）
@@ -860,19 +860,23 @@ def create_task_payment(
         # 
         # 注意：官方示例代码使用的是 Checkout Session + Direct Charges 模式（立即转账）
         # 但交易市场需要托管模式，所以不设置 transfer_data.destination
-        payment_intent = stripe.PaymentIntent.create(
-            amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
-            currency="gbp",
-            # 明确指定支付方式类型，确保 WeChat Pay 可用
-            # 如果 Stripe Dashboard 中启用了 WeChat Pay，它会被包含在可用支付方式中
-            payment_method_types=["card", "wechat_pay"],
-            # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
-            automatic_payment_methods={
-                "enabled": True,
-            },
-            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-            metadata={
+        
+        # 尝试创建包含 WeChat Pay 的 PaymentIntent
+        # 如果 WeChat Pay 不可用（未启用或账户不支持），回退到只使用 card
+        payment_intent = None
+        try:
+            payment_intent = stripe.PaymentIntent.create(
+                amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
+                currency="gbp",
+                # 明确指定支付方式类型，尝试包含 WeChat Pay
+                payment_method_types=["card", "wechat_pay"],
+                # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
+                automatic_payment_methods={
+                    "enabled": True,
+                },
+                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
+                metadata={
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
                 "taker_id": str(task.taker_id),
@@ -883,7 +887,59 @@ def create_task_payment(
                 "application_fee": str(application_fee_pence)  # 保存服务费金额，用于后续转账时扣除
             },
             description=f"任务 #{task_id} 任务金额支付 - {task.title}",
-        )
+            )
+        except stripe.error.InvalidRequestError as e:
+            # 如果 WeChat Pay 不可用（例如未启用或账户不支持），回退到只使用 card
+            if "wechat_pay" in str(e).lower() or "payment_method" in str(e).lower():
+                logger.warning(f"WeChat Pay 不可用，回退到只使用 card: {str(e)}")
+                try:
+                    payment_intent = stripe.PaymentIntent.create(
+                        amount=final_amount,
+                        currency="gbp",
+                        # 只使用 card，确保支付流程可以继续
+                        payment_method_types=["card"],
+                        # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
+                        automatic_payment_methods={
+                            "enabled": True,
+                        },
+                        metadata={
+                            "task_id": str(task_id),
+                            "user_id": str(current_user.id),
+                            "taker_id": str(task.taker_id),
+                            "taker_stripe_account_id": taker.stripe_account_id,
+                            "task_amount": str(task_amount_pence),
+                            "points_used": str(points_used) if points_used else "",
+                            "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
+                            "application_fee": str(application_fee_pence)
+                        },
+                        description=f"任务 #{task_id} 任务金额支付 - {task.title}",
+                    )
+                except Exception as fallback_error:
+                    logger.error(f"创建 PaymentIntent 失败（回退方案）: {fallback_error}", exc_info=True)
+                    raise HTTPException(
+                        status_code=500,
+                        detail="创建支付失败，请稍后重试"
+                    )
+            else:
+                # 其他类型的错误，直接抛出
+                logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail="创建支付失败，请稍后重试"
+                )
+        except Exception as e:
+            # 其他异常，直接抛出
+            logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="创建支付失败，请稍后重试"
+            )
+        
+        if payment_intent is None:
+            raise HTTPException(
+                status_code=500,
+                detail="创建支付失败，请稍后重试"
+            )
         
         # 创建支付历史记录（待支付状态）
         # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
