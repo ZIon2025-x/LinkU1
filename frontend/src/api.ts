@@ -201,13 +201,6 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   response => {
-    // 记录API性能（已记录，可用于后续分析）
-    const metadata = (response.config as any).metadata;
-    if (metadata?.startTime) {
-      const duration = performance.now() - metadata.startTime;
-      // API性能数据已记录
-    }
-    
     // 成功响应后清理重试计数器
     if (response.status >= 200 && response.status < 300) {
       const globalKey = 'global_401_retry';
