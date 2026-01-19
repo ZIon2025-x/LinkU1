@@ -178,8 +178,60 @@ def redeem_coupon(
     db: Session = Depends(get_db)
 ):
     """积分兑换优惠券"""
-    # TODO: 实现积分兑换优惠券逻辑
-    raise HTTPException(status_code=501, detail="功能开发中")
+    # 1. 获取优惠券信息
+    coupon = get_coupon_by_id(db, request.coupon_id)
+    if not coupon:
+        raise HTTPException(status_code=404, detail="优惠券不存在")
+    
+    # 2. 检查优惠券是否可以用积分兑换
+    usage_conditions = coupon.usage_conditions or {}
+    points_required = usage_conditions.get("points_required", 0)
+    
+    if points_required <= 0:
+        raise HTTPException(status_code=400, detail="该优惠券不支持积分兑换")
+    
+    # 3. 检查优惠券是否有效
+    now = get_utc_time()
+    if coupon.status != "active":
+        raise HTTPException(status_code=400, detail="优惠券已失效")
+    if coupon.valid_from > now or coupon.valid_until < now:
+        raise HTTPException(status_code=400, detail="优惠券不在有效期内")
+    
+    # 4. 获取用户积分账户
+    points_account = get_or_create_points_account(db, current_user.id)
+    if points_account.balance < points_required:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"积分不足，需要 {points_required} 积分，当前余额 {points_account.balance} 积分"
+        )
+    
+    # 5. 领取优惠券
+    user_coupon = claim_coupon(
+        db,
+        current_user.id,
+        coupon.id,
+        idempotency_key=request.idempotency_key
+    )
+    
+    if not user_coupon:
+        raise HTTPException(status_code=400, detail="领取失败，请检查优惠券是否可用或已达到领取限制")
+    
+    # 6. 扣除积分
+    add_points_transaction(
+        db,
+        current_user.id,
+        -points_required,
+        "coupon_redeem",
+        f"积分兑换优惠券: {coupon.name}"
+    )
+    
+    return {
+        "success": True,
+        "user_coupon_id": user_coupon.id,
+        "coupon_id": coupon.id,
+        "points_used": points_required,
+        "message": f"兑换成功！已使用 {points_required} 积分"
+    }
 
 
 @router.post("/points/redeem/product")
@@ -230,12 +282,45 @@ def claim_coupon_api(
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    """领取优惠券"""
+    """领取优惠券（支持优惠券ID或兑换码）"""
+    promotion_code_id = None
+    
     if request.coupon_id:
         coupon_id = request.coupon_id
     elif request.promotion_code:
-        # TODO: 通过推广码查找优惠券
-        raise HTTPException(status_code=501, detail="推广码功能开发中")
+        # 通过兑换码查找优惠券
+        promo_code = db.query(models.PromotionCode).filter(
+            models.PromotionCode.code.ilike(request.promotion_code),
+            models.PromotionCode.is_active == True
+        ).first()
+        
+        if not promo_code:
+            raise HTTPException(status_code=404, detail="兑换码无效或已失效")
+        
+        # 检查兑换码有效期
+        now = get_utc_time()
+        if promo_code.valid_from > now or promo_code.valid_until < now:
+            raise HTTPException(status_code=400, detail="兑换码不在有效期内")
+        
+        # 检查兑换码使用次数
+        if promo_code.max_uses:
+            used_count = db.query(models.UserCoupon).filter(
+                models.UserCoupon.promotion_code_id == promo_code.id
+            ).count()
+            if used_count >= promo_code.max_uses:
+                raise HTTPException(status_code=400, detail="兑换码已达到使用上限")
+        
+        # 检查用户是否已使用过此兑换码
+        if promo_code.per_user_limit:
+            user_used_count = db.query(models.UserCoupon).filter(
+                models.UserCoupon.user_id == current_user.id,
+                models.UserCoupon.promotion_code_id == promo_code.id
+            ).count()
+            if user_used_count >= promo_code.per_user_limit:
+                raise HTTPException(status_code=400, detail="您已使用过此兑换码")
+        
+        coupon_id = promo_code.coupon_id
+        promotion_code_id = promo_code.id
     else:
         raise HTTPException(status_code=400, detail="必须提供coupon_id或promotion_code")
     
@@ -243,15 +328,20 @@ def claim_coupon_api(
         db,
         current_user.id,
         coupon_id,
+        promotion_code_id=promotion_code_id,
         idempotency_key=request.idempotency_key
     )
     
     if not user_coupon:
         raise HTTPException(status_code=400, detail="领取失败，请检查优惠券是否可用或已达到领取限制")
     
+    # 获取优惠券详情用于返回
+    coupon = get_coupon_by_id(db, coupon_id)
+    
     return {
         "user_coupon_id": user_coupon.id,
         "coupon_id": user_coupon.coupon_id,
+        "coupon_name": coupon.name if coupon else None,
         "message": "优惠券领取成功"
     }
 

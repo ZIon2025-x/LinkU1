@@ -445,6 +445,12 @@ struct CouponFlowLayout: View {
 struct CouponsView: View {
     @ObservedObject var viewModel: CouponPointsViewModel
     @State private var showingAvailable = true
+    @State private var redemptionCode = ""
+    @State private var isRedeeming = false
+    @State private var showRedeemSuccess = false
+    @State private var redeemSuccessMessage = ""
+    @State private var showRedeemError = false
+    @State private var redeemErrorMessage = ""
     
     var body: some View {
         VStack(spacing: 0) {
@@ -471,14 +477,31 @@ struct CouponsView: View {
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: AppSpacing.lg) {
                     if showingAvailable {
+                        // 兑换码输入区域
+                        RedemptionCodeInputView(
+                            code: $redemptionCode,
+                            isRedeeming: $isRedeeming,
+                            onRedeem: redeemWithCode
+                        )
+                        .padding(.bottom, AppSpacing.sm)
+                        
                         if viewModel.availableCoupons.isEmpty {
                             EmptyStateView(
                                 icon: "ticket",
                                 title: LocalizationKey.couponNoAvailableCoupons.localized,
                                 message: LocalizationKey.couponNoAvailableCouponsMessage.localized
                             )
-                            .padding(.top, 60)
+                            .padding(.top, 40)
                         } else {
+                            // 可领取优惠券标题
+                            HStack {
+                                Text("可领取优惠券")
+                                    .font(AppTypography.headline)
+                                    .foregroundColor(AppColors.textPrimary)
+                                Spacer()
+                            }
+                            .padding(.top, AppSpacing.sm)
+                            
                             ForEach(viewModel.availableCoupons) { coupon in
                                 CouponCardView(coupon: coupon, isAvailable: true, viewModel: viewModel)
                             }
@@ -507,6 +530,97 @@ struct CouponsView: View {
                 .padding(.bottom, AppSpacing.xxl)
             }
         }
+        .alert("兑换成功", isPresented: $showRedeemSuccess) {
+            Button("确定") {
+                viewModel.loadAvailableCoupons()
+                viewModel.loadMyCoupons()
+            }
+        } message: {
+            Text(redeemSuccessMessage)
+        }
+        .alert("兑换失败", isPresented: $showRedeemError) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(redeemErrorMessage)
+        }
+    }
+    
+    private func redeemWithCode() {
+        guard !redemptionCode.isEmpty else { return }
+        
+        isRedeeming = true
+        viewModel.redeemWithCode(redemptionCode) { result in
+            isRedeeming = false
+            switch result {
+            case .success(let response):
+                redemptionCode = ""
+                redeemSuccessMessage = response.message
+                showRedeemSuccess = true
+                HapticFeedback.success()
+            case .failure(let error):
+                redeemErrorMessage = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                showRedeemError = true
+                HapticFeedback.error()
+            }
+        }
+    }
+}
+
+// MARK: - 兑换码输入视图
+struct RedemptionCodeInputView: View {
+    @Binding var code: String
+    @Binding var isRedeeming: Bool
+    let onRedeem: () -> Void
+    
+    var body: some View {
+        VStack(spacing: AppSpacing.sm) {
+            HStack {
+                Image(systemName: "ticket.fill")
+                    .foregroundColor(AppColors.primary)
+                Text("输入兑换码")
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.textPrimary)
+                Spacer()
+            }
+            
+            HStack(spacing: AppSpacing.sm) {
+                TextField("请输入兑换码", text: $code)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
+                    .background(AppColors.surface)
+                    .cornerRadius(AppCornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                    )
+                    .autocapitalization(.allCharacters)
+                    .disableAutocorrection(true)
+                
+                Button(action: onRedeem) {
+                    if isRedeeming {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 24, height: 24)
+                    } else {
+                        Text("兑换")
+                            .font(AppTypography.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.vertical, AppSpacing.sm)
+                .background(code.isEmpty || isRedeeming ? AppColors.textSecondary : AppColors.primary)
+                .cornerRadius(AppCornerRadius.medium)
+                .disabled(code.isEmpty || isRedeeming)
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 }
 
@@ -540,6 +654,12 @@ struct CouponCardView: View {
     var status: String? = nil
     
     @State private var isClaiming = false
+    @State private var isRedeemingWithPoints = false
+    @State private var showPointsRedeemConfirm = false
+    @State private var showRedeemSuccess = false
+    @State private var redeemMessage = ""
+    @State private var showRedeemError = false
+    @State private var redeemErrorMessage = ""
     @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
@@ -604,20 +724,45 @@ struct CouponCardView: View {
                     Spacer()
                     
                     if isAvailable {
-                        Button(action: claimCoupon) {
-                            if isClaiming {
-                                ProgressView().tint(AppColors.primary)
-                            } else {
-                                Text(LocalizationKey.couponClaimNow.localized)
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(AppColors.primary)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(AppColors.primaryLight)
-                                    .cornerRadius(12)
+                        HStack(spacing: 8) {
+                            // 免费领取按钮
+                            Button(action: claimCoupon) {
+                                if isClaiming {
+                                    ProgressView().tint(AppColors.primary)
+                                } else {
+                                    Text(LocalizationKey.couponClaimNow.localized)
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(AppColors.primary)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(AppColors.primaryLight)
+                                        .cornerRadius(12)
+                                }
+                            }
+                            .disabled(isClaiming)
+                            
+                            // 积分兑换按钮（如果支持）
+                            if coupon.canRedeemWithPoints, let points = coupon.pointsRequired {
+                                Button(action: { showPointsRedeemConfirm = true }) {
+                                    if isRedeemingWithPoints {
+                                        ProgressView().tint(AppColors.warning)
+                                    } else {
+                                        HStack(spacing: 2) {
+                                            Image(systemName: "star.fill")
+                                                .font(.system(size: 8))
+                                            Text("\(points)")
+                                                .font(.system(size: 10, weight: .bold))
+                                        }
+                                        .foregroundColor(AppColors.warning)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                        .background(AppColors.warning.opacity(0.15))
+                                        .cornerRadius(12)
+                                    }
+                                }
+                                .disabled(isRedeemingWithPoints)
                             }
                         }
-                        .disabled(isClaiming)
                     } else {
                         CouponStatusBadge(status: status ?? "unused")
                     }
@@ -657,6 +802,24 @@ struct CouponCardView: View {
                     .offset(x: -UIScreen.main.bounds.width/2 + 100 + 16 + 6, y: 50)
             }
         )
+        .alert("确认兑换", isPresented: $showPointsRedeemConfirm) {
+            Button("取消", role: .cancel) {}
+            Button("确认兑换") {
+                redeemWithPoints()
+            }
+        } message: {
+            Text("确定使用 \(coupon.pointsRequired ?? 0) 积分兑换此优惠券吗？")
+        }
+        .alert("兑换成功", isPresented: $showRedeemSuccess) {
+            Button("确定") {}
+        } message: {
+            Text(redeemMessage)
+        }
+        .alert("兑换失败", isPresented: $showRedeemError) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(redeemErrorMessage)
+        }
     }
     
     private func formatDiscount(_ value: Int) -> String {
@@ -676,15 +839,41 @@ struct CouponCardView: View {
                 receiveCompletion: { completion in
                     isClaiming = false
                     if case .failure(let error) = completion {
-                        print("Claim coupon error: \(error)")
+                        redeemErrorMessage = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                        showRedeemError = true
+                        HapticFeedback.error()
                     } else {
                         viewModel.loadAvailableCoupons()
                         viewModel.loadMyCoupons()
+                        HapticFeedback.success()
                     }
                 },
-                receiveValue: { _ in }
+                receiveValue: { response in
+                    redeemMessage = response.message
+                    showRedeemSuccess = true
+                }
             )
             .store(in: &cancellables)
+    }
+    
+    private func redeemWithPoints() {
+        isRedeemingWithPoints = true
+        viewModel.redeemCouponWithPoints(couponId: coupon.id) { result in
+            isRedeemingWithPoints = false
+            switch result {
+            case .success(let response):
+                redeemMessage = response.message
+                showRedeemSuccess = true
+                viewModel.loadAvailableCoupons()
+                viewModel.loadMyCoupons()
+                viewModel.loadPointsAccount()
+                HapticFeedback.success()
+            case .failure(let error):
+                redeemErrorMessage = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                showRedeemError = true
+                HapticFeedback.error()
+            }
+        }
     }
 }
 

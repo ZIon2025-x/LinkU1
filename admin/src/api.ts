@@ -518,6 +518,69 @@ export const reviewProfileUpdateRequest = async (requestId: number, data: { acti
   return res.data;
 };
 
+// ==================== 优惠券管理 API ====================
+
+export interface CouponData {
+  code: string;
+  name: string;
+  description?: string;
+  type: 'fixed_amount' | 'percentage';
+  discount_value: number;
+  min_amount?: number;
+  max_discount?: number;
+  currency?: string;
+  total_quantity?: number;
+  per_user_limit?: number;
+  can_combine?: boolean;
+  combine_limit?: number;
+  apply_order?: number;
+  valid_from: string;
+  valid_until: string;
+  usage_conditions?: {
+    points_required?: number;
+    locations?: string[];
+    task_types?: string[];
+  };
+  eligibility_type?: string;
+  eligibility_value?: string;
+  per_day_limit?: number;
+}
+
+export const createCoupon = async (data: CouponData) => {
+  const res = await api.post('/api/admin/coupons', data);
+  return res.data;
+};
+
+export const getCoupons = async (params?: {
+  page?: number;
+  limit?: number;
+  status?: 'active' | 'inactive' | 'expired';
+}) => {
+  const res = await api.get('/api/admin/coupons', { params });
+  return res.data;
+};
+
+export const getCouponDetail = async (couponId: number) => {
+  const res = await api.get(`/api/admin/coupons/${couponId}`);
+  return res.data;
+};
+
+export const updateCoupon = async (couponId: number, data: {
+  name?: string;
+  description?: string;
+  valid_until?: string;
+  status?: 'active' | 'inactive';
+  usage_conditions?: object;
+}) => {
+  const res = await api.put(`/api/admin/coupons/${couponId}`, data);
+  return res.data;
+};
+
+export const deleteCoupon = async (couponId: number, force?: boolean) => {
+  const res = await api.delete(`/api/admin/coupons/${couponId}`, { params: { force } });
+  return res.data;
+};
+
 // ==================== 邀请码管理 API ====================
 
 export const createInvitationCode = async (data: {

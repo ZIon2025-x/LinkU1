@@ -67,6 +67,7 @@ struct Coupon: Codable, Identifiable {
     let minAmountDisplay: String
     let currency: String
     let validUntil: String
+    let usageConditions: CouponUsageConditions?
     
     enum CodingKeys: String, CodingKey {
         case id, code, name, type
@@ -76,6 +77,30 @@ struct Coupon: Codable, Identifiable {
         case minAmountDisplay = "min_amount_display"
         case currency
         case validUntil = "valid_until"
+        case usageConditions = "usage_conditions"
+    }
+    
+    /// 获取积分兑换所需积分
+    var pointsRequired: Int? {
+        return usageConditions?.pointsRequired
+    }
+    
+    /// 是否支持积分兑换
+    var canRedeemWithPoints: Bool {
+        return (pointsRequired ?? 0) > 0
+    }
+}
+
+/// 优惠券使用条件
+struct CouponUsageConditions: Codable {
+    let pointsRequired: Int?
+    let locations: [String]?
+    let taskTypes: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case pointsRequired = "points_required"
+        case locations
+        case taskTypes = "task_types"
     }
 }
 
@@ -110,6 +135,38 @@ struct CouponClaimRequest: Encodable {
         case couponId = "coupon_id"
         case promotionCode = "promotion_code"
         case idempotencyKey = "idempotency_key"
+    }
+}
+
+/// 优惠券领取响应
+struct CouponClaimResponse: Codable {
+    let userCouponId: Int
+    let couponId: Int
+    let couponName: String?
+    let message: String
+    
+    enum CodingKeys: String, CodingKey {
+        case userCouponId = "user_coupon_id"
+        case couponId = "coupon_id"
+        case couponName = "coupon_name"
+        case message
+    }
+}
+
+/// 积分兑换优惠券响应
+struct PointsRedeemCouponResponse: Codable {
+    let success: Bool
+    let userCouponId: Int
+    let couponId: Int
+    let pointsUsed: Int
+    let message: String
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case userCouponId = "user_coupon_id"
+        case couponId = "coupon_id"
+        case pointsUsed = "points_used"
+        case message
     }
 }
 

@@ -161,6 +161,7 @@ enum APIEndpoints {
     enum Points {
         static let account = "/api/coupon-points/points/account"
         static let transactions = "/api/coupon-points/points/transactions"
+        static let redeemCoupon = "/api/coupon-points/points/redeem/coupon"
     }
     
     enum Coupons {

@@ -143,11 +143,45 @@ class CouponPointsViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func claimCoupon(couponId: Int? = nil, promotionCode: String? = nil) -> AnyPublisher<Bool, Error> {
+    /// 领取优惠券（通过优惠券ID）
+    func claimCoupon(couponId: Int? = nil, promotionCode: String? = nil) -> AnyPublisher<CouponClaimResponse, Error> {
         return apiService.claimCoupon(couponId: couponId, promotionCode: promotionCode)
-            .map { _ in true }
             .mapError { $0 as Error }
             .eraseToAnyPublisher()
+    }
+    
+    /// 使用兑换码领取优惠券
+    func redeemWithCode(_ code: String, completion: @escaping (Result<CouponClaimResponse, Error>) -> Void) {
+        apiService.claimCoupon(couponId: nil, promotionCode: code)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        completion(.failure(error))
+                    }
+                },
+                receiveValue: { response in
+                    completion(.success(response))
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    /// 使用积分兑换优惠券
+    func redeemCouponWithPoints(couponId: Int, completion: @escaping (Result<PointsRedeemCouponResponse, Error>) -> Void) {
+        apiService.redeemCouponWithPoints(couponId: couponId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        completion(.failure(error))
+                    }
+                },
+                receiveValue: { response in
+                    completion(.success(response))
+                }
+            )
+            .store(in: &cancellables)
     }
     
     // MARK: - Check In

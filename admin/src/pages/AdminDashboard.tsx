@@ -86,7 +86,13 @@ import api, {
   getAdminTaskDisputes,
   getAdminTaskDisputeDetail,
   resolveTaskDispute,
-  dismissTaskDispute
+  dismissTaskDispute,
+  getCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
+  getCouponDetail,
+  CouponData
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -301,6 +307,28 @@ const AdminDashboard: React.FC = () => {
   const [showSystemSettings, setShowSystemSettings] = useState(false);
   const [show2FASettings, setShow2FASettings] = useState(false);
 
+  // 优惠券管理相关状态
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponsPage, setCouponsPage] = useState(1);
+  const [couponsTotal, setCouponsTotal] = useState(0);
+  const [couponsStatusFilter, setCouponsStatusFilter] = useState<string | undefined>(undefined);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponForm, setCouponForm] = useState({
+    id: undefined as number | undefined,
+    code: '',
+    name: '',
+    description: '',
+    type: 'fixed_amount' as 'fixed_amount' | 'percentage',
+    discount_value: 0,
+    min_amount: 0,
+    total_quantity: undefined as number | undefined,
+    per_user_limit: 1,
+    valid_from: '',
+    valid_until: '',
+    points_required: 0,
+  });
+  const [couponsLoading, setCouponsLoading] = useState(false);
+
   // 邀请码管理相关状态
   const [invitationCodes, setInvitationCodes] = useState<any[]>([]);
   const [invitationCodesPage, setInvitationCodesPage] = useState(1);
@@ -498,6 +526,19 @@ const AdminDashboard: React.FC = () => {
         } else if (taskExpertSubTab === 'applications') {
           // 加载任务达人申请数据
           loadExpertApplications();
+        }
+      } else if (activeTab === 'coupons') {
+        setCouponsLoading(true);
+        try {
+          const couponsData = await getCoupons({
+            page: couponsPage,
+            limit: 20,
+            status: couponsStatusFilter as 'active' | 'inactive' | 'expired' | undefined
+          });
+          setCoupons(couponsData.data || []);
+          setCouponsTotal(couponsData.total || 0);
+        } finally {
+          setCouponsLoading(false);
         }
       } else if (activeTab === 'invitation-codes') {
         const codesData = await getInvitationCodes({
@@ -4483,6 +4524,329 @@ const AdminDashboard: React.FC = () => {
       </div>
     </div>
   ), [notificationForm, loading, handleSendNotification]);
+
+  // 优惠券管理相关函数
+  const loadCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    try {
+      const couponsData = await getCoupons({
+        page: couponsPage,
+        limit: 20,
+        status: couponsStatusFilter as 'active' | 'inactive' | 'expired' | undefined
+      });
+      setCoupons(couponsData.data || []);
+      setCouponsTotal(couponsData.total || 0);
+    } catch (error) {
+      message.error('加载优惠券列表失败');
+    } finally {
+      setCouponsLoading(false);
+    }
+  }, [couponsPage, couponsStatusFilter]);
+
+  const handleCreateCoupon = async () => {
+    if (!couponForm.code || !couponForm.name || !couponForm.valid_from || !couponForm.valid_until) {
+      message.warning('请填写优惠券代码、名称和有效期');
+      return;
+    }
+    if (couponForm.discount_value <= 0) {
+      message.warning('请填写折扣金额');
+      return;
+    }
+    
+    try {
+      const data: CouponData = {
+        code: couponForm.code.toUpperCase(),
+        name: couponForm.name,
+        description: couponForm.description || undefined,
+        type: couponForm.type,
+        discount_value: couponForm.discount_value,
+        min_amount: couponForm.min_amount || 0,
+        total_quantity: couponForm.total_quantity,
+        per_user_limit: couponForm.per_user_limit || 1,
+        valid_from: couponForm.valid_from,
+        valid_until: couponForm.valid_until,
+        usage_conditions: couponForm.points_required > 0 ? {
+          points_required: couponForm.points_required
+        } : undefined
+      };
+      
+      if (couponForm.id) {
+        await updateCoupon(couponForm.id, {
+          name: data.name,
+          description: data.description,
+          valid_until: data.valid_until,
+          usage_conditions: data.usage_conditions
+        });
+        message.success('优惠券更新成功');
+      } else {
+        await createCoupon(data);
+        message.success('优惠券创建成功');
+      }
+      
+      setShowCouponModal(false);
+      setCouponForm({
+        id: undefined,
+        code: '',
+        name: '',
+        description: '',
+        type: 'fixed_amount',
+        discount_value: 0,
+        min_amount: 0,
+        total_quantity: undefined,
+        per_user_limit: 1,
+        valid_from: '',
+        valid_until: '',
+        points_required: 0,
+      });
+      loadCoupons();
+    } catch (error: any) {
+      message.error(getErrorMessage(error) || '操作失败');
+    }
+  };
+
+  const handleDeleteCoupon = async (couponId: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除此优惠券吗？',
+      onOk: async () => {
+        try {
+          await deleteCoupon(couponId);
+          message.success('优惠券删除成功');
+          loadCoupons();
+        } catch (error: any) {
+          message.error(getErrorMessage(error) || '删除失败');
+        }
+      }
+    });
+  };
+
+  const renderCoupons = useCallback(() => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>优惠券管理</h2>
+        <button
+          onClick={() => {
+            setCouponForm({
+              id: undefined,
+              code: '',
+              name: '',
+              description: '',
+              type: 'fixed_amount',
+              discount_value: 0,
+              min_amount: 0,
+              total_quantity: undefined,
+              per_user_limit: 1,
+              valid_from: dayjs().format('YYYY-MM-DDTHH:mm'),
+              valid_until: dayjs().add(30, 'day').format('YYYY-MM-DDTHH:mm'),
+              points_required: 0,
+            });
+            setShowCouponModal(true);
+          }}
+          className={styles.primaryButton}
+        >
+          + 创建优惠券
+        </button>
+      </div>
+      
+      {/* 筛选 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        <select
+          value={couponsStatusFilter || ''}
+          onChange={(e) => setCouponsStatusFilter(e.target.value || undefined)}
+          className={styles.select}
+        >
+          <option value="">全部状态</option>
+          <option value="active">活跃</option>
+          <option value="inactive">已禁用</option>
+          <option value="expired">已过期</option>
+        </select>
+      </div>
+      
+      {/* 优惠券列表 */}
+      {couponsLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+      ) : (
+        <div className={styles.tableContainer}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>代码</th>
+                <th>名称</th>
+                <th>类型</th>
+                <th>折扣</th>
+                <th>最低金额</th>
+                <th>积分兑换</th>
+                <th>状态</th>
+                <th>已使用</th>
+                <th>有效期至</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coupons.map((coupon) => (
+                <tr key={coupon.id}>
+                  <td>{coupon.id}</td>
+                  <td><code>{coupon.code}</code></td>
+                  <td>{coupon.name}</td>
+                  <td>{coupon.type === 'fixed_amount' ? '满减' : '折扣'}</td>
+                  <td>{coupon.type === 'fixed_amount' ? `£${coupon.discount_value_display}` : `${coupon.discount_value / 100}%`}</td>
+                  <td>£{coupon.min_amount_display}</td>
+                  <td>{coupon.usage_conditions?.points_required || '-'}</td>
+                  <td>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      backgroundColor: coupon.status === 'active' ? '#e6f7ff' : '#fafafa',
+                      color: coupon.status === 'active' ? '#1890ff' : '#999'
+                    }}>
+                      {coupon.status === 'active' ? '活跃' : coupon.status === 'inactive' ? '已禁用' : '已过期'}
+                    </span>
+                  </td>
+                  <td>{coupon.used_quantity || 0}/{coupon.total_quantity || '∞'}</td>
+                  <td>{dayjs(coupon.valid_until).format('YYYY-MM-DD HH:mm')}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDeleteCoupon(coupon.id)}
+                      className={styles.dangerButton}
+                      style={{ padding: '4px 8px', fontSize: '12px' }}
+                    >
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      {/* 分页 */}
+      {couponsTotal > 20 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+          <button
+            disabled={couponsPage === 1}
+            onClick={() => setCouponsPage(p => p - 1)}
+            className={styles.button}
+          >
+            上一页
+          </button>
+          <span style={{ lineHeight: '32px' }}>第 {couponsPage} 页</span>
+          <button
+            disabled={coupons.length < 20}
+            onClick={() => setCouponsPage(p => p + 1)}
+            className={styles.button}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+      
+      {/* 创建/编辑模态框 */}
+      {showCouponModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCouponModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>{couponForm.id ? '编辑优惠券' : '创建优惠券'}</h3>
+            <div className={styles.formGroup}>
+              <label>优惠券代码 <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="text"
+                value={couponForm.code}
+                onChange={(e) => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})}
+                placeholder="例如：WELCOME50"
+                disabled={!!couponForm.id}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>名称 <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="text"
+                value={couponForm.name}
+                onChange={(e) => setCouponForm({...couponForm, name: e.target.value})}
+                placeholder="优惠券名称"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>描述</label>
+              <textarea
+                value={couponForm.description}
+                onChange={(e) => setCouponForm({...couponForm, description: e.target.value})}
+                placeholder="优惠券描述（可选）"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>类型</label>
+              <select
+                value={couponForm.type}
+                onChange={(e) => setCouponForm({...couponForm, type: e.target.value as 'fixed_amount' | 'percentage'})}
+              >
+                <option value="fixed_amount">满减（固定金额）</option>
+                <option value="percentage">折扣（百分比）</option>
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label>折扣值（便士/基点）<span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="number"
+                value={couponForm.discount_value}
+                onChange={(e) => setCouponForm({...couponForm, discount_value: parseInt(e.target.value) || 0})}
+                placeholder={couponForm.type === 'fixed_amount' ? '例如：500 = £5.00' : '例如：1000 = 10%'}
+              />
+              <small style={{ color: '#666' }}>
+                {couponForm.type === 'fixed_amount' 
+                  ? `当前值：£${(couponForm.discount_value / 100).toFixed(2)}` 
+                  : `当前值：${(couponForm.discount_value / 100).toFixed(2)}%`}
+              </small>
+            </div>
+            <div className={styles.formGroup}>
+              <label>最低使用金额（便士）</label>
+              <input
+                type="number"
+                value={couponForm.min_amount}
+                onChange={(e) => setCouponForm({...couponForm, min_amount: parseInt(e.target.value) || 0})}
+                placeholder="例如：1000 = £10.00"
+              />
+              <small style={{ color: '#666' }}>当前值：£{(couponForm.min_amount / 100).toFixed(2)}</small>
+            </div>
+            <div className={styles.formGroup}>
+              <label>积分兑换所需积分（0表示不支持积分兑换）</label>
+              <input
+                type="number"
+                value={couponForm.points_required}
+                onChange={(e) => setCouponForm({...couponForm, points_required: parseInt(e.target.value) || 0})}
+                placeholder="例如：500 积分"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>有效期开始 <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="datetime-local"
+                value={couponForm.valid_from}
+                onChange={(e) => setCouponForm({...couponForm, valid_from: e.target.value})}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>有效期结束 <span style={{ color: 'red' }}>*</span></label>
+              <input
+                type="datetime-local"
+                value={couponForm.valid_until}
+                onChange={(e) => setCouponForm({...couponForm, valid_until: e.target.value})}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={handleCreateCoupon} className={styles.primaryButton}>
+                {couponForm.id ? '保存' : '创建'}
+              </button>
+              <button onClick={() => setShowCouponModal(false)} className={styles.button}>
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ), [coupons, couponsPage, couponsTotal, couponsStatusFilter, couponsLoading, showCouponModal, couponForm, loadCoupons]);
 
   // 邀请码管理相关函数
   const handleCreateInvitationCode = async () => {
@@ -9915,6 +10279,12 @@ const AdminDashboard: React.FC = () => {
               📢 发送通知
             </button>
             <button 
+              className={getTabButtonClassName(activeTab === 'coupons')}
+              onClick={() => handleTabChange('coupons')}
+            >
+              🎟️ 优惠券管理
+            </button>
+            <button 
               className={getTabButtonClassName(activeTab === 'invitation-codes')}
               onClick={() => handleTabChange('invitation-codes')}
             >
@@ -9962,6 +10332,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'personnel' && renderPersonnelManagement()}
             {activeTab === 'task-experts' && renderTaskExperts()}
             {activeTab === 'notifications' && renderNotifications()}
+            {activeTab === 'coupons' && renderCoupons()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
             {activeTab === 'forum-categories' && renderForumCategories()}
             {activeTab === 'forum-category-requests' && renderCategoryRequests()}

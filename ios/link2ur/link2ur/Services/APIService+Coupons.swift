@@ -45,8 +45,8 @@ extension APIService {
         return request(UserCouponListResponse.self, endpoint)
     }
     
-    /// 领取优惠券
-    func claimCoupon(couponId: Int? = nil, promotionCode: String? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+    /// 领取优惠券（支持优惠券ID或兑换码）
+    func claimCoupon(couponId: Int? = nil, promotionCode: String? = nil) -> AnyPublisher<CouponClaimResponse, APIError> {
         let idempotencyKey = UUID().uuidString
         let body = CouponClaimRequest(couponId: couponId, promotionCode: promotionCode, idempotencyKey: idempotencyKey)
         
@@ -54,7 +54,17 @@ extension APIService {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
         
-        return request(EmptyResponse.self, APIEndpoints.Coupons.claim, method: "POST", body: bodyDict)
+        return request(CouponClaimResponse.self, APIEndpoints.Coupons.claim, method: "POST", body: bodyDict)
+    }
+    
+    /// 积分兑换优惠券
+    func redeemCouponWithPoints(couponId: Int) -> AnyPublisher<PointsRedeemCouponResponse, APIError> {
+        let idempotencyKey = UUID().uuidString
+        let body: [String: Any] = [
+            "coupon_id": couponId,
+            "idempotency_key": idempotencyKey
+        ]
+        return request(PointsRedeemCouponResponse.self, APIEndpoints.Points.redeemCoupon, method: "POST", body: body)
     }
     
     // MARK: - Check In (签到)
