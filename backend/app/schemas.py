@@ -2051,6 +2051,16 @@ class ServiceApplicationOut(BaseModel):
     created_at: datetime.datetime
     approved_at: Optional[datetime.datetime]
     price_agreed_at: Optional[datetime.datetime]
+    # ⚠️ 优化：添加支付相关字段（如果需要支付）
+    payment_intent_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    payment_amount: Optional[int] = None  # 便士
+    payment_amount_display: Optional[str] = None
+    payment_currency: Optional[str] = None
+    customer_id: Optional[str] = None
+    ephemeral_key_secret: Optional[str] = None
+    payment_required: Optional[bool] = False
+    payment_expires_at: Optional[str] = None  # ISO 格式字符串
     
     class Config:
         from_attributes = True
@@ -2320,6 +2330,10 @@ class ActivityCreate(BaseModel):
     reward_distribution: Literal["equal", "custom"] = "equal"
     images: Optional[List[str]] = None
     is_public: bool = True
+    # 奖励申请者相关字段
+    reward_applicants: bool = False  # 是否奖励申请者（完成任务后给予申请者额外奖励）
+    applicant_reward_amount: Optional[float] = None  # 申请者奖励金额
+    applicant_points_reward: Optional[int] = None  # 申请者积分奖励
     # 时间段选择相关字段
     selected_time_slot_ids: Optional[List[int]] = None
     time_slot_selection_mode: Optional[Literal["fixed", "recurring_daily", "recurring_weekly"]] = None
@@ -2358,6 +2372,12 @@ class ActivityOut(BaseModel):
     images: Optional[List[str]] = None
     service_images: Optional[List[str]] = None  # 关联服务的图片（用于前端显示）
     has_time_slots: bool
+    # 奖励申请者相关字段
+    reward_applicants: bool = False  # 是否奖励申请者
+    applicant_reward_amount: Optional[float] = None  # 申请者奖励金额
+    applicant_points_reward: Optional[int] = None  # 申请者积分奖励
+    reserved_points_total: Optional[int] = None  # 预扣积分总额
+    distributed_points_total: Optional[int] = None  # 已发放积分总额
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
@@ -2399,6 +2419,11 @@ class ActivityOut(BaseModel):
             "images": obj.images,
             "service_images": service_images,
             "has_time_slots": obj.has_time_slots,
+            "reward_applicants": obj.reward_applicants if hasattr(obj, 'reward_applicants') else False,
+            "applicant_reward_amount": float(obj.applicant_reward_amount) if hasattr(obj, 'applicant_reward_amount') and obj.applicant_reward_amount else None,
+            "applicant_points_reward": obj.applicant_points_reward if hasattr(obj, 'applicant_points_reward') else None,
+            "reserved_points_total": obj.reserved_points_total if hasattr(obj, 'reserved_points_total') else None,
+            "distributed_points_total": obj.distributed_points_total if hasattr(obj, 'distributed_points_total') else None,
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
         }

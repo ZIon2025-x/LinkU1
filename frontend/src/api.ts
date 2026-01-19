@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL, API_ENDPOINTS } from './config';
+import { API_BASE_URL } from './config';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -1656,6 +1656,10 @@ export const createExpertActivity = async (activityData: {
   reward_distribution: 'equal' | 'custom';
   images?: string[];
   is_public?: boolean;
+  // 奖励申请者相关字段
+  reward_applicants?: boolean;
+  applicant_reward_amount?: number;
+  applicant_points_reward?: number;
   // 时间段选择相关字段
   time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
   selected_time_slot_ids?: number[];
@@ -1684,7 +1688,7 @@ export const createExpertMultiParticipantTask = async (taskData: {
   points_reward?: number;
   completion_rule: 'all' | 'any';
   reward_distribution: 'equal' | 'custom';
-  auto_accept: boolean;
+  auto_accept?: boolean;
   is_fixed_time_slot?: boolean;
   time_slot_duration_minutes?: number;
   time_slot_start_time?: string;
@@ -1692,7 +1696,12 @@ export const createExpertMultiParticipantTask = async (taskData: {
   participants_per_slot?: number;
   original_price_per_participant?: number;
   discount_percentage?: number;
+  discounted_price_per_participant?: number;
   images?: string[];
+  // 奖励申请者相关字段
+  reward_applicants?: boolean;
+  applicant_reward_amount?: number;
+  applicant_points_reward?: number;
   // 时间段选择相关字段
   time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
   selected_time_slot_ids?: number[];
@@ -1715,15 +1724,20 @@ export const createExpertMultiParticipantTask = async (taskData: {
     reward_type: taskData.reward_type,
     original_price_per_participant: taskData.original_price_per_participant,
     discount_percentage: taskData.discount_percentage,
-    discounted_price_per_participant: taskData.original_price_per_participant && taskData.discount_percentage
+    discounted_price_per_participant: taskData.discounted_price_per_participant || (taskData.original_price_per_participant && taskData.discount_percentage
       ? taskData.original_price_per_participant * (1 - taskData.discount_percentage / 100)
-      : taskData.original_price_per_participant,
+      : taskData.original_price_per_participant),
     currency: 'GBP',
     points_reward: taskData.points_reward,
     completion_rule: (taskData.completion_rule === 'any' ? 'min' : 'all') as 'all' | 'min',
     reward_distribution: taskData.reward_distribution,
     images: taskData.images,
     is_public: true,
+    // 奖励申请者相关字段
+    reward_applicants: taskData.reward_applicants || false,
+    applicant_reward_amount: taskData.applicant_reward_amount,
+    applicant_points_reward: taskData.applicant_points_reward,
+    // 时间段选择相关字段
     time_slot_selection_mode: taskData.time_slot_selection_mode,
     selected_time_slot_ids: taskData.selected_time_slot_ids,
     recurring_daily_time_ranges: taskData.recurring_daily_time_ranges,

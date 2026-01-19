@@ -164,6 +164,19 @@ async def respond_to_counter_offer(
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
         
+        # 7. 发送通知给用户（申请者），提醒用户等待达人创建任务并支付
+        from app.task_notifications import send_counter_offer_accepted_to_applicant_notification
+        try:
+            await send_counter_offer_accepted_to_applicant_notification(
+                db=db,
+                applicant_id=application.applicant_id,
+                expert_id=application.expert_id,
+                counter_price=application.expert_counter_price,
+                service_id=application.service_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to send notification to applicant: {e}")
+        
         return {
             "message": "已同意任务达人的议价",
             "application_id": application_id,

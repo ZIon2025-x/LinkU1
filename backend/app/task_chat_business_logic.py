@@ -175,6 +175,8 @@ class AcceptApplicationLogic:
             locked_task.status = "pending_payment"
             # 确保 is_paid 为 0（未支付）
             locked_task.is_paid = 0
+            # 设置支付过期时间（24小时）
+            locked_task.payment_expires_at = current_time + timedelta(hours=24)
             
             # 如果申请包含议价，更新 agreed_reward（不覆盖 base_reward）
             if application.negotiated_price is not None:

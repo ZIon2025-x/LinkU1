@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks, Re
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from typing import List, Optional
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import uuid
 
 from app.database import get_db
 from app.models import (
     Task, TaskParticipant, TaskParticipantReward, TaskAuditLog,
     User, AdminUser, TaskTimeSlotRelation, ServiceTimeSlot,
-    Activity, ActivityTimeSlotRelation, ActivityFavorite
+    Activity, ActivityTimeSlotRelation, ActivityFavorite, PointsAccount
 )
 from app.schemas import (
     MultiParticipantTaskCreate,
@@ -377,11 +377,16 @@ def apply_to_activity(
             "participant_id": participant.id
         }
     
-    # 确定任务状态
-    # 对于有时间段的活动申请（无论是单个任务还是多人任务），直接进入"进行中"状态
-    # 因为时间段已经确定，不需要审核
-    # 对于无时间段的多人活动，申请后也应该直接进入"进行中"状态，因为第一个申请者自动接受
-    if db_activity.has_time_slots:
+    # 确定任务状态和是否需要支付
+    # 如果活动不是奖励申请者模式（reward_applicants=False），则需要支付
+    needs_payment = not (hasattr(db_activity, 'reward_applicants') and db_activity.reward_applicants)
+    
+    # 对于有时间段的活动申请（无论是单个任务还是多人任务），如果需要支付则进入"待支付"状态，否则进入"进行中"状态
+    # 对于无时间段的多人活动，如果需要支付则进入"待支付"状态，否则进入"进行中"状态
+    # 对于无时间段的单人任务，如果需要支付则进入"待支付"状态，否则保持open状态等待审核
+    if needs_payment and price > 0:
+        initial_status = "pending_payment"
+    elif db_activity.has_time_slots:
         initial_status = "in_progress"
     elif is_multi_participant:
         # 无时间段的多人活动，申请后直接进入进行中状态
@@ -434,9 +439,69 @@ def apply_to_activity(
         expert_service_id=db_activity.expert_service_id,
         # 对于有时间段的活动申请，或者多人活动，设置接受时间
         accepted_at=get_utc_time() if (db_activity.has_time_slots or is_multi_participant) else None,
+        # 如果需要支付，设置支付过期时间（24小时）
+        payment_expires_at=get_utc_time() + timedelta(hours=24) if (needs_payment and price > 0) else None,
+        is_paid=0,  # 明确标记为未支付
     )
     
     db.add(new_task)
+    db.flush()  # 先flush获取任务ID，但不commit，以便后续创建支付意图失败时可以回滚
+    
+    # 如果需要支付，创建支付意图
+    payment_intent_id = None
+    if needs_payment and price > 0:
+        # 检查达人是否有Stripe Connect账户
+        expert_user = db.query(User).filter(User.id == db_activity.expert_id).first()
+        if not expert_user or not expert_user.stripe_account_id:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
+                headers={"X-Stripe-Connect-Required": "true"}
+            )
+        
+        # 创建支付意图
+        import stripe
+        import os
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        task_amount_pence = int(price * 100)
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+        
+        try:
+            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
+            # 交易市场托管模式：
+            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
+            payment_intent = stripe.PaymentIntent.create(
+                amount=task_amount_pence,
+                currency=db_activity.currency.lower(),
+                # 明确指定支付方式类型，确保 WeChat Pay 可用
+                payment_method_types=["card", "wechat_pay"],
+                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
+                metadata={
+                    "task_id": str(new_task.id),
+                    "activity_id": str(activity_id),
+                    "poster_id": current_user.id if not is_multi_participant else None,
+                    "taker_id": db_activity.expert_id,
+                    "taker_stripe_account_id": expert_user.stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
+                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "task_type": "activity_application",
+                },
+                description=f"活动申请支付 - {db_activity.title}",
+            )
+            payment_intent_id = payment_intent.id
+            new_task.payment_intent_id = payment_intent_id
+            logger.info(f"创建支付意图成功: payment_intent_id={payment_intent_id}, task_id={new_task.id}")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"创建支付意图失败: {e}")
+            raise HTTPException(status_code=500, detail=f"创建支付意图失败: {str(e)}")
+    
     db.commit()
     db.refresh(new_task)
     
@@ -547,7 +612,8 @@ def apply_to_activity(
     db.add(audit_log)
     db.commit()
     
-    return {
+    # ⚠️ 优化：如果需要支付，返回支付信息（包括 client_secret）
+    response_data = {
         "task_id": new_task.id,
         "activity_id": activity_id,
         "message": "Task created successfully from activity",
@@ -555,6 +621,55 @@ def apply_to_activity(
         "is_multi_participant": is_multi_participant,
         "participant_id": participant.id if is_multi_participant else None
     }
+    
+    # 如果需要支付，添加支付信息
+    if needs_payment and price > 0 and payment_intent_id:
+        try:
+            # 重新获取 PaymentIntent 以获取 client_secret
+            payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            
+            # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+            customer_id = None
+            ephemeral_key_secret = None
+            try:
+                existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(current_user.id)})
+                if existing_customers.data:
+                    customer_id = existing_customers.data[0].id
+                else:
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(current_user.id),
+                            "user_name": current_user.name or f"User {current_user.id}",
+                        }
+                    )
+                    customer_id = customer.id
+
+                ephemeral_key = stripe.EphemeralKey.create(
+                    customer=customer_id,
+                    stripe_version="2025-04-30.preview",
+                )
+                ephemeral_key_secret = ephemeral_key.secret
+            except Exception as e:
+                logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+                customer_id = None
+                ephemeral_key_secret = None
+            
+            response_data.update({
+                "payment_intent_id": payment_intent.id,
+                "client_secret": payment_intent.client_secret,
+                "amount": payment_intent.amount,
+                "amount_display": f"{payment_intent.amount / 100:.2f}",
+                "currency": payment_intent.currency.upper(),
+                "customer_id": customer_id,
+                "ephemeral_key_secret": ephemeral_key_secret,
+                "payment_required": True,
+                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None
+            })
+        except Exception as e:
+            logger.error(f"获取支付信息失败: {e}")
+            # 支付信息获取失败不影响主流程
+    
+    return response_data
 
 
 # ===========================================
@@ -1271,10 +1386,36 @@ def delete_expert_activity(
     # 注意：TaskAuditLog 的 task_id 字段不允许为 None，所以不记录活动级别的审计日志
     # 活动的状态变更已经通过 status 字段记录在 Activity 表中
     
+    # 返还未使用的预扣积分（如果有）
+    refund_points = 0
+    if db_activity.reserved_points_total and db_activity.reserved_points_total > 0:
+        # 计算应返还的积分 = 预扣积分 - 已发放积分
+        distributed = db_activity.distributed_points_total or 0
+        refund_points = db_activity.reserved_points_total - distributed
+        
+        if refund_points > 0:
+            from app.coupon_points_crud import add_points_transaction
+            try:
+                add_points_transaction(
+                    db=db,
+                    user_id=db_activity.expert_id,
+                    type="refund",
+                    amount=refund_points,  # 正数表示返还
+                    source="activity_points_refund",
+                    related_id=activity_id,
+                    related_type="activity",
+                    description=f"活动取消，返还未使用的预扣积分（预扣 {db_activity.reserved_points_total}，已发放 {distributed}，返还 {refund_points}）",
+                    idempotency_key=f"activity_refund_{activity_id}_{refund_points}"
+                )
+                logger.info(f"活动 {activity_id} 取消，返还积分 {refund_points} 给用户 {db_activity.expert_id}")
+            except Exception as e:
+                logger.error(f"活动 {activity_id} 取消，返还积分失败: {e}")
+                # 不抛出异常，继续取消活动
+    
     db.commit()
     db.refresh(db_activity)
     
-    return {"message": "Activity cancelled successfully", "activity_id": activity_id}
+    return {"message": "Activity cancelled successfully", "activity_id": activity_id, "refunded_points": refund_points}
 
 
 @router.post("/expert/activities", response_model=ActivityOut)
@@ -1326,6 +1467,50 @@ def create_expert_activity(
             detail="min_participants must be <= max_participants"
         )
     
+    # 如果奖励申请者积分，验证达人积分余额是否足够并预扣
+    reserved_points_total = 0
+    if activity.reward_applicants and activity.applicant_points_reward and activity.applicant_points_reward > 0:
+        # 计算需要预扣的积分总额 = 每人积分奖励 × 最大参与人数
+        reserved_points_total = activity.applicant_points_reward * activity.max_participants
+        
+        # 查询达人的积分账户（使用 SELECT FOR UPDATE 锁定）
+        from sqlalchemy import select
+        points_account_query = select(PointsAccount).where(
+            PointsAccount.user_id == current_user.id
+        ).with_for_update()
+        points_account_result = db.execute(points_account_query)
+        points_account = points_account_result.scalar_one_or_none()
+        
+        # 检查账户是否存在
+        if not points_account:
+            raise HTTPException(
+                status_code=400,
+                detail=f"您的积分余额不足。需要预扣 {reserved_points_total} 积分，但您当前没有积分账户。"
+            )
+        
+        # 检查余额是否足够
+        if points_account.balance < reserved_points_total:
+            raise HTTPException(
+                status_code=400,
+                detail=f"积分余额不足。需要预扣 {reserved_points_total} 积分（每人 {activity.applicant_points_reward} × {activity.max_participants} 人），但您当前余额为 {points_account.balance} 积分。"
+            )
+        
+        # 预扣积分（创建交易记录）
+        from app.coupon_points_crud import add_points_transaction
+        try:
+            add_points_transaction(
+                db=db,
+                user_id=current_user.id,
+                type="spend",
+                amount=-reserved_points_total,  # 负数表示扣除
+                source="activity_points_reserve",
+                related_type="activity",
+                description=f"创建活动预扣积分奖励（{activity.applicant_points_reward}积分 × {activity.max_participants}人）",
+                idempotency_key=f"activity_reserve_{current_user.id}_{activity.title}_{reserved_points_total}_{db.execute(select(func.now())).scalar()}"
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    
     # 计算价格（基于服务base_price，考虑折扣）
     original_price = float(service.base_price)
     discount_percentage = activity.discount_percentage or 0.0
@@ -1374,6 +1559,12 @@ def create_expert_activity(
         activity_end_date=activity.activity_end_date,
         images=activity.images if activity.images else service.images,
         has_time_slots=service.has_time_slots,
+        # 奖励申请者相关字段
+        reward_applicants=activity.reward_applicants,
+        applicant_reward_amount=activity.applicant_reward_amount if activity.reward_applicants and activity.reward_type in ("cash", "both") else None,
+        applicant_points_reward=activity.applicant_points_reward if activity.reward_applicants and activity.reward_type in ("points", "both") else None,
+        reserved_points_total=reserved_points_total if reserved_points_total > 0 else None,
+        distributed_points_total=0,
     )
     
     db.add(db_activity)

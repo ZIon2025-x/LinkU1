@@ -2439,6 +2439,178 @@ def confirm_task_completion(
             logger.error(f"发放任务完成积分奖励失败: {e}", exc_info=True)
             # 积分发放失败不影响任务完成流程
     
+    # 检查任务是否关联活动，如果活动设置了奖励申请者，则发放奖励（积分和/或现金）
+    if task.taker_id and task.parent_activity_id:
+        try:
+            from app.coupon_points_crud import add_points_transaction
+            from app.models import Activity
+            import stripe
+            import os
+            
+            # 查询关联的活动
+            activity = db.query(Activity).filter(Activity.id == task.parent_activity_id).first()
+            
+            if activity and activity.reward_applicants:
+                # 活动设置了奖励申请者
+                
+                # 1. 发放积分奖励（如果有）
+                if activity.applicant_points_reward and activity.applicant_points_reward > 0:
+                    points_to_give = activity.applicant_points_reward
+                    
+                    # 生成幂等键（防止重复发放）
+                    activity_reward_idempotency_key = f"activity_reward_points_{task.parent_activity_id}_{task_id}_{task.taker_id}"
+                    
+                    # 检查是否已发放（通过幂等键）
+                    from app.models import PointsTransaction
+                    existing_activity_reward = db.query(PointsTransaction).filter(
+                        PointsTransaction.idempotency_key == activity_reward_idempotency_key
+                    ).first()
+                    
+                    if not existing_activity_reward:
+                        # 发放活动奖励积分给申请者
+                        add_points_transaction(
+                            db,
+                            task.taker_id,
+                            type="earn",
+                            amount=points_to_give,
+                            source="activity_applicant_reward",
+                            related_id=task.parent_activity_id,
+                            related_type="activity",
+                            description=f"完成活动 #{task.parent_activity_id} 任务获得达人奖励积分",
+                            idempotency_key=activity_reward_idempotency_key
+                        )
+                        
+                        # 更新活动的已发放积分总额
+                        activity.distributed_points_total = (activity.distributed_points_total or 0) + points_to_give
+                        
+                        logger.info(f"活动奖励积分已发放: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 积分 {points_to_give}")
+                        
+                        # 发送通知给申请者
+                        try:
+                            crud.create_notification(
+                                db=db,
+                                user_id=task.taker_id,
+                                type="activity_reward_points",
+                                title="活动奖励积分已发放",
+                                content=f"您完成活动「{activity.title}」的任务，获得 {points_to_give} 积分奖励",
+                                related_id=str(task.parent_activity_id),
+                                auto_commit=False
+                            )
+                            
+                            # 发送推送通知
+                            try:
+                                from app.push_notification_service import send_push_notification
+                                send_push_notification(
+                                    db=db,
+                                    user_id=task.taker_id,
+                                    title="活动奖励积分已发放",
+                                    body=f"您完成活动「{activity.title}」的任务，获得 {points_to_give} 积分奖励",
+                                    notification_type="activity_reward_points",
+                                    data={"activity_id": task.parent_activity_id, "task_id": task_id, "points": points_to_give}
+                                )
+                            except Exception as e:
+                                logger.warning(f"发送活动奖励积分推送通知失败: {e}")
+                        except Exception as e:
+                            logger.warning(f"创建活动奖励积分通知失败: {e}")
+                
+                # 2. 发放现金奖励（如果有）
+                if activity.applicant_reward_amount and activity.applicant_reward_amount > 0:
+                    cash_amount = float(activity.applicant_reward_amount)
+                    
+                    # 生成幂等键（防止重复发放）
+                    activity_cash_reward_idempotency_key = f"activity_reward_cash_{task.parent_activity_id}_{task_id}_{task.taker_id}"
+                    
+                    # 检查是否已发放（通过检查 PaymentTransfer 记录）
+                    from app.models import PaymentTransfer
+                    existing_cash_reward = db.query(PaymentTransfer).filter(
+                        PaymentTransfer.idempotency_key == activity_cash_reward_idempotency_key
+                    ).first()
+                    
+                    if not existing_cash_reward:
+                        # 获取任务接受人信息
+                        taker = crud.get_user_by_id(db, task.taker_id)
+                        if taker and taker.stripe_account_id:
+                            try:
+                                stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+                                
+                                # 验证 Stripe Connect 账户状态
+                                account = stripe.Account.retrieve(taker.stripe_account_id)
+                                if not account.details_submitted:
+                                    logger.warning(f"用户 {task.taker_id} 的 Stripe Connect 账户未完成设置，无法发放现金奖励")
+                                elif not account.charges_enabled:
+                                    logger.warning(f"用户 {task.taker_id} 的 Stripe Connect 账户未启用收款，无法发放现金奖励")
+                                else:
+                                    # 执行 Stripe Transfer 转账现金奖励
+                                    cash_amount_pence = int(cash_amount * 100)
+                                    transfer = stripe.Transfer.create(
+                                        amount=cash_amount_pence,
+                                        currency="gbp",
+                                        destination=taker.stripe_account_id,
+                                        metadata={
+                                            "task_id": str(task_id),
+                                            "activity_id": str(task.parent_activity_id),
+                                            "taker_id": str(task.taker_id),
+                                            "transfer_type": "activity_applicant_cash_reward"
+                                        },
+                                        description=f"活动 #{task.parent_activity_id} 任务 #{task_id} 现金奖励"
+                                    )
+                                    
+                                    # 创建转账记录
+                                    from app.payment_transfer_service import create_transfer_record
+                                    from decimal import Decimal
+                                    create_transfer_record(
+                                        db=db,
+                                        task_id=task_id,
+                                        taker_id=task.taker_id,
+                                        amount=Decimal(str(cash_amount)),
+                                        transfer_id=transfer.id,
+                                        status="succeeded",
+                                        idempotency_key=activity_cash_reward_idempotency_key,
+                                        auto_commit=False
+                                    )
+                                    
+                                    logger.info(f"活动现金奖励已发放: 用户 {task.taker_id}, 活动 {task.parent_activity_id}, 金额 £{cash_amount:.2f}")
+                                    
+                                    # 发送通知给申请者
+                                    try:
+                                        crud.create_notification(
+                                            db=db,
+                                            user_id=task.taker_id,
+                                            type="activity_reward_cash",
+                                            title="活动现金奖励已发放",
+                                            content=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励",
+                                            related_id=str(task.parent_activity_id),
+                                            auto_commit=False
+                                        )
+                                        
+                                        # 发送推送通知
+                                        try:
+                                            from app.push_notification_service import send_push_notification
+                                            send_push_notification(
+                                                db=db,
+                                                user_id=task.taker_id,
+                                                title="活动现金奖励已发放",
+                                                body=f"您完成活动「{activity.title}」的任务，获得 £{cash_amount:.2f} 现金奖励",
+                                                notification_type="activity_reward_cash",
+                                                data={"activity_id": task.parent_activity_id, "task_id": task_id, "amount": cash_amount}
+                                            )
+                                        except Exception as e:
+                                            logger.warning(f"发送活动现金奖励推送通知失败: {e}")
+                                    except Exception as e:
+                                        logger.warning(f"创建活动现金奖励通知失败: {e}")
+                            except Exception as e:
+                                logger.error(f"发放活动现金奖励失败: {e}", exc_info=True)
+                                # 现金奖励发放失败不影响任务完成流程
+                        else:
+                            logger.warning(f"用户 {task.taker_id} 没有 Stripe Connect 账户，无法发放现金奖励")
+                
+                # 提交所有奖励发放的更改
+                db.commit()
+                
+        except Exception as e:
+            logger.error(f"发放活动奖励失败: {e}", exc_info=True)
+            # 奖励发放失败不影响任务完成流程
+    
     # 如果任务已支付且未确认，执行转账给任务接受人
     if task.is_paid == 1 and task.is_confirmed == 0 and task.taker_id and task.escrow_amount > 0:
         try:
@@ -4171,19 +4343,36 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         db.add(log_entry)
                         logger.info(f"✅ [WEBHOOK] 已添加操作日志")
                         
-                        # 发送通知给申请者
+                        # 发送通知给申请者（支付成功后，任务已进入 in_progress 状态）
                         try:
                             from app import crud
-                            crud.create_notification(
-                                db,
-                                application.applicant_id,
-                                "application_accepted",
-                                "您的申请已被接受",
-                                f"您的任务申请已被接受：{task.title}",
-                                task.id,
-                                auto_commit=False,
-                            )
-                            logger.info(f"✅ [WEBHOOK] 已发送接受申请通知给申请者 {application.applicant_id}")
+                            from app.task_notifications import send_task_approval_notification
+                            
+                            # 获取申请者信息
+                            applicant = db.query(models.User).filter(models.User.id == application.applicant_id).first()
+                            if applicant:
+                                # 使用 send_task_approval_notification 发送通知
+                                # 注意：此时任务状态已经是 in_progress，所以不会显示支付提醒（这是正确的）
+                                # background_tasks 可以为 None，因为通知会立即发送
+                                send_task_approval_notification(
+                                    db=db,
+                                    background_tasks=None,  # webhook 中不需要后台任务
+                                    task=task,
+                                    applicant=applicant
+                                )
+                                logger.info(f"✅ [WEBHOOK] 已发送接受申请通知给申请者 {application.applicant_id}")
+                            else:
+                                # 如果无法获取申请者信息，使用简单通知
+                                crud.create_notification(
+                                    db,
+                                    application.applicant_id,
+                                    "application_accepted",
+                                    "您的申请已被接受",
+                                    f"您的任务申请已被接受：{task.title}",
+                                    task.id,
+                                    auto_commit=False,
+                                )
+                                logger.info(f"✅ [WEBHOOK] 已发送简单接受申请通知给申请者 {application.applicant_id}")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 发送接受申请通知失败: {e}")
                         
@@ -9580,6 +9769,32 @@ def delete_expert_activity_admin(
         db.query(models.ActivityTimeSlotRelation).filter(
             models.ActivityTimeSlotRelation.activity_id == activity_id
         ).delete(synchronize_session=False)
+        
+        # ⚠️ 优化：返还未使用的预扣积分（如果有）
+        refund_points = 0
+        if activity.reserved_points_total and activity.reserved_points_total > 0:
+            # 计算应返还的积分 = 预扣积分 - 已发放积分
+            distributed = activity.distributed_points_total or 0
+            refund_points = activity.reserved_points_total - distributed
+            
+            if refund_points > 0:
+                from app.coupon_points_crud import add_points_transaction
+                try:
+                    add_points_transaction(
+                        db=db,
+                        user_id=activity.expert_id,
+                        type="refund",
+                        amount=refund_points,  # 正数表示返还
+                        source="activity_points_refund",
+                        related_id=activity_id,
+                        related_type="activity",
+                        description=f"管理员删除活动，返还未使用的预扣积分（预扣 {activity.reserved_points_total}，已发放 {distributed}，返还 {refund_points}）",
+                        idempotency_key=f"activity_admin_refund_{activity_id}_{refund_points}"
+                    )
+                    logger.info(f"管理员删除活动 {activity_id}，返还积分 {refund_points} 给用户 {activity.expert_id}")
+                except Exception as e:
+                    logger.error(f"管理员删除活动 {activity_id}，返还积分失败: {e}")
+                    # 不抛出异常，继续删除活动
         
         # 删除活动（ActivityTimeSlotRelation 会通过外键 CASCADE 自动删除，但上面已经显式删除）
         db.delete(activity)

@@ -134,6 +134,9 @@ const TaskExpertDashboard: React.FC = () => {
   // 存储折叠的活动ID：Set<activityId>，已结束的活动默认折叠
   const [collapsedActivities, setCollapsedActivities] = useState<Set<number>>(new Set());
   
+  // 达人积分余额
+  const [expertPointsBalance, setExpertPointsBalance] = useState<number>(0);
+  
   // 创建多人活动相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
   const [createMultiTaskForm, setCreateMultiTaskForm] = useState<{
@@ -153,6 +156,8 @@ const TaskExpertDashboard: React.FC = () => {
     custom_discount?: number;
     use_custom_discount: boolean;
     reward_applicants: boolean;
+    applicant_reward_amount?: number;  // 申请者奖励金额
+    applicant_points_reward?: number;  // 申请者积分奖励
     currency: string;
     // 时间段选择相关
     time_slot_selection_mode?: 'fixed';
@@ -178,6 +183,8 @@ const TaskExpertDashboard: React.FC = () => {
     custom_discount: undefined as number | undefined,
     use_custom_discount: false,
     reward_applicants: false,
+    applicant_reward_amount: undefined as number | undefined,
+    applicant_points_reward: undefined as number | undefined,
     time_slot_selection_mode: undefined,
     selected_time_slot_ids: [],
     selected_time_slot_id: undefined as number | undefined,
@@ -270,7 +277,18 @@ const TaskExpertDashboard: React.FC = () => {
   useEffect(() => {
     loadData();
     loadPendingRequest();
+    loadExpertPointsBalance();
   }, []);
+  
+  // 加载达人积分余额
+  const loadExpertPointsBalance = async () => {
+    try {
+      const response = await api.get('/api/coupon-points/points/balance');
+      setExpertPointsBalance(response.data.balance || 0);
+    } catch (err) {
+      // 忽略积分余额获取错误，可能用户没有积分账户
+    }
+  };
   
   const loadPendingRequest = async () => {
     try {
@@ -1260,6 +1278,8 @@ const TaskExpertDashboard: React.FC = () => {
                     custom_discount: undefined,
                     use_custom_discount: false,
                     reward_applicants: false,
+                    applicant_reward_amount: undefined,
+                    applicant_points_reward: undefined,
                   });
                   setShowCreateMultiTaskModal(true);
                 }}
@@ -1380,6 +1400,29 @@ const TaskExpertDashboard: React.FC = () => {
                             {activity.has_time_slots && (
                               <span className={`${styles.activityTag} ${styles.activityTagTimeSlot}`}>
                                 ⏰ 多时间段
+                              </span>
+                            )}
+                            {/* 奖励申请者标识 */}
+                            {(activity as any).reward_applicants && (
+                              <span style={{ 
+                                fontSize: '12px', 
+                                background: '#dcfce7', 
+                                color: '#166534', 
+                                padding: '2px 8px', 
+                                borderRadius: '4px',
+                                fontWeight: 500,
+                              }}>
+                                🎁 奖励申请者
+                                {(activity as any).applicant_reward_amount && (
+                                  <span style={{ marginLeft: '4px' }}>
+                                    ({activity.currency || 'GBP'}{(activity as any).applicant_reward_amount})
+                                  </span>
+                                )}
+                                {(activity as any).applicant_points_reward && (
+                                  <span style={{ marginLeft: '4px' }}>
+                                    ({(activity as any).applicant_points_reward} 积分)
+                                  </span>
+                                )}
                               </span>
                             )}
                             {/* 价格信息 */}
@@ -1646,11 +1689,14 @@ const TaskExpertDashboard: React.FC = () => {
                             </span>
                           ) : null}
                         </div>
-                        {/* 删除活动按钮（只有活动创建者可以删除） */}
-                        {isTaskManager && activity.status !== 'completed' && activity.status !== 'cancelled' && (
+                        {/* 删除活动按钮（只有活动创建者可以删除，已取消的活动除外） */}
+                        {isTaskManager && activity.status !== 'cancelled' && (
                           <button
                             onClick={async () => {
-                              if (!window.confirm(`确定要删除活动"${activity.title}"吗？\n\n删除后：\n- 活动将被取消\n- 所有未开始的任务将被自动取消\n- 已开始的任务不受影响`)) {
+                              const confirmMessage = activity.status === 'completed' 
+                                ? `确定要删除已完成的活动"${activity.title}"吗？\n\n删除后活动记录将被移除。`
+                                : `确定要删除活动"${activity.title}"吗？\n\n删除后：\n- 活动将被取消\n- 所有未开始的任务将被自动取消\n- 已开始的任务不受影响`;
+                              if (!window.confirm(confirmMessage)) {
                                 return;
                               }
                               try {
@@ -2807,9 +2853,22 @@ const TaskExpertDashboard: React.FC = () => {
 
               {/* 奖励设置（仅当勾选"奖励申请者"时显示） */}
               {createMultiTaskForm.reward_applicants && (
-                <>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#f0fdf4', 
+                  borderRadius: '8px', 
+                  border: '1px solid #86efac',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#166534', marginBottom: '12px' }}>
+                    🎁 申请者奖励设置
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#15803d', marginBottom: '12px' }}>
+                    完成任务后，申请者将获得以下奖励（由您支付）
+                  </p>
+                  
                   {/* 奖励类型 */}
-                  <div>
+                  <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
                       奖励类型
                     </label>
@@ -2830,17 +2889,21 @@ const TaskExpertDashboard: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* 积分奖励设置（当reward_type包含points时显示） */}
-                  {(createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') && (
-                    <div>
+                  {/* 现金奖励设置（当reward_type包含cash时显示） */}
+                  {(createMultiTaskForm.reward_type === 'cash' || createMultiTaskForm.reward_type === 'both') && (
+                    <div style={{ marginBottom: '12px' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                        积分奖励数量
+                        每人现金奖励 (GBP)
                       </label>
                       <input
                         type="number"
                         min="0"
-                        value={createMultiTaskForm.points_reward}
-                        onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, points_reward: parseInt(e.target.value) || 0 })}
+                        step="0.01"
+                        value={createMultiTaskForm.applicant_reward_amount || ''}
+                        onChange={(e) => setCreateMultiTaskForm({ 
+                          ...createMultiTaskForm, 
+                          applicant_reward_amount: parseFloat(e.target.value) || undefined 
+                        })}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -2848,8 +2911,62 @@ const TaskExpertDashboard: React.FC = () => {
                           borderRadius: '6px',
                           fontSize: '14px',
                         }}
-                        placeholder="输入积分数量"
+                        placeholder="例如: 10.00"
                       />
+                    </div>
+                  )}
+
+                  {/* 积分奖励设置（当reward_type包含points时显示） */}
+                  {(createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                        每人积分奖励
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={createMultiTaskForm.applicant_points_reward || ''}
+                        onChange={(e) => setCreateMultiTaskForm({ 
+                          ...createMultiTaskForm, 
+                          applicant_points_reward: parseInt(e.target.value) || undefined 
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                        placeholder="例如: 100"
+                      />
+                      {/* 显示积分余额和预扣提示 */}
+                      <div style={{ 
+                        marginTop: '8px', 
+                        padding: '8px 12px', 
+                        background: '#fffbeb', 
+                        borderRadius: '6px',
+                        border: '1px solid #fcd34d',
+                      }}>
+                        <div style={{ fontSize: '12px', color: '#92400e' }}>
+                          💰 您当前的积分余额: <strong>{expertPointsBalance}</strong> 积分
+                        </div>
+                        {createMultiTaskForm.applicant_points_reward && createMultiTaskForm.max_participants > 0 && (
+                          <>
+                            <div style={{ fontSize: '12px', color: '#92400e', marginTop: '4px' }}>
+                              📝 预扣积分: <strong>{createMultiTaskForm.applicant_points_reward * createMultiTaskForm.max_participants}</strong> 积分 
+                              （{createMultiTaskForm.applicant_points_reward} × {createMultiTaskForm.max_participants} 人）
+                            </div>
+                            {(createMultiTaskForm.applicant_points_reward * createMultiTaskForm.max_participants) > expertPointsBalance && (
+                              <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', fontWeight: 600 }}>
+                                ⚠️ 积分余额不足！请减少每人积分奖励或最大参与人数。
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div style={{ fontSize: '11px', color: '#78716c', marginTop: '4px' }}>
+                          提示: 创建活动时会预扣积分，未使用的积分会在活动取消或完成后返还。
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2873,7 +2990,7 @@ const TaskExpertDashboard: React.FC = () => {
                       <option value="custom">自定义分配</option>
                     </select>
                   </div>
-                </>
+                </div>
               )}
 
               {/* 提交按钮 */}
@@ -3009,25 +3126,40 @@ const TaskExpertDashboard: React.FC = () => {
                       
                       // 如果勾选了"奖励申请者"，添加奖励相关字段
                       if (createMultiTaskForm.reward_applicants) {
+                        taskData.reward_applicants = true;
                         taskData.reward_type = createMultiTaskForm.reward_type;
                         taskData.reward_distribution = createMultiTaskForm.reward_distribution;
                         
-                        // 添加价格和折扣信息（如果reward_type包含cash）
-                        if (createMultiTaskForm.reward_type !== 'points') {
-                          taskData.original_price_per_participant = originalPrice;
-                          if (discount > 0) {
-                            taskData.discount_percentage = discount;
-                            taskData.discounted_price_per_participant = discountedPrice;
-                          }
-                          taskData.reward = discountedPrice;
+                        // 添加申请者现金奖励（如果reward_type包含cash）
+                        if (createMultiTaskForm.reward_type === 'cash' || createMultiTaskForm.reward_type === 'both') {
+                          taskData.applicant_reward_amount = createMultiTaskForm.applicant_reward_amount || 0;
                         }
                         
-                        // 添加积分奖励（如果reward_type包含points）
+                        // 添加申请者积分奖励（如果reward_type包含points）
                         if (createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') {
-                          taskData.points_reward = createMultiTaskForm.points_reward || 0;
+                          const pointsReward = createMultiTaskForm.applicant_points_reward || 0;
+                          const maxParticipants = createMultiTaskForm.max_participants || 1;
+                          const requiredPoints = pointsReward * maxParticipants;
+                          
+                          // 前端验证积分余额是否足够
+                          if (pointsReward > 0 && requiredPoints > expertPointsBalance) {
+                            message.error(`积分余额不足！需要预扣 ${requiredPoints} 积分（${pointsReward} × ${maxParticipants} 人），但您当前余额为 ${expertPointsBalance} 积分。`);
+                            return;
+                          }
+                          
+                          taskData.applicant_points_reward = pointsReward;
+                        }
+                        
+                        // 奖励申请者模式下，服务可能是免费的或者申请者还需要支付一定费用
+                        // 这里保留原有价格逻辑用于展示
+                        taskData.original_price_per_participant = originalPrice;
+                        if (discount > 0) {
+                          taskData.discount_percentage = discount;
+                          taskData.discounted_price_per_participant = discountedPrice;
                         }
                       } else {
                         // 如果没有勾选"奖励申请者"，使用默认值（商业服务任务，达人收钱）
+                        taskData.reward_applicants = false;
                         taskData.reward_type = 'cash';
                         taskData.original_price_per_participant = originalPrice;
                         if (discount > 0) {
@@ -3041,6 +3173,8 @@ const TaskExpertDashboard: React.FC = () => {
                       await createExpertMultiParticipantTask(taskData);
                       message.success('多人活动创建成功');
                       setShowCreateMultiTaskModal(false);
+                      // 刷新积分余额（因为可能有预扣）
+                      loadExpertPointsBalance();
                       await loadMultiTasks();
                     } catch (err: any) {
                       const errorMessage = err.response?.data?.detail || err.message || '创建失败';

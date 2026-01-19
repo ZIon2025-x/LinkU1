@@ -193,7 +193,7 @@ def send_task_application_notification(
 
 def send_task_approval_notification(
     db: Session,
-    background_tasks: BackgroundTasks,
+    background_tasks: Optional[BackgroundTasks],
     task: models.Task,
     applicant: models.User
 ):
@@ -216,14 +216,22 @@ def send_task_approval_notification(
         except Exception as e:
             logger.warning(f"发送任务申请接受推送通知失败: {e}")
             # 推送通知失败不影响主流程
-        # 创建通知
-        notification_content = f"您的任务申请已被同意！任务：{task.title}"
+        # 创建通知（如果任务需要支付，添加支付提醒）
+        payment_expires_info = ""
+        if task.status == "pending_payment" and task.payment_expires_at:
+            from app.utils.time_utils import format_iso_utc
+            expires_at_str = format_iso_utc(task.payment_expires_at)
+            payment_expires_info = f"\n请尽快完成支付以开始任务。支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+        
+        notification_content = f"您的任务申请已被同意！任务：{task.title}{payment_expires_info}"
+        
+        title = "任务申请已同意，请完成支付" if task.status == "pending_payment" else "任务申请已同意"
         
         crud.create_notification(
             db=db,
             user_id=applicant.id,
             type="task_approved",
-            title="任务申请已同意",
+            title=title,
             content=notification_content,
             related_id=str(task.id)
         )
@@ -860,6 +868,65 @@ async def send_counter_offer_accepted_notification(
         logger.error(f"发送议价同意通知失败: {e}")
 
 
+async def send_counter_offer_accepted_to_applicant_notification(
+    db: AsyncSession,
+    applicant_id: str,
+    expert_id: str,
+    counter_price: Decimal,
+    service_id: int,
+):
+    """用户同意任务达人的议价后，发送通知给用户（申请者），提醒等待支付"""
+    try:
+        from app import async_crud
+        
+        # 查询服务信息
+        service = await db.get(models.TaskExpertService, service_id)
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
+        # 获取任务达人信息
+        expert_user = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
+        expert_name = expert_user.name if expert_user and expert_user.name else f"任务达人{expert_id}"
+        
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        content = f"您已同意任务达人 {expert_name} 的议价。\n服务名称：{service_name}\n议价金额：£{float(counter_price):.2f}\n请等待任务达人创建任务，创建后需要完成支付。"
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=applicant_id,
+            notification_type="counter_offer_accepted_to_applicant",
+            title="已同意议价",
+            content=content,  # 直接使用文本，不存储 JSON
+            related_id=str(service_id),
+        )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=applicant_id,
+                title="已同意议价",
+                body=f"您已同意任务达人 {expert_name} 的议价，请等待任务创建并完成支付",
+                notification_type="counter_offer_accepted_to_applicant",
+                data={
+                    "service_id": service_id
+                },
+                template_vars={
+                    "expert_name": expert_name,
+                    "service_name": service_name,
+                    "counter_price": float(counter_price)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送议价同意推送通知给用户失败: {e}")
+            # 推送通知失败不影响主流程
+        
+        logger.info(f"议价同意通知已发送给用户（申请者）: {applicant_id}")
+        
+    except Exception as e:
+        logger.error(f"发送议价同意通知给用户失败: {e}")
+
+
 async def send_counter_offer_rejected_notification(
     db: AsyncSession,
     expert_id: str,
@@ -933,14 +1000,22 @@ async def send_service_application_approved_notification(
         expert = await db.get(models.TaskExpert, expert_id)
         expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
         
+        # 查询任务信息，获取支付过期时间
+        task = await db.get(models.Task, task_id)
+        payment_expires_info = ""
+        if task and task.payment_expires_at:
+            from app.utils.time_utils import format_iso_utc
+            expires_at_str = format_iso_utc(task.payment_expires_at)
+            payment_expires_info = f"\n支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
-        notification_content = f"您的服务申请已通过，任务已创建。\n任务达人：{expert_name}\n服务名称：{service_name}"
+        notification_content = f"您的服务申请已通过，任务已创建。\n任务达人：{expert_name}\n服务名称：{service_name}\n请尽快完成支付以开始任务。{payment_expires_info}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=applicant_id,
             notification_type="service_application_approved",
-            title="服务申请已通过",
+            title="服务申请已通过，请完成支付",
             content=notification_content,
             related_id=str(task_id),
         )
@@ -951,15 +1026,16 @@ async def send_service_application_approved_notification(
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=applicant_id,
-                title=None,  # 从模板生成（会根据用户语言偏好）
-                body=None,  # 从模板生成（会根据用户语言偏好）
+                title="服务申请已通过，请完成支付",
+                body=f"任务已创建，请尽快完成支付以开始任务「{service_name}」",
                 notification_type="service_application_approved",
                 data={
                     "task_id": task_id,
                     "service_id": service_id
                 },
                 template_vars={
-                    "service_name": service_name
+                    "service_name": service_name,
+                    "task_id": task_id
                 }
             )
         except Exception as e:
@@ -1182,3 +1258,55 @@ async def send_expert_profile_update_rejected_notification(
         
     except Exception as e:
         logger.error(f"发送信息修改拒绝通知失败: {e}")
+
+
+def send_payment_reminder_notification(
+    db: Session,
+    user_id: str,
+    task_id: int,
+    task_title: str,
+    hours_remaining: int,
+    expires_at: datetime
+):
+    """发送支付提醒通知给用户（同步版本）"""
+    try:
+        from app.push_notification_service import send_push_notification
+        from app.utils.time_utils import format_iso_utc
+        
+        # 创建通知
+        hours_text = f"{hours_remaining}小时" if hours_remaining >= 1 else f"{hours_remaining * 60}分钟"
+        notification_content = f"任务「{task_title}」的支付将在{hours_text}后过期，请尽快完成支付。"
+        
+        crud.create_notification(
+            db=db,
+            user_id=user_id,
+            type="payment_reminder",
+            title="支付提醒",
+            content=notification_content,
+            related_id=str(task_id)
+        )
+        
+        # 发送推送通知
+        try:
+            send_push_notification(
+                db=db,
+                user_id=user_id,
+                title="支付提醒",
+                body=f"任务「{task_title}」的支付将在{hours_text}后过期",
+                notification_type="payment_reminder",
+                data={"task_id": task_id},
+                template_vars={
+                    "task_title": task_title,
+                    "task_id": task_id,
+                    "hours_remaining": hours_remaining,
+                    "expires_at": format_iso_utc(expires_at)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送支付提醒推送通知失败: {e}")
+        
+        logger.info(f"支付提醒通知已发送给用户 {user_id}（任务 {task_id}，{hours_remaining}小时后过期）")
+        
+    except Exception as e:
+        logger.error(f"发送支付提醒通知失败: {e}", exc_info=True)
+        raise

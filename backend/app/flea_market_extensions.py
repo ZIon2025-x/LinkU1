@@ -117,15 +117,25 @@ async def send_purchase_accepted_notification(
     task_id: int,
     final_price: float
 ):
-    """发送购买申请接受通知给买家"""
+    """发送购买申请接受通知给买家（包含支付提醒）"""
     try:
-        content = f"您的购买申请已被接受！\n商品：{item.title}\n成交价：£{final_price:.2f}\n任务已创建，可以开始交易了"
+        # 查询任务信息，获取支付过期时间
+        task = await db.get(models.Task, task_id)
+        payment_expires_info = ""
+        if task and task.status == "pending_payment" and task.payment_expires_at:
+            from app.utils.time_utils import format_iso_utc
+            expires_at_str = format_iso_utc(task.payment_expires_at)
+            payment_expires_info = f"\n请尽快完成支付以开始交易。支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+        
+        content = f"您的购买申请已被接受！\n商品：{item.title}\n成交价：£{final_price:.2f}\n任务已创建。{payment_expires_info}"
+        
+        title = "购买申请已接受，请完成支付" if task and task.status == "pending_payment" else "购买申请已接受"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=buyer.id,
             notification_type="flea_market_purchase_accepted",
-            title="购买申请已接受",
+            title=title,
             content=content,
             related_id=str(task_id),
         )
@@ -133,18 +143,22 @@ async def send_purchase_accepted_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            push_title = "购买申请已接受，请完成支付" if task and task.status == "pending_payment" else None
+            push_body = f"商品「{item.title}」的购买申请已被接受，请尽快完成支付" if task and task.status == "pending_payment" else None
+            
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=buyer.id,
-                title=None,  # 从模板生成（会根据用户语言偏好）
-                body=None,  # 从模板生成（会根据用户语言偏好）
+                title=push_title,  # 如果需要支付，使用自定义标题
+                body=push_body,  # 如果需要支付，使用自定义内容
                 notification_type="flea_market_purchase_accepted",
                 data={
                     "item_id": item.id,
                     "task_id": task_id
                 },
                 template_vars={
-                    "item_title": item.title
+                    "item_title": item.title,
+                    "task_id": task_id
                 }
             )
         except Exception as e:

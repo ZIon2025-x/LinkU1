@@ -493,6 +493,222 @@ def send_expiry_notifications(db: Session):
         raise
 
 
+def check_expired_payment_tasks(db: Session):
+    """检查并取消支付过期的任务"""
+    try:
+        current_time = get_utc_time()
+        
+        # 查询所有待支付且已过期的任务
+        expired_tasks = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "pending_payment",
+                models.Task.is_paid == 0,
+                models.Task.payment_expires_at.isnot(None),
+                models.Task.payment_expires_at < current_time
+            )
+        ).all()
+        
+        cancelled_count = 0
+        for task in expired_tasks:
+            try:
+                logger.info(f"任务 {task.id} 支付已过期（过期时间: {task.payment_expires_at}），自动取消")
+                task.status = "cancelled"
+                cancelled_count += 1
+                
+                # 如果是服务申请创建的任务，更新申请状态
+                if task.expert_service_id:
+                    from sqlalchemy import select
+                    application = db.execute(
+                        select(models.ServiceApplication).where(
+                            models.ServiceApplication.task_id == task.id
+                        )
+                    ).scalar_one_or_none()
+                    if application:
+                        application.status = "cancelled"
+                
+                # 如果是活动申请创建的任务，更新参与者状态
+                if task.is_multi_participant:
+                    participants = db.query(models.TaskParticipant).filter(
+                        models.TaskParticipant.task_id == task.id,
+                        models.TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
+                    ).all()
+                    for participant in participants:
+                        participant.status = "cancelled"
+                        participant.cancelled_at = current_time
+                
+                # 发送通知给任务发布者（需要支付的人）
+                if task.poster_id:
+                    try:
+                        from app import crud
+                        crud.create_notification(
+                            db=db,
+                            user_id=task.poster_id,
+                            type="task_cancelled",
+                            title="任务支付已过期",
+                            content=f'您的任务"{task.title}"因支付超时已自动取消。请在24小时内完成支付以避免任务被取消。',
+                            related_id=str(task.id),
+                            auto_commit=False
+                        )
+                        
+                        # 发送推送通知
+                        try:
+                            from app.push_notification_service import send_push_notification
+                            send_push_notification(
+                                db=db,
+                                user_id=task.poster_id,
+                                title="任务支付已过期",
+                                body=f'您的任务"{task.title}"因支付超时已自动取消',
+                                notification_type="task_cancelled",
+                                data={"task_id": task.id, "reason": "payment_expired"}
+                            )
+                        except Exception as e:
+                            logger.warning(f"发送支付过期取消推送通知失败（任务 {task.id}，用户 {task.poster_id}）: {e}")
+                    except Exception as e:
+                        logger.error(f"创建支付过期取消通知失败（任务 {task.id}，用户 {task.poster_id}）: {e}")
+                
+                # 如果任务有接受者，也通知接受者
+                if task.taker_id and task.taker_id != task.poster_id:
+                    try:
+                        from app import crud
+                        crud.create_notification(
+                            db=db,
+                            user_id=task.taker_id,
+                            type="task_cancelled",
+                            title="任务已取消",
+                            content=f'您接受的任务"{task.title}"因支付超时已自动取消',
+                            related_id=str(task.id),
+                            auto_commit=False
+                        )
+                        
+                        # 发送推送通知
+                        try:
+                            from app.push_notification_service import send_push_notification
+                            send_push_notification(
+                                db=db,
+                                user_id=task.taker_id,
+                                title="任务已取消",
+                                body=f'您接受的任务"{task.title}"因支付超时已自动取消',
+                                notification_type="task_cancelled",
+                                data={"task_id": task.id, "reason": "payment_expired"}
+                            )
+                        except Exception as e:
+                            logger.warning(f"发送支付过期取消推送通知失败（任务 {task.id}，用户 {task.taker_id}）: {e}")
+                    except Exception as e:
+                        logger.error(f"创建支付过期取消通知失败（任务 {task.id}，用户 {task.taker_id}）: {e}")
+                
+                # 记录任务历史
+                try:
+                    from app.crud import add_task_history
+                    add_task_history(
+                        db=db,
+                        task_id=task.id,
+                        user_id=task.poster_id or "system",
+                        status="cancelled",
+                        note="任务因支付超时自动取消",
+                        auto_commit=False
+                    )
+                except Exception as e:
+                    logger.warning(f"记录任务历史失败（任务 {task.id}）: {e}")
+                
+            except Exception as e:
+                logger.error(f"处理支付过期任务 {task.id} 时出错: {e}", exc_info=True)
+                # 继续处理其他任务，不中断整个流程
+                continue
+        
+        if cancelled_count > 0:
+            try:
+                db.commit()
+                logger.info(f"✅ 已取消 {cancelled_count} 个支付过期的任务，并发送了相关通知")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"提交支付过期任务取消失败: {e}", exc_info=True)
+                return 0
+        
+        return cancelled_count
+    except Exception as e:
+        db.rollback()
+        logger.error(f"检查支付过期任务失败: {e}", exc_info=True)
+        return 0
+
+
+def send_payment_reminders(db: Session, hours_before: int):
+    """
+    发送支付提醒通知
+    
+    Args:
+        db: 数据库会话
+        hours_before: 过期前多少小时发送提醒（12、6、1）
+    """
+    try:
+        from app.task_notifications import send_payment_reminder_notification
+        
+        current_time = get_utc_time()
+        reminder_time = current_time + timedelta(hours=hours_before)
+        
+        # 查询即将在指定小时后过期的待支付任务
+        # 使用时间范围查询（±5分钟窗口，避免重复发送）
+        start_time = reminder_time - timedelta(minutes=5)
+        end_time = reminder_time + timedelta(minutes=5)
+        
+        tasks_to_remind = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "pending_payment",
+                models.Task.is_paid == 0,
+                models.Task.payment_expires_at.isnot(None),
+                models.Task.payment_expires_at >= start_time,
+                models.Task.payment_expires_at <= end_time
+            )
+        ).all()
+        
+        sent_count = 0
+        failed_count = 0
+        skipped_count = 0
+        
+        for task in tasks_to_remind:
+            try:
+                # 检查是否已经发送过相同时间的提醒（避免重复发送）
+                # 检查最近1小时内是否已有相同类型的提醒通知
+                from datetime import timedelta
+                recent_reminder = db.query(models.Notification).filter(
+                    and_(
+                        models.Notification.user_id == task.poster_id,
+                        models.Notification.type == "payment_reminder",
+                        models.Notification.related_id == str(task.id),
+                        models.Notification.created_at >= current_time - timedelta(hours=1)
+                    )
+                ).first()
+                
+                if recent_reminder:
+                    # 最近1小时内已发送过提醒，跳过（避免重复）
+                    skipped_count += 1
+                    logger.debug(f"跳过任务 {task.id} 的支付提醒（最近1小时内已发送过）")
+                    continue
+                
+                # 发送通知给任务发布者（需要支付的人）
+                if task.poster_id:
+                    send_payment_reminder_notification(
+                        db=db,
+                        user_id=task.poster_id,
+                        task_id=task.id,
+                        task_title=task.title,
+                        hours_remaining=hours_before,
+                        expires_at=task.payment_expires_at
+                    )
+                    sent_count += 1
+                    logger.info(f"已发送支付提醒通知给用户 {task.poster_id}（任务 {task.id}，{hours_before}小时后过期）")
+                else:
+                    logger.warning(f"任务 {task.id} 没有发布者ID，无法发送支付提醒")
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"发送支付提醒通知失败（任务 {task.id}）: {e}", exc_info=True)
+        
+        logger.info(f"支付提醒通知发送完成：成功 {sent_count}，失败 {failed_count}，跳过 {skipped_count}（{hours_before}小时前提醒）")
+        
+    except Exception as e:
+        logger.error(f"发送支付提醒通知失败: {e}", exc_info=True)
+        raise
+
+
 def run_scheduled_tasks():
     """运行所有定时任务"""
     from app.state import is_app_shutting_down
@@ -514,6 +730,22 @@ def run_scheduled_tasks():
         check_expired_coupons(db)
         check_expired_invitation_codes(db)
         check_expired_points(db)
+        
+        # 检查支付过期的任务
+        try:
+            cancelled_count = check_expired_payment_tasks(db)
+            if cancelled_count > 0:
+                logger.info(f"支付过期任务检查: 取消了 {cancelled_count} 个任务")
+        except Exception as e:
+            logger.error(f"支付过期任务检查失败: {e}", exc_info=True)
+        
+        # 发送支付提醒（12小时前、6小时前、1小时前）
+        try:
+            send_payment_reminders(db, hours_before=12)
+            send_payment_reminders(db, hours_before=6)
+            send_payment_reminders(db, hours_before=1)
+        except Exception as e:
+            logger.error(f"发送支付提醒失败: {e}", exc_info=True)
         
         # 处理过期认证（每小时执行一次，这里作为兜底）
         try:

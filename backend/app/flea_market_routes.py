@@ -1199,6 +1199,7 @@ async def direct_purchase_item(
             taker_id=item.seller_id,  # 卖家
             status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
+            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
@@ -1253,6 +1254,11 @@ async def direct_purchase_item(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
+            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
+            # 交易市场托管模式：
+            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
             payment_intent = stripe.PaymentIntent.create(
                 amount=task_amount_pence,
                 currency="gbp",
@@ -1260,6 +1266,8 @@ async def direct_purchase_item(
                 # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
                 # 必须在 Stripe Dashboard 中启用 WeChat Pay
                 payment_method_types=["card", "wechat_pay"],
+                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
                 description=f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
                 metadata={
                     "task_id": str(new_task.id),
@@ -1268,9 +1276,9 @@ async def direct_purchase_item(
                     "poster_name": current_user.name or f"User {current_user.id}",
                     "taker_id": str(item.seller_id),
                     "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
+                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
+                    "task_amount": str(task_amount_pence),  # 任务金额
                     "task_amount_display": f"{item.price:.2f}",
                     "platform": "Link²Ur",
                     "payment_type": "flea_market_direct_purchase",
@@ -1581,6 +1589,7 @@ async def accept_purchase_request(
             taker_id=item.seller_id,  # 卖家
             status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
+            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
@@ -1598,6 +1607,11 @@ async def accept_purchase_request(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
+            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
+            # 交易市场托管模式：
+            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
             payment_intent = stripe.PaymentIntent.create(
                 amount=task_amount_pence,
                 currency="gbp",
@@ -1605,6 +1619,8 @@ async def accept_purchase_request(
                 # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
                 # 必须在 Stripe Dashboard 中启用 WeChat Pay
                 payment_method_types=["card", "wechat_pay"],
+                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
                 description=f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                 metadata={
                     "task_id": str(new_task.id),
@@ -1613,9 +1629,9 @@ async def accept_purchase_request(
                     "poster_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
                     "taker_id": str(item.seller_id),
                     "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,
-                    "application_fee": str(application_fee_pence),
-                    "task_amount": str(task_amount_pence),
+                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
+                    "task_amount": str(task_amount_pence),  # 任务金额
                     "task_amount_display": f"{final_price:.2f}",
                     "platform": "Link²Ur",
                     "payment_type": "flea_market_purchase_request",

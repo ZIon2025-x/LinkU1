@@ -1586,8 +1586,13 @@ async def accept_application(
         if application.negotiated_price is not None:
             locked_task.agreed_reward = application.negotiated_price
         
+        # ⚠️ 优化：立即更新任务状态为 pending_payment，并设置支付过期时间
+        # 这样定时任务可以检查支付过期，并发送提醒通知
+        locked_task.status = "pending_payment"
+        locked_task.is_paid = 0
+        locked_task.payment_expires_at = current_time + timedelta(hours=24)
+        
         # 不更新申请状态，保持为 pending（等待支付成功后由 webhook 更新）
-        # 不更新任务状态，保持原状态（等待支付成功后由 webhook 更新）
         # 不设置 taker_id，等待支付成功后再设置（由 webhook 处理）
         # 这样确保只有支付成功后才真正批准申请
         
@@ -2382,6 +2387,7 @@ async def respond_negotiation(
             locked_task.taker_id = application.applicant_id
             locked_task.status = "pending_payment"
             locked_task.is_paid = 0  # 明确标记为未支付
+            locked_task.payment_expires_at = get_utc_time() + timedelta(hours=24)  # 支付过期时间（24小时）
             
             # 如果申请包含议价，更新 agreed_reward
             if application.negotiated_price is not None:
@@ -2523,20 +2529,46 @@ async def respond_negotiation(
                 customer_id = None
                 ephemeral_key_secret = None
             
-            # 发送通知给发布者
+            # 发送通知给发布者（包含支付提醒）
             try:
+                # 获取支付过期时间信息
+                payment_expires_info = ""
+                if locked_task.payment_expires_at:
+                    from app.utils.time_utils import format_iso_utc
+                    expires_at_str = format_iso_utc(locked_task.payment_expires_at)
+                    payment_expires_info = f"\n支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+                
                 # ⚠️ 直接使用文本内容，不存储 JSON
-                content = f"申请者已接受您对任务「{task.title}」的议价，请完成支付"
+                content = f"申请者已接受您对任务「{locked_task.title}」的议价，请完成支付。{payment_expires_info}"
                 
                 new_notification = models.Notification(
                     user_id=task.poster_id,
                     type="application_accepted",
-                    title="申请者已接受您的议价",
+                    title="申请者已接受您的议价，请完成支付",
                     content=content,  # 直接使用文本，不存储 JSON
-                    related_id=application_id,
+                    related_id=str(task_id),  # 使用task_id而不是application_id，方便前端跳转
                     created_at=current_time
                 )
                 db.add(new_notification)
+                
+                # 发送推送通知
+                try:
+                    from app.push_notification_service import send_push_notification_async_safe
+                    send_push_notification_async_safe(
+                        async_db=db,
+                        user_id=task.poster_id,
+                        title="申请者已接受您的议价，请完成支付",
+                        body=f"任务「{locked_task.title}」的议价已被接受，请尽快完成支付",
+                        notification_type="application_accepted",
+                        data={"task_id": task_id},
+                        template_vars={
+                            "task_title": locked_task.title,
+                            "task_id": task_id
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"发送接受议价推送通知失败: {e}")
+                
                 await db.commit()
             except Exception as e:
                 logger.error(f"发送接受议价通知失败: {e}")

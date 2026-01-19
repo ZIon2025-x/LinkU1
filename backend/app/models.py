@@ -194,6 +194,7 @@ class Task(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)  # 任务完成时间
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID，用于关联支付记录
+    payment_expires_at = Column(DateTime(timezone=True), nullable=True)  # 支付过期时间（待支付状态的任务）
     escrow_amount = Column(Float, default=0.0)
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
     paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
@@ -1900,6 +1901,16 @@ class Activity(Base):
     images = Column(JSONB, nullable=True)
     # 时间段相关（如果关联时间段服务）
     has_time_slots = Column(Boolean, default=False, nullable=False)
+    # 奖励申请者（完成任务后给予申请者额外奖励，而不是申请者付费）
+    reward_applicants = Column(Boolean, default=False, nullable=False)
+    # 申请者奖励金额（当 reward_applicants=True 且 reward_type 包含 cash 时使用）
+    applicant_reward_amount = Column(DECIMAL(12, 2), nullable=True)
+    # 申请者积分奖励（当 reward_applicants=True 且 reward_type 包含 points 时使用）
+    applicant_points_reward = Column(BigInteger, nullable=True)
+    # 预扣积分总额（创建活动时从达人账户预扣的积分，用于后续返还计算）
+    reserved_points_total = Column(BigInteger, nullable=True, default=0)
+    # 已发放积分总额（已奖励给申请者的积分）
+    distributed_points_total = Column(BigInteger, nullable=True, default=0)
     # 创建时间
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())

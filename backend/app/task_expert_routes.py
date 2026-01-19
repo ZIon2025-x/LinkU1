@@ -2370,7 +2370,19 @@ async def apply_for_service(
                 except:
                     images_json = None
         
+        # 检查任务达人是否有Stripe Connect账户（用于接收任务奖励）
+        expert_user = await db.get(models.User, service.expert_id)
+        taker_stripe_account_id = expert_user.stripe_account_id if expert_user else None
+        
+        if not taker_stripe_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="任务达人尚未创建 Stripe Connect 收款账户，无法完成支付。请联系任务达人先创建收款账户。",
+                headers={"X-Stripe-Connect-Required": "true"}
+            )
+        
         # 创建任务（任务达人服务创建的任务等级为 expert）
+        # ⚠️ 需要支付，设置为pending_payment状态
         new_task = models.Task(
             title=service.service_name,
             description=service.description,
@@ -2385,13 +2397,52 @@ async def apply_for_service(
             task_level="expert",
             poster_id=current_user.id,  # 申请用户是发布人
             taker_id=service.expert_id,  # 任务达人接收方
-            status="in_progress",
+            status="pending_payment",  # ⚠️ 需要支付，等待支付完成
+            is_paid=0,  # 明确标记为未支付
+            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
             images=images_json,  # 存储为JSON字符串
             accepted_at=get_utc_time()
         )
         
         db.add(new_task)
         await db.flush()  # 获取任务ID
+        
+        # ⚠️ 创建支付意图
+        task_amount_pence = int(float(price) * 100)
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+        
+        try:
+            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
+            # 交易市场托管模式：
+            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
+            payment_intent = stripe.PaymentIntent.create(
+                amount=task_amount_pence,
+                currency=(application_data.currency or service.currency).lower(),
+                # 明确指定支付方式类型，确保 WeChat Pay 可用
+                payment_method_types=["card", "wechat_pay"],
+                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
+                metadata={
+                    "task_id": str(new_task.id),
+                    "application_id": str(new_application.id),
+                    "poster_id": current_user.id,
+                    "taker_id": service.expert_id,
+                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
+                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "task_type": "service_application",
+                },
+                description=f"服务申请支付 - {service.service_name}",
+            )
+            new_task.payment_intent_id = payment_intent.id
+            logger.info(f"创建支付意图成功: payment_intent_id={payment_intent.id}, task_id={new_task.id}")
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"创建支付意图失败: {e}")
+            raise HTTPException(status_code=500, detail=f"创建支付意图失败: {str(e)}")
         
         # 更新申请记录，关联任务ID
         new_application.task_id = new_task.id
@@ -2454,6 +2505,31 @@ async def apply_for_service(
             logger.error(f"Failed to send notification: {e}")
     
     # ⚠️ 重新查询后的对象所有属性都已加载，不需要再"预热"
+    # 如果需要支付，添加支付信息到返回对象
+    if new_task.status == "pending_payment" and new_task.payment_intent_id:
+        try:
+            # 重新获取 PaymentIntent 以获取 client_secret
+            payment_intent = stripe.PaymentIntent.retrieve(new_task.payment_intent_id)
+            
+            # 使用 Pydantic 的 model_dump 和 model_validate 来添加额外字段
+            from pydantic import model_validate
+            application_dict = {
+                **new_application.__dict__,
+                "payment_intent_id": payment_intent.id,
+                "client_secret": payment_intent.client_secret,
+                "payment_amount": payment_intent.amount,
+                "payment_amount_display": f"{payment_intent.amount / 100:.2f}",
+                "payment_currency": payment_intent.currency.upper(),
+                "customer_id": customer_id,
+                "ephemeral_key_secret": ephemeral_key_secret,
+                "payment_required": True,
+                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None
+            }
+            return schemas.ServiceApplicationOut(**application_dict)
+        except Exception as e:
+            logger.error(f"获取支付信息失败: {e}")
+            # 支付信息获取失败不影响主流程，返回原始对象
+    
     # 直接返回对象即可（响应模型会自动序列化已加载的属性）
     return new_application
 
@@ -2713,6 +2789,7 @@ async def approve_service_application(
         taker_id=application.expert_id,  # 任务达人接收方
         status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
         is_paid=0,  # 明确标记为未支付
+        payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
         images=images_json,  # 存储为JSON字符串
         accepted_at=get_utc_time()
     )
@@ -2731,6 +2808,11 @@ async def approve_service_application(
     application_fee_pence = calculate_application_fee_pence(task_amount_pence)
     
     try:
+        # ⚠️ 优化：使用托管模式（与其他支付功能一致）
+        # 交易市场托管模式：
+        # - 支付时：资金先到平台账户（不立即转账给任务接受人）
+        # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
+        # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
@@ -2738,6 +2820,8 @@ async def approve_service_application(
             # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
             # 必须在 Stripe Dashboard 中启用 WeChat Pay
             payment_method_types=["card", "wechat_pay"],
+            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
+            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             description=f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
             metadata={
                 "task_id": str(new_task.id),
@@ -2746,9 +2830,9 @@ async def approve_service_application(
                 "poster_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
                 "taker_id": str(application.expert_id),
                 "taker_name": expert_user.name if expert_user else f"User {application.expert_id}",
-                "taker_stripe_account_id": taker_stripe_account_id,
-                "application_fee": str(application_fee_pence),
-                "task_amount": str(task_amount_pence),
+                "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
+                "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
+                "task_amount": str(task_amount_pence),  # 任务金额
                 "task_amount_display": f"{price:.2f}",
                 "platform": "Link²Ur",
                 "payment_type": "service_application_approve",
