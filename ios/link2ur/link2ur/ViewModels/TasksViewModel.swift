@@ -537,6 +537,7 @@ class TasksViewModel: ObservableObject {
                                     isPublic: task.isPublic,
                                     posterId: task.posterId,
                                     takerId: task.takerId,
+                                    originatingUserId: task.originatingUserId,
                                     taskLevel: task.taskLevel,
                                     pointsReward: task.pointsReward,
                                     isMultiParticipant: task.isMultiParticipant,

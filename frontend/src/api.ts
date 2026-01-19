@@ -158,11 +158,6 @@ export function clearCSRFToken(): void {
   // 此函数保留用于向后兼容，实际清除由后端处理
 }
 
-// 检测是否为移动端
-function isMobileDevice(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
 api.interceptors.request.use(async config => {
   // 所有设备都使用HttpOnly Cookie认证，不再区分移动端和桌面端
   
