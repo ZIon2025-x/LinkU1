@@ -174,9 +174,32 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             if type == "pong" || type == "heartbeat" {
                 return
             }
+            
+            // 处理任务消息（格式：{ "type": "task_message", "message": {...} }）
+            if type == "task_message", let messageDict = json["message"] as? [String: Any] {
+                // 将嵌套的 message 对象提取出来
+                if let messageData = try? JSONSerialization.data(withJSONObject: messageDict) {
+                    DispatchQueue.main.async { [weak self] in
+                        do {
+                            let decoder = JSONDecoder()
+                            let message = try decoder.decode(Message.self, from: messageData)
+                            // 只处理有 content 的消息（过滤掉系统消息或其他类型的消息）
+                            if message.content != nil {
+                                self?.messageSubject.send(message)
+                            } else {
+                                print("⚠️ WebSocket 收到无 content 的任务消息，已忽略: \(text.prefix(100))")
+                            }
+                        } catch {
+                            print("❌ WebSocket task_message decoding error: \(error)")
+                            print("📥 原始消息内容: \(text.prefix(500))")
+                        }
+                    }
+                }
+                return
+            }
         }
         
-        // 在后台线程解码，然后切换到主线程发送
+        // 在后台线程解码，然后切换到主线程发送（处理普通消息格式）
         DispatchQueue.main.async { [weak self] in
             do {
                 // 在主线程解码以避免 main actor 隔离问题

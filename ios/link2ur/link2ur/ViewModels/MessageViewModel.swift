@@ -347,7 +347,7 @@ class TaskChatDetailViewModel: ObservableObject {
         }
     }
     
-    private func saveToCache() {
+    func saveToCache() {
         // 只缓存最新的100条消息
         let messagesToCache = Array(messages.suffix(100))
         if !messagesToCache.isEmpty {

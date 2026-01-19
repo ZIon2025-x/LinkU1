@@ -382,6 +382,22 @@ class MyTasksViewModel: ObservableObject {
                         if let takerId = task.takerId, String(takerId) == userId {
                             return true
                         }
+                        // 检查是否是用户申请活动创建的任务（包括多人任务中 poster_id 为 None 的情况）
+                        if let originatingUserId = task.originatingUserId, String(originatingUserId) == userId {
+                            return true
+                        }
+                        // 对于多人任务，如果任务的 posterId、takerId 和 originatingUserId 都不匹配用户ID，
+                        // 但任务已经在 API 响应中，说明用户是参与者（后端已经通过 TaskParticipant join 返回）
+                        // 后端已经过滤了，所以这里信任后端返回的数据
+                        if task.isMultiParticipant == true {
+                            // 只有在 posterId、takerId 和 originatingUserId 都不匹配时，才认为是参与者
+                            let isNotPoster = task.posterId == nil || String(task.posterId!) != userId
+                            let isNotTaker = task.takerId == nil || String(task.takerId!) != userId
+                            let isNotOriginator = task.originatingUserId == nil || String(task.originatingUserId!) != userId
+                            if isNotPoster && isNotTaker && isNotOriginator {
+                                return true  // 用户是参与者
+                            }
+                        }
                         // 如果都没有匹配，过滤掉
                         return false
                     }
@@ -393,11 +409,16 @@ class MyTasksViewModel: ObservableObject {
                     // 全部：显示所有与用户相关的任务（已在上一步过滤）
                     break
                 case .posted:
-                    // 我发布的：只显示poster_id匹配的任务
+                    // 我发布的：显示poster_id匹配的任务，或者通过活动申请创建的任务（originating_user_id匹配）
                     if let userId = self.currentUserId {
                         filteredTasks = filteredTasks.filter { task in
-                            if let posterId = task.posterId {
-                                return String(posterId) == userId
+                            // 检查是否是用户发布的任务
+                            if let posterId = task.posterId, String(posterId) == userId {
+                                return true
+                            }
+                            // 检查是否是用户申请活动创建的任务（包括多人任务中 poster_id 为 None 的情况）
+                            if let originatingUserId = task.originatingUserId, String(originatingUserId) == userId {
+                                return true
                             }
                             return false
                         }
@@ -559,9 +580,15 @@ class MyTasksViewModel: ObservableObject {
                 // 过滤与用户相关的任务，并排除已完成的任务（已完成的任务会从另一个API加载）
                 let userTasks = tasks.filter { task in
                     // 先检查是否与用户相关
-                    let isUserRelated = (task.posterId != nil && String(task.posterId!) == userId) ||
-                                       (task.takerId != nil && String(task.takerId!) == userId)
+                    let isPoster = task.posterId != nil && String(task.posterId!) == userId
+                    let isTaker = task.takerId != nil && String(task.takerId!) == userId
+                    let isOriginator = task.originatingUserId != nil && String(task.originatingUserId!) == userId
+                    let isParticipant = task.isMultiParticipant == true && !isPoster && !isTaker && !isOriginator
+                    // 对于多人任务，如果任务的 posterId、takerId 和 originatingUserId 都不匹配用户ID，
+                    // 但任务已经在 API 响应中，说明用户是参与者（后端已经通过 TaskParticipant join 返回）
+                    let isUserRelated = isPoster || isTaker || isOriginator || isParticipant
                     // 排除已完成的任务（已完成的任务会从另一个API加载）
+                    // 注意：对于多人任务，用户可能是参与者，后端已经通过 TaskParticipant join 返回了这些任务
                     return isUserRelated && task.status != .completed
                 }
                 allTasks.append(contentsOf: userTasks)
@@ -656,11 +683,17 @@ class MyTasksViewModel: ObservableObject {
                 }
                 
                 // 筛选与用户相关的任务
+                // 注意：对于多人任务，用户可能是参与者，需要通过其他方式识别
                 let userRelatedTasks = completedTaskChats.filter { taskChat in
                     if let posterId = taskChat.posterId, String(posterId) == userId {
                         return true
                     }
                     if let takerId = taskChat.takerId, String(takerId) == userId {
+                        return true
+                    }
+                    // 对于多人任务，如果任务已经在响应中，说明用户是参与者（后端已经通过 TaskParticipant join 返回）
+                    // 这里我们信任后端返回的数据，因为后端已经过滤了
+                    if taskChat.isMultiParticipant == true {
                         return true
                     }
                     return false

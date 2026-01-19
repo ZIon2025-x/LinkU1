@@ -11,6 +11,7 @@ public struct Message: Codable, Identifiable {
     let createdAt: String? // 改为可选，某些 WebSocket 消息可能没有 created_at
     let isRead: Bool? // 后端返回的是 bool，不是 int
     let imageId: String?
+    let taskId: Int? // 任务ID（用于任务聊天消息）
     let attachments: [MessageAttachment]? // 消息附件（图片、文件等）
     
     // Identifiable 协议要求的 id 属性（非可选）
@@ -45,6 +46,7 @@ public struct Message: Codable, Identifiable {
         case createdAt = "created_at"
         case isRead = "is_read"
         case imageId = "image_id"
+        case taskId = "task_id"
         case attachments
     }
     
@@ -62,6 +64,7 @@ public struct Message: Codable, Identifiable {
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
         isRead = try container.decodeIfPresent(Bool.self, forKey: .isRead)
         imageId = try container.decodeIfPresent(String.self, forKey: .imageId)
+        taskId = try container.decodeIfPresent(Int.self, forKey: .taskId)
         attachments = try container.decodeIfPresent([MessageAttachment].self, forKey: .attachments)
     }
     
@@ -78,6 +81,7 @@ public struct Message: Codable, Identifiable {
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(isRead, forKey: .isRead)
         try container.encodeIfPresent(imageId, forKey: .imageId)
+        try container.encodeIfPresent(taskId, forKey: .taskId)
         try container.encodeIfPresent(attachments, forKey: .attachments)
     }
 }

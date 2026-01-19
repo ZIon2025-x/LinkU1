@@ -21,6 +21,7 @@ struct Task: Codable, Identifiable, Equatable {
     let isPublic: Int?
     let posterId: String?  // 后端使用 poster_id
     let takerId: String?  // 后端使用 taker_id
+    let originatingUserId: String?  // 后端使用 originating_user_id（申请活动创建的任务的申请人ID）
     let taskLevel: String?
     let pointsReward: Int?
     let isMultiParticipant: Bool?
@@ -45,6 +46,7 @@ struct Task: Codable, Identifiable, Equatable {
         case isPublic = "is_public"
         case posterId = "poster_id"
         case takerId = "taker_id"
+        case originatingUserId = "originating_user_id"
         case taskLevel = "task_level"
         case pointsReward = "points_reward"
         case isMultiParticipant = "is_multi_participant"
@@ -166,6 +168,7 @@ struct RecommendationTask: Codable {
             isPublic: 1,
             posterId: nil,
             takerId: nil,
+            originatingUserId: nil,
             taskLevel: taskLevel,
             pointsReward: nil,
             isMultiParticipant: nil,

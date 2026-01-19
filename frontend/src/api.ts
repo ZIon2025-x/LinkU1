@@ -16,9 +16,6 @@ const api = axios.create({
   }
 });
 
-// CSRF token管理
-let csrfToken: string | null = null;
-
 // Token刷新管理
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
@@ -139,8 +136,6 @@ export async function getCSRFToken(): Promise<string> {
     ?.split('=')[1];
   
   if (cookieToken) {
-    // 更新内存中的缓存（用于调试）
-    csrfToken = cookieToken;
     return cookieToken;
   }
   
@@ -151,8 +146,6 @@ export async function getCSRFToken(): Promise<string> {
     if (!newToken) {
       throw new Error('CSRF token为空');
     }
-    // 更新内存缓存
-    csrfToken = newToken;
     return newToken;
   } catch (error) {
         throw error;
@@ -161,7 +154,8 @@ export async function getCSRFToken(): Promise<string> {
 
 // 清除CSRF token的函数
 export function clearCSRFToken(): void {
-  csrfToken = null;
+  // CSRF token 存储在 HttpOnly cookie 中，由后端管理
+  // 此函数保留用于向后兼容，实际清除由后端处理
 }
 
 // 检测是否为移动端

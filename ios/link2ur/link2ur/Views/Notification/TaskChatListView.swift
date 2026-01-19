@@ -785,12 +785,17 @@ struct TaskChatView: View {
         WebSocketService.shared.connect(token: token, userId: String(userId))
         
         // 监听 WebSocket 消息，只处理当前任务的消息
+        let currentTaskId = taskId  // 捕获 taskId 到局部变量
         WebSocketService.shared.messageSubject
             .sink { [weak viewModel] message in
                 guard let viewModel = viewModel else { return }
-                // 检查消息是否属于当前任务（通过消息内容或其他标识）
-                // 这里可能需要根据实际 WebSocket 消息格式调整
-                // 使用 id 来比较（id 是 String 类型，由 messageId 或其他字段生成）
+                // 检查消息是否属于当前任务
+                // 1. 检查 taskId 是否匹配
+                if let messageTaskId = message.taskId, messageTaskId != currentTaskId {
+                    return  // 不属于当前任务，忽略
+                }
+                // 2. 如果没有 taskId，可能是普通消息，需要通过其他方式判断（暂时允许）
+                // 3. 检查消息是否已存在（避免重复添加）
                 DispatchQueue.main.async {
                     if !viewModel.messages.contains(where: { $0.id == message.id }) {
                         viewModel.messages.append(message)
@@ -799,6 +804,8 @@ struct TaskChatView: View {
                             let time2 = msg2.createdAt ?? ""
                             return time1 < time2
                         }
+                        // 保存到缓存
+                        viewModel.saveToCache()
                     }
                 }
             }

@@ -327,6 +327,7 @@ class TaskOut(TaskBase):
     id: int
     poster_id: Optional[str] = None  # 现在ID是字符串类型，多人任务可能为None
     taker_id: Optional[str]  # 现在ID是字符串类型
+    originating_user_id: Optional[str] = None  # 申请活动创建的任务的申请人ID（用于"我的任务"显示）
     status: str
     task_level: str = "normal"  # normal, vip, super, expert（达人任务）
     created_at: datetime.datetime
