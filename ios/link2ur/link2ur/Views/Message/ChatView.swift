@@ -235,6 +235,9 @@ struct ChatView: View {
             LoginView()
         }
         .onAppear {
+            // 标记视图为可见，用于自动标记已读
+            viewModel.isViewVisible = true
+            
             if !appState.isAuthenticated {
                 showLogin = true
             } else {
@@ -249,6 +252,8 @@ struct ChatView: View {
             }
         }
         .onDisappear {
+            // 标记视图为不可见
+            viewModel.isViewVisible = false
             // 清理错误状态，避免下次进入时显示旧错误
             viewModel.errorMessage = nil
             // 用户体验优化：视图消失时自动收起键盘

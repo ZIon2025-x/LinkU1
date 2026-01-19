@@ -237,8 +237,10 @@ api.interceptors.response.use(
     }
     
     // 首先检查是否是CSRF token验证失败
+    const errorData = error.response?.data as any;
     if ((error.response?.status === 401 || error.response?.status === 403) && 
-        error.response?.data?.detail?.includes('CSRF token验证失败')) {
+        errorData?.detail && typeof errorData.detail === 'string' && 
+        errorData.detail.includes('CSRF token验证失败')) {
       
       const requestKey = `${error.config?.method}_${error.config?.url}`;
       const currentRetryCount = retryCounters.get(requestKey) || 0;

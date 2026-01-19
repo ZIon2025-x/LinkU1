@@ -690,6 +690,9 @@ struct TaskChatView: View {
             }
         }
         .onAppear {
+            // 标记视图为可见，用于自动标记已读
+            viewModel.isViewVisible = true
+            
             if !appState.isAuthenticated {
                 showLogin = true
             } else {
@@ -706,6 +709,8 @@ struct TaskChatView: View {
             }
         }
         .onDisappear {
+            // 标记视图为不可见
+            viewModel.isViewVisible = false
             // 清理错误状态
             viewModel.errorMessage = nil
         }
@@ -786,6 +791,7 @@ struct TaskChatView: View {
         
         // 监听 WebSocket 消息，只处理当前任务的消息
         let currentTaskId = taskId  // 捕获 taskId 到局部变量
+        let currentUserId = String(userId)  // 捕获当前用户ID
         WebSocketService.shared.messageSubject
             .sink { [weak viewModel] message in
                 guard let viewModel = viewModel else { return }
@@ -806,6 +812,19 @@ struct TaskChatView: View {
                         }
                         // 保存到缓存
                         viewModel.saveToCache()
+                        
+                        // 如果视图可见且消息不是来自当前用户，自动标记为已读
+                        if viewModel.isViewVisible, let senderId = message.senderId, senderId != currentUserId {
+                            // 延迟一小段时间，确保消息已添加到列表
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                // 使用最新消息的ID标记已读
+                                if let lastMessage = viewModel.messages.last, let messageId = lastMessage.messageId {
+                                    viewModel.markAsRead(uptoMessageId: messageId)
+                                } else {
+                                    viewModel.markAsRead()
+                                }
+                            }
+                        }
                     }
                 }
             }

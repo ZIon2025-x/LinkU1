@@ -59,6 +59,7 @@ extension ChatViewModel {
         WebSocketService.shared.connect(token: token, userId: currentUserId)
         
         // 监听WebSocket消息
+        let capturedUserId = currentUserId  // 捕获到局部变量，确保在闭包中可用
         WebSocketService.shared.messageSubject
             .sink { [weak self] message in
                 // 只处理当前对话的消息
@@ -72,6 +73,14 @@ extension ChatViewModel {
                                 let time1 = msg1.createdAt ?? ""
                                 let time2 = msg2.createdAt ?? ""
                                 return time1 < time2
+                            }
+                            
+                            // 如果视图可见且消息不是来自当前用户，自动标记为已读
+                            if self.isViewVisible, let senderId = message.senderId, senderId != capturedUserId {
+                                // 延迟一小段时间，确保消息已添加到列表
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    self.markAsRead()
+                                }
                             }
                         }
                     }
@@ -94,6 +103,7 @@ class ChatViewModel: ObservableObject {
     @Published var partner: Contact?
     @Published var hasMoreMessages = true
     @Published var isInitialLoadComplete = false
+    @Published var isViewVisible = false // 视图是否可见，用于自动标记已读
     
     // 分页参数
     private let pageSize = 20
@@ -288,6 +298,7 @@ class TaskChatDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var hasMoreMessages = true
     @Published var isInitialLoadComplete = false
+    @Published var isViewVisible = false // 视图是否可见，用于自动标记已读
     
     // 分页参数
     private let pageSize = 20
