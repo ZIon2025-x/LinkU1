@@ -1546,7 +1546,9 @@ async def accept_application(
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
-            # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
+            # 明确指定支付方式类型，确保 WeChat Pay 可用
+            payment_method_types=["card", "wechat_pay"],
+            # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
             automatic_payment_methods={"enabled": True},
             # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
             # 不设置 application_fee_amount，服务费在任务完成转账时扣除
@@ -2427,6 +2429,9 @@ async def respond_negotiation(
                 payment_intent = stripe.PaymentIntent.create(
                     amount=task_amount_pence,
                     currency="gbp",
+                    # 明确指定支付方式类型，确保 WeChat Pay 可用
+                    payment_method_types=["card", "wechat_pay"],
+                    # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
                     automatic_payment_methods={"enabled": True},
                     description=f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
                     metadata={

@@ -126,6 +126,7 @@ struct TaskDetailView: View {
                     paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                     approvedApplicantName: $approvedApplicantName,
                     showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
+                    showCompleteTaskSheet: $showCompleteTaskSheet,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -990,6 +991,7 @@ struct TaskDetailContentView: View {
     @Binding var paymentEphemeralKeySecret: String?
     @Binding var approvedApplicantName: String?
     @Binding var showConfirmCompletionSuccess: Bool
+    @Binding var showCompleteTaskSheet: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1100,6 +1102,7 @@ struct TaskDetailContentView: View {
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
+                        showCompleteTaskSheet: $showCompleteTaskSheet,
                         showNegotiatePrice: $showNegotiatePrice,
                         negotiatedPrice: $negotiatedPrice,
                         taskId: taskId,
@@ -1540,6 +1543,7 @@ struct TaskActionButtonsView: View {
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
     @Binding var showConfirmCompletionSuccess: Bool
+    @Binding var showCompleteTaskSheet: Bool
     @Binding var showNegotiatePrice: Bool
     @Binding var negotiatedPrice: Double?
     let taskId: Int
@@ -2827,17 +2831,12 @@ struct CompleteTaskSheet: View {
             // 直接使用 uploadImage 方法，它会自动压缩（0.7质量）
             // 使用任务ID作为路径，存储在任务文件夹中
             let path = "tasks/\(taskId)"
-            APIService.shared.uploadImage(image, path: path, taskId: taskId) { [weak self] result in
-                guard let self = self else {
-                    uploadGroup.leave()
-                    return
-                }
-                
+            APIService.shared.uploadImage(image, path: path, taskId: taskId) { result in
                 switch result {
                 case .success(let url):
                     DispatchQueue.main.async {
-                        self.uploadedImageUrls.append(url)
-                        self.uploadProgress.current += 1
+                        uploadedImageUrls.append(url)
+                        uploadProgress.current += 1
                     }
                 case .failure(let error):
                     uploadErrors.append((error, index))
@@ -2846,28 +2845,27 @@ struct CompleteTaskSheet: View {
             }
         }
         
-        uploadGroup.notify(queue: .main) { [weak self] in
-            guard let self = self else { return }
-            self.isUploading = false
+        uploadGroup.notify(queue: .main) {
+            isUploading = false
             
             if uploadErrors.isEmpty {
                 // 所有图片上传成功，提交完成任务
-                self.onComplete(self.uploadedImageUrls)
-                self.dismiss()
+                onComplete(uploadedImageUrls)
+                dismiss()
             } else {
                 // 生成详细的错误信息
                 var errorDetails: [String] = []
                 for (error, index) in uploadErrors {
-                    let errorDescription = self.getDetailedErrorMessage(error)
+                    let errorDescription = getDetailedErrorMessage(error)
                     errorDetails.append("第 \(index) 张图片：\(errorDescription)")
                 }
                 
                 if errorDetails.count == validImages.count {
                     // 所有图片都上传失败
-                    self.errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
                 } else {
                     // 部分图片上传失败
-                    self.errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
                 }
             }
         }

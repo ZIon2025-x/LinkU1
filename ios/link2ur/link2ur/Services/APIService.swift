@@ -651,7 +651,7 @@ public class APIService {
                         // 优先从 JSON 中获取 URL
                         if let url = json["url"] as? String, !url.isEmpty {
                             return Just(url).setFailureType(to: APIError.self).eraseToAnyPublisher()
-                        } else if let imageId = json["image_id"] as? String {
+                        } else if json["image_id"] != nil {
                             // 如果没有 URL 但有 image_id，说明后端没有生成 URL
                             // 这种情况不应该发生，但为了兼容性，返回错误
                             return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "图片上传成功但无法获取访问URL"]))).eraseToAnyPublisher()

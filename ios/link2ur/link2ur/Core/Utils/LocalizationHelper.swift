@@ -639,6 +639,7 @@ public enum LocalizationKey: String {
     case paymentMixed = "payment.mixed"
     case paymentSelectMethod = "payment.select_method"
     case paymentPayWithApplePay = "payment.pay_with_apple_pay"
+    case paymentPayWithWeChatPay = "payment.pay_with_wechat_pay"
     
     // MARK: - Task Application
     case taskApplicationApplyTask = "task_application.apply_task"

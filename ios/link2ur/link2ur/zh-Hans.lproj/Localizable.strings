@@ -1160,6 +1160,7 @@
 "payment.mixed" = "混合";
 "payment.select_method" = "选择支付方式";
 "payment.pay_with_apple_pay" = "使用 Apple Pay 支付";
+"payment.pay_with_wechat_pay" = "使用微信支付";
 "coupon.discount" = "优惠: %@";
 
 // MARK: - Payment (Extended)

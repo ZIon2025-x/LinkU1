@@ -850,6 +850,9 @@ def create_task_payment(
         # is optional because Stripe enables its functionality by default.
         # 这会自动启用所有可用的支付方式，包括 card、apple_pay、google_pay、link 等
         # 
+        # 为了确保 WeChat Pay 可用，明确指定 payment_method_types
+        # 这样 PaymentSheet 会显示所有指定的支付方式
+        # 
         # 交易市场托管模式（Marketplace/Escrow）：
         # - 支付时：资金先到平台账户（不立即转账给任务接受人）
         # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
@@ -860,7 +863,10 @@ def create_task_payment(
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            # 使用 automatic_payment_methods（Stripe 推荐方式，与官方 sample code 一致）
+            # 明确指定支付方式类型，确保 WeChat Pay 可用
+            # 如果 Stripe Dashboard 中启用了 WeChat Pay，它会被包含在可用支付方式中
+            payment_method_types=["card", "wechat_pay"],
+            # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
             automatic_payment_methods={
                 "enabled": True,
             },

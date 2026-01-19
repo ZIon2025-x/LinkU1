@@ -347,6 +347,10 @@ struct StripePaymentView: View {
             
             // 支付方式选择卡片
             paymentMethodSelectionCard
+                .transaction { transaction in
+                    // 禁用支付方式选择卡片的隐式动画，确保切换流畅
+                    transaction.animation = nil
+                }
             
             // 支付按钮
             paymentButton
@@ -512,6 +516,50 @@ struct StripePaymentView: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
                 .padding()
             }
+        } else if viewModel.selectedPaymentMethod == .wechatPay {
+            // 微信支付按钮
+            if viewModel.paymentSheet != nil {
+                Button(action: {
+                    viewModel.performPayment()
+                }) {
+                    HStack(spacing: 12) {
+                        Image("WeChatLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
+                        Text(LocalizationKey.paymentPayWithWeChatPay.localized)
+                            .font(AppTypography.title3)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                // 加载状态
+                VStack(spacing: 16) {
+                    CompactLoadingView()
+                    Text(LocalizationKey.paymentPreparingPayment.localized)
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .padding()
+                .onAppear {
+                    // 统一入口：只在必要时创建/复用 PaymentSheet
+                    viewModel.ensurePaymentSheetReady()
+                }
+            }
         } else {
             // 默认加载状态
             VStack(spacing: 16) {
@@ -552,7 +600,10 @@ struct StripePaymentView: View {
                     isSelected: viewModel.selectedPaymentMethod == .card,
                     isAvailable: true  // 允许用户自由切换
                 ) {
-                    viewModel.selectPaymentMethod(.card)
+                    // 禁用动画，立即响应
+                    withTransaction(Transaction(animation: nil)) {
+                        viewModel.selectPaymentMethod(.card)
+                    }
                 }
                 
                 // Apple Pay 选项（仅在设备支持时显示）
@@ -562,7 +613,22 @@ struct StripePaymentView: View {
                         isSelected: viewModel.selectedPaymentMethod == .applePay,
                         isAvailable: true  // 允许用户自由切换
                     ) {
-                        viewModel.selectPaymentMethod(.applePay)
+                        // 禁用动画，立即响应
+                        withTransaction(Transaction(animation: nil)) {
+                            viewModel.selectPaymentMethod(.applePay)
+                        }
+                    }
+                }
+                
+                // 微信支付选项
+                PaymentMethodOption(
+                    method: .wechatPay,
+                    isSelected: viewModel.selectedPaymentMethod == .wechatPay,
+                    isAvailable: true  // 允许用户自由切换
+                ) {
+                    // 禁用动画，立即响应
+                    withTransaction(Transaction(animation: nil)) {
+                        viewModel.selectPaymentMethod(.wechatPay)
                     }
                 }
             }
@@ -586,14 +652,24 @@ struct StripePaymentView: View {
             Button(action: action) {
                 HStack(spacing: 16) {
                     // 图标
-                    Image(systemName: method.icon)
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(isSelected ? AppColors.primary.opacity(0.1) : AppColors.surface)
-                        )
+                    Group {
+                        if method.isAssetIcon {
+                            // 使用 asset 中的图标（如微信图标），保持原始颜色
+                            Image(method.icon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } else {
+                            // 使用系统图标，可以应用颜色
+                            Image(systemName: method.icon)
+                                .font(.system(size: 24))
+                                .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
+                        }
+                    }
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(isSelected ? AppColors.primary.opacity(0.1) : AppColors.surface)
+                    )
                     
                     // 名称
                     Text(method.displayName)
@@ -609,6 +685,7 @@ struct StripePaymentView: View {
                             .font(.system(size: 20))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading) // 确保填满整个宽度
                 .padding(.vertical, 12)
                 .padding(.horizontal, 16)
                 .background(
@@ -619,10 +696,15 @@ struct StripePaymentView: View {
                                 .stroke(isSelected ? AppColors.primary : AppColors.separator, lineWidth: isSelected ? 2 : 1)
                         )
                 )
+                .contentShape(Rectangle()) // 确保整个矩形区域都可以点击
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(!isAvailable)
             .opacity(isAvailable ? 1.0 : 0.6)
+            .transaction { transaction in
+                // 禁用切换时的隐式动画，确保立即响应
+                transaction.animation = nil
+            }
         }
     }
     

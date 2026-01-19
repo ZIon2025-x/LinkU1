@@ -2734,6 +2734,9 @@ async def approve_service_application(
         payment_intent = stripe.PaymentIntent.create(
             amount=task_amount_pence,
             currency="gbp",
+            # 明确指定支付方式类型，确保 WeChat Pay 可用
+            payment_method_types=["card", "wechat_pay"],
+            # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
             automatic_payment_methods={"enabled": True},
             description=f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
             metadata={

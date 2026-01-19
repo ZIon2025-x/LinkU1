@@ -16,6 +16,7 @@ import StripePayments
 enum PaymentMethodType: String, CaseIterable {
     case card = "card"
     case applePay = "applePay"
+    case wechatPay = "wechatPay"
     
     var displayName: String {
         switch self {
@@ -23,6 +24,8 @@ enum PaymentMethodType: String, CaseIterable {
             return "信用卡/借记卡"
         case .applePay:
             return "Apple Pay"
+        case .wechatPay:
+            return "微信支付"
         }
     }
     
@@ -32,6 +35,18 @@ enum PaymentMethodType: String, CaseIterable {
             return "creditcard.fill"
         case .applePay:
             return "applelogo"
+        case .wechatPay:
+            return "WeChatLogo"  // 使用 asset 中的微信图标
+        }
+    }
+    
+    /// 判断图标是否为 asset 图标（而非系统图标）
+    var isAssetIcon: Bool {
+        switch self {
+        case .card, .applePay:
+            return false
+        case .wechatPay:
+            return true
         }
     }
 }
@@ -46,14 +61,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     @Published var availableCoupons: [UserCoupon] = []
     @Published var isLoadingCoupons = false
     @Published var selectedCoupon: UserCoupon?
-    @Published var selectedPaymentMethod: PaymentMethodType = .card {
-        didSet {
-            // 当切到信用卡时，尽量预热 PaymentSheet，减少 UI 等待
-            if selectedPaymentMethod == .card {
-                ensurePaymentSheetReady()
-            }
-        }
-    }
+    @Published var selectedPaymentMethod: PaymentMethodType = .card
     
     private let apiService: APIService
     private let taskId: Int
@@ -295,6 +303,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
 
     /// 确保 PaymentSheet 已准备好（仅在 clientSecret 变化时重建）
     /// - Note: 统一入口，避免 View 层多处重复触发 setup
+    /// 优化：延迟初始化，避免阻塞 UI
     func ensurePaymentSheetReady() {
         guard let clientSecret = activeClientSecret, !clientSecret.isEmpty else {
             return
@@ -304,25 +313,62 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             return
         }
 
-        setupPaymentElement(with: clientSecret)
+        // 延迟初始化 PaymentSheet，避免在切换支付方式时阻塞 UI
+        // 使用异步延迟，让 UI 先响应切换操作
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            // 再次检查，避免重复创建
+            if self.paymentSheet == nil || self.paymentSheetClientSecret != clientSecret {
+                self.setupPaymentElement(with: clientSecret)
+            }
+        }
     }
 
     /// 统一的支付方式切换入口（便于扩展更多支付方式）
+    /// 优化：立即更新 UI，延迟准备支付方式，避免阻塞
     func selectPaymentMethod(_ method: PaymentMethodType) {
+        // 如果已经是当前选择的方式，直接返回，避免重复操作
+        guard selectedPaymentMethod != method else {
+            return
+        }
+        
+        // 立即更新 UI，不阻塞
         selectedPaymentMethod = method
 
-        switch method {
-        case .card:
-            // 优先预热 PaymentSheet；如果还没拿到 clientSecret，则拉取一次支付信息
-            if activeClientSecret == nil {
-                createPaymentIntent()
-            } else {
-                ensurePaymentSheetReady()
+        // 延迟准备支付方式，避免阻塞 UI 切换动画
+        // 使用 debounce 机制，避免快速切换时重复调用
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, self.selectedPaymentMethod == method else {
+                return
             }
-        case .applePay:
-            // Apple Pay 需要 paymentResponse；如果没有则拉取
-            if activeClientSecret == nil {
-                createPaymentIntent()
+            
+            switch method {
+            case .card:
+                // 优先预热 PaymentSheet；如果还没拿到 clientSecret，则拉取一次支付信息
+                if self.activeClientSecret == nil {
+                    self.createPaymentIntent()
+                } else {
+                    // 只在 PaymentSheet 不存在时才创建，避免重复初始化
+                    if self.paymentSheet == nil {
+                        self.ensurePaymentSheetReady()
+                    }
+                }
+            case .applePay:
+                // Apple Pay 需要 paymentResponse；如果没有则拉取
+                if self.activeClientSecret == nil {
+                    self.createPaymentIntent()
+                }
+                // Apple Pay 不需要额外准备，直接可用
+            case .wechatPay:
+                // WeChat Pay 使用 PaymentSheet，需要 clientSecret
+                if self.activeClientSecret == nil {
+                    self.createPaymentIntent()
+                } else {
+                    // 只在 PaymentSheet 不存在时才创建，避免重复初始化
+                    if self.paymentSheet == nil {
+                        self.ensurePaymentSheetReady()
+                    }
+                }
             }
         }
     }
@@ -610,6 +656,31 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             // 使用 Apple Pay 原生实现
             Logger.debug("使用 Apple Pay 原生实现支付", category: .api)
             payWithApplePay()
+        case .wechatPay:
+            // 使用 PaymentSheet 支付（WeChat Pay 通过 PaymentSheet 处理）
+            // PaymentSheet 会自动显示 WeChat Pay 选项（如果后端支持）
+            if let paymentSheet = paymentSheet {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootViewController = windowScene.windows.first?.rootViewController {
+                    var topViewController = rootViewController
+                    while let presented = topViewController.presentedViewController {
+                        topViewController = presented
+                    }
+                    Logger.debug("准备弹出 PaymentSheet（WeChat Pay）", category: .api)
+                    paymentSheet.present(from: topViewController) { [weak self] result in
+                        Logger.debug("PaymentSheet 结果（WeChat Pay）: \(result)", category: .api)
+                        self?.handlePaymentResult(result)
+                    }
+                } else {
+                    errorMessage = "无法打开支付界面，请重试"
+                    Logger.error("无法获取顶层视图控制器", category: .api)
+                }
+            } else {
+                errorMessage = "支付表单未准备好，请稍后重试"
+                Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
+                // 尝试按统一入口创建/复用 PaymentSheet
+                ensurePaymentSheetReady()
+            }
         }
     }
 }
