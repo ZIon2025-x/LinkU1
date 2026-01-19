@@ -164,9 +164,9 @@ enum APIEndpoints {
     }
     
     enum Coupons {
-        static let available = "/api/coupons/available"
-        static let my = "/api/coupons/my"
-        static let claim = "/api/coupons/claim"
+        static let available = "/api/coupon-points/coupons/available"
+        static let my = "/api/coupon-points/coupons/my"
+        static let claim = "/api/coupon-points/coupons/claim"
     }
     
     // MARK: - Payment (支付)
@@ -179,14 +179,14 @@ enum APIEndpoints {
     
     // MARK: - Check-in (签到)
     enum CheckIn {
-        static let checkIn = "/api/checkin"
-        static let status = "/api/checkin/status"
-        static let rewards = "/api/checkin/rewards"
+        static let checkIn = "/api/coupon-points/checkin"
+        static let status = "/api/coupon-points/checkin/status"
+        static let rewards = "/api/coupon-points/checkin/rewards"
     }
     
     // MARK: - Invitation Codes (邀请码)
     enum InvitationCodes {
-        static let validate = "/api/invitation-codes/validate"
+        static let validate = "/api/coupon-points/invitation-codes/validate"
     }
     
     // MARK: - Student Verification (学生认证)

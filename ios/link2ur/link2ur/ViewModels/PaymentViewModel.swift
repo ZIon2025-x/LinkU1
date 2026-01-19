@@ -228,10 +228,12 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     }
     
     func setupPaymentElement(with clientSecret: String) {
-        // 配置 Payment Sheet（仅用于信用卡支付）
+        // 配置 Payment Sheet
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = "Link²Ur"
-        configuration.allowsDelayedPaymentMethods = true
+        // 注意：WeChat Pay 不支持 delayed payment methods
+        // 如果设置为 true，WeChat Pay 可能会被过滤掉
+        configuration.allowsDelayedPaymentMethods = false
         
         // 设置默认账单地址国家为英国（GB）
         // 说明：这里用“先取出再写回”的方式，避免直接链式修改导致的可变性问题
@@ -293,12 +295,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         // 配置 returnURL，用于 WeChat Pay 等需要跳转的支付方式回调
         // 格式：yourapp://stripe-redirect
         // 这允许用户在完成微信支付后返回到应用
-        if let returnURL = URL(string: "link2ur://stripe-redirect") {
-            configuration.returnURL = returnURL
-            Logger.debug("PaymentSheet 已配置 returnURL: \(returnURL.absoluteString)", category: .api)
-        } else {
-            Logger.warning("无法创建 returnURL", category: .api)
-        }
+        configuration.returnURL = "link2ur://stripe-redirect"
+        Logger.debug("PaymentSheet 已配置 returnURL: link2ur://stripe-redirect", category: .api)
         
         // 创建 Payment Sheet（弹出式）
         let paymentSheet = PaymentSheet(

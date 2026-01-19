@@ -909,6 +909,20 @@ def create_task_payment(
             logger.warning(f"⚠️ PaymentIntent 不包含 WeChat Pay，当前支付方式: {payment_method_types}")
             logger.warning("请检查 Stripe Dashboard 中是否已启用 WeChat Pay")
         
+        # 检查 Payment Method Configuration（诊断 WeChat Pay 不显示的问题）
+        try:
+            # 获取 Payment Method Configurations
+            pm_configs = stripe.PaymentMethodConfiguration.list(limit=1)
+            if pm_configs and pm_configs.data:
+                pm_config = pm_configs.data[0]
+                wechat_config = getattr(pm_config, 'wechat_pay', None)
+                if wechat_config:
+                    logger.info(f"🔍 WeChat Pay Configuration: available={getattr(wechat_config, 'available', 'N/A')}, display_preference={getattr(wechat_config, 'display_preference', 'N/A')}")
+                else:
+                    logger.warning("⚠️ 未找到 WeChat Pay 在 Payment Method Configuration 中的配置")
+        except Exception as e:
+            logger.debug(f"无法获取 Payment Method Configuration: {e}")
+        
         # 创建支付历史记录（待支付状态）
         # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
         # 这里只创建 PaymentIntent 和支付历史记录，不更新任务状态（is_paid, status）
