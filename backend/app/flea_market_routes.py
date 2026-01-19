@@ -1256,9 +1256,9 @@ async def direct_purchase_item(
             payment_intent = stripe.PaymentIntent.create(
                 amount=task_amount_pence,
                 currency="gbp",
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay"],
-                # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
+                # 使用 automatic_payment_methods（Stripe 推荐方式）
+                # 这会自动包含所有可用的支付方式，包括 WeChat Pay（如果已在 Dashboard 中启用）
+                # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
                 automatic_payment_methods={"enabled": True},
                 description=f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
                 metadata={
@@ -1601,9 +1601,9 @@ async def accept_purchase_request(
             payment_intent = stripe.PaymentIntent.create(
                 amount=task_amount_pence,
                 currency="gbp",
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay"],
-                # 同时使用 automatic_payment_methods 以支持其他自动启用的支付方式（如 Apple Pay）
+                # 使用 automatic_payment_methods（Stripe 推荐方式）
+                # 这会自动包含所有可用的支付方式，包括 WeChat Pay（如果已在 Dashboard 中启用）
+                # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
                 automatic_payment_methods={"enabled": True},
                 description=f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
                 metadata={
