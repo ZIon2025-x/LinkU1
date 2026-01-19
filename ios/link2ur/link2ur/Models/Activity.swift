@@ -25,6 +25,7 @@ struct Activity: Codable, Identifiable {
     let activityEndDate: String?
     let images: [String]?
     let hasTimeSlots: Bool
+    let hasApplied: Bool? // 当前用户是否已申请（可选，需要用户认证）
     
     enum CodingKeys: String, CodingKey {
         case id, title, description
@@ -47,6 +48,7 @@ struct Activity: Codable, Identifiable {
         case activityEndDate = "activity_end_date"
         case images
         case hasTimeSlots = "has_time_slots"
+        case hasApplied = "has_applied"
     }
     
     /// 活动是否已结束（状态为 ended/cancelled/completed 或已过截止日期/结束日期）

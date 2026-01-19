@@ -411,7 +411,8 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
-    # 1. 查询作为发布者或接受者的任务
+    # 1. 查询作为发布者、接受者或申请者的任务
+    # 注意：申请活动创建的任务，对于单人任务 poster_id 是申请者，对于多人任务 originating_user_id 是申请者
     tasks_query = (
         db.query(Task)
         .options(
@@ -422,7 +423,11 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
             selectinload(Task.participants)  # 预加载参与者，用于动态计算current_participants
         )
         .filter(
-            or_(Task.poster_id == user_id, Task.taker_id == user_id),
+            or_(
+                Task.poster_id == user_id,  # 作为发布者的任务
+                Task.taker_id == user_id,   # 作为接受者的任务
+                Task.originating_user_id == user_id  # 申请活动创建的任务（包括多人任务中 poster_id 为 None 的情况）
+            ),
             # 过滤掉已完成超过3天的任务
             or_(
                 Task.status != "completed",

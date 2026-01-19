@@ -403,6 +403,7 @@
 "activity.ended" = "Activity Ended";
 "activity.full" = "Full";
 "activity.apply" = "Apply to Join";
+"activity.applied" = "Applied";
 "activity.apply_to_join" = "Apply to Join Activity";
 
 // MARK: - Search

@@ -2378,6 +2378,7 @@ class ActivityOut(BaseModel):
     applicant_points_reward: Optional[int] = None  # 申请者积分奖励
     reserved_points_total: Optional[int] = None  # 预扣积分总额
     distributed_points_total: Optional[int] = None  # 已发放积分总额
+    has_applied: Optional[bool] = None  # 当前用户是否已申请（需要用户认证）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
@@ -2385,7 +2386,7 @@ class ActivityOut(BaseModel):
         from_attributes = True
     
     @classmethod
-    def from_orm_with_participants(cls, obj, current_participants: int = 0):
+    def from_orm_with_participants(cls, obj, current_participants: int = 0, has_applied: Optional[bool] = None):
         """从ORM对象创建，包含参与者数量"""
         # 获取关联服务的图片
         service_images = None
@@ -2424,6 +2425,7 @@ class ActivityOut(BaseModel):
             "applicant_points_reward": obj.applicant_points_reward if hasattr(obj, 'applicant_points_reward') else None,
             "reserved_points_total": obj.reserved_points_total if hasattr(obj, 'reserved_points_total') else None,
             "distributed_points_total": obj.distributed_points_total if hasattr(obj, 'distributed_points_total') else None,
+            "has_applied": has_applied,
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
         }

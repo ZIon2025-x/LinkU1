@@ -1205,13 +1205,14 @@ def get_activities(
 @router.get("/activities/{activity_id}", response_model=ActivityOut)
 def get_activity_detail(
     activity_id: int,
+    current_user=Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     """
     获取活动详情
     """
     from app.models import Task, TaskParticipant
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
     from sqlalchemy.orm import joinedload
     
     # 加载关联的服务信息（用于获取服务图片）
@@ -1242,9 +1243,32 @@ def get_activity_detail(
     # 总参与者数量 = 多人任务的参与者 + 单个任务数量
     current_count = multi_participant_count + single_task_count
     
+    # 检查当前用户是否已申请（如果用户已登录）
+    has_applied = None
+    if current_user:
+        # 检查用户是否在多人任务中申请过
+        multi_participant_applied = db.query(TaskParticipant.id).join(
+            Task, TaskParticipant.task_id == Task.id
+        ).filter(
+            Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == True,
+            TaskParticipant.user_id == current_user.id,
+            TaskParticipant.status.in_(["pending", "accepted", "in_progress", "completed"])
+        ).first() is not None
+        
+        # 检查用户是否在单个任务中申请过
+        single_task_applied = db.query(Task.id).filter(
+            Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == False,
+            Task.originating_user_id == current_user.id,
+            Task.status.in_(["open", "taken", "in_progress", "completed"])
+        ).first() is not None
+        
+        has_applied = multi_participant_applied or single_task_applied
+    
     # 使用 from_orm_with_participants 方法创建输出对象
     from app import schemas
-    return schemas.ActivityOut.from_orm_with_participants(activity, current_count)
+    return schemas.ActivityOut.from_orm_with_participants(activity, current_count, has_applied=has_applied)
 
 
 @router.delete("/expert/activities/{activity_id}")

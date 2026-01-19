@@ -401,6 +401,7 @@
 "activity.ended" = "活动已结束";
 "activity.full" = "已满员";
 "activity.apply" = "申请参加";
+"activity.applied" = "已申请";
 
 // MARK: - Search
 "search.search" = "搜索";

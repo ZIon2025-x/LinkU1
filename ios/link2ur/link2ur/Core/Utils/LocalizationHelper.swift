@@ -376,6 +376,7 @@ public enum LocalizationKey: String {
     case activityConfirmApply = "activity.confirm_apply"
     case activityApplyToJoin = "activity.apply_to_join"
     case activityApply = "activity.apply"
+    case activityApplied = "activity.applied"
     case activityPerson = "activity.person"
     case activityPersonsBooked = "activity.persons_booked"
     

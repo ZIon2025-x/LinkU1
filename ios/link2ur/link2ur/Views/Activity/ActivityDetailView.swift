@@ -618,6 +618,15 @@ struct ActivityBottomBar: View {
                             .frame(height: 50)
                             .background(AppColors.textQuaternary)
                             .cornerRadius(AppCornerRadius.medium)
+                    } else if activity.hasApplied == true {
+                        // 已申请状态：显示"已申请"，灰色，不可点击
+                        Text(LocalizationKey.activityApplied.localized)
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(AppColors.textQuaternary)
+                            .cornerRadius(AppCornerRadius.medium)
                     } else {
                         Button(action: onApply) {
                             Text(activity.isFull ? LocalizationKey.activityFull.localized : LocalizationKey.activityApply.localized)
