@@ -191,8 +191,8 @@ class TaskDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func completeTask(taskId: Int, completion: @escaping (Bool) -> Void) {
-        apiService.completeTask(taskId: taskId)
+    func completeTask(taskId: Int, evidenceImages: [String]? = nil, completion: @escaping (Bool) -> Void) {
+        apiService.completeTask(taskId: taskId, evidenceImages: evidenceImages)
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
                     completion(false)

@@ -540,8 +540,10 @@ struct TaskExpertListContentView: View {
     @ObservedObject private var locationService = LocationService.shared
     @State private var selectedCategory: String? = nil
     @State private var selectedCity: String? = nil
-    @State private var showFilter = false
-    @State private var showSearch = false
+    @State private var showFilterPanel = false
+    @State private var searchText = ""
+    @State private var searchDebounceTask: DispatchWorkItem?
+    @FocusState private var isSearchFocused: Bool
     
     // 任务达人分类映射（根据后端 models.py 中的 category 字段）
     let categories: [(name: String, value: String)] = [
@@ -572,27 +574,75 @@ struct TaskExpertListContentView: View {
             VStack(spacing: 0) {
                 // 搜索和筛选栏
                 HStack(spacing: AppSpacing.sm) {
-                    // 搜索按钮
-                    Button(action: {
-                        showSearch = true
-                    }) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                            Text(LocalizationKey.homeSearchExperts.localized)
-                                .font(AppTypography.subheadline)
+                    // 搜索框
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(AppColors.textTertiary)
+                            .font(.system(size: 16))
+                        
+                        TextField(LocalizationKey.homeSearchExperts.localized, text: $searchText)
+                            .focused($isSearchFocused)
+                            .font(AppTypography.subheadline)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.search)
+                            .onSubmit {
+                                // 提交时立即搜索，取消防抖
+                                searchDebounceTask?.cancel()
+                                applyFilters()
+                                isSearchFocused = false
+                            }
+                            .onChange(of: searchText) { newValue in
+                                // 防抖搜索：延迟500ms后执行
+                                searchDebounceTask?.cancel()
+                                
+                                let keyword = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let workItem = DispatchWorkItem {
+                                    applyFilters()
+                                }
+                                searchDebounceTask = workItem
+                                
+                                // 如果输入为空，立即清除结果
+                                if keyword.isEmpty {
+                                    applyFilters()
+                                } else {
+                                    // 延迟500ms执行搜索
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+                                }
+                            }
+                        
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchDebounceTask?.cancel()
+                                searchText = ""
+                                applyFilters()
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(AppColors.textTertiary)
+                                    .font(.system(size: 16))
+                            }
                         }
-                        .foregroundColor(AppColors.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppSpacing.sm)
-                        .cardBackground(cornerRadius: AppCornerRadius.medium)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.horizontal, AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.medium)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .stroke(isSearchFocused ? AppColors.primary : AppColors.separator.opacity(0.3), lineWidth: isSearchFocused ? 2 : 1)
+                    )
                     
                     // 筛选按钮
                     Button(action: {
-                        showFilter = true
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showFilterPanel.toggle()
+                        }
                     }) {
                         IconStyle.icon("line.3.horizontal.decrease.circle", size: 20)
                             .foregroundColor(selectedCategory != nil || selectedCity != nil ? AppColors.primary : AppColors.textSecondary)
+                            .rotationEffect(.degrees(showFilterPanel ? 180 : 0))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showFilterPanel)
                             .padding(AppSpacing.sm)
                         .cardBackground(cornerRadius: AppCornerRadius.medium)
                     }
@@ -600,7 +650,81 @@ struct TaskExpertListContentView: View {
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, AppSpacing.sm)
                 
-                // 筛选标签
+                // 筛选面板
+                if showFilterPanel {
+                    VStack(spacing: AppSpacing.md) {
+                        // 分类筛选
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text(LocalizationKey.taskExpertType.localized)
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: AppSpacing.sm) {
+                                    ForEach(categories, id: \.value) { category in
+                                        FilterTag(
+                                            title: category.name,
+                                            isSelected: selectedCategory == category.value || (selectedCategory == nil && category.value.isEmpty),
+                                            icon: "tag.fill"
+                                        ) {
+                                            selectedCategory = category.value.isEmpty ? nil : category.value
+                                            applyFilters()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 城市筛选
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("所在城市")
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: AppSpacing.sm) {
+                                    ForEach(cities, id: \.self) { city in
+                                        FilterTag(
+                                            title: city,
+                                            isSelected: selectedCity == city || (selectedCity == nil && city == LocalizationKey.commonAll.localized),
+                                            icon: "mappin.circle.fill"
+                                        ) {
+                                            selectedCity = city == LocalizationKey.commonAll.localized ? nil : city
+                                            applyFilters()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 清除筛选按钮
+                        if selectedCategory != nil || selectedCity != nil {
+                            Button(action: {
+                                selectedCategory = nil
+                                selectedCity = nil
+                                applyFilters()
+                            }) {
+                                HStack {
+                                    Image(systemName: "xmark.circle.fill")
+                                    Text(LocalizationKey.taskExpertClear.localized)
+                                }
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, AppSpacing.sm)
+                                .background(AppColors.primary.opacity(0.1))
+                                .cornerRadius(AppCornerRadius.medium)
+                            }
+                        }
+                    }
+                    .padding(AppSpacing.md)
+                    .background(AppColors.cardBackground)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
+                // 筛选标签（已选择的筛选条件）
                 if selectedCategory != nil || selectedCity != nil {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: AppSpacing.sm) {
@@ -637,9 +761,9 @@ struct TaskExpertListContentView: View {
                         VStack {
                             Spacer()
                             EmptyStateView(
-                                icon: "person.3.fill",
-                                title: LocalizationKey.homeNoExperts.localized,
-                                message: LocalizationKey.homeNoExpertsMessage.localized
+                                icon: searchText.isEmpty ? "person.3.fill" : "magnifyingglass",
+                                title: searchText.isEmpty ? LocalizationKey.homeNoExperts.localized : LocalizationKey.taskExpertNoExpertsFound.localized,
+                                message: searchText.isEmpty ? LocalizationKey.homeNoExpertsMessage.localized : String(format: LocalizationKey.taskExpertNoExpertsFoundWithQuery.localized, searchText)
                             )
                             Spacer()
                         }
@@ -662,22 +786,6 @@ struct TaskExpertListContentView: View {
                 .background(AppColors.background)
             }
         }
-        .sheet(isPresented: $showSearch) {
-            NavigationView {
-                TaskExpertSearchView()
-            }
-        }
-        .sheet(isPresented: $showFilter) {
-            TaskExpertFilterView(
-                selectedCategory: $selectedCategory,
-                selectedCity: $selectedCity,
-                categories: categories,
-                cities: cities,
-                onApply: {
-                    applyFilters()
-                }
-            )
-        }
         .task {
             // 使用 task 替代 onAppear，避免重复调用
             initializeLocationService(
@@ -697,6 +805,7 @@ struct TaskExpertListContentView: View {
         }
         .refreshable {
             // 下拉刷新：刷新位置和达人列表
+            searchDebounceTask?.cancel()
             if locationService.isAuthorized {
                 locationService.requestLocation()
             }
@@ -705,12 +814,18 @@ struct TaskExpertListContentView: View {
             // 等待一小段时间，确保刷新完成
             try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
         }
+        .onDisappear {
+            // 页面消失时取消防抖任务
+            searchDebounceTask?.cancel()
+        }
     }
     
     private func applyFilters(forceRefresh: Bool = false) {
         let category = selectedCategory?.isEmpty == true ? nil : selectedCategory
         let city = selectedCity == LocalizationKey.commonAll.localized ? nil : selectedCity
-        viewModel.loadExperts(category: category, location: city, keyword: nil, forceRefresh: forceRefresh)
+        let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalKeyword = keyword.isEmpty ? nil : keyword
+        viewModel.loadExperts(category: category, location: city, keyword: finalKeyword, forceRefresh: forceRefresh)
     }
 }
 
@@ -2135,6 +2250,35 @@ fileprivate func initializeLocationService(
                     onLocationReady()
                 }
             }
+        }
+    }
+}
+
+// MARK: - 筛选标签组件
+struct FilterTag: View {
+    let title: String
+    let isSelected: Bool
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                Text(title)
+            }
+            .font(AppTypography.caption)
+            .fontWeight(isSelected ? .semibold : .regular)
+            .foregroundColor(isSelected ? .white : AppColors.textSecondary)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.xs)
+            .background(isSelected ? AppColors.primary : AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.pill)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppCornerRadius.pill)
+                    .stroke(isSelected ? AppColors.primary : AppColors.separator.opacity(0.3), lineWidth: isSelected ? 0 : 1)
+            )
         }
     }
 }

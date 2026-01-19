@@ -15,6 +15,8 @@ extension APIError {
             return .reauthenticate
         case .httpError(let code) where code >= 500:
             return .retry(maxAttempts: 3, delay: 2.0)
+        case .serverError(let code, _) where code >= 500:
+            return .retry(maxAttempts: 3, delay: 2.0)
         case .requestFailed:
             return .retry(maxAttempts: 2, delay: 1.0)
         case .decodingError:
@@ -56,6 +58,25 @@ extension APIError {
                 return LocalizationKey.errorServerError.localized
             default:
                 return String(format: LocalizationKey.errorRequestFailed.localized, code)
+            }
+        case .serverError(let code, let message):
+            switch code {
+            case 400:
+                return "\(LocalizationKey.errorBadRequest.localized): \(message)"
+            case 401:
+                return LocalizationKey.errorUnauthorized.localized
+            case 403:
+                return LocalizationKey.errorForbidden.localized
+            case 404:
+                return LocalizationKey.errorNotFound.localized
+            case 413:
+                return "文件过大: \(message)"
+            case 429:
+                return LocalizationKey.errorTooManyRequests.localized
+            case 500...599:
+                return "\(LocalizationKey.errorServerError.localized): \(message)"
+            default:
+                return "\(String(format: LocalizationKey.errorRequestFailed.localized, code)): \(message)"
             }
         case .decodingError:
             return LocalizationKey.errorDecodingError.localized

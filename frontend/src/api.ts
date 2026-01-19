@@ -1004,8 +1004,10 @@ export async function getMyTasks() {
 }
 
 // 完成任务
-export async function completeTask(taskId: number) {
-  const res = await api.post(`/api/users/tasks/${taskId}/complete`);
+export async function completeTask(taskId: number, evidenceImages?: string[]) {
+  const res = await api.post(`/api/users/tasks/${taskId}/complete`, {
+    evidence_images: evidenceImages || []
+  });
   return res.data;
 }
 

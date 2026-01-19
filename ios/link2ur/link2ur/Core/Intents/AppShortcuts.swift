@@ -144,20 +144,20 @@ struct Link2UrShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: OpenAppIntent(),
             phrases: [
-                // 中文短语
+                // 中文短语（每个短语必须包含 ${applicationName}）
                 "打开 ${applicationName}",
-                "打开 link to you",
-                "打开 link2ur",
-                "打开 link 2 u r",
                 "启动 ${applicationName}",
                 "运行 ${applicationName}",
+                "使用 ${applicationName}",
+                "打开 ${applicationName} 应用",
+                "启动 ${applicationName} 应用",
                 // English phrases
                 "Open ${applicationName}",
-                "Open link to you",
-                "Open link2ur",
-                "Open link 2 u r",
                 "Launch ${applicationName}",
-                "Start ${applicationName}"
+                "Start ${applicationName}",
+                "Use ${applicationName}",
+                "Open ${applicationName} app",
+                "Launch ${applicationName} app"
             ],
             shortTitle: LocalizedStringResource("shortcuts.open_app", defaultValue: "Open Link²Ur"),
             systemImageName: "app.badge"

@@ -7,6 +7,7 @@ public enum APIError: Error, LocalizedError {
     case requestFailed(Error)
     case invalidResponse
     case httpError(Int)
+    case serverError(Int, String)
     case decodingError(Error)
     case unauthorized
     case unknown
@@ -17,6 +18,7 @@ public enum APIError: Error, LocalizedError {
         case .requestFailed(let error): return "请求失败: \(error.localizedDescription)"
         case .invalidResponse: return "无效的响应"
         case .httpError(let code): return "服务器错误 (代码: \(code))"
+        case .serverError(let code, let message): return "服务器错误 (代码: \(code)): \(message)"
         case .decodingError(let error): return "数据解析错误: \(error.localizedDescription)"
         case .unauthorized: return "未授权或登录已过期"
         case .unknown: return "未知错误"
@@ -587,15 +589,85 @@ public class APIService {
     }
     
     /// 上传图片的便捷方法 (支持 UIImage 和 path)
-    func uploadImage(_ image: UIImage, path: String, completion: @escaping (Result<String, APIError>) -> Void) {
+    func uploadImage(_ image: UIImage, path: String, taskId: Int? = nil, completion: @escaping (Result<String, APIError>) -> Void) {
+        // 压缩图片，质量0.7（避免重复压缩）
         guard let data = image.jpegData(compressionQuality: 0.7) else {
             completion(.failure(APIError.decodingError(NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]))))
             return
         }
         
+        // 生成文件名
         let filename = "\(path)_\(Int(Date().timeIntervalSince1970)).jpg"
         
-        self.uploadImage(data, filename: filename)
+        // 如果有 taskId，添加到 URL 查询参数
+        var uploadURL = "\(baseURL)\(APIEndpoints.Common.uploadImage)"
+        if let taskId = taskId {
+            uploadURL += "?task_id=\(taskId)"
+        }
+        
+        guard let url = URL(string: uploadURL) else {
+            completion(.failure(APIError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        // 设置multipart/form-data
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        
+        // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
+        if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+            request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            // 添加应用签名
+            AppSignature.signRequest(&request, sessionId: sessionId)
+        }
+        
+        // 构建multipart body
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        session.dataTaskPublisher(for: request)
+            .mapError { APIError.requestFailed($0) }
+            .flatMap { data, response -> AnyPublisher<String, APIError> in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    return Fail(error: APIError.invalidResponse).eraseToAnyPublisher()
+                }
+                
+                if (200...299).contains(httpResponse.statusCode) {
+                    // 解析响应
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        // 优先从 JSON 中获取 URL
+                        if let url = json["url"] as? String, !url.isEmpty {
+                            return Just(url).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                        } else if let imageId = json["image_id"] as? String {
+                            // 如果没有 URL 但有 image_id，说明后端没有生成 URL
+                            // 这种情况不应该发生，但为了兼容性，返回错误
+                            return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "图片上传成功但无法获取访问URL"]))).eraseToAnyPublisher()
+                        }
+                    }
+                    // 尝试直接解析为URL字符串
+                    if let urlString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       urlString.hasPrefix("http") {
+                        return Just(urlString).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                    }
+                    return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应"]))).eraseToAnyPublisher()
+                } else {
+                    let errorMessage = String(data: data, encoding: .utf8) ?? "上传失败"
+                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage)).eraseToAnyPublisher()
+                }
+            }
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
                     completion(.failure(error))

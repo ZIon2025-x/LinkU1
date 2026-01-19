@@ -39,6 +39,7 @@ import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import PaymentModal from '../components/payment/PaymentModal';
+import CompleteTaskModal from '../components/CompleteTaskModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
@@ -517,6 +518,7 @@ const MessagePage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [paymentClientSecret, setPaymentClientSecret] = useState<string | null>(null);
+  const [showCompleteTaskModal, setShowCompleteTaskModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
@@ -1527,44 +1529,31 @@ const MessagePage: React.FC = () => {
   };
 
   // 完成任务（接收者）
-  const handleCompleteTask = useCallback(async () => {
+  const handleCompleteTask = useCallback(() => {
     if (!activeTaskId || !user) return;
+    setShowCompleteTaskModal(true);
+  }, [activeTaskId, user]);
+
+  // 完成任务成功回调
+  const handleCompleteTaskSuccess = useCallback(async () => {
+    if (!activeTaskId) return;
+    showToast('success', t('messages.notifications.taskMarkedComplete'));
     
-    // 确认提示
-    if (!window.confirm(t('messages.notifications.confirmCompleteTask'))) {
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await completeTask(activeTaskId);
-      showToast('success', t('messages.notifications.taskMarkedComplete'));
-      
-      // 先更新UI状态，不阻塞
-      setActionLoading(false);
-      
-      // 延迟执行耗时的重新加载操作，避免阻塞UI
-      // 使用 setTimeout 将操作移到下一个事件循环，让UI先更新
-      setTimeout(async () => {
-        try {
-          // 重新加载任务信息（后台执行，不阻塞UI）
-          if (loadTasksRef.current) {
-            loadTasksRef.current().catch(() => {});
-          }
-          // 重新加载消息（包含系统消息）
-          if (loadTaskMessagesRef.current && activeTaskId) {
-            await loadTaskMessagesRef.current(activeTaskId);
-          }
-        } catch (error) {
-                  }
-      }, 0);
-    } catch (error: any) {
-            const errorMsg = getErrorMessage(error);
-      showToast('error', errorMsg);
-      setActionLoading(false);
-    }
-    // 注意：不包含 loadTasks 和 loadTaskMessages 在依赖数组中，因为它们是在同一个组件中定义的稳定引用
-  }, [activeTaskId, user, t]);
+    // 延迟执行耗时的重新加载操作，避免阻塞UI
+    setTimeout(async () => {
+      try {
+        // 重新加载任务信息（后台执行，不阻塞UI）
+        if (loadTasksRef.current) {
+          loadTasksRef.current().catch(() => {});
+        }
+        // 重新加载消息（包含系统消息）
+        if (loadTaskMessagesRef.current && activeTaskId) {
+          await loadTaskMessagesRef.current(activeTaskId);
+        }
+      } catch (error) {
+                }
+    }, 0);
+  }, [activeTaskId, t]);
 
   // 确认完成（发布者）
   const handleConfirmCompletion = useCallback(async () => {
@@ -7369,6 +7358,16 @@ const MessagePage: React.FC = () => {
             setPaymentClientSecret(null);
             setPaymentIntentId(null);
           }}
+        />
+      )}
+
+      {/* 完成任务弹窗 */}
+      {activeTaskId && (
+        <CompleteTaskModal
+          visible={showCompleteTaskModal}
+          taskId={activeTaskId}
+          onCancel={() => setShowCompleteTaskModal(false)}
+          onSuccess={handleCompleteTaskSuccess}
         />
       )}
     </div>

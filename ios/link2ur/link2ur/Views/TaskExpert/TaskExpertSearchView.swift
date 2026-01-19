@@ -46,12 +46,17 @@ struct TaskExpertSearchView: View {
                         
                         if !searchText.isEmpty {
                             Button(action: {
-                                searchText = ""
+                                var transaction = Transaction()
+                                transaction.disablesAnimations = true
+                                withTransaction(transaction) {
+                                    searchText = ""
+                                }
                                 performSearch()
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(AppColors.textTertiary)
                             }
+                            .transaction { $0.animation = nil }
                         }
                     }
                     .padding(AppSpacing.md)
@@ -60,6 +65,7 @@ struct TaskExpertSearchView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: AppCornerRadius.medium)
                             .stroke(isSearchFocused ? AppColors.primary : AppColors.separator.opacity(0.3), lineWidth: isSearchFocused ? 2 : 1)
+                            .transaction { $0.animation = nil }
                     )
                     
                     // 筛选按钮
@@ -137,19 +143,27 @@ struct TaskExpertSearchView: View {
                         // 清除筛选
                         if selectedCategory != nil || selectedCity != nil {
                             Button(action: {
-                                selectedCategory = nil
-                                selectedCity = nil
+                                var transaction = Transaction()
+                                transaction.disablesAnimations = true
+                                withTransaction(transaction) {
+                                    selectedCategory = nil
+                                    selectedCity = nil
+                                }
                                 performSearch()
                             }) {
                                 Text(LocalizationKey.taskExpertClear.localized)
                                     .font(AppTypography.subheadline)
                                     .foregroundColor(AppColors.primary)
                             }
+                            .transaction { $0.animation = nil }
                         }
                     }
                 }
                 .padding(AppSpacing.md)
                 .background(AppColors.cardBackground)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
                 
                 // 内容区域
                 if viewModel.isLoading && viewModel.experts.isEmpty {
@@ -185,8 +199,15 @@ struct TaskExpertSearchView: View {
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .transaction { transaction in
+            transaction.animation = nil
+        }
         .onAppear {
-            isSearchFocused = true
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                isSearchFocused = true
+            }
         }
     }
     

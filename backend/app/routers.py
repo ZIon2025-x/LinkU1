@@ -22,7 +22,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1835,6 +1835,7 @@ def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
 @router.post("/tasks/{task_id}/complete", response_model=schemas.TaskOut)
 def complete_task(
     task_id: int,
+    evidence_images: Optional[List[str]] = Body(None, description="证据图片URL列表"),
     background_tasks: BackgroundTasks = None,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -1875,14 +1876,20 @@ def complete_task(
 
     # 发送系统消息到任务聊天框
     try:
-        from app.models import Message
+        from app.models import Message, MessageAttachment
         import json
         
         taker_name = current_user.name or f"用户{current_user.id}"
+        # 根据是否有证据图片显示不同的消息内容
+        if evidence_images and len(evidence_images) > 0:
+            system_message_content = "任务已完成，请查看证据图片。"
+        else:
+            system_message_content = f"接收者 {taker_name} 已确认完成任务，等待发布者确认。"
+        
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=f"接收者 {taker_name} 已确认完成任务，等待发布者确认。",
+            content=system_message_content,
             task_id=task_id,
             message_type="system",
             conversation_type="task",
@@ -1890,6 +1897,21 @@ def complete_task(
             created_at=get_utc_time()
         )
         db.add(system_message)
+        db.flush()  # 获取消息ID
+        
+        # 如果有证据图片，创建附件
+        if evidence_images:
+            for image_url in evidence_images:
+                attachment = MessageAttachment(
+                    message_id=system_message.id,
+                    attachment_type="image",
+                    url=image_url,
+                    blob_id=None,
+                    meta=None,
+                    created_at=get_utc_time()
+                )
+                db.add(attachment)
+        
         db.commit()
     except Exception as e:
         print(f"Failed to send system message: {e}")
@@ -7903,6 +7925,28 @@ async def upload_image(
         # 使用新的私密图片系统上传
         from app.image_system import private_image_system
         result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=image.content_type)
+        
+        # 如果有 task_id，生成图片访问 URL
+        if task_id and result.get("success") and result.get("image_id"):
+            # 获取任务参与者
+            task = crud.get_task(db, task_id)
+            if task:
+                participants = []
+                if task.poster_id:
+                    participants.append(task.poster_id)
+                if task.taker_id:
+                    participants.append(task.taker_id)
+                # 添加当前用户（如果不在列表中）
+                if current_user.id not in participants:
+                    participants.append(current_user.id)
+                
+                # 生成图片访问 URL
+                image_url = private_image_system.generate_image_url(
+                    result["image_id"],
+                    current_user.id,
+                    participants
+                )
+                result["url"] = image_url
         
         return JSONResponse(content=result)
 

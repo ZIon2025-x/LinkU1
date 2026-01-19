@@ -7,6 +7,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from './LoginModal';
+import CompleteTaskModal from './CompleteTaskModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
@@ -696,31 +697,22 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [taskId, task, user, isNegotiateChecked, negotiatedPrice, applyMessage, hasApplied, t, language, checkUserApplication, loadParticipants]);
 
-  // P0 优化：使用 useCallback 缓存函数
-  const handleCompleteTask = useCallback(async () => {
+  // 完成任务（打开模态框）
+  const [showCompleteTaskModal, setShowCompleteTaskModal] = useState(false);
+  
+  const handleCompleteTask = useCallback(() => {
     if (!user) {
       setShowLoginModal(true);
       return;
     }
-    
-    // 确认提示
-    const confirmMessage = language === 'zh' ? '确定是否已经完成？' : 'Are you sure the task is completed?';
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await completeTask(taskId!);
-      alert(t('taskDetail.taskMarkedComplete'));
-      const res = await api.get(`/api/tasks/${taskId}`);
-      setTask(res.data);
-    } catch (error: any) {
-      alert(getErrorMessage(error));
-    } finally {
-      setActionLoading(false);
-    }
-  }, [user, taskId, t, language]);
+    setShowCompleteTaskModal(true);
+  }, [user]);
+
+  // 完成任务成功回调
+  const handleCompleteTaskSuccess = useCallback(async () => {
+    const res = await api.get(`/api/tasks/${taskId}`);
+    setTask(res.data);
+  }, [taskId]);
 
   const handleConfirmCompletion = useCallback(async () => {
     if (!user) {
@@ -3955,6 +3947,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             </div>
           </div>
         </div>
+      )}
+
+      {/* 完成任务弹窗 */}
+      {taskId && (
+        <CompleteTaskModal
+          visible={showCompleteTaskModal}
+          taskId={taskId}
+          onCancel={() => setShowCompleteTaskModal(false)}
+          onSuccess={handleCompleteTaskSuccess}
+        />
       )}
     </div>
   );

@@ -874,12 +874,21 @@ async def send_task_message(
         
         # 创建消息
         meta_str = json.dumps(request.meta) if request.meta else None
+        
+        # 从 meta 中读取 message_type，如果是系统消息，则设置为 "system"
+        # 系统消息的 sender_id 应该为 None
+        message_type = "normal"
+        sender_id = current_user.id
+        if request.meta and request.meta.get("message_type") == "system":
+            message_type = "system"
+            sender_id = None  # 系统消息的 sender_id 为 None
+        
         new_message = models.Message(
-            sender_id=current_user.id,
+            sender_id=sender_id,
             receiver_id=None,  # 任务消息不需要 receiver_id
             content=request.content,
             task_id=task_id,
-            message_type="normal",
+            message_type=message_type,
             conversation_type="task",
             meta=meta_str,
             created_at=current_time

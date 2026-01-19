@@ -319,8 +319,12 @@ extension APIService {
     // 注意：acceptApplication 方法已移至 APIService+Chat.swift，这里不再重复定义
     
     /// 完成任务 (执行者)
-    func completeTask(taskId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, APIEndpoints.Users.taskComplete(taskId), method: "POST")
+    func completeTask(taskId: Int, evidenceImages: [String]? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+        var body: [String: Any] = [:]
+        if let evidenceImages = evidenceImages, !evidenceImages.isEmpty {
+            body["evidence_images"] = evidenceImages
+        }
+        return request(EmptyResponse.self, APIEndpoints.Users.taskComplete(taskId), method: "POST", body: body.isEmpty ? nil : body)
     }
     
     /// 确认任务完成 (发布者)

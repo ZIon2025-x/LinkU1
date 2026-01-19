@@ -156,9 +156,7 @@ const TermsOfService: React.FC = () => {
               <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
                 {t('termsOfService.serviceNature.testingPhase')}
               </p>
-              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
-                {t('termsOfService.serviceNature.paymentLimitation')}
-              </p>
+              <p>{t('termsOfService.serviceNature.paymentSystem')}</p>
 
               {/* 2. 用户类型与资格 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
@@ -188,9 +186,27 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.feesAndRules.title')}
               </h2>
               <p>{t('termsOfService.feesAndRules.content')}</p>
+              <p>{t('termsOfService.feesAndRules.paymentProcessing')}</p>
               <p>{t('termsOfService.feesAndRules.reviews')}</p>
 
-              {/* 5. 用户行为与禁止事项 */}
+              {/* 5. 支付与退款 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.paymentAndRefund.title')}
+              </h2>
+              <p>{t('termsOfService.paymentAndRefund.paymentMethod')}</p>
+              <p>{t('termsOfService.paymentAndRefund.paymentProcess')}</p>
+              <p>{t('termsOfService.paymentAndRefund.escrowService')}</p>
+              <p style={{ fontWeight: '600', marginTop: '16px' }}>{t('termsOfService.paymentAndRefund.completionConfirmation')}</p>
+              <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.refundBeforeConfirmation')}</p>
+              <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.appealAfterConfirmation')}</p>
+              <p style={{ marginTop: '12px', fontWeight: '600' }}>{t('termsOfService.paymentAndRefund.refundProcessing')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.refundProcessingDetails')}</p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca', marginTop: '16px' }}>
+                {t('termsOfService.paymentAndRefund.refundWarning')}
+              </p>
+              <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.paymentSecurity')}</p>
+
+              {/* 6. 用户行为与禁止事项 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.userBehavior.title')}
               </h2>
@@ -200,7 +216,7 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.userBehavior.accountSuspension')}
               </p>
 
-              {/* 6. 知识产权与用户内容 */}
+              {/* 7. 知识产权与用户内容 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.intellectualProperty.title')}
               </h2>
@@ -208,14 +224,14 @@ const TermsOfService: React.FC = () => {
               <p>{t('termsOfService.intellectualProperty.userContent')}</p>
               <p>{t('termsOfService.intellectualProperty.complaints')}</p>
 
-              {/* 7. 隐私与数据 */}
+              {/* 8. 隐私与数据 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.privacyData.title')}
               </h2>
               <p>{t('termsOfService.privacyData.controller')}</p>
               <p>{t('termsOfService.privacyData.payments')}</p>
 
-              {/* 8. 免责声明与责任限制 */}
+              {/* 9. 免责声明与责任限制 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.disclaimer.title')}
               </h2>
@@ -223,14 +239,14 @@ const TermsOfService: React.FC = () => {
               <p>{t('termsOfService.disclaimer.liability')}</p>
               <p>{t('termsOfService.disclaimer.limit')}</p>
 
-              {/* 9. 终止与数据保留 */}
+              {/* 10. 终止与数据保留 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.termination.title')}
               </h2>
               <p>{t('termsOfService.termination.content')}</p>
               <p>{t('termsOfService.termination.effect')}</p>
 
-              {/* 10. 争议与适用法律 */}
+              {/* 13. 争议与适用法律 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.disputes.title')}
               </h2>

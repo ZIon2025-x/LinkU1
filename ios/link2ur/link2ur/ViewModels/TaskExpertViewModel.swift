@@ -150,6 +150,17 @@ class TaskExpertViewModel: ObservableObject {
                 self.rawExperts = response.allExperts
                 Logger.debug("收到 \(response.allExperts.count) 个任务达人数据", category: .api)
                 
+                // 如果搜索没有结果，立即清空列表并返回
+                if response.allExperts.isEmpty {
+                    DispatchQueue.main.async {
+                        self.experts = []
+                        self.isLoading = false
+                    }
+                    Logger.debug("搜索无结果，已清空专家列表", category: .api)
+                    Logger.success("任务达人加载成功，共0条", category: .api)
+                    return
+                }
+                
                 // 检查位置服务状态
                 Logger.debug("位置服务状态检查:", category: .general)
                 Logger.debug("  - 授权状态: \(self.locationService.authorizationStatus.rawValue)", category: .general)
@@ -208,6 +219,10 @@ class TaskExpertViewModel: ObservableObject {
         
         guard !rawExperts.isEmpty else {
             print("⚠️ 原始达人数据为空，无法排序")
+            // 清空专家列表，确保搜索无结果时显示空状态
+            DispatchQueue.main.async { [weak self] in
+                self?.experts = []
+            }
             return
         }
         

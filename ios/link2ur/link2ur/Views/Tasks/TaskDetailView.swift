@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import LinkPresentation
 import Combine
+import PhotosUI
 
 struct TaskDetailView: View {
     let taskId: Int
@@ -11,7 +12,6 @@ struct TaskDetailView: View {
     @State private var applyMessage = ""
     @State private var negotiatedPrice: Double?
     @State private var showNegotiatePrice = false
-    @State private var showNegotiatePriceDialog = false // 议价选择对话框
     @State private var showFullScreenImage = false
     @State private var selectedImageIndex = 0
     @State private var actionLoading = false
@@ -34,6 +34,7 @@ struct TaskDetailView: View {
     @State private var shareImageCancellable: AnyCancellable?
     @State private var isShareImageLoading = false // 分享图片加载状态
     @State private var showConfirmCompletionSuccess = false // 确认完成成功提示
+    @State private var showCompleteTaskSheet = false // 显示完成任务页面
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
@@ -125,7 +126,6 @@ struct TaskDetailView: View {
                     paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                     approvedApplicantName: $approvedApplicantName,
                     showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
-                    showNegotiatePriceDialog: $showNegotiatePriceDialog,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -176,10 +176,8 @@ struct TaskDetailView: View {
             .sheet(isPresented: $showPaymentView) {
                 paymentSheetContent
             }
-            .alert(LocalizationKey.taskApplicationIsNegotiatePrice.localized, isPresented: $showNegotiatePriceDialog) {
-                negotiatePriceDialog
-            } message: {
-                Text(LocalizationKey.taskApplicationNegotiatePriceHint.localized)
+            .sheet(isPresented: $showCompleteTaskSheet) {
+                completeTaskSheet
             }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
@@ -374,6 +372,26 @@ struct TaskDetailView: View {
     }
     
     @ViewBuilder
+    private var completeTaskSheet: some View {
+        if let task = viewModel.task {
+            CompleteTaskSheet(
+                taskId: taskId,
+                task: task,
+                onComplete: { evidenceImageUrls in
+                    viewModel.completeTask(taskId: taskId, evidenceImages: evidenceImageUrls.isEmpty ? nil : evidenceImageUrls) { success in
+                        if success {
+                            showCompleteTaskSheet = false
+                            viewModel.loadTask(taskId: taskId)
+                            HapticFeedback.success()
+                            // 注意：系统消息已由后端自动发送，不需要前端再次发送
+                        }
+                    }
+                }
+            )
+        }
+    }
+    
+    @ViewBuilder
     private var reviewModal: some View {
         ReviewModal(
             rating: $reviewRating,
@@ -406,33 +424,6 @@ struct TaskDetailView: View {
                 }
             }
         )
-    }
-    
-    @ViewBuilder
-    private var negotiatePriceDialog: some View {
-        // 是，我要议价
-        Button(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized) {
-            // 设置议价选项
-            showNegotiatePrice = true
-            // 如果任务有基础奖励，预填充议价金额
-            if let task = viewModel.task {
-                negotiatedPrice = task.baseReward ?? task.reward
-            }
-            // 打开申请表单
-            showApplySheet = true
-        }
-        // 否，不议价
-        Button(LocalizationKey.paymentNo.localized) {
-            // 不议价
-            showNegotiatePrice = false
-            negotiatedPrice = nil
-            // 打开申请表单
-            showApplySheet = true
-        }
-        // 取消
-        Button(LocalizationKey.commonCancel.localized, role: .cancel) {
-            // 什么都不做，直接关闭对话框
-        }
     }
     
     @ViewBuilder
@@ -999,7 +990,6 @@ struct TaskDetailContentView: View {
     @Binding var paymentEphemeralKeySecret: String?
     @Binding var approvedApplicantName: String?
     @Binding var showConfirmCompletionSuccess: Bool
-    @Binding var showNegotiatePriceDialog: Bool // 议价选择对话框
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1110,7 +1100,8 @@ struct TaskDetailContentView: View {
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
-                        showNegotiatePriceDialog: $showNegotiatePriceDialog,
+                        showNegotiatePrice: $showNegotiatePrice,
+                        negotiatedPrice: $negotiatedPrice,
                         taskId: taskId,
                         viewModel: viewModel
                     )
@@ -1549,7 +1540,8 @@ struct TaskActionButtonsView: View {
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
     @Binding var showConfirmCompletionSuccess: Bool
-    @Binding var showNegotiatePriceDialog: Bool // 议价选择对话框
+    @Binding var showNegotiatePrice: Bool
+    @Binding var negotiatedPrice: Double?
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
@@ -1585,8 +1577,10 @@ struct TaskActionButtonsView: View {
                 else if task.status == .open && task.takerId == nil {
                     Button(action: {
                         if appState.isAuthenticated {
-                            // 先显示议价选择对话框
-                            showNegotiatePriceDialog = true
+                            // 直接打开申请表单，议价默认关闭
+                            showNegotiatePrice = false
+                            negotiatedPrice = nil
+                            showApplySheet = true
                         } else {
                             showLogin = true
                         }
@@ -1600,27 +1594,15 @@ struct TaskActionButtonsView: View {
             // 其他操作按钮
             if task.status == .inProgress && isTaker {
                 Button(action: {
-                    actionLoading = true
-                    viewModel.completeTask(taskId: taskId) { success in
-                        actionLoading = false
-                        if success {
-                            viewModel.loadTask(taskId: taskId)
-                        }
-                    }
+                    showCompleteTaskSheet = true
                 }) {
                     HStack(spacing: AppSpacing.sm) {
-                        if actionLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            IconStyle.icon("checkmark.circle.fill", size: 20)
-                        }
-                        Text(actionLoading ? LocalizationKey.actionsProcessing.localized : LocalizationKey.actionsMarkComplete.localized)
+                        IconStyle.icon("checkmark.circle.fill", size: 20)
+                        Text(LocalizationKey.actionsMarkComplete.localized)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(useGradient: false))
                 .tint(AppColors.success)
-                .disabled(actionLoading)
             }
             
             if task.status == .pendingConfirmation && isPoster {
@@ -2532,5 +2514,425 @@ struct ReviewModal: View {
                 }
             }
         }
+    }
+}
+
+// 完成任务页面
+struct CompleteTaskSheet: View {
+    let taskId: Int
+    let task: Task
+    let onComplete: ([String]) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var selectedImages: [UIImage] = []
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isUploading = false
+    @State private var uploadedImageUrls: [String] = []
+    @State private var errorMessage: String?
+    @State private var uploadProgress: (current: Int, total: Int) = (0, 0)
+    @State private var imageSizeErrors: [String] = []
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 说明文字
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack(spacing: AppSpacing.sm) {
+                                IconStyle.icon("checkmark.circle.fill", size: 24)
+                                    .foregroundColor(AppColors.success)
+                                Text("任务已完成")
+                                    .font(AppTypography.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                            
+                            Text("您已完成此任务。请上传相关证据图片（可选），以便发布者确认任务完成情况。")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 证据图片上传
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack {
+                                SectionHeader(title: "证据图片（可选）", icon: "photo.on.rectangle")
+                                Spacer()
+                                Text("\(selectedImages.count)/5")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            
+                            // 图片大小限制提示
+                            HStack(spacing: 4) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.textTertiary)
+                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            .padding(.horizontal, 4)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: AppSpacing.md) {
+                                    // 添加按钮
+                                    if selectedImages.count < 5 {
+                                        PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - selectedImages.count, matching: .images) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "plus.viewfinder")
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(AppColors.primary)
+                                                Text("添加图片")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(AppColors.textSecondary)
+                                            }
+                                            .frame(width: 90, height: 90)
+                                            .background(AppColors.background)
+                                            .cornerRadius(AppCornerRadius.medium)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                    .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                                            )
+                                        }
+                                        .onChange(of: selectedItems) { _ in
+                                            handleImageSelection()
+                                        }
+                                    }
+                                    
+                                    // 图片预览
+                                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 90, height: 90)
+                                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                            
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedImages.remove(at: index)
+                                                    selectedItems = []
+                                                    HapticFeedback.light()
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.white)
+                                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                            }
+                                            .padding(4)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 图片大小错误提示
+                        if !imageSizeErrors.isEmpty {
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                ForEach(imageSizeErrors, id: \.self) { error in
+                                    HStack(spacing: 8) {
+                                        IconStyle.icon("exclamationmark.triangle.fill", size: 16)
+                                        Text(error)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(AppColors.warning)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.warning.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传错误提示
+                        if let errorMessage = errorMessage {
+                            HStack(spacing: 8) {
+                                IconStyle.icon("exclamationmark.octagon.fill", size: 16)
+                                Text(errorMessage)
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(AppColors.error)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.error.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传进度
+                        if isUploading && uploadProgress.total > 0 {
+                            VStack(spacing: AppSpacing.xs) {
+                                HStack {
+                                    Text("上传进度")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    Spacer()
+                                    Text("\(uploadProgress.current)/\(uploadProgress.total)")
+                                        .font(AppTypography.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(AppColors.primary)
+                                }
+                                
+                                ProgressView(value: Double(uploadProgress.current), total: Double(uploadProgress.total))
+                                    .tint(AppColors.primary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 提交按钮
+                        Button(action: {
+                            submitCompletion()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isUploading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    IconStyle.icon("checkmark.circle.fill", size: 18)
+                                }
+                                if isUploading {
+                                    Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)...")
+                                        .font(AppTypography.bodyBold)
+                                } else {
+                                    Text("确认完成任务")
+                                        .font(AppTypography.bodyBold)
+                                }
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isUploading)
+                        .padding(.top, AppSpacing.lg)
+                    }
+                    .padding(AppSpacing.md)
+                }
+            }
+            .navigationTitle("完成任务")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                    .disabled(isUploading)
+                }
+            }
+        }
+    }
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            var newSizeErrors: [String] = []
+            let maxImageSize = 5 * 1024 * 1024 // 5MB
+            
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    // 检查图片大小（压缩前）
+                    if data.count > maxImageSize {
+                        let sizeInMB = Double(data.count) / (1024 * 1024)
+                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        continue
+                    }
+                    
+                    if let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            if selectedImages.count < 5 {
+                                selectedImages.append(image)
+                            } else {
+                                newSizeErrors.append("最多只能上传 5 张图片")
+                            }
+                        }
+                    }
+                }
+            }
+            
+            DispatchQueue.main.async {
+                imageSizeErrors = newSizeErrors
+                selectedItems = [] // 清空以备下次选择
+            }
+        }
+    }
+    
+    private func submitCompletion() {
+        guard !isUploading else { return }
+        
+        errorMessage = nil
+        imageSizeErrors = []
+        
+        if selectedImages.isEmpty {
+            // 没有图片，直接提交
+            onComplete([])
+            dismiss()
+            return
+        }
+        
+        // 检查图片大小（压缩后）
+        let maxImageSize = 5 * 1024 * 1024 // 5MB
+        var sizeErrors: [String] = []
+        var validImages: [(UIImage, Int)] = []
+        
+        for (index, image) in selectedImages.enumerated() {
+            if let imageData = image.jpegData(compressionQuality: 0.7) {
+                if imageData.count > maxImageSize {
+                    let sizeInMB = Double(imageData.count) / (1024 * 1024)
+                    sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                } else {
+                    validImages.append((image, index + 1))
+                }
+            } else {
+                sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+            }
+        }
+        
+        if !sizeErrors.isEmpty {
+            imageSizeErrors = sizeErrors
+            return
+        }
+        
+        if validImages.isEmpty {
+            errorMessage = "没有可上传的图片"
+            return
+        }
+        
+        // 上传图片
+        isUploading = true
+        uploadedImageUrls = []
+        uploadProgress = (0, validImages.count)
+        
+        let uploadGroup = DispatchGroup()
+        var uploadErrors: [(Error, Int)] = []
+        
+        for (image, index) in validImages {
+            uploadGroup.enter()
+            // 直接使用 uploadImage 方法，它会自动压缩（0.7质量）
+            // 使用任务ID作为路径，存储在任务文件夹中
+            let path = "tasks/\(taskId)"
+            APIService.shared.uploadImage(image, path: path, taskId: taskId) { [weak self] result in
+                guard let self = self else {
+                    uploadGroup.leave()
+                    return
+                }
+                
+                switch result {
+                case .success(let url):
+                    DispatchQueue.main.async {
+                        self.uploadedImageUrls.append(url)
+                        self.uploadProgress.current += 1
+                    }
+                case .failure(let error):
+                    uploadErrors.append((error, index))
+                }
+                uploadGroup.leave()
+            }
+        }
+        
+        uploadGroup.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.isUploading = false
+            
+            if uploadErrors.isEmpty {
+                // 所有图片上传成功，提交完成任务
+                self.onComplete(self.uploadedImageUrls)
+                self.dismiss()
+            } else {
+                // 生成详细的错误信息
+                var errorDetails: [String] = []
+                for (error, index) in uploadErrors {
+                    let errorDescription = self.getDetailedErrorMessage(error)
+                    errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                }
+                
+                if errorDetails.count == validImages.count {
+                    // 所有图片都上传失败
+                    self.errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                } else {
+                    // 部分图片上传失败
+                    self.errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                }
+            }
+        }
+    }
+    
+    /// 获取详细的错误信息
+    private func getDetailedErrorMessage(_ error: Error) -> String {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .requestFailed(let underlyingError):
+                if let urlError = underlyingError as? URLError {
+                    switch urlError.code {
+                    case .notConnectedToInternet, .networkConnectionLost:
+                        return "网络连接失败，请检查网络设置"
+                    case .timedOut:
+                        return "上传超时，请重试"
+                    case .cannotFindHost, .cannotConnectToHost:
+                        return "无法连接到服务器，请稍后重试"
+                    default:
+                        return "网络错误：\(urlError.localizedDescription)"
+                    }
+                }
+                return "网络请求失败：\(underlyingError.localizedDescription)"
+            case .httpError(let statusCode):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误，请检查图片格式"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传图片"
+                case 413:
+                    return "图片文件过大，请选择较小的图片"
+                case 500...599:
+                    return "服务器错误（\(statusCode)），请稍后重试"
+                default:
+                    return "服务器错误（\(statusCode)）"
+                }
+            case .serverError(let statusCode, let message):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误：\(message)"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传图片"
+                case 413:
+                    return "图片文件过大：\(message)"
+                case 500...599:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                default:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                }
+            case .decodingError(let error):
+                return "解析响应失败：\(error.localizedDescription)"
+            case .invalidURL:
+                return "无效的URL"
+            case .invalidResponse:
+                return "服务器响应格式错误"
+            case .unauthorized:
+                return "未授权，请重新登录"
+            case .unknown:
+                return "未知错误，请重试"
+            }
+        }
+        return error.localizedDescription
     }
 }
