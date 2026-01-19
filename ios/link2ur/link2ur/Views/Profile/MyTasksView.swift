@@ -413,13 +413,55 @@ struct EnhancedTaskCard: View {
         return String(takerId) == userId
     }
     
+    private var isOriginator: Bool {
+        guard let userId = currentUserId, let originatingUserId = task.originatingUserId else { return false }
+        return String(originatingUserId) == userId
+    }
+    
     private var userRole: String {
-        if isPoster {
-            return "发布者"
-        } else if isTaker {
-            return "接受者"
+        // 对于多人任务，需要特殊处理
+        if task.isMultiParticipant == true {
+            // 多人任务中，用户可能是：
+            // 1. 第一个申请者（originatingUserId）
+            // 2. 参与者（通过 TaskParticipant 表关联，但 posterId 可能为 None）
+            // 3. 任务达人（takerId，创建者）
+            if isTaker {
+                return "任务达人"
+            } else if isOriginator {
+                return "申请者"
+            } else if isPoster {
+                return "发布者"
+            } else {
+                // 如果都不是，说明用户是参与者（通过 TaskParticipant 表关联）
+                return "参与者"
+            }
+        } else {
+            // 单人任务：正常的发布者/接受者逻辑
+            if isPoster {
+                return "发布者"
+            } else if isTaker {
+                return "接受者"
+            }
         }
         return "未知"
+    }
+    
+    private func getRoleIcon() -> String {
+        // 对于多人任务，需要特殊处理
+        if task.isMultiParticipant == true {
+            if isTaker {
+                return "star.fill"  // 任务达人
+            } else if isOriginator {
+                return "person.badge.plus"  // 申请者
+            } else if isPoster {
+                return "square.and.pencil"  // 发布者
+            } else {
+                return "person.2.fill"  // 参与者
+            }
+        } else {
+            // 单人任务
+            return isPoster ? "square.and.pencil" : "hand.raised.fill"
+        }
     }
     
     private func getStatusColor() -> Color {
@@ -460,7 +502,7 @@ struct EnhancedTaskCard: View {
                     
                     // 用户角色标签
                     HStack(spacing: 4) {
-                        Image(systemName: isPoster ? "square.and.pencil" : "hand.raised.fill")
+                        Image(systemName: getRoleIcon())
                             .font(.system(size: 10))
                             .foregroundColor(AppColors.textTertiary)
                         Text(userRole)

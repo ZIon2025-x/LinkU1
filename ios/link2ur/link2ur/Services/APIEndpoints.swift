@@ -139,6 +139,7 @@ enum APIEndpoints {
     // MARK: - Task Messages (任务消息)
     enum TaskMessages {
         static let list = "/api/messages/tasks"
+        static let unreadCount = "/api/messages/tasks/unread/count"
         static func taskMessages(_ taskId: Int) -> String {
             "/api/messages/task/\(taskId)"
         }

@@ -319,6 +319,74 @@ async def get_task_chat_list(
         )
 
 
+@task_chat_router.get("/messages/tasks/unread/count")
+async def get_task_chat_unread_count(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    获取任务聊天消息的总未读数量
+    返回当前用户所有任务聊天消息的未读总数
+    """
+    try:
+        from app.task_chat_business_logic import UnreadCountLogic
+        
+        # 查询用户相关的任务（作为发布者、接受者或多人任务参与者）
+        task_ids_set = set()
+        
+        # 1. 作为发布者或接受者的任务
+        tasks_query_1 = select(models.Task.id).where(
+            or_(
+                models.Task.poster_id == current_user.id,
+                models.Task.taker_id == current_user.id,
+                # 多人任务：作为任务达人创建者
+                and_(
+                    models.Task.is_multi_participant.is_(True),
+                    models.Task.created_by_expert.is_(True),
+                    models.Task.expert_creator_id == current_user.id
+                )
+            )
+        )
+        result_1 = await db.execute(tasks_query_1)
+        task_ids_set.update([row[0] for row in result_1.all()])
+        
+        # 2. 作为多人任务参与者的任务
+        participant_tasks_query = select(models.Task.id).join(
+            models.TaskParticipant,
+            models.Task.id == models.TaskParticipant.task_id
+        ).where(
+            and_(
+                models.TaskParticipant.user_id == current_user.id,
+                models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                models.Task.is_multi_participant.is_(True)
+            )
+        )
+        result_2 = await db.execute(participant_tasks_query)
+        task_ids_set.update([row[0] for row in result_2.all()])
+        
+        if not task_ids_set:
+            return {"unread_count": 0}
+        
+        # 批量计算所有任务的未读数量
+        total_unread = 0
+        for task_id in task_ids_set:
+            unread_count = await UnreadCountLogic.get_unread_count(
+                db=db,
+                task_id=task_id,
+                user_id=current_user.id
+            )
+            total_unread += unread_count
+        
+        return {"unread_count": total_unread}
+    
+    except Exception as e:
+        logger.error(f"获取任务聊天未读数量失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取任务聊天未读数量失败: {str(e)}"
+        )
+
+
 @task_chat_router.get("/messages/task/{task_id}")
 async def get_task_messages(
     task_id: int,
@@ -979,31 +1047,32 @@ async def send_task_message(
                     # 尝试通过WebSocket发送（实时通知）
                     success = await ws_manager.send_to_user(participant_id, message_response)
                     if success:
-                        logger.debug(f"Task message broadcasted to participant {participant_id}")
-                    
-                    # 无论WebSocket是否成功，都发送推送通知（确保用户不在app中时也能收到）
-                    try:
-                        # 截取消息内容（最多50个字符）
-                        message_preview = new_message.content[:50] + ("..." if len(new_message.content) > 50 else "")
-                        send_push_notification_async_safe(
-                            async_db=db,
-                            user_id=participant_id,
-                            title=None,  # 从模板生成（会根据用户语言偏好）
-                            body=None,  # 从模板生成（会根据用户语言偏好）
-                            notification_type="task_message",
-                            data={
-                                "task_id": task_id,
-                                "sender_id": current_user.id
-                            },
-                            template_vars={
-                                "sender_name": current_user.name or f"用户{current_user.id}",
-                                "message": message_preview,
-                                "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
-                                "task_id": task_id  # 传递 task_id 以便获取翻译
-                            }
-                        )
-                    except Exception as e:
-                        logger.warning(f"发送任务消息推送通知失败（用户 {participant_id}）: {e}")
+                        logger.debug(f"Task message broadcasted to participant {participant_id} via WebSocket (user is in app, skipping push notification)")
+                    else:
+                        # WebSocket发送失败，说明用户不在app中，需要发送推送通知
+                        logger.debug(f"Task message WebSocket failed for participant {participant_id} (user is not in app, sending push notification)")
+                        try:
+                            # 截取消息内容（最多50个字符）
+                            message_preview = new_message.content[:50] + ("..." if len(new_message.content) > 50 else "")
+                            send_push_notification_async_safe(
+                                async_db=db,
+                                user_id=participant_id,
+                                title=None,  # 从模板生成（会根据用户语言偏好）
+                                body=None,  # 从模板生成（会根据用户语言偏好）
+                                notification_type="task_message",
+                                data={
+                                    "task_id": task_id,
+                                    "sender_id": current_user.id
+                                },
+                                template_vars={
+                                    "sender_name": current_user.name or f"用户{current_user.id}",
+                                    "message": message_preview,
+                                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
+                                    "task_id": task_id  # 传递 task_id 以便获取翻译
+                                }
+                            )
+                        except Exception as e:
+                            logger.warning(f"发送任务消息推送通知失败（用户 {participant_id}）: {e}")
         except Exception as e:
             # WebSocket广播失败不应该影响消息发送
             logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)

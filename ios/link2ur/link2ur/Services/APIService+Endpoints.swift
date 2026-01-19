@@ -687,9 +687,14 @@ extension APIService {
         return request([MessageOut].self, APIEndpoints.Users.messagesUnread)
     }
     
-    /// 获取未读消息数量
+    /// 获取未读消息数量（普通聊天消息）
     func getUnreadMessageCount() -> AnyPublisher<[String: Int], APIError> {
         return request([String: Int].self, APIEndpoints.Users.messagesUnreadCount)
+    }
+    
+    /// 获取任务聊天消息的未读数量
+    func getTaskChatUnreadCount() -> AnyPublisher<[String: Int], APIError> {
+        return request([String: Int].self, APIEndpoints.TaskMessages.unreadCount)
     }
     
     /// 获取联系人列表

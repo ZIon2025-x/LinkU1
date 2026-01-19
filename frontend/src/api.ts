@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { API_BASE_URL } from './config';
+import { logger } from './utils/logger';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

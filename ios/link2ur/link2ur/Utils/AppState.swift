@@ -222,24 +222,22 @@ public class AppState: ObservableObject {
         isLoadingMessageCount = true
         lastMessageRefreshTime = Date()
         
-        apiService.getUnreadMessageCount()
+        // 使用任务聊天消息的未读数量 API
+        apiService.getTaskChatUnreadCount()
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoadingMessageCount = false
                 if case .failure(let error) = result {
-                    print("⚠️ 加载未读消息数量失败: \(error.localizedDescription)")
+                    print("⚠️ 加载任务聊天未读消息数量失败: \(error.localizedDescription)")
+                    // 失败时不清零，保持上次的值
                 }
             }, receiveValue: { [weak self] response in
-                // 后端返回格式：{"unread_count": 5} 或 {"total": 5} 或 {"tasks": 5}
+                // 后端返回格式：{"unread_count": 5}
                 if let count = response["unread_count"] {
                     self?.unreadMessageCount = count
-                } else if let total = response["total"] {
-                    self?.unreadMessageCount = total
-                } else if let tasks = response["tasks"] {
-                    // 如果 tasks 是数字，直接使用
-                    self?.unreadMessageCount = tasks
+                    print("📱 [AppState] 任务聊天未读消息数量已更新: \(count)")
                 } else {
-                    // 如果没有找到任何字段，设置为0
+                    // 如果没有找到 unread_count 字段，设置为0
                     self?.unreadMessageCount = 0
                 }
                 // Badge 会在 unreadMessageCount 的 didSet 中自动更新
