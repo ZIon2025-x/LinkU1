@@ -1341,7 +1341,11 @@ async def get_visible_forums(
                 category_out = schemas.ForumCategoryOut(
                     id=category.id,
                     name=category.name,
+                    name_en=getattr(category, 'name_en', None),
+                    name_zh=getattr(category, 'name_zh', None),
                     description=category.description,
+                    description_en=getattr(category, 'description_en', None),
+                    description_zh=getattr(category, 'description_zh', None),
                     icon=category.icon,
                     sort_order=category.sort_order,
                     is_visible=category.is_visible,
@@ -1435,7 +1439,11 @@ async def get_visible_forums(
                 category_out = schemas.ForumCategoryOut(
                     id=category.id,
                     name=category.name,
+                    name_en=getattr(category, 'name_en', None),
+                    name_zh=getattr(category, 'name_zh', None),
                     description=category.description,
+                    description_en=getattr(category, 'description_en', None),
+                    description_zh=getattr(category, 'description_zh', None),
                     icon=category.icon,
                     sort_order=category.sort_order,
                     is_visible=category.is_visible,
