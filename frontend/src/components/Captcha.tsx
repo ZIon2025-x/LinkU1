@@ -3,7 +3,7 @@
  * 支持 Google reCAPTCHA v2（交互式）和 hCaptcha
  */
 
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { logger } from '../utils/logger';
 
 interface CaptchaProps {

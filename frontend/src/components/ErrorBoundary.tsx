@@ -2,7 +2,7 @@
  * ErrorBoundary 组件
  * 捕获子组件的错误，防止整个应用崩溃
  */
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import ErrorFallback from './ErrorFallback';
 
 interface Props {
