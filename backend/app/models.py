@@ -2120,8 +2120,12 @@ class ForumPost(Base):
     __tablename__ = "forum_posts"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False)
-    content = Column(Text, nullable=False)
+    title = Column(String(200), nullable=False)  # 保留原字段用于兼容
+    title_en = Column(String(200), nullable=True)  # 英文标题
+    title_zh = Column(String(200), nullable=True)  # 中文标题
+    content = Column(Text, nullable=False)  # 保留原字段用于兼容
+    content_en = Column(Text, nullable=True)  # 英文内容
+    content_zh = Column(Text, nullable=True)  # 中文内容
     category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=False)
     author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 改为可空，支持管理员发帖
     admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 管理员作者ID

@@ -2723,7 +2723,11 @@ class ForumCategoryListResponse(BaseModel):
 # 帖子相关 Schemas
 class ForumPostBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200, description="帖子标题，1-200字符")
+    title_en: Optional[str] = Field(None, max_length=200, description="帖子标题（英文）")
+    title_zh: Optional[str] = Field(None, max_length=200, description="帖子标题（中文）")
     content: str = Field(..., min_length=10, max_length=50000, description="帖子内容，10-50000字符")
+    content_en: Optional[str] = Field(None, max_length=50000, description="帖子内容（英文）")
+    content_zh: Optional[str] = Field(None, max_length=50000, description="帖子内容（中文）")
     category_id: int = Field(..., description="板块ID")
 
 
@@ -2733,7 +2737,11 @@ class ForumPostCreate(ForumPostBase):
 
 class ForumPostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=200)
+    title_en: Optional[str] = Field(None, max_length=200, description="帖子标题（英文）")
+    title_zh: Optional[str] = Field(None, max_length=200, description="帖子标题（中文）")
     content: Optional[str] = Field(None, min_length=1)
+    content_en: Optional[str] = Field(None, max_length=50000, description="帖子内容（英文）")
+    content_zh: Optional[str] = Field(None, max_length=50000, description="帖子内容（中文）")
     category_id: Optional[int] = None
 
 
@@ -2761,6 +2769,8 @@ class LatestPostInfo(BaseModel):
     """最新帖子信息（用于板块预览）"""
     id: int
     title: str
+    title_en: Optional[str] = None
+    title_zh: Optional[str] = None
     author: Optional["UserInfo"] = None
     last_reply_at: Optional[datetime.datetime] = None
     reply_count: int = 0
@@ -2774,7 +2784,11 @@ class ForumPostOut(BaseModel):
     """帖子详情输出"""
     id: int
     title: str
+    title_en: Optional[str] = None
+    title_zh: Optional[str] = None
     content: str
+    content_en: Optional[str] = None
+    content_zh: Optional[str] = None
     category: CategoryInfo
     author: UserInfo
     view_count: int  # 浏览量（前端负责格式化显示）
@@ -2798,7 +2812,11 @@ class ForumPostListItem(BaseModel):
     """帖子列表项（不包含完整内容）"""
     id: int
     title: str
+    title_en: Optional[str] = None
+    title_zh: Optional[str] = None
     content_preview: str  # 内容预览（前200字符）
+    content_preview_en: Optional[str] = None  # 内容预览（英文）
+    content_preview_zh: Optional[str] = None  # 内容预览（中文）
     category: CategoryInfo
     author: UserInfo
     view_count: int  # 浏览量（前端负责格式化显示）

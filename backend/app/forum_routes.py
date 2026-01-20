@@ -1023,6 +1023,8 @@ async def get_visible_forums(
                                 latest_post_info = schemas.LatestPostInfo(
                                     id=latest_post.id,
                                     title=latest_post.title,
+                                    title_en=getattr(latest_post, 'title_en', None),
+                                    title_zh=getattr(latest_post, 'title_zh', None),
                                     author=author_info,
                                     last_reply_at=latest_post.last_reply_at or latest_post.created_at,
                                     reply_count=latest_post.reply_count,
@@ -1579,15 +1581,12 @@ async def get_categories(
     - include_latest_post: 如果为 True，每个板块会包含最新帖子的简要信息（标题、作者、最后回复时间等）
     注意：分类列表只显示对普通用户可见的最新帖子（is_visible == True）
     """
-    logger.info(f"📥 获取板块列表请求: include_latest_post={include_latest_post}")
-    
     result = await db.execute(
         select(models.ForumCategory)
         .where(models.ForumCategory.is_visible == True)
         .order_by(models.ForumCategory.sort_order.asc(), models.ForumCategory.id.asc())
     )
     categories = result.scalars().all()
-    logger.info(f"📋 找到 {len(categories)} 个可见板块")
     
     # 如果需要包含最新帖子信息，需要手动构建响应
     if include_latest_post:
@@ -1609,14 +1608,6 @@ async def get_categories(
             # func.coalesce() 确保即使帖子没有回复，也会使用 created_at 进行排序并显示在预览中
             latest_post = None
             try:
-                # 先检查是否有任何帖子（用于调试）
-                check_result = await db.execute(
-                    select(func.count(models.ForumPost.id))
-                    .where(models.ForumPost.category_id == category.id)
-                )
-                total_posts = check_result.scalar() or 0
-                logger.debug(f"板块 {category.id} 总帖子数（包括已删除/不可见）: {total_posts}")
-                
                 latest_post_result = await db.execute(
                     select(models.ForumPost)
                     .where(
@@ -1637,58 +1628,9 @@ async def get_categories(
                     )
                 )
                 latest_post = latest_post_result.scalar_one_or_none()
-                
-                if not latest_post and total_posts > 0:
-                    logger.debug(
-                        f"板块 {category.id} 查询条件: category_id={category.id}, "
-                        f"is_deleted=False, is_visible=True"
-                    )
             except Exception as e:
-                logger.error(f"❌ 查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
                 latest_post = None
-            
-            # 详细调试日志
-            logger.info(
-                f"板块 {category.id} ({category.name}): "
-                f"可见帖子数={real_post_count}, "
-                f"找到最新帖子={'是' if latest_post else '否'}"
-            )
-            
-            if latest_post:
-                logger.info(
-                    f"板块 {category.id} 最新帖子: ID={latest_post.id}, "
-                    f"标题={latest_post.title[:50]}, "
-                    f"is_deleted={latest_post.is_deleted}, "
-                    f"is_visible={latest_post.is_visible}, "
-                    f"last_reply_at={latest_post.last_reply_at}, "
-                    f"created_at={latest_post.created_at}, "
-                    f"author={'存在' if latest_post.author else '不存在'}"
-                )
-            
-            # 调试：如果帖子数大于0但没有找到最新帖子，记录详细日志
-            if real_post_count > 0 and not latest_post:
-                # 检查是否有帖子但不符合条件
-                all_posts_result = await db.execute(
-                    select(models.ForumPost)
-                    .where(models.ForumPost.category_id == category.id)
-                    .limit(10)
-                )
-                all_posts = all_posts_result.scalars().all()
-                
-                # 详细记录每个帖子的状态
-                post_details = []
-                for p in all_posts:
-                    post_details.append(
-                        f"ID={p.id}, is_deleted={p.is_deleted}, is_visible={p.is_visible}, "
-                        f"title={p.title[:30]}"
-                    )
-                
-                logger.warning(
-                    f"⚠️ 板块 {category.id} ({category.name}) 有 {real_post_count} 个可见帖子，但未找到最新可见帖子。\n"
-                    f"该板块共有 {len(all_posts)} 个帖子（包括已删除/不可见的）。\n"
-                    f"帖子详情：\n" + "\n".join(post_details) + "\n"
-                    f"可能原因：查询条件不匹配或数据不一致"
-                )
             
             # 添加最新帖子信息（如果存在）
             latest_post_info = None
@@ -1721,8 +1663,8 @@ async def get_categories(
                 icon=category.icon,
                 sort_order=category.sort_order,
                 is_visible=category.is_visible,
-                is_admin_only=getattr(category, 'is_admin_only', False),  # 兼容可能没有此字段的情况
-                post_count=real_post_count,  # 使用实时统计的帖子数
+                is_admin_only=getattr(category, 'is_admin_only', False),
+                post_count=real_post_count,
                 last_post_at=category.last_post_at,
                 created_at=category.created_at,
                 updated_at=category.updated_at,
@@ -1731,34 +1673,19 @@ async def get_categories(
             
             category_list.append(category_out)
         
-        # 返回包含最新帖子信息的列表（注意：这会改变响应模型，但为了功能完整性暂时这样实现）
-        latest_post_count = sum(1 for c in category_list if c.latest_post is not None)
-        logger.info(f"✅ 返回 {len(category_list)} 个板块，其中 {latest_post_count} 个板块包含 latest_post")
         return {"categories": category_list}
     
     # 标准返回（不包含最新帖子信息）- 需要显式序列化以包含多语言字段
     category_list = []
     for category in categories:
-        # 调试：输出原始数据
-        name_en = getattr(category, 'name_en', None)
-        name_zh = getattr(category, 'name_zh', None)
-        description_en = getattr(category, 'description_en', None)
-        description_zh = getattr(category, 'description_zh', None)
-        
-        logger.debug(
-            f"板块 {category.id} ({category.name}): "
-            f"name_en={name_en}, name_zh={name_zh}, "
-            f"description_en={description_en}, description_zh={description_zh}"
-        )
-        
         category_out = schemas.ForumCategoryOut(
             id=category.id,
             name=category.name,
-            name_en=name_en,
-            name_zh=name_zh,
+            name_en=getattr(category, 'name_en', None),
+            name_zh=getattr(category, 'name_zh', None),
             description=category.description,
-            description_en=description_en,
-            description_zh=description_zh,
+            description_en=getattr(category, 'description_en', None),
+            description_zh=getattr(category, 'description_zh', None),
             icon=category.icon,
             sort_order=category.sort_order,
             is_visible=category.is_visible,
@@ -1772,15 +1699,6 @@ async def get_categories(
             updated_at=category.updated_at
         )
         category_list.append(category_out)
-    
-    # 调试：输出序列化后的数据
-    logger.info(f"✅ 返回 {len(category_list)} 个板块（标准格式，不包含 latest_post）")
-    for cat in category_list[:3]:  # 只输出前3个作为示例
-        logger.debug(
-            f"序列化后板块 {cat.id}: name={cat.name}, "
-            f"name_en={cat.name_en}, name_zh={cat.name_zh}, "
-            f"description_en={cat.description_en}, description_zh={cat.description_zh}"
-        )
     
     return {"categories": category_list}
 
@@ -2744,10 +2662,23 @@ async def get_posts(
         # 计算帖子的浏览量（数据库值 + Redis增量）
         display_view_count = await get_post_display_view_count(post.id, post.view_count)
         
+        # 生成内容预览（支持双语）
+        content_preview = strip_markdown(post.content)
+        content_preview_en = None
+        content_preview_zh = None
+        if hasattr(post, 'content_en') and post.content_en:
+            content_preview_en = strip_markdown(post.content_en)
+        if hasattr(post, 'content_zh') and post.content_zh:
+            content_preview_zh = strip_markdown(post.content_zh)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
-            content_preview=strip_markdown(post.content),
+            title_en=getattr(post, 'title_en', None),
+            title_zh=getattr(post, 'title_zh', None),
+            content_preview=content_preview,
+            content_preview_en=content_preview_en,
+            content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
             view_count=display_view_count,
@@ -2861,10 +2792,14 @@ async def get_post(
     return schemas.ForumPostOut(
         id=post.id,
         title=post.title,
+        title_en=getattr(post, 'title_en', None),
+        title_zh=getattr(post, 'title_zh', None),
         content=post.content,
+        content_en=getattr(post, 'content_en', None),
+        content_zh=getattr(post, 'content_zh', None),
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
         author=await get_post_author_info(db, post, request),
-            view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
+        view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
         reply_count=post.reply_count,
         like_count=post.like_count,
         favorite_count=post.favorite_count,
@@ -3006,12 +2941,29 @@ async def create_post(
                 headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
             )
     
+    # 自动填充双语字段
+    from app.utils.bilingual_helper import auto_fill_bilingual_fields
+    
+    normalized_content = post.content.strip() if post.content else None
+    _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
+        name=post.title,
+        description=normalized_content,
+        name_en=post.title_en.strip() if post.title_en else None,
+        name_zh=post.title_zh.strip() if post.title_zh else None,
+        description_en=post.content_en.strip() if post.content_en else None,
+        description_zh=post.content_zh.strip() if post.content_zh else None,
+    )
+    
     # 创建帖子
     if admin_user:
         # 管理员发帖：使用 admin_author_id
         db_post = models.ForumPost(
             title=post.title,
+            title_en=title_en,
+            title_zh=title_zh,
             content=post.content,
+            content_en=content_en,
+            content_zh=content_zh,
             category_id=post.category_id,
             admin_author_id=admin_user.id,
             author_id=None  # 管理员发帖时，author_id 为空
@@ -3020,7 +2972,11 @@ async def create_post(
         # 普通用户发帖：使用 author_id
         db_post = models.ForumPost(
             title=post.title,
+            title_en=title_en,
+            title_zh=title_zh,
             content=post.content,
+            content_en=content_en,
+            content_zh=content_zh,
             category_id=post.category_id,
             author_id=current_user.id,
             admin_author_id=None
@@ -3050,7 +3006,11 @@ async def create_post(
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
+        title_en=getattr(db_post, 'title_en', None),
+        title_zh=getattr(db_post, 'title_zh', None),
         content=db_post.content,
+        content_en=getattr(db_post, 'content_en', None),
+        content_zh=getattr(db_post, 'content_zh', None),
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
         author=author_info,
         view_count=db_post.view_count,
@@ -3147,6 +3107,28 @@ async def update_post(
     old_category_id = db_post.category_id
     old_is_visible = db_post.is_visible
     
+    # 如果更新了 title 或 content，自动填充双语字段
+    if 'title' in update_data or 'content' in update_data:
+        from app.utils.bilingual_helper import auto_fill_bilingual_fields
+        
+        updated_title = update_data.get('title', db_post.title)
+        updated_content = update_data.get('content', db_post.content)
+        
+        _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
+            name=updated_title,
+            description=updated_content.strip() if updated_content else None,
+            name_en=update_data.get('title_en') or db_post.title_en,
+            name_zh=update_data.get('title_zh') or db_post.title_zh,
+            description_en=update_data.get('content_en') or db_post.content_en,
+            description_zh=update_data.get('content_zh') or db_post.content_zh,
+        )
+        
+        # 更新双语字段
+        update_data['title_en'] = title_en
+        update_data['title_zh'] = title_zh
+        update_data['content_en'] = content_en
+        update_data['content_zh'] = content_zh
+    
     # 如果更新了板块，需要检查新板块的权限（学校板块需要权限）
     if "category_id" in update_data and update_data["category_id"] != old_category_id:
         new_category_id = update_data["category_id"]
@@ -3230,7 +3212,11 @@ async def update_post(
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
+        title_en=getattr(db_post, 'title_en', None),
+        title_zh=getattr(db_post, 'title_zh', None),
         content=db_post.content,
+        content_en=getattr(db_post, 'content_en', None),
+        content_zh=getattr(db_post, 'content_zh', None),
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
         author=await get_post_author_info(db, db_post, request),
         view_count=db_post.view_count,
@@ -6310,10 +6296,23 @@ async def get_hot_posts(
         # 计算帖子的浏览量（数据库值 + Redis增量）
         display_view_count = await get_post_display_view_count(post.id, post.view_count)
         
+        # 生成内容预览（支持双语）
+        content_preview = strip_markdown(post.content)
+        content_preview_en = None
+        content_preview_zh = None
+        if hasattr(post, 'content_en') and post.content_en:
+            content_preview_en = strip_markdown(post.content_en)
+        if hasattr(post, 'content_zh') and post.content_zh:
+            content_preview_zh = strip_markdown(post.content_zh)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
-            content_preview=strip_markdown(post.content),
+            title_en=getattr(post, 'title_en', None),
+            title_zh=getattr(post, 'title_zh', None),
+            content_preview=content_preview,
+            content_preview_en=content_preview_en,
+            content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
             view_count=display_view_count,
@@ -6515,10 +6514,23 @@ async def get_user_hot_posts(
         # 计算帖子的浏览量（数据库值 + Redis增量）
         display_view_count = await get_post_display_view_count(post.id, post.view_count)
         
+        # 生成内容预览（支持双语）
+        content_preview = strip_markdown(post.content)
+        content_preview_en = None
+        content_preview_zh = None
+        if hasattr(post, 'content_en') and post.content_en:
+            content_preview_en = strip_markdown(post.content_en)
+        if hasattr(post, 'content_zh') and post.content_zh:
+            content_preview_zh = strip_markdown(post.content_zh)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
-            content_preview=strip_markdown(post.content),
+            title_en=getattr(post, 'title_en', None),
+            title_zh=getattr(post, 'title_zh', None),
+            content_preview=content_preview,
+            content_preview_en=content_preview_en,
+            content_preview_zh=content_preview_zh,
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
             view_count=display_view_count,
