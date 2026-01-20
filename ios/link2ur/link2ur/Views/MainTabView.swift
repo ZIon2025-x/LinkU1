@@ -129,13 +129,10 @@ public struct MainTabView: View {
                     handleSelectionChange(newValue, oldSelection: oldSelection)
                     // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
                     if oldSelection != 0 {
-                        print("🔍 [MainTabView] ⚠️ 延迟触发首页重置")
-                        // 延迟一点触发重置通知，只重置 selectedTab
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            print("🔍 [MainTabView] 执行延迟的首页重置")
-                            appState.shouldResetHomeView = true
-                            NotificationCenter.default.post(name: .resetHomeView, object: nil)
-                        }
+                        print("🔍 [MainTabView] ⚠️ 立即触发首页重置")
+                        // 优化：移除延迟，立即触发，提升响应速度
+                        appState.shouldResetHomeView = true
+                        NotificationCenter.default.post(name: .resetHomeView, object: nil)
                     } else {
                         print("🔍 [MainTabView] 已在首页，不触发重置")
                     }

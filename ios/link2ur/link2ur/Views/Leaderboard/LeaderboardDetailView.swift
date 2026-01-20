@@ -26,7 +26,7 @@ struct LeaderboardDetailView: View {
                         
                         VStack(alignment: .leading, spacing: AppSpacing.lg) {
                             // 2. 描述内容
-                            if let description = leaderboard.description, !description.description.isEmpty {
+                            if let description = leaderboard.displayDescription, !description.isEmpty {
                                 Text(description)
                                     .font(AppTypography.body)
                                     .foregroundColor(AppColors.textSecondary)
@@ -232,7 +232,7 @@ struct LeaderboardHeroSection: View {
             
             // 标题
             VStack(alignment: .leading, spacing: 4) {
-                Text(leaderboard.name)
+                Text(leaderboard.displayName)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
@@ -557,12 +557,12 @@ struct LeaderboardShareView: View {
                 
                 // 标题和描述
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(leaderboard.name)
+                    Text(leaderboard.displayName)
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
-                    if let description = leaderboard.description, !description.isEmpty {
+                    if let description = leaderboard.displayDescription, !description.isEmpty {
                         Text(description)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
@@ -629,7 +629,7 @@ struct LeaderboardShareView: View {
     
     /// 获取分享标题
     private func getShareTitle(for leaderboard: CustomLeaderboard) -> String {
-        let trimmedName = leaderboard.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = leaderboard.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedName.isEmpty {
             return "排行榜"
         }
@@ -638,7 +638,7 @@ struct LeaderboardShareView: View {
     
     /// 获取分享描述
     private func getShareDescription(for leaderboard: CustomLeaderboard) -> String {
-        if let description = leaderboard.description, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let description = leaderboard.displayDescription, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             // 限制长度
             let maxLength = 200
             if description.count > maxLength {

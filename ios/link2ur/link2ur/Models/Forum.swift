@@ -21,8 +21,12 @@ struct LatestPostInfo: Codable {
 // 论坛板块
 struct ForumCategory: Codable, Identifiable {
     let id: Int
-    let name: String
-    let description: String?
+    let name: String  // 保留原字段用于兼容
+    let nameEn: String?  // 英文名称
+    let nameZh: String?  // 中文名称
+    let description: String?  // 保留原字段用于兼容
+    let descriptionEn: String?  // 英文描述
+    let descriptionZh: String?  // 中文描述
     let icon: String?
     let postCount: Int?  // 改为可选，因为在帖子中嵌套时可能不包含此字段
     let lastPostAt: String?
@@ -35,6 +39,10 @@ struct ForumCategory: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, name, description, icon, type, country
+        case nameEn = "name_en"
+        case nameZh = "name_zh"
+        case descriptionEn = "description_en"
+        case descriptionZh = "description_zh"
         case postCount = "post_count"
         case lastPostAt = "last_post_at"
         case latestPost = "latest_post"
@@ -48,7 +56,11 @@ struct ForumCategory: Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        nameEn = try container.decodeIfPresent(String.self, forKey: .nameEn)
+        nameZh = try container.decodeIfPresent(String.self, forKey: .nameZh)
         description = try container.decodeIfPresent(String.self, forKey: .description)
+        descriptionEn = try container.decodeIfPresent(String.self, forKey: .descriptionEn)
+        descriptionZh = try container.decodeIfPresent(String.self, forKey: .descriptionZh)
         icon = try container.decodeIfPresent(String.self, forKey: .icon)
         postCount = try container.decodeIfPresent(Int.self, forKey: .postCount)
         lastPostAt = try container.decodeIfPresent(String.self, forKey: .lastPostAt)
@@ -63,6 +75,30 @@ struct ForumCategory: Codable, Identifiable {
     // 检查是否需要学生认证才能访问
     var requiresStudentVerification: Bool {
         return type == "root" || type == "university"
+    }
+    
+    // 根据当前语言获取显示名称
+    var displayName: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            // 中文环境：优先使用 nameZh，否则使用 name
+            return nameZh?.isEmpty == false ? nameZh! : name
+        } else {
+            // 英文环境：优先使用 nameEn，否则使用 name
+            return nameEn?.isEmpty == false ? nameEn! : name
+        }
+    }
+    
+    // 根据当前语言获取显示描述
+    var displayDescription: String? {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            // 中文环境：优先使用 descriptionZh，否则使用 description
+            return descriptionZh?.isEmpty == false ? descriptionZh : description
+        } else {
+            // 英文环境：优先使用 descriptionEn，否则使用 description
+            return descriptionEn?.isEmpty == false ? descriptionEn : description
+        }
     }
 }
 

@@ -94,8 +94,20 @@ struct LeaderboardView: View {
         .refreshable {
             viewModel.loadLeaderboards(sort: selectedSort, forceRefresh: true)
         }
-        .onAppear {
+        .task {
+            // 优化：先从缓存加载，避免初次进入时显示空状态
+            // 排行榜肯定不是空的，应该先从缓存加载
             if viewModel.leaderboards.isEmpty {
+                // loadLeaderboards 内部已经会从缓存加载，但这里确保先显示缓存数据
+                if let cachedLeaderboards = CacheManager.shared.loadLeaderboards(location: nil, sort: selectedSort) {
+                    viewModel.leaderboards = cachedLeaderboards
+                    Logger.success("从缓存加载了 \(cachedLeaderboards.count) 个排行榜", category: .cache)
+                }
+            }
+        }
+        .onAppear {
+            // 优化：只在缓存也为空时才加载，避免不必要的网络请求
+            if viewModel.leaderboards.isEmpty && !viewModel.isLoading {
                 viewModel.loadLeaderboards(sort: selectedSort)
             }
         }
@@ -149,13 +161,13 @@ struct LeaderboardCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Text(leaderboard.name)
+                    Text(leaderboard.displayName)
                         .font(AppTypography.title3)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
                     
-                    if let description = leaderboard.description {
+                    if let description = leaderboard.displayDescription {
                         Text(description)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)

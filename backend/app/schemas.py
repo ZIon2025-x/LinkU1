@@ -2586,8 +2586,12 @@ class FleaMarketReportResponse(BaseModel):
 
 # 板块相关 Schemas
 class ForumCategoryBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=100)  # 保留原字段用于兼容
+    name_en: Optional[str] = Field(None, max_length=100, description="英文名称")
+    name_zh: Optional[str] = Field(None, max_length=100, description="中文名称")
+    description: Optional[str] = None  # 保留原字段用于兼容
+    description_en: Optional[str] = Field(None, description="英文描述")
+    description_zh: Optional[str] = Field(None, description="中文描述")
     icon: Optional[str] = Field(None, max_length=200)
     sort_order: int = Field(0, ge=0)
     is_visible: bool = True
@@ -2617,8 +2621,12 @@ class ForumCategoryUpdate(BaseModel):
 
 class ForumCategoryRequestCreate(BaseModel):
     """申请新建板块"""
-    name: str = Field(..., min_length=1, max_length=100, description="板块名称")
-    description: Optional[str] = Field(None, max_length=500, description="板块描述（最多500字符）")
+    name: str = Field(..., min_length=1, max_length=100, description="板块名称（保留用于兼容）")
+    name_en: Optional[str] = Field(None, max_length=100, description="英文名称")
+    name_zh: Optional[str] = Field(None, max_length=100, description="中文名称")
+    description: Optional[str] = Field(None, max_length=500, description="板块描述（保留用于兼容，最多500字符）")
+    description_en: Optional[str] = Field(None, max_length=500, description="英文描述（最多500字符）")
+    description_zh: Optional[str] = Field(None, max_length=500, description="中文描述（最多500字符）")
     icon: Optional[str] = Field(None, max_length=200, description="板块图标（emoji或URL）")
     type: str = Field("general", pattern="^(general|root|university)$", description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
     
@@ -3093,6 +3101,10 @@ class CustomLeaderboardCreate(CustomLeaderboardBase):
 
 class CustomLeaderboardOut(CustomLeaderboardBase):
     id: int
+    name_en: Optional[str] = None  # 英文名称
+    name_zh: Optional[str] = None  # 中文名称
+    description_en: Optional[str] = None  # 英文描述
+    description_zh: Optional[str] = None  # 中文描述
     applicant_id: str
     applicant: Optional[UserInfo] = None  # 申请者信息（可选，需要时加载）
     status: str

@@ -13,11 +13,18 @@ struct FleaMarketView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.items.isEmpty {
-                // 使用网格骨架屏
+                // 使用网格骨架屏（iPad适配）
                 ScrollView {
-                    GridSkeleton(columns: 2, rows: 4)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
+                    GeometryReader { geometry in
+                        let horizontalSizeClass = geometry.size.width > 600 ? UserInterfaceSizeClass.regular : UserInterfaceSizeClass.compact
+                        let columnCount = AdaptiveLayout.gridColumnCount(
+                            horizontalSizeClass: horizontalSizeClass,
+                            itemType: .fleaMarket
+                        )
+                        GridSkeleton(columns: columnCount, rows: 4)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                    }
                 }
             } else if viewModel.items.isEmpty {
             EmptyStateView(
@@ -27,22 +34,29 @@ struct FleaMarketView: View {
             )
             } else {
                 ScrollView {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible(), spacing: AppSpacing.sm),
-                        GridItem(.flexible(), spacing: AppSpacing.sm)
-                    ], spacing: AppSpacing.md) {
-                        ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
-                            NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
-                                ItemCard(item: item, isFavorited: viewModel.favoritedItemIds.contains(item.id))
-                                    .drawingGroup() // 优化复杂卡片渲染性能
+                    // 优化：iPad适配 - 根据设备类型和SizeClass动态调整列数
+                    GeometryReader { geometry in
+                        let horizontalSizeClass = geometry.size.width > 600 ? UserInterfaceSizeClass.regular : UserInterfaceSizeClass.compact
+                        let columns = AdaptiveLayout.adaptiveGridColumns(
+                            horizontalSizeClass: horizontalSizeClass,
+                            itemType: .fleaMarket,
+                            spacing: AppSpacing.sm
+                        )
+                        
+                        LazyVGrid(columns: columns, spacing: AppSpacing.md) {
+                            ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
+                                NavigationLink(destination: FleaMarketDetailView(itemId: item.id)) {
+                                    ItemCard(item: item, isFavorited: viewModel.favoritedItemIds.contains(item.id))
+                                        .drawingGroup() // 优化复杂卡片渲染性能
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                                .id(item.id) // 确保稳定的id，优化视图复用
+                                .listItemAppear(index: index, totalItems: viewModel.items.count) // 添加错落入场动画
                             }
-                            .buttonStyle(ScaleButtonStyle())
-                            .id(item.id) // 确保稳定的id，优化视图复用
-                            .listItemAppear(index: index, totalItems: viewModel.items.count) // 添加错落入场动画
                         }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.sm)
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
                 }
                 // 注意：不能在 ScrollView 上使用 drawingGroup，会阻止点击事件
             }

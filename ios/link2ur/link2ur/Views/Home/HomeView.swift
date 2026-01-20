@@ -678,7 +678,7 @@ struct TaskExpertListContentView: View {
                         
                         // 城市筛选
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("所在城市")
+                            Text(LocalizationKey.taskExpertLocation.localized)
                                 .font(AppTypography.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.textPrimary)
@@ -1688,7 +1688,7 @@ struct RecommendedTasksSection: View {
                                     },
                                     enableLongPress: false  // 首页暂时禁用长按功能
                                 )
-                                .frame(width: 200)
+                                .frame(width: AdaptiveLayout.recommendedTaskCardWidth(screenWidth: UIScreen.main.bounds.width))
                             }
                             .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle，提供丝滑按压反馈
                             .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
@@ -1714,8 +1714,14 @@ struct RecommendedTasksSection: View {
         // 优化：移除VStack的裁剪限制，允许子视图（特别是contextMenu）超出边界
         .fixedSize(horizontal: false, vertical: true) // 确保VStack不会裁剪子视图
         .task {
-            // 只在首次加载时加载推荐任务，不自动刷新
+            // 优化：先从缓存加载，立即显示内容，提升首次进入流畅度
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
+                // 先尝试从缓存加载，避免显示空状态
+                viewModel.loadTasksFromCache(status: "open")
+                
+                // 延迟加载网络数据，让视图先渲染完成
+                try? await _Concurrency.Task.sleep(nanoseconds: 50_000_000) // 50ms
+                
                 if !appState.isAuthenticated {
                     // 未登录，加载默认任务
                     viewModel.loadTasks(status: "open")
@@ -1876,7 +1882,7 @@ struct ActivityRow: View {
             
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 HStack(spacing: 4) {
-                    Text(activity.author?.name ?? "用户")
+                    Text(activity.author?.name ?? LocalizationKey.appUser.localized)
                         .font(AppTypography.body) // 使用 body
                         .fontWeight(.semibold)
                         .foregroundColor(AppColors.textPrimary)

@@ -2050,8 +2050,12 @@ class ForumCategory(Base):
     __tablename__ = "forum_categories"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)
-    description = Column(Text, nullable=True)
+    name = Column(String(100), unique=True, nullable=False)  # 保留原字段用于兼容
+    name_en = Column(String(100), nullable=True)  # 英文名称
+    name_zh = Column(String(100), nullable=True)  # 中文名称
+    description = Column(Text, nullable=True)  # 保留原字段用于兼容
+    description_en = Column(Text, nullable=True)  # 英文描述
+    description_zh = Column(Text, nullable=True)  # 中文描述
     icon = Column(String(200), nullable=True)
     sort_order = Column(Integer, default=0, server_default=text('0'))
     is_visible = Column(Boolean, default=True, server_default=text('true'))
@@ -2081,8 +2085,12 @@ class ForumCategoryRequest(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     requester_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
+    name = Column(String(100), nullable=False)  # 保留原字段用于兼容
+    name_en = Column(String(100), nullable=True)  # 英文名称
+    name_zh = Column(String(100), nullable=True)  # 中文名称
+    description = Column(Text, nullable=True)  # 保留原字段用于兼容
+    description_en = Column(Text, nullable=True)  # 英文描述
+    description_zh = Column(Text, nullable=True)  # 中文描述
     icon = Column(String(200), nullable=True)
     type = Column(String(20), default='general', server_default=text("'general'"))  # general, root, university
     country = Column(String(10), nullable=True)  # 国家代码（如 UK），仅 type=root 时使用
@@ -2410,9 +2418,13 @@ class CustomLeaderboard(Base):
     __tablename__ = "custom_leaderboards"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)  # 榜单名称，如"London中餐榜"
+    name = Column(String(100), nullable=False)  # 榜单名称，如"London中餐榜"（保留原字段用于兼容）
+    name_en = Column(String(100), nullable=True)  # 英文名称
+    name_zh = Column(String(100), nullable=True)  # 中文名称
     location = Column(String(100), nullable=False)  # 地区，如"London", "Manchester"
-    description = Column(Text, nullable=True)  # 榜单描述
+    description = Column(Text, nullable=True)  # 榜单描述（保留原字段用于兼容）
+    description_en = Column(Text, nullable=True)  # 英文描述
+    description_zh = Column(Text, nullable=True)  # 中文描述
     cover_image = Column(String(500), nullable=True)  # 封面图片
     
     # 申请信息

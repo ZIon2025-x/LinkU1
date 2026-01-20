@@ -105,11 +105,18 @@ struct TasksView: View {
                     
                     // 内容区域
                     if (viewModel.isLoading || recommendedViewModel.isLoading) && allTasks.isEmpty {
-                        // 使用网格骨架屏，提供更好的加载体验
+                        // 使用网格骨架屏，提供更好的加载体验（iPad适配）
                         ScrollView {
-                            GridSkeleton(columns: 2, rows: 4)
-                                .padding(.horizontal, AppSpacing.md)
-                                .padding(.vertical, AppSpacing.sm)
+                            GeometryReader { geometry in
+                                let horizontalSizeClass = geometry.size.width > 600 ? UserInterfaceSizeClass.regular : UserInterfaceSizeClass.compact
+                                let columnCount = AdaptiveLayout.gridColumnCount(
+                                    horizontalSizeClass: horizontalSizeClass,
+                                    itemType: .task
+                                )
+                                GridSkeleton(columns: columnCount, rows: 4)
+                                    .padding(.horizontal, AppSpacing.md)
+                                    .padding(.vertical, AppSpacing.sm)
+                            }
                         }
                     } else if let error = viewModel.errorMessage, allTasks.isEmpty {
                         // 使用统一的错误状态组件
@@ -128,85 +135,95 @@ struct TasksView: View {
                         )
                     } else {
                         ScrollView {
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: AppSpacing.md),
-                                GridItem(.flexible(), spacing: AppSpacing.md)
-                            ], spacing: AppSpacing.md) {
-                                // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
-                                ForEach(allTasks, id: \.id) { task in
-                                    let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
-                                    
-                                    NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                        TaskCard(
-                                            task: task,
-                                            isRecommended: task.isRecommended == true,
-                                            onNotInterested: nil, // contextMenu 移到外层
-                                            enableLongPress: false // contextMenu 移到外层
-                                        )
-                                    }
-                                    .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
-                                    // 关键：把 clipShape/contentShape/contextMenu 都放在 NavigationLink 这层，确保长按高亮按圆角显示
-                                    .clipShape(cardShape)
-                                    .contentShape(cardShape)
-                                    // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
-                                    .contentShape(.interaction, cardShape)
-                                    // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
-                                    .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
-                                    .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            // 增强：记录跳过任务（用于推荐系统负反馈）
-                                            recordTaskSkip(taskId: task.id)
-                                        } label: {
-                                            Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
-                                        }
-                                    }
-                                    // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
-                                    .modifier(TaskCardContextMenuPreviewModifier(shape: cardShape))
-                                    .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
-                                    .id(task.id) // 确保稳定的id，优化视图复用
-                                    .onAppear {
-                                        // 性能优化：只在接近最后一个任务时加载更多（提前3个）
-                                        let threshold = max(0, allTasks.count - 3)
-                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                           index >= threshold {
-                                            viewModel.loadMoreTasks()
-                                        }
+                            // 优化：iPad适配 - 根据设备类型和SizeClass动态调整列数
+                            GeometryReader { geometry in
+                                let horizontalSizeClass = geometry.size.width > 600 ? UserInterfaceSizeClass.regular : UserInterfaceSizeClass.compact
+                                let columns = AdaptiveLayout.adaptiveGridColumns(
+                                    horizontalSizeClass: horizontalSizeClass,
+                                    itemType: .task,
+                                    spacing: AppSpacing.md
+                                )
+                                
+                                LazyVGrid(columns: columns, spacing: AppSpacing.md) {
+                                    // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
+                                    ForEach(allTasks, id: \.id) { task in
+                                        let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
                                         
-                                        // 图片预加载：预加载即将显示的任务图片（提前2个）
-                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                           index < allTasks.count - 2 {
-                                            let nextIndex = index + 1
-                                            if nextIndex < allTasks.count {
-                                                let nextTask = allTasks[nextIndex]
-                                                if let images = nextTask.images, let firstImage = images.first, !firstImage.isEmpty {
-                                                    // 检查是否已缓存，未缓存则预加载
-                                                    if ImageCache.shared.getCachedImage(from: firstImage) == nil {
-                                                        ImageCache.shared.loadImage(from: firstImage)
-                                                            .sink(receiveValue: { _ in })
-                                                            .store(in: &imagePreloadCancellables)
+                                        NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                                            TaskCard(
+                                                task: task,
+                                                isRecommended: task.isRecommended == true,
+                                                onNotInterested: nil, // contextMenu 移到外层
+                                                enableLongPress: false // contextMenu 移到外层
+                                            )
+                                        }
+                                        .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                                        // 关键：把 clipShape/contentShape/contextMenu 都放在 NavigationLink 这层，确保长按高亮按圆角显示
+                                        .clipShape(cardShape)
+                                        .contentShape(cardShape)
+                                        // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
+                                        .contentShape(.interaction, cardShape)
+                                        // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
+                                        .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+                                        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                // 增强：记录跳过任务（用于推荐系统负反馈）
+                                                recordTaskSkip(taskId: task.id)
+                                            } label: {
+                                                Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
+                                            }
+                                        }
+                                        // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
+                                        .modifier(TaskCardContextMenuPreviewModifier(shape: cardShape))
+                                        .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
+                                        .id(task.id) // 确保稳定的id，优化视图复用
+                                        .onAppear {
+                                            // 性能优化：只在接近最后一个任务时加载更多（提前3个）
+                                            let threshold = max(0, allTasks.count - 3)
+                                            if let index = allTasks.firstIndex(where: { $0.id == task.id }),
+                                               index >= threshold {
+                                                viewModel.loadMoreTasks()
+                                            }
+                                            
+                                            // 图片预加载：预加载即将显示的任务图片（提前2个）
+                                            if let index = allTasks.firstIndex(where: { $0.id == task.id }),
+                                               index < allTasks.count - 2 {
+                                                let nextIndex = index + 1
+                                                if nextIndex < allTasks.count {
+                                                    let nextTask = allTasks[nextIndex]
+                                                    if let images = nextTask.images, let firstImage = images.first, !firstImage.isEmpty {
+                                                        // 检查是否已缓存，未缓存则预加载
+                                                        if ImageCache.shared.getCachedImage(from: firstImage) == nil {
+                                                            ImageCache.shared.loadImage(from: firstImage)
+                                                                .sink(receiveValue: { _ in })
+                                                                .store(in: &imagePreloadCancellables)
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                
-                                // 加载更多指示器
-                                if viewModel.isLoadingMore || recommendedViewModel.isLoadingMore {
-                                    HStack {
-                                        Spacer()
-                                        CompactLoadingView()
-                                            .padding()
-                                        Spacer()
+                                    
+                                    // 加载更多指示器（使用动态列数）
+                                    if viewModel.isLoadingMore || recommendedViewModel.isLoadingMore {
+                                        HStack {
+                                            Spacer()
+                                            CompactLoadingView()
+                                                .padding()
+                                            Spacer()
+                                        }
+                                        .gridCellColumns(AdaptiveLayout.gridColumnCount(
+                                            horizontalSizeClass: horizontalSizeClass,
+                                            itemType: .task
+                                        ))
                                     }
-                                    .gridCellColumns(2)
                                 }
+                                .padding(.horizontal, AppSpacing.md)
+                                .padding(.vertical, AppSpacing.md)
+                                // 优化：在Grid底部添加额外padding，确保最后一个卡片长按时不被裁剪
+                                .padding(.bottom, AppSpacing.lg)
                             }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, AppSpacing.md)
-                            // 优化：在Grid底部添加额外padding，确保最后一个卡片长按时不被裁剪
-                            .padding(.bottom, AppSpacing.lg)
                         }
                         // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
                         .scrollContentBackground(.hidden)

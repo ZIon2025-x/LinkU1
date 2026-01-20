@@ -1766,11 +1766,28 @@ async def request_new_category(
                 detail="您已提交过相同名称的申请，请等待审核"
             )
         
+        # 自动填充双语字段
+        from app.utils.bilingual_helper import auto_fill_bilingual_fields
+        
+        normalized_description = request_data.description.strip() if request_data.description else None
+        _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+            name=normalized_name,
+            description=normalized_description,
+            name_en=request_data.name_en.strip() if request_data.name_en else None,
+            name_zh=request_data.name_zh.strip() if request_data.name_zh else None,
+            description_en=request_data.description_en.strip() if request_data.description_en else None,
+            description_zh=request_data.description_zh.strip() if request_data.description_zh else None,
+        )
+        
         # 创建申请
         new_request = models.ForumCategoryRequest(
             requester_id=current_user.id,
             name=normalized_name,
-            description=request_data.description.strip() if request_data.description else None,
+            name_en=name_en,
+            name_zh=name_zh,
+            description=normalized_description,
+            description_en=description_en,
+            description_zh=description_zh,
             icon=request_data.icon.strip() if request_data.icon else None,
             type=request_data.type,
             country=request_data.country,
@@ -1988,6 +2005,54 @@ async def review_category_request(
         
         logger.info(f"管理员 {current_admin.id} 批准了板块申请 {request_id}，创建了板块 {new_category.id}")
         
+        # 发送批准通知给申请人
+        try:
+            from app import async_crud
+            
+            title = "板块申请已通过"
+            title_en = "Forum Category Application Approved"
+            content = f"恭喜！您申请的板块「{category_request.name}」已通过审核，现已创建。"
+            content_en = f"Congratulations! Your forum category application '{category_request.name}' has been approved and is now created."
+            
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=category_request.requester_id,
+                notification_type="forum_category_approved",
+                title=title,
+                content=content,
+                title_en=title_en,
+                content_en=content_en,
+                related_id=str(new_category.id),
+                related_type="forum_category"
+            )
+            
+            # 发送推送通知
+            try:
+                await send_push_notification_async_safe(
+                    db=db,
+                    user_id=category_request.requester_id,
+                    notification_type="forum_category_approved",
+                    data={"category_id": new_category.id},
+                    template_vars={
+                        "category_name": category_request.name
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送板块批准推送通知失败: {e}")
+            
+            logger.info(f"板块申请批准通知已发送给申请人: {category_request.requester_id}")
+        except Exception as e:
+            logger.error(f"发送板块申请批准通知失败: {e}")
+            # 通知失败不影响审核流程
+        
+        # 清理板块列表缓存
+        try:
+            from app.cache import invalidate_cache
+            invalidate_cache("forum_categories*")
+            clear_all_forum_visibility_cache(f"新板块 {new_category.id} 已创建")
+        except Exception as e:
+            logger.warning(f"清理板块缓存失败: {e}")
+        
         return {
             "message": "申请已批准，新板块已创建",
             "category": schemas.ForumCategoryOut.model_validate(new_category),
@@ -2004,6 +2069,50 @@ async def review_category_request(
         await db.refresh(category_request)
         
         logger.info(f"管理员 {current_admin.id} 拒绝了板块申请 {request_id}")
+        
+        # 发送拒绝通知给申请人
+        try:
+            from app import async_crud
+            
+            title = "板块申请未通过"
+            title_en = "Forum Category Application Rejected"
+            content = f"很抱歉，您申请的板块「{category_request.name}」未通过审核。"
+            if review_comment:
+                content += f"\n审核意见：{review_comment}"
+            content_en = f"Sorry, your forum category application '{category_request.name}' has been rejected."
+            if review_comment:
+                content_en += f"\nReview comment: {review_comment}"
+            
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=category_request.requester_id,
+                notification_type="forum_category_rejected",
+                title=title,
+                content=content,
+                title_en=title_en,
+                content_en=content_en,
+                related_id=None,
+                related_type="forum_category_request"
+            )
+            
+            # 发送推送通知
+            try:
+                await send_push_notification_async_safe(
+                    db=db,
+                    user_id=category_request.requester_id,
+                    notification_type="forum_category_rejected",
+                    data={"request_id": request_id},
+                    template_vars={
+                        "category_name": category_request.name
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送板块拒绝推送通知失败: {e}")
+            
+            logger.info(f"板块申请拒绝通知已发送给申请人: {category_request.requester_id}")
+        except Exception as e:
+            logger.error(f"发送板块申请拒绝通知失败: {e}")
+            # 通知失败不影响审核流程
         
         return {
             "message": "申请已拒绝",
@@ -2110,7 +2219,27 @@ async def create_category(
                 detail="general类型板块不应设置country或university_code字段"
             )
     
-    db_category = models.ForumCategory(**category.model_dump())
+    # 自动填充双语字段
+    from app.utils.bilingual_helper import auto_fill_bilingual_fields
+    
+    normalized_description = category.description.strip() if category.description else None
+    _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+        name=category.name,
+        description=normalized_description,
+        name_en=category.name_en.strip() if category.name_en else None,
+        name_zh=category.name_zh.strip() if category.name_zh else None,
+        description_en=category.description_en.strip() if category.description_en else None,
+        description_zh=category.description_zh.strip() if category.description_zh else None,
+    )
+    
+    # 创建板块对象，包含双语字段
+    category_dict = category.model_dump()
+    category_dict['name_en'] = name_en
+    category_dict['name_zh'] = name_zh
+    category_dict['description_en'] = description_en
+    category_dict['description_zh'] = description_zh
+    
+    db_category = models.ForumCategory(**category_dict)
     db.add(db_category)
     await db.flush()
     
@@ -2131,6 +2260,13 @@ async def create_category(
     
     await db.commit()
     await db.refresh(db_category)
+    
+    # 清理板块列表缓存
+    try:
+        from app.cache import invalidate_cache
+        invalidate_cache("forum_categories*")
+    except Exception as e:
+        logger.warning(f"清理板块缓存失败: {e}")
     
     return db_category
 
@@ -2222,6 +2358,29 @@ async def update_category(
     
     # 更新字段
     update_data = category.model_dump(exclude_unset=True)
+    
+    # 如果更新了name或description，自动填充双语字段
+    if 'name' in update_data or 'description' in update_data:
+        from app.utils.bilingual_helper import auto_fill_bilingual_fields
+        
+        updated_name = update_data.get('name', db_category.name)
+        updated_description = update_data.get('description', db_category.description)
+        
+        _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+            name=updated_name,
+            description=updated_description,
+            name_en=update_data.get('name_en') or db_category.name_en,
+            name_zh=update_data.get('name_zh') or db_category.name_zh,
+            description_en=update_data.get('description_en') or db_category.description_en,
+            description_zh=update_data.get('description_zh') or db_category.description_zh,
+        )
+        
+        # 更新双语字段
+        update_data['name_en'] = name_en
+        update_data['name_zh'] = name_zh
+        update_data['description_en'] = description_en
+        update_data['description_zh'] = description_zh
+    
     for field, value in update_data.items():
         setattr(db_category, field, value)
     
@@ -2256,6 +2415,21 @@ async def update_category(
     
     await db.commit()
     await db.refresh(db_category)
+    
+    # 清理板块列表缓存
+    try:
+        from app.cache import invalidate_cache
+        invalidate_cache("forum_categories*")
+        invalidate_cache(f"forum_category:{category_id}*")
+        # 如果可见性相关字段发生变化，清理所有用户的可见板块缓存
+        if (old_type != new_type or 
+            old_university_code != new_university_code or 
+            old_country != new_country or
+            old_is_admin_only != new_is_admin_only or
+            old_is_visible != new_is_visible):
+            clear_all_forum_visibility_cache(f"板块 {category_id} 信息更新")
+    except Exception as e:
+        logger.warning(f"清理板块缓存失败: {e}")
     
     return db_category
 
@@ -5810,6 +5984,25 @@ async def get_forum_stats(
         "replies_today": replies_today_count,
         "replies_7d": replies_7d_count,
         "replies_30d": replies_30d_count
+    }
+
+
+@router.get("/admin/pending-requests/count")
+async def get_pending_requests_count(
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取待审核申请数量统计（管理员）"""
+    # 统计待审核的板块申请
+    pending_category_requests = await db.execute(
+        select(func.count(models.ForumCategoryRequest.id))
+        .where(models.ForumCategoryRequest.status == "pending")
+    )
+    pending_category_count = pending_category_requests.scalar() or 0
+    
+    return {
+        "pending_category_requests": pending_category_count,
+        "total_pending": pending_category_count
     }
 
 

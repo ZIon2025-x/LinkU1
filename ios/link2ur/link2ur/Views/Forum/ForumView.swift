@@ -110,6 +110,17 @@ struct ForumView: View {
                 viewModel.loadCategories(universityId: nil)
             }
         }
+        .task {
+            // 优化：先从缓存加载，避免初次进入时显示空状态
+            // 论坛板块肯定不是空的，应该先从缓存加载
+            if viewModel.categories.isEmpty {
+                // 尝试从缓存加载
+                if let cachedCategories = CacheManager.shared.loadForumCategories() {
+                    viewModel.categories = cachedCategories
+                    Logger.success("从缓存加载了 \(cachedCategories.count) 个论坛板块", category: .cache)
+                }
+            }
+        }
         .onAppear {
             // 未登录用户也可以加载 general 类型的板块
             if appState.isAuthenticated {
@@ -118,6 +129,7 @@ struct ForumView: View {
                     verificationViewModel.loadStatus()
                 }
                 // 如果已认证且板块为空，加载所有板块；否则只加载 general 板块
+                // 优化：只在缓存也为空时才加载，避免不必要的网络请求
                 if let verificationStatus = verificationViewModel.verificationStatus,
                    verificationStatus.isVerified {
                     if viewModel.categories.isEmpty && !viewModel.isLoading {
@@ -128,7 +140,7 @@ struct ForumView: View {
                     viewModel.loadCategories(universityId: nil)
                 }
             } else {
-                // 未登录：如果板块为空，加载 general 板块
+                // 未登录：如果板块为空（包括缓存也为空），加载 general 板块
                 if viewModel.categories.isEmpty && !viewModel.isLoading {
                     viewModel.loadCategories(universityId: nil)
                 }
@@ -353,12 +365,12 @@ struct CategoryCard: View {
             
             // 信息区域
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                Text(category.name)
+                Text(category.displayName)
                     .font(AppTypography.body)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)
                 
-                if let description = category.description {
+                if let description = category.displayDescription {
                     Text(description)
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)

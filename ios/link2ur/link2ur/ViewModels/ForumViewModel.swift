@@ -101,12 +101,16 @@ class ForumViewModel: ObservableObject {
                             }
                             self?.categories = categories
                             self?.isRequestingCategories = false
+                            // 保存到缓存
+                            CacheManager.shared.saveForumCategories(categories)
                             Logger.success("加载了 \(categories.count) 个论坛板块（已更新收藏状态）", category: .api)
                         })
                         .store(in: &strongSelf.cancellables)
                 } else {
                     self?.categories = categories
                     self?.isRequestingCategories = false
+                    // 保存到缓存
+                    CacheManager.shared.saveForumCategories(categories)
                     Logger.success("加载了 \(categories.count) 个论坛板块", category: .api)
                 }
             })

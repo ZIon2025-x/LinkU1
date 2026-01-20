@@ -31,7 +31,7 @@ struct RecentActivity: Identifiable {
         self.createdAt = forumPost.createdAt
         self.icon = "bubble.left.and.bubble.right.fill"
         self.iconColor = AppColors.gradientPrimary
-        self.actionText = "发布了新帖子"
+        self.actionText = LocalizationKey.activityPostedForumPost.localized
     }
     
     // 跳蚤市场商品
@@ -44,7 +44,7 @@ struct RecentActivity: Identifiable {
         self.createdAt = fleaMarketItem.createdAt
         self.icon = "cart.fill"
         self.iconColor = AppColors.gradientWarning
-        self.actionText = "发布了新商品"
+        self.actionText = LocalizationKey.activityPostedFleaMarketItem.localized
     }
     
     // 发起排行榜
@@ -57,7 +57,7 @@ struct RecentActivity: Identifiable {
         self.createdAt = leaderboard.createdAt
         self.icon = "trophy.fill"
         self.iconColor = AppColors.gradientSuccess
-        self.actionText = "发起了排行榜"
+        self.actionText = LocalizationKey.activityCreatedLeaderboard.localized
     }
 }
 

@@ -39,6 +39,7 @@ struct TaskDetailView: View {
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
     @State private var viewStartTime: Date? // 增强：记录任务详情页查看开始时间（用于计算浏览时长）
+    @State private var retryWorkItem: DispatchWorkItem? // 用于取消递归重试任务
     
     // 判断当前用户是否是任务发布者
     private var isPoster: Bool {
@@ -210,6 +211,10 @@ struct TaskDetailView: View {
                 viewStartTime = Date()
             }
             .onDisappear {
+                // 取消所有待执行的重试任务，防止View销毁后仍执行任务
+                retryWorkItem?.cancel()
+                retryWorkItem = nil
+                
                 // 增强：计算浏览时长并记录（用于推荐系统学习）
                 if let startTime = viewStartTime {
                     let duration = Int(Date().timeIntervalSince(startTime))
@@ -577,26 +582,55 @@ struct TaskDetailView: View {
             return
         }
         
+        // 取消之前的重试任务（如果存在）
+        retryWorkItem?.cancel()
+        
         // 优化：使用指数退避策略，减少不必要的请求
         let delay = min(Double(attempt * attempt), 10.0) // 最大延迟10秒
         let currentTaskId = taskId
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            self.viewModel.loadTask(taskId: currentTaskId)
+        let workItem = DispatchWorkItem { [weak viewModel, weak appState] in
+            guard let viewModel = viewModel else { return }
+            
+            viewModel.loadTask(taskId: currentTaskId)
             
             // 检查任务状态是否已更新
-            if let task = self.viewModel.task, 
+            if let task = viewModel.task,
                task.status == .inProgress || task.status == .pendingConfirmation {
                 // 状态已更新，停止重试
-                self.viewModel.loadApplications(taskId: currentTaskId, currentUserId: self.appState.currentUser?.id)
+                viewModel.loadApplications(taskId: currentTaskId, currentUserId: appState?.currentUser?.id)
                 return
             }
             
             // 如果还没更新，继续重试
             if attempt < maxAttempts {
-                self.refreshTaskWithRetry(attempt: attempt + 1, maxAttempts: maxAttempts)
+                // 递归调用，创建下一个重试任务
+                let nextDelay = min(Double((attempt + 1) * (attempt + 1)), 10.0)
+                let nextWorkItem = DispatchWorkItem { [weak viewModel, weak appState] in
+                    guard let viewModel = viewModel else { return }
+                    viewModel.loadTask(taskId: currentTaskId)
+                    
+                    if let task = viewModel.task,
+                       task.status == .inProgress || task.status == .pendingConfirmation {
+                        viewModel.loadApplications(taskId: currentTaskId, currentUserId: appState?.currentUser?.id)
+                    } else if attempt + 1 < maxAttempts {
+                        // 继续递归重试
+                        DispatchQueue.main.async {
+                            self.refreshTaskWithRetry(attempt: attempt + 2, maxAttempts: maxAttempts)
+                        }
+                    }
+                }
+                // 在主线程更新retryWorkItem并安排执行
+                // 注意：struct 是值类型，不需要 weak self
+                DispatchQueue.main.async {
+                    self.retryWorkItem = nextWorkItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + nextDelay, execute: nextWorkItem)
+                }
             }
         }
+        
+        retryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 }
 
@@ -2773,6 +2807,7 @@ struct CompleteTaskSheet: View {
                     }
                     
                     if let image = UIImage(data: data) {
+                        // 在主线程更新UI
                         DispatchQueue.main.async {
                             if selectedImages.count < 5 {
                                 selectedImages.append(image)
@@ -2784,6 +2819,7 @@ struct CompleteTaskSheet: View {
                 }
             }
             
+            // 在主线程更新UI
             DispatchQueue.main.async {
                 imageSizeErrors = newSizeErrors
                 selectedItems = [] // 清空以备下次选择

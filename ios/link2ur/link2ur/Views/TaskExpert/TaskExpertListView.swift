@@ -117,11 +117,16 @@ struct TaskExpertListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
-                        showFilter = true
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            showFilter = true
+                        }
                     }) {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .foregroundColor(AppColors.primary)
                     }
+                    .transaction { $0.animation = nil } // 禁用动画
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -130,7 +135,11 @@ struct TaskExpertListView: View {
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.primary)
                     }
+                    .transaction { $0.animation = nil } // 禁用动画
                 }
+            }
+            .transaction { transaction in
+                transaction.animation = nil // 禁用整个toolbar的动画
             }
             .searchable(text: $searchText, prompt: LocalizationKey.taskExpertSearchPrompt.localized)
             .onChange(of: searchText) { newValue in

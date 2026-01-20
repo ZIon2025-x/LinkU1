@@ -196,12 +196,21 @@ struct PostCard: View {
                 if let author = post.author {
                     NavigationLink(destination: userProfileDestination(user: author)) {
                         HStack(spacing: 6) {
-                            AvatarView(
-                                urlString: author.avatar,
-                                size: 20,
-                                placeholder: Image(systemName: "person.circle.fill")
-                            )
-                            .clipShape(Circle())
+                            // 优化：官方账号使用 Logo 图片作为头像
+                            if author.isAdmin == true {
+                                Image("Logo")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 20, height: 20)
+                                    .clipShape(Circle())
+                            } else {
+                                AvatarView(
+                                    urlString: author.avatar,
+                                    size: 20,
+                                    placeholder: Image(systemName: "person.circle.fill")
+                                )
+                                .clipShape(Circle())
+                            }
                             
                             Text(author.name)
                                 .font(AppTypography.caption)

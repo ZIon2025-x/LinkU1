@@ -105,6 +105,7 @@ public enum LocalizationKey: String {
     case commonCopied = "common.copied"
     case commonTap = "common.tap"
     case commonLongPressToCopy = "common.long_press_to_copy"
+    case commonUser = "common.user"
     
     // MARK: - App
     case appName = "app.name"
@@ -492,6 +493,7 @@ public enum LocalizationKey: String {
     // MARK: - Task Expert
     case taskExpertApplied = "task_expert.applied"
     case taskExpertByAppointment = "task_expert.by_appointment"
+    case taskExpertLocation = "task_expert.location"
     
     // MARK: - Translation
     case translationTranslating = "translation.translating"
@@ -694,6 +696,9 @@ public enum LocalizationKey: String {
     case activityRemainingSlots = "activity.remaining_slots"
     case activityStatus = "activity.status"
     case activityEnded = "activity.ended"
+    case activityPostedForumPost = "activity.posted_forum_post"
+    case activityPostedFleaMarketItem = "activity.posted_flea_market_item"
+    case activityCreatedLeaderboard = "activity.created_leaderboard"
     case activityFull = "activity.full"
     case activityHotRecruiting = "activity.hot_recruiting"
     case activityLocation = "activity.location"

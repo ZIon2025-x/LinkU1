@@ -797,6 +797,16 @@ nonisolated public class CacheManager: @unchecked Sendable {
         return load([Activity].self, forKey: "activities")
     }
     
+    /// 保存论坛分类列表
+    func saveForumCategories(_ categories: [ForumCategory]) {
+        save(categories, forKey: "forum_categories")
+    }
+    
+    /// 加载论坛分类列表
+    func loadForumCategories() -> [ForumCategory]? {
+        return load([ForumCategory].self, forKey: "forum_categories")
+    }
+    
     /// 保存论坛帖子列表
     func saveForumPosts(_ posts: [ForumPost], categoryId: Int? = nil) {
         let key = cacheKeyForForumPosts(categoryId: categoryId)

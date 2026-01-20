@@ -152,7 +152,7 @@ struct ForumPostDetailView: View {
                         tagLabel(text: "精华", color: AppColors.warning, icon: "star.fill")
                     }
                     if let category = post.category {
-                        Text(category.name)
+                        Text(category.displayName)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(AppColors.primary)
                             .padding(.horizontal, 8)
@@ -172,13 +172,23 @@ struct ForumPostDetailView: View {
             if let author = post.author {
                 NavigationLink(destination: userProfileDestination(user: author)) {
                     HStack(spacing: 12) {
-                        AvatarView(
-                            urlString: author.avatar,
-                            size: 44,
-                            placeholder: Image(systemName: "person.circle.fill")
-                        )
-                        .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        // 优化：官方账号使用 Logo 图片作为头像
+                        if author.isAdmin == true {
+                            Image("Logo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 44, height: 44)
+                                .clipShape(Circle())
+                                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        } else {
+                            AvatarView(
+                                urlString: author.avatar,
+                                size: 44,
+                                placeholder: Image(systemName: "person.circle.fill")
+                            )
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                        }
                         
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
@@ -510,12 +520,21 @@ struct ReplyCard: View {
             // 作者信息
             if let author = reply.author {
                 HStack(spacing: 10) {
-                    AvatarView(
-                        urlString: author.avatar,
-                        size: 32,
-                        placeholder: Image(systemName: "person.circle.fill")
-                    )
-                    .clipShape(Circle())
+                    // 优化：官方账号使用 Logo 图片作为头像
+                    if author.isAdmin == true {
+                        Image("Logo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                    } else {
+                        AvatarView(
+                            urlString: author.avatar,
+                            size: 32,
+                            placeholder: Image(systemName: "person.circle.fill")
+                        )
+                        .clipShape(Circle())
+                    }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
@@ -787,7 +806,7 @@ struct ForumPostShareSheet: View {
                         Label("\(post.viewCount) 浏览", systemImage: "eye")
                         Label("\(post.replyCount) 回复", systemImage: "bubble.left")
                         if let category = post.category {
-                            Label(category.name, systemImage: "tag")
+                            Label(category.displayName, systemImage: "tag")
                         }
                     }
                     .font(AppTypography.caption)

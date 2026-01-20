@@ -843,7 +843,9 @@ public struct LoginView: View {
                                 lineWidth: 1
                             )
                     )
-                    .padding(.horizontal, AppSpacing.md)
+                    // iPad适配：限制表单最大宽度并居中
+                    .frame(maxWidth: DeviceInfo.isPad ? 500 : .infinity)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                     .opacity(logoOpacity)
                     .offset(y: logoOpacity == 0 ? 20 : 0)
                     .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: logoOpacity)
@@ -854,6 +856,8 @@ public struct LoginView: View {
             }
             }
             }
+            // iPad适配：确保内容在iPad上居中显示
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .fullScreenCover(isPresented: $showCaptcha) {
                 captchaView
             }

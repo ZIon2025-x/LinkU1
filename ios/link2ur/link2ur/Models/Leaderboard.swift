@@ -3,8 +3,12 @@ import Foundation
 // 自定义排行榜
 struct CustomLeaderboard: Codable, Identifiable {
     let id: Int
-    let name: String
-    let description: String?
+    let name: String  // 保留原字段用于兼容
+    let nameEn: String?  // 英文名称
+    let nameZh: String?  // 中文名称
+    let description: String?  // 保留原字段用于兼容
+    let descriptionEn: String?  // 英文描述
+    let descriptionZh: String?  // 中文描述
     let location: String?
     let coverImage: String?
     let applicationReason: String?
@@ -25,7 +29,11 @@ struct CustomLeaderboard: Codable, Identifiable {
         
         id = try container.decode(Int.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        nameEn = try container.decodeIfPresent(String.self, forKey: .nameEn)
+        nameZh = try container.decodeIfPresent(String.self, forKey: .nameZh)
         description = try container.decodeIfPresent(String.self, forKey: .description)
+        descriptionEn = try container.decodeIfPresent(String.self, forKey: .descriptionEn)
+        descriptionZh = try container.decodeIfPresent(String.self, forKey: .descriptionZh)
         location = try container.decodeIfPresent(String.self, forKey: .location)
         coverImage = try container.decodeIfPresent(String.self, forKey: .coverImage)
         applicationReason = try container.decodeIfPresent(String.self, forKey: .applicationReason)
@@ -63,7 +71,11 @@ struct CustomLeaderboard: Codable, Identifiable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(nameEn, forKey: .nameEn)
+        try container.encodeIfPresent(nameZh, forKey: .nameZh)
         try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(descriptionEn, forKey: .descriptionEn)
+        try container.encodeIfPresent(descriptionZh, forKey: .descriptionZh)
         try container.encodeIfPresent(location, forKey: .location)
         try container.encodeIfPresent(coverImage, forKey: .coverImage)
         try container.encodeIfPresent(applicationReason, forKey: .applicationReason)
@@ -79,6 +91,10 @@ struct CustomLeaderboard: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, name, description, location, applicant, status
+        case nameEn = "name_en"
+        case nameZh = "name_zh"
+        case descriptionEn = "description_en"
+        case descriptionZh = "description_zh"
         case coverImage = "cover_image"
         case applicationReason = "application_reason"
         case applicantId = "applicant_id"
@@ -88,6 +104,30 @@ struct CustomLeaderboard: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case isFavorited = "is_favorited"
+    }
+    
+    // 根据当前语言获取显示名称
+    var displayName: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            // 中文环境：优先使用 nameZh，否则使用 name
+            return nameZh?.isEmpty == false ? nameZh! : name
+        } else {
+            // 英文环境：优先使用 nameEn，否则使用 name
+            return nameEn?.isEmpty == false ? nameEn! : name
+        }
+    }
+    
+    // 根据当前语言获取显示描述
+    var displayDescription: String? {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            // 中文环境：优先使用 descriptionZh，否则使用 description
+            return descriptionZh?.isEmpty == false ? descriptionZh : description
+        } else {
+            // 英文环境：优先使用 descriptionEn，否则使用 description
+            return descriptionEn?.isEmpty == false ? descriptionEn : description
+        }
     }
 }
 

@@ -172,8 +172,12 @@ async def get_all_leaderboards_admin(
         leaderboard_dict = schemas.CustomLeaderboardOut(
             id=leaderboard.id,
             name=leaderboard.name,
+            name_en=leaderboard.name_en,
+            name_zh=leaderboard.name_zh,
             location=leaderboard.location,
             description=leaderboard.description,
+            description_en=leaderboard.description_en,
+            description_zh=leaderboard.description_zh,
             cover_image=leaderboard.cover_image,
             applicant_id=leaderboard.applicant_id,
             applicant=applicant_info,
@@ -465,10 +469,27 @@ async def apply_leaderboard(
             detail="该地区已存在相同名称的榜单申请或已激活榜单"
         )
     
+    # 自动填充双语字段
+    from app.utils.bilingual_helper import auto_fill_bilingual_fields
+    
+    normalized_description = leaderboard_data.description.strip() if leaderboard_data.description else None
+    _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+        name=leaderboard_data.name,
+        description=normalized_description,
+        name_en=leaderboard_data.name_en.strip() if leaderboard_data.name_en else None,
+        name_zh=leaderboard_data.name_zh.strip() if leaderboard_data.name_zh else None,
+        description_en=leaderboard_data.description_en.strip() if leaderboard_data.description_en else None,
+        description_zh=leaderboard_data.description_zh.strip() if leaderboard_data.description_zh else None,
+    )
+    
     new_leaderboard = models.CustomLeaderboard(
         name=leaderboard_data.name,
+        name_en=name_en,
+        name_zh=name_zh,
         location=leaderboard_data.location,
-        description=leaderboard_data.description,
+        description=normalized_description,
+        description_en=description_en,
+        description_zh=description_zh,
         cover_image=leaderboard_data.cover_image,
         application_reason=leaderboard_data.application_reason,
         applicant_id=current_user.id,
@@ -506,8 +527,12 @@ async def apply_leaderboard(
     return schemas.CustomLeaderboardOut(
         id=new_leaderboard.id,
         name=new_leaderboard.name,
+        name_en=new_leaderboard.name_en,
+        name_zh=new_leaderboard.name_zh,
         location=new_leaderboard.location,
         description=new_leaderboard.description,
+        description_en=new_leaderboard.description_en,
+        description_zh=new_leaderboard.description_zh,
         cover_image=new_leaderboard.cover_image,
         applicant_id=new_leaderboard.applicant_id,
         applicant=applicant_info,
@@ -728,8 +753,12 @@ async def get_leaderboard_detail(
     result = schemas.CustomLeaderboardOut(
         id=leaderboard.id,
         name=leaderboard.name,
+        name_en=leaderboard.name_en,
+        name_zh=leaderboard.name_zh,
         location=leaderboard.location,
         description=leaderboard.description,
+        description_en=leaderboard.description_en,
+        description_zh=leaderboard.description_zh,
         cover_image=leaderboard.cover_image,
         applicant_id=leaderboard.applicant_id,
         applicant=applicant_info,
@@ -830,6 +859,94 @@ async def review_leaderboard(
     leaderboard.review_comment = comment
     
     await db.commit()
+    
+    # 清理排行榜列表缓存
+    try:
+        from app.cache import invalidate_cache
+        invalidate_cache("custom_leaderboards*")
+        invalidate_cache(f"leaderboard:{leaderboard_id}*")
+    except Exception as e:
+        logger.warning(f"清理排行榜缓存失败: {e}")
+    
+    # 发送审核结果通知给申请人
+    try:
+        from app import async_crud
+        
+        if action == "approve":
+            # 批准通知
+            title = "排行榜申请已通过"
+            title_en = "Leaderboard Application Approved"
+            content = f"恭喜！您申请的排行榜「{leaderboard.name}」已通过审核，现已激活。"
+            content_en = f"Congratulations! Your leaderboard application '{leaderboard.name}' has been approved and is now active."
+            
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=leaderboard.applicant_id,
+                notification_type="leaderboard_approved",
+                title=title,
+                content=content,
+                title_en=title_en,
+                content_en=content_en,
+                related_id=str(leaderboard.id),
+                related_type="leaderboard"
+            )
+            
+            # 发送推送通知
+            try:
+                from app.push_notification_service import send_push_notification_async_safe
+                await send_push_notification_async_safe(
+                    db=db,
+                    user_id=leaderboard.applicant_id,
+                    notification_type="leaderboard_approved",
+                    data={"leaderboard_id": leaderboard.id},
+                    template_vars={
+                        "leaderboard_name": leaderboard.name
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送排行榜批准推送通知失败: {e}")
+        else:
+            # 拒绝通知
+            title = "排行榜申请未通过"
+            title_en = "Leaderboard Application Rejected"
+            content = f"很抱歉，您申请的排行榜「{leaderboard.name}」未通过审核。"
+            if comment:
+                content += f"\n审核意见：{comment}"
+            content_en = f"Sorry, your leaderboard application '{leaderboard.name}' has been rejected."
+            if comment:
+                content_en += f"\nReview comment: {comment}"
+            
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=leaderboard.applicant_id,
+                notification_type="leaderboard_rejected",
+                title=title,
+                content=content,
+                title_en=title_en,
+                content_en=content_en,
+                related_id=str(leaderboard.id),
+                related_type="leaderboard"
+            )
+            
+            # 发送推送通知
+            try:
+                from app.push_notification_service import send_push_notification_async_safe
+                await send_push_notification_async_safe(
+                    db=db,
+                    user_id=leaderboard.applicant_id,
+                    notification_type="leaderboard_rejected",
+                    data={"leaderboard_id": leaderboard.id},
+                    template_vars={
+                        "leaderboard_name": leaderboard.name
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"发送排行榜拒绝推送通知失败: {e}")
+        
+        logger.info(f"排行榜审核通知已发送给申请人: {leaderboard.applicant_id}")
+    except Exception as e:
+        logger.error(f"发送排行榜审核通知失败: {e}")
+        # 通知失败不影响审核流程
     
     return {"message": f"榜单已{action}"}
 
@@ -2061,6 +2178,27 @@ async def review_report(
     return {
         "message": f"举报已{action}",
         "status": action
+    }
+
+
+# ==================== 待审核申请统计 ====================
+
+@router.get("/admin/pending-requests/count")
+async def get_pending_leaderboard_requests_count(
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取待审核排行榜申请数量统计（管理员）"""
+    # 统计待审核的排行榜申请
+    pending_leaderboards = await db.execute(
+        select(func.count(models.CustomLeaderboard.id))
+        .where(models.CustomLeaderboard.status == "pending")
+    )
+    pending_leaderboard_count = pending_leaderboards.scalar() or 0
+    
+    return {
+        "pending_leaderboard_requests": pending_leaderboard_count,
+        "total_pending": pending_leaderboard_count
     }
 
 
