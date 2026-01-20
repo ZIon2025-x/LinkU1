@@ -368,7 +368,7 @@ api.interceptors.response.use(
         refreshPromise = api.post(refreshEndpoint);
         
         try {
-          const refreshResponse = await refreshPromise;
+          await refreshPromise;
           
           // 会话刷新成功后，清除缓存的 CSRF token
           // 下次获取时会从 cookie 中读取最新的 token
@@ -388,7 +388,7 @@ api.interceptors.response.use(
           if (!window.location.pathname.includes('/admin')) {
             try {
               refreshPromise = api.post('/api/secure-auth/refresh-token');
-              const refreshTokenResponse = await refreshPromise;
+              await refreshPromise;
               
               // 会话刷新成功后，清除缓存的 CSRF token
               // 下次获取时会从 cookie 中读取最新的 token
