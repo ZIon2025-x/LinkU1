@@ -17,8 +17,12 @@ class TranslationService(Enum):
     GOOGLE = "google"  # deep-translator的Google翻译（免费版）
     BAIDU = "baidu"
     YOUDAO = "youdao"
-    DEEPL = "deepl"
-    MYMEMORY = "mymemory"
+    DEEPL = "deepl"  # DeepL（需要API密钥，但有免费额度）
+    MYMEMORY = "mymemory"  # MyMemory（免费）
+    LIBRETRANSLATE = "libretranslate"  # LibreTranslate（免费开源）
+    PONS = "pons"  # Pons（免费）
+    LINGVANEX = "lingvanex"  # Lingvanex（免费）
+    QCRI = "qcri"  # QCRI（免费）
     MICROSOFT = "microsoft"
 
 
@@ -60,7 +64,59 @@ class TranslationManager:
                             # 创建Google Cloud翻译客户端工厂函数
                             def create_google_cloud_translator():
                                 if api_key:
-                                    return translate.Client(api_key=api_key)
+                                    # 使用API密钥时，需要通过REST API方式调用
+                                    # google-cloud-translate v2 的 Client 不支持 api_key 参数
+                                    # 创建一个使用REST API的包装器
+                                    class GoogleCloudRESTTranslator:
+                                        def __init__(self, api_key):
+                                            self.api_key = api_key
+                                            self.base_url = "https://translation.googleapis.com/language/translate/v2"
+                                        
+                                        def translate(self, text, source_language=None, target_language='en'):
+                                            import requests
+                                            # Google Translation API REST v2 使用POST方法
+                                            # API密钥作为查询参数，翻译内容在请求体中
+                                            url = f"{self.base_url}?key={self.api_key}"
+                                            
+                                            # 构建请求体
+                                            body = {
+                                                'q': text,
+                                                'target': target_language
+                                            }
+                                            if source_language:
+                                                body['source'] = source_language
+                                            
+                                            headers = {
+                                                'Content-Type': 'application/json'
+                                            }
+                                            
+                                            try:
+                                                response = requests.post(url, json=body, headers=headers, timeout=10)
+                                                response.raise_for_status()
+                                                result = response.json()
+                                                
+                                                # 检查响应格式
+                                                if 'data' in result and 'translations' in result['data']:
+                                                    if len(result['data']['translations']) > 0:
+                                                        return {
+                                                            'translatedText': result['data']['translations'][0]['translatedText']
+                                                        }
+                                                    else:
+                                                        raise Exception("API返回的翻译结果为空")
+                                                else:
+                                                    logger.error(f"Google Translation API返回格式错误: {result}")
+                                                    raise Exception(f"API返回格式错误: {result}")
+                                            except requests.exceptions.RequestException as e:
+                                                logger.error(f"Google Translation API请求失败: {e}")
+                                                if hasattr(e, 'response') and e.response is not None:
+                                                    try:
+                                                        error_detail = e.response.json()
+                                                        logger.error(f"API错误详情: {error_detail}")
+                                                    except:
+                                                        logger.error(f"API错误响应: {e.response.text}")
+                                                raise
+                                    
+                                    return GoogleCloudRESTTranslator(api_key)
                                 elif credentials_path:
                                     return translate.Client.from_service_account_json(credentials_path)
                                 else:
@@ -117,18 +173,92 @@ class TranslationManager:
                         logger.warning("有道翻译需要API密钥，跳过")
                 except ImportError:
                     logger.warning("deep-translator模块未安装，跳过有道翻译")
+            
+            # DeepL翻译（需要API密钥，但有免费额度）
+            elif service_name == 'deepl':
+                try:
+                    from deep_translator import DeeplTranslator
+                    api_key = getattr(settings, 'DEEPL_API_KEY', '')
+                    if api_key:
+                        self.services.append((TranslationService.DEEPL, DeeplTranslator))
+                    else:
+                        logger.warning("DeepL翻译需要API密钥，跳过")
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过DeepL翻译")
+            
+            # LibreTranslate（免费开源翻译服务）
+            elif service_name == 'libretranslate':
+                try:
+                    from deep_translator import LibreTranslator
+                    # LibreTranslate 可以自建或使用公共实例，不需要API密钥
+                    self.services.append((TranslationService.LIBRETRANSLATE, LibreTranslator))
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过LibreTranslate")
+                except Exception as e:
+                    logger.warning(f"初始化LibreTranslate失败: {e}")
+            
+            # Pons翻译（免费）
+            elif service_name == 'pons':
+                try:
+                    from deep_translator import PonsTranslator
+                    self.services.append((TranslationService.PONS, PonsTranslator))
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过Pons翻译")
+                except Exception as e:
+                    logger.warning(f"初始化Pons翻译失败: {e}")
+            
+            # Lingvanex翻译（免费，有额度限制）
+            elif service_name == 'lingvanex':
+                try:
+                    from deep_translator import LingvanexTranslator
+                    # Lingvanex 可能需要API密钥，但有些功能免费
+                    self.services.append((TranslationService.LINGVANEX, LingvanexTranslator))
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过Lingvanex翻译")
+                except Exception as e:
+                    logger.warning(f"初始化Lingvanex翻译失败: {e}")
+            
+            # QCRI翻译（免费）
+            elif service_name == 'qcri':
+                try:
+                    from deep_translator import QcriTranslator
+                    self.services.append((TranslationService.QCRI, QcriTranslator))
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过QCRI翻译")
+                except Exception as e:
+                    logger.warning(f"初始化QCRI翻译失败: {e}")
+            
+            # Microsoft翻译（需要API密钥）
+            elif service_name == 'microsoft':
+                try:
+                    from deep_translator import MicrosoftTranslator
+                    api_key = getattr(settings, 'MICROSOFT_TRANSLATE_KEY', '')
+                    if api_key:
+                        self.services.append((TranslationService.MICROSOFT, MicrosoftTranslator))
+                    else:
+                        logger.warning("Microsoft翻译需要API密钥，跳过")
+                except ImportError:
+                    logger.warning("deep-translator模块未安装，跳过Microsoft翻译")
         
         # 如果没有配置任何服务，使用默认服务
         if not self.services:
             logger.warning("没有可用的翻译服务，尝试使用默认服务")
             try:
-                from deep_translator import GoogleTranslator, MyMemoryTranslator
+                from deep_translator import GoogleTranslator, MyMemoryTranslator, LibreTranslator
                 self.services = [
                     (TranslationService.GOOGLE, GoogleTranslator),
                     (TranslationService.MYMEMORY, MyMemoryTranslator),
+                    (TranslationService.LIBRETRANSLATE, LibreTranslator),
                 ]
             except ImportError:
-                logger.error("deep-translator模块未安装，无法使用默认翻译服务")
+                try:
+                    from deep_translator import GoogleTranslator, MyMemoryTranslator
+                    self.services = [
+                        (TranslationService.GOOGLE, GoogleTranslator),
+                        (TranslationService.MYMEMORY, MyMemoryTranslator),
+                    ]
+                except ImportError:
+                    logger.error("deep-translator模块未安装，无法使用默认翻译服务")
         
         logger.info(f"翻译服务管理器初始化完成，可用服务: {[s.value for s, _ in self.services]}")
     
@@ -151,12 +281,33 @@ class TranslationManager:
                             self.target_lang = target_lang
                         
                         def translate(self, text):
-                            result = self.client.translate(
-                                text,
-                                source_language=self.source_lang,
-                                target_language=self.target_lang
-                            )
-                            return result['translatedText']
+                            # 检查是否是REST API包装器（有translate方法且接受参数）
+                            if hasattr(self.client, 'translate') and callable(self.client.translate):
+                                # 检查是否是REST API包装器（通过检查是否有api_key属性）
+                                if hasattr(self.client, 'api_key'):
+                                    # REST API方式
+                                    result = self.client.translate(
+                                        text,
+                                        source_language=self.source_lang,
+                                        target_language=self.target_lang
+                                    )
+                                    return result['translatedText']
+                                else:
+                                    # 标准Client方式
+                                    result = self.client.translate(
+                                        text,
+                                        source_language=self.source_lang,
+                                        target_language=self.target_lang
+                                    )
+                                    return result['translatedText']
+                            else:
+                                # 标准Client方式
+                                result = self.client.translate(
+                                    text,
+                                    source_language=self.source_lang,
+                                    target_language=self.target_lang
+                                )
+                                return result['translatedText']
                     
                     return GoogleCloudTranslatorWrapper(client, source_lang, target_lang)
                 return None
@@ -167,8 +318,47 @@ class TranslationManager:
                 else:
                     return translator_class_or_factory(target=target_lang)
             elif service == TranslationService.MYMEMORY:
-                # MyMemory支持的语言代码可能不同，需要转换
-                return translator_class_or_factory(source=source_lang if source_lang != 'auto' else 'en', target=target_lang)
+                # MyMemory支持的语言代码需要转换
+                # MyMemory需要完整的语言代码，如 en-US, en-GB, zh-CN 等
+                def normalize_lang_for_mymemory(lang: str) -> str:
+                    """将语言代码转换为MyMemory支持的格式"""
+                    if not lang or lang == 'auto':
+                        return 'en'  # 默认使用英文
+                    lang_lower = lang.lower()
+                    # 映射常见语言代码
+                    lang_map = {
+                        'zh': 'zh-CN',
+                        'zh-cn': 'zh-CN',
+                        'zh-tw': 'zh-TW',
+                        'zh-hk': 'zh-TW',
+                        'en': 'en-US',  # MyMemory需要完整的区域代码
+                        'en-us': 'en-US',
+                        'en-gb': 'en-GB',
+                    }
+                    normalized = lang_map.get(lang_lower, lang)
+                    # 如果已经是完整格式（包含-），直接返回
+                    if '-' in normalized:
+                        return normalized
+                    # 否则尝试添加默认区域
+                    if normalized == 'en':
+                        return 'en-US'
+                    return normalized
+                
+                source_normalized = normalize_lang_for_mymemory(source_lang if source_lang != 'auto' else 'en')
+                target_normalized = normalize_lang_for_mymemory(target_lang)
+                
+                try:
+                    return translator_class_or_factory(source=source_normalized, target=target_normalized)
+                except Exception as e:
+                    logger.warning(f"MyMemory翻译器创建失败 (source={source_normalized}, target={target_normalized}): {e}")
+                    # 如果失败，尝试使用简化的语言代码
+                    source_simple = source_normalized.split('-')[0] if '-' in source_normalized else source_normalized
+                    target_simple = target_normalized.split('-')[0] if '-' in target_normalized else target_normalized
+                    try:
+                        return translator_class_or_factory(source=source_simple, target=target_simple)
+                    except Exception as e2:
+                        logger.warning(f"MyMemory翻译器创建失败（简化语言代码）: {e2}")
+                        return None
             elif service == TranslationService.BAIDU:
                 # 百度翻译需要API密钥
                 appid = getattr(settings, 'BAIDU_TRANSLATE_APPID', '')
@@ -185,12 +375,136 @@ class TranslationManager:
                     logger.warning("有道翻译API密钥未配置")
                     return None
                 return translator_class_or_factory(appid=appid, secret=secret, source=source_lang, target=target_lang)
+            elif service == TranslationService.DEEPL:
+                # DeepL翻译（需要API密钥）
+                api_key = getattr(settings, 'DEEPL_API_KEY', '')
+                if api_key:
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang,
+                        api_key=api_key
+                    )
+                return None
+            elif service == TranslationService.LIBRETRANSLATE:
+                # LibreTranslate（免费开源）
+                api_key = getattr(settings, 'LIBRETRANSLATE_API_KEY', '')
+                base_url = getattr(settings, 'LIBRETRANSLATE_BASE_URL', '')
+                
+                if base_url:
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang,
+                        api_key=api_key if api_key else None,
+                        base_url=base_url
+                    )
+                elif api_key:
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang,
+                        api_key=api_key
+                    )
+                else:
+                    # 使用默认公共实例（可能有限制）
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang
+                    )
+            elif service == TranslationService.PONS:
+                # Pons翻译（免费）
+                return translator_class_or_factory(
+                    source=source_lang if source_lang != 'auto' else 'en',
+                    target=target_lang
+                )
+            elif service == TranslationService.LINGVANEX:
+                # Lingvanex翻译
+                api_key = getattr(settings, 'LINGVANEX_API_KEY', '')
+                if api_key:
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang,
+                        api_key=api_key
+                    )
+                else:
+                    # 尝试不使用API密钥（可能有限制）
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang
+                    )
+            elif service == TranslationService.QCRI:
+                # QCRI翻译（免费）
+                return translator_class_or_factory(
+                    source=source_lang if source_lang != 'auto' else 'en',
+                    target=target_lang
+                )
+            elif service == TranslationService.MICROSOFT:
+                # Microsoft翻译（需要API密钥）
+                api_key = getattr(settings, 'MICROSOFT_TRANSLATE_KEY', '')
+                if api_key:
+                    return translator_class_or_factory(
+                        source=source_lang if source_lang != 'auto' else 'en',
+                        target=target_lang,
+                        api_key=api_key
+                    )
+                return None
             else:
                 # 其他服务可能需要特殊处理
                 return translator_class_or_factory(source=source_lang, target=target_lang)
         except Exception as e:
             logger.warning(f"创建{service.value}翻译器失败: {e}")
             return None
+    
+    def _preprocess_text_for_translation(self, text: str) -> tuple[str, dict]:
+        """
+        预处理文本，处理emoji等特殊字符
+        
+        返回:
+        - (处理后的文本, emoji位置信息字典)
+        """
+        import re
+        import unicodedata
+        
+        # 检测并记录emoji位置
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "]+", 
+            flags=re.UNICODE
+        )
+        
+        emoji_positions = {}
+        emoji_list = []
+        
+        # 查找所有emoji及其位置
+        for match in emoji_pattern.finditer(text):
+            emoji = match.group()
+            start = match.start()
+            emoji_list.append((start, emoji))
+            emoji_positions[start] = emoji
+        
+        # 如果包含emoji，尝试规范化处理
+        # 某些翻译API可能对某些emoji有问题，但Google Translation API通常能处理
+        # 这里我们保留emoji，但确保文本编码正确
+        processed_text = text
+        
+        # 确保文本是UTF-8编码
+        if isinstance(processed_text, bytes):
+            try:
+                processed_text = processed_text.decode('utf-8')
+            except:
+                processed_text = processed_text.decode('utf-8', errors='ignore')
+        
+        # 规范化Unicode字符（NFC格式）
+        try:
+            processed_text = unicodedata.normalize('NFC', processed_text)
+        except:
+            pass  # 如果规范化失败，使用原文本
+        
+        return processed_text, emoji_positions
     
     def translate(
         self,
@@ -219,6 +533,9 @@ class TranslationManager:
         if not self.services:
             logger.error("没有可用的翻译服务")
             return None
+        
+        # 预处理文本（处理emoji等）
+        processed_text, emoji_positions = self._preprocess_text_for_translation(text)
         
         # 转换语言代码格式
         lang_map = {
@@ -250,9 +567,48 @@ class TranslationManager:
                 # 尝试翻译（带智能重试）
                 from app.utils.translation_error_handler import handle_translation_error
                 
+                # 准备移除emoji的正则表达式（如果包含emoji）
+                import re
+                emoji_pattern = None
+                if emoji_positions:
+                    emoji_pattern = re.compile(
+                        "["
+                        "\U0001F600-\U0001F64F"  # emoticons
+                        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+                        "\U0001F680-\U0001F6FF"  # transport & map symbols
+                        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                        "\U00002702-\U000027B0"
+                        "\U000024C2-\U0001F251"
+                        "]+", 
+                        flags=re.UNICODE
+                    )
+                
                 for attempt in range(max_retries):
                     try:
-                        translated = translator.translate(text)
+                        # 根据尝试次数决定使用哪个文本
+                        # 第一次尝试使用预处理后的文本（保留emoji）
+                        # 如果失败且包含emoji，后续尝试移除emoji
+                        text_to_translate = processed_text
+                        emoji_removed = False
+                        
+                        if attempt > 0 and emoji_pattern and emoji_positions:
+                            # 移除emoji后重试
+                            text_to_translate = emoji_pattern.sub('', processed_text).strip()
+                            if not text_to_translate:
+                                # 如果移除emoji后文本为空，使用原文本
+                                text_to_translate = processed_text
+                            else:
+                                emoji_removed = True
+                                logger.debug(f"尝试 {attempt + 1}: 移除emoji后翻译")
+                        
+                        translated = translator.translate(text_to_translate)
+                        
+                        # 如果移除了emoji，尝试将emoji加回（简单方式：加在末尾）
+                        if emoji_removed and emoji_positions and translated:
+                            # 简单处理：将emoji加在翻译文本末尾
+                            emoji_text = ''.join(emoji_positions.values())
+                            if emoji_text:
+                                translated = translated + ' ' + emoji_text
                         
                         # 翻译成功，更新统计
                         if service not in self.service_stats:
@@ -264,7 +620,9 @@ class TranslationManager:
                         
                     except Exception as e:
                         # 使用错误处理器分析错误
-                        error_info = handle_translation_error(e, service.value, text, attempt)
+                        # 确保text_to_translate变量存在
+                        current_text = text_to_translate if 'text_to_translate' in locals() else processed_text
+                        error_info = handle_translation_error(e, service.value, current_text, attempt)
                         
                         if error_info['should_retry'] and attempt < max_retries - 1:
                             retry_delay = error_info['retry_delay']

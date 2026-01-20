@@ -192,10 +192,17 @@ class Config:
     
     # 翻译服务配置
     # 翻译服务优先级（用逗号分隔，按优先级排序）
-    # 可选值: google_cloud, google, mymemory, baidu, youdao, deepl, microsoft
+    # 可选值: google_cloud, google, mymemory, libretranslate, pons, lingvanex, qcri, baidu, youdao, deepl, microsoft
     # google_cloud: Google Cloud Translation API（官方API，每月前50万字符免费）
     # google: deep-translator的Google翻译（免费但可能有限制）
-    TRANSLATION_SERVICES = os.getenv("TRANSLATION_SERVICES", "google_cloud,google,mymemory").split(",")
+    # mymemory: MyMemory翻译（免费，无需API密钥）
+    # libretranslate: LibreTranslate（免费开源，可自建）
+    # pons: Pons翻译（免费）
+    # lingvanex: Lingvanex翻译（免费，有额度限制）
+    # qcri: QCRI翻译（免费）
+    # deepl: DeepL翻译（需要API密钥，但有免费额度）
+    # 默认优先级：google, mymemory, libretranslate, pons, qcri, google_cloud（Google Cloud放在最后，需要配置）
+    TRANSLATION_SERVICES = os.getenv("TRANSLATION_SERVICES", "google,mymemory,libretranslate,pons,qcri,google_cloud").split(",")
     
     # Google Cloud Translation API配置（官方API，推荐使用）
     # 方式1: 使用API密钥（简单）
@@ -210,8 +217,15 @@ class Config:
     BAIDU_TRANSLATE_SECRET = os.getenv("BAIDU_TRANSLATE_SECRET", "")
     YOUDAO_TRANSLATE_APPID = os.getenv("YOUDAO_TRANSLATE_APPID", "")
     YOUDAO_TRANSLATE_SECRET = os.getenv("YOUDAO_TRANSLATE_SECRET", "")
-    DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
+    DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")  # DeepL API密钥（可选，有免费额度）
     MICROSOFT_TRANSLATE_KEY = os.getenv("MICROSOFT_TRANSLATE_KEY", "")
+    
+    # LibreTranslate配置（免费开源）
+    LIBRETRANSLATE_API_KEY = os.getenv("LIBRETRANSLATE_API_KEY", "")  # 可选，如果使用自建实例
+    LIBRETRANSLATE_BASE_URL = os.getenv("LIBRETRANSLATE_BASE_URL", "")  # 可选，默认使用公共实例
+    
+    # Lingvanex配置（可选）
+    LINGVANEX_API_KEY = os.getenv("LINGVANEX_API_KEY", "")  # 可选，某些功能需要
     
     # 安全配置
     SECURITY_HEADERS = {
