@@ -27,7 +27,7 @@ struct CreatePostView: View {
                         Picker("选择板块", selection: $viewModel.selectedCategoryId) {
                             Text("请选择板块").tag(nil as Int?)
                             ForEach(viewModel.categories) { category in
-                                Text(category.name).tag(category.id as Int?)
+                                Text(category.displayName).tag(category.id as Int?)
                             }
                         }
                         .pickerStyle(MenuPickerStyle())

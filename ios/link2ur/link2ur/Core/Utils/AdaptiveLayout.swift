@@ -21,27 +21,96 @@ public struct AdaptiveLayout {
     ) -> Int {
         let isPad = DeviceInfo.isPad
         let isRegular = horizontalSizeClass == .regular
+        let currentiPadModel: DeviceInfo.iPadModelType = DeviceInfo.iPadModel
         
         if isPad {
             if isRegular {
                 // iPad横屏
-                switch itemType {
-                case .task:
-                    return 3  // 减少列数，让卡片更宽
-                case .fleaMarket:
-                    return 4  // 跳蚤市场商品可以多列
-                case .standard:
-                    return 3
+                switch currentiPadModel {
+                case .mini:
+                    // iPad Mini: 屏幕较小，减少列数
+                    switch itemType {
+                    case .task:
+                        return 2
+                    case .fleaMarket:
+                        return 3
+                    case .standard:
+                        return 2
+                    }
+                case .pro12_9:
+                    // iPad Pro 12.9英寸: 屏幕最大，可以显示更多列
+                    switch itemType {
+                    case .task:
+                        return 4
+                    case .fleaMarket:
+                        return 5
+                    case .standard:
+                        return 4
+                    }
+                case .pro11, .air:
+                    // iPad Pro 11英寸和iPad Air: 中等屏幕
+                    switch itemType {
+                    case .task:
+                        return 3
+                    case .fleaMarket:
+                        return 4
+                    case .standard:
+                        return 3
+                    }
+                case .standard, .unknown:
+                    // 标准iPad: 默认配置
+                    switch itemType {
+                    case .task:
+                        return 3
+                    case .fleaMarket:
+                        return 4
+                    case .standard:
+                        return 3
+                    }
                 }
             } else {
                 // iPad竖屏
-                switch itemType {
-                case .task:
-                    return 2  // 减少列数，让卡片更宽
-                case .fleaMarket:
-                    return 3  // 跳蚤市场商品可以多列
-                case .standard:
-                    return 2
+                switch currentiPadModel {
+                case .mini:
+                    // iPad Mini: 屏幕较小，减少列数
+                    switch itemType {
+                    case .task:
+                        return 2
+                    case .fleaMarket:
+                        return 2
+                    case .standard:
+                        return 2
+                    }
+                case .pro12_9:
+                    // iPad Pro 12.9英寸: 屏幕最大，可以显示更多列
+                    switch itemType {
+                    case .task:
+                        return 3
+                    case .fleaMarket:
+                        return 4
+                    case .standard:
+                        return 3
+                    }
+                case .pro11, .air:
+                    // iPad Pro 11英寸和iPad Air: 中等屏幕
+                    switch itemType {
+                    case .task:
+                        return 2
+                    case .fleaMarket:
+                        return 3
+                    case .standard:
+                        return 2
+                    }
+                case .standard, .unknown:
+                    // 标准iPad: 默认配置
+                    switch itemType {
+                    case .task:
+                        return 2
+                    case .fleaMarket:
+                        return 3
+                    case .standard:
+                        return 2
+                    }
                 }
             }
         } else {
@@ -89,10 +158,24 @@ public struct AdaptiveLayout {
     public static func recommendedTaskCardWidth(screenWidth: CGFloat) -> CGFloat {
         let isPad = DeviceInfo.isPad
         if isPad {
-            // iPad: 每行显示3个卡片，让卡片更宽
+            let currentiPadModel: DeviceInfo.iPadModelType = DeviceInfo.iPadModel
+            let columnCount: Int
+            
+            // 根据iPad型号确定列数（横屏时）
+            switch currentiPadModel {
+            case .mini:
+                columnCount = 2  // iPad Mini: 屏幕较小，2列
+            case .pro12_9:
+                columnCount = 4  // iPad Pro 12.9英寸: 屏幕最大，4列
+            case .pro11, .air:
+                columnCount = 3  // iPad Pro 11英寸和iPad Air: 中等屏幕，3列
+            case .standard, .unknown:
+                columnCount = 3  // 标准iPad: 默认3列
+            }
+            
             return cardWidth(
                 screenWidth: screenWidth,
-                columnCount: 3,
+                columnCount: columnCount,
                 horizontalPadding: 32, // AppSpacing.md * 2
                 columnSpacing: 16 // AppSpacing.md
             )

@@ -124,11 +124,11 @@ struct CategoryCard: View {
             }
             
             VStack(alignment: .leading, spacing: 6) {
-                Text(category.name)
+                Text(category.displayName)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                 
-                if let description = category.description {
+                if let description = category.displayDescription {
                     Text(description)
                         .font(.system(size: 13))
                         .foregroundColor(AppColors.textSecondary)

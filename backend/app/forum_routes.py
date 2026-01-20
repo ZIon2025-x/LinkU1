@@ -1728,8 +1728,32 @@ async def get_categories(
         logger.info(f"✅ 返回 {len(category_list)} 个板块，其中 {latest_post_count} 个板块包含 latest_post")
         return {"categories": category_list}
     
-    # 标准返回（不包含最新帖子信息）
-    return {"categories": categories}
+    # 标准返回（不包含最新帖子信息）- 需要显式序列化以包含多语言字段
+    category_list = []
+    for category in categories:
+        category_out = schemas.ForumCategoryOut(
+            id=category.id,
+            name=category.name,
+            name_en=getattr(category, 'name_en', None),
+            name_zh=getattr(category, 'name_zh', None),
+            description=category.description,
+            description_en=getattr(category, 'description_en', None),
+            description_zh=getattr(category, 'description_zh', None),
+            icon=category.icon,
+            sort_order=category.sort_order,
+            is_visible=category.is_visible,
+            is_admin_only=getattr(category, 'is_admin_only', False),
+            type=getattr(category, 'type', 'general'),
+            country=getattr(category, 'country', None),
+            university_code=getattr(category, 'university_code', None),
+            post_count=category.post_count,
+            last_post_at=category.last_post_at,
+            created_at=category.created_at,
+            updated_at=category.updated_at
+        )
+        category_list.append(category_out)
+    
+    return {"categories": category_list}
 
 
 # ==================== 板块申请相关路由（必须在 /categories/{category_id} 之前） ====================
