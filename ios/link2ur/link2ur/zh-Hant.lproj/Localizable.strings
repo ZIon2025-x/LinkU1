@@ -373,6 +373,7 @@
 "task_detail.confirm_completion_success_message" = "任務狀態已更新為已完成。獎勵將自動轉給任務接受者。";
 "task_detail.application_approved_message" = "恭喜！您的申請已通過，可以開始執行任務了。";
 "task_detail.application_rejected_message" = "很抱歉，您的申請未通過審核。";
+"task_detail.task_accepted_by_others" = "此任務已被其他用戶接受";
 "task_detail.pending_review" = "待審核";
 "task_detail.approved" = "已通過";
 "task_detail.rejected" = "已拒絕";

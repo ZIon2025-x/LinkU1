@@ -1262,6 +1262,15 @@ def record_task_interaction(
         metadata: 额外元数据（设备信息、推荐信息等）
     """
     try:
+        # 优化：先验证任务是否存在，避免记录不存在的任务交互
+        task = crud.get_task(db, task_id)
+        if not task:
+            logger.warning(
+                f"尝试记录交互时任务不存在: user_id={current_user.id}, "
+                f"task_id={task_id}, interaction_type={interaction_type}"
+            )
+            raise HTTPException(status_code=404, detail="Task not found")
+        
         tracker = UserBehaviorTracker(db)
         is_rec = is_recommended if is_recommended is not None else False
         

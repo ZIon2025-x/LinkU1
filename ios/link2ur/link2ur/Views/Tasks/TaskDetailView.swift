@@ -1575,7 +1575,7 @@ struct TaskActionButtonsView: View {
             if !isPoster {
                 // 如果用户已申请，无论任务状态如何，都显示申请状态卡片
                 if let userApp = viewModel.userApplication {
-                    ApplicationStatusCard(application: userApp, task: task)
+                    ApplicationStatusCard(application: userApp, task: task, isTaker: isTaker)
                 }
                 // 如果用户未申请，且任务状态为 open 且没有接受者，显示申请按钮
                 else if task.status == .open && task.takerId == nil {
@@ -1871,6 +1871,7 @@ struct ApplyTaskSheet: View {
 struct ApplicationStatusCard: View {
     let application: TaskApplication
     let task: Task
+    let isTaker: Bool  // 用户是否是任务接受者
     
     private var statusColor: Color {
         switch application.status {
@@ -1933,6 +1934,19 @@ struct ApplicationStatusCard: View {
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)
+                
+                // 优化：如果任务已被其他用户接受，且用户不是接受者，显示提示
+                if task.takerId != nil && !isTaker && application.status == "pending" {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.warning)
+                        Text(LocalizationKey.taskDetailTaskAcceptedByOthers.localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.warning)
+                    }
+                    .padding(.top, 2)
+                }
                 
                 if let message = application.message, !message.isEmpty {
                     Text(LocalizationKey.taskDetailMessageLabel.localized(argument: message))

@@ -1782,13 +1782,17 @@ async def reject_application(
             
             # ⚠️ 直接使用文本内容，不存储 JSON
             content = f"您的任务申请已被拒绝：{task.title}"
+            content_en = f"Your task application has been rejected: {task.title}"
             
             new_notification = models.Notification(
                 user_id=application.applicant_id,
                 type="application_rejected",
                 title="您的申请已被拒绝",
                 content=content,  # 直接使用文本，不存储 JSON
+                title_en="Application Rejected",
+                content_en=content_en,
                 related_id=application_id,
+                related_type="application_id",  # related_id 是 application_id
                 created_at=notification_time
             )
             db.add(new_notification)
@@ -1915,13 +1919,17 @@ async def withdraw_application(
             
             # ⚠️ 直接使用文本内容，不存储 JSON
             content = f"有申请者撤回了对任务「{task.title}」的申请"
+            content_en = f"An applicant has withdrawn their application for task「{task.title}」"
             
             new_notification = models.Notification(
                 user_id=task.poster_id,
                 type="application_withdrawn",
                 title="有申请者撤回了申请",
                 content=content,  # 直接使用文本，不存储 JSON
+                title_en="Application Withdrawn",
+                content_en=content_en,
                 related_id=application_id,
+                related_type="application_id",  # related_id 是 application_id
                 created_at=current_time
             )
             db.add(new_notification)
@@ -2103,6 +2111,7 @@ async def negotiate_application(
             title="新的议价提议",
             content=content,  # 直接使用文本，不存储 JSON
             related_id=application_id,
+            related_type="application_id",  # related_id 是 application_id
             created_at=current_time
         )
         db.add(new_notification)
@@ -2615,7 +2624,10 @@ async def respond_negotiation(
                     type="application_accepted",
                     title="申请者已接受您的议价，请完成支付",
                     content=content,  # 直接使用文本，不存储 JSON
+                    title_en="Application Accepted - Payment Required",
+                    content_en=f"The applicant has accepted your negotiation offer for task「{task.title}」. Please complete the payment.",
                     related_id=str(task_id),  # 使用task_id而不是application_id，方便前端跳转
+                    related_type="task_id",  # related_id 是 task_id
                     created_at=current_time
                 )
                 db.add(new_notification)
@@ -2690,7 +2702,10 @@ async def respond_negotiation(
                     type="negotiation_rejected",
                     title="申请者已拒绝您的议价",
                     content=json.dumps(notification_content),
+                    title_en="Negotiation Rejected",
+                    content_en=f"The applicant has rejected your negotiation offer for task「{task.title}」",
                     related_id=application_id,
+                    related_type="application_id",  # related_id 是 application_id
                     created_at=current_time
                 )
                 db.add(new_notification)
@@ -2872,12 +2887,23 @@ async def send_application_message(
                 content_parts.append(f"留言：{request.message}")
             content_parts.append(f"议价金额：£{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
             content = "\n".join(content_parts)
+            
+            # 英文版本
+            content_parts_en = [f"The publisher of task「{task.title}」proposed a negotiation"]
+            if request.message:
+                content_parts_en.append(f"Message: {request.message}")
+            content_parts_en.append(f"Negotiated price: £{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
+            content_en = "\n".join(content_parts_en)
+            title_en = "New Price Offer"
         else:
             # application_message 使用文本格式
             if request.message:
                 content = f"任务「{task.title}」的发布者给您留言：{request.message}"
+                content_en = f"The publisher of task「{task.title}」sent you a message: {request.message}"
             else:
                 content = f"任务「{task.title}」的发布者给您留言"
+                content_en = f"The publisher of task「{task.title}」sent you a message"
+            title_en = "New Message"
         
         # 检查是否已存在相同的通知（基于唯一约束）
         existing_notification_query = select(models.Notification).where(
@@ -2894,6 +2920,11 @@ async def send_application_message(
             # 更新现有通知
             existing_notification.title = "新的留言" if notification_type == "application_message" else "新的议价提议"
             existing_notification.content = content
+            if notification_type == "negotiation_offer":
+                existing_notification.title_en = "New Price Offer"
+            else:
+                existing_notification.title_en = "New Message"
+            existing_notification.content_en = content_en
             existing_notification.created_at = current_time
             existing_notification.read_at = None  # 重置已读状态
             existing_notification.is_read = 0  # 重置已读状态
@@ -2908,7 +2939,10 @@ async def send_application_message(
                 type=notification_type,
                 title="新的留言" if notification_type == "application_message" else "新的议价提议",
                 content=content,
+                title_en=title_en,
+                content_en=content_en,
                 related_id=application_id,  # 保持为 application_id
+                related_type="application_id",  # related_id 是 application_id
                 created_at=current_time
             )
             db.add(new_notification)
@@ -3097,6 +3131,7 @@ async def reply_application_message(
             title="申请者回复了您的留言",
             content=content,  # 直接使用文本，不存储 JSON
             related_id=request.notification_id,  # 关联到原始通知
+            related_type=None,  # 关联到通知ID，不是 task_id 或 application_id
             created_at=current_time
         )
         db.add(reply_notification)

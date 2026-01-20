@@ -43,6 +43,15 @@ class UserBehaviorTracker:
             is_recommended: 是否为推荐任务
         """
         try:
+            # 优化：先验证任务是否存在，避免外键约束错误
+            from app.models import Task
+            task = self.db.query(Task).filter(Task.id == task_id).first()
+            if not task:
+                logger.warning(
+                    f"尝试记录交互时任务不存在: user_id={user_id}, task_id={task_id}, "
+                    f"interaction_type={interaction_type}，跳过记录"
+                )
+                return
             # 在metadata中添加推荐标记和默认值
             if metadata is None:
                 metadata = {}

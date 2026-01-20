@@ -6,6 +6,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
     let userId: String?  // 后端返回 user_id
     let title: String
     let content: String
+    let titleEn: String?  // 英文标题（可选）
+    let contentEn: String?  // 英文内容（可选）
     let type: String?
     let isRead: Int?
     let createdAt: String
@@ -17,6 +19,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         case id
         case userId = "user_id"
         case title, content, type
+        case titleEn = "title_en"
+        case contentEn = "content_en"
         case isRead = "is_read"
         case createdAt = "created_at"
         case relatedId = "related_id"
@@ -35,7 +39,9 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         createdAt: String,
         relatedId: Int?,
         link: String?,
-        taskId: Int?
+        taskId: Int?,
+        titleEn: String? = nil,
+        contentEn: String? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -47,6 +53,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         self.relatedId = relatedId
         self.link = link
         self.taskId = taskId
+        self.titleEn = titleEn
+        self.contentEn = contentEn
     }
     
     // 自定义解码，处理 related_id 可能是字符串或整数的情况
@@ -57,6 +65,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         userId = try container.decodeIfPresent(String.self, forKey: .userId)
         title = try container.decode(String.self, forKey: .title)
         content = try container.decode(String.self, forKey: .content)
+        titleEn = try container.decodeIfPresent(String.self, forKey: .titleEn)
+        contentEn = try container.decodeIfPresent(String.self, forKey: .contentEn)
         type = try container.decodeIfPresent(String.self, forKey: .type)
         isRead = try container.decodeIfPresent(Int.self, forKey: .isRead)
         createdAt = try container.decode(String.self, forKey: .createdAt)
@@ -86,7 +96,9 @@ struct SystemNotification: Codable, Identifiable, Equatable {
             createdAt: self.createdAt,
             relatedId: self.relatedId,
             link: self.link,
-            taskId: self.taskId
+            taskId: self.taskId,
+            titleEn: self.titleEn,
+            contentEn: self.contentEn
         )
     }
 }

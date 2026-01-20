@@ -656,7 +656,10 @@ class NotificationBase(BaseModel):
     type: str
     title: str
     content: str
+    title_en: Optional[str] = None  # 英文标题（可选）
+    content_en: Optional[str] = None  # 英文内容（可选）
     related_id: Optional[int] = None
+    related_type: Optional[str] = None  # 'task_id' 或 'application_id'，用于明确标识 related_id 的类型
 
 
 class NotificationCreate(NotificationBase):

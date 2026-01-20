@@ -390,11 +390,14 @@ class Notification(Base):
         String(32), nullable=False
     )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply', 'task_reward_paid'
     related_id = Column(Integer, nullable=True)  # application_id 或 task_id（根据 type 而定）
+    related_type = Column(String(20), nullable=True)  # 'task_id' 或 'application_id'，用于明确标识 related_id 的类型
     content = Column(Text, nullable=False)  # JSON 格式存储通知数据
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     read_at = Column(DateTime(timezone=True), nullable=True)  # 已读时间（可为空）
     # 保留向后兼容字段
     title = Column(String(200), nullable=True)  # 可选，用于旧通知
+    title_en = Column(String(200), nullable=True)  # 英文标题（可选）
+    content_en = Column(Text, nullable=True)  # 英文内容（可选）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 read_at)
     __table_args__ = (
         UniqueConstraint("user_id", "type", "related_id", name="uix_user_type_related"),

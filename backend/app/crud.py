@@ -1107,6 +1107,8 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
         "任务已取消",
         f'您的任务"{task.title}"已被取消',
         task.id,
+        title_en="Task Cancelled",
+        content_en=f'Your task"{task.title}"has been cancelled',
     )
     
     # 发送推送通知给发布者
@@ -1132,6 +1134,8 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
             "任务已取消",
             f'您接受的任务"{task.title}"已被取消',
             task.id,
+            title_en="Task Cancelled",
+            content_en=f'The task you accepted"{task.title}"has been cancelled',
         )
         
         # 发送推送通知给接受者
@@ -1589,6 +1593,9 @@ def create_notification(
     title: str,
     content: str,
     related_id: str = None,
+    related_type: str = None,
+    title_en: str = None,
+    content_en: str = None,
     auto_commit: bool = True,
 ):
     from app.models import Notification
@@ -1596,9 +1603,20 @@ def create_notification(
     from sqlalchemy.exc import IntegrityError
 
     try:
+        # 如果没有指定 related_type，根据通知类型自动推断
+        if related_type is None and related_id is not None:
+            # task_application, task_approved, task_completed, task_confirmed, task_cancelled, task_reward_paid, application_accepted: related_id 是 task_id
+            if type in ["task_application", "task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid", "application_accepted"]:
+                related_type = "task_id"
+            # application_message, negotiation_offer, application_rejected, application_withdrawn, negotiation_rejected: related_id 是 application_id
+            elif type in ["application_message", "negotiation_offer", "application_rejected", "application_withdrawn", "negotiation_rejected"]:
+                related_type = "application_id"
+        
         # 尝试创建新通知
         notification = Notification(
-            user_id=user_id, type=type, title=title, content=content, related_id=related_id
+            user_id=user_id, type=type, title=title, content=content, 
+            related_id=related_id, related_type=related_type,
+            title_en=title_en, content_en=content_en
         )
         db.add(notification)
         if auto_commit:
@@ -1619,6 +1637,10 @@ def create_notification(
             # 更新现有通知的内容和时间
             existing_notification.content = content
             existing_notification.title = title
+            if title_en is not None:
+                existing_notification.title_en = title_en
+            if content_en is not None:
+                existing_notification.content_en = content_en
             existing_notification.created_at = get_utc_time()
             existing_notification.is_read = 0  # 重置为未读
             db.commit()
@@ -2046,6 +2068,8 @@ def cancel_expired_tasks(db: Session):
                     "任务自动取消",
                     f'您的任务"{task.title}"因超过截止日期已自动取消',
                     task.id,
+                    title_en="Task Auto-Cancelled",
+                    content_en=f'Your task"{task.title}"has been automatically cancelled due to exceeding the deadline',
                     auto_commit=False,
                 )
 
@@ -2060,6 +2084,8 @@ def cancel_expired_tasks(db: Session):
                                 "任务自动取消",
                                 f'您申请的任务"{task.title}"因超过截止日期已自动取消',
                                 task.id,
+                                title_en="Task Auto-Cancelled",
+                                content_en=f'The task you applied for"{task.title}"has been automatically cancelled due to exceeding the deadline',
                                 auto_commit=False,
                             )
                         except Exception as e:
@@ -3481,7 +3507,8 @@ def send_admin_notification(
 
     for user_id in user_ids:
         notification = models.Notification(
-            user_id=user_id, type=notification_type, title=title, content=content
+            user_id=user_id, type=notification_type, title=title, content=content,
+            title_en=None, content_en=None  # 批量通知暂时不提供英文版本，需要时可以扩展
         )
         db.add(notification)
         notifications.append(notification)

@@ -205,19 +205,12 @@ struct SystemMessageView: View {
                     LazyVStack(spacing: AppSpacing.md) {
                         ForEach(viewModel.notifications) { notification in
                             // 判断是否是任务相关的通知，并提取任务ID
-                            if isTaskRelated(notification: notification) {
-                                let extractedTaskId = extractTaskId(from: notification)
-                                
-                                // 调试日志（在闭包中执行，避免 ViewBuilder 问题）
-                                let _ = {
-                                    print("🔔 [NotificationCenterView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
-                                }()
+                            if NotificationHelper.isTaskRelated(notification) {
+                                let extractedTaskId = NotificationHelper.extractTaskId(from: notification)
                                 
                                 let onTapCallback: () -> Void = {
                                     // 点击时立即标记为已读
-                                    print("🔔 [SystemMessageView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
                                     if notification.isRead == 0 {
-                                        print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
                                         viewModel.markAsRead(notificationId: notification.id)
                                     }
                                 }
@@ -236,17 +229,12 @@ struct SystemMessageView: View {
                                 } else {
                                     // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
                                     // NotificationRow 内部会等待异步加载完成
-                                    let _ = {
-                                        print("🔔 [NotificationCenterView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
-                                    }()
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                 }
                             } else {
                                 NotificationRow(notification: notification, isTaskRelated: false, onTap: {
                                     // 标记为已读
-                                    print("🔔 [SystemMessageView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
                                     if notification.isRead == 0 {
-                                        print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
                                         viewModel.markAsRead(notificationId: notification.id)
                                     }
                                 })
@@ -273,65 +261,6 @@ struct SystemMessageView: View {
         }
     }
     
-    /// 判断通知是否是任务相关的
-    private func isTaskRelated(notification: SystemNotification) -> Bool {
-        guard let type = notification.type else { return false }
-        
-        let lowercasedType = type.lowercased()
-        
-        // 检查是否是任务相关的通知类型
-        // 后端任务通知类型包括：task_application, task_approved, task_completed, task_confirmation, task_cancelled 等
-        if lowercasedType.contains("task") {
-            return true
-        }
-        
-        // application_accepted 也是任务相关的通知（申请被接受）
-        if lowercasedType == "application_accepted" {
-            return true
-        }
-        
-        return false
-    }
-    
-    /// 从通知中提取任务ID
-    private func extractTaskId(from notification: SystemNotification) -> Int? {
-        // 优先使用 taskId 字段（后端已添加）
-        if let taskId = notification.taskId {
-            return taskId
-        }
-        
-        guard let type = notification.type else { return nil }
-        
-        let lowercasedType = type.lowercased()
-        
-        // 对于 negotiation_offer 和 application_message 类型，related_id 是 application_id，不是 task_id
-        // 这些通知必须使用 taskId 字段（后端已添加）
-        if lowercasedType == "negotiation_offer" || lowercasedType == "application_message" {
-            return nil  // 如果没有 taskId，不跳转
-        }
-        
-        // 对于 task_application 类型，优先使用 taskId，如果没有则使用 relatedId（应该是 task_id）
-        if lowercasedType == "task_application" {
-            return notification.relatedId
-        }
-        
-        // task_approved, task_completed, task_confirmed, task_cancelled, task_reward_paid 等类型
-        // related_id 就是 task_id（后端已统一）
-        if lowercasedType == "task_approved" || 
-           lowercasedType == "task_completed" || 
-           lowercasedType == "task_confirmed" || 
-           lowercasedType == "task_cancelled" ||
-           lowercasedType == "task_reward_paid" {
-            return notification.relatedId
-        }
-        
-        // 其他包含 "task" 的通知类型，尝试使用 relatedId
-        if lowercasedType.contains("task") {
-            return notification.relatedId
-        }
-        
-        return nil
-    }
 }
 
 // 分类标签按钮 - 现代简洁设计

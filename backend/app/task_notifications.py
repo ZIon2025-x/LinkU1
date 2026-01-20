@@ -123,6 +123,22 @@ def send_task_application_notification(
         
         notification_content = "\n".join(content_parts)
         
+        # 生成英文版本
+        applicant_name_en = applicant.name or f"User {applicant.id}"
+        content_parts_en = [f"{applicant_name_en} applied for task「{task.title}」"]
+        
+        if application_message:
+            content_parts_en.append(f"Application message: {application_message}")
+        else:
+            content_parts_en.append("Application message: None")
+        
+        if negotiated_price:
+            content_parts_en.append(f"Negotiated price: £{negotiated_price:.2f} {currency}")
+        else:
+            content_parts_en.append("Negotiated price: No negotiation (using original task amount)")
+        
+        notification_content_en = "\n".join(content_parts_en)
+        
         # 创建通知
         # related_id 始终使用 task_id，因为通知的目的是让用户跳转到任务详情页
         notification = crud.create_notification(
@@ -131,6 +147,8 @@ def send_task_application_notification(
             type="task_application",
             title="新任务申请",
             content=notification_content,
+            title_en="New Task Application",
+            content_en=notification_content_en,
             related_id=str(task.id)  # 始终使用 task_id，确保前端可以正确跳转
         )
         print(f"DEBUG: 通知创建结果: {notification}")
@@ -225,7 +243,16 @@ def send_task_approval_notification(
         
         notification_content = f"您的任务申请已被同意！任务：{task.title}{payment_expires_info}"
         
+        # 生成英文版本
+        payment_expires_info_en = ""
+        if task.status == "pending_payment" and task.payment_expires_at:
+            from app.utils.time_utils import format_iso_utc
+            expires_at_str = format_iso_utc(task.payment_expires_at)
+            payment_expires_info_en = f"\nPlease complete the payment as soon as possible to start the task. Payment expires at: {expires_at_str}\nPlease complete the payment within 24 hours, otherwise the task will be automatically cancelled."
+        
+        notification_content_en = f"Your task application has been approved! Task: {task.title}{payment_expires_info_en}"
         title = "任务申请已同意，请完成支付" if task.status == "pending_payment" else "任务申请已同意"
+        title_en = "Task Application Approved - Payment Required" if task.status == "pending_payment" else "Task Application Approved"
         
         crud.create_notification(
             db=db,
@@ -233,6 +260,8 @@ def send_task_approval_notification(
             type="task_approved",
             title=title,
             content=notification_content,
+            title_en=title_en,
+            content_en=notification_content_en,
             related_id=str(task.id)
         )
         
@@ -273,12 +302,18 @@ def send_task_completion_notification(
         taker_name = taker.name or f"用户{taker.id}"
         notification_content = f"用户 {taker_name} 标记任务已完成：{task.title}"
         
+        # 生成英文版本
+        taker_name_en = taker.name or f"User {taker.id}"
+        notification_content_en = f"{taker_name_en} has marked task as completed: {task.title}"
+        
         crud.create_notification(
             db=db,
             user_id=task.poster_id,
             type="task_completed",
             title="任务已完成",
             content=notification_content,
+            title_en="Task Completed",
+            content_en=notification_content_en,
             related_id=str(task.id)
         )
         
@@ -340,6 +375,7 @@ def send_task_confirmation_notification(
     try:
         # 创建通知
         notification_content = f"任务已完成并确认！奖励已发放：{task.title}"
+        notification_content_en = f"Task completed and confirmed! Reward has been issued: {task.title}"
         
         crud.create_notification(
             db=db,
@@ -347,6 +383,8 @@ def send_task_confirmation_notification(
             type="task_confirmed",
             title="任务已确认完成",
             content=notification_content,
+            title_en="Task Confirmed",
+            content_en=notification_content_en,
             related_id=str(task.id)
         )
         
@@ -404,6 +442,7 @@ def send_task_rejection_notification(
     try:
         # 创建通知
         notification_content = f"很抱歉，您的任务申请被拒绝：{task.title}"
+        notification_content_en = f"Sorry, your task application has been rejected: {task.title}"
         
         crud.create_notification(
             db=db,
@@ -411,6 +450,8 @@ def send_task_rejection_notification(
             type="task_rejected",
             title="任务申请被拒绝",
             content=notification_content,
+            title_en="Task Application Rejected",
+            content_en=notification_content_en,
             related_id=str(task.id)
         )
         

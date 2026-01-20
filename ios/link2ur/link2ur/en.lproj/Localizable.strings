@@ -594,6 +594,7 @@
 "task_detail.confirm_completion_success_message" = "Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.";
 "task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
 "task_detail.application_rejected_message" = "Sorry, your application was not approved.";
+"task_detail.task_accepted_by_others" = "This task has been accepted by another user.";
 "task_detail.pending_review" = "Pending Review";
 "task_detail.approved" = "Approved";
 "task_detail.rejected" = "Rejected";
