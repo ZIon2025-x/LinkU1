@@ -20,8 +20,8 @@ import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
 import InstallPrompt from './components/InstallPrompt';
 import ServiceAuth from './components/ServiceAuth';
-import { ServiceGuard, UserGuard } from './components/AuthGuard';
-import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
+import { ServiceGuard } from './components/AuthGuard';
+import { detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // P1 优化：创建 React Query 客户端
 const queryClient = new QueryClient({

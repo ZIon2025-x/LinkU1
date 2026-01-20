@@ -87,7 +87,8 @@ class ForumViewModel: ObservableObject {
                 // 批量获取收藏状态（如果用户已登录）
                 if !categories.isEmpty {
                     let categoryIds = categories.map { $0.id }
-                    self?.apiService.getCategoryFavoritesBatch(categoryIds: categoryIds)
+                    guard let strongSelf = self else { return }
+                    strongSelf.apiService.getCategoryFavoritesBatch(categoryIds: categoryIds)
                         .sink(receiveCompletion: { result in
                             if case .failure(let error) = result {
                                 Logger.warning("批量获取板块收藏状态失败: \(error.localizedDescription)", category: .api)
@@ -102,7 +103,7 @@ class ForumViewModel: ObservableObject {
                             self?.isRequestingCategories = false
                             Logger.success("加载了 \(categories.count) 个论坛板块（已更新收藏状态）", category: .api)
                         })
-                        .store(in: &self?.cancellables ?? Set<AnyCancellable>())
+                        .store(in: &strongSelf.cancellables)
                 } else {
                     self?.categories = categories
                     self?.isRequestingCategories = false

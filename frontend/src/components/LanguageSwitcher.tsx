@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { Select } from 'antd';
 import { GlobalOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';

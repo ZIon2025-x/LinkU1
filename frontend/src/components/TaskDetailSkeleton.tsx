@@ -2,7 +2,7 @@
  * TaskDetailSkeleton 组件
  * 任务详情页面的骨架屏加载状态
  */
-import React from 'react';
+import type React from 'react';
 
 const TaskDetailSkeleton: React.FC = () => {
   return (

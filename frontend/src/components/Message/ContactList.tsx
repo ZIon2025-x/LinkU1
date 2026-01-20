@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import LazyImage from '../../components/LazyImage';

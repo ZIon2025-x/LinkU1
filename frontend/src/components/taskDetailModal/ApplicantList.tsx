@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { TaskApplication } from '../../types/task';
 import { useLocalizedNavigation } from '../../hooks/useLocalizedNavigation';
 import { TimeHandlerV2 } from '../../utils/timeUtils';

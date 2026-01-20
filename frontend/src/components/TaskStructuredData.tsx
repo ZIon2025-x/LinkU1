@@ -1,5 +1,5 @@
 // frontend/src/components/TaskStructuredData.tsx
-import React from 'react';
+import type React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { obfuscateLocation } from '../utils/formatUtils';

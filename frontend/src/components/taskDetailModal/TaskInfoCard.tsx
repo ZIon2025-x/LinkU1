@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { Task, TaskLevel } from '../../types/task';
 import { cardStyles, statusStyles, levelStyles } from '../../utils/taskModalStyles';
 import { TimeHandlerV2 } from '../../utils/timeUtils';

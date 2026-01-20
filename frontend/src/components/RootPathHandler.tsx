@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { Navigate } from 'react-router-dom';
 import { detectBrowserLanguage, DEFAULT_LANGUAGE, addLanguageToPath } from '../utils/i18n';
 

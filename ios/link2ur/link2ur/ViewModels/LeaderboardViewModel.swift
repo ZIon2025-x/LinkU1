@@ -134,40 +134,39 @@ class LeaderboardViewModel: ObservableObject {
                         })
                         .store(in: &self.cancellables)
                 } else {
+                    // items为空的情况
                     self.rawLeaderboards = items
                     self.currentSort = sort
-                
-                // 只在默认状态（latest）时应用距离+浏览量排序
-                if sort == "latest" {
-                    self.sortLeaderboardsByDistance(sort: sort, location: location)
-                } else {
-                    // 其他排序方式直接使用后端返回的结果
-                    DispatchQueue.main.async { [weak self] in
-                        self?.leaderboards = response.items
-                    }
-                }
-                
-                self.isRequesting = false
-                Logger.success("排行榜加载成功，共\(self.leaderboards.count)条", category: .api)
-                if self.leaderboards.isEmpty {
-                    Logger.warning("警告：返回的items数组为空", category: .api)
-                }
-                // 保存到缓存（仅在没有筛选条件时）
-                if location == nil && sort == "latest" {
-                    CacheManager.shared.saveLeaderboards(self.leaderboards, location: nil, sort: "latest")
-                    Logger.success("已缓存 \(self.leaderboards.count) 个排行榜", category: .cache)
-                }
-                
-                // 如果是默认状态（latest），监听位置更新以重新排序
-                if sort == "latest" {
-                    self.locationService.$currentLocation
-                        .dropFirst() // 跳过初始值
-                        .sink { [weak self] _ in
-                            if self?.currentSort == "latest" {
-                                self?.sortLeaderboardsByDistance(sort: "latest", location: location)
-                            }
+                    
+                    // 只在默认状态（latest）时应用距离+浏览量排序
+                    if sort == "latest" {
+                        self.sortLeaderboardsByDistance(sort: sort, location: location)
+                    } else {
+                        // 其他排序方式直接使用后端返回的结果
+                        DispatchQueue.main.async {
+                            self.leaderboards = items
                         }
-                        .store(in: &self.cancellables)
+                    }
+                    
+                    self.isRequesting = false
+                    Logger.success("排行榜加载成功，共\(self.leaderboards.count)条", category: .api)
+                    
+                    // 保存到缓存（仅在没有筛选条件时）
+                    if location == nil && sort == "latest" {
+                        CacheManager.shared.saveLeaderboards(self.leaderboards, location: nil, sort: "latest")
+                    }
+                    
+                    // 如果是默认状态（latest），监听位置更新以重新排序
+                    if sort == "latest" {
+                        self.locationService.$currentLocation
+                            .dropFirst() // 跳过初始值
+                            .sink { [weak self] _ in
+                                if self?.currentSort == "latest" {
+                                    self?.sortLeaderboardsByDistance(sort: "latest", location: location)
+                                }
+                            }
+                            .store(in: &self.cancellables)
+                    }
                 }
             })
             .store(in: &cancellables)

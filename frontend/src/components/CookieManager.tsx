@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { useCookie } from '../contexts/CookieContext';
 import CookieConsent from './CookieConsent';
 import CookieSettings from './CookieSettings';

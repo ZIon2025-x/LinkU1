@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import { DEFAULT_LANGUAGE } from '../utils/i18n';
 

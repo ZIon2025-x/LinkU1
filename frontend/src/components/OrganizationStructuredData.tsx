@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 /**
  * OrganizationStructuredData - 全局组织信息结构化数据

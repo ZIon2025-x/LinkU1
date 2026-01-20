@@ -3,7 +3,7 @@
  * 安全渲染 HTML 内容，防止 XSS 攻击
  * DOMPurify hook 配置在模块级，只初始化一次
  */
-import React from 'react';
+import type React from 'react';
 import DOMPurify from 'dompurify';
 
 // ⚠️ 重要：DOMPurify hook 配置放在模块级，只初始化一次
