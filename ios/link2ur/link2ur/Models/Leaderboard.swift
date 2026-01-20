@@ -17,6 +17,7 @@ struct CustomLeaderboard: Codable, Identifiable {
     let createdAt: String
     let updatedAt: String
     var distance: Double? // 距离用户的位置（公里），用于排序
+    var isFavorited: Bool?  // 是否已收藏（可变，用于UI更新）
     
     // 使用自定义解码，处理计数字段可能是字符串或整数的情况
     init(from decoder: Decoder) throws {
@@ -55,6 +56,7 @@ struct CustomLeaderboard: Codable, Identifiable {
         
         createdAt = try container.decode(String.self, forKey: .createdAt)
         updatedAt = try container.decode(String.self, forKey: .updatedAt)
+        isFavorited = try container.decodeIfPresent(Bool.self, forKey: .isFavorited)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -85,6 +87,7 @@ struct CustomLeaderboard: Codable, Identifiable {
         case viewCount = "view_count"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case isFavorited = "is_favorited"
     }
 }
 

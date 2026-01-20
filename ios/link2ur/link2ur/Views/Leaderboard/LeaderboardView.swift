@@ -1,4 +1,6 @@
 import SwiftUI
+import Combine
+import Foundation
 
 struct LeaderboardView: View {
     @StateObject private var viewModel = LeaderboardViewModel()
@@ -6,6 +8,13 @@ struct LeaderboardView: View {
     @State private var selectedSort = "latest"
     @State private var showApplyLeaderboard = false
     @State private var showLogin = false
+    
+    // 优先显示收藏的排行榜
+    private var sortedLeaderboards: [CustomLeaderboard] {
+        let favorited = viewModel.leaderboards.filter { $0.isFavorited == true }
+        let notFavorited = viewModel.leaderboards.filter { $0.isFavorited != true }
+        return favorited + notFavorited
+    }
     
     var body: some View {
         ZStack {
@@ -41,9 +50,10 @@ struct LeaderboardView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
-                        ForEach(viewModel.leaderboards) { leaderboard in
+                        ForEach(sortedLeaderboards) { leaderboard in
                             NavigationLink(destination: LeaderboardDetailView(leaderboardId: leaderboard.id)) {
                                 LeaderboardCard(leaderboard: leaderboard)
+                                    .environmentObject(appState)
                             }
                             .buttonStyle(ScaleButtonStyle())
                         }
@@ -101,6 +111,11 @@ struct LeaderboardView: View {
 // 排行榜卡片 - 美化版
 struct LeaderboardCard: View {
     let leaderboard: CustomLeaderboard
+    @EnvironmentObject var appState: AppState
+    @State private var isFavorited: Bool?
+    @State private var isTogglingFavorite = false
+    private let apiService = APIService.shared
+    @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -159,6 +174,20 @@ struct LeaderboardCard: View {
                 }
                 
                 Spacer()
+                
+                // 收藏按钮（仅登录用户显示）
+                if appState.isAuthenticated {
+                    Button(action: {
+                        handleToggleFavorite()
+                    }) {
+                        Image(systemName: (isFavorited ?? leaderboard.isFavorited ?? false) ? "star.fill" : "star")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor((isFavorited ?? leaderboard.isFavorited ?? false) ? .yellow : AppColors.textTertiary)
+                            .frame(width: 32, height: 32)
+                    }
+                    .disabled(isTogglingFavorite)
+                    .opacity(isTogglingFavorite ? 0.6 : 1.0)
+                }
             }
             
             Divider().background(AppColors.divider)
@@ -174,6 +203,33 @@ struct LeaderboardCard: View {
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.large)
         .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
+        .onAppear {
+            // 初始化收藏状态
+            isFavorited = leaderboard.isFavorited
+        }
+        .onChange(of: leaderboard.isFavorited) { newValue in
+            isFavorited = newValue
+        }
+    }
+    
+    private func handleToggleFavorite() {
+        guard !isTogglingFavorite else { return }
+        isTogglingFavorite = true
+        
+        apiService.toggleLeaderboardFavorite(leaderboardId: leaderboard.id)
+            .sink(receiveCompletion: { result in
+                DispatchQueue.main.async {
+                    isTogglingFavorite = false
+                    if case .failure(let error) = result {
+                        ErrorHandler.shared.handle(error, context: "收藏操作")
+                    }
+                }
+            }, receiveValue: { response in
+                DispatchQueue.main.async {
+                    isFavorited = response.favorited
+                }
+            })
+            .store(in: &cancellables)
     }
 }
 

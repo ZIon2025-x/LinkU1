@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import { getVisibleForums, fetchCurrentUser, getPublicSystemSettings, logout, toggleForumCategoryFavorite, getForumCategoryFavoriteStatus } from '../api';
+import { getVisibleForums, fetchCurrentUser, getPublicSystemSettings, logout, toggleForumCategoryFavorite, getForumCategoryFavoritesBatch } from '../api';
 import { message } from 'antd';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
@@ -85,19 +85,20 @@ const Forum: React.FC = () => {
       const response = await getVisibleForums(false);
       const categoriesData = response.categories || [];
       
-      // 加载收藏状态
-      if (currentUser) {
-        const categoriesWithFavorites = await Promise.all(
-          categoriesData.map(async (category: ForumCategory) => {
-            try {
-              const favoriteStatus = await getForumCategoryFavoriteStatus(category.id);
-              return { ...category, is_favorited: favoriteStatus.favorited };
-            } catch (error) {
-              return { ...category, is_favorited: false };
-            }
-          })
-        );
-        setCategories(categoriesWithFavorites);
+      // 批量加载收藏状态（性能优化）
+      if (currentUser && categoriesData.length > 0) {
+        try {
+          const categoryIds = categoriesData.map((cat: ForumCategory) => cat.id);
+          const favoriteStatuses = await getForumCategoryFavoritesBatch(categoryIds);
+          const categoriesWithFavorites = categoriesData.map((category: ForumCategory) => ({
+            ...category,
+            is_favorited: favoriteStatuses.favorites[category.id] || false
+          }));
+          setCategories(categoriesWithFavorites);
+        } catch (error) {
+          // 如果批量获取失败，回退到单个获取或直接使用空状态
+          setCategories(categoriesData.map((cat: ForumCategory) => ({ ...cat, is_favorited: false })));
+        }
       } else {
         setCategories(categoriesData);
       }
@@ -278,6 +279,7 @@ const Forum: React.FC = () => {
                         loading={favoriteLoading[category.id]}
                         onClick={(e) => handleToggleFavorite(e, category.id)}
                         style={{ padding: '4px 8px' }}
+                        title={category.is_favorited ? '取消收藏' : '收藏'}
                       />
                     )}
                   </div>

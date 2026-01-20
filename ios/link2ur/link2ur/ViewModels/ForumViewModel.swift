@@ -82,9 +82,50 @@ class ForumViewModel: ObservableObject {
             }, receiveValue: { [weak self] response in
                 // 后端应该已经根据用户认证信息返回对应学校的板块
                 // 如果还需要前端筛选，可以在这里添加
-                self?.categories = response.categories
-                self?.isRequestingCategories = false
-                Logger.success("加载了 \(response.categories.count) 个论坛板块", category: .api)
+                var categories = response.categories
+                
+                // 批量获取收藏状态（如果用户已登录）
+                if !categories.isEmpty {
+                    let categoryIds = categories.map { $0.id }
+                    self?.apiService.getCategoryFavoritesBatch(categoryIds: categoryIds)
+                        .sink(receiveCompletion: { result in
+                            if case .failure(let error) = result {
+                                Logger.warning("批量获取板块收藏状态失败: \(error.localizedDescription)", category: .api)
+                            }
+                        }, receiveValue: { [weak self] favoriteResponse in
+                            // 更新收藏状态
+                            for i in 0..<categories.count {
+                                let categoryId = categories[i].id
+                                categories[i].isFavorited = favoriteResponse.favorites[categoryId] ?? false
+                            }
+                            self?.categories = categories
+                            self?.isRequestingCategories = false
+                            Logger.success("加载了 \(categories.count) 个论坛板块（已更新收藏状态）", category: .api)
+                        })
+                        .store(in: &self?.cancellables ?? Set<AnyCancellable>())
+                } else {
+                    self?.categories = categories
+                    self?.isRequestingCategories = false
+                    Logger.success("加载了 \(categories.count) 个论坛板块", category: .api)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 收藏/取消收藏板块
+    func toggleCategoryFavorite(categoryId: Int, completion: @escaping (Bool) -> Void) {
+        apiService.toggleCategoryFavorite(categoryId: categoryId)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "收藏操作")
+                    completion(false)
+                }
+            }, receiveValue: { [weak self] response in
+                // 更新本地状态
+                if let index = self?.categories.firstIndex(where: { $0.id == categoryId }) {
+                    self?.categories[index].isFavorited = response.favorited
+                }
+                completion(true)
             })
             .store(in: &cancellables)
     }

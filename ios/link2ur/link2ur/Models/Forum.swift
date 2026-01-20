@@ -31,6 +31,7 @@ struct ForumCategory: Codable, Identifiable {
     let type: String?  // 板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)
     let country: String?  // 国家代码（如 UK），仅 type=root 时使用
     let universityCode: String?  // 大学编码（如 UOB），仅 type=university 时使用
+    var isFavorited: Bool?  // 是否已收藏（可变，用于UI更新）
     
     enum CodingKeys: String, CodingKey {
         case id, name, description, icon, type, country
@@ -39,6 +40,7 @@ struct ForumCategory: Codable, Identifiable {
         case latestPost = "latest_post"
         case isAdminOnly = "is_admin_only"
         case universityCode = "university_code"
+        case isFavorited = "is_favorited"
     }
     
     // 自定义解码，处理可选字段可能不存在的情况
@@ -55,6 +57,7 @@ struct ForumCategory: Codable, Identifiable {
         type = try container.decodeIfPresent(String.self, forKey: .type) ?? "general"
         country = try container.decodeIfPresent(String.self, forKey: .country)
         universityCode = try container.decodeIfPresent(String.self, forKey: .universityCode)
+        isFavorited = try container.decodeIfPresent(Bool.self, forKey: .isFavorited)
     }
     
     // 检查是否需要学生认证才能访问
@@ -367,7 +370,60 @@ struct ForumLikeResponse: Codable {
 // 收藏响应
 struct ForumFavoriteResponse: Codable {
     let favorited: Bool
-    let message: String
+    let message: String?
+}
+
+// 板块收藏响应
+struct ForumCategoryFavoriteResponse: Codable {
+    let favorited: Bool
+}
+
+// 排行榜收藏响应
+struct CustomLeaderboardFavoriteResponse: Codable {
+    let favorited: Bool
+}
+
+// 批量获取收藏状态响应
+struct ForumCategoryFavoriteBatchResponse: Codable {
+    let favorites: [Int: Bool]  // category_id -> favorited
+    
+    enum CodingKeys: String, CodingKey {
+        case favorites
+    }
+    
+    // 自定义解码，处理字典键可能是字符串或整数的情况
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let rawFavorites = try container.decode([String: Bool].self, forKey: .favorites)
+        // 将字符串键转换为整数键
+        favorites = Dictionary(uniqueKeysWithValues: rawFavorites.compactMap { key, value in
+            if let intKey = Int(key) {
+                return (intKey, value)
+            }
+            return nil
+        })
+    }
+}
+
+struct CustomLeaderboardFavoriteBatchResponse: Codable {
+    let favorites: [Int: Bool]  // leaderboard_id -> favorited
+    
+    enum CodingKeys: String, CodingKey {
+        case favorites
+    }
+    
+    // 自定义解码，处理字典键可能是字符串或整数的情况
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let rawFavorites = try container.decode([String: Bool].self, forKey: .favorites)
+        // 将字符串键转换为整数键
+        favorites = Dictionary(uniqueKeysWithValues: rawFavorites.compactMap { key, value in
+            if let intKey = Int(key) {
+                return (intKey, value)
+            }
+            return nil
+        })
+    }
 }
 
 // 搜索响应

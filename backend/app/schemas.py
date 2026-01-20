@@ -2906,6 +2906,32 @@ class CustomLeaderboardFavoriteResponse(BaseModel):
     favorited: bool
 
 
+class ForumCategoryFavoriteBatchResponse(BaseModel):
+    """批量获取板块收藏状态响应"""
+    favorites: dict[int, bool]  # category_id -> favorited
+
+
+class CustomLeaderboardFavoriteBatchResponse(BaseModel):
+    """批量获取排行榜收藏状态响应"""
+    favorites: dict[int, bool]  # leaderboard_id -> favorited
+
+
+class ForumCategoryFavoriteListResponse(BaseModel):
+    """板块收藏列表响应"""
+    categories: List[ForumCategoryOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class CustomLeaderboardFavoriteListResponse(BaseModel):
+    """排行榜收藏列表响应"""
+    leaderboards: List[dict]  # 使用dict因为CustomLeaderboard的schema比较复杂
+    total: int
+    page: int
+    page_size: int
+
+
 # 搜索相关 Schemas
 class ForumSearchResponse(BaseModel):
     """搜索响应"""

@@ -8,7 +8,7 @@ import {
   applyCustomLeaderboard,
   getCustomLeaderboards,
   toggleCustomLeaderboardFavorite,
-  getCustomLeaderboardFavoriteStatus
+  getCustomLeaderboardFavoritesBatch
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
@@ -86,20 +86,20 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         const items = response.items || [];
         setLeaderboards(items);
         
-        // 加载收藏状态
-        if (user) {
-          const favoriteStatusMap: { [key: number]: boolean } = {};
-          await Promise.all(
-            items.map(async (leaderboard: any) => {
-              try {
-                const favoriteStatus = await getCustomLeaderboardFavoriteStatus(leaderboard.id);
-                favoriteStatusMap[leaderboard.id] = favoriteStatus.favorited;
-              } catch (error) {
-                favoriteStatusMap[leaderboard.id] = false;
-              }
-            })
-          );
-          setFavoriteStatuses(prev => ({ ...prev, ...favoriteStatusMap }));
+        // 批量加载收藏状态（性能优化）
+        if (user && items.length > 0) {
+          try {
+            const leaderboardIds = items.map((lb: any) => lb.id);
+            const favoriteStatuses = await getCustomLeaderboardFavoritesBatch(leaderboardIds);
+            setFavoriteStatuses(prev => ({ ...prev, ...favoriteStatuses.favorites }));
+          } catch (error) {
+            // 如果批量获取失败，使用空状态
+            const emptyStatuses: { [key: number]: boolean } = {};
+            items.forEach((lb: any) => {
+              emptyStatuses[lb.id] = false;
+            });
+            setFavoriteStatuses(prev => ({ ...prev, ...emptyStatuses }));
+          }
         }
         
         setPagination(prev => ({
@@ -517,6 +517,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                           loading={favoriteLoading[leaderboard.id]}
                           onClick={(e) => handleToggleFavorite(e, leaderboard.id)}
                           style={{ padding: '4px 8px' }}
+                          title={favoriteStatuses[leaderboard.id] ? '取消收藏' : '收藏'}
                         />
                       )}
                       <button

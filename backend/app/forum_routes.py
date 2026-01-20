@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 import re
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Body
 from sqlalchemy import select, func, or_, and_, desc, asc, case, update, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
@@ -4419,6 +4419,90 @@ async def get_category_favorite_status(
     
     return {
         "favorited": existing is not None
+    }
+
+
+@router.post("/categories/favorites/batch", response_model=schemas.ForumCategoryFavoriteBatchResponse)
+async def get_category_favorites_batch(
+    category_ids: List[int] = Body(..., description="板块ID列表"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """批量获取板块收藏状态"""
+    if not current_user or not category_ids:
+        return {"favorites": {cat_id: False for cat_id in category_ids}}
+    
+    result = await db.execute(
+        select(models.ForumCategoryFavorite).where(
+            models.ForumCategoryFavorite.category_id.in_(category_ids),
+            models.ForumCategoryFavorite.user_id == current_user.id
+        )
+    )
+    favorites = result.scalars().all()
+    
+    # 构建字典：category_id -> favorited
+    favorite_dict = {fav.category_id: True for fav in favorites}
+    # 填充未收藏的板块
+    for cat_id in category_ids:
+        if cat_id not in favorite_dict:
+            favorite_dict[cat_id] = False
+    
+    return {"favorites": favorite_dict}
+
+
+@router.get("/my/category-favorites", response_model=schemas.ForumCategoryFavoriteListResponse)
+async def get_my_category_favorites(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我收藏的板块列表"""
+    # 查询收藏的板块
+    query = (
+        select(models.ForumCategory)
+        .join(
+            models.ForumCategoryFavorite,
+            models.ForumCategory.id == models.ForumCategoryFavorite.category_id
+        )
+        .where(
+            models.ForumCategoryFavorite.user_id == current_user.id,
+            models.ForumCategory.is_visible == True
+        )
+        .order_by(models.ForumCategoryFavorite.created_at.desc())
+    )
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    categories = result.scalars().all()
+    
+    # 检查板块可见性（学校板块需要权限）
+    visible_category_ids = await visible_forums(current_user, db)
+    general_forums_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    general_ids = [row[0] for row in general_forums_result.all()]
+    visible_category_ids.extend(general_ids)
+    
+    # 过滤掉用户无权限访问的板块
+    visible_categories = [cat for cat in categories if cat.id in visible_category_ids]
+    
+    return {
+        "categories": [schemas.ForumCategoryOut.model_validate(cat) for cat in visible_categories],
+        "total": len(visible_categories),
+        "page": page,
+        "page_size": page_size
     }
 
 

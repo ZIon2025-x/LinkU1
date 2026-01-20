@@ -9,7 +9,7 @@ import os
 import shutil
 import logging
 from pathlib import Path
-from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, update, delete
 from sqlalchemy.exc import IntegrityError
@@ -2246,5 +2246,99 @@ async def get_leaderboard_favorite_status(
     
     return {
         "favorited": existing is not None
+    }
+
+
+@router.post("/favorites/batch", response_model=schemas.CustomLeaderboardFavoriteBatchResponse)
+async def get_leaderboard_favorites_batch(
+    leaderboard_ids: List[int] = Body(..., description="排行榜ID列表"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """批量获取排行榜收藏状态"""
+    if not current_user or not leaderboard_ids:
+        return {"favorites": {lb_id: False for lb_id in leaderboard_ids}}
+    
+    result = await db.execute(
+        select(models.CustomLeaderboardFavorite).where(
+            models.CustomLeaderboardFavorite.leaderboard_id.in_(leaderboard_ids),
+            models.CustomLeaderboardFavorite.user_id == current_user.id
+        )
+    )
+    favorites = result.scalars().all()
+    
+    # 构建字典：leaderboard_id -> favorited
+    favorite_dict = {fav.leaderboard_id: True for fav in favorites}
+    # 填充未收藏的排行榜
+    for lb_id in leaderboard_ids:
+        if lb_id not in favorite_dict:
+            favorite_dict[lb_id] = False
+    
+    return {"favorites": favorite_dict}
+
+
+@router.get("/my/favorites", response_model=schemas.CustomLeaderboardFavoriteListResponse)
+async def get_my_leaderboard_favorites(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我收藏的排行榜列表"""
+    # 查询收藏的排行榜
+    query = (
+        select(models.CustomLeaderboard)
+        .join(
+            models.CustomLeaderboardFavorite,
+            models.CustomLeaderboard.id == models.CustomLeaderboardFavorite.leaderboard_id
+        )
+        .where(
+            models.CustomLeaderboardFavorite.user_id == current_user.id,
+            models.CustomLeaderboard.status == "active"  # 只返回已激活的排行榜
+        )
+        .order_by(models.CustomLeaderboardFavorite.created_at.desc())
+    )
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.CustomLeaderboard.applicant)
+    )
+    
+    result = await db.execute(query)
+    leaderboards = result.scalars().all()
+    
+    # 转换为字典格式
+    leaderboard_list = []
+    for lb in leaderboards:
+        leaderboard_list.append({
+            "id": lb.id,
+            "name": lb.name,
+            "location": lb.location,
+            "description": lb.description,
+            "cover_image": lb.cover_image,
+            "applicant": {
+                "id": lb.applicant.id if lb.applicant else None,
+                "name": lb.applicant.name if lb.applicant else None
+            },
+            "item_count": lb.item_count,
+            "vote_count": lb.vote_count,
+            "view_count": lb.view_count,
+            "created_at": lb.created_at.isoformat() if lb.created_at else None
+        })
+    
+    return {
+        "leaderboards": leaderboard_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
     }
 

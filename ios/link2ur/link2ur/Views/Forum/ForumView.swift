@@ -17,18 +17,24 @@ struct ForumView: View {
         return verificationStatus.isVerified
     }
     
-    // 获取可见的板块（根据权限过滤）
+    // 获取可见的板块（根据权限过滤，收藏的板块优先显示）
     private var visibleCategories: [ForumCategory] {
+        let categories: [ForumCategory]
         if !appState.isAuthenticated {
             // 未登录：只显示 general 类型的板块
-            return viewModel.categories.filter { $0.type == "general" || $0.type == nil }
+            categories = viewModel.categories.filter { $0.type == "general" || $0.type == nil }
         } else if !isStudentVerified {
             // 已登录但未认证：只显示 general 类型的板块
-            return viewModel.categories.filter { $0.type == "general" || $0.type == nil }
+            categories = viewModel.categories.filter { $0.type == "general" || $0.type == nil }
         } else {
             // 已登录且已认证：显示所有板块（后端已经根据学校筛选了 university 类型）
-            return viewModel.categories
+            categories = viewModel.categories
         }
+        
+        // 优先显示收藏的板块
+        let favorited = categories.filter { $0.isFavorited == true }
+        let notFavorited = categories.filter { $0.isFavorited != true }
+        return favorited + notFavorited
     }
     
     var body: some View {
@@ -76,6 +82,7 @@ struct ForumView: View {
                         ForEach(Array(visibleCategories.enumerated()), id: \.element.id) { index, category in
                             NavigationLink(destination: ForumPostListView(category: category)) {
                                 CategoryCard(category: category)
+                                    .environmentObject(appState)
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .listItemAppear(index: index, totalItems: visibleCategories.count)
@@ -287,6 +294,11 @@ struct UnverifiedForumView: View {
 struct CategoryCard: View {
     let category: ForumCategory
     @State private var isAppeared = false
+    @EnvironmentObject var appState: AppState
+    @State private var isFavorited: Bool?
+    @State private var isTogglingFavorite = false
+    @State private var cancellables = Set<AnyCancellable>()
+    private let apiService = APIService.shared
     
     var body: some View {
         HStack(spacing: AppSpacing.md) {
@@ -418,6 +430,20 @@ struct CategoryCard: View {
             
             Spacer()
             
+            // 收藏按钮（仅登录用户显示）
+            if appState.isAuthenticated {
+                Button(action: {
+                    handleToggleFavorite()
+                }) {
+                    Image(systemName: (isFavorited ?? category.isFavorited ?? false) ? "star.fill" : "star")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor((isFavorited ?? category.isFavorited ?? false) ? .yellow : AppColors.textTertiary)
+                        .frame(width: 32, height: 32)
+                }
+                .disabled(isTogglingFavorite)
+                .opacity(isTogglingFavorite ? 0.6 : 1.0)
+            }
+            
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(AppColors.textTertiary)
@@ -429,7 +455,32 @@ struct CategoryCard: View {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0).delay(0.05)) {
                 isAppeared = true
             }
+            // 初始化收藏状态
+            isFavorited = category.isFavorited
         }
+        .onChange(of: category.isFavorited) { newValue in
+            isFavorited = newValue
+        }
+    }
+    
+    private func handleToggleFavorite() {
+        guard !isTogglingFavorite else { return }
+        isTogglingFavorite = true
+        
+        apiService.toggleCategoryFavorite(categoryId: category.id)
+            .sink(receiveCompletion: { result in
+                DispatchQueue.main.async {
+                    isTogglingFavorite = false
+                    if case .failure(let error) = result {
+                        ErrorHandler.shared.handle(error, context: "收藏操作")
+                    }
+                }
+            }, receiveValue: { response in
+                DispatchQueue.main.async {
+                    isFavorited = response.favorited
+                }
+            })
+            .store(in: &cancellables)
     }
     
     /// 格式化论坛时间显示为 "01/Jan" 格式

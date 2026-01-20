@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Tabs, Spin, Empty, Typography, Space, Tag, Button, Pagination } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, LikeOutlined, StarOutlined,
-  EditOutlined, DeleteOutlined, UserOutlined, ClockCircleOutlined
+  EditOutlined, DeleteOutlined, UserOutlined, ClockCircleOutlined,
+  FileTextOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -11,7 +12,7 @@ import { useCurrentUser } from '../contexts/AuthContext';
 import { 
   getMyForumPosts, getMyForumReplies, getMyForumLikes, getMyForumFavorites,
   deleteForumPost, deleteForumReply, fetchCurrentUser, getPublicSystemSettings, logout,
-  getForumUnreadNotificationCount
+  getForumUnreadNotificationCount, getMyCategoryFavorites, getMyLeaderboardFavorites
 } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { message, Modal } from 'antd';
@@ -103,6 +104,8 @@ const ForumMyContent: React.FC = () => {
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [likes, setLikes] = useState<ForumLike[]>([]);
   const [favorites, setFavorites] = useState<ForumFavorite[]>([]);
+  const [categoryFavorites, setCategoryFavorites] = useState<any[]>([]);
+  const [leaderboardFavorites, setLeaderboardFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -172,6 +175,16 @@ const ForumMyContent: React.FC = () => {
           const favoritesRes = await getMyForumFavorites(params);
           setFavorites(favoritesRes.favorites || []);
           setTotal(favoritesRes.total || 0);
+          break;
+        case 'category-favorites':
+          const categoryFavoritesRes = await getMyCategoryFavorites(currentPage, pageSize);
+          setCategoryFavorites(categoryFavoritesRes.categories || []);
+          setTotal(categoryFavoritesRes.total || 0);
+          break;
+        case 'leaderboard-favorites':
+          const leaderboardFavoritesRes = await getMyLeaderboardFavorites(currentPage, pageSize);
+          setLeaderboardFavorites(leaderboardFavoritesRes.leaderboards || []);
+          setTotal(leaderboardFavoritesRes.total || 0);
           break;
       }
     } catch (error: any) {
@@ -534,6 +547,137 @@ const ForumMyContent: React.FC = () => {
                             </span>
                             <span>
                               <ClockCircleOutlined /> {formatRelativeTime(favorite.post.last_reply_at || favorite.post.created_at)}
+                            </span>
+                          </Space>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                  {total > pageSize && (
+                    <div className={styles.pagination}>
+                      <Pagination
+                        current={currentPage}
+                        total={total}
+                        pageSize={pageSize}
+                        onChange={(page) => setCurrentPage(page)}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </TabPane>
+
+            <TabPane 
+              tab={
+                <span>
+                  <FileTextOutlined /> {t('forum.myCategoryFavorites') || '收藏的板块'}
+                </span>
+              } 
+              key="category-favorites"
+            >
+              {loading ? (
+                <div className={styles.loadingContainer}>
+                  <SkeletonLoader type="post" count={3} />
+                </div>
+              ) : categoryFavorites.length === 0 ? (
+                <Empty description={t('forum.noCategoryFavorites') || '您还没有收藏任何板块'} />
+              ) : (
+                <>
+                  <div className={styles.list}>
+                    {categoryFavorites.map((category) => (
+                      <Card
+                        key={category.id}
+                        className={styles.itemCard}
+                        hoverable
+                        onClick={() => navigate(`/${lang}/forum/category/${category.id}`)}
+                      >
+                        <div className={styles.itemHeader}>
+                          <Title
+                            level={5}
+                            className={styles.itemTitle}
+                            ellipsis={{ rows: 2 }}
+                          >
+                            {category.icon && <span style={{ marginRight: 8 }}>{category.icon}</span>}
+                            {category.name}
+                          </Title>
+                        </div>
+                        {category.description && (
+                          <div className={styles.itemContent}>
+                            <Text ellipsis>{category.description}</Text>
+                          </div>
+                        )}
+                        <div className={styles.itemMeta}>
+                          <Space split="|">
+                            <Tag color="blue">{category.post_count} {t('forum.posts')}</Tag>
+                            {category.last_post_at && (
+                              <span>
+                                <ClockCircleOutlined /> {formatRelativeTime(category.last_post_at)}
+                              </span>
+                            )}
+                          </Space>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                  {total > pageSize && (
+                    <div className={styles.pagination}>
+                      <Pagination
+                        current={currentPage}
+                        total={total}
+                        pageSize={pageSize}
+                        onChange={(page) => setCurrentPage(page)}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </TabPane>
+
+            <TabPane 
+              tab={
+                <span>
+                  <TrophyOutlined /> {t('forum.myLeaderboardFavorites') || '收藏的排行榜'}
+                </span>
+              } 
+              key="leaderboard-favorites"
+            >
+              {loading ? (
+                <div className={styles.loadingContainer}>
+                  <SkeletonLoader type="post" count={3} />
+                </div>
+              ) : leaderboardFavorites.length === 0 ? (
+                <Empty description={t('forum.noLeaderboardFavorites') || '您还没有收藏任何排行榜'} />
+              ) : (
+                <>
+                  <div className={styles.list}>
+                    {leaderboardFavorites.map((leaderboard) => (
+                      <Card
+                        key={leaderboard.id}
+                        className={styles.itemCard}
+                        hoverable
+                        onClick={() => navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`)}
+                      >
+                        <div className={styles.itemHeader}>
+                          <Title
+                            level={5}
+                            className={styles.itemTitle}
+                            ellipsis={{ rows: 2 }}
+                          >
+                            {leaderboard.name}
+                          </Title>
+                        </div>
+                        {leaderboard.description && (
+                          <div className={styles.itemContent}>
+                            <Text ellipsis>{leaderboard.description}</Text>
+                          </div>
+                        )}
+                        <div className={styles.itemMeta}>
+                          <Space split="|">
+                            <span>📍 {leaderboard.location}</span>
+                            <Tag color="blue">{leaderboard.item_count || 0} {t('forum.itemCount')}</Tag>
+                            <Tag color="orange">{leaderboard.vote_count || 0} {t('forum.voteCount')}</Tag>
+                            <span>
+                              <EyeOutlined /> {formatViewCount(leaderboard.view_count || 0)}
                             </span>
                           </Space>
                         </div>

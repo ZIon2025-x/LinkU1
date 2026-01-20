@@ -524,6 +524,32 @@ extension APIService {
         return request(ForumFavoriteResponse.self, APIEndpoints.Forum.favorites, method: "POST", body: body)
     }
     
+    /// 收藏/取消收藏板块
+    func toggleCategoryFavorite(categoryId: Int) -> AnyPublisher<ForumCategoryFavoriteResponse, APIError> {
+        return request(ForumCategoryFavoriteResponse.self, APIEndpoints.Forum.categoryFavorite(categoryId), method: "POST")
+    }
+    
+    /// 获取板块收藏状态
+    func getCategoryFavoriteStatus(categoryId: Int) -> AnyPublisher<ForumCategoryFavoriteResponse, APIError> {
+        return request(ForumCategoryFavoriteResponse.self, APIEndpoints.Forum.categoryFavoriteStatus(categoryId))
+    }
+    
+    /// 批量获取板块收藏状态
+    func getCategoryFavoritesBatch(categoryIds: [Int]) -> AnyPublisher<ForumCategoryFavoriteBatchResponse, APIError> {
+        return request(ForumCategoryFavoriteBatchResponse.self, APIEndpoints.Forum.categoryFavoritesBatch, method: "POST", body: categoryIds)
+    }
+    
+    /// 获取我收藏的板块列表
+    func getMyCategoryFavorites(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ForumCategoryListResponse, APIError> {
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Forum.myCategoryFavorites)?\(queryString)"
+        return request(ForumCategoryListResponse.self, endpoint)
+    }
+    
     /// 增加帖子浏览量
     func incrementPostViewCount(postId: Int) -> AnyPublisher<EmptyResponse, APIError> {
         return request(EmptyResponse.self, APIEndpoints.Forum.incrementView(postId), method: "POST")
@@ -740,6 +766,32 @@ extension APIService {
     func voteLeaderboardItem(itemId: Int, voteType: String) -> AnyPublisher<LeaderboardItemOut, APIError> {
         let body: [String: Any] = ["item_id": itemId, "vote_type": voteType]
         return request(LeaderboardItemOut.self, APIEndpoints.Leaderboard.vote, method: "POST", body: body)
+    }
+    
+    /// 收藏/取消收藏排行榜
+    func toggleLeaderboardFavorite(leaderboardId: Int) -> AnyPublisher<CustomLeaderboardFavoriteResponse, APIError> {
+        return request(CustomLeaderboardFavoriteResponse.self, APIEndpoints.Leaderboard.favorite(leaderboardId), method: "POST")
+    }
+    
+    /// 获取排行榜收藏状态
+    func getLeaderboardFavoriteStatus(leaderboardId: Int) -> AnyPublisher<CustomLeaderboardFavoriteResponse, APIError> {
+        return request(CustomLeaderboardFavoriteResponse.self, APIEndpoints.Leaderboard.favoriteStatus(leaderboardId))
+    }
+    
+    /// 批量获取排行榜收藏状态
+    func getLeaderboardFavoritesBatch(leaderboardIds: [Int]) -> AnyPublisher<CustomLeaderboardFavoriteBatchResponse, APIError> {
+        return request(CustomLeaderboardFavoriteBatchResponse.self, APIEndpoints.Leaderboard.favoritesBatch, method: "POST", body: leaderboardIds)
+    }
+    
+    /// 获取我收藏的排行榜列表
+    func getMyLeaderboardFavorites(page: Int = 1, pageSize: Int = 20) -> AnyPublisher<CustomLeaderboardListResponse, APIError> {
+        let queryParams: [String: String?] = [
+            "page": "\(page)",
+            "page_size": "\(pageSize)"
+        ]
+        let queryString = APIRequestHelper.buildQueryString(queryParams)
+        let endpoint = "\(APIEndpoints.Leaderboard.myFavorites)?\(queryString)"
+        return request(CustomLeaderboardListResponse.self, endpoint)
     }
 }
 

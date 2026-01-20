@@ -223,6 +223,14 @@ enum APIEndpoints {
         }
         static let markAllNotificationsRead = "/api/forum/notifications/read-all"
         static let myCategoryRequests = "/api/forum/categories/requests/my"
+        static func categoryFavorite(_ categoryId: Int) -> String {
+            "/api/forum/categories/\(categoryId)/favorite"
+        }
+        static func categoryFavoriteStatus(_ categoryId: Int) -> String {
+            "/api/forum/categories/\(categoryId)/favorite/status"
+        }
+        static let categoryFavoritesBatch = "/api/forum/categories/favorites/batch"
+        static let myCategoryFavorites = "/api/forum/my/category-favorites"
     }
     
     // MARK: - Flea Market (跳蚤市场)
@@ -295,6 +303,14 @@ enum APIEndpoints {
         static func reportItem(_ itemId: Int) -> String {
             "/api/custom-leaderboards/items/\(itemId)/report"
         }
+        static func favorite(_ leaderboardId: Int) -> String {
+            "/api/custom-leaderboards/\(leaderboardId)/favorite"
+        }
+        static func favoriteStatus(_ leaderboardId: Int) -> String {
+            "/api/custom-leaderboards/\(leaderboardId)/favorite/status"
+        }
+        static let favoritesBatch = "/api/custom-leaderboards/favorites/batch"
+        static let myFavorites = "/api/custom-leaderboards/my/favorites"
     }
     
     // MARK: - Common (通用)

@@ -95,8 +95,47 @@ class LeaderboardViewModel: ObservableObject {
                 guard let self = self else { return }
                 
                 // 保存原始数据和排序方式
-                self.rawLeaderboards = response.items
-                self.currentSort = sort
+                var items = response.items
+                
+                // 批量获取收藏状态（如果用户已登录）
+                if !items.isEmpty {
+                    let leaderboardIds = items.map { $0.id }
+                    self.apiService.getLeaderboardFavoritesBatch(leaderboardIds: leaderboardIds)
+                        .sink(receiveCompletion: { result in
+                            if case .failure(let error) = result {
+                                Logger.warning("批量获取排行榜收藏状态失败: \(error.localizedDescription)", category: .api)
+                            }
+                        }, receiveValue: { favoriteResponse in
+                            // 更新收藏状态
+                            for i in 0..<items.count {
+                                let leaderboardId = items[i].id
+                                items[i].isFavorited = favoriteResponse.favorites[leaderboardId] ?? false
+                            }
+                            self.rawLeaderboards = items
+                            self.currentSort = sort
+                            
+                            // 只在默认状态（latest）时应用距离+浏览量排序
+                            if sort == "latest" {
+                                self.sortLeaderboardsByDistance(sort: sort, location: location)
+                            } else {
+                                // 其他排序方式直接使用后端返回的结果
+                                DispatchQueue.main.async {
+                                    self.leaderboards = items
+                                }
+                            }
+                            
+                            self.isRequesting = false
+                            Logger.success("排行榜加载成功，共\(self.leaderboards.count)条（已更新收藏状态）", category: .api)
+                            
+                            // 保存到缓存（仅在没有筛选条件时）
+                            if location == nil && sort == "latest" {
+                                CacheManager.shared.saveLeaderboards(self.leaderboards, location: nil, sort: "latest")
+                            }
+                        })
+                        .store(in: &self.cancellables)
+                } else {
+                    self.rawLeaderboards = items
+                    self.currentSort = sort
                 
                 // 只在默认状态（latest）时应用距离+浏览量排序
                 if sort == "latest" {
@@ -514,6 +553,28 @@ class LeaderboardItemDetailViewModel: ObservableObject {
                     self?.loadComments(itemId: self?.item?.id ?? 0)
                 }
                 completion(true, response.likeCount, response.liked)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 收藏/取消收藏排行榜
+    func toggleLeaderboardFavorite(leaderboardId: Int, completion: @escaping (Bool) -> Void) {
+        apiService.toggleLeaderboardFavorite(leaderboardId: leaderboardId)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "收藏操作")
+                    completion(false)
+                }
+            }, receiveValue: { [weak self] response in
+                // 更新本地状态
+                if let index = self?.leaderboards.firstIndex(where: { $0.id == leaderboardId }) {
+                    self?.leaderboards[index].isFavorited = response.favorited
+                }
+                // 同时更新rawLeaderboards
+                if let index = self?.rawLeaderboards.firstIndex(where: { $0.id == leaderboardId }) {
+                    self?.rawLeaderboards[index].isFavorited = response.favorited
+                }
+                completion(true)
             })
             .store(in: &cancellables)
     }

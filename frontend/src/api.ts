@@ -2254,6 +2254,18 @@ export const getForumCategoryFavoriteStatus = async (categoryId: number) => {
   return res.data;
 };
 
+export const getForumCategoryFavoritesBatch = async (categoryIds: number[]) => {
+  const res = await api.post('/api/forum/categories/favorites/batch', categoryIds);
+  return res.data;
+};
+
+export const getMyCategoryFavorites = async (page: number = 1, pageSize: number = 20) => {
+  const res = await api.get('/api/forum/my/category-favorites', {
+    params: { page, page_size: pageSize }
+  });
+  return res.data;
+};
+
 // 排行榜收藏
 export const toggleCustomLeaderboardFavorite = async (leaderboardId: number) => {
   const res = await api.post(`/api/custom-leaderboards/${leaderboardId}/favorite`);
@@ -2262,6 +2274,18 @@ export const toggleCustomLeaderboardFavorite = async (leaderboardId: number) => 
 
 export const getCustomLeaderboardFavoriteStatus = async (leaderboardId: number) => {
   const res = await api.get(`/api/custom-leaderboards/${leaderboardId}/favorite/status`);
+  return res.data;
+};
+
+export const getCustomLeaderboardFavoritesBatch = async (leaderboardIds: number[]) => {
+  const res = await api.post('/api/custom-leaderboards/favorites/batch', leaderboardIds);
+  return res.data;
+};
+
+export const getMyLeaderboardFavorites = async (page: number = 1, pageSize: number = 20) => {
+  const res = await api.get('/api/custom-leaderboards/my/favorites', {
+    params: { page, page_size: pageSize }
+  });
   return res.data;
 };
 
