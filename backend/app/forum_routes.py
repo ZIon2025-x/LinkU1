@@ -1135,7 +1135,11 @@ async def get_visible_forums(
                         category_out = schemas.ForumCategoryOut(
                             id=category.id,
                             name=category.name,
+                            name_en=getattr(category, 'name_en', None),
+                            name_zh=getattr(category, 'name_zh', None),
                             description=category.description,
+                            description_en=getattr(category, 'description_en', None),
+                            description_zh=getattr(category, 'description_zh', None),
                             icon=category.icon,
                             sort_order=category.sort_order,
                             is_visible=category.is_visible,
@@ -1229,7 +1233,11 @@ async def get_visible_forums(
                         category_out = schemas.ForumCategoryOut(
                             id=category.id,
                             name=category.name,
+                            name_en=getattr(category, 'name_en', None),
+                            name_zh=getattr(category, 'name_zh', None),
                             description=category.description,
+                            description_en=getattr(category, 'description_en', None),
+                            description_zh=getattr(category, 'description_zh', None),
                             icon=category.icon,
                             sort_order=category.sort_order,
                             is_visible=category.is_visible,
@@ -2188,7 +2196,27 @@ async def get_category(
     if not is_admin:
         await assert_forum_visible(current_user, category_id, db, raise_exception=True)
     
-    return category
+    # 显式创建 ForumCategoryOut 对象，确保包含双语字段
+    return schemas.ForumCategoryOut(
+        id=category.id,
+        name=category.name,
+        name_en=getattr(category, 'name_en', None),
+        name_zh=getattr(category, 'name_zh', None),
+        description=category.description,
+        description_en=getattr(category, 'description_en', None),
+        description_zh=getattr(category, 'description_zh', None),
+        icon=category.icon,
+        sort_order=category.sort_order,
+        is_visible=category.is_visible,
+        is_admin_only=getattr(category, 'is_admin_only', False),
+        type=getattr(category, 'type', 'general'),
+        country=getattr(category, 'country', None),
+        university_code=getattr(category, 'university_code', None),
+        post_count=category.post_count,
+        last_post_at=category.last_post_at,
+        created_at=category.created_at,
+        updated_at=category.updated_at
+    )
 
 
 @router.post("/categories", response_model=schemas.ForumCategoryOut)
