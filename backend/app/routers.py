@@ -3877,7 +3877,46 @@ def get_notifications_with_recent_read_api(
     recent_read_limit: int = 10
 ):
     """获取所有未读通知和最近N条已读通知"""
-    return crud.get_notifications_with_recent_read(db, current_user.id, recent_read_limit)
+    from app.models import TaskApplication
+    from sqlalchemy.orm import Session as SQLSession
+    
+    notifications = crud.get_notifications_with_recent_read(db, current_user.id, recent_read_limit)
+    result = []
+    
+    for notification in notifications:
+        notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
+        
+        # task_application 类型：related_id 直接就是 task_id（新数据统一方式）
+        if notification.type == "task_application" and notification.related_id:
+            notification_dict["task_id"] = notification.related_id
+        
+        # application_message 和 negotiation_offer 类型：related_id 是 application_id
+        # 需要通过 TaskApplication 表查询 task_id
+        elif notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
+            try:
+                # 通过 application_id 查询 task_id
+                application = db.query(TaskApplication).filter(
+                    TaskApplication.id == notification.related_id
+                ).first()
+                
+                if application:
+                    notification_dict["task_id"] = application.task_id
+                else:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Application not found for notification {notification.id}, related_id: {notification.related_id}")
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
+        
+        # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
+        elif notification.type in ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"] and notification.related_id:
+            notification_dict["task_id"] = notification.related_id
+        
+        result.append(schemas.NotificationOut(**notification_dict))
+    
+    return result
 
 
 @router.get("/notifications/unread/count")

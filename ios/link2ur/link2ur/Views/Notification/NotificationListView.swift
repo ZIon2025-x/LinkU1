@@ -29,7 +29,10 @@ struct NotificationListView: View {
                     LazyVStack(spacing: 12) {
                         ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
                             // 判断是否是任务相关的通知，并提取任务ID
-                            if isTaskRelated(notification: notification), let taskId = extractTaskId(from: notification) {
+                            // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
+                            // 让 NotificationRow 内部等待异步加载完成
+                            if isTaskRelated(notification: notification) {
+                                let extractedTaskId = extractTaskId(from: notification)
                                 let onTapCallback: () -> Void = {
                                     // 点击时立即标记为已读
                                     print("🔔 [NotificationListView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
@@ -38,16 +41,25 @@ struct NotificationListView: View {
                                         viewModel.markAsRead(notificationId: notification.id)
                                     }
                                 }
-                                NavigationLink(destination: TaskDetailView(taskId: taskId)) {
-                                    NotificationRow(notification: notification, isTaskRelated: true, onTap: onTapCallback)
-                                }
-                                .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle提供更好的交互反馈
-                                .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
-                                .simultaneousGesture(
-                                    TapGesture().onEnded {
-                                        onTapCallback()
+                                
+                                // 如果有 taskId，创建 NavigationLink；否则让 NotificationRow 内部处理
+                                if let taskId = extractedTaskId {
+                                    NavigationLink(destination: TaskDetailView(taskId: taskId)) {
+                                        NotificationRow(notification: notification, isTaskRelated: true, onTap: onTapCallback)
                                     }
-                                )
+                                    .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle提供更好的交互反馈
+                                    .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
+                                    .simultaneousGesture(
+                                        TapGesture().onEnded {
+                                            onTapCallback()
+                                        }
+                                    )
+                                } else {
+                                    // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
+                                    // NotificationRow 内部会等待异步加载完成
+                                    NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
+                                        .listItemAppear(index: index, totalItems: viewModel.notifications.count)
+                                }
                             } else {
                                 NotificationRow(notification: notification, isTaskRelated: false, onTap: {
                                     // 标记为已读
@@ -535,6 +547,7 @@ struct NotificationRow: View {
                     }
                 },
                 receiveValue: { response in
+                    isLoadingTokens = false
                     // 优化：保存任务状态
                     taskStatus = response.taskStatus
                     
@@ -544,8 +557,10 @@ struct NotificationRow: View {
                     } else {
                         tokenAccept = response.tokenAccept
                         tokenReject = response.tokenReject
-                        taskId = response.taskId ?? notification.taskId
-                        applicationId = response.applicationId ?? notification.relatedId
+                    }
+                    // 优先使用 API 返回的 taskId，如果没有则使用 notification.taskId
+                    taskId = response.taskId ?? notification.taskId
+                    applicationId = response.applicationId ?? notification.relatedId
                         
                         // 优化：解析真实过期时间
                         if let expiresAtString = response.expiresAt {
