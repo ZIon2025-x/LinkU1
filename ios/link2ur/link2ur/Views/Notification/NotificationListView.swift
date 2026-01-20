@@ -34,8 +34,10 @@ struct NotificationListView: View {
                             if isTaskRelated(notification: notification) {
                                 let extractedTaskId = extractTaskId(from: notification)
                                 
-                                // 调试日志
-                                print("🔔 [NotificationListView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
+                                // 调试日志（在闭包中执行，避免 ViewBuilder 问题）
+                                let _ = {
+                                    print("🔔 [NotificationListView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
+                                }()
                                 
                                 let onTapCallback: () -> Void = {
                                     // 点击时立即标记为已读
@@ -61,7 +63,9 @@ struct NotificationListView: View {
                                 } else {
                                     // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
                                     // NotificationRow 内部会等待异步加载完成
-                                    print("🔔 [NotificationListView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
+                                    let _ = {
+                                        print("🔔 [NotificationListView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
+                                    }()
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                         .listItemAppear(index: index, totalItems: viewModel.notifications.count)
                                 }
@@ -114,6 +118,11 @@ struct NotificationListView: View {
             return true
         }
         
+        // application_accepted 也是任务相关的通知（申请被接受）
+        if lowercasedType == "application_accepted" {
+            return true
+        }
+        
         return false
     }
     
@@ -136,6 +145,11 @@ struct NotificationListView: View {
         
         // 对于 task_application 类型，优先使用 taskId，如果没有则使用 relatedId（应该是 task_id）
         if lowercasedType == "task_application" {
+            return notification.relatedId
+        }
+        
+        // application_accepted 类型：related_id 就是 task_id
+        if lowercasedType == "application_accepted" {
             return notification.relatedId
         }
         

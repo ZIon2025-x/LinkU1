@@ -54,6 +54,11 @@ def enrich_notification_dict_with_task_id_sync(
             logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
         return notification_dict
     
+    # application_accepted 类型：related_id 就是 task_id
+    if notification.type == "application_accepted" and notification.related_id:
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+        return notification_dict
+    
     # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
     task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
     if notification.type in task_status_types and notification.related_id:
@@ -104,6 +109,11 @@ async def enrich_notification_dict_with_task_id_async(
                 )
         except Exception as e:
             logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
+        return notification_dict
+    
+    # application_accepted 类型：related_id 就是 task_id
+    if notification.type == "application_accepted" and notification.related_id:
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
     # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id

@@ -208,8 +208,10 @@ struct SystemMessageView: View {
                             if isTaskRelated(notification: notification) {
                                 let extractedTaskId = extractTaskId(from: notification)
                                 
-                                // 调试日志
-                                print("🔔 [NotificationCenterView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
+                                // 调试日志（在闭包中执行，避免 ViewBuilder 问题）
+                                let _ = {
+                                    print("🔔 [NotificationCenterView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
+                                }()
                                 
                                 let onTapCallback: () -> Void = {
                                     // 点击时立即标记为已读
@@ -234,7 +236,9 @@ struct SystemMessageView: View {
                                 } else {
                                     // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
                                     // NotificationRow 内部会等待异步加载完成
-                                    print("🔔 [NotificationCenterView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
+                                    let _ = {
+                                        print("🔔 [NotificationCenterView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
+                                    }()
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                 }
                             } else {
@@ -278,6 +282,11 @@ struct SystemMessageView: View {
         // 检查是否是任务相关的通知类型
         // 后端任务通知类型包括：task_application, task_approved, task_completed, task_confirmation, task_cancelled 等
         if lowercasedType.contains("task") {
+            return true
+        }
+        
+        // application_accepted 也是任务相关的通知（申请被接受）
+        if lowercasedType == "application_accepted" {
             return true
         }
         
