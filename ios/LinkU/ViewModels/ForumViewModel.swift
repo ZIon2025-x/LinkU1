@@ -20,6 +20,10 @@ class ForumViewModel: ObservableObject {
                     self?.errorMessage = error.localizedDescription
                 }
             }, receiveValue: { [weak self] response in
+                print("📥 收到论坛板块列表: 共 \(response.categories.count) 个板块")
+                for (index, category) in response.categories.prefix(3).enumerated() {
+                    print("  板块[\(index)]: id=\(category.id), name=\(category.name), nameEn=\(category.nameEn ?? "nil"), nameZh=\(category.nameZh ?? "nil")")
+                }
                 self?.categories = response.categories
             })
             .store(in: &cancellables)

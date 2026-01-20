@@ -1731,14 +1731,26 @@ async def get_categories(
     # 标准返回（不包含最新帖子信息）- 需要显式序列化以包含多语言字段
     category_list = []
     for category in categories:
+        # 调试：输出原始数据
+        name_en = getattr(category, 'name_en', None)
+        name_zh = getattr(category, 'name_zh', None)
+        description_en = getattr(category, 'description_en', None)
+        description_zh = getattr(category, 'description_zh', None)
+        
+        logger.debug(
+            f"板块 {category.id} ({category.name}): "
+            f"name_en={name_en}, name_zh={name_zh}, "
+            f"description_en={description_en}, description_zh={description_zh}"
+        )
+        
         category_out = schemas.ForumCategoryOut(
             id=category.id,
             name=category.name,
-            name_en=getattr(category, 'name_en', None),
-            name_zh=getattr(category, 'name_zh', None),
+            name_en=name_en,
+            name_zh=name_zh,
             description=category.description,
-            description_en=getattr(category, 'description_en', None),
-            description_zh=getattr(category, 'description_zh', None),
+            description_en=description_en,
+            description_zh=description_zh,
             icon=category.icon,
             sort_order=category.sort_order,
             is_visible=category.is_visible,
@@ -1752,6 +1764,15 @@ async def get_categories(
             updated_at=category.updated_at
         )
         category_list.append(category_out)
+    
+    # 调试：输出序列化后的数据
+    logger.info(f"✅ 返回 {len(category_list)} 个板块（标准格式，不包含 latest_post）")
+    for cat in category_list[:3]:  # 只输出前3个作为示例
+        logger.debug(
+            f"序列化后板块 {cat.id}: name={cat.name}, "
+            f"name_en={cat.name_en}, name_zh={cat.name_zh}, "
+            f"description_en={cat.description_en}, description_zh={cat.description_zh}"
+        )
     
     return {"categories": category_list}
 

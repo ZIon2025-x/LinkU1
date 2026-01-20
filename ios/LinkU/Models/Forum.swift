@@ -36,30 +36,41 @@ struct ForumCategory: Codable, Identifiable {
         icon = try container.decodeIfPresent(String.self, forKey: .icon)
         postCount = try container.decode(Int.self, forKey: .postCount)
         lastPostAt = try container.decodeIfPresent(String.self, forKey: .lastPostAt)
+        
+        // 调试信息：输出解码后的数据
+        print("📥 ForumCategory 解码: id=\(id), name=\(name), nameEn=\(nameEn ?? "nil"), nameZh=\(nameZh ?? "nil"), description=\(description ?? "nil"), descriptionEn=\(descriptionEn ?? "nil"), descriptionZh=\(descriptionZh ?? "nil")")
     }
     
     // 根据当前语言获取显示名称
     var displayName: String {
         let language = Locale.current.language.languageCode?.identifier ?? "en"
+        let result: String
         if language.hasPrefix("zh") {
             // 中文环境：优先使用 nameZh，否则使用 name
-            return nameZh?.isEmpty == false ? nameZh! : name
+            result = nameZh?.isEmpty == false ? nameZh! : name
         } else {
             // 英文环境：优先使用 nameEn，否则使用 name
-            return nameEn?.isEmpty == false ? nameEn! : name
+            result = nameEn?.isEmpty == false ? nameEn! : name
         }
+        // 调试信息
+        print("🔍 ForumCategory[\(id)].displayName: language=\(language), name=\(name), nameEn=\(nameEn ?? "nil"), nameZh=\(nameZh ?? "nil"), result=\(result)")
+        return result
     }
     
     // 根据当前语言获取显示描述
     var displayDescription: String? {
         let language = Locale.current.language.languageCode?.identifier ?? "en"
+        let result: String?
         if language.hasPrefix("zh") {
             // 中文环境：优先使用 descriptionZh，否则使用 description
-            return descriptionZh?.isEmpty == false ? descriptionZh : description
+            result = descriptionZh?.isEmpty == false ? descriptionZh : description
         } else {
             // 英文环境：优先使用 descriptionEn，否则使用 description
-            return descriptionEn?.isEmpty == false ? descriptionEn : description
+            result = descriptionEn?.isEmpty == false ? descriptionEn : description
         }
+        // 调试信息
+        print("🔍 ForumCategory[\(id)].displayDescription: language=\(language), description=\(description ?? "nil"), descriptionEn=\(descriptionEn ?? "nil"), descriptionZh=\(descriptionZh ?? "nil"), result=\(result ?? "nil")")
+        return result
     }
 }
 
