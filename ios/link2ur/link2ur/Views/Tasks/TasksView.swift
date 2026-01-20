@@ -4,17 +4,7 @@ import UIKit
 
 struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
-    @StateObject private var recommendedViewModel: TasksViewModel = {
-        let vm = TasksViewModel()
-        // 初始化时立即从推荐任务缓存加载，避免刷新后推荐原因丢失
-        if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
-            if !cachedRecommendedTasks.isEmpty {
-                vm.tasks = cachedRecommendedTasks
-                Logger.success("初始化时从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
-            }
-        }
-        return vm
-    }()  // 推荐任务 ViewModel
+    @StateObject private var recommendedViewModel = TasksViewModel()  // 推荐任务 ViewModel
     @EnvironmentObject var appState: AppState  // 增强：用于检查登录状态
     @State private var searchText = ""
     @State private var showFilter = false
@@ -144,18 +134,35 @@ struct TasksView: View {
                             ], spacing: AppSpacing.md) {
                                 // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
                                 ForEach(allTasks, id: \.id) { task in
+                                    let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                                    
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
                                         TaskCard(
                                             task: task,
                                             isRecommended: task.isRecommended == true,
-                                            onNotInterested: {
-                                                // 增强：记录跳过任务（用于推荐系统负反馈）
-                                                recordTaskSkip(taskId: task.id)
-                                            }
+                                            onNotInterested: nil, // contextMenu 移到外层
+                                            enableLongPress: false // contextMenu 移到外层
                                         )
-                                        // 移除 drawingGroup，避免影响长按交互
                                     }
                                     .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                                    // 关键：把 clipShape/contentShape/contextMenu 都放在 NavigationLink 这层，确保长按高亮按圆角显示
+                                    .clipShape(cardShape)
+                                    .contentShape(cardShape)
+                                    // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
+                                    .contentShape(.interaction, cardShape)
+                                    // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
+                                    .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+                                    .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            // 增强：记录跳过任务（用于推荐系统负反馈）
+                                            recordTaskSkip(taskId: task.id)
+                                        } label: {
+                                            Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
+                                        }
+                                    }
+                                    // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
+                                    .modifier(TaskCardContextMenuPreviewModifier(shape: cardShape))
                                     .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
                                     .id(task.id) // 确保稳定的id，优化视图复用
                                     .onAppear {
@@ -239,13 +246,25 @@ struct TasksView: View {
                 )
             }
             .task {
-                // 首次加载时，应用引导教程保存的个性化设置
-                applyOnboardingPreferences()
-                
-                // 使用 task 替代 onAppear，避免重复加载
-                if allTasks.isEmpty && !viewModel.isLoading && !recommendedViewModel.isLoading {
-                    // 加载推荐任务和普通任务
-                    loadTasksWithRecommendations()
+                // 延迟执行所有初始化操作，让导航动画先完成，提升流畅度
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    // 首次加载时，应用引导教程保存的个性化设置
+                    applyOnboardingPreferences()
+                    
+                    // 先从缓存异步加载推荐任务，避免阻塞
+                    if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
+                        if !cachedRecommendedTasks.isEmpty {
+                            recommendedViewModel.tasks = cachedRecommendedTasks
+                            Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+                            updateMergedTasks()
+                        }
+                    }
+                    
+                    // 使用 task 替代 onAppear，避免重复加载
+                    if allTasks.isEmpty && !viewModel.isLoading && !recommendedViewModel.isLoading {
+                        // 加载推荐任务和普通任务
+                        loadTasksWithRecommendations()
+                    }
                 }
             }
             // 优化：使用防抖机制，减少频繁更新（减少延迟提升响应速度）
@@ -674,27 +693,13 @@ struct TaskCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.cardBackground) // 内容区域背景
         }
-        .background(
-            // 优化：使用与容器背景色一致的背景，避免长按时露出灰色
-            RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
-                .fill(AppColors.cardBackground)
-                .overlay(
-                    // 使用细微边框替代阴影，减少"镶嵌"感
-                    RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
-                        .stroke(Color(UIColor.separator).opacity(0.3), lineWidth: 0.5)
-                )
-        )
+        .background(AppColors.cardBackground) // 内容区域背景
         .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)) // 优化：确保圆角边缘干净，不露出底层
         .compositingGroup() // 组合渲染，确保圆角边缘干净
-        // 移除阴影，使用更轻量的视觉分隔
-        .contentShape(Rectangle()) // 优化：确保整个卡片区域都可以被点击和长按
-        // 任务大厅：使用 contextMenu（原生体验更好）
-        // 首页：暂时禁用长按功能
-        .modifier(LongPressModifier(
-            enableLongPress: enableLongPress,
-            onNotInterested: onNotInterested,
-            showAlert: $showNotInterestedAlert
-        ))
+        // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
+        .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+        .contentShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)) // 优化：使用相同的圆角形状作为点击区域，避免长按时露出尖角
         .alert(LocalizationKey.tasksNotInterested.localized, isPresented: $showNotInterestedAlert) {
             Button(role: .destructive) {
                 onNotInterested?()
@@ -874,25 +879,14 @@ struct StatusBadge: View {
     }
 }
 
-// 长按手势修饰符 - 根据 enableLongPress 决定使用 contextMenu 还是禁用
-struct LongPressModifier: ViewModifier {
-    let enableLongPress: Bool
-    let onNotInterested: (() -> Void)?
-    @Binding var showAlert: Bool
+// iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
+struct TaskCardContextMenuPreviewModifier: ViewModifier {
+    let shape: RoundedRectangle
     
     func body(content: Content) -> some View {
-        if enableLongPress, onNotInterested != nil {
-            // 任务大厅：使用 contextMenu
-            content
-                .contextMenu {
-                    Button(role: .destructive) {
-                        onNotInterested?()
-                    } label: {
-                        Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
-                    }
-                }
+        if #available(iOS 17.0, *) {
+            content.contentShape(.contextMenuPreview, shape)
         } else {
-            // 首页：禁用长按功能
             content
         }
     }

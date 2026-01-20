@@ -39,7 +39,8 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 // 消息列表
                 if viewModel.isLoading && viewModel.messages.isEmpty {
-                    LoadingView(message: LocalizationKey.messagesLoadingMessages.localized)
+                    // 使用骨架屏替代简单加载指示器
+                    MessageListSkeleton(messageCount: 6)
                 } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
                     // 使用统一的错误状态组件
                     ErrorStateView(
@@ -464,6 +465,17 @@ struct MessageBubble: View {
                                    radius: isFromCurrentUser ? 8 : AppShadow.small.radius, 
                                    x: 0, 
                                    y: isFromCurrentUser ? 4 : AppShadow.small.y)
+                            .contextMenu {
+                                // 长按菜单：复制消息
+                                Button(action: {
+                                    UIPasteboard.general.string = content
+                                    // 使用 Haptic Feedback 提供触觉反馈
+                                    let generator = UINotificationFeedbackGenerator()
+                                    generator.notificationOccurred(.success)
+                                }) {
+                                    Label("复制", systemImage: "doc.on.doc")
+                                }
+                            }
                         
                         // 翻译按钮和状态（仅非当前用户的消息）
                         if !isFromCurrentUser {

@@ -182,6 +182,34 @@ public struct ContentView: View {
         
         // 根据通知类型进行跳转
         switch notificationType {
+        case "message":
+            // 处理消息推送（私信或任务聊天）
+            if let notificationTypeString = userInfo["notification_type"] as? String {
+                switch notificationTypeString {
+                case "task_message":
+                    // 任务聊天消息
+                    if let taskId = extractTaskId(from: userInfo) {
+                        print("🔔 [ContentView] 跳转到任务聊天: \(taskId)")
+                        // 在 UserDefaults 中标记需要刷新该任务的消息
+                        UserDefaults.standard.set(true, forKey: "refresh_task_chat_\(taskId)")
+                        // 发送通知，标记需要刷新任务聊天消息
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("RefreshTaskChat"),
+                            object: nil,
+                            userInfo: ["task_id": taskId]
+                        )
+                        navigateToTask(id: taskId)
+                    }
+                case "private_message":
+                    // 私信消息
+                    if let partnerId = userInfo["partner_id"] as? String {
+                        print("🔔 [ContentView] 跳转到私信聊天: \(partnerId)")
+                        navigateToChat(partnerId: partnerId)
+                    }
+                default:
+                    print("🔔 [ContentView] 未知消息类型: \(notificationTypeString)")
+                }
+            }
         case "task_application", "task_completed", "task_confirmed", "application_accepted":
             // 跳转到任务详情
             if let taskId = extractTaskId(from: userInfo) {
@@ -257,6 +285,24 @@ public struct ContentView: View {
         if let url = DeepLinkHandler.generateURL(for: .post(id: id)) {
             DeepLinkHandler.shared.handle(url)
         }
+    }
+    
+    // 导航到私信聊天
+    private func navigateToChat(partnerId: String) {
+        // 发送通知，让消息页面处理跳转
+        NotificationCenter.default.post(
+            name: NSNotification.Name("NavigateToChat"),
+            object: nil,
+            userInfo: ["partner_id": partnerId]
+        )
+        
+        // 切换到消息标签页（索引3）
+        // 注意：这里需要通过某种方式通知 MainTabView 切换标签
+        // 由于 ContentView 不直接控制 MainTabView，我们使用通知机制
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SwitchToMessagesTab"),
+            object: nil
+        )
     }
     
     // 检查引导教程状态

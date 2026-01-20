@@ -314,15 +314,27 @@ public class AppState: ObservableObject {
                                 // 注意：APIService 会自动尝试刷新 token
                                 // 如果刷新失败，APIService 会处理登出逻辑
                                 // 这里不立即登出，等待刷新结果
+                                // 但先设置为已登录，让用户可以使用 app（如果 token 有效，后续请求会成功）
+                                self?.isAuthenticated = true
                             } else if case APIError.httpError(401) = error {
                                 // HTTP 401 错误：认证失败
                                 Logger.warning("登录状态检查：HTTP 401 错误，认证失败", category: .auth)
                                 // 不立即登出，等待 token 刷新机制处理
+                                // 但先设置为已登录，让用户可以使用 app（如果 token 有效，后续请求会成功）
+                                self?.isAuthenticated = true
                             } else {
                                 // 网络错误、超时等：不登出，保持登录状态
                                 Logger.warning("登录状态检查失败（网络错误），保持登录状态: \(error.localizedDescription)", category: .auth)
-                                // 保持 isAuthenticated 状态，不调用 logout()
-                                // 用户仍然可以尝试使用应用，如果 token 有效，后续请求会成功
+                                // ⚠️ 关键修复：如果 Keychain 中有 token，即使验证失败（网络错误），也先设置为已登录
+                                // 这样用户可以使用 app，后续请求会自动重试，如果 token 有效会成功
+                                // 如果 token 真的无效，APIService 的刷新机制会处理登出
+                                self?.isAuthenticated = true
+                                
+                                // 尝试建立 WebSocket 连接（如果 token 有效）
+                                if KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) != nil {
+                                    // 注意：这里无法获取 userId，所以暂时不连接 WebSocket
+                                    // 等后续请求成功后，会自动连接
+                                }
                             }
                         }
                     }

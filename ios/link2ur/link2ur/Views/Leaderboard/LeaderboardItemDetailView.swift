@@ -215,7 +215,7 @@ struct LeaderboardItemDetailView: View {
                 .multilineTextAlignment(.center)
             
             if let submitter = item.submitter {
-                NavigationLink(destination: UserProfileView(userId: submitter.id)) {
+                NavigationLink(destination: userProfileDestination(user: submitter)) {
                     HStack(spacing: 8) {
                         AvatarView(
                             urlString: submitter.avatar,

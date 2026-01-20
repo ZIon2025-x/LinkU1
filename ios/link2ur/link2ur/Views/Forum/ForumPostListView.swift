@@ -152,7 +152,7 @@ struct PostCard: View {
             HStack(spacing: 0) {
                 // 作者信息
                 if let author = post.author {
-                    NavigationLink(destination: UserProfileView(userId: author.id)) {
+                    NavigationLink(destination: userProfileDestination(user: author)) {
                         HStack(spacing: 6) {
                             AvatarView(
                                 urlString: author.avatar,

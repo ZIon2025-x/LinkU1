@@ -279,6 +279,84 @@ struct ListSkeleton: View {
     }
 }
 
+// MARK: - 消息列表骨架屏
+
+/// 消息列表骨架屏 - 模拟聊天消息气泡布局
+struct MessageListSkeleton: View {
+    let messageCount: Int
+    
+    init(messageCount: Int = 6) {
+        self.messageCount = messageCount
+    }
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.md) {
+                ForEach(0..<messageCount, id: \.self) { index in
+                    MessageBubbleSkeleton(
+                        isFromCurrentUser: index % 3 == 0,
+                        index: index
+                    )
+                    .opacity(1.0 - Double(index) * 0.08) // 渐变透明度，模拟加载顺序
+                }
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+        }
+    }
+}
+
+/// 单个消息气泡骨架屏
+struct MessageBubbleSkeleton: View {
+    let isFromCurrentUser: Bool
+    let index: Int // 用于生成不同的消息样式
+    
+    init(isFromCurrentUser: Bool, index: Int = 0) {
+        self.isFromCurrentUser = isFromCurrentUser
+        self.index = index
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
+            if isFromCurrentUser {
+                Spacer(minLength: 50)
+            } else {
+                // 发送者头像
+                SkeletonCircle(size: 36)
+                    .overlay(
+                        Circle()
+                            .stroke(AppColors.separator.opacity(0.2), lineWidth: 1)
+                    )
+            }
+            
+            VStack(alignment: isFromCurrentUser ? .trailing : .leading, spacing: 4) {
+                // 消息气泡 - 使用固定模式模拟不同长度的消息
+                let widths: [CGFloat?] = [120, 180, 100, 220, 150, 160, 140, nil]
+                let heights: [CGFloat] = [45, 60, 50, 75, 55, 65, 48, 70]
+                let widthIndex = index % widths.count
+                let heightIndex = index % heights.count
+                
+                SkeletonShape(
+                    width: widths[widthIndex],
+                    height: heights[heightIndex],
+                    cornerRadius: AppCornerRadius.large
+                )
+                
+                // 时间戳
+                SkeletonShape(width: 50, height: 10, cornerRadius: AppCornerRadius.tiny)
+                    .padding(.horizontal, AppSpacing.xs)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: UIScreen.main.bounds.width * 0.75, alignment: isFromCurrentUser ? .trailing : .leading)
+            
+            if !isFromCurrentUser {
+                Spacer(minLength: 50)
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+    }
+}
+
 // MARK: - 网格骨架屏
 
 struct GridSkeleton: View {
@@ -447,10 +525,21 @@ struct SkeletonContainer<Content: View, Skeleton: View>: View {
             
             Divider()
             
+            Divider()
+            
             Group {
                 Text("列表骨架屏")
                     .font(AppTypography.bodyBold)
                 ListSkeleton(itemCount: 3)
+            }
+            
+            Divider()
+            
+            Group {
+                Text("消息列表骨架屏")
+                    .font(AppTypography.bodyBold)
+                MessageListSkeleton(messageCount: 4)
+                    .frame(height: 400)
             }
         }
         .padding()

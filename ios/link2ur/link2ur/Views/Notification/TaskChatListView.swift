@@ -246,13 +246,17 @@ struct TaskChatRow: View {
     }
 }
 
-// 任务聊天视图
+// MARK: - 注意：TaskChatView 已迁移到 Views/Message/TaskChatView.swift
+// 旧的 TaskChatView 定义已删除，请使用新的实现
+// 如果需要查看旧实现，请查看 git 历史记录
+
+/*
+// 任务聊天视图（已迁移，保留注释作为参考）
 struct TaskChatView: View {
     let taskId: Int
     let taskTitle: String
     let taskChat: TaskChatItem? // 传入任务聊天信息，包含 posterId 和 takerId
     @StateObject private var viewModel: TaskChatDetailViewModel
-    @StateObject private var keyboardObserver = KeyboardHeightObserver()
     @EnvironmentObject var appState: AppState
     @State private var messageText = ""
     @State private var lastMessageId: String?
@@ -267,12 +271,14 @@ struct TaskChatView: View {
     @State private var showLocationDetail = false
     @State private var taskDetail: Task?
     @StateObject private var taskDetailViewModel = TaskDetailViewModel()
-    
-    // 计算键盘避让的底部 padding
-    private var keyboardPadding: CGFloat {
-        guard keyboardObserver.keyboardHeight > 0 else { return 0 }
-        return max(keyboardObserver.keyboardHeight - 60, 0)
-    }
+    @State private var lastAppearTime: Date? // 记录上次出现的时间，用于判断是否需要刷新
+    @State private var hasLoadedFromNotification = false // 标记是否从推送通知进入
+    @State private var isWebSocketConnected = false // 标记 WebSocket 是否已连接
+    @State private var showNewMessageButton = false // 是否显示新消息提示按钮
+    @State private var isNearBottom = true // 是否接近底部（用于判断是否显示新消息按钮）
+    @State private var scrollPosition: CGFloat = 0 // 滚动位置
+    @State private var markAsReadWorkItem: DispatchWorkItem? // 用于防抖标记已读
+    @StateObject private var keyboardObserver = KeyboardHeightObserver() // 键盘高度观察者
     
     // 判断任务是否已完成或取消（不允许发送消息）
     // 如果 taskChat 为 nil，默认允许发送消息（输入框可见）
@@ -315,406 +321,7 @@ struct TaskChatView: View {
         _viewModel = StateObject(wrappedValue: TaskChatDetailViewModel(taskId: taskId, taskChat: taskChat))
     }
     
-    var body: some View {
-        ZStack {
-            AppColors.background
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // 消息列表区域 - 使用 Spacer 确保输入框始终可见
-                Group {
-                    if viewModel.isLoading && viewModel.messages.isEmpty {
-                        // 加载状态
-                        LoadingView(message: LocalizationKey.commonLoading.localized)
-                    } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
-                        // 使用统一的错误状态组件
-                        ErrorStateView(
-                            message: errorMessage,
-                            retryAction: {
-                                if let userId = appState.currentUser?.id {
-                                    viewModel.loadMessages(currentUserId: String(userId))
-                                }
-                            }
-                        )
-                    } else {
-                        ScrollViewReader { proxy in
-                            ScrollView {
-                                LazyVStack(spacing: 0) {
-                                    // 加载更多历史消息按钮（在顶部）
-                                    if viewModel.hasMoreMessages {
-                                        Button(action: {
-                                            // 任务聊天目前不支持分页，暂时隐藏
-                                        }) {
-                                            HStack(spacing: 8) {
-                                                if viewModel.isLoadingMore {
-                                                    CompactLoadingView()
-                                                } else {
-                                                    Image(systemName: "arrow.up.circle")
-                                                        .font(.system(size: 14))
-                                                }
-                                                Text(viewModel.isLoadingMore ? LocalizationKey.commonLoading.localized : LocalizationKey.commonLoadMore.localized)
-                                                    .font(.system(size: 13))
-                                            }
-                                            .foregroundColor(AppColors.textSecondary)
-                                            .padding(.vertical, 12)
-                                            .frame(maxWidth: .infinity)
-                                        }
-                                        .disabled(viewModel.isLoadingMore)
-                                        .id("load_more_button")
-                                        .opacity(0) // 暂时隐藏，因为后端不支持分页
-                                    }
-                                    
-                                    if viewModel.messages.isEmpty {
-                                        // 空状态
-                                        VStack(spacing: AppSpacing.md) {
-                                            Image(systemName: "message.fill")
-                                                .font(.system(size: 48))
-                                                .foregroundColor(AppColors.textTertiary)
-                                            Text(LocalizationKey.notificationNoMessages.localized)
-                                                .font(AppTypography.title3)
-                                                .foregroundColor(AppColors.textSecondary)
-                                            Text(LocalizationKey.notificationStartConversation.localized)
-                                                .font(AppTypography.subheadline)
-                                                .foregroundColor(AppColors.textTertiary)
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.top, 100)
-                                    } else {
-                                        LazyVStack(spacing: AppSpacing.sm) {
-                                            ForEach(viewModel.messages) { message in
-                                                // 判断是否为系统消息
-                                                if isSystemMessage(message) {
-                                                    SystemMessageBubble(message: message)
-                                                        .id(message.id)
-                                                } else {
-                                                    MessageBubble(
-                                                        message: message,
-                                                        isFromCurrentUser: isMessageFromCurrentUser(message)
-                                                    )
-                                                    .id(message.id)
-                                                }
-                                            }
-                                        }
-                                        .padding(.horizontal, AppSpacing.md)
-                                        .padding(.vertical, AppSpacing.sm)
-                                    }
-                                }
-                                .padding(.bottom, keyboardPadding)
-                            }
-                            .scrollContentBackground(.hidden) // 隐藏背景，避免手势冲突
-                            .refreshable {
-                                if let userId = appState.currentUser?.id {
-                                    viewModel.loadMessages(currentUserId: String(userId))
-                                }
-                            }
-                            .onAppear {
-                                // 首次进入时滚动到底部
-                                if !viewModel.messages.isEmpty {
-                                    scrollToBottom(proxy: proxy, delay: 0.2)
-                                }
-                            }
-                            .onChange(of: viewModel.messages.count) { newCount in
-                                // 只有新消息添加时才滚动到底部（不是加载更多历史时）
-                                if newCount > 0 {
-                                    // 检查是否是新增消息（通过比较最后一条消息ID）
-                                    if let lastMessage = viewModel.messages.last,
-                                       lastMessage.id != lastMessageId {
-                                        scrollToBottom(proxy: proxy, delay: 0.1)
-                                    }
-                                }
-                            }
-                            .onChange(of: viewModel.isInitialLoadComplete) { completed in
-                                // 首次加载完成后滚动到底部
-                                if completed && !viewModel.messages.isEmpty {
-                                    scrollToBottom(proxy: proxy, delay: 0.1)
-                                }
-                            }
-                            .onChange(of: isInputFocused) { focused in
-                                if focused && !viewModel.messages.isEmpty {
-                                    scrollToBottom(proxy: proxy, delay: 0.3)
-                                }
-                            }
-                            .onChange(of: keyboardObserver.keyboardHeight) { height in
-                                if height > 0 && !viewModel.messages.isEmpty {
-                                    scrollToBottom(proxy: proxy, delay: 0.1, animation: keyboardObserver.keyboardAnimation)
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                
-                // 输入区域 - 始终显示在底部，确保可见
-                VStack(spacing: 0) {
-                    Divider()
-                        .background(AppColors.separator)
-                    
-                    // 根据任务状态显示不同的输入区域
-                    if isTaskClosed {
-                        // 任务已结束，显示提示
-                        HStack(spacing: AppSpacing.sm) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(AppColors.textTertiary)
-                            
-                            Text(closedStatusText)
-                                .font(AppTypography.body)
-                                .foregroundColor(AppColors.textTertiary)
-                            
-                            Spacer()
-                            
-                            // 查看任务详情按钮
-                            Button(action: { showTaskDetail = true }) {
-                                Text(LocalizationKey.notificationViewDetails.localized)
-                                    .font(AppTypography.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(AppColors.primary)
-                                    .padding(.horizontal, AppSpacing.sm)
-                                    .padding(.vertical, 6)
-                                    .background(AppColors.primaryLight)
-                                    .cornerRadius(AppCornerRadius.small)
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.md)
-                        .background(AppColors.cardBackground)
-                    } else {
-                        // 正常输入区域
-                        HStack(spacing: AppSpacing.sm) {
-                            // ➕ 更多功能按钮
-                            Button(action: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    showActionMenu.toggle()
-                                    // 收起键盘
-                                    if showActionMenu {
-                                        isInputFocused = false
-                                    }
-                                }
-                            }) {
-                                ZStack {
-                                    Circle()
-                                        .fill(showActionMenu ? AppColors.primary : AppColors.cardBackground)
-                                        .frame(width: 36, height: 36)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(showActionMenu ? Color.clear : AppColors.separator.opacity(0.5), lineWidth: 1)
-                                        )
-                                    
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(showActionMenu ? .white : AppColors.textSecondary)
-                                        .rotationEffect(.degrees(showActionMenu ? 45 : 0))
-                                }
-                            }
-                            
-                            // 输入框
-                            HStack(spacing: AppSpacing.sm) {
-                                TextField(LocalizationKey.actionsEnterMessage.localized, text: $messageText, axis: .vertical)
-                                    .font(AppTypography.body)
-                                    .lineLimit(1...4)
-                                    .focused($isInputFocused)
-                                    .disabled(viewModel.isSending)
-                                    .onSubmit {
-                                        sendMessage()
-                                    }
-                                    .onChange(of: isInputFocused) { focused in
-                                        if focused && showActionMenu {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                                showActionMenu = false
-                                            }
-                                        }
-                                    }
-                            }
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.vertical, 10)
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(AppCornerRadius.pill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: AppCornerRadius.pill)
-                                    .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
-                            )
-                            
-                            // 发送按钮 - 渐变设计
-                            Button(action: sendMessage) {
-                                ZStack {
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: messageText.isEmpty || viewModel.isSending ? [AppColors.textTertiary, AppColors.textTertiary] : AppColors.gradientPrimary),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 40, height: 40)
-                                    
-                                    if viewModel.isSending {
-                                        CompactLoadingView()
-                                    } else {
-                                        Image(systemName: "arrow.up")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                            }
-                            .disabled(messageText.isEmpty || viewModel.isSending)
-                            .opacity(messageText.isEmpty || viewModel.isSending ? 0.5 : 1.0)
-                            .animation(.easeInOut(duration: 0.2), value: messageText.isEmpty)
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.isSending)
-                        }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(AppColors.cardBackground)
-                        
-                        // 功能菜单面板
-                        if showActionMenu {
-                            ChatActionMenuView(
-                                taskStatus: taskChat?.taskStatus ?? taskChat?.status,
-                                onImagePicker: {
-                                    showActionMenu = false
-                                    showImagePicker = true
-                                },
-                                onViewTaskDetail: {
-                                    showActionMenu = false
-                                    showTaskDetail = true
-                                },
-                                onViewLocationDetail: {
-                                    showActionMenu = false
-                                    loadTaskDetailAndShowLocation()
-                                }
-                            )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
-                }
-                // 使用手动键盘避让，避免系统约束冲突
-                // 键盘避让已通过 ScrollView 的 padding 处理（见第 107 行的 keyboardPadding）
-            }
-        }
-        .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
-        .navigationTitle(taskTitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(AppColors.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbar(.hidden, for: .tabBar)
-        // 确保右滑返回手势正常工作
-        .enableSwipeBack()
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        showTaskDetail = true
-                    } label: {
-                        Label("任务详情", systemImage: "doc.text")
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        showCustomerService = true
-                    } label: {
-                        Label("需要帮助", systemImage: "questionmark.circle")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(AppColors.primary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.automatic)
-                .menuIndicator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showCustomerService) {
-            NavigationStack {
-                CustomerServiceView()
-                    .environmentObject(appState)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(LocalizationKey.commonDone.localized) {
-                                showCustomerService = false
-                            }
-                        }
-                    }
-            }
-        }
-        .sheet(isPresented: $showTaskDetail) {
-            NavigationStack {
-                TaskDetailView(taskId: taskId)
-                    .environmentObject(appState)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(LocalizationKey.commonDone.localized) {
-                                showTaskDetail = false
-                            }
-                        }
-                    }
-            }
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView()
-        }
-        .sheet(isPresented: $showImagePicker) {
-            ImagePicker(selectedImage: $selectedImage)
-        }
-        .sheet(isPresented: $showLocationDetail) {
-            NavigationStack {
-                if let task = taskDetail {
-                    TaskLocationDetailView(
-                        location: task.location,
-                        latitude: task.latitude,
-                        longitude: task.longitude
-                    )
-                } else if let task = taskDetailViewModel.task {
-                    TaskLocationDetailView(
-                        location: task.location,
-                        latitude: task.latitude,
-                        longitude: task.longitude
-                    )
-                }
-            }
-        }
-        .onReceive(taskDetailViewModel.$task.compactMap { $0 }) { task in
-            // 当任务加载完成时，如果 showLocationDetail 为 true，更新 taskDetail
-            if showLocationDetail && taskDetail == nil {
-                taskDetail = task
-            }
-        }
-        .onChange(of: selectedImage) { newImage in
-            if let image = newImage {
-                // TODO: 上传图片并发送
-                uploadAndSendImage(image)
-                selectedImage = nil
-            }
-        }
-        .onAppear {
-            // 标记视图为可见，用于自动标记已读
-            viewModel.isViewVisible = true
-            
-            if !appState.isAuthenticated {
-                showLogin = true
-            } else {
-                // 只在消息为空时加载，避免重复加载
-                if viewModel.messages.isEmpty, let userId = appState.currentUser?.id {
-                    viewModel.loadMessages(currentUserId: String(userId))
-                }
-                // 延迟标记已读，等消息加载完成后再标记
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    viewModel.markAsRead()
-                }
-                // 连接 WebSocket 用于接收实时消息
-                connectWebSocket()
-            }
-        }
-        .onDisappear {
-            // 标记视图为不可见
-            viewModel.isViewVisible = false
-            // 清理错误状态
-            viewModel.errorMessage = nil
-        }
-    }
+    // MARK: - Helper Functions
     
     private func sendMessage() {
         let trimmedText = messageText.trimmingCharacters(in: .whitespaces)
@@ -787,7 +394,13 @@ struct TaskChatView: View {
             return
         }
         
+        // 避免重复连接
+        guard !isWebSocketConnected else {
+            return
+        }
+        
         WebSocketService.shared.connect(token: token, userId: String(userId))
+        isWebSocketConnected = true
         
         // 监听 WebSocket 消息，只处理当前任务的消息
         let currentTaskId = taskId  // 捕获 taskId 到局部变量
@@ -803,26 +416,63 @@ struct TaskChatView: View {
                 // 2. 如果没有 taskId，可能是普通消息，需要通过其他方式判断（暂时允许）
                 // 3. 检查消息是否已存在（避免重复添加）
                 DispatchQueue.main.async {
+                    // 使用 Set 优化去重检查（如果消息量大的话）
                     if !viewModel.messages.contains(where: { $0.id == message.id }) {
-                        viewModel.messages.append(message)
-                        viewModel.messages.sort { msg1, msg2 in
-                            let time1 = msg1.createdAt ?? ""
-                            let time2 = msg2.createdAt ?? ""
-                            return time1 < time2
+                        // 优化：使用二分插入保持有序，避免每次都完整排序
+                        let messageTime = message.createdAt ?? ""
+                        if let insertIndex = viewModel.messages.firstIndex(where: { ($0.createdAt ?? "") > messageTime }) {
+                            viewModel.messages.insert(message, at: insertIndex)
+                        } else {
+                            viewModel.messages.append(message)
                         }
-                        // 保存到缓存
+                        
+                        // 批量保存缓存（减少 I/O 操作）
+                        // saveToCache 内部已经实现了防抖机制
                         viewModel.saveToCache()
                         
-                        // 如果视图可见且消息不是来自当前用户，自动标记为已读
+                        // 如果视图可见且消息不是来自当前用户，自动标记为已读（使用防抖）
                         if viewModel.isViewVisible, let senderId = message.senderId, senderId != currentUserId {
-                            // 延迟一小段时间，确保消息已添加到列表
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            // 取消之前的标记已读任务
+                            self.markAsReadWorkItem?.cancel()
+                            
+                            // 创建新的标记已读任务（防抖：延迟 0.3 秒）
+                            let workItem = DispatchWorkItem { [weak viewModel] in
+                                guard let viewModel = viewModel else { return }
                                 // 使用最新消息的ID标记已读
                                 if let lastMessage = viewModel.messages.last, let messageId = lastMessage.messageId {
                                     viewModel.markAsRead(uptoMessageId: messageId)
                                 } else {
                                     viewModel.markAsRead()
                                 }
+                            }
+                            self.markAsReadWorkItem = workItem
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+                        }
+                        
+                        // 如果应用在后台且消息不是来自当前用户，发送本地推送通知
+                        if let senderId = message.senderId, senderId != currentUserId {
+                            if LocalNotificationManager.shared.isAppInBackground() || !viewModel.isViewVisible {
+                                // 获取发送者名称
+                                let senderName = message.senderName ?? "有人"
+                                // 获取消息内容（如果是图片消息，显示提示）
+                                let messageContent = message.content ?? "[图片]"
+                                let displayContent = messageContent == "[图片]" ? "发送了一张图片" : messageContent
+                                
+                                // 获取消息ID（可能是字符串或整数）
+                                let messageIdString: String
+                                if let messageId = message.messageId {
+                                    messageIdString = String(messageId)
+                                } else {
+                                    messageIdString = message.id
+                                }
+                                
+                                LocalNotificationManager.shared.sendMessageNotification(
+                                    title: senderName,
+                                    body: displayContent,
+                                    messageId: messageIdString,
+                                    senderId: senderId,
+                                    taskId: currentTaskId
+                                )
                             }
                         }
                     }
@@ -838,8 +488,6 @@ struct TaskChatView: View {
         return false
     }
     
-    // 判断是否为系统消息
-    // 加载任务详情并显示位置
     private func loadTaskDetailAndShowLocation() {
         // 先设置 showLocationDetail 为 true，这样 onReceive 可以捕获任务加载
         showLocationDetail = true
@@ -890,134 +538,727 @@ struct TaskChatView: View {
             workItem.perform()
         }
     }
-}
-
-// 系统消息气泡组件 - 居中显示，样式与普通消息区分
-struct SystemMessageBubble: View {
-    let message: Message
     
-    var body: some View {
-        HStack {
-            Spacer()
-            
-            VStack(spacing: 4) {
-                // 系统消息内容
-                HStack(spacing: 6) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(AppColors.textTertiary)
-                    
-                    Text(message.content ?? "系统消息")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, AppSpacing.md)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                        .fill(AppColors.cardBackground.opacity(0.6))
-                )
-                
-                // 时间戳（可选，系统消息可能不需要显示时间）
-                if let createdAt = message.createdAt {
-                    Text(formatTime(createdAt))
-                        .font(AppTypography.caption2)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, AppSpacing.xs)
-    }
-    
-    private func formatTime(_ timeString: String) -> String {
-        return DateFormatterHelper.shared.formatTime(timeString)
-    }
-}
-
-// 聊天功能菜单组件
-struct ChatActionMenuView: View {
-    let taskStatus: String?
-    let onImagePicker: () -> Void
-    let onViewTaskDetail: () -> Void
-    let onViewLocationDetail: () -> Void
-    
-    // 判断是否应该显示详细地址按钮（仅在 in_progress 或 pending_confirmation 时显示）
-    private var shouldShowLocationDetail: Bool {
-        guard let status = taskStatus?.lowercased() else { return false }
-        return status == "in_progress" || status == "pending_confirmation"
-    }
-    
-    var body: some View {
+    // MARK: - Input Area View
+    @ViewBuilder
+    private var inputAreaView: some View {
         VStack(spacing: 0) {
             Divider()
-                .background(AppColors.separator.opacity(0.3))
+                .background(AppColors.separator)
             
-            HStack(spacing: AppSpacing.xl) {
-                // 上传图片
-                ChatActionButton(
-                    icon: "photo.fill",
-                    title: LocalizationKey.notificationImage.localized,
-                    color: AppColors.success,
-                    action: onImagePicker
-                )
+            // 根据任务状态显示不同的输入区域
+            if isTaskClosed {
+                // 任务已结束，显示提示
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(AppColors.textTertiary)
+                    
+                    Text(closedStatusText)
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textTertiary)
+                    
+                    Spacer()
+                    
+                    // 查看任务详情按钮
+                    Button(action: { showTaskDetail = true }) {
+                        Text(LocalizationKey.notificationViewDetails.localized)
+                            .font(AppTypography.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(AppColors.primary)
+                            .padding(.horizontal, AppSpacing.sm)
+                            .padding(.vertical, 6)
+                            .background(AppColors.primaryLight)
+                            .cornerRadius(AppCornerRadius.small)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.md)
+                .background(AppColors.cardBackground)
+            } else {
+                // 正常输入区域
+                HStack(spacing: AppSpacing.sm) {
+                    // ➕ 更多功能按钮
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showActionMenu.toggle()
+                            // 收起键盘
+                            if showActionMenu {
+                                isInputFocused = false
+                            }
+                        }
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(showActionMenu ? AppColors.primary : AppColors.cardBackground)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(showActionMenu ? Color.clear : AppColors.separator.opacity(0.5), lineWidth: 1)
+                                )
+                            
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(showActionMenu ? .white : AppColors.textSecondary)
+                                .rotationEffect(.degrees(showActionMenu ? 45 : 0))
+                        }
+                    }
+                    
+                    // 输入框
+                    VStack(spacing: 4) {
+                        HStack(spacing: AppSpacing.sm) {
+                            TextField(LocalizationKey.actionsEnterMessage.localized, text: $messageText, axis: .vertical)
+                                .font(AppTypography.body)
+                                .lineLimit(1...4)
+                                .focused($isInputFocused)
+                                .disabled(viewModel.isSending)
+                                .onSubmit {
+                                    sendMessage()
+                                }
+                                .onChange(of: isInputFocused) { focused in
+                                    if focused && showActionMenu {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            showActionMenu = false
+                                        }
+                                    }
+                                }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, 10)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.pill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.pill)
+                                .stroke(AppColors.separator.opacity(0.3), lineWidth: 1)
+                        )
+                        
+                        // 字符计数提示（仅在接近最大长度时显示）
+                        if messageText.count > 200 {
+                            HStack {
+                                Spacer()
+                                Text("\(messageText.count)/500")
+                                    .font(AppTypography.caption2)
+                                    .foregroundColor(messageText.count >= 500 ? AppColors.error : AppColors.textTertiary)
+                                    .padding(.trailing, AppSpacing.sm)
+                            }
+                        }
+                    }
+                    
+                    // 发送按钮 - 渐变设计
+                    Button(action: sendMessage) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: messageText.isEmpty || viewModel.isSending ? [AppColors.textTertiary, AppColors.textTertiary] : AppColors.gradientPrimary),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 40, height: 40)
+                            
+                            if viewModel.isSending {
+                                CompactLoadingView()
+                            } else {
+                                Image(systemName: "arrow.up")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    .disabled(messageText.isEmpty || viewModel.isSending)
+                    .opacity(messageText.isEmpty || viewModel.isSending ? 0.5 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: messageText.isEmpty)
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.isSending)
+                }
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.top, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.sm)
+                .background(AppColors.cardBackground)
                 
-                // 查看任务详情
-                ChatActionButton(
-                    icon: "doc.text.fill",
-                    title: LocalizationKey.notificationTaskDetail.localized,
-                    color: AppColors.primary,
-                    action: onViewTaskDetail
-                )
-                
-                // 详细地址（仅在任务进行中或待确认时显示）
-                if shouldShowLocationDetail {
-                    ChatActionButton(
-                        icon: "mappin.circle.fill",
-                        title: LocalizationKey.notificationDetailAddress.localized,
-                        color: AppColors.warning,
-                        action: onViewLocationDetail
+                // 功能菜单面板
+                if showActionMenu {
+                    ChatActionMenuView(
+                        taskStatus: taskChat?.taskStatus ?? taskChat?.status,
+                        onImagePicker: {
+                            showActionMenu = false
+                            showImagePicker = true
+                        },
+                        onViewTaskDetail: {
+                            showActionMenu = false
+                            showTaskDetail = true
+                        },
+                        onViewLocationDetail: {
+                            showActionMenu = false
+                            loadTaskDetailAndShowLocation()
+                        }
                     )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+        }
+        .animation(keyboardObserver.keyboardAnimation, value: keyboardObserver.keyboardHeight)
+    }
+    
+    // MARK: - Message List View
+    @ViewBuilder
+    private var messageListView: some View {
+        if viewModel.isLoading && viewModel.messages.isEmpty {
+            // 加载状态
+            LoadingView(message: LocalizationKey.commonLoading.localized)
+        } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
+            // 使用统一的错误状态组件
+            ErrorStateView(
+                message: errorMessage,
+                retryAction: {
+                    if let userId = appState.currentUser?.id {
+                        viewModel.loadMessages(currentUserId: String(userId))
+                    }
+                }
+            )
+        } else {
+            ScrollViewReader { proxy in
+                ZStack(alignment: .bottomTrailing) {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            // 加载更多历史消息按钮（在顶部）
+                            if viewModel.hasMoreMessages {
+                                Button(action: {
+                                    // 任务聊天目前不支持分页，暂时隐藏
+                                }) {
+                                    HStack(spacing: 8) {
+                                        if viewModel.isLoadingMore {
+                                            CompactLoadingView()
+                                        } else {
+                                            Image(systemName: "arrow.up.circle")
+                                                .font(.system(size: 14))
+                                        }
+                                        Text(viewModel.isLoadingMore ? LocalizationKey.commonLoading.localized : LocalizationKey.commonLoadMore.localized)
+                                            .font(.system(size: 13))
+                                    }
+                                    .foregroundColor(AppColors.textSecondary)
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .disabled(viewModel.isLoadingMore)
+                                .id("load_more_button")
+                                .opacity(0) // 暂时隐藏，因为后端不支持分页
+                            }
+                            
+                            if viewModel.messages.isEmpty {
+                                // 空状态
+                                VStack(spacing: AppSpacing.md) {
+                                    Image(systemName: "message.fill")
+                                        .font(.system(size: 48))
+                                        .foregroundColor(AppColors.textTertiary)
+                                    Text(LocalizationKey.notificationNoMessages.localized)
+                                        .font(AppTypography.title3)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    Text(LocalizationKey.notificationStartConversation.localized)
+                                        .font(AppTypography.subheadline)
+                                        .foregroundColor(AppColors.textTertiary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 100)
+                            } else {
+                                LazyVStack(spacing: AppSpacing.sm) {
+                                    ForEach(viewModel.messages) { message in
+                                        // 判断是否为系统消息
+                                        if isSystemMessage(message) {
+                                            SystemMessageBubble(message: message)
+                                                .id(message.id)
+                                        } else {
+                                            MessageBubble(
+                                                message: message,
+                                                isFromCurrentUser: isMessageFromCurrentUser(message)
+                                            )
+                                            .id(message.id)
+                                        }
+                                    }
+                                    
+                                    // 底部锚点，确保 ScrollView 默认在底部
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .id("scroll_bottom_anchor")
+                                }
+                                .padding(.horizontal, AppSpacing.md)
+                                .padding(.vertical, AppSpacing.sm)
+                            }
+                        }
+                        .background(
+                            GeometryReader { scrollGeometry in
+                                Color.clear
+                                    .preference(key: ScrollOffsetPreferenceKey.self, value: scrollGeometry.frame(in: .named("scroll")).minY)
+                            }
+                        )
+                    }
+                    .coordinateSpace(name: "scroll")
+                    .scrollContentBackground(.hidden) // 隐藏背景，避免手势冲突
+                    .scrollDismissesKeyboard(.never) // 禁用下滑收回键盘功能，确保键盘稳定
+                    .frame(maxWidth: .infinity, maxHeight: .infinity) // 确保 ScrollView 填充可用空间，让 safeAreaInset 能够正确调整
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                        // 检测是否接近底部（距离底部小于 200 像素）
+                        isNearBottom = value > -200
+                        showNewMessageButton = !isNearBottom && !viewModel.messages.isEmpty
+                    }
+                    .refreshable {
+                        if let userId = appState.currentUser?.id {
+                            viewModel.loadMessages(currentUserId: String(userId))
+                        }
+                    }
+                    .onAppear {
+                        // 视图出现时，立即滚动到底部（无动画）
+                        if let lastMessage = viewModel.messages.last {
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onChange(of: viewModel.isInitialLoadComplete) { completed in
+                        // 首次加载完成后，立即滚动到底部（无动画）
+                        if completed, let lastMessage = viewModel.messages.last {
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onChange(of: viewModel.messages.count) { newCount in
+                        // 只有新消息添加时才滚动到底部（不是加载更多历史时）
+                        if newCount > 0 {
+                            // 检查是否是新增消息（通过比较最后一条消息ID）
+                            if let lastMessage = viewModel.messages.last,
+                               lastMessage.id != lastMessageId {
+                                // 如果输入框有焦点，立即滚动到底部（无延迟，与键盘同步）
+                                if isInputFocused {
+                                    if let lastMsg = viewModel.messages.last {
+                                        DispatchQueue.main.async {
+                                            withAnimation(keyboardObserver.keyboardAnimation) {
+                                                proxy.scrollTo(lastMsg.id, anchor: .bottom)
+                                            }
+                                        }
+                                    }
+                                    showNewMessageButton = false
+                                } else if isNearBottom {
+                                    // 如果用户接近底部，延迟滚动（避免干扰用户浏览）
+                                    scrollToBottom(proxy: proxy, delay: 0.1)
+                                    showNewMessageButton = false
+                                } else {
+                                    // 用户不在底部，显示新消息提示
+                                    showNewMessageButton = true
+                                }
+                            }
+                        }
+                    }
+                    .onChange(of: isInputFocused) { focused in
+                        if focused && !viewModel.messages.isEmpty {
+                            // 输入框获得焦点时，立即滚动到底部（无延迟）
+                            // 这样在键盘弹出、视图上移时，内容已经在底部，无需额外滚动
+                            // 使用键盘动画同步滚动，让滚动和键盘弹出同步进行
+                            if let lastMessage = viewModel.messages.last {
+                                // 立即执行，不延迟，让滚动和键盘弹出同步
+                                DispatchQueue.main.async {
+                                    withAnimation(keyboardObserver.keyboardAnimation) {
+                                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .onChange(of: keyboardObserver.keyboardHeight) { height in
+                        // 当键盘弹出时，如果输入框有焦点且消息不为空，确保滚动到底部
+                        if height > 0 && isInputFocused && !viewModel.messages.isEmpty {
+                            if let lastMessage = viewModel.messages.last {
+                                DispatchQueue.main.async {
+                                    withAnimation(keyboardObserver.keyboardAnimation) {
+                                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 新消息提示按钮
+                    if showNewMessageButton {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                scrollToBottom(proxy: proxy, delay: 0)
+                                showNewMessageButton = false
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("新消息")
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: AppColors.gradientPrimary),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(20)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .padding(.trailing, AppSpacing.md)
+                        .padding(.bottom, 80) // 在输入框上方
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+            }
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            AppColors.background
+                .ignoresSafeArea()
+            
+            // 使用 safeAreaInset 让消息列表和输入区域都稳定布局
+            messageListView
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    // 输入区域 - 使用 safeAreaInset 自动避让键盘，系统会自动处理间距
+                    inputAreaView
+                }
+                .navigationTitle(taskTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(AppColors.background, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbar(.hidden, for: .tabBar)
+            // 确保右滑返回手势正常工作
+                .enableSwipeBack()
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu {
+                            Button {
+                                showTaskDetail = true
+                            } label: {
+                                Label("任务详情", systemImage: "doc.text")
+                            }
+                            
+                            Divider()
+                            
+                            Button {
+                                showCustomerService = true
+                            } label: {
+                                Label("需要帮助", systemImage: "questionmark.circle")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppColors.primary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .menuStyle(.automatic)
+                        .menuIndicator(.hidden)
+                    }
+                }
+                .sheet(isPresented: $showCustomerService) {
+                    NavigationStack {
+                        CustomerServiceView()
+                            .environmentObject(appState)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button(LocalizationKey.commonDone.localized) {
+                                        showCustomerService = false
+                                    }
+                                }
+                            }
+                    }
+                }
+                .sheet(isPresented: $showTaskDetail) {
+                    NavigationStack {
+                        TaskDetailView(taskId: taskId)
+                            .environmentObject(appState)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button(LocalizationKey.commonDone.localized) {
+                                        showTaskDetail = false
+                                    }
+                                }
+                            }
+                    }
+                }
+                .sheet(isPresented: $showLogin) {
+                    LoginView()
+                }
+                .sheet(isPresented: $showImagePicker) {
+                    ImagePicker(selectedImage: $selectedImage)
+                }
+                .sheet(isPresented: $showLocationDetail) {
+                    NavigationStack {
+                        if let task = taskDetail {
+                            TaskLocationDetailView(
+                                location: task.location,
+                                latitude: task.latitude,
+                                longitude: task.longitude
+                            )
+                        } else if let task = taskDetailViewModel.task {
+                            TaskLocationDetailView(
+                                location: task.location,
+                                latitude: task.latitude,
+                                longitude: task.longitude
+                            )
+                        }
+                    }
+                }
+                .onReceive(taskDetailViewModel.$task.compactMap { $0 }) { task in
+                    // 当任务加载完成时，如果 showLocationDetail 为 true，更新 taskDetail
+                    if showLocationDetail && taskDetail == nil {
+                        taskDetail = task
+                    }
+                }
+                .onChange(of: selectedImage) { newImage in
+                    if let image = newImage {
+                        // TODO: 上传图片并发送
+                        uploadAndSendImage(image)
+                        selectedImage = nil
+                    }
+                }
+                .onAppear {
+                    // 标记视图为可见，用于自动标记已读
+                    viewModel.isViewVisible = true
+                    
+                    if !appState.isAuthenticated {
+                        showLogin = true
+                    } else {
+                        let currentTime = Date()
+                        let shouldRefresh: Bool
+                        
+                        // 检查是否有未读消息（最重要：有未读消息必须强制刷新）
+                        let hasUnreadMessages = (taskChat?.unreadCount ?? 0) > 0
+                        
+                        // 检查是否有刷新标记（从推送通知进入）
+                        let refreshKey = "refresh_task_chat_\(taskId)"
+                        let needsRefreshFromNotification = UserDefaults.standard.bool(forKey: refreshKey)
+                        
+                        // 判断是否需要刷新消息（优先级从高到低）：
+                        // 1. 如果有未读消息，必须强制刷新（最重要）
+                        // 2. 如果消息为空，需要加载
+                        // 3. 如果是从推送通知进入（有刷新标记），需要刷新
+                        // 4. 如果距离上次出现超过30秒，需要刷新（可能从后台恢复）
+                        // 5. 如果没有 taskChat 参数（从 TaskDetailView 等进入），也刷新以确保最新
+                        // 6. 首次出现，如果消息不为空，可能是从缓存加载的，也需要刷新以确保最新
+                        if hasUnreadMessages {
+                            shouldRefresh = true
+                        } else if viewModel.messages.isEmpty {
+                            shouldRefresh = true
+                        } else if needsRefreshFromNotification {
+                            shouldRefresh = true
+                            // 清除刷新标记
+                            UserDefaults.standard.removeObject(forKey: refreshKey)
+                        } else if taskChat == nil {
+                            // 没有 taskChat 参数（从 TaskDetailView 等进入）
+                            // 如果距离上次出现超过10秒，刷新以确保最新（避免过于频繁的刷新）
+                            if let lastTime = lastAppearTime {
+                                let timeSinceLastAppear = currentTime.timeIntervalSince(lastTime)
+                                shouldRefresh = timeSinceLastAppear > 10
+                            } else {
+                                // 首次出现，刷新
+                                shouldRefresh = true
+                            }
+                        } else if let lastTime = lastAppearTime {
+                            let timeSinceLastAppear = currentTime.timeIntervalSince(lastTime)
+                            // 如果距离上次出现超过30秒，则刷新
+                            shouldRefresh = timeSinceLastAppear > 30
+                        } else {
+                            // 首次出现，如果消息不为空，可能是从缓存加载的，也需要刷新以确保最新
+                            shouldRefresh = true
+                        }
+                        
+                        if shouldRefresh, let userId = appState.currentUser?.id {
+                            // 防止重复加载：如果已经在加载中，跳过
+                            guard !viewModel.isLoading else {
+                                return
+                            }
+                            
+                            // 只有在有未读消息或从通知进入时才清空消息，避免不必要的界面闪烁
+                            if hasUnreadMessages || needsRefreshFromNotification {
+                                viewModel.messages = []
+                            }
+                            
+                            viewModel.loadMessages(currentUserId: String(userId))
+                            hasLoadedFromNotification = false // 重置标记
+                        }
+                        
+                        // 更新最后出现时间
+                        lastAppearTime = currentTime
+                        
+                        // 延迟标记已读，等消息加载完成后再标记（只在有未读消息时）
+                        if hasUnreadMessages {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                viewModel.markAsRead()
+                            }
+                        }
+                        // 连接 WebSocket 用于接收实时消息（避免重复连接）
+                        if !isWebSocketConnected {
+                            connectWebSocket()
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshTaskChat"))) { notification in
+                    // 监听刷新任务聊天的通知
+                    if let taskIdFromNotification = notification.userInfo?["task_id"] as? Int,
+                       taskIdFromNotification == taskId {
+                        hasLoadedFromNotification = true
+                        // 如果视图已经出现且不在加载中，立即刷新
+                        if viewModel.isViewVisible, !viewModel.isLoading, let userId = appState.currentUser?.id {
+                            viewModel.messages = [] // 清空旧消息
+                            viewModel.loadMessages(currentUserId: String(userId))
+                            hasLoadedFromNotification = false
+                        }
+                    }
+                }
+                .onDisappear {
+                    // 标记视图为不可见
+                    viewModel.isViewVisible = false
+                    // 清理错误状态
+                    viewModel.errorMessage = nil
+                    // 取消待执行的标记已读任务
+                    markAsReadWorkItem?.cancel()
+                    markAsReadWorkItem = nil
+                    // 注意：不在这里断开 WebSocket，因为可能还有其他聊天窗口在使用
+                    // WebSocket 会在应用退出或用户登出时统一断开
+                }
+        }
+    }
+    
+    // 系统消息气泡组件 - 居中显示，样式与普通消息区分
+    struct SystemMessageBubble: View {
+        let message: Message
+        
+        var body: some View {
+            HStack {
+                Spacer()
+                
+                VStack(spacing: 4) {
+                    // 系统消息内容
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textTertiary)
+                        
+                        Text(message.content ?? "系统消息")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .fill(AppColors.cardBackground.opacity(0.6))
+                    )
+                    
+                    // 时间戳（可选，系统消息可能不需要显示时间）
+                    if let createdAt = message.createdAt {
+                        Text(formatTime(createdAt))
+                            .font(AppTypography.caption2)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
                 }
                 
                 Spacer()
             }
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.vertical, AppSpacing.md)
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.xs)
         }
-        .background(AppColors.cardBackground)
+        
+        private func formatTime(_ timeString: String) -> String {
+            return DateFormatterHelper.shared.formatTime(timeString)
+        }
     }
-}
-
-// 聊天功能按钮
-struct ChatActionButton: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
     
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                        .fill(color.opacity(0.15))
-                        .frame(width: 56, height: 56)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 24))
-                        .foregroundColor(color)
-                }
+    // 聊天功能菜单组件
+    struct ChatActionMenuView: View {
+        let taskStatus: String?
+        let onImagePicker: () -> Void
+        let onViewTaskDetail: () -> Void
+        let onViewLocationDetail: () -> Void
+        
+        // 判断是否应该显示详细地址按钮（仅在 in_progress 或 pending_confirmation 时显示）
+        private var shouldShowLocationDetail: Bool {
+            guard let status = taskStatus?.lowercased() else { return false }
+            return status == "in_progress" || status == "pending_confirmation"
+        }
+        
+        var body: some View {
+            VStack(spacing: 0) {
+                Divider()
+                    .background(AppColors.separator.opacity(0.3))
                 
-                Text(title)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textSecondary)
+                HStack(spacing: AppSpacing.xl) {
+                    // 上传图片
+                    ChatActionButton(
+                        icon: "photo.fill",
+                        title: LocalizationKey.notificationImage.localized,
+                        color: AppColors.success,
+                        action: onImagePicker
+                    )
+                    
+                    // 查看任务详情
+                    ChatActionButton(
+                        icon: "doc.text.fill",
+                        title: LocalizationKey.notificationTaskDetail.localized,
+                        color: AppColors.primary,
+                        action: onViewTaskDetail
+                    )
+                    
+                    // 详细地址（仅在任务进行中或待确认时显示）
+                    if shouldShowLocationDetail {
+                        ChatActionButton(
+                            icon: "mappin.circle.fill",
+                            title: LocalizationKey.notificationDetailAddress.localized,
+                            color: AppColors.warning,
+                            action: onViewLocationDetail
+                        )
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.vertical, AppSpacing.md)
+            }
+            .background(AppColors.cardBackground)
+        }
+        
+        // 聊天功能按钮
+        struct ChatActionButton: View {
+            let icon: String
+            let title: String
+            let color: Color
+            let action: () -> Void
+            
+            var body: some View {
+                Button(action: action) {
+                    VStack(spacing: 8) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                .fill(color.opacity(0.15))
+                                .frame(width: 56, height: 56)
+                            
+                            Image(systemName: icon)
+                                .font(.system(size: 24))
+                                .foregroundColor(color)
+                        }
+                        
+                        Text(title)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                }
+                .buttonStyle(ScaleButtonStyle())
             }
         }
-        .buttonStyle(ScaleButtonStyle())
+        
     }
 }
-
+*/

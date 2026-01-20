@@ -11,80 +11,7 @@ struct UserProfileView: View {
             AppColors.background
                 .ignoresSafeArea()
             
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let profile = viewModel.userProfile {
-                ScrollView {
-                    VStack(spacing: AppSpacing.lg) {
-                        // 用户信息卡片
-                        UserInfoCard(profile: profile)
-                            .padding(.horizontal, AppSpacing.md)
-                            .padding(.top, AppSpacing.md)
-                        
-                        // 统计数据
-                        StatsRow(profile: profile)
-                            .padding(.horizontal, AppSpacing.md)
-                        
-                        // 最近任务
-                        if !profile.recentTasks.isEmpty {
-                            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                                HStack {
-                                    Image(systemName: "list.bullet.rectangle")
-                                        .foregroundColor(AppColors.primary)
-                                        .font(.system(size: 18))
-                                    Text(LocalizationKey.profileRecentTasks.localized)
-                                        .font(AppTypography.title3)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(AppColors.textPrimary)
-                                }
-                                .padding(.horizontal, AppSpacing.md)
-                                
-                                ForEach(profile.recentTasks.prefix(5)) { task in
-                                    NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                        TaskRowView(task: task)
-                                    }
-                                    .buttonStyle(ScaleButtonStyle())
-                                    .padding(.horizontal, AppSpacing.md)
-                                }
-                            }
-                            .padding(.top, AppSpacing.md)
-                        }
-                        
-                        // 评价
-                        if !profile.reviews.isEmpty {
-                            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                                HStack {
-                                    Image(systemName: "star.fill")
-                                        .foregroundColor(.yellow)
-                                        .font(.system(size: 18))
-                                    Text(LocalizationKey.profileUserReviews.localized)
-                                        .font(AppTypography.title3)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(AppColors.textPrimary)
-                                }
-                                .padding(.horizontal, AppSpacing.md)
-                                
-                                ForEach(profile.reviews.prefix(5)) { review in
-                                    ReviewRowView(review: review)
-                                        .padding(.horizontal, AppSpacing.md)
-                                }
-                            }
-                            .padding(.top, AppSpacing.md)
-                        }
-                        
-                        Spacer(minLength: AppSpacing.xl)
-                    }
-                    .padding(.bottom, AppSpacing.xl)
-                }
-            } else if let error = viewModel.errorMessage {
-                ErrorStateView(
-                    message: error,
-                    retryAction: {
-                        viewModel.loadUserProfile(userId: userId)
-                    }
-                )
-            }
+            buildContentView()
         }
         .navigationTitle("用户资料")
         .navigationBarTitleDisplayMode(.inline)
@@ -97,6 +24,141 @@ struct UserProfileView: View {
             }
         }
     }
+    
+    // MARK: - Content Views
+    
+    private var contentState: ContentState {
+        if viewModel.isOfficialAccount {
+            return .officialAccount
+        } else if viewModel.isLoading {
+            return .loading
+        } else if let profile = viewModel.userProfile {
+            return .profile(profile)
+        } else if let error = viewModel.errorMessage {
+            return .error(error)
+        } else {
+            return .loading
+        }
+    }
+    
+    @ViewBuilder
+    private func buildContentView() -> some View {
+        switch contentState {
+        case .officialAccount:
+            AboutView()
+        case .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .profile(let profile):
+            ProfileScrollView(profile: profile)
+        case .error(let message):
+            ErrorStateView(
+                message: message,
+                retryAction: {
+                    viewModel.loadUserProfile(userId: userId)
+                }
+            )
+        }
+    }
+    
+    private enum ContentState {
+        case officialAccount
+        case loading
+        case profile(UserProfileResponse)
+        case error(String)
+    }
+    
+}
+
+// MARK: - Profile Scroll View
+
+private struct ProfileScrollView: View {
+    let profile: UserProfileResponse
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: AppSpacing.lg) {
+                // 用户信息卡片
+                UserInfoCard(profile: profile)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.top, AppSpacing.md)
+                
+                // 统计数据
+                StatsRow(profile: profile)
+                    .padding(.horizontal, AppSpacing.md)
+                
+                // 最近任务
+                if !profile.recentTasks.isEmpty {
+                    RecentTasksSection(profile: profile)
+                }
+                
+                // 评价
+                if !profile.reviews.isEmpty {
+                    ReviewsSection(profile: profile)
+                }
+                
+                Spacer(minLength: AppSpacing.xl)
+            }
+            .padding(.bottom, AppSpacing.xl)
+        }
+    }
+}
+
+// MARK: - Recent Tasks Section
+
+private struct RecentTasksSection: View {
+    let profile: UserProfileResponse
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Image(systemName: "list.bullet.rectangle")
+                    .foregroundColor(AppColors.primary)
+                    .font(.system(size: 18))
+                Text(LocalizationKey.profileRecentTasks.localized)
+                    .font(AppTypography.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            
+            ForEach(profile.recentTasks.prefix(5)) { task in
+                NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                    TaskRowView(task: task)
+                }
+                .buttonStyle(ScaleButtonStyle())
+                .padding(.horizontal, AppSpacing.md)
+            }
+        }
+        .padding(.top, AppSpacing.md)
+    }
+}
+
+// MARK: - Reviews Section
+
+private struct ReviewsSection: View {
+    let profile: UserProfileResponse
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 18))
+                Text(LocalizationKey.profileUserReviews.localized)
+                    .font(AppTypography.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            
+            ForEach(profile.reviews.prefix(5)) { review in
+                ReviewRowView(review: review)
+                    .padding(.horizontal, AppSpacing.md)
+            }
+        }
+        .padding(.top, AppSpacing.md)
+    }
 }
 
 // MARK: - ViewModel
@@ -106,6 +168,7 @@ class UserProfileViewModel: ObservableObject {
     @Published var userProfile: UserProfileResponse?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isOfficialAccount = false // 是否是官方账号
     
     private var cancellables = Set<AnyCancellable>()
     private let apiService = APIService.shared
@@ -113,7 +176,33 @@ class UserProfileViewModel: ObservableObject {
     func loadUserProfile(userId: String) {
         isLoading = true
         errorMessage = nil
+        isOfficialAccount = false
         
+        // 先获取简化版用户信息，检查是否是官方账号
+        apiService.getUserProfile(userId: userId)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    if case .failure = completion {
+                        // 如果获取简化版失败，尝试加载完整资料
+                        self?.loadUserProfileDetail(userId: userId)
+                    }
+                },
+                receiveValue: { [weak self] user in
+                    // 检查是否是官方账号
+                    if user.isAdmin == true {
+                        self?.isOfficialAccount = true
+                        self?.isLoading = false
+                    } else {
+                        // 不是官方账号，加载完整资料
+                        self?.loadUserProfileDetail(userId: userId)
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
+    
+    private func loadUserProfileDetail(userId: String) {
         // 使用完整资料 API
         apiService.getUserProfileDetail(userId: userId)
             .receive(on: DispatchQueue.main)

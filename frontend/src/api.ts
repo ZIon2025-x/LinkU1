@@ -270,6 +270,11 @@ api.interceptors.response.use(
         // 重新获取CSRF token
         const newToken = await getCSRFToken();
         
+        // 检查 error.config 是否存在
+        if (!error.config) {
+          return Promise.reject(error);
+        }
+        
         // 重试原始请求
         const retryConfig = {
           ...error.config,
@@ -320,6 +325,11 @@ api.interceptors.response.use(
       
       if (isAcceptTaskApi && currentRetryCount >= 1) {
                 retryCounters.delete(requestKey);
+        return Promise.reject(error);
+      }
+      
+      // 检查 error.config 是否存在
+      if (!error.config) {
         return Promise.reject(error);
       }
       

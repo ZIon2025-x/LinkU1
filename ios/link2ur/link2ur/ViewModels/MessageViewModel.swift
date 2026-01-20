@@ -82,6 +82,25 @@ extension ChatViewModel {
                                     self.markAsRead()
                                 }
                             }
+                            
+                            // 如果应用在后台且消息不是来自当前用户，发送本地推送通知
+                            if let senderId = message.senderId, senderId != capturedUserId {
+                                if LocalNotificationManager.shared.isAppInBackground() || !self.isViewVisible {
+                                    // 获取发送者名称
+                                    let senderName = message.senderName ?? "有人"
+                                    // 获取消息内容（如果是图片消息，显示提示）
+                                    let messageContent = message.content ?? "[图片]"
+                                    let displayContent = messageContent == "[图片]" ? "发送了一张图片" : messageContent
+                                    
+                                    LocalNotificationManager.shared.sendMessageNotification(
+                                        title: senderName,
+                                        body: displayContent,
+                                        messageId: message.id,
+                                        senderId: senderId,
+                                        partnerId: self.partnerId
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -358,13 +377,25 @@ class TaskChatDetailViewModel: ObservableObject {
         }
     }
     
+    private var cacheSaveWorkItem: DispatchWorkItem?
+    
     func saveToCache() {
+        // 取消之前的保存任务（防抖：避免频繁写入）
+        cacheSaveWorkItem?.cancel()
+        
         // 只缓存最新的100条消息
         let messagesToCache = Array(messages.suffix(100))
-        if !messagesToCache.isEmpty {
-            cacheManager.save(messagesToCache, forKey: cacheKey)
+        guard !messagesToCache.isEmpty else { return }
+        
+        // 创建保存任务（延迟 0.5 秒，批量保存）
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.cacheManager.save(messagesToCache, forKey: self.cacheKey)
             Logger.debug("✅ 已缓存 \(messagesToCache.count) 条任务聊天消息", category: .cache)
         }
+        
+        cacheSaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
     
     // 注意：taskChat 会在 loadMessages 方法中使用，这里先保存
@@ -550,11 +581,11 @@ class TaskChatDetailViewModel: ObservableObject {
                 
                 // 如果找到了对方用户ID，重新加载消息
                 if let partnerId = self.partnerId, !partnerId.isEmpty {
-                    print("📤 从任务详情获取到对方用户ID: \(partnerId)，重新加载消息")
+                    Logger.debug("📤 从任务详情获取到对方用户ID: \(partnerId)，重新加载消息", category: .api)
                     self.loadMessages(currentUserId: currentUserId)
                 } else {
                     self.errorMessage = "无法确定对方用户ID"
-                    print("❌ 无法从任务详情确定对方用户ID")
+                    Logger.warning("❌ 无法从任务详情确定对方用户ID", category: .api)
                 }
             })
             .store(in: &cancellables)
@@ -570,23 +601,30 @@ class TaskChatDetailViewModel: ObservableObject {
         ]
         
         isSending = true
-        print("📤 发送任务聊天消息，任务ID: \(taskId)")
+        Logger.debug("📤 发送任务聊天消息，任务ID: \(taskId)", category: .api)
         apiService.request(Message.self, "/api/messages/task/\(taskId)/send", method: "POST", body: body)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isSending = false
                 if case .failure(let error) = result {
-                    print("❌ 发送任务聊天消息失败: \(error)")
+                    Logger.error("❌ 发送任务聊天消息失败: \(error)", category: .api)
                     completion(false)
                 }
             }, receiveValue: { [weak self] message in
-                self?.isSending = false
-                self?.messages.append(message)
-                self?.messages.sort { msg1, msg2 in
-                    let time1 = msg1.createdAt ?? ""
-                    let time2 = msg2.createdAt ?? ""
-                    return time1 < time2
+                guard let self = self else { return }
+                self.isSending = false
+                
+                // 优化：使用二分插入保持有序，避免每次都完整排序
+                let messageTime = message.createdAt ?? ""
+                if let insertIndex = self.messages.firstIndex(where: { ($0.createdAt ?? "") > messageTime }) {
+                    self.messages.insert(message, at: insertIndex)
+                } else {
+                    self.messages.append(message)
                 }
-                print("✅ 任务聊天消息发送成功")
+                
+                // 保存到缓存（内部已实现防抖）
+                self.saveToCache()
+                
+                Logger.debug("✅ 任务聊天消息发送成功", category: .api)
                 completion(true)
             })
             .store(in: &cancellables)
@@ -613,29 +651,41 @@ class TaskChatDetailViewModel: ObservableObject {
         ]
         
         isSending = true
-        print("📤 发送带附件的任务聊天消息，任务ID: \(taskId), 附件类型: \(attachmentType)")
+        Logger.debug("📤 发送带附件的任务聊天消息，任务ID: \(taskId), 附件类型: \(attachmentType)", category: .api)
         apiService.request(Message.self, "/api/messages/task/\(taskId)/send", method: "POST", body: body)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isSending = false
                 if case .failure(let error) = result {
-                    print("❌ 发送带附件消息失败: \(error)")
+                    Logger.error("❌ 发送带附件消息失败: \(error)", category: .api)
                     completion(false)
                 }
             }, receiveValue: { [weak self] message in
-                self?.isSending = false
-                self?.messages.append(message)
-                self?.messages.sort { msg1, msg2 in
-                    let time1 = msg1.createdAt ?? ""
-                    let time2 = msg2.createdAt ?? ""
-                    return time1 < time2
+                guard let self = self else { return }
+                self.isSending = false
+                
+                // 优化：使用二分插入保持有序，避免每次都完整排序
+                let messageTime = message.createdAt ?? ""
+                if let insertIndex = self.messages.firstIndex(where: { ($0.createdAt ?? "") > messageTime }) {
+                    self.messages.insert(message, at: insertIndex)
+                } else {
+                    self.messages.append(message)
                 }
-                print("✅ 带附件消息发送成功")
+                
+                // 保存到缓存（内部已实现防抖）
+                self.saveToCache()
+                
+                Logger.debug("✅ 带附件消息发送成功", category: .api)
                 completion(true)
             })
             .store(in: &cancellables)
     }
     
+    private var markAsReadWorkItem: DispatchWorkItem?
+    
     func markAsRead(uptoMessageId: Int? = nil) {
+        // 取消之前的标记已读任务（防抖：避免频繁请求）
+        markAsReadWorkItem?.cancel()
+        
         // 使用任务聊天专用标记已读端点
         // 如果提供了 uptoMessageId，使用它；否则使用最新消息的ID
         let messageId = uptoMessageId ?? messages.last?.messageId
@@ -644,21 +694,28 @@ class TaskChatDetailViewModel: ObservableObject {
         var body: [String: Any]? = nil
         if let messageId = messageId {
             body = ["upto_message_id": messageId]
-            print("📤 标记任务聊天已读，任务ID: \(taskId), 消息ID: \(messageId)")
+            Logger.debug("📤 标记任务聊天已读，任务ID: \(taskId), 消息ID: \(messageId)", category: .api)
         } else {
-            print("📤 标记任务聊天已读，任务ID: \(taskId)（无消息ID，不发送body）")
+            Logger.debug("📤 标记任务聊天已读，任务ID: \(taskId)（无消息ID，不发送body）", category: .api)
         }
         
-        // 如果有 body 才发送，否则使用空 body
-        apiService.request(EmptyResponse.self, "/api/messages/task/\(taskId)/read", method: "POST", body: body ?? [:])
-            .sink(receiveCompletion: { result in
-                if case .failure(let error) = result {
-                    print("⚠️ 标记任务聊天已读失败: \(error)")
-                }
-            }, receiveValue: { _ in
-                print("✅ 任务聊天已标记为已读")
-            })
-            .store(in: &cancellables)
+        // 创建标记已读任务（延迟 0.2 秒，防抖）
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            // 如果有 body 才发送，否则使用空 body
+            self.apiService.request(EmptyResponse.self, "/api/messages/task/\(self.taskId)/read", method: "POST", body: body ?? [:])
+                .sink(receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        Logger.warning("⚠️ 标记任务聊天已读失败: \(error)", category: .api)
+                    }
+                }, receiveValue: { _ in
+                    Logger.debug("✅ 任务聊天已标记为已读", category: .api)
+                })
+                .store(in: &self.cancellables)
+        }
+        
+        markAsReadWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
     }
 }
 

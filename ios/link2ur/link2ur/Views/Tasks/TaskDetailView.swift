@@ -1453,7 +1453,7 @@ struct TaskPosterInfoView: View {
                     .foregroundColor(AppColors.textPrimary)
             }
             
-            NavigationLink(destination: UserProfileView(userId: poster.id)) {
+            NavigationLink(destination: userProfileDestination(user: poster)) {
                 HStack(spacing: 12) {
                     ZStack {
                         AvatarView(

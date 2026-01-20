@@ -170,7 +170,7 @@ struct ForumPostDetailView: View {
             
             // 作者信息
             if let author = post.author {
-                NavigationLink(destination: UserProfileView(userId: author.id)) {
+                NavigationLink(destination: userProfileDestination(user: author)) {
                     HStack(spacing: 12) {
                         AvatarView(
                             urlString: author.avatar,
