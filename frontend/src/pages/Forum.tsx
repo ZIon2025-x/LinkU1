@@ -3,11 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Empty, Typography, Space, Tag, Button } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, ClockCircleOutlined, UserOutlined,
-  SearchOutlined, TrophyOutlined, FileTextOutlined, PlusOutlined
+  SearchOutlined, TrophyOutlined, FileTextOutlined, PlusOutlined, StarOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import { getVisibleForums, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
+import { getVisibleForums, fetchCurrentUser, getPublicSystemSettings, logout, toggleForumCategoryFavorite, getForumCategoryFavoriteStatus } from '../api';
+import { message } from 'antd';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -27,6 +28,7 @@ interface ForumCategory {
   icon?: string;
   post_count: number;
   last_post_at?: string;
+  is_favorited?: boolean;
   latest_post?: {
     id: number;
     title: string;
@@ -57,6 +59,7 @@ const Forum: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState<{ [key: number]: boolean }>({});
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
 
   useEffect(() => {
@@ -82,7 +85,22 @@ const Forum: React.FC = () => {
       const response = await getVisibleForums(false);
       const categoriesData = response.categories || [];
       
-      setCategories(categoriesData);
+      // 加载收藏状态
+      if (currentUser) {
+        const categoriesWithFavorites = await Promise.all(
+          categoriesData.map(async (category: ForumCategory) => {
+            try {
+              const favoriteStatus = await getForumCategoryFavoriteStatus(category.id);
+              return { ...category, is_favorited: favoriteStatus.favorited };
+            } catch (error) {
+              return { ...category, is_favorited: false };
+            }
+          })
+        );
+        setCategories(categoriesWithFavorites);
+      } else {
+        setCategories(categoriesData);
+      }
     } catch (error: any) {
       // API失败时设置为空数组，显示"暂无板块"提示
       // 如果是权限错误（404），也显示空数组（隐藏学校板块存在性）
@@ -94,6 +112,28 @@ const Forum: React.FC = () => {
 
   const handleCategoryClick = (categoryId: number) => {
     navigate(`/${lang}/forum/category/${categoryId}`);
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, categoryId: number) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
+    
+    if (!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    setFavoriteLoading(prev => ({ ...prev, [categoryId]: true }));
+    try {
+      const response = await toggleForumCategoryFavorite(categoryId);
+      setCategories(prev => prev.map(cat => 
+        cat.id === categoryId ? { ...cat, is_favorited: response.favorited } : cat
+      ));
+      message.success(response.favorited ? '收藏成功' : '已取消收藏');
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '操作失败');
+    } finally {
+      setFavoriteLoading(prev => ({ ...prev, [categoryId]: false }));
+    }
   };
 
   if (loading) {
@@ -229,7 +269,18 @@ const Forum: React.FC = () => {
                     {category.icon && <span className={styles.categoryIcon}>{category.icon}</span>}
                     {category.name}
                   </Title>
-                  <Tag color="blue">{category.post_count} {t('forum.posts')}</Tag>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Tag color="blue">{category.post_count} {t('forum.posts')}</Tag>
+                    {currentUser && (
+                      <Button
+                        type="text"
+                        icon={<StarOutlined style={{ color: category.is_favorited ? '#faad14' : undefined }} />}
+                        loading={favoriteLoading[category.id]}
+                        onClick={(e) => handleToggleFavorite(e, category.id)}
+                        style={{ padding: '4px 8px' }}
+                      />
+                    )}
+                  </div>
                 </div>
                 
                 {category.description && (

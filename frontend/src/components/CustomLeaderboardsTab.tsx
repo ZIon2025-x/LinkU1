@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Select, Modal, Form, message, Empty, Tag, Input, Pagination, Spin, Upload, Image } from 'antd';
-import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import {
   applyCustomLeaderboard,
-  getCustomLeaderboards
+  getCustomLeaderboards,
+  toggleCustomLeaderboardFavorite,
+  getCustomLeaderboardFavoriteStatus
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
@@ -42,6 +44,8 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
+  const [favoriteStatuses, setFavoriteStatuses] = useState<{ [key: number]: boolean }>({});
+  const [favoriteLoading, setFavoriteLoading] = useState<{ [key: number]: boolean }>({});
 
   // 防抖搜索
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
@@ -79,7 +83,25 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       });
       
       if (response && response.items) {
-        setLeaderboards(response.items || []);
+        const items = response.items || [];
+        setLeaderboards(items);
+        
+        // 加载收藏状态
+        if (user) {
+          const favoriteStatusMap: { [key: number]: boolean } = {};
+          await Promise.all(
+            items.map(async (leaderboard: any) => {
+              try {
+                const favoriteStatus = await getCustomLeaderboardFavoriteStatus(leaderboard.id);
+                favoriteStatusMap[leaderboard.id] = favoriteStatus.favorited;
+              } catch (error) {
+                favoriteStatusMap[leaderboard.id] = false;
+              }
+            })
+          );
+          setFavoriteStatuses(prev => ({ ...prev, ...favoriteStatusMap }));
+        }
+        
         setPagination(prev => ({
           ...prev,
           current: page,
@@ -221,6 +243,30 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   const handlePageChange = (page: number) => {
     loadLeaderboards(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, leaderboardId: number) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
+    
+    if (!user) {
+      if (onShowLogin) {
+        onShowLogin();
+      } else {
+        setShowLoginModal(true);
+      }
+      return;
+    }
+
+    setFavoriteLoading(prev => ({ ...prev, [leaderboardId]: true }));
+    try {
+      const response = await toggleCustomLeaderboardFavorite(leaderboardId);
+      setFavoriteStatuses(prev => ({ ...prev, [leaderboardId]: response.favorited }));
+      message.success(response.favorited ? '收藏成功' : '已取消收藏');
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '操作失败');
+    } finally {
+      setFavoriteLoading(prev => ({ ...prev, [leaderboardId]: false }));
+    }
   };
 
   return (
@@ -463,31 +509,42 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                     }}>
                       {t('forum.applicant')}：{leaderboard.applicant?.name || leaderboard.applicant_id || t('forum.anonymous')}
                     </div>
-                    <button
-                      style={{
-                        padding: '6px 16px',
-                        background: '#667eea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 14,
-                        cursor: 'pointer',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#5568d3';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#667eea';
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const lang = language || 'zh';
-                        navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
-                      }}
-                    >
-                      {t('forum.viewDetails')}
-                    </button>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {user && (
+                        <Button
+                          type="text"
+                          icon={<StarOutlined style={{ color: favoriteStatuses[leaderboard.id] ? '#faad14' : undefined }} />}
+                          loading={favoriteLoading[leaderboard.id]}
+                          onClick={(e) => handleToggleFavorite(e, leaderboard.id)}
+                          style={{ padding: '4px 8px' }}
+                        />
+                      )}
+                      <button
+                        style={{
+                          padding: '6px 16px',
+                          background: '#667eea',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 6,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#5568d3';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#667eea';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const lang = language || 'zh';
+                          navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
+                        }}
+                      >
+                        {t('forum.viewDetails')}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

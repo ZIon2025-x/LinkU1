@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo, type FC } from 'react';
 import { useTaskSorting } from '../hooks/useTaskSorting';
 
 interface SortControlsProps {
@@ -10,7 +10,7 @@ interface SortControlsProps {
   t: (key: string) => string;
 }
 
-const SortControls: React.FC<SortControlsProps> = React.memo(({
+const SortControls: FC<SortControlsProps> = memo(({
   loadTasks,
   taskLevel,
   showLevelDropdown,

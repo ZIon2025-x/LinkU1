@@ -4346,6 +4346,82 @@ async def toggle_favorite(
     }
 
 
+# ==================== 板块收藏 API ====================
+
+@router.post("/categories/{category_id}/favorite", response_model=schemas.ForumCategoryFavoriteResponse)
+async def toggle_category_favorite(
+    category_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """收藏/取消收藏论坛板块"""
+    # 验证板块存在
+    result = await db.execute(
+        select(models.ForumCategory).where(models.ForumCategory.id == category_id)
+    )
+    category = result.scalar_one_or_none()
+    
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="板块不存在"
+        )
+    
+    # 检查板块可见性（学校板块需要权限）
+    await assert_forum_visible(current_user, category_id, db, raise_exception=True)
+    
+    # 检查是否已收藏
+    existing_favorite = await db.execute(
+        select(models.ForumCategoryFavorite).where(
+            models.ForumCategoryFavorite.category_id == category_id,
+            models.ForumCategoryFavorite.user_id == current_user.id
+        )
+    )
+    existing = existing_favorite.scalar_one_or_none()
+    
+    if existing:
+        # 取消收藏
+        await db.delete(existing)
+        favorited = False
+    else:
+        # 添加收藏
+        new_favorite = models.ForumCategoryFavorite(
+            category_id=category_id,
+            user_id=current_user.id
+        )
+        db.add(new_favorite)
+        favorited = True
+    
+    await db.commit()
+    
+    return {
+        "favorited": favorited
+    }
+
+
+@router.get("/categories/{category_id}/favorite/status", response_model=schemas.ForumCategoryFavoriteResponse)
+async def get_category_favorite_status(
+    category_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取板块收藏状态"""
+    if not current_user:
+        return {"favorited": False}
+    
+    result = await db.execute(
+        select(models.ForumCategoryFavorite).where(
+            models.ForumCategoryFavorite.category_id == category_id,
+            models.ForumCategoryFavorite.user_id == current_user.id
+        )
+    )
+    existing = result.scalar_one_or_none()
+    
+    return {
+        "favorited": existing is not None
+    }
+
+
 # ==================== 搜索 API ====================
 
 @router.get("/search", response_model=schemas.ForumSearchResponse)

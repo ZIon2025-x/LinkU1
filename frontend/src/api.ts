@@ -2243,6 +2243,28 @@ export const getCustomLeaderboards = async (params?: {
   return res.data;
 };
 
+// 论坛板块收藏
+export const toggleForumCategoryFavorite = async (categoryId: number) => {
+  const res = await api.post(`/api/forum/categories/${categoryId}/favorite`);
+  return res.data;
+};
+
+export const getForumCategoryFavoriteStatus = async (categoryId: number) => {
+  const res = await api.get(`/api/forum/categories/${categoryId}/favorite/status`);
+  return res.data;
+};
+
+// 排行榜收藏
+export const toggleCustomLeaderboardFavorite = async (leaderboardId: number) => {
+  const res = await api.post(`/api/custom-leaderboards/${leaderboardId}/favorite`);
+  return res.data;
+};
+
+export const getCustomLeaderboardFavoriteStatus = async (leaderboardId: number) => {
+  const res = await api.get(`/api/custom-leaderboards/${leaderboardId}/favorite/status`);
+  return res.data;
+};
+
 export const getCustomLeaderboardDetail = async (leaderboardId: number) => {
   const res = await api.get(`/api/custom-leaderboards/${leaderboardId}`);
   return res.data;

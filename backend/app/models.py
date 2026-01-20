@@ -2244,6 +2244,26 @@ class ForumFavorite(Base):
     )
 
 
+class ForumCategoryFavorite(Base):
+    """论坛板块收藏表"""
+    __tablename__ = "forum_category_favorites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    
+    # 关系
+    category = relationship("ForumCategory", foreign_keys=[category_id])
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        UniqueConstraint("category_id", "user_id", name="uq_forum_category_favorites_category_user"),
+        Index("idx_forum_category_favorites_user", user_id, created_at),
+        Index("idx_forum_category_favorites_category", category_id),
+    )
+
+
 class ForumNotification(Base):
     """通知表"""
     __tablename__ = "forum_notifications"
@@ -2421,6 +2441,26 @@ class CustomLeaderboard(Base):
         Index('idx_leaderboard_status', 'status'),
         Index('idx_leaderboard_location', 'location'),
         Index('idx_leaderboard_vote_count', 'vote_count'),  # 热门榜单排序优化
+    )
+
+
+class CustomLeaderboardFavorite(Base):
+    """自定义排行榜收藏表"""
+    __tablename__ = "custom_leaderboard_favorites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    leaderboard_id = Column(Integer, ForeignKey("custom_leaderboards.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    
+    # 关系
+    leaderboard = relationship("CustomLeaderboard", foreign_keys=[leaderboard_id])
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        UniqueConstraint("leaderboard_id", "user_id", name="uq_custom_leaderboard_favorites_leaderboard_user"),
+        Index("idx_custom_leaderboard_favorites_user", user_id, created_at),
+        Index("idx_custom_leaderboard_favorites_leaderboard", leaderboard_id),
     )
 
 

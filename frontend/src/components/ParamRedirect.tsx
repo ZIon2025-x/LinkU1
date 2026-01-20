@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { DEFAULT_LANGUAGE } from '../utils/i18n';
 
@@ -7,7 +7,7 @@ interface ParamRedirectProps {
   fallbackPath?: string;
 }
 
-const ParamRedirect: React.FC<ParamRedirectProps> = ({ basePath, fallbackPath = `/${DEFAULT_LANGUAGE}` }) => {
+const ParamRedirect: FC<ParamRedirectProps> = ({ basePath, fallbackPath = `/${DEFAULT_LANGUAGE}` }) => {
   const params = useParams();
   
   // 构建重定向路径，包含所有参数

@@ -2171,3 +2171,80 @@ async def delete_item_admin(
             detail=f"删除竞品失败: {str(e)}"
         )
 
+
+# ==================== 排行榜收藏 API ====================
+
+@router.post("/{leaderboard_id}/favorite", response_model=schemas.CustomLeaderboardFavoriteResponse)
+async def toggle_leaderboard_favorite(
+    leaderboard_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """收藏/取消收藏排行榜"""
+    # 验证排行榜存在
+    leaderboard = await db.get(models.CustomLeaderboard, leaderboard_id)
+    
+    if not leaderboard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="排行榜不存在"
+        )
+    
+    # 检查排行榜状态（只有已激活的排行榜才能收藏）
+    if leaderboard.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="只能收藏已激活的排行榜"
+        )
+    
+    # 检查是否已收藏
+    existing_favorite = await db.execute(
+        select(models.CustomLeaderboardFavorite).where(
+            models.CustomLeaderboardFavorite.leaderboard_id == leaderboard_id,
+            models.CustomLeaderboardFavorite.user_id == current_user.id
+        )
+    )
+    existing = existing_favorite.scalar_one_or_none()
+    
+    if existing:
+        # 取消收藏
+        await db.delete(existing)
+        favorited = False
+    else:
+        # 添加收藏
+        new_favorite = models.CustomLeaderboardFavorite(
+            leaderboard_id=leaderboard_id,
+            user_id=current_user.id
+        )
+        db.add(new_favorite)
+        favorited = True
+    
+    await db.commit()
+    
+    return {
+        "favorited": favorited
+    }
+
+
+@router.get("/{leaderboard_id}/favorite/status", response_model=schemas.CustomLeaderboardFavoriteResponse)
+async def get_leaderboard_favorite_status(
+    leaderboard_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取排行榜收藏状态"""
+    if not current_user:
+        return {"favorited": False}
+    
+    result = await db.execute(
+        select(models.CustomLeaderboardFavorite).where(
+            models.CustomLeaderboardFavorite.leaderboard_id == leaderboard_id,
+            models.CustomLeaderboardFavorite.user_id == current_user.id
+        )
+    )
+    existing = result.scalar_one_or_none()
+    
+    return {
+        "favorited": existing is not None
+    }
+

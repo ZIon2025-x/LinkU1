@@ -2890,6 +2890,22 @@ class ForumFavoriteResponse(BaseModel):
     favorite_count: int
 
 
+class ForumCategoryFavoriteRequest(BaseModel):
+    category_id: int
+
+
+class ForumCategoryFavoriteResponse(BaseModel):
+    favorited: bool
+
+
+class CustomLeaderboardFavoriteRequest(BaseModel):
+    leaderboard_id: int
+
+
+class CustomLeaderboardFavoriteResponse(BaseModel):
+    favorited: bool
+
+
 # 搜索相关 Schemas
 class ForumSearchResponse(BaseModel):
     """搜索响应"""
