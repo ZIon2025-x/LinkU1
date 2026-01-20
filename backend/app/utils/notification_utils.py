@@ -57,7 +57,8 @@ def enrich_notification_dict_with_task_id_sync(
     # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
     task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
     if notification.type in task_status_types and notification.related_id:
-        notification_dict["task_id"] = notification.related_id
+        # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
     return notification_dict
@@ -108,7 +109,8 @@ async def enrich_notification_dict_with_task_id_async(
     # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
     task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
     if notification.type in task_status_types and notification.related_id:
-        notification_dict["task_id"] = notification.related_id
+        # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
     return notification_dict
@@ -183,7 +185,8 @@ def enrich_notifications_with_task_id_sync(
         else:
             task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
             if notification.type in task_status_types and notification.related_id:
-                notification_dict["task_id"] = notification.related_id
+                # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+                notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         
         result.append(schemas.NotificationOut(**notification_dict))
     
@@ -261,7 +264,8 @@ async def enrich_notifications_with_task_id_async(
         else:
             task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
             if notification.type in task_status_types and notification.related_id:
-                notification_dict["task_id"] = notification.related_id
+                # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+                notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         
         result.append(schemas.NotificationOut(**notification_dict))
     

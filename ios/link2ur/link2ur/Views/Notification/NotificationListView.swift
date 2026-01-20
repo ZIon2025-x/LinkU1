@@ -33,6 +33,10 @@ struct NotificationListView: View {
                             // 让 NotificationRow 内部等待异步加载完成
                             if isTaskRelated(notification: notification) {
                                 let extractedTaskId = extractTaskId(from: notification)
+                                
+                                // 调试日志
+                                print("🔔 [NotificationListView] 任务通知 - ID: \(notification.id), type: \(notification.type ?? "nil"), taskId: \(notification.taskId?.description ?? "nil"), relatedId: \(notification.relatedId?.description ?? "nil"), extractedTaskId: \(extractedTaskId?.description ?? "nil")")
+                                
                                 let onTapCallback: () -> Void = {
                                     // 点击时立即标记为已读
                                     print("🔔 [NotificationListView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
@@ -57,6 +61,7 @@ struct NotificationListView: View {
                                 } else {
                                     // 对于 negotiation_offer 和 application_message，即使 taskId 为 null，也创建 NotificationRow
                                     // NotificationRow 内部会等待异步加载完成
+                                    print("🔔 [NotificationListView] 警告：任务通知但没有 taskId，ID: \(notification.id), type: \(notification.type ?? "nil")")
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                         .listItemAppear(index: index, totalItems: viewModel.notifications.count)
                                 }
