@@ -117,30 +117,25 @@ class DateFormatterHelper {
         let hours = (totalMinutes % (24 * 60)) / 60
         let minutes = totalMinutes % 60
         
-        // 超过30天
+        // 超过30天：显示月数
         if days >= 30 {
             let months = days / 30
-            let remainingDays = days % 30
-            if remainingDays > 0 {
-                return "\(months)个月 · \(remainingDays)天"
-            }
             return "\(months)个月"
         }
-        // 1-30天
+        // 7-29天：显示周数
+        else if days >= 7 {
+            let weeks = days / 7
+            return "\(weeks)周"
+        }
+        // 1-6天：显示天数
         else if days > 0 {
-            if hours > 0 {
-                return "\(days)天 · \(hours)小时"
-            }
             return "\(days)天"
         }
-        // 小于1天但大于1小时
+        // 小于1天但大于1小时：显示小时数
         else if hours > 0 {
-            if minutes > 0 {
-                return "\(hours)小时 · \(minutes)分钟"
-            }
             return "\(hours)小时"
         }
-        // 小于1小时
+        // 小于1小时：显示分钟数
         else {
             return "\(minutes)分钟"
         }

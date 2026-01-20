@@ -78,11 +78,61 @@ class TaskChatViewModel: ObservableObject {
                     return true
                 }
                 
-                // 按照最新消息时间排序（最新的在前）
+                // 排序逻辑：优先显示新任务和活跃任务
+                // 1. 有未读消息的任务优先（按未读数降序）
+                // 2. 然后优先显示处于活跃状态的任务（in_progress, pending_confirmation, pending_payment）
+                // 3. 然后按最后消息时间排序（最新的在前）
+                // 4. 如果都没有消息，按任务ID降序（新任务的ID更大）
                 let sortedChats = filteredChats.sorted { chat1, chat2 in
+                    let unreadCount1 = chat1.unreadCount ?? 0
+                    let unreadCount2 = chat2.unreadCount ?? 0
+                    
+                    // 优先显示有未读消息的任务
+                    if unreadCount1 > 0 && unreadCount2 == 0 {
+                        return true
+                    }
+                    if unreadCount1 == 0 && unreadCount2 > 0 {
+                        return false
+                    }
+                    
+                    // 如果都有未读消息，按未读数降序
+                    if unreadCount1 > 0 && unreadCount2 > 0 {
+                        if unreadCount1 != unreadCount2 {
+                            return unreadCount1 > unreadCount2
+                        }
+                    }
+                    
+                    // 判断任务是否处于活跃状态（需要用户关注的状态）
+                    let isActive1 = self?.isActiveStatus(chat1.status ?? chat1.taskStatus) ?? false
+                    let isActive2 = self?.isActiveStatus(chat2.status ?? chat2.taskStatus) ?? false
+                    
+                    // 优先显示活跃状态的任务
+                    if isActive1 && !isActive2 {
+                        return true
+                    }
+                    if !isActive1 && isActive2 {
+                        return false
+                    }
+                    
+                    // 然后按最后消息时间排序
                     let time1 = self?.parseDate(from: chat1.lastMessageTime ?? chat1.lastMessage?.createdAt) ?? Date.distantPast
                     let time2 = self?.parseDate(from: chat2.lastMessageTime ?? chat2.lastMessage?.createdAt) ?? Date.distantPast
-                    return time1 > time2 // 降序排列，最新的在前
+                    
+                    // 如果都有消息时间，按时间降序
+                    if time1 != Date.distantPast && time2 != Date.distantPast {
+                        return time1 > time2
+                    }
+                    
+                    // 如果只有一个有消息时间，有消息的排在前面
+                    if time1 != Date.distantPast && time2 == Date.distantPast {
+                        return true
+                    }
+                    if time1 == Date.distantPast && time2 != Date.distantPast {
+                        return false
+                    }
+                    
+                    // 如果都没有消息，按任务ID降序（新任务的ID更大）
+                    return chat1.id > chat2.id
                 }
                 
                 self?.taskChats = sortedChats
@@ -155,10 +205,61 @@ class TaskChatViewModel: ObservableObject {
                     return true
                 }
                 
+                // 排序逻辑：优先显示新任务和活跃任务
+                // 1. 有未读消息的任务优先（按未读数降序）
+                // 2. 然后优先显示处于活跃状态的任务（in_progress, pending_confirmation, pending_payment）
+                // 3. 然后按最后消息时间排序（最新的在前）
+                // 4. 如果都没有消息，按任务ID降序（新任务的ID更大）
                 let sortedChats = filteredChats.sorted { chat1, chat2 in
+                    let unreadCount1 = chat1.unreadCount ?? 0
+                    let unreadCount2 = chat2.unreadCount ?? 0
+                    
+                    // 优先显示有未读消息的任务
+                    if unreadCount1 > 0 && unreadCount2 == 0 {
+                        return true
+                    }
+                    if unreadCount1 == 0 && unreadCount2 > 0 {
+                        return false
+                    }
+                    
+                    // 如果都有未读消息，按未读数降序
+                    if unreadCount1 > 0 && unreadCount2 > 0 {
+                        if unreadCount1 != unreadCount2 {
+                            return unreadCount1 > unreadCount2
+                        }
+                    }
+                    
+                    // 判断任务是否处于活跃状态（需要用户关注的状态）
+                    let isActive1 = self.isActiveStatus(chat1.status ?? chat1.taskStatus)
+                    let isActive2 = self.isActiveStatus(chat2.status ?? chat2.taskStatus)
+                    
+                    // 优先显示活跃状态的任务
+                    if isActive1 && !isActive2 {
+                        return true
+                    }
+                    if !isActive1 && isActive2 {
+                        return false
+                    }
+                    
+                    // 然后按最后消息时间排序
                     let time1 = self.parseDate(from: chat1.lastMessageTime ?? chat1.lastMessage?.createdAt) ?? Date.distantPast
                     let time2 = self.parseDate(from: chat2.lastMessageTime ?? chat2.lastMessage?.createdAt) ?? Date.distantPast
-                    return time1 > time2
+                    
+                    // 如果都有消息时间，按时间降序
+                    if time1 != Date.distantPast && time2 != Date.distantPast {
+                        return time1 > time2
+                    }
+                    
+                    // 如果只有一个有消息时间，有消息的排在前面
+                    if time1 != Date.distantPast && time2 == Date.distantPast {
+                        return true
+                    }
+                    if time1 == Date.distantPast && time2 != Date.distantPast {
+                        return false
+                    }
+                    
+                    // 如果都没有消息，按任务ID降序（新任务的ID更大）
+                    return chat1.id > chat2.id
                 }
                 
                 self.taskChats = sortedChats
@@ -193,6 +294,16 @@ class TaskChatViewModel: ObservableObject {
         }
         
         return nil
+    }
+    
+    /// 判断任务是否处于活跃状态（需要用户关注的状态）
+    /// 活跃状态包括：in_progress（进行中）、pending_confirmation（待确认）、pending_payment（待支付）
+    private func isActiveStatus(_ status: String?) -> Bool {
+        guard let status = status else { return false }
+        let lowercasedStatus = status.lowercased()
+        return lowercasedStatus == "in_progress" ||
+               lowercasedStatus == "pending_confirmation" ||
+               lowercasedStatus == "pending_payment"
     }
 }
 

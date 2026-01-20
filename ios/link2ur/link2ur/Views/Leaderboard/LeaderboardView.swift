@@ -92,7 +92,7 @@ struct LeaderboardView: View {
             }
         }
         .refreshable {
-            viewModel.loadLeaderboards(sort: selectedSort)
+            viewModel.loadLeaderboards(sort: selectedSort, forceRefresh: true)
         }
         .onAppear {
             if viewModel.leaderboards.isEmpty {

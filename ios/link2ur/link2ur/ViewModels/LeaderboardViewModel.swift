@@ -26,7 +26,7 @@ class LeaderboardViewModel: ObservableObject {
     private var rawLeaderboards: [CustomLeaderboard] = [] // 保存原始数据，用于重新排序
     private var currentSort: String = "latest" // 保存当前排序方式
     
-    func loadLeaderboards(location: String? = nil, sort: String = "latest") {
+    func loadLeaderboards(location: String? = nil, sort: String = "latest", forceRefresh: Bool = false) {
         let startTime = Date()
         
         // 防止重复请求
@@ -36,17 +36,20 @@ class LeaderboardViewModel: ObservableObject {
         }
         
         isRequesting = true
-        isLoading = true
+        // 只有在没有现有数据时才显示加载状态，避免刷新时闪烁
+        let hasExistingData = !leaderboards.isEmpty
+        if !hasExistingData {
+            isLoading = true
+        }
         errorMessage = nil
         
-        // 尝试从缓存加载数据（仅在没有筛选条件时）
-        if location == nil && sort == "latest" {
+        // 尝试从缓存加载数据（仅在没有筛选条件时，且非强制刷新）
+        if location == nil && sort == "latest" && !forceRefresh {
             if let cachedLeaderboards = CacheManager.shared.loadLeaderboards(location: nil, sort: "latest") {
                 self.leaderboards = cachedLeaderboards
                 Logger.success("从缓存加载了 \(self.leaderboards.count) 个排行榜", category: .cache)
                 isLoading = false
-                isRequesting = false
-                // 继续在后台刷新数据
+                // 继续在后台刷新数据，但不重置 isRequesting，让后台请求继续
             }
         }
         
@@ -121,6 +124,7 @@ class LeaderboardViewModel: ObservableObject {
                                 // 其他排序方式直接使用后端返回的结果
                                 DispatchQueue.main.async {
                                     self.leaderboards = items
+                                    self.isLoading = false
                                 }
                             }
                             
@@ -145,6 +149,7 @@ class LeaderboardViewModel: ObservableObject {
                         // 其他排序方式直接使用后端返回的结果
                         DispatchQueue.main.async {
                             self.leaderboards = items
+                            self.isLoading = false
                         }
                     }
                     
@@ -174,7 +179,12 @@ class LeaderboardViewModel: ObservableObject {
     
     /// 按距离排序排行榜（距离相同时按浏览量排序）
     private func sortLeaderboardsByDistance(sort: String, location: String?) {
-        guard !rawLeaderboards.isEmpty else { return }
+        guard !rawLeaderboards.isEmpty else {
+            DispatchQueue.main.async {
+                self.isLoading = false
+            }
+            return
+        }
         
         var leaderboards = rawLeaderboards
         
@@ -224,6 +234,7 @@ class LeaderboardViewModel: ObservableObject {
         // 更新到主线程
         DispatchQueue.main.async { [weak self] in
             self?.leaderboards = leaderboards
+            self?.isLoading = false
         }
     }
     

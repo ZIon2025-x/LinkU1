@@ -206,34 +206,32 @@ struct SystemMessageView: View {
                         ForEach(viewModel.notifications) { notification in
                             // 判断是否是任务相关的通知，并提取任务ID
                             if isTaskRelated(notification: notification), let taskId = extractTaskId(from: notification) {
+                                let onTapCallback: () -> Void = {
+                                    // 点击时立即标记为已读
+                                    print("🔔 [SystemMessageView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
+                                    if notification.isRead == 0 {
+                                        print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
                                 NavigationLink(destination: TaskDetailView(taskId: taskId)) {
-                                    NotificationRow(notification: notification)
+                                    NotificationRow(notification: notification, isTaskRelated: true, onTap: onTapCallback)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .simultaneousGesture(
                                     TapGesture().onEnded {
-                                        // 点击时立即标记为已读
-                                        print("🔔 [SystemMessageView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
-                                        if notification.isRead == 0 {
-                                            print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
-                                            viewModel.markAsRead(notificationId: notification.id)
-                                        }
+                                        onTapCallback()
                                     }
                                 )
                             } else {
-                                NotificationRow(notification: notification)
-                                    .onTapGesture {
-                                        // 标记为已读
-                                        print("🔔 [SystemMessageView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
-                                        if notification.isRead == 0 {
-                                            print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
-                                            viewModel.markAsRead(notificationId: notification.id)
-                                        }
-                                        // 如果有链接，可以跳转
-                                        if let link = notification.link, !link.isEmpty {
-                                            // 处理链接跳转
-                                        }
+                                NotificationRow(notification: notification, isTaskRelated: false, onTap: {
+                                    // 标记为已读
+                                    print("🔔 [SystemMessageView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
+                                    if notification.isRead == 0 {
+                                        print("🔔 [SystemMessageView] 标记为已读，ID: \(notification.id)")
+                                        viewModel.markAsRead(notificationId: notification.id)
                                     }
+                                })
                             }
                         }
                     }

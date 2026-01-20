@@ -61,7 +61,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetId, setWidgetId] = useState<number | string | null>(null);
-  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     if (!siteKey) {
@@ -151,17 +150,14 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
         const id = window.grecaptcha!.render(containerRef.current!, {
           sitekey: siteKey,
           callback: (token: string) => {
-            setIsVerified(true);
             onVerify(token);
           },
           'expired-callback': () => {
-            setIsVerified(false);
             if (onExpire) {
               onExpire();
             }
           },
           'error-callback': () => {
-            setIsVerified(false);
             if (onError) {
               onError('reCAPTCHA verification failed');
             }
@@ -185,17 +181,14 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       const id = window.hcaptcha.render(containerRef.current, {
         sitekey: siteKey,
         callback: (token: string) => {
-          setIsVerified(true);
           onVerify(token);
         },
         'error-callback': (error: string) => {
-          setIsVerified(false);
           if (onError) {
             onError(error || 'hCaptcha verification failed');
           }
         },
         'expired-callback': () => {
-          setIsVerified(false);
           if (onExpire) {
             onExpire();
           }
@@ -215,7 +208,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
     if (type === 'hcaptcha' && widgetId && window.hcaptcha) {
       try {
         window.hcaptcha.reset(widgetId as string);
-        setIsVerified(false);
         logger.log('hCaptcha 已重置');
       } catch (e) {
         console.error('重置 hCaptcha 失败:', e);
@@ -223,7 +215,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
     } else if (type === 'recaptcha' && widgetId && window.grecaptcha) {
       try {
         window.grecaptcha.reset(widgetId as number);
-        setIsVerified(false);
         logger.log('reCAPTCHA 已重置');
       } catch (e) {
         console.error('重置 reCAPTCHA 失败:', e);

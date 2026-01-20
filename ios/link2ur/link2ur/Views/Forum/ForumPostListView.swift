@@ -56,7 +56,7 @@ struct ForumPostListView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
                     // 收藏按钮（仅登录用户显示，且必须有category）
-                    if appState.isAuthenticated, let categoryId = category?.id {
+                    if appState.isAuthenticated, category?.id != nil {
                         Button(action: {
                             handleToggleFavorite()
                         }) {
@@ -138,12 +138,12 @@ struct ForumPostListView: View {
         isTogglingFavorite = true
         HapticFeedback.light()
         
-        viewModel.toggleCategoryFavorite(categoryId: categoryId) { [weak self] success in
+        viewModel.toggleCategoryFavorite(categoryId: categoryId) { success in
             DispatchQueue.main.async {
-                self?.isTogglingFavorite = false
+                isTogglingFavorite = false
                 if success {
                     // 切换收藏状态
-                    self?.isFavorited = !(self?.isFavorited ?? self?.category?.isFavorited ?? false)
+                    isFavorited = !(isFavorited ?? category?.isFavorited ?? false)
                     HapticFeedback.success()
                 }
             }

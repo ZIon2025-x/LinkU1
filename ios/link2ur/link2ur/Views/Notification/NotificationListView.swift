@@ -30,36 +30,34 @@ struct NotificationListView: View {
                         ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
                             // 判断是否是任务相关的通知，并提取任务ID
                             if isTaskRelated(notification: notification), let taskId = extractTaskId(from: notification) {
+                                let onTapCallback: () -> Void = {
+                                    // 点击时立即标记为已读
+                                    print("🔔 [NotificationListView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
+                                    if notification.isRead == 0 {
+                                        print("🔔 [NotificationListView] 标记为已读，ID: \(notification.id)")
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
                                 NavigationLink(destination: TaskDetailView(taskId: taskId)) {
-                                    NotificationRow(notification: notification)
+                                    NotificationRow(notification: notification, isTaskRelated: true, onTap: onTapCallback)
                                 }
                                 .buttonStyle(ScaleButtonStyle()) // 使用ScaleButtonStyle提供更好的交互反馈
                                 .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
                                 .simultaneousGesture(
                                     TapGesture().onEnded {
-                                        // 点击时立即标记为已读
-                                        print("🔔 [NotificationListView] 点击任务通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
-                                        if notification.isRead == 0 {
-                                            print("🔔 [NotificationListView] 标记为已读，ID: \(notification.id)")
-                                            viewModel.markAsRead(notificationId: notification.id)
-                                        }
+                                        onTapCallback()
                                     }
                                 )
                             } else {
-                                NotificationRow(notification: notification)
-                                    .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
-                                    .onTapGesture {
-                                        // 标记为已读
-                                        print("🔔 [NotificationListView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
-                                        if notification.isRead == 0 {
-                                            print("🔔 [NotificationListView] 标记为已读，ID: \(notification.id)")
-                                            viewModel.markAsRead(notificationId: notification.id)
-                                        }
-                                        // 如果有链接，可以跳转
-                                        if let link = notification.link, !link.isEmpty {
-                                            // 处理链接跳转
-                                        }
+                                NotificationRow(notification: notification, isTaskRelated: false, onTap: {
+                                    // 标记为已读
+                                    print("🔔 [NotificationListView] 点击普通通知，ID: \(notification.id), isRead: \(notification.isRead ?? -1)")
+                                    if notification.isRead == 0 {
+                                        print("🔔 [NotificationListView] 标记为已读，ID: \(notification.id)")
+                                        viewModel.markAsRead(notificationId: notification.id)
                                     }
+                                })
+                                .listItemAppear(index: index, totalItems: viewModel.notifications.count) // 添加错落入场动画
                             }
                         }
                     }
@@ -91,6 +89,11 @@ struct NotificationListView: View {
         // 检查是否是任务相关的通知类型
         // 后端任务通知类型包括：task_application, task_approved, task_completed, task_confirmation, task_cancelled 等
         if lowercasedType.contains("task") {
+            return true
+        }
+        
+        // negotiation_offer 和 application_message 也是任务相关的通知
+        if lowercasedType == "negotiation_offer" || lowercasedType == "application_message" {
             return true
         }
         
@@ -140,6 +143,8 @@ struct NotificationListView: View {
 
 struct NotificationRow: View {
     let notification: SystemNotification
+    let isTaskRelated: Bool  // 是否是任务相关的通知（由外层传入）
+    let onTap: (() -> Void)?  // 点击回调（用于标记已读等）
     @State private var isLoadingTokens = false
     @State private var isResponding = false
     @State private var showError = false
@@ -151,6 +156,13 @@ struct NotificationRow: View {
     @State private var isExpired: Bool = false  // 优化：标记议价是否已过期
     @State private var expiresAt: Date? = nil  // 优化：真实过期时间
     @State private var taskStatus: String? = nil  // 优化：任务状态，用于判断是否已过期
+    @State private var showDetail = false  // 显示详情弹窗
+    
+    init(notification: SystemNotification, isTaskRelated: Bool = false, onTap: (() -> Void)? = nil) {
+        self.notification = notification
+        self.isTaskRelated = isTaskRelated
+        self.onTap = onTap
+    }
     
     var isNegotiationOffer: Bool {
         notification.type?.lowercased() == "negotiation_offer"
@@ -227,13 +239,29 @@ struct NotificationRow: View {
     var body: some View {
         Group {
             // 如果是议价通知或留言通知，且有 task_id，可以跳转
-            if (isNegotiationOffer || isApplicationMessage), let taskId = taskId {
+            // 优先使用 notification.taskId（直接从后端返回），如果没有则使用 @State 变量 taskId（异步加载）
+            // 注意：如果通知被外层识别为任务相关（isTaskRelated=true），外层会创建 NavigationLink，这里不应该再创建
+            if (isNegotiationOffer || isApplicationMessage), 
+               !isTaskRelated,  // 只有在外层没有识别为任务相关时，才在这里创建 NavigationLink
+               let taskId = notification.taskId ?? taskId {
                 NavigationLink(destination: TaskDetailView(taskId: taskId)) {
                     notificationContent
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                notificationContent
+                // 对于其他通知，如果不是任务相关的，都可以点击查看详情
+                // 如果是任务相关的通知，应该由外层的 NavigationLink 处理，不在这里添加 onTapGesture
+                if !isTaskRelated {
+                    notificationContent
+                        .onTapGesture {
+                            // 先执行外层的回调（如标记已读）
+                            onTap?()
+                            // 然后打开详情
+                            showDetail = true
+                        }
+                } else {
+                    notificationContent
+                }
             }
         }
     }
@@ -282,6 +310,22 @@ struct NotificationRow: View {
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(isNegotiationOffer ? nil : 2)
                         .multilineTextAlignment(.leading)
+                    
+                    // 如果内容可能被截断，显示"查看全文"提示
+                    if !isNegotiationOffer && isContentTruncated {
+                        Button(action: {
+                            showDetail = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Text("查看全文")
+                                    .font(.system(size: 12, weight: .medium))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10))
+                            }
+                            .foregroundColor(AppColors.primary)
+                        }
+                        .padding(.top, 4)
+                    }
                 }
                 
                 Spacer()
@@ -401,6 +445,16 @@ struct NotificationRow: View {
         } message: {
             Text(errorMessage)
         }
+        .sheet(isPresented: $showDetail) {
+            NotificationDetailView(notification: notification)
+        }
+    }
+    
+    // 检查内容是否可能被截断
+    private var isContentTruncated: Bool {
+        // 简单判断：如果内容超过一定长度，可能被截断
+        // 2行大约可以显示 100-150 个字符（取决于字体大小）
+        return notification.content.count > 100
     }
     
     private func formatTime(_ timeString: String) -> String {
@@ -567,3 +621,70 @@ struct NotificationRow: View {
     }
 }
 
+// MARK: - 通知详情视图
+struct NotificationDetailView: View {
+    let notification: SystemNotification
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    // 标题
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text(notification.title)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        HStack(spacing: AppSpacing.sm) {
+                            Label(formatTime(notification.createdAt), systemImage: "clock.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textSecondary)
+                            
+                            if notification.isRead == 0 {
+                                Label("未读", systemImage: "circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppColors.error)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.top, AppSpacing.md)
+                    
+                    Divider()
+                        .padding(.horizontal, AppSpacing.md)
+                    
+                    // 内容
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("通知内容")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text(notification.content)
+                            .font(.system(size: 15))
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.bottom, AppSpacing.xl)
+                }
+            }
+            .background(AppColors.background)
+            .navigationTitle("通知详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") {
+                        dismiss()
+                    }
+                    .foregroundColor(AppColors.primary)
+                }
+            }
+        }
+    }
+    
+    private func formatTime(_ timeString: String) -> String {
+        return DateFormatterHelper.shared.formatTime(timeString)
+    }
+}

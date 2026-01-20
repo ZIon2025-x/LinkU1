@@ -184,9 +184,9 @@ struct LeaderboardDetailView: View {
         isTogglingFavorite = true
         HapticFeedback.light()
         
-        viewModel.toggleLeaderboardFavorite(leaderboardId: leaderboardId) { [weak self] success in
+        viewModel.toggleLeaderboardFavorite(leaderboardId: leaderboardId) { success in
             DispatchQueue.main.async {
-                self?.isTogglingFavorite = false
+                isTogglingFavorite = false
                 if success {
                     HapticFeedback.success()
                 }
