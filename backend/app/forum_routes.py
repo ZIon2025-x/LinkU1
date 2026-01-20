@@ -1982,9 +1982,30 @@ async def review_category_request(
     
     if action == "approve":
         # 批准申请，创建新板块
+        # 如果申请中没有双语字段，自动填充
+        if not category_request.name_en or not category_request.name_zh:
+            from app.utils.bilingual_helper import auto_fill_bilingual_fields
+            _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+                name=category_request.name,
+                description=category_request.description,
+                name_en=category_request.name_en,
+                name_zh=category_request.name_zh,
+                description_en=category_request.description_en,
+                description_zh=category_request.description_zh,
+            )
+        else:
+            name_en = category_request.name_en
+            name_zh = category_request.name_zh
+            description_en = category_request.description_en
+            description_zh = category_request.description_zh
+        
         new_category = models.ForumCategory(
             name=category_request.name,
+            name_en=name_en,
+            name_zh=name_zh,
             description=category_request.description,
+            description_en=description_en,
+            description_zh=description_zh,
             icon=category_request.icon,
             type=category_request.type,
             country=category_request.country,

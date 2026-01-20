@@ -1195,6 +1195,179 @@ async def startup_event():
         logger.info("数据库连接池监控任务已启动")
     except Exception as e:
         logger.error(f"启动连接池监控任务失败: {e}")
+    
+    # 一次性迁移：完整翻译现有的论坛板块和排行榜双语字段（仅运行一次）
+    async def migrate_bilingual_fields_once():
+        """一次性完整迁移双语字段"""
+        try:
+            from app.database import AsyncSessionLocal
+            from app.db_migrations import ensure_migration_table, is_migration_executed, mark_migration_executed
+            from app.models import ForumCategory, CustomLeaderboard
+            from app.utils.bilingual_helper import auto_fill_bilingual_fields
+            from sqlalchemy import select
+            import time
+            
+            # 使用迁移记录表来标记是否已迁移
+            migration_name = "bilingual_fields_data_migration"
+            
+            # 确保迁移记录表存在
+            ensure_migration_table(sync_engine)
+            
+            # 检查是否已迁移
+            if is_migration_executed(sync_engine, migration_name):
+                logger.info("双语字段数据迁移已完成，跳过")
+                return
+            
+            logger.info("=" * 60)
+            logger.info("开始一次性完整迁移双语字段数据...")
+            logger.info("=" * 60)
+            
+            start_time = time.time()
+            
+            async with AsyncSessionLocal() as db:
+                # 迁移论坛板块
+                category_result = await db.execute(
+                    select(ForumCategory).where(
+                        (ForumCategory.name_en.is_(None)) | 
+                        (ForumCategory.name_zh.is_(None)) |
+                        (ForumCategory.description_en.is_(None)) |
+                        (ForumCategory.description_zh.is_(None))
+                    )
+                )
+                categories = category_result.scalars().all()
+                
+                category_total = len(categories)
+                logger.info(f"找到 {category_total} 个需要迁移的论坛板块")
+                
+                category_updated = 0
+                category_errors = 0
+                
+                for idx, category in enumerate(categories, 1):
+                    try:
+                        if idx % 10 == 0:
+                            logger.info(f"  处理板块进度: {idx}/{category_total}")
+                        
+                        # 自动填充双语字段
+                        _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+                            name=category.name,
+                            description=category.description,
+                            name_en=category.name_en,
+                            name_zh=category.name_zh,
+                            description_en=category.description_en,
+                            description_zh=category.description_zh,
+                        )
+                        
+                        # 更新字段（只更新缺失的字段）
+                        if not category.name_en and name_en:
+                            category.name_en = name_en
+                        if not category.name_zh and name_zh:
+                            category.name_zh = name_zh
+                        if category.description and not category.description_en and description_en:
+                            category.description_en = description_en
+                        if category.description and not category.description_zh and description_zh:
+                            category.description_zh = description_zh
+                        
+                        await db.flush()
+                        category_updated += 1
+                        
+                        # 每10个提交一次
+                        if category_updated % 10 == 0:
+                            await db.commit()
+                    
+                    except Exception as e:
+                        category_errors += 1
+                        logger.warning(f"  迁移板块 {category.id} ({category.name}) 失败: {e}")
+                        await db.rollback()
+                        continue
+                
+                # 最终提交板块更新
+                try:
+                    await db.commit()
+                    logger.info(f"✓ 论坛板块迁移完成: 成功 {category_updated} 个, 失败 {category_errors} 个")
+                except Exception as e:
+                    logger.error(f"提交板块更新失败: {e}")
+                    await db.rollback()
+                
+                # 迁移排行榜
+                leaderboard_result = await db.execute(
+                    select(CustomLeaderboard).where(
+                        (CustomLeaderboard.name_en.is_(None)) | 
+                        (CustomLeaderboard.name_zh.is_(None)) |
+                        (CustomLeaderboard.description_en.is_(None)) |
+                        (CustomLeaderboard.description_zh.is_(None))
+                    )
+                )
+                leaderboards = leaderboard_result.scalars().all()
+                
+                leaderboard_total = len(leaderboards)
+                logger.info(f"找到 {leaderboard_total} 个需要迁移的排行榜")
+                
+                leaderboard_updated = 0
+                leaderboard_errors = 0
+                
+                for idx, leaderboard in enumerate(leaderboards, 1):
+                    try:
+                        if idx % 10 == 0:
+                            logger.info(f"  处理排行榜进度: {idx}/{leaderboard_total}")
+                        
+                        # 自动填充双语字段
+                        _, name_en, name_zh, description_en, description_zh = await auto_fill_bilingual_fields(
+                            name=leaderboard.name,
+                            description=leaderboard.description,
+                            name_en=leaderboard.name_en,
+                            name_zh=leaderboard.name_zh,
+                            description_en=leaderboard.description_en,
+                            description_zh=leaderboard.description_zh,
+                        )
+                        
+                        # 更新字段（只更新缺失的字段）
+                        if not leaderboard.name_en and name_en:
+                            leaderboard.name_en = name_en
+                        if not leaderboard.name_zh and name_zh:
+                            leaderboard.name_zh = name_zh
+                        if leaderboard.description and not leaderboard.description_en and description_en:
+                            leaderboard.description_en = description_en
+                        if leaderboard.description and not leaderboard.description_zh and description_zh:
+                            leaderboard.description_zh = description_zh
+                        
+                        await db.flush()
+                        leaderboard_updated += 1
+                        
+                        # 每10个提交一次
+                        if leaderboard_updated % 10 == 0:
+                            await db.commit()
+                    
+                    except Exception as e:
+                        leaderboard_errors += 1
+                        logger.warning(f"  迁移排行榜 {leaderboard.id} ({leaderboard.name}) 失败: {e}")
+                        await db.rollback()
+                        continue
+                
+                # 最终提交排行榜更新
+                try:
+                    await db.commit()
+                    logger.info(f"✓ 排行榜迁移完成: 成功 {leaderboard_updated} 个, 失败 {leaderboard_errors} 个")
+                except Exception as e:
+                    logger.error(f"提交排行榜更新失败: {e}")
+                    await db.rollback()
+            
+            # 标记迁移已完成
+            execution_time = int((time.time() - start_time) * 1000)
+            mark_migration_executed(sync_engine, migration_name, execution_time)
+            
+            logger.info("=" * 60)
+            logger.info("双语字段数据迁移完成！")
+            logger.info(f"  论坛板块: 成功 {category_updated} 个, 失败 {category_errors} 个")
+            logger.info(f"  排行榜: 成功 {leaderboard_updated} 个, 失败 {leaderboard_errors} 个")
+            logger.info(f"  总耗时: {execution_time}ms")
+            logger.info("=" * 60)
+            logger.info("提示：迁移已完成，可以删除此代码")
+        
+        except Exception as e:
+            logger.error(f"双语字段数据迁移失败: {e}", exc_info=True)
+    
+    # 在后台异步运行迁移（不阻塞启动）
+    asyncio.create_task(migrate_bilingual_fields_once())
 
 
 @app.on_event("shutdown")
