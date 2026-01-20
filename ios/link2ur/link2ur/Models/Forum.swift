@@ -4,7 +4,9 @@ import SwiftUI
 // 最新帖子信息（用于板块预览）
 struct LatestPostInfo: Codable {
     let id: Int
-    let title: String
+    let title: String  // 保留原字段用于兼容
+    let titleEn: String?  // 英文标题
+    let titleZh: String?  // 中文标题
     let author: User?
     let lastReplyAt: String?
     let replyCount: Int
@@ -12,9 +14,34 @@ struct LatestPostInfo: Codable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, author
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
         case lastReplyAt = "last_reply_at"
         case replyCount = "reply_count"
         case viewCount = "view_count"
+    }
+    
+    // 自定义解码，处理可选字段
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        titleEn = try container.decodeIfPresent(String.self, forKey: .titleEn)
+        titleZh = try container.decodeIfPresent(String.self, forKey: .titleZh)
+        author = try container.decodeIfPresent(User.self, forKey: .author)
+        lastReplyAt = try container.decodeIfPresent(String.self, forKey: .lastReplyAt)
+        replyCount = try container.decode(Int.self, forKey: .replyCount)
+        viewCount = try container.decode(Int.self, forKey: .viewCount)
+    }
+    
+    // 根据当前语言获取显示标题
+    var displayTitle: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return titleZh?.isEmpty == false ? titleZh! : title
+        } else {
+            return titleEn?.isEmpty == false ? titleEn! : title
+        }
     }
 }
 
@@ -123,9 +150,15 @@ struct ForumCategoryListResponse: Decodable {
 // 论坛帖子
 struct ForumPost: Codable, Identifiable {
     let id: Int
-    let title: String
-    let content: String?
-    let contentPreview: String?
+    let title: String  // 保留原字段用于兼容
+    let titleEn: String?  // 英文标题
+    let titleZh: String?  // 中文标题
+    let content: String?  // 保留原字段用于兼容
+    let contentEn: String?  // 英文内容
+    let contentZh: String?  // 中文内容
+    let contentPreview: String?  // 保留原字段用于兼容
+    let contentPreviewEn: String?  // 英文内容预览
+    let contentPreviewZh: String?  // 中文内容预览
     let category: ForumCategory?
     let author: User?
     let viewCount: Int
@@ -142,7 +175,13 @@ struct ForumPost: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, content, category, author
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
+        case contentEn = "content_en"
+        case contentZh = "content_zh"
         case contentPreview = "content_preview"
+        case contentPreviewEn = "content_preview_en"
+        case contentPreviewZh = "content_preview_zh"
         case viewCount = "view_count"
         case replyCount = "reply_count"
         case likeCount = "like_count"
@@ -161,8 +200,14 @@ struct ForumPost: Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(Int.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
+        titleEn = try container.decodeIfPresent(String.self, forKey: .titleEn)
+        titleZh = try container.decodeIfPresent(String.self, forKey: .titleZh)
         content = try container.decodeIfPresent(String.self, forKey: .content)
+        contentEn = try container.decodeIfPresent(String.self, forKey: .contentEn)
+        contentZh = try container.decodeIfPresent(String.self, forKey: .contentZh)
         contentPreview = try container.decodeIfPresent(String.self, forKey: .contentPreview)
+        contentPreviewEn = try container.decodeIfPresent(String.self, forKey: .contentPreviewEn)
+        contentPreviewZh = try container.decodeIfPresent(String.self, forKey: .contentPreviewZh)
         category = try container.decodeIfPresent(ForumCategory.self, forKey: .category)
         author = try container.decodeIfPresent(User.self, forKey: .author)
         
@@ -207,12 +252,48 @@ struct ForumPost: Codable, Identifiable {
         lastReplyAt = try container.decodeIfPresent(String.self, forKey: .lastReplyAt)
     }
     
+    // 根据当前语言获取显示标题
+    var displayTitle: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return titleZh?.isEmpty == false ? titleZh! : title
+        } else {
+            return titleEn?.isEmpty == false ? titleEn! : title
+        }
+    }
+    
+    // 根据当前语言获取显示内容
+    var displayContent: String? {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return contentZh?.isEmpty == false ? contentZh : content
+        } else {
+            return contentEn?.isEmpty == false ? contentEn : content
+        }
+    }
+    
+    // 根据当前语言获取显示内容预览
+    var displayContentPreview: String? {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return contentPreviewZh?.isEmpty == false ? contentPreviewZh : contentPreview
+        } else {
+            return contentPreviewEn?.isEmpty == false ? contentPreviewEn : contentPreview
+        }
+    }
+    
     // 手动初始化器（用于从搜索结果构造）
-    init(id: Int, title: String, content: String?, contentPreview: String?, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, isLiked: Bool? = nil, isFavorited: Bool? = nil, createdAt: String, lastReplyAt: String?) {
+    init(id: Int, title: String, titleEn: String? = nil, titleZh: String? = nil, content: String?, contentEn: String? = nil, contentZh: String? = nil, contentPreview: String?, contentPreviewEn: String? = nil, contentPreviewZh: String? = nil, category: ForumCategory?, author: User?, viewCount: Int, replyCount: Int, likeCount: Int, favoriteCount: Int, isPinned: Bool, isFeatured: Bool, isLocked: Bool, isLiked: Bool? = nil, isFavorited: Bool? = nil, createdAt: String, lastReplyAt: String?) {
         self.id = id
         self.title = title
+        self.titleEn = titleEn
+        self.titleZh = titleZh
         self.content = content
+        self.contentEn = contentEn
+        self.contentZh = contentZh
         self.contentPreview = contentPreview
+        self.contentPreviewEn = contentPreviewEn
+        self.contentPreviewZh = contentPreviewZh
         self.category = category
         self.author = author
         self.viewCount = viewCount

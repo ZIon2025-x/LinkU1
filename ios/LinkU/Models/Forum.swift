@@ -95,9 +95,15 @@ struct ForumCategoryListResponse: Codable {
 // 论坛帖子
 struct ForumPost: Codable, Identifiable {
     let id: Int
-    let title: String
-    let content: String?
-    let contentPreview: String?
+    let title: String  // 保留原字段用于兼容
+    let titleEn: String?  // 英文标题
+    let titleZh: String?  // 中文标题
+    let content: String?  // 保留原字段用于兼容
+    let contentEn: String?  // 英文内容
+    let contentZh: String?  // 中文内容
+    let contentPreview: String?  // 保留原字段用于兼容
+    let contentPreviewEn: String?  // 英文内容预览
+    let contentPreviewZh: String?  // 中文内容预览
     let category: ForumCategory?
     let author: User?
     let viewCount: Int
@@ -111,7 +117,13 @@ struct ForumPost: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, content, category, author
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
+        case contentEn = "content_en"
+        case contentZh = "content_zh"
         case contentPreview = "content_preview"
+        case contentPreviewEn = "content_preview_en"
+        case contentPreviewZh = "content_preview_zh"
         case viewCount = "view_count"
         case replyCount = "reply_count"
         case likeCount = "like_count"
@@ -120,6 +132,36 @@ struct ForumPost: Codable, Identifiable {
         case isLocked = "is_locked"
         case createdAt = "created_at"
         case lastReplyAt = "last_reply_at"
+    }
+    
+    // 根据当前语言获取显示标题
+    var displayTitle: String {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        if language.hasPrefix("zh") {
+            return titleZh?.isEmpty == false ? titleZh! : title
+        } else {
+            return titleEn?.isEmpty == false ? titleEn! : title
+        }
+    }
+    
+    // 根据当前语言获取显示内容
+    var displayContent: String? {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        if language.hasPrefix("zh") {
+            return contentZh?.isEmpty == false ? contentZh : content
+        } else {
+            return contentEn?.isEmpty == false ? contentEn : content
+        }
+    }
+    
+    // 根据当前语言获取显示内容预览
+    var displayContentPreview: String? {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        if language.hasPrefix("zh") {
+            return contentPreviewZh?.isEmpty == false ? contentPreviewZh : contentPreview
+        } else {
+            return contentPreviewEn?.isEmpty == false ? contentPreviewEn : contentPreview
+        }
     }
 }
 

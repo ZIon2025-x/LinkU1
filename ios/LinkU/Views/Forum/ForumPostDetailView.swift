@@ -43,7 +43,7 @@ struct ForumPostDetailView: View {
                                     }
                                 }
                                 
-                                Text(post.title)
+                                Text(post.displayTitle)
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(AppColors.textPrimary)
@@ -79,7 +79,7 @@ struct ForumPostDetailView: View {
                             Divider()
                             
                             // 内容
-                            if let content = post.content {
+                            if let content = post.displayContent {
                                 Text(content)
                                     .font(.body)
                                     .foregroundColor(AppColors.textPrimary)

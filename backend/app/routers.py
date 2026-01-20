@@ -10204,42 +10204,73 @@ async def translate_text(
             # 使用翻译管理器（支持多个服务自动降级）
             from app.translation_manager import get_translation_manager
             
-            # 按句子分段（优先按句号、问号、感叹号分段）
+            # 按段落分段（优先保留换行符和段落格式）
             import re
-            sentences = re.split(r'([.!?。！？]\s*)', text)
-            # 重新组合句子，保持标点
+            # 先按双换行符（段落分隔）分段
+            paragraphs = re.split(r'(\n\s*\n)', text)
+            
+            # 重新组合段落，保持段落分隔符
             segments = []
+            segment_separators = []  # 记录每个分段之间的分隔符
             current_segment = ""
             
-            for i in range(0, len(sentences), 2):
-                sentence = sentences[i] + (sentences[i+1] if i+1 < len(sentences) else "")
-                if len(current_segment) + len(sentence) > MAX_TEXT_LENGTH and current_segment:
+            for i in range(0, len(paragraphs), 2):
+                paragraph = paragraphs[i] + (paragraphs[i+1] if i+1 < len(paragraphs) else "")
+                if len(current_segment) + len(paragraph) > MAX_TEXT_LENGTH and current_segment:
                     segments.append(current_segment)
-                    current_segment = sentence
+                    # 记录分段之间的分隔符（段落分隔符或空字符串）
+                    segment_separators.append(paragraphs[i-1] if i > 0 and i-1 < len(paragraphs) else "")
+                    current_segment = paragraph
                 else:
-                    current_segment += sentence
+                    current_segment += paragraph
             
             if current_segment:
                 segments.append(current_segment)
+                segment_separators.append("")  # 最后一段没有后续分隔符
             
-            # 如果分段后仍然有超长段，按字符数强制分段
+            # 如果分段后仍然有超长段，按单换行符或句子分段
             final_segments = []
-            for seg in segments:
+            final_separators = []
+            for seg_idx, seg in enumerate(segments):
                 if len(seg) > MAX_TEXT_LENGTH:
-                    # 按字符数强制分段
-                    for i in range(0, len(seg), MAX_TEXT_LENGTH):
-                        final_segments.append(seg[i:i+MAX_TEXT_LENGTH])
+                    # 按单换行符分段
+                    lines = re.split(r'(\n)', seg)
+                    current_chunk = ""
+                    for i in range(0, len(lines), 2):
+                        line = lines[i] + (lines[i+1] if i+1 < len(lines) else "")
+                        if len(current_chunk) + len(line) > MAX_TEXT_LENGTH and current_chunk:
+                            final_segments.append(current_chunk)
+                            final_separators.append(lines[i-1] if i > 0 and i-1 < len(lines) else "")
+                            current_chunk = line
+                        else:
+                            current_chunk += line
+                    if current_chunk:
+                        final_segments.append(current_chunk)
+                        final_separators.append("")
                 else:
                     final_segments.append(seg)
+                    final_separators.append(segment_separators[seg_idx] if seg_idx < len(segment_separators) else "")
             
             # 检查分段后的缓存
             segment_cache_key = f"translation_segments:{hashlib.md5(f'{text}|{source_lang}|{target_lang}'.encode('utf-8')).hexdigest()}"
+            segment_separators_key = f"translation_separators:{hashlib.md5(f'{text}|{source_lang}|{target_lang}'.encode('utf-8')).hexdigest()}"
             if redis_cache and redis_cache.enabled:
                 cached_segments = redis_cache.get(segment_cache_key)
+                cached_separators = redis_cache.get(segment_separators_key)
                 if cached_segments and isinstance(cached_segments, list) and len(cached_segments) == len(final_segments):
                     logger.debug(f"长文本分段翻译缓存命中: {len(final_segments)}段")
+                    # 合并时保留分隔符
+                    if cached_separators and isinstance(cached_separators, list) and len(cached_separators) == len(final_separators):
+                        translated_text = ""
+                        for i, seg in enumerate(cached_segments):
+                            translated_text += seg
+                            if i < len(cached_separators):
+                                translated_text += cached_separators[i]
+                    else:
+                        # 兼容旧缓存格式（没有分隔符信息）
+                        translated_text = "".join(cached_segments)
                     return {
-                        "translated_text": "".join(cached_segments),
+                        "translated_text": translated_text,
                         "source_language": source_lang if source_lang != 'auto' else 'auto',
                         "target_language": target_lang,
                         "original_text": text,
@@ -10260,7 +10291,7 @@ async def translate_text(
                 max_concurrent=3  # 限制并发数，避免触发限流
             )
             
-            # 处理翻译结果（失败的使用原文）
+            # 处理翻译结果（失败的使用原文），并保留分段分隔符
             translated_segments = []
             for i, translated_seg in enumerate(translated_segments_list):
                 if translated_seg:
@@ -10269,12 +10300,19 @@ async def translate_text(
                     logger.warning(f"分段 {i} 翻译失败，使用原文")
                     translated_segments.append(final_segments[i])
             
-            translated_text = "".join(translated_segments)
+            # 合并翻译结果，保留原始的分段分隔符
+            translated_text = ""
+            for i, seg in enumerate(translated_segments):
+                translated_text += seg
+                # 添加分段之间的分隔符（保留换行符和段落格式）
+                if i < len(final_separators):
+                    translated_text += final_separators[i]
             
-            # 缓存分段翻译结果
+            # 缓存分段翻译结果和分隔符
             if redis_cache and redis_cache.enabled:
                 try:
                     redis_cache.set(segment_cache_key, translated_segments, ttl=7 * 24 * 60 * 60)
+                    redis_cache.set(segment_separators_key, final_separators, ttl=7 * 24 * 60 * 60)
                 except Exception as e:
                     logger.warning(f"保存分段翻译缓存失败: {e}")
             

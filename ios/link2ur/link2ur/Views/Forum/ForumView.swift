@@ -385,7 +385,7 @@ struct CategoryCard: View {
                             Image(systemName: "message.fill")
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(AppColors.primary)
-                            Text(latestPost.title)
+                            Text(latestPost.displayTitle)
                                 .font(AppTypography.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(AppColors.textPrimary)

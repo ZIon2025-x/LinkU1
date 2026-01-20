@@ -25,8 +25,8 @@ struct RecentActivity: Identifiable {
     init(forumPost: ForumPost) {
         self.id = "forum_\(forumPost.id)"
         self.type = .forumPost
-        self.title = forumPost.title
-        self.description = forumPost.contentPreview
+        self.title = forumPost.displayTitle
+        self.description = forumPost.displayContentPreview
         self.author = forumPost.author
         self.createdAt = forumPost.createdAt
         self.icon = "bubble.left.and.bubble.right.fill"

@@ -174,7 +174,7 @@ struct PostCard: View {
                 }
                 
                 // 标题
-                Text(post.title)
+                Text(post.displayTitle)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(2)
@@ -182,7 +182,7 @@ struct PostCard: View {
             }
             
             // 内容预览
-            if let preview = post.contentPreview, !preview.isEmpty {
+            if let preview = post.displayContentPreview, !preview.isEmpty {
                 Text(preview)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)

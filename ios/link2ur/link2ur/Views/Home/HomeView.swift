@@ -1443,7 +1443,7 @@ struct SearchForumCard: View {
             
             // 信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(post.title)
+                Text(post.displayTitle)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)

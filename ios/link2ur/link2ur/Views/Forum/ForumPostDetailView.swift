@@ -100,7 +100,7 @@ struct ForumPostDetailView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let post = viewModel.post, !post.title.isEmpty {
+            if let post = viewModel.post, !post.displayTitle.isEmpty {
                 // 确保帖子数据完整后再显示分享视图
                 ForumPostShareSheet(
                     post: post,
@@ -162,7 +162,7 @@ struct ForumPostDetailView: View {
                     }
                 }
                 
-                Text(post.title)
+                Text(post.displayTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(AppColors.textPrimary)
                     .lineSpacing(4)
@@ -242,7 +242,7 @@ struct ForumPostDetailView: View {
     @ViewBuilder
     private func postContent(post: ForumPost) -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            if let content = post.content {
+            if let content = post.displayContent {
                 Text(content)
                     .font(.system(size: 17))
                     .foregroundColor(AppColors.textPrimary)
@@ -856,7 +856,7 @@ struct ForumPostShareSheet: View {
     
     /// 获取分享标题
     private func getShareTitle(for post: ForumPost) -> String {
-        let trimmedTitle = post.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = post.displayTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedTitle.isEmpty {
             return "看看这篇帖子"
         }
@@ -867,9 +867,9 @@ struct ForumPostShareSheet: View {
     private func getShareDescription(for post: ForumPost) -> String {
         // 优先使用content，如果没有则使用contentPreview
         let description: String
-        if let content = post.content, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let content = post.displayContent, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             description = content
-        } else if let preview = post.contentPreview, !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        } else if let preview = post.displayContentPreview, !preview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             description = preview
         } else {
             // 如果没有内容，使用帖子信息构建描述
