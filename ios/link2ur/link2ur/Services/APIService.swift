@@ -225,6 +225,56 @@ public class APIService {
         // 记录请求开始时间
         let startTime = Date()
         
+        return performRequest(request: request, type: type, startTime: startTime)
+    }
+    
+    /// 发送数组作为请求体的请求方法（用于批量API）
+    public func requestWithArrayBody<T: Decodable>(_ type: T.Type, _ endpoint: String, method: String = "POST", body: [Any]? = nil, headers: [String: String]? = nil) -> AnyPublisher<T, APIError> {
+        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+            return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 iOS 应用识别所需的 headers 被设置
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        
+        // 注入 Session ID
+        let isPublicEndpoint = APIEndpoints.publicEndpoints.contains { endpoint.contains($0) }
+        
+        if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !sessionId.isEmpty {
+            request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            AppSignature.signRequest(&request, sessionId: sessionId)
+        } else if !isPublicEndpoint {
+            Logger.warning("请求 \(endpoint) 时 Session ID 为空，可能导致401错误", category: .api)
+        }
+        
+        if let headers = headers {
+            for (key, value) in headers {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
+        
+        if let body = body {
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                return Fail(error: APIError.requestFailed(error)).eraseToAnyPublisher()
+            }
+        }
+        
+        Logger.debug("请求: \(method) \(endpoint)", category: .api)
+        
+        let startTime = Date()
+        
+        return performRequest(request: request, type: type, startTime: startTime)
+    }
+    
+    /// 执行请求的通用方法
+    private func performRequest<T: Decodable>(request: URLRequest, type: T.Type, startTime: Date) -> AnyPublisher<T, APIError> {
         return session.dataTaskPublisher(for: request)
             .mapError { APIError.requestFailed($0) }
             .flatMap { data, response -> AnyPublisher<T, APIError> in
@@ -232,14 +282,17 @@ public class APIService {
                     // 记录性能指标（错误情况）
                     let duration = Date().timeIntervalSince(startTime)
                     PerformanceMonitor.shared.recordNetworkRequest(
-                        endpoint: endpoint,
-                        method: method,
+                        endpoint: request.url?.path ?? "",
+                        method: request.httpMethod ?? "GET",
                         duration: duration,
                         statusCode: nil,
                         error: APIError.invalidResponse
                     )
                     return Fail(error: APIError.invalidResponse).eraseToAnyPublisher()
                 }
+                
+                let endpoint = request.url?.path ?? ""
+                let method = request.httpMethod ?? "GET"
                 
                 if (200...299).contains(httpResponse.statusCode) {
                     // 打印原始响应数据（用于调试）
@@ -296,10 +349,13 @@ public class APIService {
                     let originalBody = request.httpBody
                     let originalHeaders = request.allHTTPHeaderFields
                     
+                    let endpoint = request.url?.path ?? ""
+                    let method = request.httpMethod ?? "GET"
+                    
                     return self.handle401Error()
                         .flatMap { () -> AnyPublisher<T, APIError> in
                             // 重新构建请求（确保所有 header 和 body 都正确设置）
-                            guard let retryURL = URL(string: "\(self.baseURL)\(endpoint)") else {
+                            guard let retryURL = request.url else {
                                 return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
                             }
                             

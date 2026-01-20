@@ -8,6 +8,8 @@ struct ForumPostListView: View {
     @State private var showCreatePost = false
     @State private var showLogin = false
     @State private var searchTask: DispatchWorkItem?
+    @State private var isFavorited: Bool?
+    @State private var isTogglingFavorite = false
     
     var body: some View {
         ZStack {
@@ -52,15 +54,31 @@ struct ForumPostListView: View {
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: LocalizationKey.forumSearchPosts.localized)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    if appState.isAuthenticated {
-                        showCreatePost = true
-                    } else {
-                        showLogin = true
+                HStack(spacing: 12) {
+                    // 收藏按钮（仅登录用户显示，且必须有category）
+                    if appState.isAuthenticated, let categoryId = category?.id {
+                        Button(action: {
+                            handleToggleFavorite()
+                        }) {
+                            Image(systemName: (isFavorited ?? category?.isFavorited ?? false) ? "star.fill" : "star")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor((isFavorited ?? category?.isFavorited ?? false) ? .yellow : AppColors.textTertiary)
+                        }
+                        .disabled(isTogglingFavorite)
+                        .opacity(isTogglingFavorite ? 0.6 : 1.0)
                     }
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(AppColors.primary)
+                    
+                    // 加号按钮
+                    Button(action: {
+                        if appState.isAuthenticated {
+                            showCreatePost = true
+                        } else {
+                            showLogin = true
+                        }
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(AppColors.primary)
+                    }
                 }
             }
         }
@@ -105,6 +123,30 @@ struct ForumPostListView: View {
             
             // 延迟500ms执行搜索
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+        }
+        .onAppear {
+            // 初始化收藏状态
+            if let category = category {
+                isFavorited = category.isFavorited
+            }
+        }
+    }
+    
+    private func handleToggleFavorite() {
+        guard let categoryId = category?.id, !isTogglingFavorite else { return }
+        
+        isTogglingFavorite = true
+        HapticFeedback.light()
+        
+        viewModel.toggleCategoryFavorite(categoryId: categoryId) { [weak self] success in
+            DispatchQueue.main.async {
+                self?.isTogglingFavorite = false
+                if success {
+                    // 切换收藏状态
+                    self?.isFavorited = !(self?.isFavorited ?? self?.category?.isFavorited ?? false)
+                    HapticFeedback.success()
+                }
+            }
         }
     }
 }

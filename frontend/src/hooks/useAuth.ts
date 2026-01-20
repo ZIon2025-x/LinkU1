@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // 认证状态类型
-export type AuthRole = 'user' | 'service' | 'admin' | null;
+export type AuthRole = 'user' | null;
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -77,23 +77,10 @@ export const useAuth = () => {
 
   // 登录
   const login = useCallback(async (role: AuthRole, credentials: any): Promise<boolean> => {
-    if (!role) return false;
+    if (!role || role !== 'user') return false;
 
     try {
-      let endpoint = '';
-      switch (role) {
-        case 'admin':
-          endpoint = '/api/auth/admin/login';
-          break;
-        case 'service':
-          endpoint = '/api/auth/service/login';
-          break;
-        case 'user':
-          endpoint = '/api/secure-auth/login';
-          break;
-        default:
-          return false;
-      }
+      const endpoint = '/api/secure-auth/login';
 
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${endpoint}`, {
         method: 'POST',
@@ -118,19 +105,12 @@ export const useAuth = () => {
         } catch (error) {
                   }
         
-        // 根据角色获取用户数据
-        let userData = null;
-        if (role === 'admin' && data.admin) {
-          userData = data.admin;
-        } else if (role === 'service' && data.service) {
-          userData = data.service;
-        } else if (role === 'user' && data.user) {
-          userData = data.user;
-        }
+        // 获取用户数据
+        const userData = data.user || null;
         
         setAuthState({
           isAuthenticated: true,
-          role,
+          role: 'user',
           user: userData,
           loading: false
         });
@@ -150,23 +130,8 @@ export const useAuth = () => {
   // 登出
   const logout = useCallback(async () => {
     try {
-      let endpoint = '';
-      switch (authState.role) {
-        case 'admin':
-          endpoint = '/api/auth/admin/logout';
-          break;
-        case 'service':
-          endpoint = '/api/auth/service/logout';
-          break;
-        case 'user':
-          endpoint = '/api/secure-auth/logout';
-          break;
-        default:
-          break;
-      }
-
-      if (endpoint) {
-        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${endpoint}`, {
+      if (authState.role === 'user') {
+        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/secure-auth/logout`, {
           method: 'POST',
           credentials: 'include'
         });

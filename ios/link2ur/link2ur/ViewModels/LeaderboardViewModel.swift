@@ -282,6 +282,27 @@ class LeaderboardDetailViewModel: ObservableObject {
         cancellables.removeAll()
     }
     
+    /// 收藏/取消收藏排行榜
+    func toggleLeaderboardFavorite(leaderboardId: Int, completion: @escaping (Bool) -> Void) {
+        apiService.toggleLeaderboardFavorite(leaderboardId: leaderboardId)
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    ErrorHandler.shared.handle(error, context: "收藏操作")
+                    completion(false)
+                }
+            }, receiveValue: { [weak self] response in
+                // 更新本地状态
+                DispatchQueue.main.async {
+                    if var leaderboard = self?.leaderboard {
+                        leaderboard.isFavorited = response.favorited
+                        self?.leaderboard = leaderboard
+                    }
+                    completion(true)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
     func loadLeaderboard(leaderboardId: Int, preserveLeaderboard: Bool = false) {
         // 防止重复请求
         guard !isLoading else {
@@ -556,27 +577,6 @@ class LeaderboardItemDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    /// 收藏/取消收藏排行榜
-    func toggleLeaderboardFavorite(leaderboardId: Int, completion: @escaping (Bool) -> Void) {
-        apiService.toggleLeaderboardFavorite(leaderboardId: leaderboardId)
-            .sink(receiveCompletion: { result in
-                if case .failure(let error) = result {
-                    ErrorHandler.shared.handle(error, context: "收藏操作")
-                    completion(false)
-                }
-            }, receiveValue: { [weak self] response in
-                // 更新本地状态
-                if let index = self?.leaderboards.firstIndex(where: { $0.id == leaderboardId }) {
-                    self?.leaderboards[index].isFavorited = response.favorited
-                }
-                // 同时更新rawLeaderboards
-                if let index = self?.rawLeaderboards.firstIndex(where: { $0.id == leaderboardId }) {
-                    self?.rawLeaderboards[index].isFavorited = response.favorited
-                }
-                completion(true)
-            })
-            .store(in: &cancellables)
-    }
     
     func voteItem(itemId: Int, voteType: String, comment: String? = nil, isAnonymous: Bool = false, completion: @escaping (Bool, Int, Int, Int) -> Void) {
         // 后端期望 comment 和 is_anonymous 作为 Query 参数，而不是 body

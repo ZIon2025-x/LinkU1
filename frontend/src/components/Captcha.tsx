@@ -61,7 +61,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetId, setWidgetId] = useState<number | string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       if (document.getElementById(scriptId)) {
         // 脚本已加载
         if (window.grecaptcha && containerRef.current) {
-          setIsLoaded(true);
           renderRecaptcha();
         }
         return;
@@ -88,7 +86,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       script.async = true;
       script.defer = true;
       script.onload = () => {
-        setIsLoaded(true);
         if (containerRef.current) {
           renderRecaptcha();
         }
@@ -105,7 +102,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       if (document.getElementById(scriptId)) {
         // 脚本已加载
         if (window.hcaptcha && containerRef.current) {
-          setIsLoaded(true);
           renderHcaptcha();
         }
         return;
@@ -117,7 +113,6 @@ const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({
       script.async = true;
       script.defer = true;
       script.onload = () => {
-        setIsLoaded(true);
         if (containerRef.current) {
           renderHcaptcha();
         }

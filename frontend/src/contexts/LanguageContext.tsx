@@ -44,20 +44,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return detectBrowserLanguage();
   });
 
-  // 检查当前是否在管理员或客服页面
-  const isAdminOrServicePage = () => {
-    if (typeof window === 'undefined') return false;
-    const path = window.location.pathname;
-    // 检查是否是管理员页面或客服页面
-    return path.includes('/admin');
-  };
-
   // 在组件挂载后，尝试从用户资料获取语言偏好（只在初始化时执行一次）
   useEffect(() => {
-    // 如果是管理员或客服页面，不调用用户接口
-    if (isAdminOrServicePage()) {
-      return;
-    }
 
     const loadUserLanguagePreference = async () => {
       try {

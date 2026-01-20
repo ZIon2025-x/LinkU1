@@ -536,7 +536,7 @@ extension APIService {
     
     /// 批量获取板块收藏状态
     func getCategoryFavoritesBatch(categoryIds: [Int]) -> AnyPublisher<ForumCategoryFavoriteBatchResponse, APIError> {
-        return request(ForumCategoryFavoriteBatchResponse.self, APIEndpoints.Forum.categoryFavoritesBatch, method: "POST", body: categoryIds)
+        return requestWithArrayBody(ForumCategoryFavoriteBatchResponse.self, APIEndpoints.Forum.categoryFavoritesBatch, method: "POST", body: categoryIds)
     }
     
     /// 获取我收藏的板块列表
@@ -780,7 +780,7 @@ extension APIService {
     
     /// 批量获取排行榜收藏状态
     func getLeaderboardFavoritesBatch(leaderboardIds: [Int]) -> AnyPublisher<CustomLeaderboardFavoriteBatchResponse, APIError> {
-        return request(CustomLeaderboardFavoriteBatchResponse.self, APIEndpoints.Leaderboard.favoritesBatch, method: "POST", body: leaderboardIds)
+        return requestWithArrayBody(CustomLeaderboardFavoriteBatchResponse.self, APIEndpoints.Leaderboard.favoritesBatch, method: "POST", body: leaderboardIds)
     }
     
     /// 获取我收藏的排行榜列表

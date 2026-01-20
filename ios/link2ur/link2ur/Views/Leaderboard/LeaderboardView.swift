@@ -118,9 +118,10 @@ struct LeaderboardCard: View {
     @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            // 封面和标题
-            HStack(spacing: AppSpacing.md) {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                // 封面和标题
+                HStack(spacing: AppSpacing.md) {
                 // 封面图片
                 if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
                     AsyncImageView(
@@ -171,38 +172,39 @@ struct LeaderboardCard: View {
                         }
                         .foregroundColor(AppColors.textSecondary)
                     }
+                    }
+                    
+                    Spacer()
                 }
                 
-                Spacer()
+                Divider().background(AppColors.divider)
                 
-                // 收藏按钮（仅登录用户显示）
-                if appState.isAuthenticated {
-                    Button(action: {
-                        handleToggleFavorite()
-                    }) {
-                        Image(systemName: (isFavorited ?? leaderboard.isFavorited ?? false) ? "star.fill" : "star")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor((isFavorited ?? leaderboard.isFavorited ?? false) ? .yellow : AppColors.textTertiary)
-                            .frame(width: 32, height: 32)
-                    }
-                    .disabled(isTogglingFavorite)
-                    .opacity(isTogglingFavorite ? 0.6 : 1.0)
+                // 统计信息
+                HStack(spacing: 24) {
+                    CompactStatItem(icon: "square.grid.2x2.fill", count: leaderboard.itemCount)
+                    CompactStatItem(icon: "hand.thumbsup.fill", count: leaderboard.voteCount)
+                    CompactStatItem(icon: "eye.fill", count: leaderboard.viewCount)
                 }
             }
+            .padding(AppSpacing.md)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.large)
+            .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
             
-            Divider().background(AppColors.divider)
-            
-            // 统计信息
-            HStack(spacing: 24) {
-                CompactStatItem(icon: "square.grid.2x2.fill", count: leaderboard.itemCount)
-                CompactStatItem(icon: "hand.thumbsup.fill", count: leaderboard.voteCount)
-                CompactStatItem(icon: "eye.fill", count: leaderboard.viewCount)
+            // 收藏图标提示（仅在已收藏时显示）
+            if (isFavorited ?? leaderboard.isFavorited ?? false) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.yellow)
+                    .padding(6)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    )
+                    .padding(8)
             }
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.cardBackground)
-        .cornerRadius(AppCornerRadius.large)
-        .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
         .onAppear {
             // 初始化收藏状态
             isFavorited = leaderboard.isFavorited

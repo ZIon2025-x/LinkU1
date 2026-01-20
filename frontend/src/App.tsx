@@ -19,8 +19,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
 import InstallPrompt from './components/InstallPrompt';
-import ServiceAuth from './components/ServiceAuth';
-import { ServiceGuard } from './components/AuthGuard';
 import { detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // P1 优化：创建 React Query 客户端
@@ -264,7 +262,6 @@ const LanguageRoutes: React.FC = () => {
               <Settings />
             </ProtectedRoute>
           } />
-          <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
           <Route path={`/${lang}/verify-email`} element={<VerifyEmail />} />
           <Route path={`/${lang}/reset-password/:token`} element={<ResetPassword />} />
           <Route path={`/${lang}/student-verification`} element={
@@ -273,12 +270,6 @@ const LanguageRoutes: React.FC = () => {
             </ProtectedRoute>
           } />
           <Route path={`/${lang}/student-verification/verify/:token`} element={<VerifyStudentEmail />} />
-          {/* 新的独立认证路由 */}
-          <Route path={`/${lang}/service`} element={
-            <ServiceGuard>
-              <ServiceAuth />
-            </ServiceGuard>
-          } />
         </React.Fragment>
       ))}
       

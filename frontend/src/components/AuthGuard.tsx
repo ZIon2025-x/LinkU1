@@ -40,43 +40,16 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
 
   // 如果指定了特定角色要求
   if (requiredRole && role !== requiredRole) {
-    // 根据当前角色重定向到相应的登录页
-    let loginPath = '/login';
-    switch (role) {
-      case 'service':
-        loginPath = '/service/login';
-        break;
-      case 'user':
-        loginPath = '/login';
-        break;
-    }
-    return <Navigate to={loginPath} replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   // 如果指定了允许的角色列表
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    // 根据当前角色重定向到相应的登录页
-    let loginPath = '/login';
-    switch (role) {
-      case 'service':
-        loginPath = '/service/login';
-        break;
-      case 'user':
-        loginPath = '/login';
-        break;
-    }
-    return <Navigate to={loginPath} replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;
 };
-
-// 客服专用保护组件
-export const ServiceGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AuthGuard requiredRole="service" redirectTo="/service/login">
-    {children}
-  </AuthGuard>
-);
 
 // 用户专用保护组件
 export const UserGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (

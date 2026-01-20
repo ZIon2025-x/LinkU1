@@ -19,14 +19,6 @@ export const API_ENDPOINTS = {
   REFRESH: '/api/secure-auth/refresh',
   LOGOUT: '/api/secure-auth/logout',
   
-  // 客服认证
-  CS_LOGIN: '/api/customer-service/login',
-  CS_REFRESH: '/api/customer-service/refresh',
-  
-  // 管理员认证
-  ADMIN_LOGIN: '/api/admin/login',
-  ADMIN_REFRESH: '/api/admin/refresh',
-  
   // 用户相关
   PROFILE: '/api/users/profile/me',
   AVATAR: '/api/users/avatar',

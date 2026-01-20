@@ -9,6 +9,7 @@ struct LeaderboardDetailView: View {
     @State private var showLogin = false
     @State private var showSubmitItem = false
     @State private var showShareSheet = false
+    @State private var isTogglingFavorite = false
     
     var body: some View {
         ZStack {
@@ -116,6 +117,19 @@ struct LeaderboardDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
+                    // 收藏/取消收藏（仅登录用户显示）
+                    if appState.isAuthenticated {
+                        Button(action: {
+                            handleToggleFavorite()
+                        }) {
+                            Label(
+                                (viewModel.leaderboard?.isFavorited ?? false) ? "取消收藏" : "收藏",
+                                systemImage: (viewModel.leaderboard?.isFavorited ?? false) ? "star.fill" : "star"
+                            )
+                        }
+                        .disabled(isTogglingFavorite)
+                    }
+                    
                     // 添加竞品
                     Button(action: {
                         if appState.isAuthenticated {
@@ -161,6 +175,22 @@ struct LeaderboardDetailView: View {
         .onAppear {
             viewModel.loadLeaderboard(leaderboardId: leaderboardId)
             viewModel.loadItems(leaderboardId: leaderboardId, sort: selectedSort)
+        }
+    }
+    
+    private func handleToggleFavorite() {
+        guard !isTogglingFavorite else { return }
+        
+        isTogglingFavorite = true
+        HapticFeedback.light()
+        
+        viewModel.toggleLeaderboardFavorite(leaderboardId: leaderboardId) { [weak self] success in
+            DispatchQueue.main.async {
+                self?.isTogglingFavorite = false
+                if success {
+                    HapticFeedback.success()
+                }
+            }
         }
     }
 }
