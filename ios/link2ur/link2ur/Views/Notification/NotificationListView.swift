@@ -561,38 +561,37 @@ struct NotificationRow: View {
                     // 优先使用 API 返回的 taskId，如果没有则使用 notification.taskId
                     taskId = response.taskId ?? notification.taskId
                     applicationId = response.applicationId ?? notification.relatedId
+                    
+                    // 优化：解析真实过期时间
+                    if let expiresAtString = response.expiresAt {
+                        let isoFormatter = ISO8601DateFormatter()
+                        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                        isoFormatter.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
+                        expiresAt = isoFormatter.date(from: expiresAtString)
                         
-                        // 优化：解析真实过期时间
-                        if let expiresAtString = response.expiresAt {
-                            let isoFormatter = ISO8601DateFormatter()
-                            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                            isoFormatter.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
-                            expiresAt = isoFormatter.date(from: expiresAtString)
-                            
-                            // 如果过期时间已过，标记为过期
-                            if let expiresAt = expiresAt, Date() >= expiresAt {
+                        // 如果过期时间已过，标记为过期
+                        if let expiresAt = expiresAt, Date() >= expiresAt {
+                            isExpired = true
+                        }
+                    } else {
+                        // 如果没有过期时间，基于创建时间+5分钟计算
+                        if let createdAt = DateFormatterHelper.shared.parseDatePublic(notification.createdAt) {
+                            expiresAt = createdAt.addingTimeInterval(300)  // 5分钟
+                            if Date() >= expiresAt! {
                                 isExpired = true
-                            }
-                        } else {
-                            // 如果没有过期时间，基于创建时间+5分钟计算
-                            if let createdAt = DateFormatterHelper.shared.parseDatePublic(notification.createdAt) {
-                                expiresAt = createdAt.addingTimeInterval(300)  // 5分钟
-                                if Date() >= expiresAt! {
-                                    isExpired = true
-                                }
                             }
                         }
-                        
-                        // 优化：如果任务已进入进行中或更后面的状态，标记为过期
-                        if let taskStatus = taskStatus {
-                            let status = taskStatus.lowercased()
-                            if status == "in_progress" || 
-                               status == "pending_payment" || 
-                               status == "pending_confirmation" || 
-                               status == "completed" || 
-                               status == "cancelled" {
-                                isExpired = true
-                            }
+                    }
+                    
+                    // 优化：如果任务已进入进行中或更后面的状态，标记为过期
+                    if let taskStatus = taskStatus {
+                        let status = taskStatus.lowercased()
+                        if status == "in_progress" || 
+                           status == "pending_payment" || 
+                           status == "pending_confirmation" || 
+                           status == "completed" || 
+                           status == "cancelled" {
+                            isExpired = true
                         }
                     }
                 }

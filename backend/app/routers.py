@@ -3860,14 +3860,20 @@ def get_notifications_api(
     db: Session = Depends(get_db),
     limit: int = 20,
 ):
-    return crud.get_user_notifications(db, current_user.id, limit)
+    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
+    
+    notifications = crud.get_user_notifications(db, current_user.id, limit)
+    return enrich_notifications_with_task_id_sync(notifications, db)
 
 
 @router.get("/notifications/unread", response_model=list[schemas.NotificationOut])
 def get_unread_notifications_api(
     current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):
-    return crud.get_unread_notifications(db, current_user.id)
+    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
+    
+    notifications = crud.get_unread_notifications(db, current_user.id)
+    return enrich_notifications_with_task_id_sync(notifications, db)
 
 
 @router.get("/notifications/with-recent-read", response_model=list[schemas.NotificationOut])
@@ -3877,46 +3883,10 @@ def get_notifications_with_recent_read_api(
     recent_read_limit: int = 10
 ):
     """获取所有未读通知和最近N条已读通知"""
-    from app.models import TaskApplication
-    from sqlalchemy.orm import Session as SQLSession
+    from app.utils.notification_utils import enrich_notifications_with_task_id_sync
     
     notifications = crud.get_notifications_with_recent_read(db, current_user.id, recent_read_limit)
-    result = []
-    
-    for notification in notifications:
-        notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
-        
-        # task_application 类型：related_id 直接就是 task_id（新数据统一方式）
-        if notification.type == "task_application" and notification.related_id:
-            notification_dict["task_id"] = notification.related_id
-        
-        # application_message 和 negotiation_offer 类型：related_id 是 application_id
-        # 需要通过 TaskApplication 表查询 task_id
-        elif notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
-            try:
-                # 通过 application_id 查询 task_id
-                application = db.query(TaskApplication).filter(
-                    TaskApplication.id == notification.related_id
-                ).first()
-                
-                if application:
-                    notification_dict["task_id"] = application.task_id
-                else:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Application not found for notification {notification.id}, related_id: {notification.related_id}")
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
-        
-        # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
-        elif notification.type in ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"] and notification.related_id:
-            notification_dict["task_id"] = notification.related_id
-        
-        result.append(schemas.NotificationOut(**notification_dict))
-    
-    return result
+    return enrich_notifications_with_task_id_sync(notifications, db)
 
 
 @router.get("/notifications/unread/count")
@@ -3934,7 +3904,12 @@ def mark_notification_read_api(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    return crud.mark_notification_read(db, notification_id, current_user.id)
+    from app.utils.notification_utils import enrich_notification_dict_with_task_id_sync
+    
+    notification = crud.mark_notification_read(db, notification_id, current_user.id)
+    notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
+    enriched_dict = enrich_notification_dict_with_task_id_sync(notification, notification_dict, db)
+    return schemas.NotificationOut(**enriched_dict)
 
 
 @router.post("/users/device-token")

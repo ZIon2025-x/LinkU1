@@ -1034,39 +1034,8 @@ async def get_notifications(
     )
     
     # 对于任务相关通知，设置 task_id 字段
-    result = []
-    for notification in notifications:
-        notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
-        
-        # task_application 类型：related_id 直接就是 task_id（新数据统一方式）
-        if notification.type == "task_application" and notification.related_id:
-            notification_dict["task_id"] = notification.related_id
-        
-        # application_message 和 negotiation_offer 类型：related_id 是 application_id
-        # 需要通过 TaskApplication 表查询 task_id
-        elif notification.type in ["application_message", "negotiation_offer"] and notification.related_id:
-            try:
-                # 通过 application_id 查询 task_id
-                application_query = select(models.TaskApplication).where(
-                    models.TaskApplication.id == notification.related_id
-                )
-                application_result = await db.execute(application_query)
-                application = application_result.scalar_one_or_none()
-                
-                if application:
-                    notification_dict["task_id"] = application.task_id
-                else:
-                    logger.warning(f"Application not found for notification {notification.id}, related_id: {notification.related_id}")
-            except Exception as e:
-                logger.warning(f"Failed to get task_id for notification {notification.id}: {e}")
-        
-        # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
-        elif notification.type in ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"] and notification.related_id:
-            notification_dict["task_id"] = notification.related_id
-        
-        result.append(schemas.NotificationOut(**notification_dict))
-    
-    return result
+    from app.utils.notification_utils import enrich_notifications_with_task_id_async
+    return await enrich_notifications_with_task_id_async(notifications, db)
 
 
 @async_router.put(
@@ -1078,12 +1047,17 @@ async def mark_notification_as_read(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """标记通知为已读（异步版本）"""
+    from app.utils.notification_utils import enrich_notification_dict_with_task_id_async
+    
     notification = await async_crud.async_notification_crud.mark_notification_as_read(
         db, notification_id
     )
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
-    return notification
+    
+    notification_dict = schemas.NotificationOut.model_validate(notification).model_dump()
+    enriched_dict = await enrich_notification_dict_with_task_id_async(notification, notification_dict, db)
+    return schemas.NotificationOut(**enriched_dict)
 
 
 # 系统监控路由
