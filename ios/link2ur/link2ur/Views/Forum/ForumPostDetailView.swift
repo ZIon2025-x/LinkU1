@@ -873,7 +873,7 @@ struct ForumPostShareSheet: View {
             description = preview
         } else {
             // 如果没有内容，使用帖子信息构建描述
-            let categoryText = post.category?.name ?? ""
+            let categoryText = post.category?.displayName ?? ""
             let statsText = "\(post.viewCount) 浏览 · \(post.replyCount) 回复"
             if !categoryText.isEmpty {
                 return "\(categoryText) | \(statsText)"

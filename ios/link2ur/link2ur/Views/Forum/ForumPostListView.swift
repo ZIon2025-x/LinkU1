@@ -46,7 +46,7 @@ struct ForumPostListView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .navigationTitle(category?.name ?? LocalizationKey.forumAllPosts.localized)
+        .navigationTitle(category?.displayName ?? LocalizationKey.forumAllPosts.localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

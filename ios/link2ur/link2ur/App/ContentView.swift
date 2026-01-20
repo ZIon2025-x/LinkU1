@@ -125,14 +125,10 @@ public struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)  // 确保在左下角
                 }
-            } else if appState.isAuthenticated || appState.userSkippedLogin {
-                // 已登录或用户选择跳过登录，都显示主界面
-                MainTabView()
-                    .sheet(isPresented: $showOnboarding) {
-                        OnboardingView(isPresented: $showOnboarding)
-                    }
             } else {
-                LoginView()
+                // 未登录时也直接显示主界面，不再强制显示登录框
+                // 用户可以在需要时通过其他入口进行登录
+                MainTabView()
                     .sheet(isPresented: $showOnboarding) {
                         OnboardingView(isPresented: $showOnboarding)
                     }

@@ -655,8 +655,12 @@ async def get_leaderboards(
         leaderboard_dict = {
             "id": leaderboard.id,
             "name": leaderboard.name,
+            "name_en": leaderboard.name_en,
+            "name_zh": leaderboard.name_zh,
             "location": leaderboard.location,
             "description": leaderboard.description,
+            "description_en": leaderboard.description_en,
+            "description_zh": leaderboard.description_zh,
             "cover_image": leaderboard.cover_image,
             "applicant_id": leaderboard.applicant_id,
             "applicant": applicant_info,

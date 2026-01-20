@@ -31,7 +31,7 @@ struct CreatePostView: View {
                                     get: { viewModel.selectedCategoryId != nil ? "\(viewModel.selectedCategoryId!)" : "" },
                                     set: { newValue in viewModel.selectedCategoryId = Int(newValue) }
                                 ),
-                                options: viewModel.categories.map { ("\($0.id)", $0.name) },
+                                options: viewModel.categories.map { ("\($0.id)", $0.displayName) },
                                 icon: "tray.full.fill"
                             )
                         }
