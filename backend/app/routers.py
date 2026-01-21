@@ -8401,27 +8401,34 @@ async def upload_image(
         from app.image_system import private_image_system
         result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=image.content_type)
         
-        # 如果有 task_id，生成图片访问 URL
-        if task_id and result.get("success") and result.get("image_id"):
-            # 获取任务参与者
-            task = crud.get_task(db, task_id)
-            if task:
-                participants = []
-                if task.poster_id:
-                    participants.append(task.poster_id)
-                if task.taker_id:
-                    participants.append(task.taker_id)
-                # 添加当前用户（如果不在列表中）
-                if current_user.id not in participants:
-                    participants.append(current_user.id)
-                
-                # 生成图片访问 URL
-                image_url = private_image_system.generate_image_url(
-                    result["image_id"],
-                    current_user.id,
-                    participants
-                )
-                result["url"] = image_url
+        # 生成图片访问 URL（确保总是返回 URL）
+        if result.get("success") and result.get("image_id"):
+            participants = []
+            
+            # 如果有 task_id，获取任务参与者
+            if task_id:
+                task = crud.get_task(db, task_id)
+                if task:
+                    if task.poster_id:
+                        participants.append(task.poster_id)
+                    if task.taker_id:
+                        participants.append(task.taker_id)
+            
+            # 添加当前用户（如果不在列表中）
+            if current_user.id not in participants:
+                participants.append(current_user.id)
+            
+            # 如果没有参与者（不应该发生），至少包含当前用户
+            if not participants:
+                participants = [current_user.id]
+            
+            # 生成图片访问 URL
+            image_url = private_image_system.generate_image_url(
+                result["image_id"],
+                current_user.id,
+                participants
+            )
+            result["url"] = image_url
         
         return JSONResponse(content=result)
 

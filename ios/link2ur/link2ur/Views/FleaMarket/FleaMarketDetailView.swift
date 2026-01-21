@@ -594,7 +594,7 @@ struct FleaMarketDetailView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "pencil")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text(LocalizationKey.fleaMarketEditItem.localized)
+                            Text(LocalizationKey.fleaMarketEditItemTitle.localized)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .foregroundColor(.white)

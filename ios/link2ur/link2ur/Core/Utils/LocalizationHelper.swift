@@ -1504,7 +1504,7 @@ public enum LocalizationKey: String {
     case fleaMarketViewItem = "flea_market.view_item"
     case fleaMarketSaving = "flea_market.saving"
     case fleaMarketSaveChanges = "flea_market.save_changes"
-    case fleaMarketEditItem = "flea_market.edit_item"
+    case fleaMarketEditItemTitle = "flea_market.edit_item_title"
     case fleaMarketCategoryElectronics = "flea_market.category.electronics"
     case fleaMarketCategoryClothing = "flea_market.category.clothing"
     case fleaMarketCategoryFurniture = "flea_market.category.furniture"

@@ -247,7 +247,7 @@ struct EditFleaMarketItemView: View {
             }
             .background(AppColors.background)
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(LocalizationKey.fleaMarketEditItem.localized)
+            .navigationTitle(LocalizationKey.fleaMarketEditItemTitle.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .contentShape(Rectangle())
