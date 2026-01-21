@@ -3141,29 +3141,44 @@ def get_my_tasks(
     """获取当前用户的任务（发布的和接受的）"""
     tasks = crud.get_user_tasks(db, current_user.id, limit=limit, offset=offset)
     
-    # 获取所有任务的翻译
+    # 获取所有任务的翻译（标题和描述）
     task_ids = [task.id for task in tasks]
     if task_ids:
         from app.crud import get_task_translation
-        translations_dict = {}
+        title_translations_dict = {}
+        description_translations_dict = {}
+        
         for task_id in task_ids:
-            # 获取英文翻译
-            trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
-            if trans_en:
-                translations_dict[(task_id, 'en')] = trans_en.translated_text
-            # 获取中文翻译
-            trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
-            if trans_zh:
-                translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
+            # 获取标题翻译
+            title_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
+            if title_en:
+                title_translations_dict[(task_id, 'en')] = title_en.translated_text
+            title_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
+            if title_zh:
+                title_translations_dict[(task_id, 'zh-CN')] = title_zh.translated_text
+            
+            # 获取描述翻译
+            desc_en = get_task_translation(db, task_id, 'description', 'en', validate=False)
+            if desc_en:
+                description_translations_dict[(task_id, 'en')] = desc_en.translated_text
+            desc_zh = get_task_translation(db, task_id, 'description', 'zh-CN', validate=False)
+            if desc_zh:
+                description_translations_dict[(task_id, 'zh-CN')] = desc_zh.translated_text
         
         # 为每个任务添加翻译字段
         for task in tasks:
-            task.title_en = translations_dict.get((task.id, 'en'))
-            task.title_zh = translations_dict.get((task.id, 'zh-CN'))
+            task.title_en = title_translations_dict.get((task.id, 'en'))
+            task.title_zh = title_translations_dict.get((task.id, 'zh-CN'))
+            task.description_en = description_translations_dict.get((task.id, 'en'))
+            task.description_zh = description_translations_dict.get((task.id, 'zh-CN'))
         
         # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
-        missing_task_ids = [task_id for task_id in task_ids 
-                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
+        missing_title_task_ids = [task_id for task_id in task_ids 
+                                 if (task_id, 'en') not in title_translations_dict or (task_id, 'zh-CN') not in title_translations_dict]
+        missing_desc_task_ids = [task_id for task_id in task_ids 
+                                if (task_id, 'en') not in description_translations_dict or (task_id, 'zh-CN') not in description_translations_dict]
+        missing_task_ids = list(set(missing_title_task_ids + missing_desc_task_ids))
+        
         if missing_task_ids:
             import threading
             from app.utils.translation_prefetch import prefetch_task_by_id
@@ -3185,11 +3200,11 @@ def get_my_tasks(
                                 finally:
                                     loop.close()
                             except Exception as e:
-                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
+                                logger.warning(f"后台翻译任务 {task_id} 失败: {e}")
                     finally:
                         sync_db.close()
                 except Exception as e:
-                    logger.error(f"后台翻译任务标题失败: {e}")
+                    logger.error(f"后台翻译任务失败: {e}")
             
             thread = threading.Thread(target=trigger_translations_sync, daemon=True)
             thread.start()
