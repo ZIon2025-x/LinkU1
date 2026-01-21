@@ -83,6 +83,9 @@ struct ForumPostDetailView: View {
                                 Text(content)
                                     .font(.body)
                                     .foregroundColor(AppColors.textPrimary)
+                                    .lineSpacing(8)
+                                    .lineLimit(nil)  // 不限制行数
+                                    .multilineTextAlignment(.leading)  // 左对齐多行文本
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             

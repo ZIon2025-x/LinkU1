@@ -243,10 +243,13 @@ struct ForumPostDetailView: View {
     private func postContent(post: ForumPost) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             if let content = post.displayContent {
+                // 使用 AttributedString 或直接使用 Text，确保换行符被正确处理
                 Text(content)
                     .font(.system(size: 17))
                     .foregroundColor(AppColors.textPrimary)
                     .lineSpacing(8)
+                    .lineLimit(nil)  // 不限制行数
+                    .multilineTextAlignment(.leading)  // 左对齐多行文本
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

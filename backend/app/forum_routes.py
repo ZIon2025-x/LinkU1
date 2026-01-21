@@ -2944,15 +2944,38 @@ async def create_post(
     # 自动填充双语字段
     from app.utils.bilingual_helper import auto_fill_bilingual_fields
     
+    # 保留换行符：只移除首尾空白，保留中间的换行符和格式
     normalized_content = post.content.strip() if post.content else None
     _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
         name=post.title,
-        description=normalized_content,
+        description=normalized_content,  # 保留换行符
         name_en=post.title_en.strip() if post.title_en else None,
         name_zh=post.title_zh.strip() if post.title_zh else None,
         description_en=post.content_en.strip() if post.content_en else None,
         description_zh=post.content_zh.strip() if post.content_zh else None,
     )
+    
+    # 确保翻译后的内容也保留换行符（如果翻译服务丢失了换行符，从原文恢复）
+    if content_en and normalized_content and '\n' in normalized_content:
+        # 如果翻译后的内容没有换行符，但原文有，尝试恢复换行符位置
+        if '\n' not in content_en:
+            # 尝试在翻译文本中恢复换行符：在句号、问号、感叹号后添加换行
+            import re
+            # 在句号、问号、感叹号后添加换行（如果原文在该位置有换行）
+            lines_original = normalized_content.split('\n')
+            if len(lines_original) > 1:
+                # 原文有多行，尝试在翻译文本的相应位置恢复换行
+                # 简单方案：在句号、问号、感叹号后添加换行
+                content_en = re.sub(r'([.!?。！？])\s+', r'\1\n', content_en)
+                # 移除多余的空行
+                content_en = re.sub(r'\n{3,}', '\n\n', content_en)
+    if content_zh and normalized_content and '\n' in normalized_content:
+        if '\n' not in content_zh:
+            import re
+            lines_original = normalized_content.split('\n')
+            if len(lines_original) > 1:
+                content_zh = re.sub(r'([.!?。！？])\s+', r'\1\n', content_zh)
+                content_zh = re.sub(r'\n{3,}', '\n\n', content_zh)
     
     # 创建帖子
     if admin_user:
