@@ -193,6 +193,40 @@
 "notification.enable_notification_description" = "不錯過任何重要資訊";
 "notification.allow_notification" = "允許通知";
 "notification.not_now" = "稍後提醒";
+"notification.title.task_application" = "新任務申請";
+"notification.title.application_accepted" = "申請者已接受您的議價，請完成支付";
+"notification.title.application_rejected" = "您的申請已被拒絕";
+"notification.title.application_withdrawn" = "有申請者撤回了申請";
+"notification.title.task_completed" = "任務已完成";
+"notification.title.task_confirmed" = "獎勵已發放";
+"notification.title.task_cancelled" = "任務已取消";
+"notification.title.task_auto_cancelled" = "任務自動取消";
+"notification.title.application_message" = "新留言";
+"notification.title.negotiation_offer" = "新的議價提議";
+"notification.title.negotiation_rejected" = "申請者已拒絕您的議價";
+"notification.title.task_approved" = "任務申請已通過";
+"notification.title.task_reward_paid" = "任務獎勵已支付";
+"notification.title.task_approved_with_payment" = "任務申請已同意，請完成支付";
+"notification.title.announcement" = "公告";
+"notification.title.customer_service" = "客服消息";
+"notification.title.unknown" = "通知";
+"notification.content.task_application" = "{applicant_name} 申請了任務「{task_title}」\n申請留言：{application_message}\n議價金額：{price_info}";
+"notification.content.application_accepted" = "申請者已接受您對任務「{task_title}」的議價，請完成支付。{payment_expires_info}";
+"notification.content.application_rejected" = "您的任務申請已被拒絕：{task_title}";
+"notification.content.application_withdrawn" = "有申請者撤回了對任務「{task_title}」的申請";
+"notification.content.task_completed" = "{taker_name} 已將任務「{task_title}」標記為完成";
+"notification.content.task_confirmed" = "任務已完成並確認！「{task_title}」的獎勵已發放";
+"notification.content.task_cancelled" = "您的任務「{task_title}」已被取消";
+"notification.content.task_auto_cancelled" = "您的任務「{task_title}」因超過截止日期已自動取消";
+"notification.content.application_message" = "任務「{task_title}」的發布者給您留言：{message}";
+"notification.content.negotiation_offer" = "任務「{task_title}」的發布者提出議價\n留言：{message}\n議價金額：£{negotiated_price:.2f} {currency}";
+"notification.content.negotiation_rejected" = "申請者已拒絕您對任務「{task_title}」的議價";
+"notification.content.task_approved" = "您對任務「{task_title}」的申請已通過";
+"notification.content.task_reward_paid" = "任務「{task_title}」的獎勵已支付";
+"notification.content.task_approved_with_payment" = "您的任務申請已被同意！任務：{task_title}{payment_expires_info}";
+"notification.content.announcement" = "{message}";
+"notification.content.customer_service" = "{message}";
+"notification.content.unknown" = "{message}";
 
 // MARK: - Student Verification
 "student_verification.verification" = "學生認證";
@@ -702,6 +736,19 @@
 "forum.select_section" = "選擇板塊";
 "forum.please_select_section" = "請選擇板塊";
 "forum.publish" = "發布";
+"forum.someone" = "有人";
+"forum.notification_new_reply" = "新回覆";
+"forum.notification_new_like" = "新點讚";
+"forum.notification_reply_post" = "%@ 回覆了您的帖子";
+"forum.notification_reply_reply" = "%@ 回覆了您的回覆";
+"forum.notification_like_post" = "%@ 點讚了您的帖子";
+"forum.notification_like_reply" = "%@ 點讚了您的回覆";
+"forum.notification_pin_post" = "帖子已置頂";
+"forum.notification_pin_post_content" = "您的帖子已被管理員置頂";
+"forum.notification_feature_post" = "帖子已加精";
+"forum.notification_feature_post_content" = "您的帖子已被管理員加精";
+"forum.notification_default" = "論壇通知";
+"forum.notification_default_content" = "您收到了一條論壇通知";
 
 // MARK: - Info
 "info.connect_platform" = "連接你我的任務平台";

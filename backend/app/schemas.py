@@ -680,6 +680,7 @@ class NotificationOut(NotificationBase):
     is_read: int
     created_at: datetime.datetime
     task_id: Optional[int] = None  # 对于 application_message 和 negotiation_offer 类型，存储 task_id
+    variables: Optional[Dict[str, Any]] = None  # 动态变量（用于前端格式化翻译键）
 
     class Config:
         from_attributes = True

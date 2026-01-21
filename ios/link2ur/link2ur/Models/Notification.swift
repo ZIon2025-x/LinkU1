@@ -1,5 +1,20 @@
 import Foundation
 
+// 动态键用于解码字典
+struct DynamicCodingKeys: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+    }
+    
+    init?(intValue: Int) {
+        self.intValue = intValue
+        self.stringValue = "\(intValue)"
+    }
+}
+
 // 系统通知
 struct SystemNotification: Codable, Identifiable, Equatable {
     let id: Int
@@ -14,6 +29,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
     let relatedId: Int?  // 后端返回 related_id（可能是字符串或整数）
     let link: String?  // iOS 扩展字段，可能为空
     let taskId: Int?  // 对于 application_message 和 negotiation_offer 类型，存储 task_id
+    let variables: [String: Any]?  // 动态变量（用于格式化翻译键）
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -26,6 +42,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         case relatedId = "related_id"
         case link  // 可选字段，如果后端不返回则为 nil
         case taskId = "task_id"  // 可选字段，后端可能返回
+        case variables  // 动态变量
     }
     
     // 显式成员初始化器（因为添加了自定义解码器，需要手动提供）
@@ -41,7 +58,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         link: String?,
         taskId: Int?,
         titleEn: String? = nil,
-        contentEn: String? = nil
+        contentEn: String? = nil,
+        variables: [String: Any]? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -55,6 +73,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         self.taskId = taskId
         self.titleEn = titleEn
         self.contentEn = contentEn
+        self.variables = variables
     }
     
     // 自定义解码，处理 related_id 可能是字符串或整数的情况
@@ -72,6 +91,13 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         createdAt = try container.decode(String.self, forKey: .createdAt)
         link = try container.decodeIfPresent(String.self, forKey: .link)
         taskId = try container.decodeIfPresent(Int.self, forKey: .taskId)
+        
+        // 解码 variables（使用 AnyCodable 处理动态类型）
+        if let variablesData = try? container.decodeIfPresent([String: AnyCodable].self, forKey: .variables) {
+            variables = variablesData.mapValues { $0.value }
+        } else {
+            variables = nil
+        }
         
         // 处理 related_id：可能是字符串或整数
         if let relatedIdInt = try? container.decode(Int.self, forKey: .relatedId) {
@@ -349,13 +375,174 @@ struct UnifiedNotification: Identifiable {
         self.id = "system_\(systemNotification.id)"
         self.source = .system(systemNotification)
         self.type = systemNotification.type ?? "unknown"
-        self.title = systemNotification.title
-        self.content = systemNotification.content
+        // 使用翻译键获取标题
+        self.title = UnifiedNotification.getSystemNotificationTitle(type: systemNotification.type ?? "unknown")
+        // 使用翻译键和变量格式化内容，如果失败则回退到原始内容
+        let languageCode = LocalizationHelper.currentLanguage
+        let fallbackContent = languageCode.lowercased().hasPrefix("zh") 
+            ? systemNotification.content 
+            : (systemNotification.contentEn ?? systemNotification.content)
+        
+        self.content = UnifiedNotification.getSystemNotificationContent(
+            type: systemNotification.type ?? "unknown",
+            variables: systemNotification.variables ?? [:],
+            fallbackContent: fallbackContent
+        )
         self.relatedId = systemNotification.relatedId
         self.postId = nil
         self.isRead = (systemNotification.isRead ?? 0) == 1
         self.createdAt = systemNotification.createdAt
         self.fromUser = nil
+    }
+    
+    // 根据通知类型获取翻译后的标题
+    static func getSystemNotificationTitle(type: String) -> String {
+        let notificationType = NotificationType(rawValue: type.lowercased()) ?? .unknown
+        return notificationType.localizedTitle
+    }
+    
+    // 根据通知类型和变量获取翻译后的内容
+    static func getSystemNotificationContent(type: String, variables: [String: Any], fallbackContent: String? = nil) -> String {
+        let notificationType = NotificationType(rawValue: type.lowercased()) ?? .unknown
+        let template = notificationType.localizedContentTemplate
+        
+        // 如果变量为空，且提供了后备内容，使用后备内容
+        if variables.isEmpty && fallbackContent != nil {
+            return fallbackContent!
+        }
+        
+        // 格式化模板，替换变量占位符
+        var result = template
+        
+        // 按变量名长度降序排序，避免短变量名被长变量名的一部分替换
+        let sortedVariables = variables.sorted { $0.key.count > $1.key.count }
+        
+        for (key, value) in sortedVariables {
+            let placeholder = "{\(key)}"
+            var stringValue = "\(value)"
+            
+            // 处理特殊格式：如果是数字，可能需要格式化
+            if let doubleValue = value as? Double {
+                // 检查模板中是否有格式化要求（如 {negotiated_price:.2f}）
+                if template.contains("\(key):.2f") {
+                    stringValue = String(format: "%.2f", doubleValue)
+                } else {
+                    stringValue = String(format: "%.0f", doubleValue)
+                }
+            } else if let intValue = value as? Int {
+                stringValue = "\(intValue)"
+            }
+            
+            result = result.replacingOccurrences(of: placeholder, with: stringValue)
+            // 也替换带格式的占位符（如 {negotiated_price:.2f}）
+            result = result.replacingOccurrences(of: "{\(key):.2f}", with: stringValue)
+        }
+        
+        // 如果格式化后的结果仍然包含占位符（说明变量不完整），且提供了后备内容，使用后备内容
+        if result.contains("{") && fallbackContent != nil {
+            return fallbackContent!
+        }
+        
+        return result
+    }
+    
+    // 系统通知类型枚举
+    enum NotificationType: String {
+        case taskApplication = "task_application"
+        case applicationAccepted = "application_accepted"
+        case applicationRejected = "application_rejected"
+        case applicationWithdrawn = "application_withdrawn"
+        case taskCompleted = "task_completed"
+        case taskConfirmed = "task_confirmed"
+        case taskCancelled = "task_cancelled"
+        case taskAutoCancelled = "task_auto_cancelled"
+        case applicationMessage = "application_message"
+        case negotiationOffer = "negotiation_offer"
+        case negotiationRejected = "negotiation_rejected"
+        case taskApproved = "task_approved"
+        case taskRewardPaid = "task_reward_paid"
+        case taskApprovedWithPayment = "task_approved_with_payment"
+        case announcement = "announcement"
+        case customerService = "customer_service"
+        case unknown = "unknown"
+        
+        var localizedTitle: String {
+            switch self {
+            case .taskApplication:
+                return LocalizationKey.notificationTitleTaskApplication.localized
+            case .applicationAccepted:
+                return LocalizationKey.notificationTitleApplicationAccepted.localized
+            case .applicationRejected:
+                return LocalizationKey.notificationTitleApplicationRejected.localized
+            case .applicationWithdrawn:
+                return LocalizationKey.notificationTitleApplicationWithdrawn.localized
+            case .taskCompleted:
+                return LocalizationKey.notificationTitleTaskCompleted.localized
+            case .taskConfirmed:
+                return LocalizationKey.notificationTitleTaskConfirmed.localized
+            case .taskCancelled:
+                return LocalizationKey.notificationTitleTaskCancelled.localized
+            case .taskAutoCancelled:
+                return LocalizationKey.notificationTitleTaskAutoCancelled.localized
+            case .applicationMessage:
+                return LocalizationKey.notificationTitleApplicationMessage.localized
+            case .negotiationOffer:
+                return LocalizationKey.notificationTitleNegotiationOffer.localized
+            case .negotiationRejected:
+                return LocalizationKey.notificationTitleNegotiationRejected.localized
+            case .taskApproved:
+                return LocalizationKey.notificationTitleTaskApproved.localized
+            case .taskRewardPaid:
+                return LocalizationKey.notificationTitleTaskRewardPaid.localized
+            case .taskApprovedWithPayment:
+                return LocalizationKey.notificationTitleTaskApprovedWithPayment.localized
+            case .announcement:
+                return LocalizationKey.notificationTitleAnnouncement.localized
+            case .customerService:
+                return LocalizationKey.notificationTitleCustomerService.localized
+            case .unknown:
+                return LocalizationKey.notificationTitleUnknown.localized
+            }
+        }
+        
+        var localizedContentTemplate: String {
+            switch self {
+            case .taskApplication:
+                return LocalizationKey.notificationContentTaskApplication.localized
+            case .applicationAccepted:
+                return LocalizationKey.notificationContentApplicationAccepted.localized
+            case .applicationRejected:
+                return LocalizationKey.notificationContentApplicationRejected.localized
+            case .applicationWithdrawn:
+                return LocalizationKey.notificationContentApplicationWithdrawn.localized
+            case .taskCompleted:
+                return LocalizationKey.notificationContentTaskCompleted.localized
+            case .taskConfirmed:
+                return LocalizationKey.notificationContentTaskConfirmed.localized
+            case .taskCancelled:
+                return LocalizationKey.notificationContentTaskCancelled.localized
+            case .taskAutoCancelled:
+                return LocalizationKey.notificationContentTaskAutoCancelled.localized
+            case .applicationMessage:
+                return LocalizationKey.notificationContentApplicationMessage.localized
+            case .negotiationOffer:
+                return LocalizationKey.notificationContentNegotiationOffer.localized
+            case .negotiationRejected:
+                return LocalizationKey.notificationContentNegotiationRejected.localized
+            case .taskApproved:
+                return LocalizationKey.notificationContentTaskApproved.localized
+            case .taskRewardPaid:
+                return LocalizationKey.notificationContentTaskRewardPaid.localized
+            case .taskApprovedWithPayment:
+                return LocalizationKey.notificationContentTaskApprovedWithPayment.localized
+            case .announcement:
+                return LocalizationKey.notificationContentAnnouncement.localized
+            case .customerService:
+                return LocalizationKey.notificationContentCustomerService.localized
+            case .unknown:
+                return LocalizationKey.notificationContentUnknown.localized
+            }
+        }
     }
     
     // 从论坛通知创建
@@ -383,30 +570,31 @@ struct UnifiedNotification: Identifiable {
         }
         self.type = mappedType
         
-        // 生成标题和内容
-        let userName = forumNotification.fromUser?.name ?? "用户"
+        // 生成标题和内容（国际化）
+        let userName = forumNotification.fromUser?.name ?? LocalizationKey.forumSomeone.localized
+        
         switch forumNotification.notificationType {
         case "reply_post":
-            self.title = "新回复"
-            self.content = "\(userName) 回复了您的帖子"
+            self.title = LocalizationKey.forumNotificationNewReply.localized
+            self.content = String(format: LocalizationKey.forumNotificationReplyPost.localized, userName)
         case "reply_reply":
-            self.title = "新回复"
-            self.content = "\(userName) 回复了您的回复"
+            self.title = LocalizationKey.forumNotificationNewReply.localized
+            self.content = String(format: LocalizationKey.forumNotificationReplyReply.localized, userName)
         case "like_post":
-            self.title = "新点赞"
-            self.content = "\(userName) 点赞了您的帖子"
+            self.title = LocalizationKey.forumNotificationNewLike.localized
+            self.content = String(format: LocalizationKey.forumNotificationLikePost.localized, userName)
         case "like_reply":
-            self.title = "新点赞"
-            self.content = "\(userName) 点赞了您的回复"
+            self.title = LocalizationKey.forumNotificationNewLike.localized
+            self.content = String(format: LocalizationKey.forumNotificationLikeReply.localized, userName)
         case "pin_post":
-            self.title = "帖子已置顶"
-            self.content = "您的帖子已被管理员置顶"
+            self.title = LocalizationKey.forumNotificationPinPost.localized
+            self.content = LocalizationKey.forumNotificationPinPostContent.localized
         case "feature_post":
-            self.title = "帖子已加精"
-            self.content = "您的帖子已被管理员加精"
+            self.title = LocalizationKey.forumNotificationFeaturePost.localized
+            self.content = LocalizationKey.forumNotificationFeaturePostContent.localized
         default:
-            self.title = "论坛通知"
-            self.content = "您收到了一条论坛通知"
+            self.title = LocalizationKey.forumNotificationDefault.localized
+            self.content = LocalizationKey.forumNotificationDefaultContent.localized
         }
         
         // 对于回复类型的通知，relatedId应该是postId（用于跳转到帖子详情）

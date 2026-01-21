@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from app import models
 from app import schemas
+from app.utils.notification_variables import extract_notification_variables
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,13 @@ def enrich_notification_dict_with_task_id_sync(
     Returns:
         更新后的通知字典
     """
+    # 提取动态变量
+    notification_dict["variables"] = extract_notification_variables(
+        notification.type or "unknown",
+        notification.content,
+        notification.content_en
+    )
+    
     # 使用 related_type 字段来判断 related_id 的类型（新数据）
     if notification.related_type == "task_id" and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
@@ -115,6 +123,13 @@ async def enrich_notification_dict_with_task_id_async(
     Returns:
         更新后的通知字典
     """
+    # 提取动态变量
+    notification_dict["variables"] = extract_notification_variables(
+        notification.type or "unknown",
+        notification.content,
+        notification.content_en
+    )
+    
     # 使用 related_type 字段来判断 related_id 的类型（新数据）
     if notification.related_type == "task_id" and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None

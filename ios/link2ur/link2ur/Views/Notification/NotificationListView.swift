@@ -122,27 +122,16 @@ struct NotificationRow: View {
     
     // 根据用户语言环境选择显示中文还是英文
     private var displayTitle: String {
-        let languageCode = LocalizationHelper.currentLanguage
-        // 如果是中文相关语言，优先使用中文；否则使用英文
-        if languageCode.lowercased().hasPrefix("zh"), let titleEn = notification.titleEn, !titleEn.isEmpty {
-            // 如果有英文版本，但用户是中文环境，使用中文
-            return notification.title
-        } else if let titleEn = notification.titleEn, !titleEn.isEmpty {
-            // 如果有英文版本，且用户是英文环境，使用英文
-            return titleEn
-        }
-        // 如果没有英文版本，使用中文（向后兼容）
-        return notification.title
+        // 使用翻译键获取标题
+        return UnifiedNotification.getSystemNotificationTitle(type: notification.type ?? "unknown")
     }
     
     private var displayContent: String {
         let languageCode = LocalizationHelper.currentLanguage
-        // 如果是中文相关语言，优先使用中文；否则使用英文
-        if languageCode.lowercased().hasPrefix("zh"), let contentEn = notification.contentEn, !contentEn.isEmpty {
-            // 如果有英文版本，但用户是中文环境，使用中文
+        // 如果是中文相关语言，使用中文（content字段）；否则使用英文（contentEn字段）
+        if languageCode.lowercased().hasPrefix("zh") {
             return notification.content
         } else if let contentEn = notification.contentEn, !contentEn.isEmpty {
-            // 如果有英文版本，且用户是英文环境，使用英文
             return contentEn
         }
         // 如果没有英文版本，使用中文（向后兼容）
@@ -607,23 +596,22 @@ struct NotificationDetailView: View {
     
     // 根据用户语言环境选择显示中文还是英文
     private var displayTitle: String {
-        let languageCode = LocalizationHelper.currentLanguage
-        if languageCode.lowercased().hasPrefix("zh"), let titleEn = notification.titleEn, !titleEn.isEmpty {
-            return notification.title
-        } else if let titleEn = notification.titleEn, !titleEn.isEmpty {
-            return titleEn
-        }
-        return notification.title
+        // 使用翻译键获取标题
+        return UnifiedNotification.getSystemNotificationTitle(type: notification.type ?? "unknown")
     }
     
     private var displayContent: String {
+        // 使用翻译键和变量格式化内容，如果失败则回退到原始内容
         let languageCode = LocalizationHelper.currentLanguage
-        if languageCode.lowercased().hasPrefix("zh"), let contentEn = notification.contentEn, !contentEn.isEmpty {
-            return notification.content
-        } else if let contentEn = notification.contentEn, !contentEn.isEmpty {
-            return contentEn
-        }
-        return notification.content
+        let fallbackContent = languageCode.lowercased().hasPrefix("zh") 
+            ? notification.content 
+            : (notification.contentEn ?? notification.content)
+        
+        return UnifiedNotification.getSystemNotificationContent(
+            type: notification.type ?? "unknown",
+            variables: notification.variables ?? [:],
+            fallbackContent: fallbackContent
+        )
     }
     
     var body: some View {
