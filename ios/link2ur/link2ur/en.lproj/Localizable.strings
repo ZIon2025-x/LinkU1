@@ -488,6 +488,22 @@
 "time.weeks_ago" = "%d weeks ago";
 "time.months_ago" = "%d months ago";
 "time.years_ago" = "%d years ago";
+"time.seconds_ago" = "%d seconds ago";
+"time.deadline_unknown" = "Deadline unknown";
+"time.expired" = "Expired";
+"time.months" = "%d months";
+"time.weeks" = "%d weeks";
+"time.days" = "%d days";
+"time.hours" = "%d hours";
+"time.minutes" = "%d minutes";
+"time.seconds" = "%d seconds";
+"time.month_day_format" = "MMM d";
+"time.year_month_day_format" = "MMM d, yyyy";
+"time.duration_hours_minutes" = "%d hours %d minutes";
+"time.duration_minutes_seconds" = "%d minutes %d seconds";
+"time.duration_seconds" = "%d seconds";
+"time.wan" = "万";
+"time.wan_plus" = "+";
 
 // MARK: - Tabs
 "tabs.home" = "Home";
@@ -801,6 +817,14 @@
 "coupon.my_coupons" = "My Coupons";
 "coupon.no_threshold" = "No Threshold";
 "coupon.claim_now" = "Claim Now";
+"coupon.available_coupons" = "Available Coupons";
+"coupon.redeem_success" = "Redeem Success";
+"coupon.redeem_failed" = "Redeem Failed";
+"coupon.enter_redemption_code" = "Enter Redemption Code";
+"coupon.enter_redemption_code_placeholder" = "Please enter redemption code";
+"coupon.redeem" = "Redeem";
+"coupon.confirm_redeem" = "Confirm Redeem";
+"coupon.confirm_redeem_with_points" = "Are you sure you want to redeem this coupon with %d points?";
 "coupon.valid_until" = "Valid Until: %@";
 "coupon.no_available_coupons" = "No Available Coupons";
 "coupon.no_available_coupons_message" = "No coupons available to claim, stay tuned for events";
@@ -869,6 +893,9 @@
 "activity.all" = "All";
 "activity.active" = "Active";
 "activity.ended" = "Ended";
+"activity.tab.all" = "All";
+"activity.tab.applied" = "Applied";
+"activity.tab.favorited" = "Favorited";
 "activity.activities" = "Activities";
 "activity.no_ended_activities" = "No Ended Activities";
 "activity.no_ended_activities_message" = "No ended activity records";
@@ -1393,3 +1420,119 @@
 "shortcuts.view_flea_market_description" = "Browse and publish second-hand goods";
 "shortcuts.view_forum" = "View Forum";
 "shortcuts.view_forum_description" = "Participate in community discussions";
+
+// MARK: - Profile Extended
+"profile.in_progress" = "In Progress";
+"profile.completed" = "Completed";
+"profile.credit_score" = "Credit Score";
+"profile.my_content" = "My Content";
+"profile.system_and_verification" = "System & Verification";
+"profile.my_tasks_subtitle_text" = "Manage tasks I published and accepted";
+"profile.my_posts_subtitle_text" = "Second-hand item transaction records";
+"profile.my_forum_posts" = "My Posts";
+"profile.my_forum_posts_subtitle" = "View discussions I posted in the forum";
+"profile.my_wallet_subtitle_text" = "Balance, recharge and withdrawal";
+"profile.points_coupons_subtitle_text" = "Points details and coupons";
+"profile.student_verification_subtitle_text" = "Get student-exclusive verification badge";
+"profile.activity_subtitle_text" = "View offline activities I participated in";
+"profile.task_preferences" = "Task Preferences";
+"profile.task_preferences_subtitle" = "Personalize recommended content";
+"profile.my_applications_subtitle_text" = "Expert/Service provider application status";
+"profile.settings_subtitle_text" = "Profile, password and security";
+"profile.no_contact_info" = "No contact information";
+"profile.user_profile" = "User Profile";
+"profile.posted_tasks" = "Posted Tasks";
+"profile.taken_tasks" = "Taken Tasks";
+"profile.completed_tasks" = "Completed Tasks";
+
+// MARK: - My Items Category
+"my_items.selling" = "Selling";
+"my_items.purchased" = "Purchased";
+"my_items.favorites" = "Favorites";
+"my_items.sold" = "Sold";
+"my_items.empty.selling" = "No Items for Sale";
+"my_items.empty.purchased" = "No Purchase Records";
+"my_items.empty.favorites" = "No Favorites";
+"my_items.empty.sold" = "No Sold Items";
+"my_items.empty.selling_message" = "You haven't published any second-hand items yet";
+"my_items.empty.purchased_message" = "You haven't purchased any items yet";
+"my_items.empty.favorites_message" = "You haven't favorited any items yet";
+"my_items.empty.sold_message" = "You haven't successfully sold any items yet";
+"my_items.status.selling" = "For Sale";
+"my_items.status.purchased" = "Purchased";
+"my_items.status.sold" = "Sold";
+
+// MARK: - Forum Post Detail Extended
+"forum.pinned" = "Pinned";
+"forum.featured" = "Featured";
+"forum.write_reply_placeholder" = "Write your reply...";
+"forum.view_this_post" = "Check out this post";
+"forum.browse" = "views";
+"forum.replies_count" = "replies";
+
+// MARK: - Flea Market Detail Extended
+"flea_market.status.active" = "For Sale";
+"flea_market.status.delisted" = "Delisted";
+"flea_market.refreshing" = "Refreshing...";
+"flea_market.refresh" = "Refresh";
+"flea_market.confirm" = "Confirm";
+"flea_market.submit" = "Submit";
+"flea_market.view_item" = "View this item";
+"flea_market.saving" = "Saving...";
+"flea_market.save_changes" = "Save Changes";
+"flea_market.edit_item" = "Edit Item";
+"flea_market.category.electronics" = "Electronics";
+"flea_market.category.clothing" = "Clothing & Accessories";
+"flea_market.category.furniture" = "Furniture & Appliances";
+"flea_market.category.books" = "Books & Stationery";
+"flea_market.category.sports" = "Sports & Outdoors";
+"flea_market.category.beauty" = "Beauty & Skincare";
+"flea_market.category.other" = "Other";
+"flea_market.partial_upload_failed" = "Some images failed to upload, please try again";
+"flea_market.fill_required_fields" = "Please fill in all required fields";
+
+// MARK: - Forum Posts Extended
+"forum.my_posts" = "My Posts";
+"forum.my_posts.posted" = "Posted";
+"forum.my_posts.favorited" = "Favorited";
+"forum.my_posts.liked" = "Liked";
+"forum.my_posts.empty.posted" = "You haven't posted any posts yet";
+"forum.my_posts.empty.favorited" = "You haven't favorited any posts yet";
+"forum.my_posts.empty.liked" = "You haven't liked any posts yet";
+"forum.load_failed" = "Load Failed";
+"forum.retry" = "Retry";
+
+// MARK: - Forum Category Request
+"forum.no_categories" = "No Categories";
+"forum.categories_loading" = "Loading forum categories...";
+"forum.request_new_category" = "Request New Category";
+"forum.request_submitted" = "Request Submitted";
+"forum.request_submitted_message" = "Your request has been successfully submitted. The administrator will notify you of the result after review.";
+"forum.request_instructions" = "Request Instructions";
+"forum.request_instructions_text" = "Fill in the following information to request a new forum category. Your request will be reviewed by the administrator, and the category will be officially created after approval.";
+"forum.category_name" = "Category Name";
+"forum.category_name_placeholder" = "Please enter category name";
+"forum.category_description" = "Category Description";
+"forum.category_description_placeholder" = "Please briefly describe the purpose and discussion topics of this category";
+"forum.category_icon" = "Category Icon (Optional)";
+"forum.category_icon_hint" = "You can enter an emoji as the category icon, for example: 💬, 📚, 🎮, etc.";
+"forum.category_icon_example" = "For example: 💬";
+"forum.category_icon_entered" = "1 emoji entered";
+"forum.submit_request" = "Submit Request";
+"forum.my_requests" = "My Requests";
+"forum.request_status.all" = "All";
+"forum.request_status.pending" = "Pending";
+"forum.request_status.approved" = "Approved";
+"forum.request_status.rejected" = "Rejected";
+"forum.no_requests" = "No Requests";
+"forum.no_requests_message" = "You haven't submitted any category requests yet.";
+"forum.no_requests_filtered" = "No requests found for this status.";
+"forum.review_comment" = "Review Comment";
+"forum.review_time" = "Review Time";
+"forum.request_time" = "Request Time";
+"forum.request_name_required" = "Please enter category name";
+"forum.request_name_too_long" = "Category name cannot exceed %d characters";
+"forum.request_description_too_long" = "Category description cannot exceed %d characters";
+"forum.request_icon_too_long" = "Icon cannot exceed %d characters";
+"forum.request_submit_failed" = "Submission failed, please check if the input is correct";
+"forum.request_login_expired" = "Login expired, please login again";

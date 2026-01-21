@@ -71,8 +71,8 @@ struct ForumView: View {
                     // 已认证但没有板块
                     EmptyStateView(
                         icon: "bubble.left.and.bubble.right.fill",
-                        title: "暂无板块",
-                        message: "论坛板块加载中..."
+                        title: LocalizationKey.forumNoCategories.localized,
+                        message: LocalizationKey.forumCategoriesLoading.localized
                     )
                 }
             } else {
@@ -597,12 +597,12 @@ struct ForumCategoryRequestView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "info.circle.fill")
                                     .foregroundColor(AppColors.primary)
-                                Text("申请说明")
+                                Text(LocalizationKey.forumRequestInstructions.localized)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。")
+                            Text(LocalizationKey.forumRequestInstructionsText.localized)
                                 .font(.system(size: 14))
                                 .foregroundColor(AppColors.textSecondary)
                                 .lineSpacing(4)
@@ -618,14 +618,14 @@ struct ForumCategoryRequestView: View {
                             // 板块名称
                             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                                 HStack {
-                                    Text("板块名称")
+                                    Text(LocalizationKey.forumCategoryName.localized)
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundColor(AppColors.textPrimary)
                                     Text("*")
                                         .foregroundColor(AppColors.error)
                                 }
                                 
-                                TextField("请输入板块名称", text: $categoryName)
+                                TextField(LocalizationKey.forumCategoryNamePlaceholder.localized, text: $categoryName)
                                     .font(.system(size: 15))
                                     .padding(AppSpacing.md)
                                     .background(AppColors.cardBackground)
@@ -662,7 +662,7 @@ struct ForumCategoryRequestView: View {
                             
                             // 板块描述
                             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                Text("板块描述")
+                                Text(LocalizationKey.forumCategoryDescription.localized)
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(AppColors.textPrimary)
                                 
@@ -692,7 +692,7 @@ struct ForumCategoryRequestView: View {
                                         }
                                     
                                     if categoryDescription.isEmpty {
-                                        Text("请简要描述这个板块的用途和讨论主题")
+                                        Text(LocalizationKey.forumCategoryDescriptionPlaceholder.localized)
                                             .font(.system(size: 15))
                                             .foregroundColor(AppColors.textTertiary)
                                             .padding(.top, AppSpacing.sm + 4)
@@ -716,15 +716,15 @@ struct ForumCategoryRequestView: View {
                             
                             // 板块图标（可选）
                             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                Text("板块图标（可选）")
+                                Text(LocalizationKey.forumCategoryIcon.localized)
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(AppColors.textPrimary)
                                 
-                                Text("可以输入一个 emoji 表情作为板块图标，例如：💬、📚、🎮 等")
+                                Text(LocalizationKey.forumCategoryIconHint.localized)
                                     .font(.system(size: 12))
                                     .foregroundColor(AppColors.textSecondary)
                                 
-                                TextField("例如：💬", text: $categoryIcon)
+                                TextField(LocalizationKey.forumCategoryIconExample.localized, text: $categoryIcon)
                                     .font(.system(size: 24))
                                     .multilineTextAlignment(.center)
                                     .padding(AppSpacing.md)
@@ -752,7 +752,7 @@ struct ForumCategoryRequestView: View {
                                 if !categoryIcon.isEmpty {
                                     HStack {
                                         Spacer()
-                                        Text("已输入 1 个 emoji")
+                                        Text(LocalizationKey.forumCategoryIconEntered.localized)
                                             .font(.system(size: 12))
                                             .foregroundColor(AppColors.textSecondary)
                                     }
@@ -770,7 +770,7 @@ struct ForumCategoryRequestView: View {
                                     ProgressView()
                                         .tint(.white)
                                 } else {
-                                    Text("提交申请")
+                                    Text(LocalizationKey.forumSubmitRequest.localized)
                                         .font(.system(size: 16, weight: .semibold))
                                 }
                             }
@@ -810,28 +810,28 @@ struct ForumCategoryRequestView: View {
                     focusedField = nil
                 }
             }
-            .navigationTitle("申请新建板块")
+            .navigationTitle(LocalizationKey.forumRequestNewCategory.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
                 // 键盘上方的完成按钮
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("完成") {
+                    Button(LocalizationKey.commonDone.localized) {
                         focusedField = nil
                     }
                 }
             }
-            .alert("申请已提交", isPresented: $showSuccessAlert) {
-                Button("确定") {
+            .alert(LocalizationKey.forumRequestSubmitted.localized, isPresented: $showSuccessAlert) {
+                Button(LocalizationKey.commonOk.localized) {
                     dismiss()
                 }
             } message: {
-                Text("您的申请已成功提交，管理员将在审核后通知您结果。")
+                Text(LocalizationKey.forumRequestSubmittedMessage.localized)
             }
         }
     }
@@ -843,22 +843,22 @@ struct ForumCategoryRequestView: View {
         // 验证输入
         let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
-            errorMessage = "请输入板块名称"
+            errorMessage = LocalizationKey.forumRequestNameRequired.localized
             return
         }
         
         guard trimmedName.count <= maxNameLength else {
-            errorMessage = "板块名称不能超过\(maxNameLength)个字符"
+            errorMessage = LocalizationKey.forumRequestNameTooLong.localized(argument: maxNameLength)
             return
         }
         
         guard categoryDescription.count <= maxDescriptionLength else {
-            errorMessage = "板块描述不能超过\(maxDescriptionLength)个字符"
+            errorMessage = LocalizationKey.forumRequestDescriptionTooLong.localized(argument: maxDescriptionLength)
             return
         }
         
         guard categoryIcon.count <= maxIconLength else {
-            errorMessage = "图标不能超过\(maxIconLength)个字符"
+            errorMessage = LocalizationKey.forumRequestIconTooLong.localized(argument: maxIconLength)
             return
         }
         
@@ -899,9 +899,9 @@ struct ForumCategoryRequestView: View {
                     switch error {
                     case .httpError(let code):
                         if code == 400 {
-                            errorMessage = "提交失败，请检查输入内容是否正确"
+                            errorMessage = LocalizationKey.forumRequestSubmitFailed.localized
                         } else if code == 401 {
-                            errorMessage = "登录已过期，请重新登录"
+                            errorMessage = LocalizationKey.forumRequestLoginExpired.localized
                         } else {
                             errorMessage = error.userFriendlyMessage
                         }
@@ -958,10 +958,10 @@ struct MyCategoryRequestsView: View {
                     // 状态筛选器
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: AppSpacing.sm) {
-                            StatusFilterButton(title: "全部", status: nil, selectedStatus: $selectedStatus)
-                            StatusFilterButton(title: "待审核", status: "pending", selectedStatus: $selectedStatus)
-                            StatusFilterButton(title: "已通过", status: "approved", selectedStatus: $selectedStatus)
-                            StatusFilterButton(title: "已拒绝", status: "rejected", selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: LocalizationKey.forumRequestStatusAll.localized, status: nil, selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: LocalizationKey.forumRequestStatusPending.localized, status: "pending", selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: LocalizationKey.forumRequestStatusApproved.localized, status: "approved", selectedStatus: $selectedStatus)
+                            StatusFilterButton(title: LocalizationKey.forumRequestStatusRejected.localized, status: "rejected", selectedStatus: $selectedStatus)
                         }
                         .padding(.horizontal, AppSpacing.md)
                         .padding(.vertical, AppSpacing.sm)
@@ -990,8 +990,8 @@ struct MyCategoryRequestsView: View {
                     } else if filteredRequests.isEmpty {
                         EmptyStateView(
                             icon: "tray.fill",
-                            title: "暂无申请",
-                            message: selectedStatus == nil ? "您还没有提交过板块申请。" : "没有找到相关状态的申请。"
+                            title: LocalizationKey.forumNoRequests.localized,
+                            message: selectedStatus == nil ? LocalizationKey.forumNoRequestsMessage.localized : LocalizationKey.forumNoRequestsFiltered.localized
                         )
                     } else {
                         List {
@@ -1009,11 +1009,11 @@ struct MyCategoryRequestsView: View {
                     }
                 }
             }
-            .navigationTitle("我的申请")
+            .navigationTitle(LocalizationKey.forumMyRequests.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                 }
@@ -1117,7 +1117,7 @@ struct CategoryRequestCard: View {
             if request.status != "pending" {
                 if let reviewComment = request.reviewComment, !reviewComment.isEmpty {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                        Text("审核意见")
+                        Text(LocalizationKey.forumReviewComment.localized)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(AppColors.textSecondary)
                         Text(reviewComment)
@@ -1131,7 +1131,7 @@ struct CategoryRequestCard: View {
                 
                 if let reviewedAt = request.reviewedAt {
                     HStack {
-                        Text("审核时间: \(reviewedAt.formatDate())")
+                        Text("\(LocalizationKey.forumReviewTime.localized): \(reviewedAt.formatDate())")
                             .font(.system(size: 12))
                             .foregroundColor(AppColors.textTertiary)
                         Spacer()
@@ -1139,7 +1139,7 @@ struct CategoryRequestCard: View {
                 }
             } else {
                 HStack {
-                    Text("申请时间: \(request.createdAt.formatDate())")
+                    Text("\(LocalizationKey.forumRequestTime.localized): \(request.createdAt.formatDate())")
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textTertiary)
                     Spacer()

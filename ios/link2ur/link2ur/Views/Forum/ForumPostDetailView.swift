@@ -146,10 +146,10 @@ struct ForumPostDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     if post.isPinned {
-                        tagLabel(text: "置顶", color: AppColors.error, icon: "pin.fill")
+                        tagLabel(text: LocalizationKey.forumPinned.localized, color: AppColors.error, icon: "pin.fill")
                     }
                     if post.isFeatured {
-                        tagLabel(text: "精华", color: AppColors.warning, icon: "star.fill")
+                        tagLabel(text: LocalizationKey.forumFeatured.localized, color: AppColors.warning, icon: "star.fill")
                     }
                     if let category = post.category {
                         Text(category.displayName)
@@ -462,7 +462,7 @@ struct ReplyInputView: View {
             ZStack(alignment: .topLeading) {
                 // 占位符
                 if replyContent.isEmpty {
-                    Text("写下你的回复...")
+                    Text(LocalizationKey.forumWriteReplyPlaceholder.localized)
                         .font(.system(size: 16))
                         .foregroundColor(Color(UIColor.placeholderText))
                         .padding(.horizontal, 16)
@@ -722,7 +722,7 @@ struct ReplySheet: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         dismiss()
                     }
                 }
@@ -828,8 +828,8 @@ struct ForumPostShareSheet: View {
                     
                     // 帖子信息
                     HStack(spacing: AppSpacing.md) {
-                        Label("\(post.viewCount) 浏览", systemImage: "eye")
-                        Label("\(post.replyCount) 回复", systemImage: "bubble.left")
+                        Label("\(post.viewCount) \(LocalizationKey.forumBrowse.localized)", systemImage: "eye")
+                        Label("\(post.replyCount) \(LocalizationKey.forumRepliesCount.localized)", systemImage: "bubble.left")
                         if let category = post.category {
                             Label(category.displayName, systemImage: "tag")
                         }
@@ -883,7 +883,7 @@ struct ForumPostShareSheet: View {
     private func getShareTitle(for post: ForumPost) -> String {
         let trimmedTitle = post.displayTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedTitle.isEmpty {
-            return "看看这篇帖子"
+            return LocalizationKey.forumViewThisPost.localized
         }
         return trimmedTitle
     }
@@ -899,7 +899,7 @@ struct ForumPostShareSheet: View {
         } else {
             // 如果没有内容，使用帖子信息构建描述
             let categoryText = post.category?.displayName ?? ""
-            let statsText = "\(post.viewCount) 浏览 · \(post.replyCount) 回复"
+            let statsText = "\(post.viewCount) \(LocalizationKey.forumBrowse.localized) · \(post.replyCount) \(LocalizationKey.forumRepliesCount.localized)"
             if !categoryText.isEmpty {
                 return "\(categoryText) | \(statsText)"
             }

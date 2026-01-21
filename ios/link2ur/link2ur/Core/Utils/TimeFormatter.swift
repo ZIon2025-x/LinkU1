@@ -13,24 +13,24 @@ public struct TimeFormatter {
         )
         
         if let year = components.year, year > 0 {
-            return "\(year)年前"
+            return LocalizationKey.timeYearsAgo.localized(argument: year)
         }
         if let month = components.month, month > 0 {
-            return "\(month)个月前"
+            return LocalizationKey.timeMonthsAgo.localized(argument: month)
         }
         if let day = components.day, day > 0 {
-            return "\(day)天前"
+            return LocalizationKey.timeDaysAgo.localized(argument: day)
         }
         if let hour = components.hour, hour > 0 {
-            return "\(hour)小时前"
+            return LocalizationKey.timeHoursAgo.localized(argument: hour)
         }
         if let minute = components.minute, minute > 0 {
-            return "\(minute)分钟前"
+            return LocalizationKey.timeMinutesAgo.localized(argument: minute)
         }
         if let second = components.second, second > 0 {
-            return "\(second)秒前"
+            return LocalizationKey.timeSecondsAgo.localized(argument: second)
         }
-        return "刚刚"
+        return LocalizationKey.timeJustNow.localized
     }
     
     /// 格式化持续时间（如"2小时30分钟"）
@@ -40,11 +40,11 @@ public struct TimeFormatter {
         let seconds = Int(timeInterval) % 60
         
         if hours > 0 {
-            return "\(hours)小时\(minutes)分钟"
+            return String(format: LocalizationKey.timeDurationHoursMinutes.localized, hours, minutes)
         } else if minutes > 0 {
-            return "\(minutes)分钟\(seconds)秒"
+            return String(format: LocalizationKey.timeDurationMinutesSeconds.localized, minutes, seconds)
         } else {
-            return "\(seconds)秒"
+            return String(format: LocalizationKey.timeDurationSeconds.localized, seconds)
         }
     }
     
@@ -79,7 +79,13 @@ public struct TimeFormatter {
     
     /// 格式化日期时间（长格式）
     public static func longDateTime(_ date: Date) -> String {
-        return format(date, format: "yyyy年MM月dd日 HH:mm:ss")
+        // 使用系统 locale 的日期格式
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = TimeZone.current
+        formatter.dateStyle = .long
+        formatter.timeStyle = .medium
+        return formatter.string(from: date)
     }
     
     /// 格式化周几

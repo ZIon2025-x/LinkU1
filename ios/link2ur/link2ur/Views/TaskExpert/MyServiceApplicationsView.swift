@@ -7,9 +7,13 @@ struct MyServiceApplicationsView: View {
     @State private var selectedTab: ActivityTab = .all
     
     enum ActivityTab: String, CaseIterable {
-        case all = "全部"
-        case applied = "申请过的"
-        case favorited = "收藏的"
+        case all = "activity.tab.all"
+        case applied = "activity.tab.applied"
+        case favorited = "activity.tab.favorited"
+        
+        var localized: String {
+            return LocalizationKey(rawValue: self.rawValue)?.localized ?? self.rawValue
+        }
     }
     
     var body: some View {
@@ -28,7 +32,7 @@ struct MyServiceApplicationsView: View {
                             }
                         }) {
                             VStack(spacing: 4) {
-                                Text(tab.rawValue)
+                                Text(tab.localized)
                                     .font(AppTypography.body)
                                     .fontWeight(selectedTab == tab ? .semibold : .regular)
                                     .foregroundColor(selectedTab == tab ? AppColors.primary : AppColors.textSecondary)
@@ -96,7 +100,12 @@ struct ActivityListViewContent: View {
     // 直接依赖 allActivities 确保视图能响应数据变化
     private var filteredActivities: [ActivityWithType] {
         // 优先从缓存获取
-        let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+        let typeString: String
+        switch type {
+        case .all: typeString = "all"
+        case .applied: typeString = "applied"
+        case .favorited: typeString = "favorited"
+        }
         
         // 如果已加载过该类型，从缓存返回
         if let cached = viewModel.cachedActivities[typeString] {
@@ -158,7 +167,12 @@ struct ActivityListViewContent: View {
             }
         }
         .refreshable {
-            let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+            let typeString: String
+            switch type {
+            case .all: typeString = "all"
+            case .applied: typeString = "applied"
+            case .favorited: typeString = "favorited"
+            }
             viewModel.loadActivities(type: typeString, forceRefresh: true)
         }
     }
@@ -396,7 +410,12 @@ class MyActivitiesViewModel: ObservableObject {
     
     // 根据类型获取活动列表（从缓存中过滤）
     func getActivities(for type: MyServiceApplicationsView.ActivityTab) -> [ActivityWithType] {
-        let typeString = type.rawValue == "全部" ? "all" : (type.rawValue == "申请过的" ? "applied" : "favorited")
+        let typeString: String
+        switch type {
+        case .all: typeString = "all"
+        case .applied: typeString = "applied"
+        case .favorited: typeString = "favorited"
+        }
         
         // 如果已加载过该类型，直接返回缓存
         if let cached = cachedActivities[typeString] {
@@ -444,7 +463,7 @@ class MyActivitiesViewModel: ObservableObject {
                     DispatchQueue.main.async {
                         self?.isLoading = false
                         if case .failure(let error) = result {
-                            ErrorHandler.shared.handle(error, context: "加载我的活动")
+                            ErrorHandler.shared.handle(error, context: LocalizationKey.activityLoadFailed.localized)
                             self?.errorMessage = error.userFriendlyMessage
                         }
                     }
@@ -462,7 +481,7 @@ class MyActivitiesViewModel: ObservableObject {
                                 self?.allActivities = response.data.activities
                             }
                         } else {
-                            self?.errorMessage = "数据解析失败"
+                            self?.errorMessage = LocalizationKey.errorDecodingError.localized
                         }
                     }
                 }

@@ -364,13 +364,13 @@ struct MyItemStatusBadge: View {
     var badgeInfo: (text: String, color: Color)? {
         switch category {
         case .selling:
-            return ("在售", AppColors.success)
+            return (LocalizationKey.myItemsStatusSelling.localized, AppColors.success)
         case .purchased:
-            return ("已购", AppColors.primary)
+            return (LocalizationKey.myItemsStatusPurchased.localized, AppColors.primary)
         case .favorites:
             return nil
         case .sold:
-            return ("已售", AppColors.textTertiary)
+            return (LocalizationKey.myItemsStatusSold.localized, AppColors.textTertiary)
         }
     }
     

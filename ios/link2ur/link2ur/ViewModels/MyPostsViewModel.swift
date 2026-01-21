@@ -10,28 +10,28 @@ enum MyItemsCategory: Int, CaseIterable, Hashable {
     
     var title: String {
         switch self {
-        case .selling: return "正在出售"
-        case .purchased: return "收的闲置"
-        case .favorites: return "收藏的"
-        case .sold: return "已售出"
+        case .selling: return LocalizationKey.myItemsSelling.localized
+        case .purchased: return LocalizationKey.myItemsPurchased.localized
+        case .favorites: return LocalizationKey.myItemsFavorites.localized
+        case .sold: return LocalizationKey.myItemsSold.localized
         }
     }
     
     var emptyTitle: String {
         switch self {
-        case .selling: return "暂无在售商品"
-        case .purchased: return "暂无购买记录"
-        case .favorites: return "暂无收藏"
-        case .sold: return "暂无已售商品"
+        case .selling: return LocalizationKey.myItemsEmptySelling.localized
+        case .purchased: return LocalizationKey.myItemsEmptyPurchased.localized
+        case .favorites: return LocalizationKey.myItemsEmptyFavorites.localized
+        case .sold: return LocalizationKey.myItemsEmptySold.localized
         }
     }
     
     var emptyMessage: String {
         switch self {
-        case .selling: return "您还没有发布任何闲置商品"
-        case .purchased: return "您还没有购买过任何商品"
-        case .favorites: return "您还没有收藏任何商品"
-        case .sold: return "您还没有成功出售过商品"
+        case .selling: return LocalizationKey.myItemsEmptySellingMessage.localized
+        case .purchased: return LocalizationKey.myItemsEmptyPurchasedMessage.localized
+        case .favorites: return LocalizationKey.myItemsEmptyFavoritesMessage.localized
+        case .sold: return LocalizationKey.myItemsEmptySoldMessage.localized
         }
     }
     

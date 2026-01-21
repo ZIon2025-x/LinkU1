@@ -13,7 +13,7 @@ struct UserProfileView: View {
             
             buildContentView()
         }
-        .navigationTitle("用户资料")
+        .navigationTitle(LocalizationKey.profileUserProfile.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
@@ -425,21 +425,21 @@ struct StatsRow: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             EnhancedStatItem(
-                label: "发布任务",
+                label: LocalizationKey.profilePostedTasks.localized,
                 value: "\(profile.stats.postedTasks)",
                 icon: "square.and.pencil",
                 gradient: AppColors.gradientPrimary
             )
             
             EnhancedStatItem(
-                label: "接取任务",
+                label: LocalizationKey.profileTakenTasks.localized,
                 value: "\(profile.stats.takenTasks)",
                 icon: "hand.raised.fill",
                 gradient: AppColors.gradientSuccess
             )
             
             EnhancedStatItem(
-                label: "完成任务",
+                label: LocalizationKey.profileCompletedTasks.localized,
                 value: "\(profile.stats.completedTasks)",
                 icon: "checkmark.circle.fill",
                 gradient: AppColors.gradientWarning

@@ -495,7 +495,7 @@ struct CouponsView: View {
                         } else {
                             // 可领取优惠券标题
                             HStack {
-                                Text("可领取优惠券")
+                                Text(LocalizationKey.couponAvailableCoupons.localized)
                                     .font(AppTypography.bodyBold)
                                     .foregroundColor(AppColors.textPrimary)
                                 Spacer()
@@ -530,16 +530,16 @@ struct CouponsView: View {
                 .padding(.bottom, AppSpacing.xxl)
             }
         }
-        .alert("兑换成功", isPresented: $showRedeemSuccess) {
-            Button("确定") {
+        .alert(LocalizationKey.couponRedeemSuccess.localized, isPresented: $showRedeemSuccess) {
+            Button(LocalizationKey.commonOk.localized) {
                 viewModel.loadAvailableCoupons()
                 viewModel.loadMyCoupons()
             }
         } message: {
             Text(redeemSuccessMessage)
         }
-        .alert("兑换失败", isPresented: $showRedeemError) {
-            Button("确定", role: .cancel) {}
+        .alert(LocalizationKey.couponRedeemFailed.localized, isPresented: $showRedeemError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {}
         } message: {
             Text(redeemErrorMessage)
         }
@@ -577,7 +577,7 @@ struct RedemptionCodeInputView: View {
             HStack {
                 Image(systemName: "ticket.fill")
                     .foregroundColor(AppColors.primary)
-                Text("输入兑换码")
+                Text(LocalizationKey.couponEnterRedemptionCode.localized)
                     .font(AppTypography.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(AppColors.textPrimary)
@@ -585,7 +585,7 @@ struct RedemptionCodeInputView: View {
             }
             
             HStack(spacing: AppSpacing.sm) {
-                TextField("请输入兑换码", text: $code)
+                TextField(LocalizationKey.couponEnterRedemptionCodePlaceholder.localized, text: $code)
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.sm)
@@ -604,7 +604,7 @@ struct RedemptionCodeInputView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(width: 24, height: 24)
                     } else {
-                        Text("兑换")
+                        Text(LocalizationKey.couponRedeem.localized)
                             .font(AppTypography.subheadline)
                             .fontWeight(.semibold)
                     }
@@ -802,21 +802,21 @@ struct CouponCardView: View {
                     .offset(x: -UIScreen.main.bounds.width/2 + 100 + 16 + 6, y: 50)
             }
         )
-        .alert("确认兑换", isPresented: $showPointsRedeemConfirm) {
-            Button("取消", role: .cancel) {}
-            Button("确认兑换") {
+        .alert(LocalizationKey.couponConfirmRedeem.localized, isPresented: $showPointsRedeemConfirm) {
+            Button(LocalizationKey.commonCancel.localized, role: .cancel) {}
+            Button(LocalizationKey.couponConfirmRedeem.localized) {
                 redeemWithPoints()
             }
         } message: {
-            Text("确定使用 \(coupon.pointsRequired ?? 0) 积分兑换此优惠券吗？")
+            Text(String(format: LocalizationKey.couponConfirmRedeemWithPoints.localized, coupon.pointsRequired ?? 0))
         }
-        .alert("兑换成功", isPresented: $showRedeemSuccess) {
-            Button("确定") {}
+        .alert(LocalizationKey.couponRedeemSuccess.localized, isPresented: $showRedeemSuccess) {
+            Button(LocalizationKey.commonOk.localized) {}
         } message: {
             Text(redeemMessage)
         }
-        .alert("兑换失败", isPresented: $showRedeemError) {
-            Button("确定", role: .cancel) {}
+        .alert(LocalizationKey.couponRedeemFailed.localized, isPresented: $showRedeemError) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {}
         } message: {
             Text(redeemErrorMessage)
         }

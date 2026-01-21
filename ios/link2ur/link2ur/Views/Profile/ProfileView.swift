@@ -103,7 +103,7 @@ struct ProfileView: View {
                     }
                 }
                 
-                Text(appState.currentUser?.email ?? appState.currentUser?.phone ?? "未绑定联系方式")
+                Text(appState.currentUser?.email ?? appState.currentUser?.phone ?? LocalizationKey.profileNoContactInfo.localized)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.textSecondary)
                     .padding(.horizontal, 12)
@@ -119,12 +119,12 @@ struct ProfileView: View {
     
     private var statsSection: some View {
         HStack(spacing: 0) {
-            StatItem(label: "进行中", value: "\(tasksViewModel.inProgressTasksCount)", color: AppColors.primary)
+            StatItem(label: LocalizationKey.profileInProgress.localized, value: "\(tasksViewModel.inProgressTasksCount)", color: AppColors.primary)
             Divider().frame(height: 30)
-            StatItem(label: "已完成", value: "\(tasksViewModel.completedTasksCount)", color: AppColors.success)
+            StatItem(label: LocalizationKey.profileCompleted.localized, value: "\(tasksViewModel.completedTasksCount)", color: AppColors.success)
             Divider().frame(height: 30)
             StatItem(
-                label: "信用分",
+                label: LocalizationKey.profileCreditScore.localized,
                 value: creditScoreDisplay,
                 color: AppColors.warning
             )
@@ -152,34 +152,34 @@ struct ProfileView: View {
     
     private var myContentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("我的内容")
+            Text(LocalizationKey.profileMyContent.localized)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
                 .padding(.horizontal, AppSpacing.sm)
             
             VStack(spacing: 0) {
                 NavigationLink(destination: MyTasksView()) {
-                    ProfileRow(icon: "list.bullet.rectangle.fill", title: LocalizationKey.profileMyTasks.localized, subtitle: "管理我发布和接受的任务", color: AppColors.primary)
+                    ProfileRow(icon: "list.bullet.rectangle.fill", title: LocalizationKey.profileMyTasks.localized, subtitle: LocalizationKey.profileMyTasksSubtitleText.localized, color: AppColors.primary)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: MyPostsView()) {
-                    ProfileRow(icon: "shippingbox.fill", title: LocalizationKey.profileMyPosts.localized, subtitle: "闲置物品交易记录", color: Color.orange)
+                    ProfileRow(icon: "shippingbox.fill", title: LocalizationKey.profileMyPosts.localized, subtitle: LocalizationKey.profileMyPostsSubtitleText.localized, color: Color.orange)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: MyForumPostsView()) {
-                    ProfileRow(icon: "doc.text.fill", title: "我的帖子", subtitle: "查看我在论坛发布的讨论", color: Color.blue)
+                    ProfileRow(icon: "doc.text.fill", title: LocalizationKey.profileMyForumPosts.localized, subtitle: LocalizationKey.profileMyForumPostsSubtitle.localized, color: Color.blue)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: WalletView()) {
-                    ProfileRow(icon: "creditcard.fill", title: LocalizationKey.profileMyWallet.localized, subtitle: "余额、充值与提现", color: AppColors.success)
+                    ProfileRow(icon: "creditcard.fill", title: LocalizationKey.profileMyWallet.localized, subtitle: LocalizationKey.profileMyWalletSubtitleText.localized, color: AppColors.success)
                 }
                 Divider().padding(.leading, 56)
                 
-                NavigationLink(destination: CouponPointsView()) {
-                    ProfileRow(icon: "ticket.fill", title: LocalizationKey.profilePointsCoupons.localized, subtitle: "积分明细与优惠券", color: Color.pink)
+                NavigationLink(destination: MyServiceApplicationsView()) {
+                    ProfileRow(icon: "bolt.shield.fill", title: LocalizationKey.profileMyApplications.localized, subtitle: LocalizationKey.profileMyApplicationsSubtitleText.localized, color: Color.purple)
                 }
             }
             .background(AppColors.cardBackground)
@@ -191,34 +191,34 @@ struct ProfileView: View {
     
     private var systemSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("系统与验证")
+            Text(LocalizationKey.profileSystemAndVerification.localized)
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
                 .padding(.horizontal, AppSpacing.sm)
             
             VStack(spacing: 0) {
                 NavigationLink(destination: StudentVerificationView()) {
-                    ProfileRow(icon: "graduationcap.fill", title: LocalizationKey.profileStudentVerification.localized, subtitle: "获取学生专属认证标识", color: Color.indigo)
+                    ProfileRow(icon: "graduationcap.fill", title: LocalizationKey.profileStudentVerification.localized, subtitle: LocalizationKey.profileStudentVerificationSubtitleText.localized, color: Color.indigo)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: ActivityListView()) {
-                    ProfileRow(icon: "calendar.badge.clock", title: LocalizationKey.profileActivity.localized, subtitle: "查看我参与的线下活动", color: Color.orange)
+                    ProfileRow(icon: "calendar.badge.clock", title: LocalizationKey.profileActivity.localized, subtitle: LocalizationKey.profileActivitySubtitleText.localized, color: Color.orange)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: TaskPreferencesView()) {
-                    ProfileRow(icon: "heart.text.square.fill", title: "任务偏好", subtitle: "个性化定制推荐内容", color: Color.red)
+                    ProfileRow(icon: "heart.text.square.fill", title: LocalizationKey.profileTaskPreferences.localized, subtitle: LocalizationKey.profileTaskPreferencesSubtitle.localized, color: Color.red)
                 }
                 Divider().padding(.leading, 56)
                 
-                NavigationLink(destination: MyServiceApplicationsView()) {
-                    ProfileRow(icon: "bolt.shield.fill", title: LocalizationKey.profileMyApplications.localized, subtitle: "达人/服务商申请状态", color: Color.purple)
+                NavigationLink(destination: CouponPointsView()) {
+                    ProfileRow(icon: "ticket.fill", title: LocalizationKey.profilePointsCoupons.localized, subtitle: LocalizationKey.profilePointsCouponsSubtitleText.localized, color: Color.pink)
                 }
                 Divider().padding(.leading, 56)
                 
                 NavigationLink(destination: SettingsView()) {
-                    ProfileRow(icon: "gearshape.fill", title: LocalizationKey.profileSettings.localized, subtitle: "个人资料、密码与安全", color: Color.gray)
+                    ProfileRow(icon: "gearshape.fill", title: LocalizationKey.profileSettings.localized, subtitle: LocalizationKey.profileSettingsSubtitleText.localized, color: Color.gray)
                 }
             }
             .background(AppColors.cardBackground)

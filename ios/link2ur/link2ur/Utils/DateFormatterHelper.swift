@@ -20,7 +20,7 @@ class DateFormatterHelper {
     
     func formatTime(_ timeString: String) -> String {
         guard let date = parseDate(timeString) else {
-            return "刚刚"
+            return LocalizationKey.timeJustNow.localized
         }
         
         let now = Date()
@@ -28,25 +28,25 @@ class DateFormatterHelper {
         
         // 小于1分钟
         if timeInterval < 60 {
-            return "刚刚"
+            return LocalizationKey.timeJustNow.localized
         }
         
         // 小于1小时
         if timeInterval < 3600 {
             let minutes = Int(timeInterval / 60)
-            return "\(minutes)分钟前"
+            return LocalizationKey.timeMinutesAgo.localized(argument: minutes)
         }
         
         // 小于24小时
         if timeInterval < 86400 {
             let hours = Int(timeInterval / 3600)
-            return "\(hours)小时前"
+            return LocalizationKey.timeHoursAgo.localized(argument: hours)
         }
         
         // 小于7天
         if timeInterval < 604800 {
             let days = Int(timeInterval / 86400)
-            return "\(days)天前"
+            return LocalizationKey.timeDaysAgo.localized(argument: days)
         }
         
         // 超过7天，显示具体日期
@@ -56,11 +56,11 @@ class DateFormatterHelper {
         
         // 根据用户 locale 选择合适的日期格式
         if userLocale.identifier.hasPrefix("zh") {
-            // 中文格式
-            displayFormatter.dateFormat = "MM月dd日"
-            if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
-                displayFormatter.dateFormat = "yyyy年MM月dd日"
-            }
+            // 中文格式：使用本地化的日期格式
+            let format = calendar.component(.year, from: date) != calendar.component(.year, from: now) 
+                ? LocalizationKey.timeYearMonthDayFormat.localized 
+                : LocalizationKey.timeMonthDayFormat.localized
+            displayFormatter.dateFormat = format
         } else {
             // 英文或其他语言格式 - 使用系统默认格式
             displayFormatter.dateStyle = .medium
@@ -101,7 +101,7 @@ class DateFormatterHelper {
     
     func formatDeadline(_ deadlineString: String) -> String {
         guard let deadline = parseDate(deadlineString) else {
-            return "截止时间未知"
+            return LocalizationKey.timeDeadlineUnknown.localized
         }
         
         let now = Date()
@@ -109,7 +109,7 @@ class DateFormatterHelper {
         
         // 已过期
         if timeInterval <= 0 {
-            return "已过期"
+            return LocalizationKey.timeExpired.localized
         }
         
         let totalMinutes = Int(timeInterval / 60)
@@ -120,24 +120,24 @@ class DateFormatterHelper {
         // 超过30天：显示月数
         if days >= 30 {
             let months = days / 30
-            return "\(months)个月"
+            return LocalizationKey.timeMonths.localized(argument: months)
         }
         // 7-29天：显示周数
         else if days >= 7 {
             let weeks = days / 7
-            return "\(weeks)周"
+            return LocalizationKey.timeWeeks.localized(argument: weeks)
         }
         // 1-6天：显示天数
         else if days > 0 {
-            return "\(days)天"
+            return LocalizationKey.timeDays.localized(argument: days)
         }
         // 小于1天但大于1小时：显示小时数
         else if hours > 0 {
-            return "\(hours)小时"
+            return LocalizationKey.timeHours.localized(argument: hours)
         }
         // 小于1小时：显示分钟数
         else {
-            return "\(minutes)分钟"
+            return LocalizationKey.timeMinutes.localized(argument: minutes)
         }
     }
     
@@ -227,17 +227,20 @@ extension Int {
             }
         } else if self < 100000 {
             let wan = Double(self) / 10000.0
+            let wanText = LocalizationKey.timeWan.localized
             // 如果是整数，不显示小数
             if wan.truncatingRemainder(dividingBy: 1) == 0 {
-                return "\(Int(wan))万"
+                return "\(Int(wan))\(wanText)"
             } else {
                 // 保留一位小数
-                return String(format: "%.1f万", wan)
+                return String(format: "%.1f\(wanText)", wan)
             }
         } else {
             // 10万及以上显示为 "10万+"
             let wan = self / 10000
-            return "\(wan)万+"
+            let wanText = LocalizationKey.timeWan.localized
+            let plusText = LocalizationKey.timeWanPlus.localized
+            return "\(wan)\(wanText)\(plusText)"
         }
     }
 }

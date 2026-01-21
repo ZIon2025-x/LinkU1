@@ -301,6 +301,22 @@
 "time.weeks_ago" = "%d週前";
 "time.months_ago" = "%d個月前";
 "time.years_ago" = "%d年前";
+"time.seconds_ago" = "%d秒前";
+"time.deadline_unknown" = "截止時間未知";
+"time.expired" = "已過期";
+"time.months" = "%d個月";
+"time.weeks" = "%d週";
+"time.days" = "%d天";
+"time.hours" = "%d小時";
+"time.minutes" = "%d分鐘";
+"time.seconds" = "%d秒";
+"time.month_day_format" = "MM月dd日";
+"time.year_month_day_format" = "yyyy年MM月dd日";
+"time.duration_hours_minutes" = "%d小時%d分鐘";
+"time.duration_minutes_seconds" = "%d分鐘%d秒";
+"time.duration_seconds" = "%d秒";
+"time.wan" = "萬";
+"time.wan_plus" = "+";
 
 // MARK: - Tabs
 "tabs.home" = "首頁";
@@ -551,6 +567,14 @@
 "coupon.min_amount_available" = "滿%@可用";
 "coupon.available" = "可領取的";
 "coupon.my_coupons" = "我的卡券";
+"coupon.available_coupons" = "可領取優惠券";
+"coupon.redeem_success" = "兌換成功";
+"coupon.redeem_failed" = "兌換失敗";
+"coupon.enter_redemption_code" = "輸入兌換碼";
+"coupon.enter_redemption_code_placeholder" = "請輸入兌換碼";
+"coupon.redeem" = "兌換";
+"coupon.confirm_redeem" = "確認兌換";
+"coupon.confirm_redeem_with_points" = "確定使用 %d 積分兌換此優惠券嗎？";
 "coupon.no_threshold" = "無門檻";
 "coupon.claim_now" = "立即領取";
 "coupon.valid_until" = "有效期至: %@";
@@ -613,6 +637,9 @@
 "activity.all" = "全部";
 "activity.active" = "進行中";
 "activity.ended" = "已結束";
+"activity.tab.all" = "全部";
+"activity.tab.applied" = "申請過的";
+"activity.tab.favorited" = "收藏的";
 "activity.activities" = "活動";
 "activity.no_ended_activities" = "暫無已結束的活動";
 "activity.no_ended_activities_message" = "沒有已結束的活動記錄";
@@ -898,3 +925,119 @@
 "shortcuts.view_flea_market_description" = "瀏覽和發布二手商品";
 "shortcuts.view_forum" = "查看論壇";
 "shortcuts.view_forum_description" = "參與社區討論";
+
+// MARK: - Profile Extended
+"profile.in_progress" = "進行中";
+"profile.completed" = "已完成";
+"profile.credit_score" = "信用分";
+"profile.my_content" = "我的內容";
+"profile.system_and_verification" = "系統與驗證";
+"profile.my_tasks_subtitle_text" = "管理我發布和接受的任務";
+"profile.my_posts_subtitle_text" = "閒置物品交易記錄";
+"profile.my_forum_posts" = "我的帖子";
+"profile.my_forum_posts_subtitle" = "查看我在論壇發布的討論";
+"profile.my_wallet_subtitle_text" = "餘額、充值與提現";
+"profile.points_coupons_subtitle_text" = "積分明細與優惠券";
+"profile.student_verification_subtitle_text" = "獲取學生專屬認證標識";
+"profile.activity_subtitle_text" = "查看我參與的線下活動";
+"profile.task_preferences" = "任務偏好";
+"profile.task_preferences_subtitle" = "個性化定制推薦內容";
+"profile.my_applications_subtitle_text" = "達人/服務商申請狀態";
+"profile.settings_subtitle_text" = "個人資料、密碼與安全";
+"profile.no_contact_info" = "未綁定聯繫方式";
+"profile.user_profile" = "用戶資料";
+"profile.posted_tasks" = "發布任務";
+"profile.taken_tasks" = "接取任務";
+"profile.completed_tasks" = "完成任務";
+
+// MARK: - My Items Category
+"my_items.selling" = "正在出售";
+"my_items.purchased" = "收的閒置";
+"my_items.favorites" = "收藏的";
+"my_items.sold" = "已售出";
+"my_items.empty.selling" = "暫無在售商品";
+"my_items.empty.purchased" = "暫無購買記錄";
+"my_items.empty.favorites" = "暫無收藏";
+"my_items.empty.sold" = "暫無已售商品";
+"my_items.empty.selling_message" = "您還沒有發布任何閒置商品";
+"my_items.empty.purchased_message" = "您還沒有購買過任何商品";
+"my_items.empty.favorites_message" = "您還沒有收藏任何商品";
+"my_items.empty.sold_message" = "您還沒有成功出售過商品";
+"my_items.status.selling" = "在售";
+"my_items.status.purchased" = "已購";
+"my_items.status.sold" = "已售";
+
+// MARK: - Forum Post Detail Extended
+"forum.pinned" = "置頂";
+"forum.featured" = "精華";
+"forum.write_reply_placeholder" = "寫下你的回復...";
+"forum.view_this_post" = "看看這篇帖子";
+"forum.browse" = "瀏覽";
+"forum.replies_count" = "回復";
+
+// MARK: - Flea Market Detail Extended
+"flea_market.status.active" = "在售";
+"flea_market.status.delisted" = "已下架";
+"flea_market.refreshing" = "延時中";
+"flea_market.refresh" = "延時";
+"flea_market.confirm" = "確認";
+"flea_market.submit" = "提交";
+"flea_market.view_item" = "查看這個商品";
+"flea_market.saving" = "正在保存...";
+"flea_market.save_changes" = "保存修改";
+"flea_market.edit_item" = "編輯商品";
+"flea_market.category.electronics" = "電子產品";
+"flea_market.category.clothing" = "服裝配飾";
+"flea_market.category.furniture" = "傢俱家電";
+"flea_market.category.books" = "圖書文具";
+"flea_market.category.sports" = "運動戶外";
+"flea_market.category.beauty" = "美妝護膚";
+"flea_market.category.other" = "其他";
+"flea_market.partial_upload_failed" = "部分圖片上傳失敗，請重試";
+"flea_market.fill_required_fields" = "請填寫所有必填項";
+
+// MARK: - Forum Posts Extended
+"forum.my_posts" = "我的帖子";
+"forum.my_posts.posted" = "我發布的";
+"forum.my_posts.favorited" = "我收藏的";
+"forum.my_posts.liked" = "我喜歡的";
+"forum.my_posts.empty.posted" = "您還沒有發布過帖子";
+"forum.my_posts.empty.favorited" = "您還沒有收藏過帖子";
+"forum.my_posts.empty.liked" = "您還沒有喜歡過帖子";
+"forum.load_failed" = "加載失敗";
+"forum.retry" = "重試";
+
+// MARK: - Forum Category Request
+"forum.no_categories" = "暫無板塊";
+"forum.categories_loading" = "論壇板塊加載中...";
+"forum.request_new_category" = "申請新建板塊";
+"forum.request_submitted" = "申請已提交";
+"forum.request_submitted_message" = "您的申請已成功提交，管理員將在審核後通知您結果。";
+"forum.request_instructions" = "申請說明";
+"forum.request_instructions_text" = "填寫以下信息申請新建論壇板塊。您的申請將由管理員審核，審核通過後板塊將正式創建。";
+"forum.category_name" = "板塊名稱";
+"forum.category_name_placeholder" = "請輸入板塊名稱";
+"forum.category_description" = "板塊描述";
+"forum.category_description_placeholder" = "請簡要描述這個板塊的用途和討論主題";
+"forum.category_icon" = "板塊圖標（可選）";
+"forum.category_icon_hint" = "可以輸入一個 emoji 表情作為板塊圖標，例如：💬、📚、🎮 等";
+"forum.category_icon_example" = "例如：💬";
+"forum.category_icon_entered" = "已輸入 1 個 emoji";
+"forum.submit_request" = "提交申請";
+"forum.my_requests" = "我的申請";
+"forum.request_status.all" = "全部";
+"forum.request_status.pending" = "待審核";
+"forum.request_status.approved" = "已通過";
+"forum.request_status.rejected" = "已拒絕";
+"forum.no_requests" = "暫無申請";
+"forum.no_requests_message" = "您還沒有提交過板塊申請。";
+"forum.no_requests_filtered" = "沒有找到相關狀態的申請。";
+"forum.review_comment" = "審核意見";
+"forum.review_time" = "審核時間";
+"forum.request_time" = "申請時間";
+"forum.request_name_required" = "請輸入板塊名稱";
+"forum.request_name_too_long" = "板塊名稱不能超過%d個字符";
+"forum.request_description_too_long" = "板塊描述不能超過%d個字符";
+"forum.request_icon_too_long" = "圖標不能超過%d個字符";
+"forum.request_submit_failed" = "提交失敗，請檢查輸入內容是否正確";
+"forum.request_login_expired" = "登錄已過期，請重新登錄";

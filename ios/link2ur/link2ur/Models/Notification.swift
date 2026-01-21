@@ -16,7 +16,7 @@ struct DynamicCodingKeys: CodingKey {
 }
 
 // 系统通知
-struct SystemNotification: Codable, Identifiable, Equatable {
+struct SystemNotification: Codable, Identifiable {
     let id: Int
     let userId: String?  // 后端返回 user_id
     let title: String
@@ -29,7 +29,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
     let relatedId: Int?  // 后端返回 related_id（可能是字符串或整数）
     let link: String?  // iOS 扩展字段，可能为空
     let taskId: Int?  // 对于 application_message 和 negotiation_offer 类型，存储 task_id
-    let variables: [String: Any]?  // 动态变量（用于格式化翻译键）
+    let variables: [String: AnyCodable]?  // 动态变量（用于格式化翻译键）
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -59,7 +59,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         taskId: Int?,
         titleEn: String? = nil,
         contentEn: String? = nil,
-        variables: [String: Any]? = nil
+        variables: [String: AnyCodable]? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -93,11 +93,7 @@ struct SystemNotification: Codable, Identifiable, Equatable {
         taskId = try container.decodeIfPresent(Int.self, forKey: .taskId)
         
         // 解码 variables（使用 AnyCodable 处理动态类型）
-        if let variablesData = try? container.decodeIfPresent([String: AnyCodable].self, forKey: .variables) {
-            variables = variablesData.mapValues { $0.value }
-        } else {
-            variables = nil
-        }
+        variables = try? container.decodeIfPresent([String: AnyCodable].self, forKey: .variables)
         
         // 处理 related_id：可能是字符串或整数
         if let relatedIdInt = try? container.decode(Int.self, forKey: .relatedId) {
@@ -124,8 +120,56 @@ struct SystemNotification: Codable, Identifiable, Equatable {
             link: self.link,
             taskId: self.taskId,
             titleEn: self.titleEn,
-            contentEn: self.contentEn
+            contentEn: self.contentEn,
+            variables: self.variables
         )
+    }
+}
+
+// 实现 Equatable
+extension SystemNotification: Equatable {
+    static func == (lhs: SystemNotification, rhs: SystemNotification) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.userId == rhs.userId &&
+               lhs.title == rhs.title &&
+               lhs.content == rhs.content &&
+               lhs.titleEn == rhs.titleEn &&
+               lhs.contentEn == rhs.contentEn &&
+               lhs.type == rhs.type &&
+               lhs.isRead == rhs.isRead &&
+               lhs.createdAt == rhs.createdAt &&
+               lhs.relatedId == rhs.relatedId &&
+               lhs.link == rhs.link &&
+               lhs.taskId == rhs.taskId &&
+               areVariablesEqual(lhs.variables, rhs.variables)
+    }
+    
+    private static func areVariablesEqual(_ lhs: [String: AnyCodable]?, _ rhs: [String: AnyCodable]?) -> Bool {
+        guard let lhs = lhs, let rhs = rhs else {
+            return lhs == nil && rhs == nil
+        }
+        guard lhs.count == rhs.count else { return false }
+        for (key, lhsValue) in lhs {
+            guard let rhsValue = rhs[key] else { return false }
+            // 比较 AnyCodable 的值
+            if !areValuesEqual(lhsValue.value, rhsValue.value) {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private static func areValuesEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        if let lhs = lhs as? String, let rhs = rhs as? String {
+            return lhs == rhs
+        } else if let lhs = lhs as? Int, let rhs = rhs as? Int {
+            return lhs == rhs
+        } else if let lhs = lhs as? Double, let rhs = rhs as? Double {
+            return lhs == rhs
+        } else if let lhs = lhs as? Bool, let rhs = rhs as? Bool {
+            return lhs == rhs
+        }
+        return false
     }
 }
 
@@ -383,9 +427,12 @@ struct UnifiedNotification: Identifiable {
             ? systemNotification.content 
             : (systemNotification.contentEn ?? systemNotification.content)
         
+        // 将 AnyCodable 转换为 [String: Any]
+        let variablesDict: [String: Any] = systemNotification.variables?.mapValues { $0.value } ?? [:]
+        
         self.content = UnifiedNotification.getSystemNotificationContent(
             type: systemNotification.type ?? "unknown",
-            variables: systemNotification.variables ?? [:],
+            variables: variablesDict,
             fallbackContent: fallbackContent
         )
         self.relatedId = systemNotification.relatedId

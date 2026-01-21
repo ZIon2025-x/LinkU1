@@ -1,9 +1,17 @@
 import SwiftUI
 
 enum MyForumPostsTab: String, CaseIterable {
-    case posted = "我发布的"
-    case favorited = "我收藏的"
-    case liked = "我喜欢的"
+    case posted = "forum.my_posts.posted"
+    case favorited = "forum.my_posts.favorited"
+    case liked = "forum.my_posts.liked"
+    
+    var localizedTitle: String {
+        switch self {
+        case .posted: return LocalizationKey.forumMyPostsPosted.localized
+        case .favorited: return LocalizationKey.forumMyPostsFavorited.localized
+        case .liked: return LocalizationKey.forumMyPostsLiked.localized
+        }
+    }
     
     var icon: String {
         switch self {
@@ -39,7 +47,7 @@ struct MyForumPostsView: View {
                         posts: viewModel.myPosts,
                         isLoading: viewModel.isLoadingMyPosts,
                         errorMessage: viewModel.errorMessageMyPosts,
-                        emptyMessage: "您还没有发布过帖子",
+                        emptyMessage: LocalizationKey.forumMyPostsEmptyPosted.localized,
                         emptyIcon: "doc.text.fill"
                     )
                     .tag(MyForumPostsTab.posted)
@@ -49,7 +57,7 @@ struct MyForumPostsView: View {
                         posts: viewModel.favoritedPosts,
                         isLoading: viewModel.isLoadingFavoritedPosts,
                         errorMessage: viewModel.errorMessageFavoritedPosts,
-                        emptyMessage: "您还没有收藏过帖子",
+                        emptyMessage: LocalizationKey.forumMyPostsEmptyFavorited.localized,
                         emptyIcon: "star.fill"
                     )
                     .tag(MyForumPostsTab.favorited)
@@ -59,7 +67,7 @@ struct MyForumPostsView: View {
                         posts: viewModel.likedPosts,
                         isLoading: viewModel.isLoadingLikedPosts,
                         errorMessage: viewModel.errorMessageLikedPosts,
-                        emptyMessage: "您还没有喜欢过帖子",
+                        emptyMessage: LocalizationKey.forumMyPostsEmptyLiked.localized,
                         emptyIcon: "heart.fill"
                     )
                     .tag(MyForumPostsTab.liked)
@@ -74,7 +82,7 @@ struct MyForumPostsView: View {
                 }
             }
         }
-        .navigationTitle("我的帖子")
+        .navigationTitle(LocalizationKey.forumMyPosts.localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -126,7 +134,7 @@ struct MyForumPostsView: View {
                     .font(.system(size: 48))
                     .foregroundColor(AppColors.error.opacity(0.6))
                 
-                Text("加载失败")
+                Text(LocalizationKey.forumLoadFailed.localized)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -136,7 +144,7 @@ struct MyForumPostsView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, AppSpacing.xl)
                 
-                Button("重试") {
+                Button(LocalizationKey.forumRetry.localized) {
                     loadDataForCurrentTab(forceRefresh: true)
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -307,7 +315,7 @@ struct ForumPostsTabButton: View {
             HStack(spacing: 6) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 12, weight: .medium))
-                Text(tab.rawValue)
+                Text(tab.localizedTitle)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
             }
             .foregroundColor(isSelected ? .white : AppColors.textSecondary)

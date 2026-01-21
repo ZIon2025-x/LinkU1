@@ -83,7 +83,7 @@ struct FleaMarketDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
-                    ShareLink(item: "查看这个商品: \(viewModel.item?.title ?? "")") {
+                    ShareLink(item: "\(LocalizationKey.fleaMarketViewItem.localized): \(viewModel.item?.title ?? "")") {
                         Circle()
                             .fill(Color.black.opacity(0.3))
                             .frame(width: 36, height: 36)
@@ -346,7 +346,7 @@ struct FleaMarketDetailView: View {
                     Circle()
                         .fill(item.status == "active" ? Color.green : Color.gray)
                         .frame(width: 6, height: 6)
-                    Text(item.status == "active" ? "在售" : "已下架")
+                    Text(item.status == "active" ? LocalizationKey.fleaMarketStatusActive.localized : LocalizationKey.fleaMarketStatusDelisted.localized)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(item.status == "active" ? .green : .gray)
                 }
@@ -570,7 +570,7 @@ struct FleaMarketDetailView: View {
                                 Image(systemName: "arrow.clockwise")
                                     .font(.system(size: 15, weight: .semibold))
                             }
-                            Text(isRefreshing ? "延时中" : "延时")
+                            Text(isRefreshing ? LocalizationKey.fleaMarketRefreshing.localized : LocalizationKey.fleaMarketRefresh.localized)
                                 .font(.system(size: 15, weight: .semibold))
                         }
                         .foregroundColor(.white)
@@ -819,7 +819,7 @@ struct PurchaseSheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onPurchase) {
-                        Text(purchaseType == .direct ? "确认" : "提交")
+                        Text(purchaseType == .direct ? LocalizationKey.fleaMarketConfirm.localized : LocalizationKey.fleaMarketSubmit.localized)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)

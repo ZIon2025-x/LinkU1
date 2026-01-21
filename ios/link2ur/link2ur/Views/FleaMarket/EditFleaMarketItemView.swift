@@ -233,7 +233,7 @@ struct EditFleaMarketItemView: View {
                             } else {
                                 IconStyle.icon("checkmark.circle.fill", size: 18)
                             }
-                            Text(viewModel.isLoading || viewModel.isUploading ? "正在保存..." : "保存修改")
+                            Text(viewModel.isLoading || viewModel.isUploading ? LocalizationKey.fleaMarketSaving.localized : LocalizationKey.fleaMarketSaveChanges.localized)
                                 .font(AppTypography.bodyBold)
                         }
                     }
@@ -247,7 +247,7 @@ struct EditFleaMarketItemView: View {
             }
             .background(AppColors.background)
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("编辑商品")
+            .navigationTitle(LocalizationKey.fleaMarketEditItem.localized)
             .navigationBarTitleDisplayMode(.inline)
             .enableSwipeBack()
             .contentShape(Rectangle())
@@ -610,7 +610,17 @@ class EditFleaMarketItemViewModel: ObservableObject {
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     
-    let categories = ["电子产品", "服装配饰", "家具家电", "图书文具", "运动户外", "美妆护肤", "其他"]
+    var categories: [String] {
+        [
+            LocalizationKey.fleaMarketCategoryElectronics.localized,
+            LocalizationKey.fleaMarketCategoryClothing.localized,
+            LocalizationKey.fleaMarketCategoryFurniture.localized,
+            LocalizationKey.fleaMarketCategoryBooks.localized,
+            LocalizationKey.fleaMarketCategorySports.localized,
+            LocalizationKey.fleaMarketCategoryBeauty.localized,
+            LocalizationKey.fleaMarketCategoryOther.localized
+        ]
+    }
     
     init(item: FleaMarketItem, apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
@@ -675,7 +685,7 @@ class EditFleaMarketItemViewModel: ObservableObject {
                 if let firstError = uploadErrors.first {
                     ErrorHandler.shared.handle(firstError, context: "上传商品图片")
                 }
-                self?.errorMessage = "部分图片上传失败，请重试"
+                self?.errorMessage = LocalizationKey.fleaMarketPartialUploadFailed.localized
                 completion(false)
             }
         }
@@ -683,7 +693,7 @@ class EditFleaMarketItemViewModel: ObservableObject {
     
     func updateItem(itemId: String, completion: @escaping (Bool) -> Void) {
         guard !title.isEmpty, !description.isEmpty, let price = price, price > 0 else {
-            errorMessage = "请填写所有必填项"
+            errorMessage = LocalizationKey.fleaMarketFillRequiredFields.localized
             return
         }
         

@@ -322,13 +322,13 @@ struct ExpertCard: View {
                     // 单数和完成率
                     HStack(spacing: 4) {
                         if let completed = expert.completedTasks {
-                            Text("\(completed)\(LocalizationKey.taskExpertOrder.localized)")
+                            Text("\(completed) \(LocalizationKey.taskExpertOrder.localized)")
                                 .font(AppTypography.caption)
                         }
                         
                         if let rate = expert.completionRate {
                             Text("·")
-                            Text(String(format: LocalizationKey.taskExpertCompletionRatePercent.localized, Int(rate)))
+                            Text("\(Int(rate))%")
                                 .font(AppTypography.caption)
                         }
                     }

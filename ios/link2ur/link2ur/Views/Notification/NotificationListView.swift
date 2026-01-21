@@ -607,9 +607,12 @@ struct NotificationDetailView: View {
             ? notification.content 
             : (notification.contentEn ?? notification.content)
         
+        // 将 AnyCodable 转换为 [String: Any]
+        let variablesDict: [String: Any] = notification.variables?.mapValues { $0.value } ?? [:]
+        
         return UnifiedNotification.getSystemNotificationContent(
             type: notification.type ?? "unknown",
-            variables: notification.variables ?? [:],
+            variables: variablesDict,
             fallbackContent: fallbackContent
         )
     }

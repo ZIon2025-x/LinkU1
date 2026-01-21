@@ -468,6 +468,22 @@
 "time.weeks_ago" = "%d周前";
 "time.months_ago" = "%d个月前";
 "time.years_ago" = "%d年前";
+"time.seconds_ago" = "%d秒前";
+"time.deadline_unknown" = "截止时间未知";
+"time.expired" = "已过期";
+"time.months" = "%d个月";
+"time.weeks" = "%d周";
+"time.days" = "%d天";
+"time.hours" = "%d小时";
+"time.minutes" = "%d分钟";
+"time.seconds" = "%d秒";
+"time.month_day_format" = "MM月dd日";
+"time.year_month_day_format" = "yyyy年MM月dd日";
+"time.duration_hours_minutes" = "%d小时%d分钟";
+"time.duration_minutes_seconds" = "%d分钟%d秒";
+"time.duration_seconds" = "%d秒";
+"time.wan" = "万";
+"time.wan_plus" = "+";
 
 // MARK: - Tabs
 "tabs.home" = "首页";
@@ -801,6 +817,14 @@
 "coupon.available" = "可领取的";
 "coupon.discount" = "%d%% 折扣";
 "coupon.my_coupons" = "我的卡券";
+"coupon.available_coupons" = "可领取优惠券";
+"coupon.redeem_success" = "兑换成功";
+"coupon.redeem_failed" = "兑换失败";
+"coupon.enter_redemption_code" = "输入兑换码";
+"coupon.enter_redemption_code_placeholder" = "请输入兑换码";
+"coupon.redeem" = "兑换";
+"coupon.confirm_redeem" = "确认兑换";
+"coupon.confirm_redeem_with_points" = "确定使用 %d 积分兑换此优惠券吗？";
 "coupon.no_threshold" = "无门槛";
 "coupon.claim_now" = "立即领取";
 "coupon.valid_until" = "有效期至: %@";
@@ -910,6 +934,9 @@
 "activity.all" = "全部";
 "activity.active" = "进行中";
 "activity.ended" = "已结束";
+"activity.tab.all" = "全部";
+"activity.tab.applied" = "申请过的";
+"activity.tab.favorited" = "收藏的";
 "activity.activities" = "活动";
 "activity.no_ended_activities" = "暂无已结束的活动";
 "activity.no_ended_activities_message" = "没有已结束的活动记录";
@@ -1393,3 +1420,119 @@
 "shortcuts.view_flea_market_description" = "浏览和发布二手商品";
 "shortcuts.view_forum" = "查看论坛";
 "shortcuts.view_forum_description" = "参与社区讨论";
+
+// MARK: - Profile Extended
+"profile.in_progress" = "进行中";
+"profile.completed" = "已完成";
+"profile.credit_score" = "信用分";
+"profile.my_content" = "我的内容";
+"profile.system_and_verification" = "系统与验证";
+"profile.my_tasks_subtitle_text" = "管理我发布和接受的任务";
+"profile.my_posts_subtitle_text" = "闲置物品交易记录";
+"profile.my_forum_posts" = "我的帖子";
+"profile.my_forum_posts_subtitle" = "查看我在论坛发布的讨论";
+"profile.my_wallet_subtitle_text" = "余额、充值与提现";
+"profile.points_coupons_subtitle_text" = "积分明细与优惠券";
+"profile.student_verification_subtitle_text" = "获取学生专属认证标识";
+"profile.activity_subtitle_text" = "查看我参与的线下活动";
+"profile.task_preferences" = "任务偏好";
+"profile.task_preferences_subtitle" = "个性化定制推荐内容";
+"profile.my_applications_subtitle_text" = "达人/服务商申请状态";
+"profile.settings_subtitle_text" = "个人资料、密码与安全";
+"profile.no_contact_info" = "未绑定联系方式";
+"profile.user_profile" = "用户资料";
+"profile.posted_tasks" = "发布任务";
+"profile.taken_tasks" = "接取任务";
+"profile.completed_tasks" = "完成任务";
+
+// MARK: - My Items Category
+"my_items.selling" = "正在出售";
+"my_items.purchased" = "收的闲置";
+"my_items.favorites" = "收藏的";
+"my_items.sold" = "已售出";
+"my_items.empty.selling" = "暂无在售商品";
+"my_items.empty.purchased" = "暂无购买记录";
+"my_items.empty.favorites" = "暂无收藏";
+"my_items.empty.sold" = "暂无已售商品";
+"my_items.empty.selling_message" = "您还没有发布任何闲置商品";
+"my_items.empty.purchased_message" = "您还没有购买过任何商品";
+"my_items.empty.favorites_message" = "您还没有收藏任何商品";
+"my_items.empty.sold_message" = "您还没有成功出售过商品";
+"my_items.status.selling" = "在售";
+"my_items.status.purchased" = "已购";
+"my_items.status.sold" = "已售";
+
+// MARK: - Forum Post Detail Extended
+"forum.pinned" = "置顶";
+"forum.featured" = "精华";
+"forum.write_reply_placeholder" = "写下你的回复...";
+"forum.view_this_post" = "看看这篇帖子";
+"forum.browse" = "浏览";
+"forum.replies_count" = "回复";
+
+// MARK: - Flea Market Detail Extended
+"flea_market.status.active" = "在售";
+"flea_market.status.delisted" = "已下架";
+"flea_market.refreshing" = "延时中";
+"flea_market.refresh" = "延时";
+"flea_market.confirm" = "确认";
+"flea_market.submit" = "提交";
+"flea_market.view_item" = "查看这个商品";
+"flea_market.saving" = "正在保存...";
+"flea_market.save_changes" = "保存修改";
+"flea_market.edit_item" = "编辑商品";
+"flea_market.category.electronics" = "电子产品";
+"flea_market.category.clothing" = "服装配饰";
+"flea_market.category.furniture" = "家具家电";
+"flea_market.category.books" = "图书文具";
+"flea_market.category.sports" = "运动户外";
+"flea_market.category.beauty" = "美妆护肤";
+"flea_market.category.other" = "其他";
+"flea_market.partial_upload_failed" = "部分图片上传失败，请重试";
+"flea_market.fill_required_fields" = "请填写所有必填项";
+
+// MARK: - Forum Posts Extended
+"forum.my_posts" = "我的帖子";
+"forum.my_posts.posted" = "我发布的";
+"forum.my_posts.favorited" = "我收藏的";
+"forum.my_posts.liked" = "我喜欢的";
+"forum.my_posts.empty.posted" = "您还没有发布过帖子";
+"forum.my_posts.empty.favorited" = "您还没有收藏过帖子";
+"forum.my_posts.empty.liked" = "您还没有喜欢过帖子";
+"forum.load_failed" = "加载失败";
+"forum.retry" = "重试";
+
+// MARK: - Forum Category Request
+"forum.no_categories" = "暂无板块";
+"forum.categories_loading" = "论坛板块加载中...";
+"forum.request_new_category" = "申请新建板块";
+"forum.request_submitted" = "申请已提交";
+"forum.request_submitted_message" = "您的申请已成功提交，管理员将在审核后通知您结果。";
+"forum.request_instructions" = "申请说明";
+"forum.request_instructions_text" = "填写以下信息申请新建论坛板块。您的申请将由管理员审核，审核通过后板块将正式创建。";
+"forum.category_name" = "板块名称";
+"forum.category_name_placeholder" = "请输入板块名称";
+"forum.category_description" = "板块描述";
+"forum.category_description_placeholder" = "请简要描述这个板块的用途和讨论主题";
+"forum.category_icon" = "板块图标（可选）";
+"forum.category_icon_hint" = "可以输入一个 emoji 表情作为板块图标，例如：💬、📚、🎮 等";
+"forum.category_icon_example" = "例如：💬";
+"forum.category_icon_entered" = "已输入 1 个 emoji";
+"forum.submit_request" = "提交申请";
+"forum.my_requests" = "我的申请";
+"forum.request_status.all" = "全部";
+"forum.request_status.pending" = "待审核";
+"forum.request_status.approved" = "已通过";
+"forum.request_status.rejected" = "已拒绝";
+"forum.no_requests" = "暂无申请";
+"forum.no_requests_message" = "您还没有提交过板块申请。";
+"forum.no_requests_filtered" = "没有找到相关状态的申请。";
+"forum.review_comment" = "审核意见";
+"forum.review_time" = "审核时间";
+"forum.request_time" = "申请时间";
+"forum.request_name_required" = "请输入板块名称";
+"forum.request_name_too_long" = "板块名称不能超过%d个字符";
+"forum.request_description_too_long" = "板块描述不能超过%d个字符";
+"forum.request_icon_too_long" = "图标不能超过%d个字符";
+"forum.request_submit_failed" = "提交失败，请检查输入内容是否正确";
+"forum.request_login_expired" = "登录已过期，请重新登录";
