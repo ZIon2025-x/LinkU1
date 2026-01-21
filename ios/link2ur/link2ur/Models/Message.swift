@@ -7,6 +7,7 @@ public struct Message: Codable, Identifiable {
     let senderAvatar: String? // 发送者头像
     let receiverId: String?
     let content: String? // 改为可选，某些 WebSocket 消息可能没有 content
+    let contentEn: String? // 英文内容（用于系统消息国际化）
     let msgType: MessageType?
     let createdAt: String? // 改为可选，某些 WebSocket 消息可能没有 created_at
     let isRead: Bool? // 后端返回的是 bool，不是 int
@@ -35,6 +36,19 @@ public struct Message: Codable, Identifiable {
         attachments?.first { $0.attachmentType == "image" }?.url
     }
     
+    /// 根据当前语言获取显示内容（用于系统消息国际化）
+    var displayContent: String? {
+        guard let content = content else { return nil }
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            // 中文环境，优先使用content（中文），如果没有则使用contentEn
+            return content
+        } else {
+            // 英文环境，优先使用contentEn，如果没有则使用content（中文）
+            return contentEn?.isEmpty == false ? contentEn : content
+        }
+    }
+    
     enum CodingKeys: String, CodingKey {
         case messageId = "id"
         case senderId = "sender_id"
@@ -42,6 +56,7 @@ public struct Message: Codable, Identifiable {
         case senderAvatar = "sender_avatar"
         case receiverId = "receiver_id"
         case content
+        case contentEn = "content_en"
         case msgType = "message_type" // 后端返回的是 message_type，不是 type
         case createdAt = "created_at"
         case isRead = "is_read"
@@ -60,6 +75,7 @@ public struct Message: Codable, Identifiable {
         senderAvatar = try container.decodeIfPresent(String.self, forKey: .senderAvatar)
         receiverId = try container.decodeIfPresent(String.self, forKey: .receiverId)
         content = try container.decodeIfPresent(String.self, forKey: .content)
+        contentEn = try container.decodeIfPresent(String.self, forKey: .contentEn)
         msgType = try container.decodeIfPresent(MessageType.self, forKey: .msgType)
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
         isRead = try container.decodeIfPresent(Bool.self, forKey: .isRead)
@@ -77,6 +93,7 @@ public struct Message: Codable, Identifiable {
         try container.encodeIfPresent(senderAvatar, forKey: .senderAvatar)
         try container.encodeIfPresent(receiverId, forKey: .receiverId)
         try container.encodeIfPresent(content, forKey: .content)
+        try container.encodeIfPresent(contentEn, forKey: .contentEn)
         try container.encodeIfPresent(msgType, forKey: .msgType)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(isRead, forKey: .isRead)

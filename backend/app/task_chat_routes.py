@@ -160,6 +160,10 @@ async def get_task_chat_list(
         # 批量获取任务ID列表
         task_ids = [task.id for task in tasks]
         
+        # 批量获取任务翻译（使用辅助函数）
+        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
+        translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
+        
         # 批量查询所有游标（优化性能）
         cursors_query = select(models.MessageReadCursor).where(
             and_(
@@ -288,9 +292,14 @@ async def get_task_chat_list(
                 except (json.JSONDecodeError, TypeError):
                     images_list = []
             
+            # 获取双语标题
+            title_en, title_zh = get_task_title_translations(translations_dict, task.id)
+            
             task_data = {
                 "id": task.id,
                 "title": task.title,
+                "title_en": title_en,
+                "title_zh": title_zh,
                 "task_type": task.task_type,
                 "images": images_list,
                 "poster_id": task.poster_id,
@@ -585,10 +594,17 @@ async def get_task_messages(
             except (json.JSONDecodeError, TypeError):
                 images_list = []
         
+        # 获取任务翻译
+        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
+        translations_dict = await get_task_translations_batch(db, [task_id], field_type='title')
+        title_en, title_zh = get_task_title_translations(translations_dict, task_id)
+        
         # 构建任务信息
         task_data = {
             "id": task.id,
             "title": task.title,
+            "title_en": title_en,
+            "title_zh": title_zh,
             "task_type": task.task_type,
             "images": images_list,
             "poster_id": task.poster_id,

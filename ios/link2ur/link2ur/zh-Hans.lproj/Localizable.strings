@@ -398,6 +398,9 @@
 // MARK: - Activity
 "activity.activity" = "动态";
 "activity.recent_activity" = "最近动态";
+"activity.posted_forum_post" = "发布了帖子";
+"activity.posted_flea_market_item" = "发布了闲置";
+"activity.created_leaderboard" = "创建了排行榜";
 "activity.ended" = "活动已结束";
 "activity.full" = "已满员";
 "activity.apply" = "申请参加";

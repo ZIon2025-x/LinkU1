@@ -400,6 +400,9 @@
 // MARK: - Activity
 "activity.activity" = "Activity";
 "activity.recent_activity" = "Recent Activity";
+"activity.posted_forum_post" = "posted a forum post";
+"activity.posted_flea_market_item" = "posted a flea market item";
+"activity.created_leaderboard" = "created a leaderboard";
 "activity.ended" = "Activity Ended";
 "activity.full" = "Full";
 "activity.apply" = "Apply to Join";

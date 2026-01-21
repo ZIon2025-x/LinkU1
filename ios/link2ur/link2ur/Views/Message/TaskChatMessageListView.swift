@@ -277,7 +277,7 @@ struct TaskChatSystemMessageBubble: View {
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textTertiary)
                     
-                    Text(message.content ?? "系统消息")
+                    Text(message.displayContent ?? LocalizationKey.notificationSystemMessage.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                         .multilineTextAlignment(.center)

@@ -384,26 +384,26 @@ const Home: React.FC = () => {
       ]).then(([taskNotifications, forumResponse]) => {
         const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
           // 生成论坛通知的显示文本
-          const userName = fn.from_user?.name || '用户';
+          const userName = fn.from_user?.name || t('forum.user');
           let contentText = '';
           switch (fn.notification_type) {
             case 'reply_post':
-              contentText = `${userName} 回复了您的帖子`;
+              contentText = t('forum.notificationReplyPost', { userName });
               break;
             case 'reply_reply':
-              contentText = `${userName} 回复了您的回复`;
+              contentText = t('forum.notificationReplyReply', { userName });
               break;
             case 'like_post':
-              contentText = `${userName} 点赞了您的帖子`;
+              contentText = t('forum.notificationLikePost', { userName });
               break;
             case 'feature_post':
-              contentText = '您的帖子被设为精华';
+              contentText = t('forum.notificationFeaturePost');
               break;
             case 'pin_post':
-              contentText = '您的帖子被置顶';
+              contentText = t('forum.notificationPinPost');
               break;
             default:
-              contentText = '论坛通知';
+              contentText = t('forum.notificationDefault');
           }
           
           return {
@@ -509,26 +509,26 @@ const Home: React.FC = () => {
           ]);
           
           const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
-            const userName = fn.from_user?.name || '用户';
+            const userName = fn.from_user?.name || t('forum.user');
             let contentText = '';
             switch (fn.notification_type) {
               case 'reply_post':
-                contentText = `${userName} 回复了您的帖子`;
+                contentText = t('forum.notificationReplyPost', { userName });
                 break;
               case 'reply_reply':
-                contentText = `${userName} 回复了您的回复`;
+                contentText = t('forum.notificationReplyReply', { userName });
                 break;
               case 'like_post':
-                contentText = `${userName} 点赞了您的帖子`;
+                contentText = t('forum.notificationLikePost', { userName });
                 break;
               case 'feature_post':
-                contentText = '您的帖子被设为精华';
+                contentText = t('forum.notificationFeaturePost');
                 break;
               case 'pin_post':
-                contentText = '您的帖子被置顶';
+                contentText = t('forum.notificationPinPost');
                 break;
               default:
-                contentText = '论坛通知';
+                contentText = t('forum.notificationDefault');
             }
             
             return {
@@ -596,26 +596,26 @@ const Home: React.FC = () => {
             getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
           ]).then(([taskNotifications, forumResponse]) => {
             const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
-              const userName = fn.from_user?.name || '用户';
+              const userName = fn.from_user?.name || t('forum.user');
               let contentText = '';
               switch (fn.notification_type) {
                 case 'reply_post':
-                  contentText = `${userName} 回复了您的帖子`;
+                  contentText = t('forum.notificationReplyPost', { userName });
                   break;
                 case 'reply_reply':
-                  contentText = `${userName} 回复了您的回复`;
+                  contentText = t('forum.notificationReplyReply', { userName });
                   break;
                 case 'like_post':
-                  contentText = `${userName} 点赞了您的帖子`;
+                  contentText = t('forum.notificationLikePost', { userName });
                   break;
                 case 'feature_post':
-                  contentText = '您的帖子被设为精华';
+                  contentText = t('forum.notificationFeaturePost');
                   break;
                 case 'pin_post':
-                  contentText = '您的帖子被置顶';
+                  contentText = t('forum.notificationPinPost');
                   break;
                 default:
-                  contentText = '论坛通知';
+                  contentText = t('forum.notificationDefault');
               }
               
               return {
@@ -1175,7 +1175,7 @@ const Home: React.FC = () => {
         <div className={styles.featuresContainer}>
           <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
             <h2 className={styles.featuresTitle} style={{ color: '#1f2937', margin: 0 }}>
-              🏆 {language === 'zh' ? '热门榜单' : 'Hot Leaderboards'}
+              🏆 {t('forum.hotLeaderboards')}
             </h2>
             <button
               onClick={() => navigate(`/${language || 'zh'}/forum/leaderboard`)}
@@ -1213,7 +1213,7 @@ const Home: React.FC = () => {
             </button>
           </div>
           <p className={styles.featuresSubtitle} style={{ color: '#6b7280' }}>
-            {language === 'zh' ? '发现最受欢迎的排行榜' : 'Discover the most popular leaderboards'}
+            {t('forum.hotLeaderboardsSubtitle')}
           </p>
           
           {loadingHotLeaderboards ? (
@@ -1222,7 +1222,7 @@ const Home: React.FC = () => {
             </div>
           ) : hotLeaderboards.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
-              <div>{language === 'zh' ? '暂无热门榜单' : 'No hot leaderboards'}</div>
+              <div>{t('forum.noHotLeaderboards')}</div>
             </div>
           ) : (
             <div className={styles.featuresGrid} style={{ 
@@ -1348,9 +1348,9 @@ const Home: React.FC = () => {
                       fontSize: '12px',
                       color: '#64748b'
                     }}>
-                      <span>📦 {leaderboard.item_count || 0} {language === 'zh' ? '个竞品' : 'items'}</span>
-                      <span>👍 {leaderboard.vote_count || 0} {language === 'zh' ? '票' : 'votes'}</span>
-                      <span>👁️ {formatViewCount(leaderboard.view_count || 0)} {language === 'zh' ? '浏览' : 'views'}</span>
+                      <span>📦 {leaderboard.item_count || 0} {t('forum.itemsCount')}</span>
+                      <span>👍 {leaderboard.vote_count || 0} {t('forum.votesCount')}</span>
+                      <span>👁️ {formatViewCount(leaderboard.view_count || 0)} {t('forum.viewsCount')}</span>
                     </div>
                   </div>
                 );
@@ -1430,13 +1430,13 @@ const Home: React.FC = () => {
                     const minutes = Math.floor(diff / (1000 * 60));
                     
                     if (days > 0) {
-                      return `${days}天前`;
+                      return t('common.daysAgo', { count: days });
                     } else if (hours > 0) {
-                      return `${hours}小时前`;
+                      return t('common.hoursAgo', { count: hours });
                     } else if (minutes > 0) {
-                      return `${minutes}分钟前`;
+                      return t('common.minutesAgo', { count: minutes });
                     } else {
-                      return '刚刚';
+                      return t('common.justNow');
                     }
                   } catch {
                     return dateString;
@@ -1563,7 +1563,7 @@ const Home: React.FC = () => {
                               marginLeft: '6px',
                               border: '1px solid #91d5ff'
                             }}>
-                              {language === 'zh' ? '官方' : 'Official'}
+                              {t('forum.official')}
                             </span>
                           )}
                         </>
@@ -1740,7 +1740,7 @@ const Home: React.FC = () => {
                     
                     <div className={styles.taskInfoRow}>
                       <span className={styles.taskTypeBadge}>
-                        {task.task_type}
+                        {t(`taskTypes.${task.task_type}`, task.task_type)}
                       </span>
                       <span className={`${styles.taskLocationBadge} ${
                         task.location?.toLowerCase() === 'online' ? styles.taskLocationOnline : styles.taskLocationOffline

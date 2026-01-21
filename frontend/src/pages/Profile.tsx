@@ -367,7 +367,7 @@ const Profile: React.FC = () => {
             color: 'transparent',
             background: 'transparent'
           }}>
-            {user.name || `用户${user.id}`}
+            {user.name || `${t('profile.user')}${user.id}`}
           </h1>
           
           {/* 用户ID显示 */}
@@ -510,7 +510,7 @@ const Profile: React.FC = () => {
               color: '#1e293b',
               margin: '0'
             }}>
-              {user.name || `用户${user.id}`}
+              {user.name || `${t('profile.user')}${user.id}`}
             </h2>
             {isStudentVerified && (
               <div style={{

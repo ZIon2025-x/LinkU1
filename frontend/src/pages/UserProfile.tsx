@@ -138,7 +138,7 @@ const UserProfile: React.FC = () => {
 
   const loadUserProfile = async () => {
     if (!userId) {
-      setError('用户ID不存在');
+      setError(t('userProfile.userIdNotExist'));
       setLoading(false);
       return;
     }
@@ -149,7 +149,7 @@ const UserProfile: React.FC = () => {
       const data = await getUserProfile(userId);
       setProfile(data);
     } catch (error: any) {
-      let errorMsg = '用户不存在';
+      let errorMsg = t('userProfile.userNotExist');
       if (error?.response?.data?.detail) {
         if (typeof error.response.data.detail === 'string') {
           errorMsg = error.response.data.detail;
@@ -359,7 +359,7 @@ const UserProfile: React.FC = () => {
               }}>
                 <LazyImage
                   src={profile.user.avatar || '/static/avatar1.png'}
-                  alt="头像"
+                  alt={t('userProfile.avatarAlt')}
                   width={140}
                   height={140}
                   style={{
@@ -465,7 +465,7 @@ const UserProfile: React.FC = () => {
                   marginBottom: 16
                 }}>
                   <div style={{ fontSize: 16, fontWeight: 600, color: '#667eea', marginBottom: 8 }}>
-                    👑 任务达人
+                    👑 {t('userProfile.taskExpert')}
                   </div>
                   {taskExpert.bio && (
                     <div style={{ fontSize: 14, color: '#666', lineHeight: 1.6 }}>
@@ -478,7 +478,7 @@ const UserProfile: React.FC = () => {
                 {expertServices.length > 0 && (
                   <div style={{ marginTop: 24 }}>
                     <h3 style={{ fontSize: 18, fontWeight: 600, color: '#333', marginBottom: 16 }}>
-                      服务菜单
+                      {t('userProfile.serviceMenu')}
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {expertServices.map((service) => (
@@ -517,7 +517,7 @@ const UserProfile: React.FC = () => {
                                 {service.currency} {service.base_price.toFixed(2)}
                               </div>
                               <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-                                {service.application_count} 申请
+                                {service.application_count} {t('userProfile.applications')}
                               </div>
                             </div>
                           </div>

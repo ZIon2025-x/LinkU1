@@ -52,7 +52,7 @@ struct MessageView: View {
                                 .padding(.top, AppSpacing.lg)
                             } else {
                                 ForEach(viewModel.taskChats) { taskChat in
-                                    NavigationLink(destination: TaskChatView(taskId: taskChat.id, taskTitle: taskChat.title, taskChat: taskChat)
+                                    NavigationLink(destination: TaskChatView(taskId: taskChat.id, taskTitle: taskChat.displayTitle, taskChat: taskChat)
                                         .environmentObject(appState)) {
                                         TaskChatRow(taskChat: taskChat, currentUserId: appState.currentUser?.id)
                                     }

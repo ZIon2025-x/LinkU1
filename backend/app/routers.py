@@ -1140,7 +1140,53 @@ def get_task_detail(
         except Exception as e:
             logger.warning(f"记录用户浏览行为失败: {e}")
     
-    return TaskService.get_task_cached(task_id=task_id, db=db)
+    task = TaskService.get_task_cached(task_id=task_id, db=db)
+    
+    # 获取任务翻译（标题和描述）
+    from app.crud import get_task_translation
+    # 标题翻译
+    title_trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
+    title_trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
+    task.title_en = title_trans_en.translated_text if title_trans_en else None
+    task.title_zh = title_trans_zh.translated_text if title_trans_zh else None
+    # 描述翻译
+    desc_trans_en = get_task_translation(db, task_id, 'description', 'en', validate=False)
+    desc_trans_zh = get_task_translation(db, task_id, 'description', 'zh-CN', validate=False)
+    task.description_en = desc_trans_en.translated_text if desc_trans_en else None
+    task.description_zh = desc_trans_zh.translated_text if desc_trans_zh else None
+    
+    # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
+    needs_translation = (
+        not task.title_en or not task.title_zh or 
+        not task.description_en or not task.description_zh
+    )
+    if needs_translation:
+        import threading
+        from app.utils.translation_prefetch import prefetch_task_by_id
+        import asyncio
+        
+        def trigger_translations_sync():
+            """在后台线程中触发翻译任务"""
+            try:
+                sync_db = next(get_db())
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        loop.run_until_complete(
+                            prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
+                        )
+                    finally:
+                        loop.close()
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                logger.error(f"后台翻译任务失败: {e}")
+        
+        thread = threading.Thread(target=trigger_translations_sync, daemon=True)
+        thread.start()
+    
+    return task
 
 
 @router.get("/recommendations")
@@ -1184,13 +1230,65 @@ def get_recommendations(
             longitude=longitude
         )
         
+        # 获取所有任务的翻译
+        task_ids = [item["task"].id for item in recommendations]
+        translations_dict = {}
+        if task_ids:
+            from app.crud import get_task_translation
+            for task_id in task_ids:
+                # 获取英文翻译
+                trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
+                if trans_en:
+                    translations_dict[(task_id, 'en')] = trans_en.translated_text
+                # 获取中文翻译
+                trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
+                if trans_zh:
+                    translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
+        
+        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
+        missing_task_ids = [task_id for task_id in task_ids 
+                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
+        if missing_task_ids:
+            import threading
+            from app.utils.translation_prefetch import prefetch_task_by_id
+            import asyncio
+            
+            def trigger_translations_sync():
+                """在后台线程中触发翻译任务"""
+                try:
+                    sync_db = next(get_db())
+                    try:
+                        for task_id in missing_task_ids:
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                try:
+                                    loop.run_until_complete(
+                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
+                                    )
+                                finally:
+                                    loop.close()
+                            except Exception as e:
+                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
+                    finally:
+                        sync_db.close()
+                except Exception as e:
+                    logger.error(f"后台翻译任务标题失败: {e}")
+            
+            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
+            thread.start()
+        
         # 转换为响应格式
         result = []
         for item in recommendations:
             task = item["task"]
+            title_en = translations_dict.get((task.id, 'en'))
+            title_zh = translations_dict.get((task.id, 'zh-CN'))
             result.append({
                 "task_id": task.id,
                 "title": task.title,
+                "title_en": title_en,
+                "title_zh": title_zh,
                 "description": task.description,
                 "task_type": task.task_type,
                 "location": task.location,
@@ -1886,19 +1984,42 @@ def complete_task(
     # 发送系统消息到任务聊天框
     try:
         from app.models import Message, MessageAttachment
+        from app.utils.notification_templates import get_notification_texts
         import json
         
         taker_name = current_user.name or f"用户{current_user.id}"
         # 根据是否有证据图片显示不同的消息内容
         if evidence_images and len(evidence_images) > 0:
-            system_message_content = "任务已完成，请查看证据图片。"
+            # 使用国际化模板
+            _, content_zh, _, content_en = get_notification_texts(
+                "task_completed",
+                taker_name=taker_name,
+                task_title=db_task.title,
+                has_evidence=True
+            )
+            # 如果没有对应的模板，使用默认文本
+            if not content_zh:
+                content_zh = "任务已完成，请查看证据图片。"
+            if not content_en:
+                content_en = "Task completed. Please check the evidence images."
         else:
-            system_message_content = f"接收者 {taker_name} 已确认完成任务，等待发布者确认。"
+            _, content_zh, _, content_en = get_notification_texts(
+                "task_completed",
+                taker_name=taker_name,
+                task_title=db_task.title,
+                has_evidence=False
+            )
+            # 如果没有对应的模板，使用默认文本
+            if not content_zh:
+                content_zh = f"接收者 {taker_name} 已确认完成任务，等待发布者确认。"
+            if not content_en:
+                content_en = f"Recipient {taker_name} has confirmed task completion, waiting for poster confirmation."
         
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=system_message_content,
+            content=content_zh,  # 中文内容
+            content_en=content_en,  # 英文内容
             task_id=task_id,
             message_type="system",
             conversation_type="task",
@@ -1999,10 +2120,14 @@ def create_task_dispute(
         import json
         
         poster_name = current_user.name or f"用户{current_user.id}"
+        content_zh = f"{poster_name} 对任务完成状态有异议。"
+        content_en = f"{poster_name} has raised a dispute about the task completion status."
+        
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=f"{poster_name} 对任务完成状态有异议。",
+            content=content_zh,  # 中文内容
+            content_en=content_en,  # 英文内容
             task_id=task_id,
             message_type="system",
             conversation_type="task",
@@ -2337,13 +2462,26 @@ def confirm_task_completion(
     # 发送系统消息到任务聊天框
     try:
         from app.models import Message
+        from app.utils.notification_templates import get_notification_texts
         import json
         
         poster_name = current_user.name or f"用户{current_user.id}"
+        _, content_zh, _, content_en = get_notification_texts(
+            "task_confirmed",
+            poster_name=poster_name,
+            task_title=task.title
+        )
+        # 如果没有对应的模板，使用默认文本
+        if not content_zh:
+            content_zh = f"发布者 {poster_name} 已确认任务完成。"
+        if not content_en:
+            content_en = f"Poster {poster_name} has confirmed task completion."
+        
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=f"发布者 {poster_name} 已确认任务完成。",
+            content=content_zh,  # 中文内容
+            content_en=content_en,  # 英文内容
             task_id=task_id,
             message_type="system",
             conversation_type="task",
@@ -3002,6 +3140,60 @@ def get_my_tasks(
 ):
     """获取当前用户的任务（发布的和接受的）"""
     tasks = crud.get_user_tasks(db, current_user.id, limit=limit, offset=offset)
+    
+    # 获取所有任务的翻译
+    task_ids = [task.id for task in tasks]
+    if task_ids:
+        from app.crud import get_task_translation
+        translations_dict = {}
+        for task_id in task_ids:
+            # 获取英文翻译
+            trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
+            if trans_en:
+                translations_dict[(task_id, 'en')] = trans_en.translated_text
+            # 获取中文翻译
+            trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
+            if trans_zh:
+                translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
+        
+        # 为每个任务添加翻译字段
+        for task in tasks:
+            task.title_en = translations_dict.get((task.id, 'en'))
+            task.title_zh = translations_dict.get((task.id, 'zh-CN'))
+        
+        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
+        missing_task_ids = [task_id for task_id in task_ids 
+                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
+        if missing_task_ids:
+            import threading
+            from app.utils.translation_prefetch import prefetch_task_by_id
+            import asyncio
+            
+            def trigger_translations_sync():
+                """在后台线程中触发翻译任务"""
+                try:
+                    sync_db = next(get_db())
+                    try:
+                        for task_id in missing_task_ids:
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                try:
+                                    loop.run_until_complete(
+                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
+                                    )
+                                finally:
+                                    loop.close()
+                            except Exception as e:
+                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
+                    finally:
+                        sync_db.close()
+                except Exception as e:
+                    logger.error(f"后台翻译任务标题失败: {e}")
+            
+            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
+            thread.start()
+    
     return tasks
 
 
@@ -3064,6 +3256,60 @@ def user_profile(
         for t in tasks
         if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
     ]
+    
+    # 获取所有任务的翻译
+    all_display_tasks = posted_tasks + taken_tasks
+    task_ids = [task.id for task in all_display_tasks]
+    if task_ids:
+        from app.crud import get_task_translation
+        translations_dict = {}
+        for task_id in task_ids:
+            # 获取英文翻译
+            trans_en = get_task_translation(db, task_id, 'title', 'en', validate=False)
+            if trans_en:
+                translations_dict[(task_id, 'en')] = trans_en.translated_text
+            # 获取中文翻译
+            trans_zh = get_task_translation(db, task_id, 'title', 'zh-CN', validate=False)
+            if trans_zh:
+                translations_dict[(task_id, 'zh-CN')] = trans_zh.translated_text
+        
+        # 为每个任务添加翻译字段
+        for task in all_display_tasks:
+            task.title_en = translations_dict.get((task.id, 'en'))
+            task.title_zh = translations_dict.get((task.id, 'zh-CN'))
+        
+        # 对于没有翻译的任务，在后台触发翻译（不阻塞响应）
+        missing_task_ids = [task_id for task_id in task_ids 
+                           if (task_id, 'en') not in translations_dict or (task_id, 'zh-CN') not in translations_dict]
+        if missing_task_ids:
+            import threading
+            from app.utils.translation_prefetch import prefetch_task_by_id
+            import asyncio
+            
+            def trigger_translations_sync():
+                """在后台线程中触发翻译任务"""
+                try:
+                    sync_db = next(get_db())
+                    try:
+                        for task_id in missing_task_ids:
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                try:
+                                    loop.run_until_complete(
+                                        prefetch_task_by_id(sync_db, task_id, target_languages=['en', 'zh-CN'])
+                                    )
+                                finally:
+                                    loop.close()
+                            except Exception as e:
+                                logger.warning(f"后台翻译任务 {task_id} 标题失败: {e}")
+                    finally:
+                        sync_db.close()
+                except Exception as e:
+                    logger.error(f"后台翻译任务标题失败: {e}")
+            
+            thread = threading.Thread(target=trigger_translations_sync, daemon=True)
+            thread.start()
 
     # 获取用户收到的评价
     reviews = crud.get_reviews_received_by_user(
@@ -3109,6 +3355,8 @@ def user_profile(
             {
                 "id": t.id,
                 "title": t.title,
+                "title_en": getattr(t, 'title_en', None),
+                "title_zh": getattr(t, 'title_zh', None),
                 "status": t.status,
                 "created_at": t.created_at,
                 "reward": float(t.agreed_reward) if t.agreed_reward is not None else float(t.base_reward) if t.base_reward is not None else 0.0,

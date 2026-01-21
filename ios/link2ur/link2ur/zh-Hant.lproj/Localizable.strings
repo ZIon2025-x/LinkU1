@@ -207,6 +207,9 @@
 // MARK: - Activity
 "activity.activity" = "動態";
 "activity.recent_activity" = "最近動態";
+"activity.posted_forum_post" = "發布了帖子";
+"activity.posted_flea_market_item" = "發布了閒置";
+"activity.created_leaderboard" = "創建了排行榜";
 "activity.ended" = "活動已結束";
 "activity.full" = "已滿員";
 "activity.apply" = "申請參加";

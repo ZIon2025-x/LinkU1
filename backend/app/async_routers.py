@@ -144,6 +144,11 @@ async def get_tasks(
             parent_activity_id=parent_activity_id,
         )
         
+        # 批量获取任务翻译
+        task_ids = [task.id for task in tasks]
+        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
+        translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
+        
         # 格式化任务列表（与下面的格式化逻辑保持一致）
         formatted_tasks = []
         for task in tasks:
@@ -165,9 +170,14 @@ async def get_tasks(
                 float(task.longitude) if task.longitude is not None else None
             )
             
+            # 获取双语标题
+            title_en, title_zh = get_task_title_translations(translations_dict, task.id)
+            
             task_data = {
                 "id": task.id,
                 "title": task.title,
+                "title_en": title_en,
+                "title_zh": title_zh,
                 "description": task.description,
                 "deadline": format_iso_utc(task.deadline) if task.deadline else None,
                 "is_flexible": task.is_flexible or 0,
@@ -237,6 +247,11 @@ async def get_tasks(
         user_longitude=user_longitude,
     )
     
+    # 批量获取任务翻译
+    task_ids = [task.id for task in tasks]
+    from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
+    translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
+    
     # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
     # format_iso_utc 已在文件顶部导入
     
@@ -253,10 +268,15 @@ async def get_tasks(
             except (json.JSONDecodeError, TypeError):
                 images_list = []
         
+        # 获取双语标题
+        title_en, title_zh = get_task_title_translations(translations_dict, task.id)
+        
         # 构建格式化的任务数据
         task_data = {
             "id": task.id,
             "title": task.title,
+            "title_en": title_en,
+            "title_zh": title_zh,
             "description": task.description,
             "deadline": format_iso_utc(task.deadline) if task.deadline else None,
             "is_flexible": task.is_flexible or 0,
@@ -358,6 +378,23 @@ async def get_task_by_id(
         # 如果都不是，拒绝访问
         if not is_poster and not is_taker and not is_participant and not is_applicant:
             raise HTTPException(status_code=403, detail="无权限查看此任务")
+    
+    # 获取任务翻译（标题和描述）
+    from app.utils.task_translation_helper import (
+        get_task_translations_batch, 
+        get_task_title_translations,
+        get_task_description_translations
+    )
+    title_translations_dict = await get_task_translations_batch(db, [task_id], field_type='title')
+    description_translations_dict = await get_task_translations_batch(db, [task_id], field_type='description')
+    title_en, title_zh = get_task_title_translations(title_translations_dict, task_id)
+    description_en, description_zh = get_task_description_translations(description_translations_dict, task_id)
+    
+    # 将翻译添加到任务对象
+    task.title_en = title_en
+    task.title_zh = title_zh
+    task.description_en = description_en
+    task.description_zh = description_zh
     
     return task
 
@@ -967,6 +1004,26 @@ async def get_user_tasks(
         posted_skip=posted_skip, posted_limit=posted_limit,
         taken_skip=taken_skip, taken_limit=taken_limit
     )
+    
+    # 获取所有任务的翻译
+    all_task_ids = []
+    if 'posted_tasks' in tasks:
+        all_task_ids.extend([task.id for task in tasks['posted_tasks']])
+    if 'taken_tasks' in tasks:
+        all_task_ids.extend([task.id for task in tasks['taken_tasks']])
+    
+    if all_task_ids:
+        from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
+        translations_dict = await get_task_translations_batch(db, all_task_ids, field_type='title')
+        
+        # 为每个任务添加翻译字段
+        for task_list_key in ['posted_tasks', 'taken_tasks']:
+            if task_list_key in tasks:
+                for task in tasks[task_list_key]:
+                    title_en, title_zh = get_task_title_translations(translations_dict, task.id)
+                    task.title_en = title_en
+                    task.title_zh = title_zh
+    
     return tasks
 
 

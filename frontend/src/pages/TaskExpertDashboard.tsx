@@ -917,7 +917,7 @@ const TaskExpertDashboard: React.FC = () => {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px', fontSize: '18px' }}>
-        加载中...
+        {t('common.loading')}
       </div>
     );
   }
@@ -1017,7 +1017,7 @@ const TaskExpertDashboard: React.FC = () => {
             <h2 className={styles.cardTitle}>仪表盘</h2>
             
             {loadingDashboardStats ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('common.loading')}</div>
             ) : dashboardStats ? (
               <div className={styles.statsGrid}>
                 <StatCard
@@ -1072,7 +1072,7 @@ const TaskExpertDashboard: React.FC = () => {
             </div>
 
             {loadingServices ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('common.loading')}</div>
             ) : services.length === 0 ? (
               <div className={styles.empty}>
                 暂无服务，点击"创建服务"按钮添加
@@ -1154,7 +1154,7 @@ const TaskExpertDashboard: React.FC = () => {
             <h2 className={styles.cardTitle} style={{ margin: '0 0 24px 0' }}>收到的申请</h2>
 
             {loadingApplications ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('common.loading')}</div>
             ) : applications.length === 0 ? (
               <div className={styles.empty}>
                 暂无申请
@@ -1257,7 +1257,7 @@ const TaskExpertDashboard: React.FC = () => {
         {activeTab === 'multi-tasks' && (
           <div className={styles.contentCard}>
             <div className={styles.flexBetween} style={{ marginBottom: '24px' }}>
-              <h2 className={styles.cardTitle} style={{ margin: 0 }}>我的多人活动</h2>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>{t('taskExperts.myMultiTasks')}</h2>
               <button
                 onClick={() => {
                   setCreateMultiTaskForm({
@@ -1285,12 +1285,12 @@ const TaskExpertDashboard: React.FC = () => {
                 }}
                 className={`${styles.button} ${styles.buttonPrimary}`}
               >
-                + 创建多人活动
+                + {t('taskExperts.createMultiTask')}
               </button>
             </div>
 
             {loadingMultiTasks ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('common.loading')}</div>
             ) : multiTasks.length === 0 ? (
               <div className={styles.empty}>
                 暂无多人活动
@@ -1779,7 +1779,7 @@ const TaskExpertDashboard: React.FC = () => {
             </div>
 
             {loadingSchedule ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('common.loading')}</div>
             ) : scheduleData && scheduleData.items && scheduleData.items.length > 0 ? (
               <div>
                 {/* 按日期分组显示 */}
@@ -2000,7 +2000,7 @@ const TaskExpertDashboard: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>创建多人活动</h3>
+              <h3 className={styles.modalTitle}>{t('taskExperts.createMultiTaskTitle')}</h3>
               <button
                 onClick={() => setShowCreateMultiTaskModal(false)}
                 className={styles.modalClose}
@@ -3401,7 +3401,7 @@ const TaskExpertDashboard: React.FC = () => {
                 )}
               </div>
               {loadingTimeSlotManagement ? (
-                <div className={styles.loading}>加载中...</div>
+                <div className={styles.loading}>{t('common.loading')}</div>
               ) : timeSlotManagementSlots.length === 0 ? (
                 <div className={styles.timeSlotListEmpty}>
                   <div className={styles.timeSlotListEmptyIcon}>📅</div>

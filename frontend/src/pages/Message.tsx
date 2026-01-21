@@ -43,6 +43,7 @@ import CompleteTaskModal from '../components/CompleteTaskModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import TaskTitle from '../components/TaskTitle';
 import styles from './Message.module.css';
 
 // 私密图片显示组件
@@ -273,7 +274,7 @@ interface TaskListItemProps {
 }
 
 const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTaskClick, onRemoveTask }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   const handleClick = useCallback(() => {
     onTaskClick(task.id);
@@ -355,7 +356,14 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
           </div>
         </div>
         <div className={styles.taskInfo}>
-          <div className={styles.taskTitle}>{task.title}</div>
+          <div className={styles.taskTitle}>
+            <TaskTitle
+              title={task.title}
+              language={language}
+              taskId={task.id}
+              autoTranslate={true}
+            />
+          </div>
           {task.last_message && (
             <div className={styles.taskDescription}>
               {task.last_message.sender_name}: {task.last_message.content}
@@ -425,7 +433,7 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
 TaskListItem.displayName = 'TaskListItem';
 
 const MessagePage: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { unreadCount: globalUnreadCount, refreshUnreadCount, updateUnreadCount } = useUnreadMessages();
   
   // 添加CSS动画样式
@@ -668,7 +676,7 @@ const MessagePage: React.FC = () => {
     if (file) {
       // 任务完成后禁止上传图片
       if (activeTask?.status === 'completed') {
-        alert('任务已完成，无法发送图片');
+        alert(t('messages.taskCannotSendImage'));
         event.target.value = ''; // 清空文件选择
         return;
       }
@@ -709,7 +717,7 @@ const MessagePage: React.FC = () => {
     if (file) {
       // 任务完成后禁止上传文件
       if (activeTask?.status === 'completed') {
-        alert('任务已完成，无法发送文件');
+        alert(t('messages.taskCannotSendFile'));
         event.target.value = ''; // 清空文件选择
         return;
       }
@@ -891,7 +899,7 @@ const MessagePage: React.FC = () => {
     
     // 任务完成后禁止发送文件
     if (activeTask?.status === 'completed') {
-      alert('任务已完成，无法发送文件');
+      alert(t('messages.taskCannotSendFile'));
       return;
     }
     
@@ -1247,7 +1255,7 @@ const MessagePage: React.FC = () => {
           });
           
           if (!response.ok) {
-            throw new Error('发送消息失败');
+            throw new Error(t('messages.sendMessageFailedError'));
           }
         }
       }
@@ -1447,7 +1455,7 @@ const MessagePage: React.FC = () => {
     
     // 任务完成后禁止发送消息
     if (activeTask?.status === 'completed') {
-      showToast('error', '任务已完成，无法发送消息');
+      showToast('error', t('messages.taskCannotSendMessage'));
       return;
     }
     
@@ -2057,7 +2065,7 @@ const MessagePage: React.FC = () => {
                 ...msg,
                 content: systemMessage,
                 sender_id: 'system',
-                sender_name: '系统',
+                sender_name: t('messages.system'),
                 isSystemMessage: true
               };
             }
@@ -2658,7 +2666,7 @@ const MessagePage: React.FC = () => {
                   const systemMsg = {
                     id: Date.now(),
                     sender_id: null, // 系统消息 sender_id 为 null
-                    sender_name: '系统',
+                    sender_name: t('messages.system'),
                     sender_avatar: null,
                     content: systemMessage,
                     message_type: 'system', // 明确标记为系统消息
@@ -2861,7 +2869,7 @@ const MessagePage: React.FC = () => {
                 });
                 
                 // 标记为新消息，触发自动滚动（只对非系统消息）
-                if (fromName !== '系统') {
+                if (fromName !== t('messages.system')) {
                   setIsNewMessage(true);
                 }
                 
@@ -2933,7 +2941,7 @@ const MessagePage: React.FC = () => {
                 });
                 
                 // 标记为新消息，触发自动滚动（只对非系统消息）
-                if (fromName !== '系统') {
+                if (fromName !== t('messages.system')) {
                   setIsNewMessage(true);
                 }
                 
@@ -3858,7 +3866,7 @@ const MessagePage: React.FC = () => {
             {/* 任务列表内容 */}
             <div className={styles.taskListContainer} style={{ borderTop: '1px solid #e2e8f0' }}>
               {tasksLoading && tasks.length === 0 ? (
-                <div className={styles.taskListLoading}>加载中...</div>
+                <div className={styles.taskListLoading}>{t('messages.taskListLoading')}</div>
               ) : filteredTasks.length === 0 ? (
                 <div className={styles.taskListEmpty}>
                   {taskSearchTerm.trim() ? (t('messages.noTasksFound') || '没有找到匹配的任务') : (t('messages.noTasks') || '暂无任务')}
@@ -3976,26 +3984,33 @@ const MessagePage: React.FC = () => {
                 </div>
               </div>
               <div className={styles.chatHeaderTaskInfo} onClick={() => setShowTaskDetailModal(true)}>
-                <h3 className={styles.chatHeaderTaskTitle}>{activeTask.title}</h3>
+                <h3 className={styles.chatHeaderTaskTitle}>
+                  <TaskTitle
+                    title={activeTask.title}
+                    language={language}
+                    taskId={activeTask.id}
+                    autoTranslate={true}
+                  />
+                </h3>
                 <div className={styles.chatHeaderTaskMeta}>
                   {activeTask.status === 'open' && !activeTask.taker_id && (
                     <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeWaiting}`}>
-                      等待接受
+                      {t('messages.taskStatusWaiting')}
                     </span>
                   )}
                   {activeTask.status === 'in_progress' && (
                     <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeInProgress}`}>
-                      进行中
+                      {t('messages.taskStatusInProgress')}
                     </span>
                   )}
                   {activeTask.status === 'completed' && (
                     <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeCompleted}`}>
-                      已完成
+                      {t('messages.taskStatusCompleted')}
                     </span>
                   )}
                   {activeTask.status === 'cancelled' && (
                     <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeCancelled}`}>
-                      已取消
+                      {t('messages.taskStatusCancelled')}
                     </span>
                   )}
                 </div>
@@ -4340,7 +4355,7 @@ const MessagePage: React.FC = () => {
                         fontSize: '14px'
                       }}
                     >
-                      {taskMessagesLoading ? '加载中...' : '加载更多'}
+                      {taskMessagesLoading ? t('messages.taskListLoading') : t('messages.loadMore')}
                     </button>
                   </div>
                 )}
@@ -5098,7 +5113,7 @@ const MessagePage: React.FC = () => {
                     cursor: (!serviceConnected || isSending || uploadingImage) ? 'not-allowed' : 'pointer',
                     opacity: (!serviceConnected || isSending || uploadingImage) ? 0.5 : 1
                   }}
-                  title="发送图片"
+                  title={t('messages.sendImage')}
                 >
                   <input
                     type="file"
@@ -5117,7 +5132,7 @@ const MessagePage: React.FC = () => {
                     cursor: (!serviceConnected || isSending || uploadingFile) ? 'not-allowed' : 'pointer',
                     opacity: (!serviceConnected || isSending || uploadingFile) ? 0.5 : 1
                   }}
-                  title="发送文件"
+                  title={t('messages.sendFile')}
                 >
                   <input
                     type="file"
@@ -5258,7 +5273,7 @@ const MessagePage: React.FC = () => {
                     alignSelf: 'flex-start'
                   }}
                 >
-                  {uploadingImage ? '上传中...' : '发送图片'}
+                  {uploadingImage ? t('messages.uploading') : t('messages.sendingImage')}
                 </button>
               )}
               
@@ -5280,7 +5295,7 @@ const MessagePage: React.FC = () => {
                     alignSelf: 'flex-start'
                   }}
                 >
-                  {uploadingFile ? '上传中...' : '发送文件'}
+                  {uploadingFile ? t('messages.uploading') : t('messages.sendingFile')}
                 </button>
               )}
             </div>
@@ -5306,7 +5321,7 @@ const MessagePage: React.FC = () => {
                   color: '#92400e',
                   textAlign: 'center'
                 }}>
-                  任务开始后才能发送消息
+                  {t('messages.taskMustStartBeforeMessage')}
                 </div>
               )}
               
@@ -5464,7 +5479,7 @@ const MessagePage: React.FC = () => {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
-                  title="发送图片"
+                  title={t('messages.sendImage')}
                 >
                   <input
                     type="file"
@@ -5516,7 +5531,7 @@ const MessagePage: React.FC = () => {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
-                  title="发送文件"
+                  title={t('messages.sendFile')}
                 >
                   <input
                     type="file"
@@ -5589,12 +5604,12 @@ const MessagePage: React.FC = () => {
                   }}
                   placeholder={
                     activeTask.status === 'completed'
-                      ? '任务已完成，无法发送消息'
+                      ? t('messages.taskCannotSendMessage')
                       : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id
-                      ? '任务开始后才能发送消息'
+                      ? t('messages.taskMustStartBeforeMessage')
                       : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id === user?.id
-                      ? '可以发送一些任务相关信息（帮助接收人快速了解任务）'
-                      : '输入消息...'
+                      ? t('messages.typeMessage')
+                      : t('messages.typeMessage')
                   }
                   disabled={
                     activeTask.status === 'completed' ||
@@ -5719,7 +5734,7 @@ const MessagePage: React.FC = () => {
                     alignSelf: 'flex-start'
                   }}
                 >
-                  {uploadingImage ? '上传中...' : '发送图片'}
+                  {uploadingImage ? t('messages.uploading') : t('messages.sendingImage')}
                 </button>
               )}
             </div>
@@ -6139,7 +6154,7 @@ const MessagePage: React.FC = () => {
             </div>
 
             {applicationsLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              <div style={{ textAlign: 'center', padding: '40px' }}>{t('messages.taskListLoading')}</div>
             ) : applications.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
                 暂无申请
@@ -6515,7 +6530,7 @@ const MessagePage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                {uploadingImage ? '发送中...' : '发送图片'}
+                {uploadingImage ? t('messages.sending') : t('messages.sendingImage')}
               </button>
             </div>
           </div>
@@ -7255,11 +7270,11 @@ const MessagePage: React.FC = () => {
             }}>
               {userTasksLoading ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
-                  加载中...
+                  {t('messages.taskListLoading')}
                 </div>
               ) : userTasks.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                  暂无任务
+                  {t('messages.noTasks')}
                 </div>
               ) : (
                 <div style={{
@@ -7296,7 +7311,12 @@ const MessagePage: React.FC = () => {
                         color: '#333',
                         marginBottom: '8px'
                       }}>
-                        {task.title}
+                        <TaskTitle
+                          title={task.title}
+                          language={language}
+                          taskId={task.id}
+                          autoTranslate={true}
+                        />
                       </div>
                       <div style={{
                         display: 'flex',
@@ -7319,10 +7339,10 @@ const MessagePage: React.FC = () => {
                           fontSize: 12,
                           fontWeight: 600
                         }}>
-                          {task.status === 'open' ? '待接取' :
-                           task.status === 'taken' ? '待审核申请' :
-                           task.status === 'in_progress' ? '进行中' :
-                           task.status === 'completed' ? '已完成' : task.status}
+                          {task.status === 'open' ? t('messages.taskStatusWaiting') :
+                           task.status === 'taken' ? t('messages.taskStatusWaiting') :
+                           task.status === 'in_progress' ? t('messages.taskStatusInProgress') :
+                           task.status === 'completed' ? t('messages.taskStatusCompleted') : task.status}
                         </span>
                       </div>
                     </div>

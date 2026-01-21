@@ -335,6 +335,10 @@ class TaskOut(TaskBase):
     images: Optional[List[str]] = None  # 图片URL列表
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
+    title_en: Optional[str] = None  # 英文标题（可选）
+    title_zh: Optional[str] = None  # 中文标题（可选）
+    description_en: Optional[str] = None  # 英文描述（可选）
+    description_zh: Optional[str] = None  # 中文描述（可选）
     # 多人任务相关字段
     is_multi_participant: Optional[bool] = False
     expert_creator_id: Optional[str] = None
@@ -453,7 +457,11 @@ class TaskOut(TaskBase):
             "points_reward": obj.points_reward,
             "is_flexible": obj.is_flexible,
             "title": obj.title,
+            "title_en": getattr(obj, 'title_en', None),  # 从对象获取，如果没有则从翻译表获取
+            "title_zh": getattr(obj, 'title_zh', None),  # 从对象获取，如果没有则从翻译表获取
             "description": obj.description,
+            "description_en": getattr(obj, 'description_en', None),  # 从对象获取，如果没有则从翻译表获取
+            "description_zh": getattr(obj, 'description_zh', None),  # 从对象获取，如果没有则从翻译表获取
             "deadline": obj.deadline,
             "reward": float(obj.reward) if obj.reward else 0.0,
             "base_reward": float(obj.base_reward) if obj.base_reward else None,

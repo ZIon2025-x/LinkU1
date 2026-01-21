@@ -614,22 +614,28 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     
                     switch (forumType) {
                       case 'reply_post':
-                        text = fromUser ? `${fromUser.name} 回复了您的帖子` : '有人回复了您的帖子';
+                        text = fromUser 
+                          ? t('forum.notificationReplyPost', { userName: fromUser.name })
+                          : t('forum.notificationReplyPost', { userName: t('forum.someone') });
                         break;
                       case 'reply_reply':
-                        text = fromUser ? `${fromUser.name} 回复了您的回复` : '有人回复了您的回复';
+                        text = fromUser 
+                          ? t('forum.notificationReplyReply', { userName: fromUser.name })
+                          : t('forum.notificationReplyReply', { userName: t('forum.someone') });
                         break;
                       case 'like_post':
-                        text = fromUser ? `${fromUser.name} 点赞了您的帖子` : '有人点赞了您的帖子';
+                        text = fromUser 
+                          ? t('forum.notificationLikePost', { userName: fromUser.name })
+                          : t('forum.notificationLikePost', { userName: t('forum.someone') });
                         break;
                       case 'feature_post':
-                        text = '您的帖子被设为精华';
+                        text = t('forum.notificationFeaturePost');
                         break;
                       case 'pin_post':
-                        text = '您的帖子被置顶';
+                        text = t('forum.notificationPinPost');
                         break;
                       default:
-                        text = '论坛通知';
+                        text = t('forum.notificationDefault');
                     }
                     
                     return (

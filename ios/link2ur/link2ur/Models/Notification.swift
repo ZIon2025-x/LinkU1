@@ -107,6 +107,8 @@ struct SystemNotification: Codable, Identifiable, Equatable {
 struct TaskChatItem: Codable, Identifiable, Equatable {
     let id: Int // 任务ID
     let title: String
+    let titleEn: String? // 英文标题
+    let titleZh: String? // 中文标题
     let taskType: String?
     let posterId: String?
     let takerId: String?
@@ -123,6 +125,8 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, status, images
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
         case taskType = "task_type"
         case posterId = "poster_id"
         case takerId = "taker_id"
@@ -140,6 +144,8 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
         
         id = try container.decode(Int.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
+        titleEn = try container.decodeIfPresent(String.self, forKey: .titleEn)
+        titleZh = try container.decodeIfPresent(String.self, forKey: .titleZh)
         taskType = try container.decodeIfPresent(String.self, forKey: .taskType)
         posterId = try container.decodeIfPresent(String.self, forKey: .posterId)
         takerId = try container.decodeIfPresent(String.self, forKey: .takerId)
@@ -178,6 +184,16 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
         } catch {
             // 如果解码失败，从 last_message.created_at 提取
             lastMessageTime = lastMessage?.createdAt
+        }
+    }
+    
+    // 根据当前语言获取显示标题
+    var displayTitle: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return titleZh?.isEmpty == false ? titleZh! : title
+        } else {
+            return titleEn?.isEmpty == false ? titleEn! : title
         }
     }
 }

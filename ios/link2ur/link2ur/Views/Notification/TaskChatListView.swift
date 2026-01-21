@@ -138,7 +138,7 @@ struct TaskChatRow: View {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 // 标题和时间
                 HStack(alignment: .center, spacing: AppSpacing.sm) {
-                    Text(taskChat.title)
+                    Text(taskChat.displayTitle)
                         .font(AppTypography.body)
                         .fontWeight(taskChat.unreadCount ?? 0 > 0 ? .bold : .semibold)
                         .foregroundColor(AppColors.textPrimary)
@@ -1146,7 +1146,7 @@ struct TaskChatView: View {
                             .font(.system(size: 12))
                             .foregroundColor(AppColors.textTertiary)
                         
-                        Text(message.content ?? "系统消息")
+                        Text(message.displayContent ?? LocalizationKey.notificationSystemMessage.localized)
                             .font(AppTypography.caption)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
