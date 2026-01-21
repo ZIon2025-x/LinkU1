@@ -806,6 +806,15 @@ async def get_reply_author_info(
 
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
+    if not text:
+        return ""
+    
+    # 如果内容是编码格式（包含 \n 或 \c 标记），先解码
+    # 向后兼容：如果包含编码标记，先解码；否则直接处理
+    if '\\n' in text or '\\c' in text:
+        # 解码编码标记
+        text = text.replace('\\n', '\n').replace('\\c', ' ')
+    
     # 简单的 Markdown 去除（移除常见标记）
     text = re.sub(r'#{1,6}\s+', '', text)  # 标题
     text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # 粗体
@@ -814,7 +823,7 @@ def strip_markdown(text: str, max_length: int = 200) -> str:
     text = re.sub(r'```[\s\S]*?```', '', text)  # 代码块
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)  # 链接
     text = re.sub(r'!\[([^\]]*)\]\([^\)]+\)', '', text)  # 图片
-    text = re.sub(r'\n+', ' ', text)  # 换行符
+    text = re.sub(r'\n+', ' ', text)  # 换行符替换为空格
     text = text.strip()
     
     if len(text) > max_length:
@@ -2944,38 +2953,20 @@ async def create_post(
     # 自动填充双语字段
     from app.utils.bilingual_helper import auto_fill_bilingual_fields
     
-    # 保留换行符：只移除首尾空白，保留中间的换行符和格式
+    # 内容已经是编码格式（\n 和 \c 标记），只移除首尾空白，保留编码标记
+    # 注意：strip() 不会影响 \n 和 \c 标记，因为它们不是空白字符
     normalized_content = post.content.strip() if post.content else None
     _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
         name=post.title,
-        description=normalized_content,  # 保留换行符
+        description=normalized_content,  # 保留编码标记（\n 和 \c）
         name_en=post.title_en.strip() if post.title_en else None,
         name_zh=post.title_zh.strip() if post.title_zh else None,
         description_en=post.content_en.strip() if post.content_en else None,
         description_zh=post.content_zh.strip() if post.content_zh else None,
     )
     
-    # 确保翻译后的内容也保留换行符（如果翻译服务丢失了换行符，从原文恢复）
-    if content_en and normalized_content and '\n' in normalized_content:
-        # 如果翻译后的内容没有换行符，但原文有，尝试恢复换行符位置
-        if '\n' not in content_en:
-            # 尝试在翻译文本中恢复换行符：在句号、问号、感叹号后添加换行
-            import re
-            # 在句号、问号、感叹号后添加换行（如果原文在该位置有换行）
-            lines_original = normalized_content.split('\n')
-            if len(lines_original) > 1:
-                # 原文有多行，尝试在翻译文本的相应位置恢复换行
-                # 简单方案：在句号、问号、感叹号后添加换行
-                content_en = re.sub(r'([.!?。！？])\s+', r'\1\n', content_en)
-                # 移除多余的空行
-                content_en = re.sub(r'\n{3,}', '\n\n', content_en)
-    if content_zh and normalized_content and '\n' in normalized_content:
-        if '\n' not in content_zh:
-            import re
-            lines_original = normalized_content.split('\n')
-            if len(lines_original) > 1:
-                content_zh = re.sub(r'([.!?。！？])\s+', r'\1\n', content_zh)
-                content_zh = re.sub(r'\n{3,}', '\n\n', content_zh)
+    # 注意：内容已经是编码格式（\n 和 \c 标记），翻译服务会保留这些标记
+    # 不需要尝试恢复换行符，因为内容已经是编码格式了
     
     # 创建帖子
     if admin_user:
@@ -3137,9 +3128,12 @@ async def update_post(
         updated_title = update_data.get('title', db_post.title)
         updated_content = update_data.get('content', db_post.content)
         
+        # 内容已经是编码格式（\n 和 \c 标记），只移除首尾空白，保留编码标记
+        normalized_updated_content = updated_content.strip() if updated_content else None
+        
         _, title_en, title_zh, content_en, content_zh = await auto_fill_bilingual_fields(
             name=updated_title,
-            description=updated_content.strip() if updated_content else None,
+            description=normalized_updated_content,  # 保留编码标记（\n 和 \c）
             name_en=update_data.get('title_en') or db_post.title_en,
             name_zh=update_data.get('title_zh') or db_post.title_zh,
             description_en=update_data.get('content_en') or db_post.content_en,

@@ -110,9 +110,14 @@ const ForumPostDetail: React.FC = () => {
 
   // 计算 SEO 相关数据（必须在所有 hooks 之后，但在 early return 之前）
   const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
-  const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+  // 解码内容用于 SEO 和分享描述
+  const getDecodedContent = (content: string) => {
+    const { decodeContent } = require('../utils/formatContent');
+    return decodeContent(content);
+  };
+  const seoDescription = post ? getDecodedContent(post.content).replace(/<[^>]*>/g, '').substring(0, 160) : '';
   // 用于分享的描述（使用全文，移除HTML标签，限制长度在200字符内，微信分享建议不超过200字符）
-  const shareDescription = post ? post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200) : '';
+  const shareDescription = post ? getDecodedContent(post.content).replace(/<[^>]*>/g, '').trim().substring(0, 200) : '';
   const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/post/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
 
   // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
@@ -379,7 +384,8 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     
     // 限制描述长度在200字符内（微信分享建议不超过200字符）
-    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    const { decodeContent } = require('../utils/formatContent');
+    const currentShareDescription = decodeContent(post.content).replace(/<[^>]*>/g, '').trim().substring(0, 200);
     const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     
     // 强制移除所有描述标签（无条件移除，确保清理干净）
@@ -613,8 +619,10 @@ const ForumPostDetail: React.FC = () => {
     }
     try {
       setReplyLoading(true);
+      // 对内容进行编码：将换行和空格转换为标记格式
+      const { encodeContent } = await import('../utils/formatContent');
       await createForumReply(Number(postId), {
-        content: replyContent,
+        content: encodeContent(replyContent),
         parent_reply_id: parentReplyId
       });
       message.success(t('forum.createSuccess'));
@@ -695,7 +703,8 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     
     // 计算分享描述（确保与组件顶层定义一致）
-    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    const { decodeContent } = require('../utils/formatContent');
+    const currentShareDescription = decodeContent(post.content).replace(/<[^>]*>/g, '').trim().substring(0, 200);
     
     // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
     updateWeixinMetaTags();
@@ -789,7 +798,8 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     
     // 计算分享描述（限制在200字符内）
-    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    const { decodeContent } = require('../utils/formatContent');
+    const currentShareDescription = decodeContent(post.content).replace(/<[^>]*>/g, '').trim().substring(0, 200);
     
     // 如果是微信分享（通过二维码），立即更新 meta 标签
     if (platform === 'wechat') {

@@ -24,6 +24,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import SkeletonLoader from '../components/SkeletonLoader';
+import SafeContent from '../components/SafeContent';
 import styles from './ForumMyContent.module.css';
 
 const { Title, Text } = Typography;
@@ -414,9 +415,7 @@ const ForumMyContent: React.FC = () => {
                           />
                         </div>
                         <div className={styles.itemContent}>
-                          <Text ellipsis>
-                            {reply.content}
-                          </Text>
+                          <SafeContent content={reply.content} />
                         </div>
                         <div className={styles.itemMeta}>
                           <Space split="|">
@@ -480,9 +479,7 @@ const ForumMyContent: React.FC = () => {
                       </div>
                       {like.target_type === 'reply' && like.reply && (
                         <div className={styles.itemContent}>
-                          <Text ellipsis>
-                            {like.reply.content}
-                          </Text>
+                          <SafeContent content={like.reply.content} />
                         </div>
                       )}
                       <div className={styles.itemMeta}>

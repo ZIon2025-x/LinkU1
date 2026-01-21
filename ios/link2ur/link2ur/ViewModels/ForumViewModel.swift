@@ -449,8 +449,11 @@ class ForumPostDetailViewModel: ObservableObject {
     }
     
     func replyToPost(postId: Int, content: String, parentReplyId: Int? = nil, completion: @escaping (Bool) -> Void) {
+        // 对内容进行编码：将换行和空格转换为标记格式
+        let encodedContent = ContentFormatter.encodeContent(content)
+        
         var body: [String: Any] = [
-            "content": content
+            "content": encodedContent
         ]
         
         if let parentId = parentReplyId {

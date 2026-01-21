@@ -110,9 +110,11 @@ const ForumCreatePost: React.FC = () => {
     try {
       setPostLoading(true);
       const response = await getForumPost(Number(postId));
+      // 对内容进行解码：将标记格式转换回显示格式
+      const { decodeContent } = await import('../utils/formatContent');
       form.setFieldsValue({
         title: response.title,
-        content: response.content,
+        content: decodeContent(response.content || ''),
         category_id: response.category.id
       });
     } catch (error: any) {
@@ -125,11 +127,18 @@ const ForumCreatePost: React.FC = () => {
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
+      // 对内容进行编码：将换行和空格转换为标记格式
+      const { encodeContent } = await import('../utils/formatContent');
+      const encodedValues = {
+        ...values,
+        content: encodeContent(values.content || '')
+      };
+      
       if (isEdit && postId) {
-        await updateForumPost(Number(postId), values);
+        await updateForumPost(Number(postId), encodedValues);
         message.success(t('forum.updateSuccess'));
       } else {
-        await createForumPost(values);
+        await createForumPost(encodedValues);
         message.success(t('forum.createSuccess'));
       }
       navigate(`/${lang}/forum/category/${values.category_id}`);

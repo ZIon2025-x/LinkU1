@@ -61,9 +61,12 @@ class CreatePostViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
+        // 对内容进行编码：将换行和空格转换为标记格式
+        let encodedContent = ContentFormatter.encodeContent(content)
+        
         let body: [String: Any] = [
             "title": title,
-            "content": content,
+            "content": encodedContent,
             "category_id": categoryId
         ]
         

@@ -183,7 +183,9 @@ struct PostCard: View {
             
             // 内容预览
             if let preview = post.displayContentPreview, !preview.isEmpty {
-                Text(preview)
+                // 解码内容：将标记格式（\n 和 \c）转换回实际的换行和空格
+                let decodedPreview = ContentFormatter.decodeContent(preview)
+                Text(decodedPreview)
                     .font(AppTypography.subheadline)
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)

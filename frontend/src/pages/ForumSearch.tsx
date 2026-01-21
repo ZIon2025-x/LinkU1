@@ -19,6 +19,7 @@ import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import SkeletonLoader from '../components/SkeletonLoader';
+import SafeContent from '../components/SafeContent';
 import styles from './ForumSearch.module.css';
 
 const { Title, Text } = Typography;
@@ -237,9 +238,7 @@ const ForumSearch: React.FC = () => {
                   </div>
 
                   <div className={styles.postContent}>
-                    <Text ellipsis type="secondary">
-                      {post.content}
-                    </Text>
+                    <SafeContent content={post.content} />
                   </div>
 
                   <div className={styles.postMeta}>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { decodeContent } from '../utils/formatContent';
 
 interface ForumPostStructuredDataProps {
   post: {
@@ -33,7 +34,7 @@ const ForumPostStructuredData: React.FC<ForumPostStructuredDataProps> = ({ post,
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": post.title,
-    "description": post.content.replace(/<[^>]*>/g, '').slice(0, 200),
+    "description": decodeContent(post.content).replace(/<[^>]*>/g, '').slice(0, 200),
     "author": {
       "@type": "Person",
       "name": post.author.name,

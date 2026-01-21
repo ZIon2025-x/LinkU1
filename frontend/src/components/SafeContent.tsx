@@ -5,6 +5,7 @@
  */
 import type React from 'react';
 import DOMPurify from 'dompurify';
+import { decodeContent } from '../utils/formatContent';
 
 // ⚠️ 重要：DOMPurify hook 配置放在模块级，只初始化一次
 // 避免在组件渲染时重复注册 hook
@@ -61,6 +62,9 @@ const SafeContent: React.FC<SafeContentProps> = ({
 }) => {
   if (!content) return null;
   
+  // 对内容进行解码：将标记格式转换回显示格式
+  const decodedContent = decodeContent(content);
+  
   if (allowHtml) {
     // 确保 hook 已初始化（双重检查）
     if (typeof window !== 'undefined') {
@@ -68,7 +72,7 @@ const SafeContent: React.FC<SafeContentProps> = ({
     }
     
     // 富文本/Markdown 内容：使用 DOMPurify 白名单清洗
-    const sanitized = DOMPurify.sanitize(content, {
+    const sanitized = DOMPurify.sanitize(decodedContent, {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img'
@@ -99,7 +103,7 @@ const SafeContent: React.FC<SafeContentProps> = ({
         className={className}
         style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
       >
-        {content}
+        {decodedContent}
       </div>
     );
   }

@@ -243,8 +243,9 @@ struct ForumPostDetailView: View {
     private func postContent(post: ForumPost) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             if let content = post.displayContent {
-                // 使用 AttributedString 或直接使用 Text，确保换行符被正确处理
-                Text(content)
+                // 解码内容：将标记格式（\n 和 \c）转换回实际的换行和空格
+                let decodedContent = ContentFormatter.decodeContent(content)
+                Text(decodedContent)
                     .font(.system(size: 17))
                     .foregroundColor(AppColors.textPrimary)
                     .lineSpacing(8)
@@ -456,13 +457,30 @@ struct ReplyInputView: View {
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
-        HStack(spacing: 10) {
-            TextField("写下你的回复...", text: $replyContent)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color(UIColor.secondarySystemBackground))
-                .cornerRadius(22)
-                .focused($isInputFocused)
+        HStack(alignment: .bottom, spacing: 10) {
+            // 使用 TextEditor 支持多行输入和换行
+            ZStack(alignment: .topLeading) {
+                // 占位符
+                if replyContent.isEmpty {
+                    Text("写下你的回复...")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(UIColor.placeholderText))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .allowsHitTesting(false)
+                }
+                
+                // 文本编辑器（支持多行和换行）
+                TextEditor(text: $replyContent)
+                    .font(.system(size: 16))
+                    .frame(minHeight: 36, maxHeight: 100) // 最小高度36，最大高度100
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .scrollContentBackground(.hidden)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(22)
+                    .focused($isInputFocused)
+            }
             
             if !replyContent.trimmingCharacters(in: .whitespaces).isEmpty {
                 Button(action: {
@@ -591,10 +609,14 @@ struct ReplyCard: View {
             }
             
             // 回复内容
-            Text(reply.content)
+            // 解码内容：将标记格式（\n 和 \c）转换回实际的换行和空格
+            let decodedReplyContent = ContentFormatter.decodeContent(reply.content)
+            Text(decodedReplyContent)
                 .font(.system(size: 15))
                 .foregroundColor(AppColors.textPrimary)
                 .lineSpacing(4)
+                .lineLimit(nil)  // 不限制行数
+                .multilineTextAlignment(.leading)  // 左对齐多行文本
                 .padding(.leading, 42)
             
             // 子回复按钮
