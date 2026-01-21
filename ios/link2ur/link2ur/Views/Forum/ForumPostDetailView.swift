@@ -473,7 +473,7 @@ struct ReplyInputView: View {
                 // 文本编辑器（支持多行和换行）
                 TextEditor(text: $replyContent)
                     .font(.system(size: 16))
-                    .frame(minHeight: 36, maxHeight: 100) // 最小高度36，最大高度100
+                    .frame(height: 44) // 和爱心按钮高度一致
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                     .scrollContentBackground(.hidden)

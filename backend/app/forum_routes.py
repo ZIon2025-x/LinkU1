@@ -804,6 +804,107 @@ async def get_reply_author_info(
         is_admin=False
     )
 
+def get_user_language_preference(
+    current_user: Optional[models.User] = None,
+    request: Optional[Request] = None
+) -> str:
+    """
+    获取用户语言偏好
+    优先级：用户设置 > Accept-Language 请求头 > 默认英文
+    """
+    # 1. 优先使用用户设置的语言偏好
+    if current_user:
+        language = getattr(current_user, 'language_preference', None)
+        if language and isinstance(language, str):
+            language = language.strip().lower()
+            if language in ['zh', 'zh-cn', 'chinese']:
+                return 'zh'
+            elif language in ['en', 'en-us', 'english']:
+                return 'en'
+    
+    # 2. 如果没有用户设置，尝试从请求头获取
+    if request:
+        accept_language = request.headers.get("Accept-Language", "")
+        if accept_language:
+            # 解析 Accept-Language 头（例如：zh-CN,zh;q=0.9,en;q=0.8）
+            languages = accept_language.split(',')
+            for lang in languages:
+                lang = lang.split(';')[0].strip().lower()
+                if lang.startswith('zh'):
+                    return 'zh'
+                elif lang.startswith('en'):
+                    return 'en'
+    
+    # 3. 默认返回英文
+    return 'en'
+
+
+async def create_latest_post_info(
+    latest_post: models.ForumPost,
+    db: AsyncSession,
+    request: Optional[Request] = None,
+    current_user: Optional[models.User] = None
+) -> schemas.LatestPostInfo:
+    """
+    创建最新帖子信息，根据用户语言选择正确的标题和预览内容
+    """
+    author_info = await get_post_author_info(db, latest_post, request)
+    display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+    
+    # 获取用户语言偏好
+    user_lang = get_user_language_preference(current_user, request)
+    
+    # 根据用户语言选择标题
+    display_title = latest_post.title
+    title_en = getattr(latest_post, 'title_en', None)
+    title_zh = getattr(latest_post, 'title_zh', None)
+    if user_lang == 'zh' and title_zh:
+        display_title = title_zh
+    elif user_lang == 'en' and title_en:
+        display_title = title_en
+    
+    # 生成内容预览（支持双语）
+    content_preview = None
+    content_preview_en = None
+    content_preview_zh = None
+    
+    # 先解码内容，再生成预览
+    from app.utils.bilingual_helper import _restore_encoding_markers
+    content = latest_post.content
+    if content:
+        # 解码编码标记
+        decoded_content = _restore_encoding_markers(content)
+        content_preview = strip_markdown(decoded_content)
+    
+    if hasattr(latest_post, 'content_en') and latest_post.content_en:
+        decoded_content_en = _restore_encoding_markers(latest_post.content_en)
+        content_preview_en = strip_markdown(decoded_content_en)
+    if hasattr(latest_post, 'content_zh') and latest_post.content_zh:
+        decoded_content_zh = _restore_encoding_markers(latest_post.content_zh)
+        content_preview_zh = strip_markdown(decoded_content_zh)
+    
+    # 根据用户语言选择预览内容
+    display_preview = content_preview
+    if user_lang == 'zh' and content_preview_zh:
+        display_preview = content_preview_zh
+    elif user_lang == 'en' and content_preview_en:
+        display_preview = content_preview_en
+    
+    return schemas.LatestPostInfo(
+        id=latest_post.id,
+        title=display_title,
+        title_en=title_en,
+        title_zh=title_zh,
+        content_preview=display_preview,
+        content_preview_en=content_preview_en,
+        content_preview_zh=content_preview_zh,
+        author=author_info,
+        last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+        reply_count=latest_post.reply_count,
+        view_count=display_view_count
+    )
+
+
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
     if not text:
@@ -1026,18 +1127,8 @@ async def get_visible_forums(
                             # 添加最新帖子信息
                             latest_post_info = None
                             if latest_post:
-                                author_info = await get_post_author_info(db, latest_post, request)
-                                display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                                
-                                latest_post_info = schemas.LatestPostInfo(
-                                    id=latest_post.id,
-                                    title=latest_post.title,
-                                    title_en=getattr(latest_post, 'title_en', None),
-                                    title_zh=getattr(latest_post, 'title_zh', None),
-                                    author=author_info,
-                                    last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                                    reply_count=latest_post.reply_count,
-                                    view_count=display_view_count
+                                latest_post_info = await create_latest_post_info(
+                                    latest_post, db, request, current_user
                                 )
                             
                             category_out = schemas.ForumCategoryOut(
@@ -1131,16 +1222,8 @@ async def get_visible_forums(
                         # 添加最新帖子信息
                         latest_post_info = None
                         if latest_post:
-                            author_info = await get_post_author_info(db, latest_post, request)
-                            display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                            
-                            latest_post_info = schemas.LatestPostInfo(
-                                id=latest_post.id,
-                                title=latest_post.title,
-                                author=author_info,
-                                last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                                reply_count=latest_post.reply_count,
-                                view_count=display_view_count
+                            latest_post_info = await create_latest_post_info(
+                                latest_post, db, request, current_user
                             )
                         
                         category_out = schemas.ForumCategoryOut(
@@ -1229,16 +1312,8 @@ async def get_visible_forums(
                         # 添加最新帖子信息
                         latest_post_info = None
                         if latest_post:
-                            author_info = await get_post_author_info(db, latest_post, request)
-                            display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                            
-                            latest_post_info = schemas.LatestPostInfo(
-                                id=latest_post.id,
-                                title=latest_post.title,
-                                author=author_info,
-                                last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                                reply_count=latest_post.reply_count,
-                                view_count=display_view_count
+                            latest_post_info = await create_latest_post_info(
+                                latest_post, db, request, current_user
                             )
                         
                         category_out = schemas.ForumCategoryOut(
@@ -1337,16 +1412,8 @@ async def get_visible_forums(
                 # 添加最新帖子信息
                 latest_post_info = None
                 if latest_post:
-                    author_info = await get_post_author_info(db, latest_post, request)
-                    display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                    
-                    latest_post_info = schemas.LatestPostInfo(
-                        id=latest_post.id,
-                        title=latest_post.title,
-                        author=author_info,
-                        last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                        reply_count=latest_post.reply_count,
-                        view_count=display_view_count
+                    latest_post_info = await create_latest_post_info(
+                        latest_post, db, request, current_user
                     )
                 
                 category_out = schemas.ForumCategoryOut(
@@ -1435,16 +1502,8 @@ async def get_visible_forums(
                 # 添加最新帖子信息
                 latest_post_info = None
                 if latest_post:
-                    author_info = await get_post_author_info(db, latest_post, request)
-                    display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                    
-                    latest_post_info = schemas.LatestPostInfo(
-                        id=latest_post.id,
-                        title=latest_post.title,
-                        author=author_info,
-                        last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                        reply_count=latest_post.reply_count,
-                        view_count=display_view_count
+                    latest_post_info = await create_latest_post_info(
+                        latest_post, db, request, current_user
                     )
                 
                 category_out = schemas.ForumCategoryOut(
@@ -1538,16 +1597,8 @@ async def get_visible_forums(
             # 添加最新帖子信息
             latest_post_info = None
             if latest_post:
-                author_info = await get_post_author_info(db, latest_post, request)
-                display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                
-                latest_post_info = schemas.LatestPostInfo(
-                    id=latest_post.id,
-                    title=latest_post.title,
-                    author=author_info,
-                    last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                    reply_count=latest_post.reply_count,
-                    view_count=display_view_count
+                latest_post_info = await create_latest_post_info(
+                    latest_post, db, request, None
                 )
             
             category_out = schemas.ForumCategoryOut(
@@ -1648,16 +1699,8 @@ async def get_categories(
                 # 注意：这里不传入 request，因为只是显示作者信息，不需要检查管理员会话
                 author_info = await get_post_author_info(db, latest_post, None)
                 
-                # 计算最新帖子的浏览量（数据库值 + Redis增量）
-                display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
-                
-                latest_post_info = schemas.LatestPostInfo(
-                    id=latest_post.id,
-                    title=latest_post.title,
-                    author=author_info,
-                    last_reply_at=latest_post.last_reply_at or latest_post.created_at,
-                    reply_count=latest_post.reply_count,
-                    view_count=display_view_count
+                latest_post_info = await create_latest_post_info(
+                    latest_post, db, request, None
                 )
             
             # 构建板块信息（使用 Pydantic 模型，包含 latest_post）

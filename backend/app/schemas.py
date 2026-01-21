@@ -2771,6 +2771,9 @@ class LatestPostInfo(BaseModel):
     title: str
     title_en: Optional[str] = None
     title_zh: Optional[str] = None
+    content_preview: Optional[str] = None  # 内容预览（根据用户语言选择）
+    content_preview_en: Optional[str] = None
+    content_preview_zh: Optional[str] = None
     author: Optional["UserInfo"] = None
     last_reply_at: Optional[datetime.datetime] = None
     reply_count: int = 0

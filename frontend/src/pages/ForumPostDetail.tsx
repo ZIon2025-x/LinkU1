@@ -1229,13 +1229,15 @@ const ForumPostDetail: React.FC = () => {
             )}
             <TextArea
               id="reply-content"
-              rows={4}
+              rows={1}
+              autoSize={{ minRows: 1, maxRows: 4 }}
               placeholder={t('forum.replyPlaceholder')}
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               maxLength={10000}
               showCount
               aria-label={t('forum.replyPlaceholder')}
+              style={{ minHeight: '32px' }}
             />
             <div className={styles.replyActions}>
               <Button
