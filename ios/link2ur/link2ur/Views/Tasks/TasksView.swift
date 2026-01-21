@@ -679,12 +679,10 @@ struct TaskCard: View {
             // 内容区域（符合 HIG，使用系统背景）
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 // 标题（使用系统字体，支持翻译）
-                TranslatableText(
-                    task.title,
-                    font: AppTypography.body,
-                    foregroundColor: AppColors.textPrimary,
-                    lineLimit: 2
-                )
+                Text(task.displayTitle)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 
                 // 底部信息栏

@@ -4,7 +4,11 @@ import CoreLocation
 struct Task: Codable, Identifiable, Equatable {
     let id: Int
     let title: String
+    let titleEn: String?  // 英文标题（可选）
+    let titleZh: String?  // 中文标题（可选）
     let description: String
+    let descriptionEn: String?  // 英文描述（可选）
+    let descriptionZh: String?  // 中文描述（可选）
     let taskType: String  // 后端使用 task_type
     let location: String  // 后端使用 location（不是 city）
     let latitude: Double?  // 纬度（用于地图选点和距离计算）
@@ -35,6 +39,10 @@ struct Task: Codable, Identifiable, Equatable {
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
+        case descriptionEn = "description_en"
+        case descriptionZh = "description_zh"
         case taskType = "task_type"
         case location
         case reward
@@ -94,6 +102,26 @@ struct Task: Codable, Identifiable, Equatable {
     var isOnline: Bool {
         location.lowercased() == "online"
     }
+    
+    /// 根据当前语言获取显示标题
+    var displayTitle: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return titleZh?.isEmpty == false ? titleZh! : title
+        } else {
+            return titleEn?.isEmpty == false ? titleEn! : title
+        }
+    }
+    
+    /// 根据当前语言获取显示描述
+    var displayDescription: String {
+        let language = LocalizationHelper.currentLanguage
+        if language.hasPrefix("zh") {
+            return descriptionZh?.isEmpty == false ? descriptionZh! : description
+        } else {
+            return descriptionEn?.isEmpty == false ? descriptionEn! : description
+        }
+    }
 }
 
 enum TaskStatus: String, Codable {
@@ -106,12 +134,12 @@ enum TaskStatus: String, Codable {
     
     var displayText: String {
         switch self {
-        case .open: return "开放中"
-        case .inProgress: return "进行中"
-        case .completed: return "已完成"
-        case .cancelled: return "已取消"
-        case .pendingConfirmation: return "待确认"
-        case .pendingPayment: return "待支付"
+        case .open: return LocalizationKey.taskStatusOpen.localized
+        case .inProgress: return LocalizationKey.taskStatusInProgress.localized
+        case .completed: return LocalizationKey.taskStatusCompleted.localized
+        case .cancelled: return LocalizationKey.taskStatusCancelled.localized
+        case .pendingConfirmation: return LocalizationKey.taskStatusPendingConfirmation.localized
+        case .pendingPayment: return LocalizationKey.taskStatusPendingPayment.localized
         }
     }
 }
@@ -151,7 +179,11 @@ struct RecommendationTask: Codable {
         return Task(
             id: taskId,
             title: title,
+            titleEn: nil,  // 推荐任务可能没有翻译
+            titleZh: nil,
             description: description,
+            descriptionEn: nil,
+            descriptionZh: nil,
             taskType: taskType,
             location: location,
             latitude: nil,

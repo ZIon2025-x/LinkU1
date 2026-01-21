@@ -263,7 +263,7 @@ struct TaskDetailView: View {
     
     @ViewBuilder
     private var shareSheetContent: some View {
-        if let task = viewModel.task, !task.description.isEmpty {
+        if let task = viewModel.task, !task.displayDescription.isEmpty {
             // 确保任务数据完整后再显示分享视图
             TaskShareSheet(
                 task: task,
@@ -660,8 +660,8 @@ struct TaskShareSheet: View {
     
     // 计算属性：确保描述始终是最新的
     private var currentDescription: String {
-        // 优先使用 @State 中的值，如果为空则使用 task.description
-        return shareDescription.isEmpty ? task.description : shareDescription
+        // 优先使用 @State 中的值，如果为空则使用 task.displayDescription
+        return shareDescription.isEmpty ? task.displayDescription : shareDescription
     }
     
     var body: some View {
@@ -715,20 +715,16 @@ struct TaskShareSheet: View {
                 
                 // 标题和描述
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    TranslatableText(
-                        task.title,
-                        font: AppTypography.bodyBold,
-                        foregroundColor: AppColors.textPrimary,
-                        lineLimit: 2
-                    )
+                    Text(task.displayTitle)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(2)
                     
                     if !currentDescription.isEmpty {
-                        TranslatableText(
-                            currentDescription,
-                            font: AppTypography.caption,
-                            foregroundColor: AppColors.textSecondary,
-                            lineLimit: 2
-                        )
+                        Text(currentDescription)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(2)
                     }
                     
                     // 任务信息
@@ -771,7 +767,7 @@ struct TaskShareSheet: View {
             // 确保在视图出现时更新描述
             shareDescription = task.description
         }
-        .onChange(of: task.description) { newDescription in
+        .onChange(of: task.displayDescription) { newDescription in
             // 当任务描述更新时，同步更新分享描述
             shareDescription = newDescription
         }
@@ -1065,7 +1061,7 @@ struct TaskDetailContentView: View {
                             applications: viewModel.applications,
                             isLoading: viewModel.isLoadingApplications,
                             taskId: taskId,
-                            taskTitle: task.title,
+                            taskTitle: task.displayTitle,
                             onApprove: { applicationId in
                                 actionLoading = true
                                 // 获取申请者名字（在批准前保存）
@@ -1283,12 +1279,10 @@ struct TaskHeaderCard: View {
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                TranslatableText(
-                    task.title,
-                    font: AppTypography.title,
-                    foregroundColor: AppColors.textPrimary,
-                    lineLimit: 3
-                )
+                Text(task.displayTitle)
+                    .font(AppTypography.title)
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
                 
                 // 价格和积分
@@ -1377,13 +1371,11 @@ struct TaskInfoCard: View {
                         .foregroundColor(AppColors.textPrimary)
                 }
                 
-                TranslatableText(
-                    task.description,
-                    font: AppTypography.body,
-                    foregroundColor: AppColors.textSecondary,
-                    lineSpacing: 6
-                )
-                .fixedSize(horizontal: false, vertical: true)
+                Text(task.displayDescription)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
             Divider()

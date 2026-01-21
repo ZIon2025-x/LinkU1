@@ -227,17 +227,17 @@ struct MyTasksView: View {
     private func getEmptyMessage() -> String {
         switch selectedTab {
         case .all:
-            return "您还没有发布或接受任何任务"
+            return LocalizationKey.myTasksEmptyAll.localized
         case .posted:
-            return "您还没有发布任何任务"
+            return LocalizationKey.myTasksEmptyPosted.localized
         case .taken:
-            return "您还没有接受任何任务"
+            return LocalizationKey.myTasksEmptyTaken.localized
         case .pending:
-            return "您还没有待处理的申请记录"
+            return LocalizationKey.myTasksEmptyPending.localized
         case .completed:
-            return "您还没有已完成的任务"
+            return LocalizationKey.myTasksEmptyCompleted.localized
         case .cancelled:
-            return "您还没有已取消的任务"
+            return LocalizationKey.myTasksEmptyCancelled.localized
         }
     }
 }
@@ -261,7 +261,7 @@ struct MyTasksTabButton: View {
                         .font(.system(size: 14))
                 }
                 
-                Text(tab.rawValue)
+                Text(tab.localizedName)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
                 
                 if count > 0 {
@@ -307,7 +307,7 @@ struct MyTasksApplicationCard: View {
             // 标题和状态
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(application.taskTitle)
+                    Text(application.displayTitle)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(2)
@@ -426,24 +426,24 @@ struct EnhancedTaskCard: View {
             // 2. 参与者（通过 TaskParticipant 表关联，但 posterId 可能为 None）
             // 3. 任务达人（takerId，创建者）
             if isTaker {
-                return "任务达人"
+                return LocalizationKey.myTasksRoleExpert.localized
             } else if isOriginator {
-                return "申请者"
+                return LocalizationKey.myTasksRoleApplicant.localized
             } else if isPoster {
-                return "发布者"
+                return LocalizationKey.myTasksRolePoster.localized
             } else {
                 // 如果都不是，说明用户是参与者（通过 TaskParticipant 表关联）
-                return "参与者"
+                return LocalizationKey.myTasksRoleParticipant.localized
             }
         } else {
             // 单人任务：正常的发布者/接受者逻辑
             if isPoster {
-                return "发布者"
+                return LocalizationKey.myTasksRolePoster.localized
             } else if isTaker {
-                return "接受者"
+                return LocalizationKey.myTasksRoleTaker.localized
             }
         }
-        return "未知"
+        return LocalizationKey.myTasksRoleUnknown.localized
     }
     
     private func getRoleIcon() -> String {
@@ -487,7 +487,7 @@ struct EnhancedTaskCard: View {
             HStack(alignment: .top, spacing: AppSpacing.md) {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     HStack(spacing: AppSpacing.xs) {
-                        Text(task.title)
+                        Text(task.displayTitle)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(AppColors.textPrimary)
                             .lineLimit(2)
@@ -543,7 +543,7 @@ struct EnhancedTaskCard: View {
             
             // 任务描述
             if !task.description.isEmpty {
-                Text(task.description)
+                Text(task.displayDescription)
                     .font(.system(size: 14))
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)
@@ -579,9 +579,9 @@ struct EnhancedTaskCard: View {
     private func getTaskLevelLabel(_ level: String) -> String {
         switch level {
         case "super":
-            return "🔥 超级任务"
+            return LocalizationKey.taskDetailSuperTask.localized
         case "vip":
-            return "⭐ VIP任务"
+            return LocalizationKey.taskDetailVipTask.localized
         default:
             return ""
         }

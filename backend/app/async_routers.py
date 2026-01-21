@@ -818,15 +818,28 @@ async def get_user_applications(
         applications_result = await db.execute(applications_query)
         applications = applications_result.scalars().all()
         
+        # 获取所有任务的翻译
+        task_ids = [app.task_id for app in applications if app.task]
+        from app.utils.task_translation_helper import get_task_translations_batch
+        translations_dict = {}
+        if task_ids:
+            translations_dict = await get_task_translations_batch(db, task_ids, 'title')
+        
         # 直接使用关联数据，无需额外查询
         result = []
         for app in applications:
             task = app.task  # 已预加载，无需查询
             if task:
+                # 获取任务标题翻译（键格式为 (task_id, target_language)）
+                title_en = translations_dict.get((task.id, 'en'))
+                title_zh = translations_dict.get((task.id, 'zh-CN'))
+                
                 result.append({
                     "id": app.id,
                     "task_id": app.task_id,
                     "task_title": task.title,
+                    "task_title_en": title_en,
+                    "task_title_zh": title_zh,
                     "task_reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
                     "task_location": task.location,
                     "status": app.status,

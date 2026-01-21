@@ -1123,6 +1123,30 @@
 "my_tasks.pending" = "Pending";
 "my_tasks.application_message" = "Application Message";
 "my_tasks.view_details" = "View Details";
+"my_tasks.tab.all" = "All";
+"my_tasks.tab.posted" = "Posted";
+"my_tasks.tab.taken" = "Taken";
+"my_tasks.tab.pending" = "Pending";
+"my_tasks.tab.completed" = "Completed";
+"my_tasks.tab.cancelled" = "Cancelled";
+"my_tasks.empty.all" = "You haven't posted or accepted any tasks yet";
+"my_tasks.empty.posted" = "You haven't posted any tasks yet";
+"my_tasks.empty.taken" = "You haven't accepted any tasks yet";
+"my_tasks.empty.pending" = "You have no pending application records yet";
+"my_tasks.empty.completed" = "You have no completed tasks yet";
+"my_tasks.empty.cancelled" = "You have no cancelled tasks yet";
+"my_tasks.role.poster" = "Poster";
+"my_tasks.role.taker" = "Taker";
+"my_tasks.role.expert" = "Expert";
+"my_tasks.role.applicant" = "Applicant";
+"my_tasks.role.participant" = "Participant";
+"my_tasks.role.unknown" = "Unknown";
+"task_status.open" = "Open";
+"task_status.in_progress" = "In Progress";
+"task_status.completed" = "Completed";
+"task_status.cancelled" = "Cancelled";
+"task_status.pending_confirmation" = "Pending Confirmation";
+"task_status.pending_payment" = "Pending Payment";
 
 // MARK: - My Posts
 "my_posts.title" = "My Items";

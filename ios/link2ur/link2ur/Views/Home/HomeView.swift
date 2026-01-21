@@ -1239,12 +1239,12 @@ struct SearchTaskCard: View {
             
             // 信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
+                Text(task.displayTitle)
                     .font(AppTypography.bodyBold)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
                 
-                Text(task.description)
+                Text(task.displayDescription)
                     .font(AppTypography.caption)
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)

@@ -804,6 +804,40 @@
 "spotlight.expert" = "任務達人";
 "spotlight.quick_action" = "快速操作";
 
+// MARK: - My Tasks
+"my_tasks.loading_completed" = "載入已完成任務...";
+"my_tasks.network_unavailable" = "網路不可用";
+"my_tasks.check_network" = "請檢查網路連接後重試";
+"my_tasks.no_pending_applications" = "暫無待處理申請";
+"my_tasks.no_pending_applications_message" = "沒有待處理的申請記錄";
+"my_tasks.pending" = "待處理";
+"my_tasks.application_message" = "申請消息";
+"my_tasks.view_details" = "查看詳情";
+"my_tasks.tab.all" = "全部";
+"my_tasks.tab.posted" = "我發布的";
+"my_tasks.tab.taken" = "我接受的";
+"my_tasks.tab.pending" = "待處理申請";
+"my_tasks.tab.completed" = "已完成";
+"my_tasks.tab.cancelled" = "已取消";
+"my_tasks.empty.all" = "您還沒有發布或接受任何任務";
+"my_tasks.empty.posted" = "您還沒有發布任何任務";
+"my_tasks.empty.taken" = "您還沒有接受任何任務";
+"my_tasks.empty.pending" = "您還沒有待處理的申請記錄";
+"my_tasks.empty.completed" = "您還沒有已完成的任務";
+"my_tasks.empty.cancelled" = "您還沒有已取消的任務";
+"my_tasks.role.poster" = "發布者";
+"my_tasks.role.taker" = "接受者";
+"my_tasks.role.expert" = "任務達人";
+"my_tasks.role.applicant" = "申請者";
+"my_tasks.role.participant" = "參與者";
+"my_tasks.role.unknown" = "未知";
+"task_status.open" = "開放中";
+"task_status.in_progress" = "進行中";
+"task_status.completed" = "已完成";
+"task_status.cancelled" = "已取消";
+"task_status.pending_confirmation" = "待確認";
+"task_status.pending_payment" = "待支付";
+
 // MARK: - Shortcuts
 "shortcuts.publish_task" = "發布任務";
 "shortcuts.publish_task_description" = "快速發布一個新任務";

@@ -6,6 +6,8 @@ struct UserTaskApplication: Codable, Identifiable {
     let id: Int
     let taskId: Int
     let taskTitle: String
+    let taskTitleEn: String?
+    let taskTitleZh: String?
     let taskReward: Double
     let taskLocation: String
     let taskStatus: String
@@ -17,12 +19,24 @@ struct UserTaskApplication: Codable, Identifiable {
         case id
         case taskId = "task_id"
         case taskTitle = "task_title"
+        case taskTitleEn = "task_title_en"
+        case taskTitleZh = "task_title_zh"
         case taskReward = "task_reward"
         case taskLocation = "task_location"
         case taskStatus = "task_status"
         case status
         case message
         case createdAt = "created_at"
+    }
+    
+    var displayTitle: String {
+        let currentLang = LocalizationHelper.currentLanguage
+        if currentLang == "en", let titleEn = taskTitleEn, !titleEn.isEmpty {
+            return titleEn
+        } else if currentLang == "zh-Hans" || currentLang == "zh-Hant", let titleZh = taskTitleZh, !titleZh.isEmpty {
+            return titleZh
+        }
+        return taskTitle
     }
 }
 
@@ -57,12 +71,23 @@ enum TaskStatusFilter: String, CaseIterable {
 
 // 标签页类型（参考 frontend）
 enum TaskTab: String, CaseIterable {
-    case all = "全部"
-    case posted = "我发布的"
-    case taken = "我接受的"
-    case pending = "待处理申请"
-    case completed = "已完成"
-    case cancelled = "已取消"
+    case all
+    case posted
+    case taken
+    case pending
+    case completed
+    case cancelled
+    
+    var localizedName: String {
+        switch self {
+        case .all: return LocalizationKey.myTasksTabAll.localized
+        case .posted: return LocalizationKey.myTasksTabPosted.localized
+        case .taken: return LocalizationKey.myTasksTabTaken.localized
+        case .pending: return LocalizationKey.myTasksTabPending.localized
+        case .completed: return LocalizationKey.myTasksTabCompleted.localized
+        case .cancelled: return LocalizationKey.myTasksTabCancelled.localized
+        }
+    }
     
     var icon: String {
         switch self {

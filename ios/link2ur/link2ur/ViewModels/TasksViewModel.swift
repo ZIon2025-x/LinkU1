@@ -520,7 +520,11 @@ class TasksViewModel: ObservableObject {
                                 updatedTasks[index] = Task(
                                     id: task.id,
                                     title: task.title,
+                                    titleEn: task.titleEn,
+                                    titleZh: task.titleZh,
                                     description: task.description,
+                                    descriptionEn: task.descriptionEn,
+                                    descriptionZh: task.descriptionZh,
                                     taskType: task.taskType,
                                     location: task.location,
                                     latitude: task.latitude,
