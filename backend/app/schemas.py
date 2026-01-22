@@ -2168,6 +2168,14 @@ class FleaMarketItemResponse(BaseModel):
     created_at: str
     updated_at: str
     days_until_auto_delist: Optional[int] = None  # 距离自动下架还有多少天
+    # 未付款购买信息（仅当当前用户有未付款的购买时返回）
+    pending_payment_task_id: Optional[int] = None  # 待支付任务ID
+    pending_payment_client_secret: Optional[str] = None  # Stripe支付client_secret
+    pending_payment_amount: Optional[int] = None  # 支付金额（便士）
+    pending_payment_amount_display: Optional[str] = None  # 支付金额显示
+    pending_payment_currency: Optional[str] = None  # 支付货币
+    pending_payment_customer_id: Optional[str] = None  # Stripe客户ID
+    pending_payment_ephemeral_key_secret: Optional[str] = None  # Stripe临时密钥
 
     class Config:
         from_attributes = True

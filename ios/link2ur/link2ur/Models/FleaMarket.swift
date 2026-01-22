@@ -50,6 +50,14 @@ struct FleaMarketItem: Codable, Identifiable {
     let createdAt: String
     let updatedAt: String?
     let daysUntilAutoDelist: Int? // 距离自动下架还有多少天
+    // 未付款购买信息（仅当当前用户有未付款的购买时返回）
+    let pendingPaymentTaskId: Int? // 待支付任务ID
+    let pendingPaymentClientSecret: String? // Stripe支付client_secret
+    let pendingPaymentAmount: Int? // 支付金额（便士）
+    let pendingPaymentAmountDisplay: String? // 支付金额显示
+    let pendingPaymentCurrency: String? // 支付货币
+    let pendingPaymentCustomerId: String? // Stripe客户ID
+    let pendingPaymentEphemeralKeySecret: String? // Stripe临时密钥
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
@@ -60,6 +68,13 @@ struct FleaMarketItem: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case daysUntilAutoDelist = "days_until_auto_delist"
+        case pendingPaymentTaskId = "pending_payment_task_id"
+        case pendingPaymentClientSecret = "pending_payment_client_secret"
+        case pendingPaymentAmount = "pending_payment_amount"
+        case pendingPaymentAmountDisplay = "pending_payment_amount_display"
+        case pendingPaymentCurrency = "pending_payment_currency"
+        case pendingPaymentCustomerId = "pending_payment_customer_id"
+        case pendingPaymentEphemeralKeySecret = "pending_payment_ephemeral_key_secret"
     }
     
     // 自定义解码，处理 price 可能是字符串的情况
@@ -95,6 +110,20 @@ struct FleaMarketItem: Codable, Identifiable {
         createdAt = try container.decode(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
         daysUntilAutoDelist = try container.decodeIfPresent(Int.self, forKey: .daysUntilAutoDelist)
+        pendingPaymentTaskId = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentTaskId)
+        pendingPaymentClientSecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentClientSecret)
+        pendingPaymentAmount = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentAmount)
+        pendingPaymentAmountDisplay = try container.decodeIfPresent(String.self, forKey: .pendingPaymentAmountDisplay)
+        pendingPaymentCurrency = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCurrency)
+        pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
+        pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
+        pendingPaymentTaskId = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentTaskId)
+        pendingPaymentClientSecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentClientSecret)
+        pendingPaymentAmount = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentAmount)
+        pendingPaymentAmountDisplay = try container.decodeIfPresent(String.self, forKey: .pendingPaymentAmountDisplay)
+        pendingPaymentCurrency = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCurrency)
+        pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
+        pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
     }
     
     // 自定义编码
@@ -120,6 +149,13 @@ struct FleaMarketItem: Codable, Identifiable {
         try container.encode(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
         try container.encodeIfPresent(daysUntilAutoDelist, forKey: .daysUntilAutoDelist)
+        try container.encodeIfPresent(pendingPaymentTaskId, forKey: .pendingPaymentTaskId)
+        try container.encodeIfPresent(pendingPaymentClientSecret, forKey: .pendingPaymentClientSecret)
+        try container.encodeIfPresent(pendingPaymentAmount, forKey: .pendingPaymentAmount)
+        try container.encodeIfPresent(pendingPaymentAmountDisplay, forKey: .pendingPaymentAmountDisplay)
+        try container.encodeIfPresent(pendingPaymentCurrency, forKey: .pendingPaymentCurrency)
+        try container.encodeIfPresent(pendingPaymentCustomerId, forKey: .pendingPaymentCustomerId)
+        try container.encodeIfPresent(pendingPaymentEphemeralKeySecret, forKey: .pendingPaymentEphemeralKeySecret)
     }
 }
 

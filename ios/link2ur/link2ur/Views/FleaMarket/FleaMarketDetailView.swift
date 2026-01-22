@@ -658,38 +658,37 @@ struct FleaMarketDetailView: View {
                         .shadow(color: AppColors.primary.opacity(0.4), radius: 8, x: 0, y: 4)
                     }
                 } else {
-                    // 如果不是卖家，显示购买相关按钮
-                    // 议价按钮
-                    Button(action: {
-                        if appState.isAuthenticated {
-                            purchaseType = .negotiate
-                            showPurchaseSheet = true
-                        } else {
-                            showLogin = true
-                        }
-                    }) {
-                        Text(LocalizationKey.fleaMarketNegotiate.localized)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(AppColors.primary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(
-                                RoundedRectangle(cornerRadius: 25)
-                                    .stroke(AppColors.primary, lineWidth: 1.5)
-                            )
-                    }
-                    
-                    // 立即购买按钮
-                    Button(action: {
-                        if appState.isAuthenticated {
-                            purchaseType = .direct
-                            showPurchaseSheet = true
-                        } else {
-                            showLogin = true
-                        }
-                    }) {
-                        Text(LocalizationKey.fleaMarketBuyNow.localized)
-                            .font(.system(size: 16, weight: .semibold))
+                    // 检查是否有未付款的购买
+                    if let pendingTaskId = item.pendingPaymentTaskId,
+                       let clientSecret = item.pendingPaymentClientSecret {
+                        // 有未付款的购买，显示继续支付按钮
+                        Button(action: {
+                            if appState.isAuthenticated {
+                                // 设置支付参数
+                                paymentTaskId = pendingTaskId
+                                paymentClientSecret = clientSecret
+                                // 计算支付金额
+                                if let amount = item.pendingPaymentAmount {
+                                    paymentAmount = Double(amount) / 100.0
+                                } else if let amountDisplay = item.pendingPaymentAmountDisplay, let amountValue = Double(amountDisplay) {
+                                    paymentAmount = amountValue
+                                } else {
+                                    paymentAmount = item.price
+                                }
+                                paymentCustomerId = item.pendingPaymentCustomerId
+                                paymentEphemeralKeySecret = item.pendingPaymentEphemeralKeySecret
+                                // 显示支付页面
+                                showPaymentView = true
+                            } else {
+                                showLogin = true
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "creditcard.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("继续支付")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
@@ -705,6 +704,56 @@ struct FleaMarketDetailView: View {
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 25))
                             .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
+                        }
+                    } else {
+                        // 没有未付款的购买，显示正常的购买按钮
+                        // 议价按钮
+                        Button(action: {
+                            if appState.isAuthenticated {
+                                purchaseType = .negotiate
+                                showPurchaseSheet = true
+                            } else {
+                                showLogin = true
+                            }
+                        }) {
+                            Text(LocalizationKey.fleaMarketNegotiate.localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(AppColors.primary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 25)
+                                        .stroke(AppColors.primary, lineWidth: 1.5)
+                                )
+                        }
+                        
+                        // 立即购买按钮
+                        Button(action: {
+                            if appState.isAuthenticated {
+                                purchaseType = .direct
+                                showPurchaseSheet = true
+                            } else {
+                                showLogin = true
+                            }
+                        }) {
+                            Text(LocalizationKey.fleaMarketBuyNow.localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.9, green: 0.3, blue: 0.2),
+                                            Color(red: 0.95, green: 0.4, blue: 0.3)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 25))
+                                .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
+                        }
                     }
                 }
             }

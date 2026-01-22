@@ -33,6 +33,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.async_routers import get_current_user_optional
 
 # 管理员认证函数（从forum_routes复制，因为flea_market也需要）
 async def get_current_admin_async(
@@ -430,6 +431,7 @@ async def get_flea_market_items(
 @flea_market_router.get("/items/{item_id}", response_model=schemas.FleaMarketItemResponse)
 async def get_flea_market_item(
     item_id: str,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取商品详情（自动增加浏览量）"""
@@ -486,6 +488,48 @@ async def get_flea_market_item(
         )
         favorite_count = favorite_count_result.scalar() or 0
         
+        # 检查当前用户是否有未付款的购买
+        pending_payment_task_id = None
+        pending_payment_client_secret = None
+        pending_payment_amount = None
+        pending_payment_amount_display = None
+        pending_payment_currency = None
+        pending_payment_customer_id = None
+        pending_payment_ephemeral_key_secret = None
+        
+        if current_user and item.sold_task_id:
+            # 检查关联的任务是否是当前用户的未付款购买
+            task_result = await db.execute(
+                select(models.Task).where(
+                    and_(
+                        models.Task.id == item.sold_task_id,
+                        models.Task.poster_id == current_user.id,  # 当前用户是买家
+                        models.Task.status == "pending_payment",  # 待支付状态
+                        models.Task.is_paid == 0  # 未支付
+                    )
+                )
+            )
+            task = task_result.scalar_one_or_none()
+            
+            if task and task.payment_intent_id:
+                # 从Stripe获取支付信息
+                try:
+                    import stripe
+                    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+                    payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                    
+                    if payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
+                        pending_payment_task_id = task.id
+                        pending_payment_client_secret = payment_intent.client_secret
+                        pending_payment_amount = payment_intent.amount
+                        pending_payment_amount_display = f"{payment_intent.amount / 100:.2f}"
+                        pending_payment_currency = payment_intent.currency.upper()
+                        
+                        # 注意：customer_id和ephemeral_key_secret在iOS端可能不需要
+                        # 如果iOS端需要这些信息，可以在支付时从任务详情API获取
+                except Exception as e:
+                    logger.warning(f"获取支付信息失败: {e}")
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -503,6 +547,13 @@ async def get_flea_market_item(
             created_at=format_iso_utc(item.created_at),
             updated_at=format_iso_utc(item.updated_at),
             days_until_auto_delist=days_until_auto_delist,
+            pending_payment_task_id=pending_payment_task_id,
+            pending_payment_client_secret=pending_payment_client_secret,
+            pending_payment_amount=pending_payment_amount,
+            pending_payment_amount_display=pending_payment_amount_display,
+            pending_payment_currency=pending_payment_currency,
+            pending_payment_customer_id=pending_payment_customer_id,
+            pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
         )
     except HTTPException:
         raise

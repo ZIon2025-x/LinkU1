@@ -285,6 +285,14 @@ class MessagePermissionLogic:
         if TaskStatusLogic.is_task_in_progress(task):
             return True, None
         
+        # 如果任务处于待支付状态且有接受者，可以发送消息（双方需要沟通支付相关事宜）
+        if task.status == "pending_payment" and task.taker_id is not None:
+            return True, None
+        
+        # 如果任务处于待确认状态且有接受者，可以发送消息（双方需要沟通确认相关事宜）
+        if task.status == "pending_confirmation" and task.taker_id is not None:
+            return True, None
+        
         # 如果任务未开始且是说明类消息
         if is_prenote and task.status == "open" and is_poster:
             return True, None
