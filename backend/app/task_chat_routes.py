@@ -355,17 +355,22 @@ async def get_task_chat_unread_count(
         tasks_query_1 = select(models.Task.id).where(
             or_(
                 models.Task.poster_id == current_user.id,
-                models.Task.taker_id == current_user.id,
-                # 多人任务：作为任务达人创建者
-                and_(
-                    models.Task.is_multi_participant.is_(True),
-                    models.Task.created_by_expert.is_(True),
-                    models.Task.expert_creator_id == current_user.id
-                )
+                models.Task.taker_id == current_user.id
             )
         )
         result_1 = await db.execute(tasks_query_1)
         task_ids_set.update([row[0] for row in result_1.all()])
+        
+        # 1b. 多人任务：作为任务达人创建者（单独查询，避免在 or_() 中使用 and_() 导致的问题）
+        expert_creator_query = select(models.Task.id).where(
+            and_(
+                models.Task.is_multi_participant.is_(True),
+                models.Task.created_by_expert.is_(True),
+                models.Task.expert_creator_id == current_user.id
+            )
+        )
+        expert_creator_result = await db.execute(expert_creator_query)
+        task_ids_set.update([row[0] for row in expert_creator_result.all()])
         
         # 2. 作为多人任务参与者的任务
         # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
