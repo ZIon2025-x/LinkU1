@@ -218,12 +218,29 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           const response = await api.post(`/api/flea-market/items/${itemId}/direct-purchase`);
           const data = response.data.data;
           
-          // ⚠️ 安全修复：如果任务状态为 pending_payment，跳转到支付页面
-          if (data.task_status === 'pending_payment' && data.task_id) {
+          // ⚠️ 优化：如果任务状态为 pending_payment，跳转到支付页面并传递支付参数
+          if (data.task_status === 'pending_payment' && data.task_id && data.client_secret) {
             message.success(t('fleaMarket.purchaseSuccess') || '购买成功！请完成支付');
             onClose();
+            // 构建支付页面URL，传递支付参数
+            const params = new URLSearchParams({
+              client_secret: data.client_secret,
+              payment_intent_id: data.payment_intent_id || '',
+            });
+            if (data.amount) {
+              params.set('amount', data.amount.toString());
+            }
+            if (data.amount_display) {
+              params.set('amount_display', data.amount_display);
+            }
+            if (data.currency) {
+              params.set('currency', data.currency);
+            }
+            // 设置返回URL，支付完成后返回跳蚤市场
+            params.set('return_url', window.location.href);
+            params.set('return_type', 'flea_market');
             // 跳转到支付页面
-            navigate(`/${language}/tasks/${data.task_id}/payment`);
+            navigate(`/${language}/tasks/${data.task_id}/payment?${params.toString()}`);
           } else {
             message.success(t('fleaMarket.purchaseSuccess') || '购买成功！任务已创建');
             onClose();

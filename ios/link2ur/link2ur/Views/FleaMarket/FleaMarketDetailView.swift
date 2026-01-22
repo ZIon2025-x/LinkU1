@@ -12,6 +12,12 @@ struct FleaMarketDetailView: View {
     @State private var currentImageIndex = 0
     @State private var isRefreshing = false
     @State private var showRefreshSuccess = false
+    @State private var showPaymentView = false
+    @State private var paymentTaskId: Int?
+    @State private var paymentClientSecret: String?
+    @State private var paymentAmount: Double = 0
+    @State private var paymentCustomerId: String?
+    @State private var paymentEphemeralKeySecret: String?
     
     enum PurchaseType {
         case direct
@@ -136,8 +142,33 @@ struct FleaMarketDetailView: View {
                 message: $purchaseMessage,
                 onPurchase: {
                     if purchaseType == .direct {
-                        viewModel.directPurchase(itemId: itemId) { success in
-                                if success { showPurchaseSheet = false }
+                        viewModel.directPurchase(itemId: itemId) { purchaseData in
+                            if let data = purchaseData {
+                                // 如果返回了支付信息，显示支付页面
+                                if data.taskStatus == "pending_payment",
+                                   let taskId = Int(data.taskId),
+                                   let clientSecret = data.clientSecret {
+                                    showPurchaseSheet = false
+                                    // 设置支付参数
+                                    paymentTaskId = taskId
+                                    paymentClientSecret = clientSecret
+                                    // 计算支付金额（amount 是分为单位，需要转换为元）
+                                    if let amount = data.amount {
+                                        paymentAmount = Double(amount) / 100.0
+                                    } else if let amountDisplay = data.amountDisplay, let amountValue = Double(amountDisplay) {
+                                        paymentAmount = amountValue
+                                    } else {
+                                        paymentAmount = 0.0
+                                    }
+                                    paymentCustomerId = data.customerId
+                                    paymentEphemeralKeySecret = data.ephemeralKeySecret
+                                    // 显示支付页面
+                                    showPaymentView = true
+                                } else {
+                                    // 没有支付信息，只关闭购买弹窗
+                                    showPurchaseSheet = false
+                                }
+                            }
                         }
                     } else {
                         viewModel.requestPurchase(itemId: itemId, proposedPrice: proposedPrice, message: purchaseMessage.isEmpty ? nil : purchaseMessage) { success in
@@ -156,6 +187,22 @@ struct FleaMarketDetailView: View {
             Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
             Text(LocalizationKey.successRefreshSuccessMessage.localized)
+        }
+        .sheet(isPresented: $showPaymentView) {
+            if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
+                StripePaymentView(
+                    taskId: taskId,
+                    amount: paymentAmount,
+                    clientSecret: clientSecret,
+                    customerId: paymentCustomerId,
+                    ephemeralKeySecret: paymentEphemeralKeySecret,
+                    taskTitle: viewModel.item?.title,
+                    onPaymentSuccess: {
+                        showPaymentView = false
+                        // 支付成功后，可以刷新商品信息或返回列表
+                    }
+                )
+            }
         }
         .task(id: itemId) {
             print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
@@ -612,39 +659,6 @@ struct FleaMarketDetailView: View {
                     }
                 } else {
                     // 如果不是卖家，显示购买相关按钮
-                    // 收藏按钮
-                    Button(action: {
-                        if appState.isAuthenticated {
-                            viewModel.toggleFavorite(itemId: itemId) { success in
-                                if success { HapticFeedback.success() }
-                            }
-                        } else {
-                            showLogin = true
-                        }
-                    }) {
-                        VStack(spacing: 4) {
-                            ZStack {
-                                if viewModel.isTogglingFavorite {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                } else {
-                                    Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(viewModel.isFavorited ? .red : AppColors.textSecondary)
-                                        .scaleEffect(viewModel.isFavorited ? 1.1 : 1.0)
-                                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.isFavorited)
-                                }
-                            }
-                            .frame(height: 24)
-                            
-                            Text(LocalizationKey.fleaMarketFavorite.localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(viewModel.isFavorited ? .red : AppColors.textTertiary)
-                        }
-                        .frame(width: 50)
-                    }
-                    .disabled(viewModel.isTogglingFavorite)
-                    
                     // 议价按钮
                     Button(action: {
                         if appState.isAuthenticated {
@@ -692,7 +706,6 @@ struct FleaMarketDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 25))
                             .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
                     }
-                    .layoutPriority(1)
                 }
             }
             .padding(.horizontal, 16)

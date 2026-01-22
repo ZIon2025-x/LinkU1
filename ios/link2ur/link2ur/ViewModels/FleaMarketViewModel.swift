@@ -202,14 +202,14 @@ class FleaMarketDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func directPurchase(itemId: String, completion: @escaping (Bool) -> Void) {
-        apiService.request(EmptyResponse.self, "/api/flea-market/items/\(itemId)/direct-purchase", method: "POST", body: [:])
+    func directPurchase(itemId: String, completion: @escaping (DirectPurchaseResponse.DirectPurchaseData?) -> Void) {
+        apiService.request(DirectPurchaseResponse.self, "/api/flea-market/items/\(itemId)/direct-purchase", method: "POST", body: [:])
             .sink(receiveCompletion: { result in
                 if case .failure = result {
-                    completion(false)
+                    completion(nil)
                 }
-            }, receiveValue: { _ in
-                completion(true)
+            }, receiveValue: { response in
+                completion(response.data)
             })
             .store(in: &cancellables)
     }

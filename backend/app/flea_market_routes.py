@@ -1349,7 +1349,7 @@ async def direct_purchase_item(
         return {
             "success": True,
             "data": {
-                "task_id": format_flea_market_id(new_task.id),
+                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
                 "item_status": "reserved",  # 商品状态为预留，等待支付完成
                 "task_status": "pending_payment",  # 返回任务状态
                 "payment_intent_id": payment_intent.id,
@@ -1750,7 +1750,7 @@ async def accept_purchase_request(
         return {
             "success": True,
             "data": {
-                "task_id": format_flea_market_id(new_task.id),
+                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
                 "item_status": "reserved",  # 商品状态为预留，等待支付完成
                 "task_status": "pending_payment",  # 返回任务状态
                 "final_price": float(final_price),

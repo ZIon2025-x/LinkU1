@@ -219,4 +219,37 @@ struct MyFavoritesResponse: Decodable {
     }
 }
 
+// 直接购买响应
+struct DirectPurchaseResponse: Decodable {
+    let success: Bool
+    let data: DirectPurchaseData
+    let message: String?
+    
+    struct DirectPurchaseData: Decodable {
+        let taskId: String
+        let itemStatus: String
+        let taskStatus: String
+        let paymentIntentId: String?
+        let clientSecret: String?
+        let amount: Int?
+        let amountDisplay: String?
+        let currency: String?
+        let customerId: String?
+        let ephemeralKeySecret: String?
+        
+        enum CodingKeys: String, CodingKey {
+            case taskId = "task_id"
+            case itemStatus = "item_status"
+            case taskStatus = "task_status"
+            case paymentIntentId = "payment_intent_id"
+            case clientSecret = "client_secret"
+            case amount
+            case amountDisplay = "amount_display"
+            case currency
+            case customerId = "customer_id"
+            case ephemeralKeySecret = "ephemeral_key_secret"
+        }
+    }
+}
+
 
