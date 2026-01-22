@@ -286,7 +286,7 @@ async def get_flea_market_categories():
 @flea_market_router.get("/items", response_model=schemas.FleaMarketItemListResponse)
 async def get_flea_market_items(
     page: int = Query(1, ge=1),
-    pageSize: int = Query(20, ge=1, le=100),
+    pageSize: int = Query(20, ge=1, le=100, alias="page_size"),  # 支持 page_size 参数名
     category: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
     status_filter: Optional[str] = Query("active", alias="status"),
@@ -692,6 +692,10 @@ async def create_flea_market_item(
                 service.delete_temp(category=ImageCategory.FLEA_MARKET, user_id=current_user.id)
             except Exception as e:
                 logger.warning(f"移动商品图片失败: {e}")
+        
+        # 清除商品列表缓存，确保新商品立即显示
+        invalidate_item_cache(new_item.id)
+        logger.info(f"已清除商品列表缓存，新商品ID: {new_item.id}")
         
         return {
             "success": True,

@@ -45,8 +45,9 @@ class FleaMarketViewModel: ObservableObject {
         }
         
         // 尝试从缓存加载数据（仅第一页且无搜索关键词时，且非强制刷新）
+        // 注意：如果缓存中有空数组，不要使用缓存，避免显示空列表
         if page == 1 && !forceRefresh && (keyword == nil || keyword?.isEmpty == true) {
-            if let cachedItems = CacheManager.shared.loadFleaMarketItems(category: category) {
+            if let cachedItems = CacheManager.shared.loadFleaMarketItems(category: category), !cachedItems.isEmpty {
                 self.items = cachedItems
                 Logger.success("从缓存加载了 \(self.items.count) 个跳蚤市场商品", category: .cache)
                 isLoading = false
