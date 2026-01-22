@@ -45,14 +45,16 @@ struct ForumView: View {
             if viewModel.isLoading && viewModel.categories.isEmpty {
                 // 使用骨架屏替代LoadingView，提供更好的加载体验
                 ScrollView {
-                    LazyVStack(spacing: AppSpacing.md) {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                         ForEach(0..<5, id: \.self) { index in
                             ForumCategorySkeleton()
                                 .listItemAppear(index: index, totalItems: 5)
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                    .frame(maxWidth: .infinity) // 确保在iPad上居中
                 }
             } else if visibleCategories.isEmpty {
                 if !appState.isAuthenticated {
@@ -77,7 +79,7 @@ struct ForumView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: AppSpacing.md) {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                         // 显示可见的板块 - 添加错落入场动画
                         ForEach(Array(visibleCategories.enumerated()), id: \.element.id) { index, category in
                             NavigationLink(destination: ForumPostListView(category: category)) {
@@ -88,8 +90,10 @@ struct ForumView: View {
                             .listItemAppear(index: index, totalItems: visibleCategories.count)
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                    .frame(maxWidth: .infinity) // 确保在iPad上居中
                 }
             }
         }
@@ -314,7 +318,7 @@ struct CategoryCard: View {
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            HStack(spacing: AppSpacing.md) {
+            HStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                 // 图标容器 - 渐变背景 + 丝滑动画
                 ZStack {
                 RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous)
@@ -360,15 +364,17 @@ struct CategoryCard: View {
                         .foregroundColor(.white)
                 }
             }
-            .frame(width: 64, height: 64)
+            .frame(width: DeviceInfo.isPad ? 80 : 64, height: DeviceInfo.isPad ? 80 : 64)
             .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large))
             
             // 信息区域
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                 Text(category.displayName)
                     .font(AppTypography.body)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 if let description = category.displayDescription {
                     Text(description)
@@ -390,6 +396,7 @@ struct CategoryCard: View {
                                 .fontWeight(.medium)
                                 .foregroundColor(AppColors.textPrimary)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                         
                         // 帖子元信息：发布人、回复数、浏览量、时间
@@ -462,7 +469,7 @@ struct CategoryCard: View {
                     .padding(8)
             }
         }
-        .padding(AppSpacing.md)
+        .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
         .cardStyle(cornerRadius: AppCornerRadius.large)
         .onAppear {
             // 图标入场动画

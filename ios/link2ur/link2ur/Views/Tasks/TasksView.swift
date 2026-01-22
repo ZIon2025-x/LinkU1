@@ -246,21 +246,36 @@ struct TasksView: View {
             }
             .refreshable {
                 // 强制刷新，清除缓存并重新加载推荐任务和普通任务
-                recommendedViewModel.loadRecommendedTasks(
-                    limit: 20,
-                    algorithm: "hybrid",
-                    taskType: selectedCategory,
-                    location: selectedCity,
-                    keyword: searchText.isEmpty ? nil : searchText,
-                    forceRefresh: true
-                )
-                viewModel.loadTasks(
-                    category: selectedCategory,
-                    city: selectedCity,
-                    status: "open",
-                    keyword: searchText.isEmpty ? nil : searchText,
-                    forceRefresh: true
-                )
+                // 并行加载推荐任务和普通任务
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        await MainActor.run {
+                            recommendedViewModel.loadRecommendedTasks(
+                                limit: 20,
+                                algorithm: "hybrid",
+                                taskType: selectedCategory,
+                                location: selectedCity,
+                                keyword: searchText.isEmpty ? nil : searchText,
+                                forceRefresh: true
+                            )
+                        }
+                    }
+                    group.addTask {
+                        await MainActor.run {
+                            viewModel.loadTasks(
+                                category: selectedCategory,
+                                city: selectedCity,
+                                status: "open",
+                                keyword: searchText.isEmpty ? nil : searchText,
+                                forceRefresh: true
+                            )
+                        }
+                    }
+                }
+                // 等待两个任务都完成后再更新合并列表
+                await MainActor.run {
+                    updateMergedTasks()
+                }
             }
             .task {
                 // 延迟执行所有初始化操作，让导航动画先完成，提升流畅度
@@ -335,17 +350,20 @@ struct TasksView: View {
     
     /// 加载任务（推荐任务优先）
     private func loadTasksWithRecommendations() {
-        // 先加载推荐任务
-        recommendedViewModel.loadRecommendedTasks(
-            limit: 20,
-            algorithm: "hybrid",
-            taskType: selectedCategory,
-            location: selectedCity,
-            keyword: searchText.isEmpty ? nil : searchText,
-            forceRefresh: false
-        )
+        // 并行加载推荐任务和普通任务，提高加载速度
+        // 先加载推荐任务（如果已登录）
+        if appState.isAuthenticated {
+            recommendedViewModel.loadRecommendedTasks(
+                limit: 20,
+                algorithm: "hybrid",
+                taskType: selectedCategory,
+                location: selectedCity,
+                keyword: searchText.isEmpty ? nil : searchText,
+                forceRefresh: false
+            )
+        }
         
-        // 然后加载普通任务
+        // 同时加载普通任务（无论是否登录都需要）
         viewModel.loadTasks(
             category: selectedCategory,
             city: selectedCity,
@@ -354,7 +372,7 @@ struct TasksView: View {
             forceRefresh: false
         )
         
-        // 监听两个 ViewModel 的变化，合并任务列表
+        // 立即更新合并列表（基于当前已有数据）
         updateMergedTasks()
     }
     
@@ -400,54 +418,43 @@ struct TasksView: View {
     }
     
     /// 更新合并后的任务列表（推荐任务优先）
-    /// 优化：数据合并操作很快，直接在主线程处理即可
+    /// 优化：使用字典提高去重效率，减少时间复杂度
     /// 优化：只在数据真正变化时更新，避免不必要的视图重绘
     private func updateMergedTasks() {
-        // 使用 Set 去重，推荐任务优先（保留推荐原因）
+        // 使用字典快速去重，推荐任务优先（保留推荐原因和 isRecommended 标记）
         var taskMap: [Int: Task] = [:]
         
-        // 先添加推荐任务（保留推荐原因和 isRecommended 标记）
-        for task in recommendedViewModel.tasks {
-            // 确保推荐任务保留推荐原因
-            if task.isRecommended == true && task.recommendationReason != nil {
-                taskMap[task.id] = task
-            } else {
-                taskMap[task.id] = task
-            }
+        // 先添加普通任务（作为基础）
+        for task in viewModel.tasks {
+            taskMap[task.id] = task
         }
         
-        // 再添加普通任务（如果不在推荐列表中，或者普通任务没有推荐原因）
-        for task in viewModel.tasks {
-            if let existingTask = taskMap[task.id] {
-                // 如果推荐任务已存在，检查是否需要更新
-                // 如果普通任务有推荐原因但推荐任务没有，保留普通任务（可能是新推荐的）
-                if existingTask.recommendationReason == nil && task.recommendationReason != nil {
-                    taskMap[task.id] = task
-                }
-                // 否则保持推荐任务不变（推荐任务优先）
-            } else {
-                // 任务不在推荐列表中，添加普通任务
+        // 再添加推荐任务（覆盖普通任务，保留推荐原因）
+        for task in recommendedViewModel.tasks {
+            // 推荐任务优先，保留推荐原因和 isRecommended 标记
+            if task.isRecommended == true {
+                taskMap[task.id] = task
+            } else if taskMap[task.id] == nil {
+                // 如果普通任务中没有，也添加
                 taskMap[task.id] = task
             }
         }
         
         // 转换为数组，推荐任务在前（保留推荐原因）
         var mergedTasks: [Task] = []
-        var addedIds = Set<Int>()
+        var recommendedTaskIds = Set(recommendedViewModel.tasks.map { $0.id })
         
         // 先添加推荐任务（保留推荐原因）
         for task in recommendedViewModel.tasks {
-            if !addedIds.contains(task.id) {
-                mergedTasks.append(task)
-                addedIds.insert(task.id)
+            if let mergedTask = taskMap[task.id] {
+                mergedTasks.append(mergedTask)
             }
         }
         
         // 再添加普通任务（如果不在推荐列表中）
         for task in viewModel.tasks {
-            if !addedIds.contains(task.id) {
+            if !recommendedTaskIds.contains(task.id) {
                 mergedTasks.append(task)
-                addedIds.insert(task.id)
             }
         }
         
@@ -572,25 +579,138 @@ struct TaskCard: View {
         }
     }
     
+    // 增强：本地化推荐理由
+    private func localizeRecommendationReason(_ reason: String?) -> String {
+        guard let reason = reason, !reason.isEmpty else {
+            return LocalizationKey.homeRecommendedTasks.localized
+        }
+        
+        let language = LocalizationHelper.currentLanguage
+        let isEnglish = !language.hasPrefix("zh")
+        
+        // 如果已经是英文，直接返回
+        if isEnglish && !reason.contains("您") && !reason.contains("常") && !reason.contains("位于") {
+            return reason
+        }
+        
+        // 中文到英文的映射
+        var localizedReason = reason
+        
+        // 任务类型匹配
+        if reason.contains("您常接受") || reason.contains("常接受") {
+            if let taskType = extractTaskType(from: reason) {
+                localizedReason = isEnglish ? 
+                    "You often accept \(taskType) tasks" : 
+                    reason
+            }
+        }
+        
+        // 位置匹配
+        if reason.contains("位于您常去的") || reason.contains("位于") {
+            if let location = extractLocation(from: reason) {
+                localizedReason = isEnglish ? 
+                    "Located in \(location) where you often work" : 
+                    reason
+            } else if reason.contains("支持在线完成") || reason.contains("在线完成") {
+                localizedReason = isEnglish ? 
+                    "Can be completed online" : 
+                    reason
+            }
+        }
+        
+        // 价格匹配
+        if reason.contains("价格在您的接受范围内") {
+            localizedReason = isEnglish ? 
+                "Price within your range" : 
+                reason
+        } else if reason.contains("高价值任务") {
+            localizedReason = isEnglish ? 
+                "High-value task" : 
+                reason
+        }
+        
+        // 时间匹配
+        if reason.contains("即将截止") {
+            localizedReason = isEnglish ? 
+                "Deadline approaching" : 
+                reason
+        } else if reason.contains("近期任务") || reason.contains("新发布任务") {
+            localizedReason = isEnglish ? 
+                "Recent task" : 
+                reason
+        }
+        
+        // 任务等级
+        if reason.contains("VIP任务") {
+            localizedReason = isEnglish ? 
+                "VIP task" : 
+                reason
+        } else if reason.contains("超级任务") {
+            localizedReason = isEnglish ? 
+                "Super task" : 
+                reason
+        }
+        
+        // 通用推荐
+        if reason.contains("根据您的偏好推荐") {
+            localizedReason = isEnglish ? 
+                "Recommended based on your preferences" : 
+                reason
+        } else if reason.contains("可能适合您") {
+            localizedReason = isEnglish ? 
+                "May be suitable for you" : 
+                reason
+        }
+        
+        return localizedReason
+    }
+    
+    // 从推荐理由中提取任务类型
+    private func extractTaskType(from reason: String) -> String? {
+        // 尝试提取任务类型（简化版）
+        let taskTypes = ["Social Help", "Transportation", "Pet Care", "Life Convenience", 
+                        "Housekeeping", "Campus Life", "Errand Running", "Skill Service"]
+        for type in taskTypes {
+            if reason.contains(type) {
+                return type
+            }
+        }
+        return nil
+    }
+    
+    // 从推荐理由中提取位置
+    private func extractLocation(from reason: String) -> String? {
+        // 尝试提取位置（简化版）
+        let locations = ["Birmingham", "London", "Manchester", "Liverpool", "Leeds"]
+        for location in locations {
+            if reason.contains(location) {
+                return location
+            }
+        }
+        return nil
+    }
+    
     // 增强：解析推荐理由，返回对应的图标和颜色
     private func getRecommendationReasonInfo(_ reason: String?) -> (icon: String, color: Color) {
         guard let reason = reason else {
             return ("star.fill", AppColors.primary)
         }
         
-        // 根据推荐理由内容返回不同的图标和颜色
-        if reason.contains("同校") || reason.contains("学校") {
+        // 根据推荐理由内容返回不同的图标和颜色（支持中英文）
+        if reason.contains("同校") || reason.contains("学校") || reason.contains("school") || reason.contains("university") {
             return ("graduationcap.fill", Color.blue)
-        } else if reason.contains("距离") || reason.contains("km") {
+        } else if reason.contains("距离") || reason.contains("km") || reason.contains("distance") || reason.contains("Located") {
             return ("mappin.circle.fill", Color.green)
-        } else if reason.contains("活跃时间") || reason.contains("时间段") || reason.contains("当前活跃") {
+        } else if reason.contains("活跃时间") || reason.contains("时间段") || reason.contains("当前活跃") || reason.contains("active") || reason.contains("time") {
             return ("clock.fill", Color.orange)
-        } else if reason.contains("高评分") || reason.contains("评分") {
+        } else if reason.contains("高评分") || reason.contains("评分") || reason.contains("rating") || reason.contains("score") {
             return ("star.fill", Color.yellow)
-        } else if reason.contains("新发布") || reason.contains("新任务") {
+        } else if reason.contains("新发布") || reason.contains("新任务") || reason.contains("Recent") || reason.contains("New") {
             return ("sparkles", Color.purple)
-        } else if reason.contains("即将截止") || reason.contains("截止") {
+        } else if reason.contains("即将截止") || reason.contains("截止") || reason.contains("Deadline") || reason.contains("approaching") {
             return ("timer", Color.red)
+        } else if reason.contains("高价值") || reason.contains("High-value") {
+            return ("dollarsign.circle.fill", Color.green)
         } else {
             return ("star.fill", AppColors.primary)
         }
@@ -750,12 +870,13 @@ struct TaskCard: View {
             // 优先级：推荐理由 > 任务等级标签（如果同时存在，推荐理由在左上角，任务等级在右上角）
             if isRecommended {
                 if let reason = task.recommendationReason, !reason.isEmpty {
-                    // 有推荐理由，显示推荐理由
+                    // 有推荐理由，显示本地化的推荐理由
+                    let localizedReason = localizeRecommendationReason(reason)
                     let reasonInfo = getRecommendationReasonInfo(reason)
                     HStack(spacing: 4) {
                         Image(systemName: reasonInfo.icon)
                             .font(.system(size: 10, weight: .semibold))
-                        Text(reason)
+                        Text(localizedReason)
                             .font(AppTypography.caption2)
                             .lineLimit(1)
                     }

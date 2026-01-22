@@ -471,51 +471,71 @@ class TasksViewModel: ObservableObject {
                 
                 // 将推荐任务转换为 Task 对象
                 let recommendedTasks = response.recommendations.map { recommendation -> Task in
-                    let task = recommendation.toTask()
-                    // 调试：检查图片数据
-                    if let images = task.images, !images.isEmpty {
-                        Logger.debug("推荐任务 \(task.id) 有 \(images.count) 张图片", category: .api)
-                    } else {
-                        Logger.debug("推荐任务 \(task.id) 没有图片数据，尝试从普通任务列表补充", category: .api)
-                    }
-                    return task
+                    recommendation.toTask()
                 }
                 
-                // 如果推荐任务没有图片，尝试从任务详情 API 补充图片信息
-                // 只对 images 为 nil 的任务进行补充（如果 API 返回空数组，说明任务确实没有图片，不需要补充）
-                let tasksWithoutImages = recommendedTasks.filter { $0.images == nil }
-                if !tasksWithoutImages.isEmpty {
-                    Logger.debug("发现 \(tasksWithoutImages.count) 个推荐任务缺少图片，尝试补充", category: .api)
+                // 优化：先立即显示已有图片的任务，提升用户体验
+                let tasksWithImages = recommendedTasks.filter { $0.images != nil && !($0.images?.isEmpty ?? true) }
+                let tasksWithoutImages = recommendedTasks.filter { $0.images == nil || ($0.images?.isEmpty ?? true) }
+                
+                // 先显示有图片的任务（立即更新UI）
+                DispatchQueue.main.async {
+                    self.tasks = tasksWithImages
+                    self.isLoading = false
+                    self.errorMessage = nil
+                    self.lastRecommendedTasksLoadTime = Date()
                     
-                    // 批量获取任务详情来补充图片（限制最多10个，避免过多请求）
-                    let taskIdsToFetch = Array(tasksWithoutImages.prefix(10).map { $0.id })
+                    // 保存到推荐任务专用缓存（仅第一页）
+                    if limit <= 20 {
+                        CacheManager.shared.saveTasks(recommendedTasks, category: taskType, city: location, isRecommended: true)
+                        Logger.success("已缓存 \(recommendedTasks.count) 个推荐任务", category: .cache)
+                    }
+                }
+                
+                // 异步补充缺少图片的任务（后台进行，不阻塞UI）
+                if !tasksWithoutImages.isEmpty {
+                    Logger.debug("发现 \(tasksWithoutImages.count) 个推荐任务缺少图片，异步补充", category: .api)
+                    
+                    // 限制最多5个任务补充图片，避免过多请求影响性能
+                    let taskIdsToFetch = Array(tasksWithoutImages.prefix(5).map { $0.id })
                     let dispatchGroup = DispatchGroup()
                     var taskImageMap: [Int: [String]] = [:]
                     var detailFetchCancellables = Set<AnyCancellable>()
+                    let timeout: TimeInterval = 3.0 // 3秒超时
                     
                     for taskId in taskIdsToFetch {
                         dispatchGroup.enter()
+                        let startTime = Date()
+                        
                         self.apiService.getTaskDetail(taskId: taskId)
+                            .timeout(timeout, scheduler: DispatchQueue.global())
                             .sink(
-                                receiveCompletion: { _ in
+                                receiveCompletion: { completion in
                                     dispatchGroup.leave()
+                                    if case .failure(let error) = completion {
+                                        Logger.debug("获取任务 \(taskId) 图片失败: \(error.localizedDescription)", category: .api)
+                                    }
                                 },
                                 receiveValue: { fullTask in
                                     if let images = fullTask.images, !images.isEmpty {
                                         taskImageMap[taskId] = images
-                                        Logger.debug("成功获取任务 \(taskId) 的图片: \(images.count) 张", category: .api)
+                                        let duration = Date().timeIntervalSince(startTime)
+                                        Logger.debug("成功获取任务 \(taskId) 的图片: \(images.count) 张 (耗时: \(String(format: "%.2f", duration))s)", category: .api)
                                     }
                                 }
                             )
                             .store(in: &detailFetchCancellables)
                     }
                     
-                    // 等待所有请求完成
-                    dispatchGroup.notify(queue: .main) {
+                    // 等待所有请求完成（带超时保护）
+                    dispatchGroup.notify(queue: .global(qos: .utility)) {
                         // 更新推荐任务的图片信息
                         var updatedTasks = recommendedTasks
+                        var hasUpdates = false
+                        
                         for (index, task) in updatedTasks.enumerated() {
                             if let images = taskImageMap[task.id] {
+                                hasUpdates = true
                                 // 创建新的 Task 对象，包含图片信息
                                 updatedTasks[index] = Task(
                                     id: task.id,
@@ -556,32 +576,17 @@ class TasksViewModel: ObservableObject {
                             }
                         }
                         
-                        // 保存到推荐任务专用缓存（仅第一页）
-                        if limit <= 20 {
-                            CacheManager.shared.saveTasks(updatedTasks, category: taskType, city: location, isRecommended: true)
-                            Logger.success("已缓存 \(updatedTasks.count) 个推荐任务（包含补充的图片）", category: .cache)
+                        // 如果有更新，刷新UI和缓存
+                        if hasUpdates {
+                            DispatchQueue.main.async {
+                                self.tasks = updatedTasks
+                                // 更新缓存
+                                if limit <= 20 {
+                                    CacheManager.shared.saveTasks(updatedTasks, category: taskType, city: location, isRecommended: true)
+                                    Logger.success("已更新缓存，补充了 \(taskImageMap.count) 个任务的图片", category: .cache)
+                                }
+                            }
                         }
-                        
-                        DispatchQueue.main.async {
-                            self.tasks = updatedTasks
-                            self.isLoading = false
-                            self.errorMessage = nil
-                            self.lastRecommendedTasksLoadTime = Date()
-                        }
-                    }
-                } else {
-                    // 所有推荐任务都有图片，直接保存
-                    // 保存到推荐任务专用缓存（仅第一页）
-                    if limit <= 20 {
-                        CacheManager.shared.saveTasks(recommendedTasks, category: taskType, city: location, isRecommended: true)
-                        Logger.success("已缓存 \(recommendedTasks.count) 个推荐任务", category: .cache)
-                    }
-                    
-                    DispatchQueue.main.async {
-                        self.tasks = recommendedTasks
-                        self.isLoading = false
-                        self.errorMessage = nil
-                        self.lastRecommendedTasksLoadTime = Date()
                     }
                 }
             })

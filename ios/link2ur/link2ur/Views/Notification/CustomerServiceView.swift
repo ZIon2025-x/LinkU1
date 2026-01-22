@@ -44,35 +44,35 @@ struct CustomerServiceView: View {
                                 VStack(spacing: 0) {
                                     if viewModel.messages.isEmpty && viewModel.chat == nil {
                                         // 未连接状态 - 显示提示信息
-                                        VStack(spacing: AppSpacing.lg) {
+                                        VStack(spacing: DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg) {
                                             Image(systemName: "message.fill")
-                                                .font(.system(size: 48))
+                                                .font(.system(size: DeviceInfo.isPad ? 64 : 48))
                                                 .foregroundColor(AppColors.textTertiary)
                                             
                                             Text(LocalizationKey.customerServiceWelcome.localized)
-                                                .font(AppTypography.title3)
+                                                .font(DeviceInfo.isPad ? AppTypography.title2 : AppTypography.title3)
                                                 .foregroundColor(AppColors.textPrimary)
                                             
                                             Text(LocalizationKey.customerServiceStartConversation.localized)
-                                                .font(AppTypography.subheadline)
+                                                .font(DeviceInfo.isPad ? AppTypography.body : AppTypography.subheadline)
                                                 .foregroundColor(AppColors.textSecondary)
                                                 .multilineTextAlignment(.center)
                                             
                                             // 显示排队状态（如果有）
                                             if let queueStatus = viewModel.queueStatus {
-                                                VStack(spacing: AppSpacing.sm) {
+                                                VStack(spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                                                     if let position = queueStatus.position {
                                                         Text(String(format: LocalizationKey.customerServiceQueuePosition.localized, position))
-                                                            .font(AppTypography.body)
+                                                            .font(DeviceInfo.isPad ? AppTypography.bodyBold : AppTypography.body)
                                                             .foregroundColor(AppColors.textSecondary)
                                                     }
                                                     if let waitTime = queueStatus.estimatedWaitTime {
                                                         Text(String(format: LocalizationKey.customerServiceEstimatedWait.localized, waitTime))
-                                                            .font(AppTypography.caption)
+                                                            .font(DeviceInfo.isPad ? AppTypography.caption : AppTypography.caption)
                                                             .foregroundColor(AppColors.textTertiary)
                                                     }
                                                 }
-                                                .padding()
+                                                .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                                                 .background(AppColors.cardBackground)
                                                 .cornerRadius(AppCornerRadius.medium)
                                             }
@@ -80,18 +80,19 @@ struct CustomerServiceView: View {
                                             // 显示错误信息（如果有）
                                             if let errorMessage = viewModel.errorMessage {
                                                 Text(errorMessage)
-                                                    .font(AppTypography.subheadline)
+                                                    .font(DeviceInfo.isPad ? AppTypography.body : AppTypography.subheadline)
                                                     .foregroundColor(AppColors.error)
                                                     .multilineTextAlignment(.center)
-                                                    .padding()
+                                                    .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                                                     .background(AppColors.error.opacity(0.1))
                                                     .cornerRadius(AppCornerRadius.medium)
                                             }
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.top, 100)
+                                        .frame(maxWidth: DeviceInfo.isPad ? 600 : .infinity) // iPad上限制最大宽度
+                                        .frame(maxWidth: .infinity) // 确保在iPad上居中
+                                        .padding(.top, DeviceInfo.isPad ? 150 : 100)
                                     } else {
-                                        LazyVStack(spacing: AppSpacing.sm) {
+                                        LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                                             // 欢迎消息
                                             if let service = viewModel.service {
                                                 WelcomeMessageBubble(serviceName: service.name)
@@ -105,8 +106,10 @@ struct CustomerServiceView: View {
                                                 .id(message.id)
                                             }
                                         }
-                                        .padding(.horizontal, AppSpacing.md)
-                                        .padding(.vertical, AppSpacing.sm)
+                                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                                        .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                                        .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                                        .frame(maxWidth: .infinity) // 确保在iPad上居中
                                     }
                                 }
                                 .padding(.bottom, keyboardPadding)
@@ -165,12 +168,14 @@ struct CustomerServiceView: View {
                                     .cornerRadius(AppCornerRadius.small)
                             }
                         }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.md)
+                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                        .padding(.vertical, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                         .background(AppColors.cardBackground)
+                        .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                        .frame(maxWidth: .infinity) // 确保在iPad上居中
                     } else {
                         // 正常输入区域
-                        HStack(spacing: AppSpacing.sm) {
+                        HStack(spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                             // 连接按钮（仅在未连接时显示）
                             if viewModel.chat == nil {
                                 Button(action: {
@@ -215,7 +220,9 @@ struct CustomerServiceView: View {
                             }
                             .disabled(messageText.isEmpty || viewModel.isSending || viewModel.chat == nil)
                         }
-                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                        .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                        .frame(maxWidth: .infinity) // 确保在iPad上居中
                         .padding(.vertical, AppSpacing.sm)
                         .background(AppColors.cardBackground)
                     }

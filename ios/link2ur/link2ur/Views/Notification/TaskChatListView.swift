@@ -87,16 +87,17 @@ struct TaskChatRow: View {
     }
     
     var body: some View {
-        HStack(alignment: .top, spacing: AppSpacing.md) {
+        HStack(alignment: .top, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
             // 任务图标/头像 - 如果有图片则显示图片，否则显示图标
             ZStack {
+                let imageSize: CGFloat = DeviceInfo.isPad ? 72 : 56
                 // 如果有任务图片，显示第一张图片
                 if let images = taskChat.images, !images.isEmpty, let firstImageUrl = images.first {
                     AsyncImageView(
                         urlString: firstImageUrl,
                         placeholder: Image(systemName: getTaskIcon()),
-                        width: 56,
-                        height: 56,
+                        width: imageSize,
+                        height: imageSize,
                         contentMode: .fill,
                         cornerRadius: AppCornerRadius.medium
                     )
@@ -112,12 +113,12 @@ struct TaskChatRow: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 56, height: 56)
+                        .frame(width: imageSize, height: imageSize)
                         .shadow(color: AppColors.primary.opacity(0.2), radius: 8, x: 0, y: 4)
                         .overlay(
                             Image(systemName: getTaskIcon())
                                 .foregroundColor(.white)
-                                .font(.system(size: 24, weight: .semibold))
+                                .font(.system(size: DeviceInfo.isPad ? 32 : 24, weight: .semibold))
                         )
                 }
                 
@@ -125,21 +126,21 @@ struct TaskChatRow: View {
                 if let unreadCount = taskChat.unreadCount, unreadCount > 0 {
                     Circle()
                         .fill(AppColors.error)
-                        .frame(width: 12, height: 12)
+                        .frame(width: DeviceInfo.isPad ? 16 : 12, height: DeviceInfo.isPad ? 16 : 12)
                         .overlay(
                             Circle()
                                 .stroke(AppColors.cardBackground, lineWidth: 2)
                         )
-                        .offset(x: 20, y: -20)
+                        .offset(x: DeviceInfo.isPad ? 26 : 20, y: DeviceInfo.isPad ? -26 : -20)
                 }
             }
             
             // 内容区域
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.sm : AppSpacing.xs) {
                 // 标题和时间
-                HStack(alignment: .center, spacing: AppSpacing.sm) {
+                HStack(alignment: .center, spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                     Text(taskChat.displayTitle)
-                        .font(AppTypography.body)
+                        .font(DeviceInfo.isPad ? AppTypography.bodyBold : AppTypography.body)
                         .fontWeight(taskChat.unreadCount ?? 0 > 0 ? .bold : .semibold)
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(1)
@@ -147,22 +148,22 @@ struct TaskChatRow: View {
                     Spacer()
                     
                     // 时间和未读数在同一行
-                    HStack(spacing: 8) {
+                    HStack(spacing: DeviceInfo.isPad ? 12 : 8) {
                         // 优先使用 lastMessageTime，如果没有则使用 lastMessage.createdAt
                         if let lastTime = taskChat.lastMessageTime ?? taskChat.lastMessage?.createdAt {
                             Text(formatTime(lastTime))
-                                .font(AppTypography.caption)
+                                .font(DeviceInfo.isPad ? AppTypography.caption : AppTypography.caption)
                                 .foregroundColor(AppColors.textTertiary)
                         }
                         
                         // 未读数 - 渐变背景
                         if let unreadCount = taskChat.unreadCount, unreadCount > 0 {
                             Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
-                                .font(AppTypography.caption2)
+                                .font(DeviceInfo.isPad ? AppTypography.caption : AppTypography.caption2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
-                                .padding(.horizontal, unreadCount > 9 ? 8 : 6)
-                                .padding(.vertical, 3)
+                                .padding(.horizontal, unreadCount > 9 ? (DeviceInfo.isPad ? 10 : 8) : (DeviceInfo.isPad ? 8 : 6))
+                                .padding(.vertical, DeviceInfo.isPad ? 5 : 3)
                                 .background(
                                     Capsule()
                                         .fill(AppColors.error)
@@ -237,7 +238,7 @@ struct TaskChatRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(AppSpacing.md)
+        .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
         .cardStyle(cornerRadius: AppCornerRadius.large)
     }
     

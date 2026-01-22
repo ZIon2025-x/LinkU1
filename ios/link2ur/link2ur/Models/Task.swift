@@ -148,6 +148,8 @@ enum TaskStatus: String, Codable {
 struct RecommendationTask: Codable {
     let taskId: Int
     let title: String
+    let titleEn: String?  // 英文标题
+    let titleZh: String?  // 中文标题
     let description: String
     let taskType: String
     let location: String
@@ -157,11 +159,13 @@ struct RecommendationTask: Codable {
     let matchScore: Double?
     let recommendationReason: String?
     let createdAt: String
-    let images: [String]?  // 添加图片字段
+    let images: [String]?  // 图片字段
     
     enum CodingKeys: String, CodingKey {
         case taskId = "task_id"
         case title
+        case titleEn = "title_en"
+        case titleZh = "title_zh"
         case description
         case taskType = "task_type"
         case location
@@ -171,7 +175,7 @@ struct RecommendationTask: Codable {
         case matchScore = "match_score"
         case recommendationReason = "recommendation_reason"
         case createdAt = "created_at"
-        case images  // 添加图片字段的 CodingKey
+        case images
     }
     
     /// 转换为 Task 对象
@@ -179,10 +183,10 @@ struct RecommendationTask: Codable {
         return Task(
             id: taskId,
             title: title,
-            titleEn: nil,  // 推荐任务可能没有翻译
-            titleZh: nil,
+            titleEn: titleEn,  // 使用后端返回的英文翻译
+            titleZh: titleZh,  // 使用后端返回的中文翻译
             description: description,
-            descriptionEn: nil,
+            descriptionEn: nil,  // 描述翻译暂时不返回
             descriptionZh: nil,
             taskType: taskType,
             location: location,
@@ -193,7 +197,7 @@ struct RecommendationTask: Codable {
             agreedReward: nil,
             currency: nil,
             status: .open, // 推荐任务默认是开放状态
-            images: images,  // 使用实际的图片数据，而不是 nil
+            images: images,  // 使用后端返回的图片数据
             createdAt: createdAt,
             deadline: deadline,
             isFlexible: nil,

@@ -1524,14 +1524,20 @@ struct ShortcutButton: View {
 struct RecommendedTasksSection: View {
     @StateObject private var viewModel: TasksViewModel = {
         let vm = TasksViewModel()
-        // 初始化时立即从缓存加载数据，避免视图渲染时显示加载状态
-        vm.loadTasksFromCache(status: "open")
+        // 初始化时立即从推荐任务缓存加载数据，避免视图渲染时显示加载状态
+        if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
+            if !cachedRecommendedTasks.isEmpty {
+                vm.tasks = cachedRecommendedTasks
+                Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+            }
+        }
         return vm
     }()
     @EnvironmentObject var appState: AppState
     @State private var recordedViews: Set<Int> = []  // 已记录的查看交互（防重复）
     
     /// 加载推荐任务，如果失败或为空则回退到默认任务
+    /// 优化：更智能的回退机制，避免不必要的默认任务加载
     private func loadRecommendedTasksWithFallback(forceRefresh: Bool = false) {
         guard appState.isAuthenticated else {
             // 未登录，直接加载默认任务
@@ -1545,12 +1551,19 @@ struct RecommendedTasksSection: View {
         // 注意：loadRecommendedTasks 内部已经会获取GPS位置，这里不需要额外处理
         viewModel.loadRecommendedTasks(limit: 20, algorithm: "hybrid", forceRefresh: forceRefresh)
         
+        // 优化：使用更简单的延迟检查机制，避免复杂的监听
         // 延迟检查，如果推荐任务为空或失败，回退到默认任务
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            // 如果推荐任务加载完成且为空，或者有错误，回退到默认任务
-            if !self.viewModel.isLoading && (self.viewModel.tasks.isEmpty || self.viewModel.errorMessage != nil) {
-                Logger.info("推荐任务为空或失败，回退到默认任务", category: .api)
-                self.viewModel.loadTasks(status: "open", forceRefresh: forceRefresh)
+        // 注意：RecommendedTasksSection 是 struct，不需要 weak 引用
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // 如果推荐任务加载完成且为空，且有错误，回退到默认任务
+            if !self.viewModel.isLoading && self.viewModel.tasks.isEmpty {
+                if self.viewModel.errorMessage != nil {
+                    Logger.info("推荐任务加载失败，回退到默认任务", category: .api)
+                    self.viewModel.loadTasks(status: "open", forceRefresh: forceRefresh)
+                } else {
+                    // 没有错误但也没有任务，可能是真的没有推荐任务，不加载默认任务
+                    Logger.info("推荐任务为空，但不加载默认任务（避免覆盖）", category: .api)
+                }
             }
         }
     }
@@ -1708,16 +1721,21 @@ struct RecommendedTasksSection: View {
                 }
                 // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
                 .scrollContentBackground(.hidden)
-                .animation(.easeInOut(duration: 0.1), value: viewModel.tasks.count) // 更快的过渡动画
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.tasks.count) // 更流畅的弹簧动画
             }
         }
         // 优化：移除VStack的裁剪限制，允许子视图（特别是contextMenu）超出边界
         .fixedSize(horizontal: false, vertical: true) // 确保VStack不会裁剪子视图
         .task {
-            // 优化：先从缓存加载，立即显示内容，提升首次进入流畅度
+            // 优化：先从推荐任务缓存加载，立即显示内容，提升首次进入流畅度
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                // 先尝试从缓存加载，避免显示空状态
-                viewModel.loadTasksFromCache(status: "open")
+                // 先尝试从推荐任务缓存加载，避免显示空状态
+                if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
+                    if !cachedRecommendedTasks.isEmpty {
+                        viewModel.tasks = cachedRecommendedTasks
+                        Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+                    }
+                }
                 
                 // 延迟加载网络数据，让视图先渲染完成
                 try? await _Concurrency.Task.sleep(nanoseconds: 50_000_000) // 50ms
@@ -1881,28 +1899,30 @@ struct ActivityRow: View {
                 .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)
             
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                HStack(spacing: 4) {
-                    Text(activity.author?.name ?? LocalizationKey.appUser.localized)
-                        .font(AppTypography.body) // 使用 body
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text(activity.actionText)
-                        .font(AppTypography.body) // 使用 body
-                        .foregroundColor(AppColors.textSecondary)
-                }
+                // 合并用户名和动作文本，确保单行显示
+                (Text(activity.author?.name ?? LocalizationKey.appUser.localized)
+                    .font(AppTypography.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.textPrimary) +
+                 Text(" \(activity.actionText)")
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 Text(activity.title)
                     .font(AppTypography.caption) // 使用 caption
                     .fontWeight(.medium)
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 if let description = activity.description, !description.isEmpty {
                     Text(description)
                         .font(AppTypography.caption) // 使用 caption
                         .foregroundColor(AppColors.textSecondary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
             

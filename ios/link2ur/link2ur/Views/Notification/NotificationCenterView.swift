@@ -116,26 +116,26 @@ struct SystemMessageCard: View {
             )
             
             // 内容层
-            HStack(alignment: .center, spacing: AppSpacing.md) {
+            HStack(alignment: .center, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                 // 左侧图标
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.25))
-                        .frame(width: 42, height: 42)
+                        .frame(width: DeviceInfo.isPad ? 56 : 42, height: DeviceInfo.isPad ? 56 : 42)
                     
                     Image(systemName: "bell.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: DeviceInfo.isPad ? 26 : 20, weight: .semibold))
                         .foregroundColor(.white)
                 }
                 
                 // 中间文字
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isPad ? 4 : 2) {
                     Text(LocalizationKey.notificationSystemMessages.localized)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .bold))
                         .foregroundColor(.white)
                     
                     Text(LocalizationKey.notificationViewAllNotifications.localized)
-                        .font(.system(size: 12))
+                        .font(.system(size: DeviceInfo.isPad ? 14 : 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 
@@ -145,32 +145,32 @@ struct SystemMessageCard: View {
                 if unreadCount > 0 {
                     HStack(spacing: 4) {
                         Text("\(unreadCount)")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .bold))
                             .foregroundColor(.white)
                         
                         if unreadCount < 10 {
                             Circle()
                                 .fill(Color.white.opacity(0.3))
-                                .frame(width: 6, height: 6)
+                                .frame(width: DeviceInfo.isPad ? 8 : 6, height: DeviceInfo.isPad ? 8 : 6)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, DeviceInfo.isPad ? 12 : 10)
+                    .padding(.vertical, DeviceInfo.isPad ? 8 : 6)
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(AppCornerRadius.small)
                 } else {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: DeviceInfo.isPad ? 16 : 14, weight: .semibold))
                         .foregroundColor(.white.opacity(0.8))
-                        .padding(8)
+                        .padding(DeviceInfo.isPad ? 10 : 8)
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+            .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
         }
-        .frame(height: 80)
+        .frame(height: DeviceInfo.isPad ? 100 : 80)
         .cornerRadius(AppCornerRadius.medium)
         .shadow(color: AppColors.primary.opacity(0.25), radius: 6, x: 0, y: 3)
     }

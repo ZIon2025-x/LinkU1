@@ -49,7 +49,7 @@ struct LeaderboardView: View {
                 }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: AppSpacing.md) {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                         ForEach(sortedLeaderboards) { leaderboard in
                             NavigationLink(destination: LeaderboardDetailView(leaderboardId: leaderboard.id)) {
                                 LeaderboardCard(leaderboard: leaderboard)
@@ -58,8 +58,10 @@ struct LeaderboardView: View {
                             .buttonStyle(ScaleButtonStyle())
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                    .frame(maxWidth: .infinity) // 确保在iPad上居中
                 }
             }
         }
@@ -133,7 +135,7 @@ struct LeaderboardCard: View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 // 封面和标题
-                HStack(spacing: AppSpacing.md) {
+                HStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                 // 封面图片
                 if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
                     AsyncImageView(
@@ -141,7 +143,7 @@ struct LeaderboardCard: View {
                         placeholder: Image(systemName: "photo.fill")
                     )
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 100, height: 100)
+                    .frame(width: DeviceInfo.isPad ? 120 : 100, height: DeviceInfo.isPad ? 120 : 100)
                     .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous))
                 } else {
                     ZStack {
@@ -153,19 +155,20 @@ struct LeaderboardCard: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 100, height: 100)
+                            .frame(width: DeviceInfo.isPad ? 120 : 100, height: DeviceInfo.isPad ? 120 : 100)
                         
-                        IconStyle.icon("trophy.fill", size: 40)
+                        IconStyle.icon("trophy.fill", size: DeviceInfo.isPad ? 50 : 40)
                             .foregroundColor(.white)
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
                     Text(leaderboard.displayName)
                         .font(AppTypography.title3)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     
                     if let description = leaderboard.displayDescription {
                         Text(description)
@@ -192,13 +195,13 @@ struct LeaderboardCard: View {
                 Divider().background(AppColors.divider)
                 
                 // 统计信息
-                HStack(spacing: 24) {
+                HStack(spacing: DeviceInfo.isPad ? 32 : 24) {
                     CompactStatItem(icon: "square.grid.2x2.fill", count: leaderboard.itemCount)
                     CompactStatItem(icon: "hand.thumbsup.fill", count: leaderboard.voteCount)
                     CompactStatItem(icon: "eye.fill", count: leaderboard.viewCount)
                 }
             }
-            .padding(AppSpacing.md)
+            .padding(DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
             .background(AppColors.cardBackground)
             .cornerRadius(AppCornerRadius.large)
             .shadow(color: AppShadow.small.color, radius: AppShadow.small.radius, x: AppShadow.small.x, y: AppShadow.small.y)

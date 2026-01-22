@@ -1041,8 +1041,8 @@ struct TaskDetailContentView: View {
                     showFullScreen: $showFullScreenImage
                 )
                 
-                // 内容区域
-                VStack(spacing: AppSpacing.md) {
+                // 内容区域 - iPad上限制最大宽度并居中
+                VStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                     // 标题和状态卡片
                     TaskHeaderCard(task: task)
                     
@@ -1052,70 +1052,70 @@ struct TaskDetailContentView: View {
                     // 发布者查看自己任务时的提示信息
                     if isPoster && task.status == .open {
                         PosterInfoCard()
-                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     }
                     
                     // 发布者：申请列表
                     if isPoster && task.status == .open {
-                        ApplicationsListView(
-                            applications: viewModel.applications,
-                            isLoading: viewModel.isLoadingApplications,
-                            taskId: taskId,
-                            taskTitle: task.displayTitle,
-                            onApprove: { applicationId in
-                                actionLoading = true
-                                // 获取申请者名字（在批准前保存）
-                                let application = viewModel.applications.first { $0.id == applicationId }
-                                let applicantName = application?.applicantName
-                                
-                                viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret, customerId, ephemeralKeySecret in
-                                    actionLoading = false
-                                    if success {
-                                        // 保存申请者名字
-                                        approvedApplicantName = applicantName
-                                        
-                                        // 如果返回了 client_secret，直接显示支付界面
-                                        if let clientSecret = clientSecret, !clientSecret.isEmpty {
-                                            // 保存 client_secret 并显示支付界面
-                                            paymentClientSecret = clientSecret
-                                            paymentCustomerId = customerId
-                                            paymentEphemeralKeySecret = ephemeralKeySecret
-                                            showPaymentView = true
-                                        } else {
-                                            // 没有 client_secret，重新加载任务信息
-                                            paymentClientSecret = nil
-                                            paymentCustomerId = nil
-                                            paymentEphemeralKeySecret = nil
-                                            viewModel.loadTask(taskId: taskId)
-                                            viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                            ApplicationsListView(
+                                applications: viewModel.applications,
+                                isLoading: viewModel.isLoadingApplications,
+                                taskId: taskId,
+                                taskTitle: task.displayTitle,
+                                onApprove: { applicationId in
+                                    actionLoading = true
+                                    // 获取申请者名字（在批准前保存）
+                                    let application = viewModel.applications.first { $0.id == applicationId }
+                                    let applicantName = application?.applicantName
+                                    
+                                    viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret, customerId, ephemeralKeySecret in
+                                        actionLoading = false
+                                        if success {
+                                            // 保存申请者名字
+                                            approvedApplicantName = applicantName
                                             
-                                            // 延迟检查是否需要支付（等待任务信息更新）
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                                // 检查任务是否有接受者且需要支付
-                                                // 注意：pendingConfirmation 状态不应该显示支付界面，因为任务已经支付过了
-                                                if let updatedTask = viewModel.task,
-                                                   updatedTask.takerId != nil,
-                                                   updatedTask.status == .pendingPayment {
-                                                    // 任务已接受但未支付，显示支付界面
-                                                    showPaymentView = true
+                                            // 如果返回了 client_secret，直接显示支付界面
+                                            if let clientSecret = clientSecret, !clientSecret.isEmpty {
+                                                // 保存 client_secret 并显示支付界面
+                                                paymentClientSecret = clientSecret
+                                                paymentCustomerId = customerId
+                                                paymentEphemeralKeySecret = ephemeralKeySecret
+                                                showPaymentView = true
+                                            } else {
+                                                // 没有 client_secret，重新加载任务信息
+                                                paymentClientSecret = nil
+                                                paymentCustomerId = nil
+                                                paymentEphemeralKeySecret = nil
+                                                viewModel.loadTask(taskId: taskId)
+                                                viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                                
+                                                // 延迟检查是否需要支付（等待任务信息更新）
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                    // 检查任务是否有接受者且需要支付
+                                                    // 注意：pendingConfirmation 状态不应该显示支付界面，因为任务已经支付过了
+                                                    if let updatedTask = viewModel.task,
+                                                       updatedTask.takerId != nil,
+                                                       updatedTask.status == .pendingPayment {
+                                                        // 任务已接受但未支付，显示支付界面
+                                                        showPaymentView = true
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            },
-                            onReject: { applicationId in
-                                actionLoading = true
-                                viewModel.rejectApplication(taskId: taskId, applicationId: applicationId) { success in
-                                    actionLoading = false
-                                    if success {
-                                        viewModel.loadTask(taskId: taskId)
-                                        viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                },
+                                onReject: { applicationId in
+                                    actionLoading = true
+                                    viewModel.rejectApplication(taskId: taskId, applicationId: applicationId) { success in
+                                        actionLoading = false
+                                        if success {
+                                            viewModel.loadTask(taskId: taskId)
+                                            viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                        }
                                     }
                                 }
-                            }
-                        )
-                        .padding(.horizontal, AppSpacing.md)
+                            )
+                            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     }
                     
                     // 操作按钮区域
@@ -1138,7 +1138,7 @@ struct TaskDetailContentView: View {
                         taskId: taskId,
                         viewModel: viewModel
                     )
-                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     
                     // 评价列表（只显示当前用户自己的评价）
                     let userReviews = viewModel.reviews.filter { review in
@@ -1147,12 +1147,14 @@ struct TaskDetailContentView: View {
                     }
                     if !userReviews.isEmpty {
                         TaskReviewsSection(reviews: userReviews)
-                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     }
                 }
-                .padding(.top, -20) // 让内容卡片与图片重叠
+                .padding(.top, DeviceInfo.isPad ? -30 : -20) // iPad上更大的重叠效果
+                .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
             }
         }
+        .frame(maxWidth: .infinity) // 确保在iPad上居中
     }
 }
 
@@ -1167,7 +1169,7 @@ struct TaskImageCarouselView: View {
             // 占位背景（避免闪烁）
             Rectangle()
                 .fill(AppColors.cardBackground)
-                .frame(height: 300)
+                .frame(height: DeviceInfo.isPad ? 450 : 300)
             
             if !images.isEmpty {
                 TabView(selection: $selectedIndex) {
@@ -1177,7 +1179,7 @@ struct TaskImageCarouselView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 300) // 略微增加高度
+                .frame(height: DeviceInfo.isPad ? 450 : 300) // iPad上更高的图片显示
                 
                 // 自定义指示器 (符合 HIG)
                 if images.count > 1 {
@@ -1214,7 +1216,7 @@ struct TaskImageCarouselView: View {
                             .foregroundColor(AppColors.textTertiary)
                     }
                 }
-                .frame(height: 300)
+                .frame(height: DeviceInfo.isPad ? 450 : 300)
             }
         }
     }
@@ -1232,11 +1234,11 @@ struct TaskImageView: View {
             urlString: imageUrl,
             placeholder: Image(systemName: "photo.fill"),
             width: nil,
-            height: 300,
+            height: DeviceInfo.isPad ? 450 : 300,
             contentMode: .fill,
             cornerRadius: 0
         )
-        .frame(height: 300)
+        .frame(height: DeviceInfo.isPad ? 450 : 300)
         .frame(maxWidth: .infinity)
         .clipped()
         .contentShape(Rectangle())
@@ -1310,10 +1312,11 @@ struct TaskHeaderCard: View {
                     .clipShape(Capsule())
             }
         }
-        .padding(AppSpacing.lg)
+        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.xlarge, corners: [.topLeft, .topRight])
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
+        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
     }
 }
 
@@ -1392,11 +1395,11 @@ struct TaskInfoCard: View {
                 TaskPosterInfoView(poster: poster)
             }
         }
-        .padding(AppSpacing.lg)
+        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.large)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
-        .padding(.horizontal, AppSpacing.md)
+        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
     }
 }
 

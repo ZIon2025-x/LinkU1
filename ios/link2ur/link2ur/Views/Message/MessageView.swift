@@ -22,7 +22,7 @@ struct MessageView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
+                        LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                             // 系统消息卡片（始终显示在顶部）
                             NavigationLink(destination: SystemMessageView()) {
                                 SystemMessageCard(unreadCount: unreadNotificationCount)
@@ -49,7 +49,7 @@ struct MessageView: View {
                                     title: LocalizationKey.messagesNoTaskChats.localized,
                                     message: LocalizationKey.messagesNoTaskChatsMessage.localized
                                 )
-                                .padding(.top, AppSpacing.lg)
+                                .padding(.top, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
                             } else {
                                 ForEach(viewModel.taskChats) { taskChat in
                                     NavigationLink(destination: TaskChatView(taskId: taskChat.id, taskTitle: taskChat.displayTitle, taskChat: taskChat)
@@ -60,8 +60,10 @@ struct MessageView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.sm)
+                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                        .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                        .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                        .frame(maxWidth: .infinity) // 确保在iPad上居中
                     }
                 }
             }
@@ -139,26 +141,26 @@ struct CustomerServiceCard: View {
             )
             
             // 内容层
-            HStack(alignment: .center, spacing: AppSpacing.md) {
+            HStack(alignment: .center, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                 // 左侧图标
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.25))
-                        .frame(width: 42, height: 42)
+                        .frame(width: DeviceInfo.isPad ? 56 : 42, height: DeviceInfo.isPad ? 56 : 42)
                     
                     Image(systemName: "headphones")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: DeviceInfo.isPad ? 26 : 20, weight: .semibold))
                         .foregroundColor(.white)
                 }
                 
                 // 中间文字
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isPad ? 4 : 2) {
                     Text(LocalizationKey.messagesCustomerService.localized)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .bold))
                         .foregroundColor(.white)
                     
                     Text(LocalizationKey.messagesContactService.localized)
-                        .font(.system(size: 12))
+                        .font(.system(size: DeviceInfo.isPad ? 14 : 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 
@@ -166,16 +168,16 @@ struct CustomerServiceCard: View {
                 
                 // 右侧箭头
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: DeviceInfo.isPad ? 16 : 14, weight: .semibold))
                     .foregroundColor(.white.opacity(0.8))
-                    .padding(8)
+                    .padding(DeviceInfo.isPad ? 10 : 8)
                     .background(Color.white.opacity(0.2))
                     .clipShape(Circle())
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+            .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
         }
-        .frame(height: 80)
+        .frame(height: DeviceInfo.isPad ? 100 : 80)
         .cornerRadius(AppCornerRadius.medium)
         .shadow(color: AppColors.success.opacity(0.25), radius: 6, x: 0, y: 3)
     }
@@ -195,26 +197,26 @@ struct InteractionMessageCard: View {
             )
             
             // 内容层
-            HStack(alignment: .center, spacing: AppSpacing.md) {
+            HStack(alignment: .center, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                 // 左侧图标
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.25))
-                        .frame(width: 42, height: 42)
+                        .frame(width: DeviceInfo.isPad ? 56 : 42, height: DeviceInfo.isPad ? 56 : 42)
                     
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: DeviceInfo.isPad ? 26 : 20, weight: .semibold))
                         .foregroundColor(.white)
                 }
                 
                 // 中间文字
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: DeviceInfo.isPad ? 4 : 2) {
                     Text(LocalizationKey.messagesInteractionInfo.localized)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .bold))
                         .foregroundColor(.white)
                     
                     Text(LocalizationKey.messagesViewForumInteractions.localized)
-                        .font(.system(size: 12))
+                        .font(.system(size: DeviceInfo.isPad ? 14 : 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 
@@ -224,32 +226,32 @@ struct InteractionMessageCard: View {
                 if unreadCount > 0 {
                     HStack(spacing: 4) {
                         Text("\(unreadCount)")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .bold))
                             .foregroundColor(.white)
                         
                         if unreadCount < 10 {
                             Circle()
                                 .fill(Color.white.opacity(0.3))
-                                .frame(width: 6, height: 6)
+                                .frame(width: DeviceInfo.isPad ? 8 : 6, height: DeviceInfo.isPad ? 8 : 6)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, DeviceInfo.isPad ? 12 : 10)
+                    .padding(.vertical, DeviceInfo.isPad ? 8 : 6)
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(AppCornerRadius.small)
                 } else {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: DeviceInfo.isPad ? 16 : 14, weight: .semibold))
                         .foregroundColor(.white.opacity(0.8))
-                        .padding(8)
+                        .padding(DeviceInfo.isPad ? 10 : 8)
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+            .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
         }
-        .frame(height: 80)
+        .frame(height: DeviceInfo.isPad ? 100 : 80)
         .cornerRadius(AppCornerRadius.medium)
         .shadow(color: AppColors.warning.opacity(0.25), radius: 6, x: 0, y: 3)
     }
@@ -321,7 +323,7 @@ struct InteractionMessageView: View {
                 )
             } else {
                 ScrollView {
-                    LazyVStack(spacing: AppSpacing.md) {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                         ForEach(interactionNotifications) { notification in
                             // 使用 NavigationLink 实现点击跳转
                             if notification.relatedId != nil {
@@ -349,8 +351,10 @@ struct InteractionMessageView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.sm)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                    .frame(maxWidth: .infinity) // 确保在iPad上居中
                 }
             }
         }
@@ -383,32 +387,33 @@ struct UnifiedNotificationRow: View {
     let notification: UnifiedNotification
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: DeviceInfo.isPad ? AppSpacing.lg : 12) {
             // 头像/图标
             ZStack {
+                let avatarSize: CGFloat = DeviceInfo.isPad ? 64 : 50
                 Circle()
                     .fill(AppColors.primaryLight)
-                    .frame(width: 50, height: 50)
+                    .frame(width: avatarSize, height: avatarSize)
                 
                 if let fromUser = notification.fromUser, let avatar = fromUser.avatar {
                     AvatarView(
                         urlString: avatar,
-                        size: 50,
+                        size: avatarSize,
                         placeholder: Image(systemName: "person.fill")
                     )
                 } else {
                     Image(systemName: notification.type.hasPrefix("forum_") ? "bubble.left.and.bubble.right.fill" : "bell.fill")
                         .foregroundColor(AppColors.primary)
-                        .font(.system(size: 20))
+                        .font(.system(size: DeviceInfo.isPad ? 28 : 20))
                 }
             }
             
             // 内容区域
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: DeviceInfo.isPad ? 8 : 6) {
                 // 标题和时间
                 HStack(alignment: .top) {
                     Text(notification.title)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: DeviceInfo.isPad ? 18 : 16, weight: .medium))
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(1)
                     
@@ -416,20 +421,20 @@ struct UnifiedNotificationRow: View {
                     
                     VStack(alignment: .trailing, spacing: 4) {
                         Text(formatTime(notification.createdAt))
-                            .font(.system(size: 12))
+                            .font(.system(size: DeviceInfo.isPad ? 14 : 12))
                             .foregroundColor(AppColors.textSecondary)
                         
                         if !notification.isRead {
                             Circle()
                                 .fill(AppColors.error)
-                                .frame(width: 8, height: 8)
+                                .frame(width: DeviceInfo.isPad ? 10 : 8, height: DeviceInfo.isPad ? 10 : 8)
                         }
                     }
                 }
                 
                 // 内容预览
                 Text(notification.content)
-                    .font(.system(size: 14))
+                    .font(.system(size: DeviceInfo.isPad ? 16 : 14))
                     .foregroundColor(AppColors.textSecondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -437,8 +442,8 @@ struct UnifiedNotificationRow: View {
             
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : 16)
+        .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : 12)
         .cardStyle(cornerRadius: AppCornerRadius.medium)
         .opacity(notification.isRead ? 0.7 : 1.0)
     }

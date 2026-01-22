@@ -1284,6 +1284,19 @@ def get_recommendations(
             task = item["task"]
             title_en = translations_dict.get((task.id, 'en'))
             title_zh = translations_dict.get((task.id, 'zh-CN'))
+            
+            # 解析图片字段
+            images_list = []
+            if task.images:
+                try:
+                    import json
+                    if isinstance(task.images, str):
+                        images_list = json.loads(task.images)
+                    elif isinstance(task.images, list):
+                        images_list = task.images
+                except (json.JSONDecodeError, TypeError):
+                    images_list = []
+            
             result.append({
                 "task_id": task.id,
                 "title": task.title,
@@ -1298,6 +1311,7 @@ def get_recommendations(
                 "match_score": round(item["score"], 3),
                 "recommendation_reason": item["reason"],
                 "created_at": task.created_at.isoformat() if task.created_at else None,
+                "images": images_list,  # 添加图片字段
             })
         
         return {

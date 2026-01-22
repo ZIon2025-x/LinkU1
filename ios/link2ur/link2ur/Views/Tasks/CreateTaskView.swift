@@ -28,12 +28,12 @@ struct CreateTaskView: View {
                     .ignoresSafeArea()
                 
                 KeyboardAvoidingScrollView(extraPadding: 20) {
-                    VStack(spacing: AppSpacing.xl) {
+                    VStack(spacing: DeviceInfo.isPad ? AppSpacing.xxl : AppSpacing.xl) {
                         // 1. 基本信息
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                             SectionHeader(title: LocalizationKey.createTaskBasicInfo.localized, icon: "doc.text.fill")
                             
-                            VStack(spacing: AppSpacing.lg) {
+                            VStack(spacing: DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg) {
                                 // 标题
                                 EnhancedTextField(
                                     title: LocalizationKey.createTaskTitle.localized,
@@ -48,22 +48,22 @@ struct CreateTaskView: View {
                                     title: LocalizationKey.createTaskDescription.localized,
                                     placeholder: LocalizationKey.createTaskDescriptionPlaceholder.localized,
                                     text: $viewModel.description,
-                                    height: 150,
+                                    height: DeviceInfo.isPad ? 200 : 150,
                                     isRequired: true,
                                     characterLimit: 1000
                                 )
                             }
                         }
-                        .padding(AppSpacing.md)
+                        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                         .background(AppColors.cardBackground)
                         .cornerRadius(AppCornerRadius.large)
                         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
                         // 2. 报酬与地点
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                             SectionHeader(title: LocalizationKey.createTaskRewardLocation.localized, icon: "dollarsign.circle.fill")
                             
-                            VStack(spacing: AppSpacing.lg) {
+                            VStack(spacing: DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg) {
                                 // 价格（固定英镑）
                                 EnhancedNumberField(
                                     title: LocalizationKey.createTaskReward.localized,
@@ -103,13 +103,13 @@ struct CreateTaskView: View {
                                 }
                             }
                         }
-                        .padding(AppSpacing.md)
+                        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                         .background(AppColors.cardBackground)
                         .cornerRadius(AppCornerRadius.large)
                         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
                         // 3. 图片展示
-                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                        VStack(alignment: .leading, spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                             HStack {
                                 SectionHeader(title: LocalizationKey.createTaskImages.localized, icon: "photo.on.rectangle.angled")
                                 Spacer()
@@ -177,7 +177,7 @@ struct CreateTaskView: View {
                                 .padding(.vertical, 4)
                             }
                         }
-                        .padding(AppSpacing.md)
+                        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                         .background(AppColors.cardBackground)
                         .cornerRadius(AppCornerRadius.large)
                         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
@@ -223,11 +223,13 @@ struct CreateTaskView: View {
                         }
                         .buttonStyle(PrimaryButtonStyle())
                         .disabled(viewModel.isLoading || viewModel.isUploading)
-                        .padding(.top, AppSpacing.lg)
-                        .padding(.bottom, AppSpacing.xxl)
+                        .padding(.top, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
+                        .padding(.bottom, DeviceInfo.isPad ? AppSpacing.xxl : AppSpacing.xxl)
                     }
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.top, AppSpacing.md)
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.top, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
+                    .frame(maxWidth: .infinity) // 确保在iPad上居中
                 }
             }
             .scrollDismissesKeyboard(.interactively)
