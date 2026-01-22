@@ -311,7 +311,14 @@ async def get_flea_market_items(
         if status_filter:
             query = query.where(models.FleaMarketItem.status == status_filter)
         else:
-            query = query.where(models.FleaMarketItem.status == "active")
+            # ⚠️ 优化：只显示 active 状态且未被预留的商品（sold_task_id 为空）
+            # 如果 sold_task_id 不为空，说明商品已被购买但等待支付，不应该在列表中显示
+            query = query.where(
+                and_(
+                    models.FleaMarketItem.status == "active",
+                    models.FleaMarketItem.sold_task_id.is_(None)  # 排除已预留但未支付完成的商品
+                )
+            )
         
         # 卖家筛选
         if seller_id:
@@ -1211,27 +1218,30 @@ async def direct_purchase_item(
         db.add(new_task)
         await db.flush()  # 获取任务ID
         
-        # 更新商品状态为sold（使用条件更新防止并发超卖）
+        # ⚠️ 优化：不立即更新商品状态为 sold，而是先关联任务ID
+        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
+        # 这样可以避免支付失败或超时后商品已下架的问题
+        # 使用条件更新防止并发超卖（检查商品仍然是 active 状态）
         update_result = await db.execute(
             update(models.FleaMarketItem)
             .where(
                 and_(
                     models.FleaMarketItem.id == db_id,
-                    models.FleaMarketItem.status == "active"
+                    models.FleaMarketItem.status == "active",
+                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
                 )
             )
             .values(
-                status="sold",
-                sold_task_id=new_task.id
+                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
             )
         )
         
-        # 检查是否成功更新（受影响行数为0说明已被其他请求售出）
+        # 检查是否成功更新（受影响行数为0说明已被其他请求售出或预留）
         if update_result.rowcount == 0:
             await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="该商品已被其他用户购买"
+                detail="该商品已被其他用户购买或正在处理中"
             )
         
         # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
@@ -1340,7 +1350,7 @@ async def direct_purchase_item(
             "success": True,
             "data": {
                 "task_id": format_flea_market_id(new_task.id),
-                "item_status": "sold",
+                "item_status": "reserved",  # 商品状态为预留，等待支付完成
                 "task_status": "pending_payment",  # 返回任务状态
                 "payment_intent_id": payment_intent.id,
                 "client_secret": payment_intent.client_secret,
@@ -1350,7 +1360,7 @@ async def direct_purchase_item(
                 "customer_id": customer_id,
                 "ephemeral_key_secret": ephemeral_key_secret,
             },
-            "message": "购买成功，请完成支付"
+            "message": "购买已创建，请完成支付。支付完成后商品将自动下架。"
         }
     except HTTPException:
         raise
@@ -1655,19 +1665,20 @@ async def accept_purchase_request(
                 detail="创建支付失败，请稍后重试"
             )
         
-        # 更新商品状态为sold（使用条件更新防止并发超卖）
-        # ⚠️ 注意：商品状态设置为 sold，但如果支付超时，会在超时处理中回滚
+        # ⚠️ 优化：不立即更新商品状态为 sold，而是先关联任务ID
+        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
+        # 使用条件更新防止并发超卖（检查商品仍然是 active 状态）
         update_result = await db.execute(
             update(models.FleaMarketItem)
             .where(
                 and_(
                     models.FleaMarketItem.id == db_id,
-                    models.FleaMarketItem.status == "active"
+                    models.FleaMarketItem.status == "active",
+                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
                 )
             )
             .values(
-                status="sold",
-                sold_task_id=new_task.id
+                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
             )
         )
         
@@ -1740,7 +1751,7 @@ async def accept_purchase_request(
             "success": True,
             "data": {
                 "task_id": format_flea_market_id(new_task.id),
-                "item_status": "sold",
+                "item_status": "reserved",  # 商品状态为预留，等待支付完成
                 "task_status": "pending_payment",  # 返回任务状态
                 "final_price": float(final_price),
                 "purchase_request_status": "accepted",
@@ -1752,7 +1763,7 @@ async def accept_purchase_request(
                 "customer_id": customer_id,
                 "ephemeral_key_secret": ephemeral_key_secret,
             },
-            "message": "购买申请已接受，请完成支付"
+            "message": "购买申请已接受，请完成支付。支付完成后商品将自动下架。"
         }
     except HTTPException:
         raise

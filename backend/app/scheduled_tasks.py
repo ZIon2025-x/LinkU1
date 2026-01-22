@@ -536,6 +536,25 @@ def check_expired_payment_tasks(db: Session):
                         participant.status = "cancelled"
                         participant.cancelled_at = current_time
                 
+                # ⚠️ 优化：如果是跳蚤市场购买，需要恢复商品状态为 active
+                if task.task_type == "Second-hand & Rental":
+                    flea_item = db.query(models.FleaMarketItem).filter(
+                        models.FleaMarketItem.sold_task_id == task.id
+                    ).first()
+                    
+                    if flea_item:
+                        # 恢复商品状态为 active，清除任务关联
+                        flea_item.status = "active"
+                        flea_item.sold_task_id = None
+                        logger.info(f"✅ 已恢复跳蚤市场商品 {flea_item.id} 状态为 active（支付过期）")
+                        
+                        # 清除商品缓存
+                        try:
+                            from app.flea_market_extensions import invalidate_item_cache
+                            invalidate_item_cache(flea_item.id)
+                        except Exception as e:
+                            logger.warning(f"清除商品缓存失败: {e}")
+                
                 # 发送通知给任务发布者（需要支付的人）
                 if task.poster_id:
                     try:

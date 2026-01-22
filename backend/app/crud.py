@@ -2243,6 +2243,26 @@ def revert_unpaid_application_approvals(db: Session):
                 else:
                     # 如果没有找到申请（可能是跳蚤市场直接购买），直接回滚任务状态
                     # ⚠️ 注意：跳蚤市场直接购买没有申请记录，需要特殊处理
+                    # ⚠️ 优化：如果是跳蚤市场购买，需要恢复商品状态为 active
+                    if task.task_type == "Second-hand & Rental" and task.sold_task_id is None:
+                        # 查找关联的跳蚤市场商品
+                        from app.models import FleaMarketItem
+                        flea_item = db.query(FleaMarketItem).filter(
+                            FleaMarketItem.sold_task_id == task.id
+                        ).first()
+                        
+                        if flea_item:
+                            # 恢复商品状态为 active，清除任务关联
+                            flea_item.status = "active"
+                            flea_item.sold_task_id = None
+                            logger.info(f"✅ 已恢复跳蚤市场商品 {flea_item.id} 状态为 active（支付超时）")
+                            
+                            # 清除商品缓存
+                            try:
+                                from app.flea_market_extensions import invalidate_item_cache
+                                invalidate_item_cache(flea_item.id)
+                            except Exception as e:
+                                logger.warning(f"清除商品缓存失败: {e}")
                     task.taker_id = None
                     task.status = "open"
                     task.is_paid = 0

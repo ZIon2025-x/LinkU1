@@ -4581,6 +4581,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 # 检查是否是待确认的批准（pending_approval）
                 metadata = payment_intent.get("metadata", {})
                 is_pending_approval = metadata.get("pending_approval") == "true"
+                
+                # ⚠️ 优化：如果是跳蚤市场购买，支付成功后更新商品状态为 sold
+                payment_type = metadata.get("payment_type")
+                if payment_type == "flea_market_direct_purchase" or payment_type == "flea_market_purchase_request":
+                    flea_market_item_id = metadata.get("flea_market_item_id")
+                    if flea_market_item_id:
+                        try:
+                            from app.models import FleaMarketItem
+                            from app.flea_market_extensions import parse_flea_market_id
+                            db_item_id = parse_flea_market_id(flea_market_item_id)
+                            
+                            # 更新商品状态为 sold（支付成功后）
+                            flea_item = db.query(FleaMarketItem).filter(
+                                and_(
+                                    FleaMarketItem.id == db_item_id,
+                                    FleaMarketItem.sold_task_id == task_id,
+                                    FleaMarketItem.status == "active"  # 确保商品仍然是 active 状态
+                                )
+                            ).first()
+                            
+                            if flea_item:
+                                flea_item.status = "sold"
+                                logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold")
+                                
+                                # 清除商品缓存
+                                from app.flea_market_extensions import invalidate_item_cache
+                                invalidate_item_cache(flea_item.id)
+                            else:
+                                logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配")
+                        except Exception as e:
+                            logger.error(f"❌ [WEBHOOK] 更新跳蚤市场商品状态失败: {e}", exc_info=True)
                 application_id_str = metadata.get("application_id")
                 
                 logger.info(f"🔍 Webhook检查: is_pending_approval={is_pending_approval}, application_id={application_id_str}, metadata={metadata}")
