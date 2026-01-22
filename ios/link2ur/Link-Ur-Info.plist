@@ -50,5 +50,8 @@
 		<string>flea market</string>
 		<string>forum</string>
 	</array>
+	<!-- 加密合规声明：应用仅使用标准加密算法（HTTPS/TLS、CryptoKit、Keychain），无需出口合规文档 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

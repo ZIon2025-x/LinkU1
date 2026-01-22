@@ -23,7 +23,7 @@ class NotificationService: UNNotificationServiceExtension {
         print("🔔 [NotificationService] 原始内容: \(request.content.body)")
         print("🔔 [NotificationService] userInfo keys: \(request.content.userInfo.keys)")
         
-        guard let bestAttemptContent = bestAttemptContent else {
+        guard bestAttemptContent != nil else {
             print("⚠️ [NotificationService] 无法创建 mutable content，使用原始内容")
             contentHandler(request.content)
             return

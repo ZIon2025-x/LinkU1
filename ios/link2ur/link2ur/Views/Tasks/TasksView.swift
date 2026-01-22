@@ -442,7 +442,7 @@ struct TasksView: View {
         
         // 转换为数组，推荐任务在前（保留推荐原因）
         var mergedTasks: [Task] = []
-        var recommendedTaskIds = Set(recommendedViewModel.tasks.map { $0.id })
+        let recommendedTaskIds = Set(recommendedViewModel.tasks.map { $0.id })
         
         // 先添加推荐任务（保留推荐原因）
         for task in recommendedViewModel.tasks {

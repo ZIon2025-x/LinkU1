@@ -8,16 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		1476797F2F1814BB009EB626 /* NotificationServiceExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 147679782F1814BA009EB626 /* NotificationServiceExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		148177E02F0F268E00620BCA /* Stripe in Frameworks */ = {isa = PBXBuildFile; productRef = 148177DF2F0F268E00620BCA /* Stripe */; };
 		148177E22F0F268E00620BCA /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = 148177E12F0F268E00620BCA /* StripeApplePay */; };
-		148177E42F0F268E00620BCA /* StripeCardScan in Frameworks */ = {isa = PBXBuildFile; productRef = 148177E32F0F268E00620BCA /* StripeCardScan */; };
 		148177E62F0F268E00620BCA /* StripeConnect in Frameworks */ = {isa = PBXBuildFile; productRef = 148177E52F0F268E00620BCA /* StripeConnect */; };
-		148177E82F0F268E00620BCA /* StripeFinancialConnections in Frameworks */ = {isa = PBXBuildFile; productRef = 148177E72F0F268E00620BCA /* StripeFinancialConnections */; };
-		148177EA2F0F268E00620BCA /* StripeIdentity in Frameworks */ = {isa = PBXBuildFile; productRef = 148177E92F0F268E00620BCA /* StripeIdentity */; };
-		148177EC2F0F268E00620BCA /* StripeIssuing in Frameworks */ = {isa = PBXBuildFile; productRef = 148177EB2F0F268E00620BCA /* StripeIssuing */; };
 		148177EE2F0F268E00620BCA /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 148177ED2F0F268E00620BCA /* StripePaymentSheet */; };
 		148177F02F0F268E00620BCA /* StripePayments in Frameworks */ = {isa = PBXBuildFile; productRef = 148177EF2F0F268E00620BCA /* StripePayments */; };
-		148177F22F0F268E00620BCA /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = 148177F12F0F268E00620BCA /* StripePaymentsUI */; };
 		1491C6B62EDF931E0054DEAA /* LinkU in Frameworks */ = {isa = PBXBuildFile; productRef = 1491C6B52EDF931E0054DEAA /* LinkU */; };
 /* End PBXBuildFile section */
 
@@ -91,17 +85,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				148177F02F0F268E00620BCA /* StripePayments in Frameworks */,
-				148177E42F0F268E00620BCA /* StripeCardScan in Frameworks */,
-				148177E82F0F268E00620BCA /* StripeFinancialConnections in Frameworks */,
-				148177F22F0F268E00620BCA /* StripePaymentsUI in Frameworks */,
 				148177E22F0F268E00620BCA /* StripeApplePay in Frameworks */,
-				148177EA2F0F268E00620BCA /* StripeIdentity in Frameworks */,
-				1491C6B62EDF931E0054DEAA /* LinkU in Frameworks */,
-				148177E02F0F268E00620BCA /* Stripe in Frameworks */,
-				148177EC2F0F268E00620BCA /* StripeIssuing in Frameworks */,
-				148177EE2F0F268E00620BCA /* StripePaymentSheet in Frameworks */,
 				148177E62F0F268E00620BCA /* StripeConnect in Frameworks */,
+				148177EE2F0F268E00620BCA /* StripePaymentSheet in Frameworks */,
+				148177F02F0F268E00620BCA /* StripePayments in Frameworks */,
+				1491C6B62EDF931E0054DEAA /* LinkU in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,16 +161,10 @@
 			name = "Link²Ur";
 			packageProductDependencies = (
 				1491C6B52EDF931E0054DEAA /* LinkU */,
-				148177DF2F0F268E00620BCA /* Stripe */,
 				148177E12F0F268E00620BCA /* StripeApplePay */,
-				148177E32F0F268E00620BCA /* StripeCardScan */,
 				148177E52F0F268E00620BCA /* StripeConnect */,
-				148177E72F0F268E00620BCA /* StripeFinancialConnections */,
-				148177E92F0F268E00620BCA /* StripeIdentity */,
-				148177EB2F0F268E00620BCA /* StripeIssuing */,
 				148177ED2F0F268E00620BCA /* StripePaymentSheet */,
 				148177EF2F0F268E00620BCA /* StripePayments */,
-				148177F12F0F268E00620BCA /* StripePaymentsUI */,
 			);
 			productName = link2ur;
 			productReference = 1491C6952EDF90BC0054DEAA /* Link²Ur.app */;
@@ -291,7 +273,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur.NotificationServiceExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -320,7 +302,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur.NotificationServiceExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -475,7 +457,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
 				PRODUCT_NAME = "Link²Ur";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -511,7 +493,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
 				PRODUCT_NAME = "Link²Ur";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -575,40 +557,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		148177DF2F0F268E00620BCA /* Stripe */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = Stripe;
-		};
 		148177E12F0F268E00620BCA /* StripeApplePay */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
 			productName = StripeApplePay;
 		};
-		148177E32F0F268E00620BCA /* StripeCardScan */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripeCardScan;
-		};
 		148177E52F0F268E00620BCA /* StripeConnect */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
 			productName = StripeConnect;
-		};
-		148177E72F0F268E00620BCA /* StripeFinancialConnections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripeFinancialConnections;
-		};
-		148177E92F0F268E00620BCA /* StripeIdentity */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripeIdentity;
-		};
-		148177EB2F0F268E00620BCA /* StripeIssuing */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripeIssuing;
 		};
 		148177ED2F0F268E00620BCA /* StripePaymentSheet */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -619,11 +576,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
 			productName = StripePayments;
-		};
-		148177F12F0F268E00620BCA /* StripePaymentsUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148177DE2F0F268E00620BCA /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripePaymentsUI;
 		};
 		1491C6B52EDF931E0054DEAA /* LinkU */ = {
 			isa = XCSwiftPackageProductDependency;
