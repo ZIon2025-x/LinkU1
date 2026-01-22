@@ -1444,27 +1444,40 @@ def get_unread_messages(db: Session, user_id: str):
     task_ids_set.update([task.id for task in user_tasks_1])
     
     # 2. 作为多人任务参与者的任务
-    participant_tasks = (
-        db.query(Task.id)
-        .join(TaskParticipant, Task.id == TaskParticipant.task_id)
+    # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+    participant_task_ids = (
+        db.query(TaskParticipant.task_id)
         .filter(
             and_(
                 TaskParticipant.user_id == user_id,
-                TaskParticipant.status.in_(["accepted", "in_progress", "completed"]),
-                Task.is_multi_participant == True
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
             )
         )
         .all()
     )
-    task_ids_set.update([task.id for task in participant_tasks])
+    participant_task_id_list = [row[0] for row in participant_task_ids]
+    
+    if participant_task_id_list:
+        # 查询这些任务中哪些是多人任务
+        participant_tasks = (
+            db.query(Task.id)
+            .filter(
+                and_(
+                    Task.id.in_(participant_task_id_list),
+                    Task.is_multi_participant.is_(True)  # 使用 is_() 而不是 ==
+                )
+            )
+            .all()
+        )
+        task_ids_set.update([task.id for task in participant_tasks])
     
     # 3. 作为多人任务创建者的任务（任务达人创建的活动）
     expert_creator_tasks = (
         db.query(Task.id)
         .filter(
             and_(
-                Task.is_multi_participant == True,
-                Task.created_by_expert == True,
+                Task.is_multi_participant.is_(True),  # 使用 is_() 而不是 ==
+                Task.created_by_expert.is_(True),  # 使用 is_() 而不是 ==
                 Task.expert_creator_id == user_id
             )
         )

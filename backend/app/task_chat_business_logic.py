@@ -494,6 +494,80 @@ class UnreadCountLogic:
         
         unread_result = await db.execute(unread_query)
         return unread_result.scalar() or 0
+    
+    @staticmethod
+    async def get_batch_unread_count(
+        db: AsyncSession,
+        task_ids: list[int],
+        user_id: str
+    ) -> dict[int, int]:
+        """
+        批量获取多个任务的未读消息数
+        返回字典：{task_id: unread_count}
+        优化：避免 N+1 查询问题
+        """
+        if not task_ids:
+            return {}
+        
+        # 初始化结果字典，所有任务默认为 0
+        result: dict[int, int] = {task_id: 0 for task_id in task_ids}
+        
+        # 批量查询所有游标
+        cursors_query = select(models.MessageReadCursor).where(
+            and_(
+                models.MessageReadCursor.task_id.in_(task_ids),
+                models.MessageReadCursor.user_id == user_id
+            )
+        )
+        cursors_result = await db.execute(cursors_query)
+        cursors = {cursor.task_id: cursor for cursor in cursors_result.scalars().all()}
+        
+        # 分别处理有游标和无游标的任务
+        task_ids_with_cursor = [tid for tid in task_ids if tid in cursors]
+        task_ids_without_cursor = [tid for tid in task_ids if tid not in cursors]
+        
+        # 1. 有游标的任务：使用游标批量查询未读数
+        if task_ids_with_cursor:
+            # 对于每个有游标的任务，分别查询未读数（因为每个任务的游标位置不同）
+            # 虽然还是多个查询，但比原来的 N+1 查询要好（因为游标查询很快）
+            for task_id in task_ids_with_cursor:
+                cursor = cursors[task_id]
+                unread_query = select(func.count(models.Message.id)).where(
+                    and_(
+                        models.Message.task_id == task_id,
+                        models.Message.id > cursor.last_read_message_id,
+                        models.Message.sender_id != user_id,
+                        models.Message.conversation_type == 'task'
+                    )
+                )
+                unread_result = await db.execute(unread_query)
+                result[task_id] = unread_result.scalar() or 0
+        
+        # 2. 无游标的任务：批量查询未读数（使用 message_reads 表）
+        if task_ids_without_cursor:
+            # 批量查询这些任务的未读消息（一次查询）
+            unread_query = select(
+                models.Message.task_id,
+                func.count(models.Message.id).label('count')
+            ).where(
+                and_(
+                    models.Message.task_id.in_(task_ids_without_cursor),
+                    models.Message.sender_id != user_id,
+                    models.Message.conversation_type == 'task',
+                    ~select(1).where(
+                        and_(
+                            models.MessageRead.message_id == models.Message.id,
+                            models.MessageRead.user_id == user_id
+                        )
+                    ).exists()
+                )
+            ).group_by(models.Message.task_id)
+            
+            unread_result = await db.execute(unread_query)
+            for row in unread_result:
+                result[row.task_id] = row.count
+        
+        return result
 
 
 class PrenoteFrequencyLimitLogic:

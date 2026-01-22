@@ -392,15 +392,14 @@ async def get_task_chat_unread_count(
         if not task_ids_set:
             return {"unread_count": 0}
         
-        # 批量计算所有任务的未读数量
-        total_unread = 0
-        for task_id in task_ids_set:
-            unread_count = await UnreadCountLogic.get_unread_count(
-                db=db,
-                task_id=task_id,
-                user_id=current_user.id
-            )
-            total_unread += unread_count
+        # 批量计算所有任务的未读数量（优化：避免 N+1 查询）
+        task_ids_list = list(task_ids_set)
+        unread_counts = await UnreadCountLogic.get_batch_unread_count(
+            db=db,
+            task_ids=task_ids_list,
+            user_id=current_user.id
+        )
+        total_unread = sum(unread_counts.values())
         
         return {"unread_count": total_unread}
     

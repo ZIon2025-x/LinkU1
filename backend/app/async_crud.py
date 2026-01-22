@@ -1155,22 +1155,30 @@ class AsyncTaskCRUD:
             )
             
             # 构建多人任务参与者查询
-            participant_query = (
-                select(models.Task)
-                .join(models.TaskParticipant, models.Task.id == models.TaskParticipant.task_id)
-                .options(
-                    selectinload(models.Task.poster),
-                    selectinload(models.Task.taker),
-                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
-                    selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
-                )
-                .where(
-                    and_(
-                        models.TaskParticipant.user_id == user_id,
-                        models.Task.is_multi_participant == True
+            # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+            participant_task_ids_query = select(models.TaskParticipant.task_id).where(
+                models.TaskParticipant.user_id == user_id
+            )
+            participant_task_ids_result = await db.execute(participant_task_ids_query)
+            participant_task_ids = [row[0] for row in participant_task_ids_result.all()]
+            
+            participant_query = None
+            if participant_task_ids:
+                participant_query = (
+                    select(models.Task)
+                    .options(
+                        selectinload(models.Task.poster),
+                        selectinload(models.Task.taker),
+                        selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
+                        selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
+                    )
+                    .where(
+                        and_(
+                            models.Task.id.in_(participant_task_ids),
+                            models.Task.is_multi_participant.is_(True)  # 使用 is_() 而不是 ==
+                        )
                     )
                 )
-            )
             
             # 列表接口默认不加载 reviews（详情接口才需要）
             if with_reviews:
@@ -1193,13 +1201,17 @@ class AsyncTaskCRUD:
                           .offset(taken_skip)
                           .limit(taken_limit)
             )
-            participant_result = await db.execute(
-                participant_query.order_by(models.Task.created_at.desc())
-            )
+            
+            # 只有当 participant_query 不为 None 时才执行查询
+            participant_tasks = []
+            if participant_query is not None:
+                participant_result = await db.execute(
+                    participant_query.order_by(models.Task.created_at.desc())
+                )
+                participant_tasks = list(participant_result.scalars().all())
             
             posted_tasks = list(posted_result.scalars().all())
             taken_tasks = list(taken_result.scalars().all())
-            participant_tasks = list(participant_result.scalars().all())
             
             # 合并taken_tasks和participant_tasks，去重（按任务ID）
             taken_task_ids = {task.id for task in taken_tasks}
