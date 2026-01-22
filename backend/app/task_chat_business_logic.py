@@ -466,8 +466,8 @@ class UnreadCountLogic:
         cursor_result = await db.execute(cursor_query)
         cursor = cursor_result.scalar_one_or_none()
         
-        if cursor:
-            # 使用游标计算未读数
+        if cursor and cursor.last_read_message_id is not None:
+            # 使用游标计算未读数（确保 last_read_message_id 不为 None）
             unread_query = select(func.count(models.Message.id)).where(
                 and_(
                     models.Message.task_id == task_id,
@@ -520,7 +520,12 @@ class UnreadCountLogic:
             )
         )
         cursors_result = await db.execute(cursors_query)
-        cursors = {cursor.task_id: cursor for cursor in cursors_result.scalars().all()}
+        # 过滤掉 last_read_message_id 为 None 的游标（视为没有游标）
+        cursors = {
+            cursor.task_id: cursor 
+            for cursor in cursors_result.scalars().all() 
+            if cursor.last_read_message_id is not None
+        }
         
         # 分别处理有游标和无游标的任务
         task_ids_with_cursor = [tid for tid in task_ids if tid in cursors]
@@ -532,16 +537,18 @@ class UnreadCountLogic:
             # 虽然还是多个查询，但比原来的 N+1 查询要好（因为游标查询很快）
             for task_id in task_ids_with_cursor:
                 cursor = cursors[task_id]
-                unread_query = select(func.count(models.Message.id)).where(
-                    and_(
-                        models.Message.task_id == task_id,
-                        models.Message.id > cursor.last_read_message_id,
-                        models.Message.sender_id != user_id,
-                        models.Message.conversation_type == 'task'
+                # 确保 last_read_message_id 不为 None（已经在上面过滤了）
+                if cursor.last_read_message_id is not None:
+                    unread_query = select(func.count(models.Message.id)).where(
+                        and_(
+                            models.Message.task_id == task_id,
+                            models.Message.id > cursor.last_read_message_id,
+                            models.Message.sender_id != user_id,
+                            models.Message.conversation_type == 'task'
+                        )
                     )
-                )
-                unread_result = await db.execute(unread_query)
-                result[task_id] = unread_result.scalar() or 0
+                    unread_result = await db.execute(unread_query)
+                    result[task_id] = unread_result.scalar() or 0
         
         # 2. 无游标的任务：批量查询未读数（使用 message_reads 表）
         if task_ids_without_cursor:
