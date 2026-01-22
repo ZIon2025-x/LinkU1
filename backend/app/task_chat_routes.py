@@ -97,18 +97,26 @@ async def get_task_chat_list(
         task_ids_set.update([row[0] for row in result_1.all()])
         
         # 2. 作为多人任务参与者的任务
-        participant_tasks_query = select(models.Task.id).join(
-            models.TaskParticipant,
-            models.Task.id == models.TaskParticipant.task_id
-        ).where(
+        # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+        participant_tasks_query = select(models.TaskParticipant.task_id).where(
             and_(
                 models.TaskParticipant.user_id == current_user.id,
-                models.TaskParticipant.status.in_(["accepted", "in_progress"]),
-                models.Task.is_multi_participant.is_(True)
+                models.TaskParticipant.status.in_(["accepted", "in_progress"])
             )
         )
-        result_2 = await db.execute(participant_tasks_query)
-        task_ids_set.update([row[0] for row in result_2.all()])
+        participant_result = await db.execute(participant_tasks_query)
+        participant_task_ids = [row[0] for row in participant_result.all()]
+        
+        if participant_task_ids:
+            # 查询这些任务中哪些是多人任务
+            multi_participant_query = select(models.Task.id).where(
+                and_(
+                    models.Task.id.in_(participant_task_ids),
+                    models.Task.is_multi_participant.is_(True)
+                )
+            )
+            result_2 = await db.execute(multi_participant_query)
+            task_ids_set.update([row[0] for row in result_2.all()])
         
         if not task_ids_set:
             return {
@@ -360,18 +368,26 @@ async def get_task_chat_unread_count(
         task_ids_set.update([row[0] for row in result_1.all()])
         
         # 2. 作为多人任务参与者的任务
-        participant_tasks_query = select(models.Task.id).join(
-            models.TaskParticipant,
-            models.Task.id == models.TaskParticipant.task_id
-        ).where(
+        # 先查询参与者任务ID，然后过滤出多人任务（避免在join中使用布尔字段比较）
+        participant_tasks_query = select(models.TaskParticipant.task_id).where(
             and_(
                 models.TaskParticipant.user_id == current_user.id,
-                models.TaskParticipant.status.in_(["accepted", "in_progress"]),
-                models.Task.is_multi_participant.is_(True)
+                models.TaskParticipant.status.in_(["accepted", "in_progress"])
             )
         )
-        result_2 = await db.execute(participant_tasks_query)
-        task_ids_set.update([row[0] for row in result_2.all()])
+        participant_result = await db.execute(participant_tasks_query)
+        participant_task_ids = [row[0] for row in participant_result.all()]
+        
+        if participant_task_ids:
+            # 查询这些任务中哪些是多人任务
+            multi_participant_query = select(models.Task.id).where(
+                and_(
+                    models.Task.id.in_(participant_task_ids),
+                    models.Task.is_multi_participant.is_(True)
+                )
+            )
+            result_2 = await db.execute(multi_participant_query)
+            task_ids_set.update([row[0] for row in result_2.all()])
         
         if not task_ids_set:
             return {"unread_count": 0}
