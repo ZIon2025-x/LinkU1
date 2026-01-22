@@ -283,18 +283,25 @@ struct TasksView: View {
                     // 首次加载时，应用引导教程保存的个性化设置
                     applyOnboardingPreferences()
                     
-                    // 先从缓存异步加载推荐任务，避免阻塞
-                    if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: nil, city: nil, isRecommended: true) {
-                        if !cachedRecommendedTasks.isEmpty {
-                            recommendedViewModel.tasks = cachedRecommendedTasks
-                            Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
-                            updateMergedTasks()
+                    // 修复：先从缓存加载普通任务，确保一开始就显示普通任务
+                    viewModel.loadTasksFromCache(category: selectedCategory, city: selectedCity, status: "open")
+                    
+                    // 再从缓存加载推荐任务（如果已登录）
+                    if appState.isAuthenticated {
+                        if let cachedRecommendedTasks = CacheManager.shared.loadTasks(category: selectedCategory, city: selectedCity, isRecommended: true) {
+                            if !cachedRecommendedTasks.isEmpty {
+                                recommendedViewModel.tasks = cachedRecommendedTasks
+                                Logger.success("从推荐任务缓存加载了 \(cachedRecommendedTasks.count) 个任务", category: .cache)
+                            }
                         }
                     }
                     
+                    // 立即更新合并列表（基于缓存数据）
+                    updateMergedTasks()
+                    
                     // 使用 task 替代 onAppear，避免重复加载
-                    if allTasks.isEmpty && !viewModel.isLoading && !recommendedViewModel.isLoading {
-                        // 加载推荐任务和普通任务
+                    if !viewModel.isLoading && !recommendedViewModel.isLoading {
+                        // 加载推荐任务和普通任务（网络请求）
                         loadTasksWithRecommendations()
                     }
                 }
@@ -350,7 +357,9 @@ struct TasksView: View {
     
     /// 加载任务（推荐任务优先）
     private func loadTasksWithRecommendations() {
+        // 修复：确保普通任务也立即加载（即使推荐任务先加载完成）
         // 并行加载推荐任务和普通任务，提高加载速度
+        
         // 先加载推荐任务（如果已登录）
         if appState.isAuthenticated {
             recommendedViewModel.loadRecommendedTasks(
@@ -364,6 +373,7 @@ struct TasksView: View {
         }
         
         // 同时加载普通任务（无论是否登录都需要）
+        // 注意：loadTasks 内部会先从缓存加载，然后进行网络请求
         viewModel.loadTasks(
             category: selectedCategory,
             city: selectedCity,
@@ -372,7 +382,8 @@ struct TasksView: View {
             forceRefresh: false
         )
         
-        // 立即更新合并列表（基于当前已有数据）
+        // 立即更新合并列表（基于当前已有数据，包括缓存数据）
+        // 这样即使推荐任务先加载完成，普通任务也能显示（如果有缓存数据）
         updateMergedTasks()
     }
     
@@ -420,6 +431,7 @@ struct TasksView: View {
     /// 更新合并后的任务列表（推荐任务优先）
     /// 优化：使用字典提高去重效率，减少时间复杂度
     /// 优化：只在数据真正变化时更新，避免不必要的视图重绘
+    /// 修复：确保推荐任务和普通任务都显示，推荐任务优先排序，并去重
     private func updateMergedTasks() {
         // 使用字典快速去重，推荐任务优先（保留推荐原因和 isRecommended 标记）
         var taskMap: [Int: Task] = [:]
@@ -440,12 +452,22 @@ struct TasksView: View {
             }
         }
         
-        // 转换为数组，推荐任务在前（保留推荐原因）
+        // 转换为数组，推荐任务在前（保留推荐原因），按匹配分数排序
         var mergedTasks: [Task] = []
-        let recommendedTaskIds = Set(recommendedViewModel.tasks.map { $0.id })
         
-        // 先添加推荐任务（保留推荐原因）
-        for task in recommendedViewModel.tasks {
+        // 先添加推荐任务（保留推荐原因），按匹配分数降序排序
+        let recommendedTasks = recommendedViewModel.tasks
+            .filter { $0.isRecommended == true }
+            .sorted { (task1, task2) -> Bool in
+                let score1 = task1.matchScore ?? 0.0
+                let score2 = task2.matchScore ?? 0.0
+                return score1 > score2
+            }
+        
+        // 获取推荐任务 ID 集合，用于去重
+        let recommendedTaskIds = Set(recommendedTasks.map { $0.id })
+        
+        for task in recommendedTasks {
             if let mergedTask = taskMap[task.id] {
                 mergedTasks.append(mergedTask)
             }

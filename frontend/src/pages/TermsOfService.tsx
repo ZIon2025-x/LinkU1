@@ -157,6 +157,7 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.serviceNature.testingPhase')}
               </p>
               <p>{t('termsOfService.serviceNature.paymentSystem')}</p>
+              <p>{t('termsOfService.serviceNature.recommendationSystem')}</p>
 
               {/* 2. 用户类型与资格 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>

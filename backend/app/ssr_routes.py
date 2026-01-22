@@ -140,6 +140,21 @@ def is_crawler(user_agent: str) -> bool:
     """检测是否是任何类型的爬虫（兼容旧代码）"""
     return is_non_js_crawler(user_agent) or is_js_capable_crawler(user_agent)
 
+def is_request_from_frontend(request: Request) -> bool:
+    """
+    检查请求是否来自前端域名（通过 vercel rewrite 转发）
+    如果是，应该直接返回 HTML 而不是重定向，避免循环
+    """
+    host = request.headers.get("Host", "")
+    referer = request.headers.get("Referer", "")
+    hostname = request.url.hostname or ""
+    
+    return (
+        "www.link2ur.com" in host or
+        "www.link2ur.com" in referer or
+        "www.link2ur.com" in hostname
+    )
+
 
 def generate_html(
     title: str,
@@ -446,9 +461,11 @@ async def ssr_task_detail(
     - 如果是普通用户，重定向到前端 SPA
     """
     user_agent = request.headers.get("User-Agent", "")
+    is_from_frontend = is_request_from_frontend(request)
     
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
-    if is_js_capable_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if is_js_capable_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
@@ -459,7 +476,8 @@ async def ssr_task_detail(
         return RedirectResponse(url=frontend_url, status_code=302)
     
     # 如果不是不执行JS的爬虫，重定向到前端
-    if not is_non_js_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if not is_non_js_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/tasks/{task_id}"
@@ -644,9 +662,11 @@ async def ssr_leaderboard_detail(
     - 如果是普通用户，重定向到前端 SPA
     """
     user_agent = request.headers.get("User-Agent", "")
+    is_from_frontend = is_request_from_frontend(request)
     
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
-    if is_js_capable_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if is_js_capable_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
@@ -657,7 +677,8 @@ async def ssr_leaderboard_detail(
         return RedirectResponse(url=frontend_url, status_code=302)
     
     # 如果不是不执行JS的爬虫，重定向到前端
-    if not is_non_js_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if not is_non_js_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/leaderboard/custom/{leaderboard_id}"
@@ -748,9 +769,11 @@ async def ssr_forum_post_detail(
     论坛帖子详情页 SSR
     """
     user_agent = request.headers.get("User-Agent", "")
+    is_from_frontend = is_request_from_frontend(request)
     
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
-    if is_js_capable_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if is_js_capable_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
@@ -761,7 +784,8 @@ async def ssr_forum_post_detail(
         return RedirectResponse(url=frontend_url, status_code=302)
     
     # 如果不是不执行JS的爬虫，重定向到前端
-    if not is_non_js_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if not is_non_js_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/forum/post/{post_id}"
@@ -854,12 +878,14 @@ async def ssr_activity_detail(
     - 如果是普通用户，重定向到前端 SPA
     """
     user_agent = request.headers.get("User-Agent", "")
+    is_from_frontend = is_request_from_frontend(request)
     
     # 调试日志：记录所有请求的 User-Agent（INFO 级别，方便排查）
     logger.info(f"活动详情 SSR 请求: activity_id={activity_id}, User-Agent={user_agent[:200] if user_agent else 'None'}")
     
     # 如果是能执行JavaScript的现代爬虫，让它们直接访问前端SPA（执行JS）
-    if is_js_capable_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if is_js_capable_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"
@@ -870,7 +896,8 @@ async def ssr_activity_detail(
         return RedirectResponse(url=frontend_url, status_code=302)
     
     # 如果不是不执行JS的爬虫，重定向到前端
-    if not is_non_js_crawler(user_agent):
+    # 但如果请求已经来自前端，直接返回 HTML 避免循环
+    if not is_non_js_crawler(user_agent) and not is_from_frontend:
         path = request.url.path
         if path.startswith("/zh/"):
             frontend_url = f"https://www.link2ur.com/zh/activities/{activity_id}"

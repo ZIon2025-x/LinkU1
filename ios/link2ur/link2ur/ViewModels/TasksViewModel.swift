@@ -474,13 +474,10 @@ class TasksViewModel: ObservableObject {
                     recommendation.toTask()
                 }
                 
-                // 优化：先立即显示已有图片的任务，提升用户体验
-                let tasksWithImages = recommendedTasks.filter { $0.images != nil && !($0.images?.isEmpty ?? true) }
-                let tasksWithoutImages = recommendedTasks.filter { $0.images == nil || ($0.images?.isEmpty ?? true) }
-                
-                // 先显示有图片的任务（立即更新UI）
+                // 修复：立即显示所有推荐任务（包括没有图片的），提升用户体验
+                // 不再过滤掉没有图片的任务，确保所有推荐任务都能显示
                 DispatchQueue.main.async {
-                    self.tasks = tasksWithImages
+                    self.tasks = recommendedTasks
                     self.isLoading = false
                     self.errorMessage = nil
                     self.lastRecommendedTasksLoadTime = Date()
@@ -493,6 +490,7 @@ class TasksViewModel: ObservableObject {
                 }
                 
                 // 异步补充缺少图片的任务（后台进行，不阻塞UI）
+                let tasksWithoutImages = recommendedTasks.filter { $0.images == nil || ($0.images?.isEmpty ?? true) }
                 if !tasksWithoutImages.isEmpty {
                     Logger.debug("发现 \(tasksWithoutImages.count) 个推荐任务缺少图片，异步补充", category: .api)
                     

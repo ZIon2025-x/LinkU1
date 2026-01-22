@@ -156,6 +156,7 @@ const PrivacyPolicy: React.FC = () => {
               <p>{t('privacyPolicy.dataCollection.accountData')}</p>
               <p>{t('privacyPolicy.dataCollection.taskData')}</p>
               <p>{t('privacyPolicy.dataCollection.locationData')}</p>
+              <p>{t('privacyPolicy.dataCollection.recommendationData')}</p>
               <p>{t('privacyPolicy.dataCollection.technicalData')}</p>
               <p>{t('privacyPolicy.dataCollection.analyticsData')}</p>
               <p>{t('privacyPolicy.dataCollection.paymentData')}</p>
@@ -179,6 +180,7 @@ const PrivacyPolicy: React.FC = () => {
               </h2>
               <p>{t('privacyPolicy.retentionPeriod.accountData')}</p>
               <p>{t('privacyPolicy.retentionPeriod.transactionData')}</p>
+              <p>{t('privacyPolicy.retentionPeriod.recommendationData')}</p>
               <p>{t('privacyPolicy.retentionPeriod.securityLogs')}</p>
 
               {/* 您的权利 */}
