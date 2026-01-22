@@ -4839,6 +4839,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     # 刷新任务对象以获取最新状态
                     db.refresh(task)
                     
+                    # ⚠️ 优化：清除任务缓存，确保前端立即看到更新后的状态
+                    try:
+                        from app.services.task_service import TaskService
+                        TaskService.invalidate_cache(task_id)
+                        logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的缓存")
+                    except Exception as e:
+                        logger.warning(f"⚠️ [WEBHOOK] 清除任务缓存失败: {e}")
+                    
+                    # 清除任务列表缓存（因为任务状态已改变）
+                    try:
+                        from app.redis_cache import invalidate_tasks_cache
+                        invalidate_tasks_cache()
+                        logger.info(f"✅ [WEBHOOK] 已清除任务列表缓存")
+                    except Exception as e:
+                        logger.warning(f"⚠️ [WEBHOOK] 清除任务列表缓存失败: {e}")
+                    
                     # 验证更新是否成功
                     logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成（提交后验证）:")
                     logger.info(f"  - 任务状态: {task.status}")
@@ -4936,6 +4952,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         logger.info(f"  - 申请状态: pending")
                         logger.info(f"  - 任务状态: {task.status}")
                         logger.info(f"  - Taker ID: {task.taker_id}")
+                        
+                        # ⚠️ 优化：清除任务缓存，确保前端立即看到更新后的状态
+                        try:
+                            from app.services.task_service import TaskService
+                            TaskService.invalidate_cache(task_id)
+                            logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的缓存（支付失败）")
+                        except Exception as e:
+                            logger.warning(f"⚠️ [WEBHOOK] 清除任务缓存失败: {e}")
+                        
+                        # 清除任务列表缓存
+                        try:
+                            from app.redis_cache import invalidate_tasks_cache
+                            invalidate_tasks_cache()
+                            logger.info(f"✅ [WEBHOOK] 已清除任务列表缓存（支付失败）")
+                        except Exception as e:
+                            logger.warning(f"⚠️ [WEBHOOK] 清除任务列表缓存失败: {e}")
                     except Exception as e:
                         logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
                         db.rollback()
@@ -4946,6 +4978,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 try:
                     db.commit()
                     logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的 payment_intent_id")
+                    
+                    # ⚠️ 优化：清除任务缓存
+                    try:
+                        from app.services.task_service import TaskService
+                        TaskService.invalidate_cache(task_id)
+                        from app.redis_cache import invalidate_tasks_cache
+                        invalidate_tasks_cache()
+                        logger.info(f"✅ [WEBHOOK] 已清除任务缓存（支付失败-无申请）")
+                    except Exception as e:
+                        logger.warning(f"⚠️ [WEBHOOK] 清除任务缓存失败: {e}")
                 except Exception as e:
                     logger.error(f"❌ [WEBHOOK] 数据库提交失败: {e}")
                     db.rollback()
