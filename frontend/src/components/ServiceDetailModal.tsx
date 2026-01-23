@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
@@ -57,7 +58,8 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   serviceId,
   onApplySuccess,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { navigate: navigateLocalized } = useLocalizedNavigation();
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -330,20 +332,89 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
               >
                 取消
               </button>
-              <button
-                onClick={handleApply}
-                disabled={applying || (service.has_time_slots && !selectedTimeSlotId)}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  background: applying ? '#ccc' : '#3b82f6',
-                  color: '#fff',
-                  cursor: applying ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {applying ? '申请中...' : '申请服务'}
-              </button>
+              {service.user_application_id ? (
+                // 已申请，显示支付按钮或等待按钮
+                service.user_application_has_negotiation && service.user_task_status === 'pending_payment' ? (
+                  // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）
+                  <button
+                    disabled
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: '#ccc',
+                      color: '#fff',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    等待达人回应
+                  </button>
+                ) : service.user_task_status === 'pending_payment' && !service.user_task_is_paid && service.user_task_id ? (
+                  // 待支付且未支付，显示继续支付按钮
+                  <button
+                    onClick={() => {
+                      navigateLocalized(`/tasks/${service.user_task_id}/payment`);
+                      onClose();
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: '#3b82f6',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    继续支付
+                  </button>
+                ) : service.user_application_has_negotiation && service.user_application_status === 'pending' ? (
+                  // 有议价且申请状态为pending，等待达人回应
+                  <button
+                    disabled
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: '#ccc',
+                      color: '#fff',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    等待达人回应
+                  </button>
+                ) : (
+                  // 其他情况，显示已申请（灰色不可点击）
+                  <button
+                    disabled
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: '#ccc',
+                      color: '#fff',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    已申请
+                  </button>
+                )
+              ) : (
+                // 未申请，显示申请按钮
+                <button
+                  onClick={handleApply}
+                  disabled={applying || (service.has_time_slots && !selectedTimeSlotId)}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: applying ? '#ccc' : '#3b82f6',
+                    color: '#fff',
+                    cursor: applying ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {applying ? '申请中...' : '申请服务'}
+                </button>
+              )}
             </div>
           </>
         ) : null}

@@ -1272,30 +1272,55 @@ def get_activity_detail(
     
     # 检查当前用户是否已申请（如果用户已登录）
     has_applied = None
+    user_task_id = None
+    user_task_status = None
+    user_task_is_paid = None
+    user_task_has_negotiation = None
+    
     if current_user:
         # 检查用户是否在多人任务中申请过
-        multi_participant_applied = db.query(TaskParticipant.id).join(
-            Task, TaskParticipant.task_id == Task.id
+        multi_participant_task = db.query(Task).join(
+            TaskParticipant, Task.id == TaskParticipant.task_id
         ).filter(
             Task.parent_activity_id == activity.id,
             Task.is_multi_participant == True,
             TaskParticipant.user_id == current_user.id,
             TaskParticipant.status.in_(["pending", "accepted", "in_progress", "completed"])
-        ).first() is not None
+        ).first()
         
         # 检查用户是否在单个任务中申请过
-        single_task_applied = db.query(Task.id).filter(
+        single_task = db.query(Task).filter(
             Task.parent_activity_id == activity.id,
             Task.is_multi_participant == False,
             Task.originating_user_id == current_user.id,
-            Task.status.in_(["open", "taken", "in_progress", "completed"])
-        ).first() is not None
+            Task.status.in_(["open", "taken", "in_progress", "pending_payment", "completed"])
+        ).first()
         
-        has_applied = multi_participant_applied or single_task_applied
+        # 优先使用单个任务（因为活动申请通常创建单个任务）
+        user_task = single_task if single_task else multi_participant_task
+        has_applied = user_task is not None
+        
+        if user_task:
+            user_task_id = user_task.id
+            user_task_status = user_task.status
+            user_task_is_paid = bool(user_task.is_paid)
+            # 检查是否有议价：agreed_reward 存在且与 base_reward 不同
+            if user_task.agreed_reward is not None and user_task.base_reward is not None:
+                user_task_has_negotiation = float(user_task.agreed_reward) != float(user_task.base_reward)
+            else:
+                user_task_has_negotiation = False
     
     # 使用 from_orm_with_participants 方法创建输出对象
     from app import schemas
-    return schemas.ActivityOut.from_orm_with_participants(activity, current_count, has_applied=has_applied)
+    activity_out = schemas.ActivityOut.from_orm_with_participants(
+        activity, current_count, 
+        has_applied=has_applied,
+        user_task_id=user_task_id,
+        user_task_status=user_task_status,
+        user_task_is_paid=user_task_is_paid,
+        user_task_has_negotiation=user_task_has_negotiation
+    )
+    return activity_out
 
 
 @router.delete("/expert/activities/{activity_id}")

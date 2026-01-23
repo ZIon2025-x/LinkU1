@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.separate_auth_deps import get_current_admin
+from app.async_routers import get_current_user_optional
 from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
@@ -2054,6 +2055,7 @@ async def get_service_time_slots_public(
 @task_expert_router.get("/services/{service_id}", response_model=schemas.TaskExpertServiceOut)
 async def get_service_detail(
     service_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取服务详情"""
@@ -2076,7 +2078,48 @@ async def get_service_detail(
     await db.commit()
     await db.refresh(service)
     
-    return schemas.TaskExpertServiceOut.from_orm(service)
+    # 查询用户申请的服务申请信息（如果用户已登录）
+    user_application_id = None
+    user_application_status = None
+    user_task_id = None
+    user_task_status = None
+    user_task_is_paid = None
+    user_application_has_negotiation = None
+    
+    if current_user:
+        # 查询用户的服务申请
+        application = await db.execute(
+            select(models.ServiceApplication)
+            .where(models.ServiceApplication.service_id == service_id)
+            .where(models.ServiceApplication.applicant_id == current_user.id)
+            .order_by(models.ServiceApplication.created_at.desc())
+        )
+        application = application.scalar_one_or_none()
+        
+        if application:
+            user_application_id = application.id
+            user_application_status = application.status
+            user_application_has_negotiation = application.negotiated_price is not None
+            
+            # 如果申请已批准且有任务ID，查询任务信息
+            if application.task_id:
+                task = await db.get(models.Task, application.task_id)
+                if task:
+                    user_task_id = task.id
+                    user_task_status = task.status
+                    user_task_is_paid = bool(task.is_paid)
+    
+    # 使用 from_orm 方法创建输出对象，并添加用户申请信息
+    service_out = schemas.TaskExpertServiceOut.from_orm(service)
+    # 添加用户申请信息
+    service_out.user_application_id = user_application_id
+    service_out.user_application_status = user_application_status
+    service_out.user_task_id = user_task_id
+    service_out.user_task_status = user_task_status
+    service_out.user_task_is_paid = user_task_is_paid
+    service_out.user_application_has_negotiation = user_application_has_negotiation
+    
+    return service_out
 
 
 # 获取任务达人的公开服务列表（放在 /services/{service_id} 之后，避免路由冲突）
@@ -2111,9 +2154,7 @@ async def get_expert_reviews(
     # 获取总数
     count_query = (
         select(func.count(models.Review.id))
-        .select_from(
-            models.Review.join(models.Task, models.Review.task_id == models.Task.id)
-        )
+        .join(models.Task, models.Review.task_id == models.Task.id)
         .where(
             and_(
                 models.Task.created_by_expert == True,

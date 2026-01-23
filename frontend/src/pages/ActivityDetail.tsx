@@ -527,13 +527,53 @@ const ActivityDetail: React.FC = () => {
 
           {/* 操作按钮 */}
           <div className={styles.actions}>
-            <button
-              onClick={handleApply}
-              disabled={applying || (activity.has_time_slots && !selectedTimeSlotId)}
-              className={`${styles.applyButton} ${(activity.has_time_slots && !selectedTimeSlotId) ? styles.applyButtonDisabled : ''}`}
-            >
-              {applying ? '申请中...' : '立即申请'}
-            </button>
+            {activity.has_applied && activity.user_task_id ? (
+              // 已申请，显示支付按钮或等待按钮
+              activity.user_task_has_negotiation && activity.user_task_status === 'pending_payment' ? (
+                // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）
+                <button
+                  disabled
+                  className={`${styles.applyButton} ${styles.applyButtonDisabled}`}
+                >
+                  等待达人回应
+                </button>
+              ) : activity.user_task_status === 'pending_payment' && !activity.user_task_is_paid ? (
+                // 待支付且未支付，显示继续支付按钮
+                <button
+                  onClick={() => {
+                    navigateLocalized(`/tasks/${activity.user_task_id}/payment`);
+                  }}
+                  className={styles.applyButton}
+                >
+                  继续支付
+                </button>
+              ) : activity.user_task_has_negotiation && activity.user_task_status !== 'pending_payment' ? (
+                // 有议价但状态不是待支付，可能是等待达人回应
+                <button
+                  disabled
+                  className={`${styles.applyButton} ${styles.applyButtonDisabled}`}
+                >
+                  等待达人回应
+                </button>
+              ) : (
+                // 其他情况，显示已申请（灰色不可点击）
+                <button
+                  disabled
+                  className={`${styles.applyButton} ${styles.applyButtonDisabled}`}
+                >
+                  已申请
+                </button>
+              )
+            ) : (
+              // 未申请，显示申请按钮
+              <button
+                onClick={handleApply}
+                disabled={applying || (activity.has_time_slots && !selectedTimeSlotId)}
+                className={`${styles.applyButton} ${(activity.has_time_slots && !selectedTimeSlotId) ? styles.applyButtonDisabled : ''}`}
+              >
+                {applying ? '申请中...' : '立即申请'}
+              </button>
+            )}
           </div>
         </div>
       </main>

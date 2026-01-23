@@ -1873,6 +1873,13 @@ class TaskExpertServiceOut(BaseModel):
     time_slot_start_time: Optional[str] = None
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
+    # 用户申请的服务申请信息（如果已申请）
+    user_application_id: Optional[int] = None  # 用户申请的服务申请ID
+    user_application_status: Optional[str] = None  # 申请状态
+    user_task_id: Optional[int] = None  # 申请后创建的任务ID（如果已批准）
+    user_task_status: Optional[str] = None  # 任务状态
+    user_task_is_paid: Optional[bool] = None  # 任务是否已支付
+    user_application_has_negotiation: Optional[bool] = None  # 是否有议价（通过检查negotiated_price是否存在）
     
     @classmethod
     def from_orm(cls, obj):
@@ -1897,6 +1904,13 @@ class TaskExpertServiceOut(BaseModel):
             "time_slot_end_time": obj.time_slot_end_time.isoformat() if isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if obj.time_slot_end_time else None),
             "participants_per_slot": obj.participants_per_slot,
             "weekly_time_slot_config": obj.weekly_time_slot_config,
+            # 用户申请信息默认为None（将在API中设置）
+            "user_application_id": None,
+            "user_application_status": None,
+            "user_task_id": None,
+            "user_task_status": None,
+            "user_task_is_paid": None,
+            "user_application_has_negotiation": None,
         }
         return cls(**data)
     
@@ -2434,6 +2448,11 @@ class ActivityOut(BaseModel):
     reserved_points_total: Optional[int] = None  # 预扣积分总额
     distributed_points_total: Optional[int] = None  # 已发放积分总额
     has_applied: Optional[bool] = None  # 当前用户是否已申请（需要用户认证）
+    # 用户申请的任务信息（如果已申请）
+    user_task_id: Optional[int] = None  # 用户申请后创建的任务ID
+    user_task_status: Optional[str] = None  # 任务状态
+    user_task_is_paid: Optional[bool] = None  # 任务是否已支付
+    user_task_has_negotiation: Optional[bool] = None  # 是否有议价（通过检查agreed_reward是否与base_reward不同）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
@@ -2441,7 +2460,13 @@ class ActivityOut(BaseModel):
         from_attributes = True
     
     @classmethod
-    def from_orm_with_participants(cls, obj, current_participants: int = 0, has_applied: Optional[bool] = None):
+    def from_orm_with_participants(
+        cls, obj, current_participants: int = 0, has_applied: Optional[bool] = None,
+        user_task_id: Optional[int] = None,
+        user_task_status: Optional[str] = None,
+        user_task_is_paid: Optional[bool] = None,
+        user_task_has_negotiation: Optional[bool] = None
+    ):
         """从ORM对象创建，包含参与者数量"""
         # 获取关联服务的图片
         service_images = None
@@ -2481,6 +2506,10 @@ class ActivityOut(BaseModel):
             "reserved_points_total": obj.reserved_points_total if hasattr(obj, 'reserved_points_total') else None,
             "distributed_points_total": obj.distributed_points_total if hasattr(obj, 'distributed_points_total') else None,
             "has_applied": has_applied,
+            "user_task_id": user_task_id,
+            "user_task_status": user_task_status,
+            "user_task_is_paid": user_task_is_paid,
+            "user_task_has_negotiation": user_task_has_negotiation,
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
         }
