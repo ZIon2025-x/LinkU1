@@ -63,6 +63,18 @@ public class AppLifecycle: ObservableObject {
     private func handleDidEnterBackground() {
         backgroundTime = Date()
         state = .background
+        
+        // 应用进入后台时，清理部分缓存以释放内存
+        // 在后台线程执行，避免阻塞主线程
+        DispatchQueue.global(qos: .utility).async {
+            // 清理过期的数据缓存
+            CacheManager.shared.clearExpiredCache()
+            
+            // 清理过期的图片缓存（保留最近7天的）
+            ImageCache.shared.clearExpiredCache(maxAge: 7 * 24 * 3600)
+            
+            Logger.debug("应用进入后台，已清理过期缓存", category: .cache)
+        }
     }
     
     private func handleDidBecomeActive() {

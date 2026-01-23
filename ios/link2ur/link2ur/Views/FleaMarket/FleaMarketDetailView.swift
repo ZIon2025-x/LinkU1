@@ -18,6 +18,7 @@ struct FleaMarketDetailView: View {
     @State private var paymentAmount: Double = 0
     @State private var paymentCustomerId: String?
     @State private var paymentEphemeralKeySecret: String?
+    @State private var isPreparingPayment = false
     
     enum PurchaseType {
         case direct
@@ -199,7 +200,14 @@ struct FleaMarketDetailView: View {
                     taskTitle: viewModel.item?.title,
                     onPaymentSuccess: {
                         showPaymentView = false
-                        // 支付成功后，可以刷新商品信息或返回列表
+                        // 支付成功后，清除缓存并刷新商品信息
+                        // 等待后端 webhook 处理完成（通常需要 1-2 秒）
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            // 清除跳蚤市场缓存，确保获取最新状态
+                            CacheManager.shared.invalidateFleaMarketCache()
+                            // 重新加载商品信息
+                            viewModel.loadItem(itemId: itemId, preserveItem: true)
+                        }
                     }
                 )
             }
@@ -664,29 +672,45 @@ struct FleaMarketDetailView: View {
                         // 有未付款的购买，显示继续支付按钮
                         Button(action: {
                             if appState.isAuthenticated {
-                                // 设置支付参数
-                                paymentTaskId = pendingTaskId
-                                paymentClientSecret = clientSecret
-                                // 计算支付金额
-                                if let amount = item.pendingPaymentAmount {
-                                    paymentAmount = Double(amount) / 100.0
-                                } else if let amountDisplay = item.pendingPaymentAmountDisplay, let amountValue = Double(amountDisplay) {
-                                    paymentAmount = amountValue
-                                } else {
-                                    paymentAmount = item.price
+                                // 立即显示加载状态，提升用户体验
+                                isPreparingPayment = true
+                                
+                                // 在后台线程准备支付参数，避免阻塞主线程
+                                DispatchQueue.main.async { [self] in
+                                    // 设置支付参数
+                                    paymentTaskId = pendingTaskId
+                                    paymentClientSecret = clientSecret
+                                    // 计算支付金额
+                                    if let amount = item.pendingPaymentAmount {
+                                        paymentAmount = Double(amount) / 100.0
+                                    } else if let amountDisplay = item.pendingPaymentAmountDisplay, let amountValue = Double(amountDisplay) {
+                                        paymentAmount = amountValue
+                                    } else {
+                                        paymentAmount = item.price
+                                    }
+                                    paymentCustomerId = item.pendingPaymentCustomerId
+                                    paymentEphemeralKeySecret = item.pendingPaymentEphemeralKeySecret
+                                    
+                                    // 短暂延迟后显示支付页面，让加载状态可见
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        isPreparingPayment = false
+                                        showPaymentView = true
+                                    }
                                 }
-                                paymentCustomerId = item.pendingPaymentCustomerId
-                                paymentEphemeralKeySecret = item.pendingPaymentEphemeralKeySecret
-                                // 显示支付页面
-                                showPaymentView = true
                             } else {
                                 showLogin = true
                             }
                         }) {
                             HStack(spacing: 8) {
-                                Image(systemName: "creditcard.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("继续支付")
+                                if isPreparingPayment {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "creditcard.fill")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                Text(isPreparingPayment ? "准备中..." : "继续支付")
                                     .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
@@ -705,6 +729,7 @@ struct FleaMarketDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 25))
                             .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
                         }
+                        .disabled(isPreparingPayment)
                     } else {
                         // 没有未付款的购买，显示正常的购买按钮
                         // 议价按钮

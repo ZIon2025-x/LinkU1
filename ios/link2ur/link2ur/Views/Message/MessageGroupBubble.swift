@@ -280,6 +280,13 @@ struct MessageGroupBubbleView: View {
     let group: MessageGroup
     @State private var showUserProfile = false
     
+    // 翻译相关状态（为每条消息维护独立的翻译状态）
+    @State private var translatedTexts: [String: String] = [:] // message.id -> translatedText
+    @State private var isTranslatingMessages: [String: Bool] = [:] // message.id -> isTranslating
+    @State private var showOriginalMessages: [String: Bool] = [:] // message.id -> showOriginal
+    @State private var showTranslationError = false // 显示翻译错误提示
+    @State private var failedMessageId: String? // 翻译失败的消息ID
+    
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
             if group.direction == .outgoing {
@@ -316,61 +323,23 @@ struct MessageGroupBubbleView: View {
                 
                 // 分组气泡内容
                 VStack(alignment: group.direction == .incoming ? .leading : .trailing, spacing: 2) {
-                    ForEach(Array(group.messages.enumerated()), id: \.element.id) { idx, message in
-                        let pos = piecePosition(index: idx, count: group.messages.count)
-                        let r = radii(for: pos, direction: group.direction)
-                        
-                        // 只渲染文本消息（图片消息等仍用单独的 MessageBubble）
-                        if let content = message.content, !content.isEmpty, content != "[图片]" {
-                            // 关键：先构建完整的气泡（包括背景、clip、shadow），再把 contextMenu 加在最外层
-                            Text(content)
-                                .font(AppTypography.body)
-                                .foregroundColor(group.direction == .outgoing ? .white : AppColors.textPrimary)
-                                .textSelection(.enabled)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Group {
-                                        if group.direction == .outgoing {
-                                            bubbleShape(r)
-                                                .fill(
-                                                    LinearGradient(
-                                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    )
-                                                )
-                                        } else {
-                                            bubbleShape(r)
-                                                .fill(AppColors.cardBackground)
-                                        }
-                                    }
-                                )
-                                .clipShape(bubbleShape(r)) // 确保圆角边缘干净，不露出底层
-                                .compositingGroup() // 组合渲染，确保圆角边缘干净
-                                // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
-                                .shadow(color: group.direction == .outgoing 
-                                    ? AppColors.primary.opacity(0.08) 
-                                    : AppColors.primary.opacity(0.08), 
-                                    radius: 12, x: 0, y: 4)
-                                .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
-                                .contentShape(bubbleShape(r)) // 使用相同的形状作为点击区域
-                                // 关键：使用 .interaction 和 .contextMenuPreview 精确控制交互和预览区域（iOS 16+）
-                                .contentShape(.interaction, bubbleShape(r)) // 精确控制交互区域
-                                // 关键：contextMenu 必须加在已经 clip 过的气泡上，而不是外层容器
-                                .contextMenu {
-                                    // 长按菜单：复制消息
-                                    Button(action: {
-                                        UIPasteboard.general.string = content
-                                        let generator = UINotificationFeedbackGenerator()
-                                        generator.notificationOccurred(.success)
-                                    }) {
-                                        Label("复制", systemImage: "doc.on.doc")
-                                    }
-                                }
-                                // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
-                                .modifier(ContextMenuPreviewShapeModifier(shape: bubbleShape(r)))
-                        }
+                    ForEach(Array(group.messages), id: \.id) { message in
+                        GroupMessageBubbleItem(
+                            message: message,
+                            index: group.messages.firstIndex(where: { $0.id == message.id }) ?? 0,
+                            totalCount: group.messages.count,
+                            direction: group.direction,
+                            translatedTexts: $translatedTexts,
+                            isTranslatingMessages: $isTranslatingMessages,
+                            showOriginalMessages: $showOriginalMessages,
+                            showTranslationError: $showTranslationError,
+                            onRestoreTranslation: { messageId, content in
+                                restoreTranslationFromCache(messageId: messageId, content: content)
+                            },
+                            onTranslate: { messageId, content in
+                                translateMessage(messageId: messageId, content: content)
+                            }
+                        )
                     }
                 }
                 
@@ -406,6 +375,11 @@ struct MessageGroupBubbleView: View {
                 }
             }
         }
+        .alert("翻译失败", isPresented: $showTranslationError) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text("无法翻译此消息，请检查网络连接后重试")
+        }
     }
     
     private func piecePosition(index: Int, count: Int) -> BubblePiecePosition {
@@ -417,6 +391,50 @@ struct MessageGroupBubbleView: View {
     
     private func formatTime(_ timeString: String) -> String {
         return DateFormatterHelper.shared.formatTime(timeString)
+    }
+    
+    /// 从缓存恢复翻译状态
+    private func restoreTranslationFromCache(messageId: String, content: String) {
+        // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
+        _Concurrency.Task { @MainActor in
+            // 如果已经有翻译状态，跳过
+            if translatedTexts[messageId] != nil {
+                return
+            }
+            
+            let targetLang = TranslationService.shared.getUserSystemLanguage()
+            let sourceLang = TranslationService.shared.detectLanguage(content)
+            
+            // 尝试从缓存获取翻译
+            if let cached = TranslationCacheManager.shared.getCachedTranslation(
+                text: content,
+                targetLanguage: targetLang,
+                sourceLanguage: sourceLang
+            ) {
+                // 如果缓存中有翻译，恢复翻译状态
+                translatedTexts[messageId] = cached
+                showOriginalMessages[messageId] = false // 默认显示翻译后的文本
+                Logger.debug("从缓存恢复翻译: \(content.prefix(20))...", category: .cache)
+            }
+        }
+    }
+    
+    /// 翻译消息内容
+    private func translateMessage(messageId: String, content: String) {
+        isTranslatingMessages[messageId] = true
+        // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
+        _Concurrency.Task { @MainActor in
+            do {
+                let translated = try await TranslationService.shared.translate(content)
+                translatedTexts[messageId] = translated
+                showOriginalMessages[messageId] = false
+            } catch {
+                Logger.error("翻译失败: \(error.localizedDescription)", category: .ui)
+                failedMessageId = messageId
+                showTranslationError = true
+            }
+            isTranslatingMessages[messageId] = false
+        }
     }
 }
 
@@ -448,3 +466,115 @@ struct AnyShape: Shape {
     }
 }
 
+// MARK: - 分组消息气泡项（用于简化类型检查）
+
+struct GroupMessageBubbleItem: View {
+    let message: Message
+    let index: Int
+    let totalCount: Int
+    let direction: BubbleDirection
+    @Binding var translatedTexts: [String: String]
+    @Binding var isTranslatingMessages: [String: Bool]
+    @Binding var showOriginalMessages: [String: Bool]
+    @Binding var showTranslationError: Bool
+    let onRestoreTranslation: (String, String) -> Void
+    let onTranslate: (String, String) -> Void
+    
+    var body: some View {
+        let pos = piecePosition(index: index, count: totalCount)
+        let r = radii(for: pos, direction: direction)
+        
+        // 只渲染文本消息（图片消息等仍用单独的 MessageBubble）
+        if let content = message.content, !content.isEmpty, content != "[图片]" {
+            let messageId = message.id
+            let isTranslating = isTranslatingMessages[messageId] ?? false
+            let translatedText = translatedTexts[messageId]
+            let showOriginal = showOriginalMessages[messageId] ?? false
+            let isFromCurrentUser = direction == .outgoing
+            
+            // 显示翻译后的文本或原文
+            let displayText = (showOriginal && !isFromCurrentUser) ? content : (translatedText ?? content)
+            
+            // 在消息出现时，尝试从缓存恢复翻译状态（仅非当前用户的消息）
+            if !isFromCurrentUser && translatedText == nil {
+                let _ = onRestoreTranslation(messageId, content)
+            }
+            
+            // 关键：先构建完整的气泡（包括背景、clip、shadow），再把 contextMenu 加在最外层
+            Text(displayText)
+                .font(AppTypography.body)
+                .foregroundColor(direction == .outgoing ? .white : AppColors.textPrimary)
+                .textSelection(.enabled)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    Group {
+                        if direction == .outgoing {
+                            bubbleShape(r)
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: AppColors.gradientPrimary),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        } else {
+                            bubbleShape(r)
+                                .fill(AppColors.cardBackground)
+                        }
+                    }
+                )
+                .clipShape(bubbleShape(r))
+                .compositingGroup()
+                .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+                .contentShape(bubbleShape(r))
+                .contentShape(.interaction, bubbleShape(r))
+                .contextMenu {
+                    // 长按菜单：复制消息
+                    Button(action: {
+                        UIPasteboard.general.string = content
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }) {
+                        Label("复制", systemImage: "doc.on.doc")
+                    }
+                    
+                    // 翻译选项（仅非当前用户的消息）
+                    if !isFromCurrentUser {
+                        Divider()
+                        
+                        if isTranslating {
+                            Button(action: {}) {
+                                Label(LocalizationKey.translationTranslating.localized, systemImage: "hourglass")
+                            }
+                            .disabled(true)
+                        } else if let translated = translatedText, translated != content {
+                            Button(action: {
+                                showOriginalMessages[messageId] = !showOriginal
+                            }) {
+                                Label(
+                                    showOriginal ? LocalizationKey.translationShowTranslation.localized : LocalizationKey.translationShowOriginal.localized,
+                                    systemImage: showOriginal ? "text.bubble" : "arrow.uturn.backward"
+                                )
+                            }
+                        } else {
+                            Button(action: {
+                                onTranslate(messageId, content)
+                            }) {
+                                Label(LocalizationKey.translationTranslate.localized, systemImage: "text.bubble")
+                            }
+                        }
+                    }
+                }
+                .modifier(ContextMenuPreviewShapeModifier(shape: bubbleShape(r)))
+        }
+    }
+    
+    private func piecePosition(index: Int, count: Int) -> BubblePiecePosition {
+        if count <= 1 { return .single }
+        if index == 0 { return .top }
+        if index == count - 1 { return .bottom }
+        return .middle
+    }
+}

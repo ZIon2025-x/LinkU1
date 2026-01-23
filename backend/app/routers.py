@@ -4603,13 +4603,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             
                             if flea_item:
                                 flea_item.status = "sold"
-                                logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold")
+                                # 确保 sold_task_id 已设置（双重保险）
+                                if flea_item.sold_task_id != task_id:
+                                    flea_item.sold_task_id = task_id
+                                logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold (task_id: {task_id})")
                                 
-                                # 清除商品缓存
+                                # 清除商品缓存（invalidate_item_cache 会自动清除列表缓存和详情缓存）
                                 from app.flea_market_extensions import invalidate_item_cache
                                 invalidate_item_cache(flea_item.id)
+                                logger.info(f"✅ [WEBHOOK] 已清除跳蚤市场商品缓存（包括列表和详情）")
                             else:
-                                logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配")
+                                logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配 (db_id: {db_item_id}, task_id: {task_id}, status: {flea_item.status if flea_item else 'None'})")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 更新跳蚤市场商品状态失败: {e}", exc_info=True)
                 application_id_str = metadata.get("application_id")

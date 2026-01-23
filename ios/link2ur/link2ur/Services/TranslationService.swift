@@ -10,7 +10,17 @@ class TranslationService {
     private var cancellables = Set<AnyCancellable>()
     private let cacheManager = TranslationCacheManager.shared
     
-    private init() {}
+    // 语言检测结果缓存（避免重复检测相同文本）
+    // 使用 NSCache 而不是普通字典，支持内存压力时自动清理
+    private let languageDetectionCache = NSCache<NSString, NSString>()
+    private let maxDetectionCacheSize = 500 // 最大缓存条目数
+    
+    private init() {
+        // 配置语言检测缓存
+        languageDetectionCache.countLimit = maxDetectionCacheSize
+        // 设置总成本限制（估算：每个条目平均约100字节）
+        languageDetectionCache.totalCostLimit = maxDetectionCacheSize * 100
+    }
     
     /// 获取用户系统语言代码
     func getUserSystemLanguage() -> String {
@@ -25,17 +35,35 @@ class TranslationService {
         }
     }
     
-    /// 检测文本语言
+    /// 检测文本语言（带缓存优化）
     func detectLanguage(_ text: String) -> String? {
+        // 先检查缓存
+        if let cached = languageDetectionCache.object(forKey: text as NSString) {
+            let cachedString = cached as String
+            return cachedString.isEmpty ? nil : cachedString
+        }
+        
+        // 对于太短的文本，跳过检测（提高性能）
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedText.count < 3 {
+            languageDetectionCache.setObject("" as NSString, forKey: text as NSString)
+            return nil
+        }
+        
         let recognizer = NLLanguageRecognizer()
-        recognizer.processString(text)
+        recognizer.processString(trimmedText)
         
         guard let dominantLanguage = recognizer.dominantLanguage else {
+            languageDetectionCache.setObject("" as NSString, forKey: text as NSString)
             return nil
         }
         
         // 转换为语言代码（例如：zh-Hans -> zh）
         let languageCode = dominantLanguage.rawValue.components(separatedBy: "-").first ?? dominantLanguage.rawValue
+        
+        // 保存到缓存（NSCache 会自动管理大小，无需手动清理）
+        languageDetectionCache.setObject(languageCode as NSString, forKey: text as NSString, cost: text.count)
+        
         return languageCode
     }
     

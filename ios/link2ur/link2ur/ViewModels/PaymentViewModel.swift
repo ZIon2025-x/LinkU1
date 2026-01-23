@@ -130,11 +130,10 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         Logger.debug("StripePayments 未导入，PaymentSheet 可能使用 StripeAPI.defaultPublishableKey", category: .api)
         #endif
         
-        // 如果外部传入了 client_secret（例如“批准申请支付”创建的 PaymentIntent）
+        // 如果外部传入了 client_secret（例如"批准申请支付"创建的 PaymentIntent）
         // 则直接使用该 PaymentIntent，不再去 coupon-points 创建新的 PaymentIntent，避免支付成功后任务状态无法推进
-        if clientSecret != nil {
-            ensurePaymentSheetReady()
-        }
+        // 注意：延迟初始化 PaymentSheet，直到 sheet 真正显示，避免阻塞主线程
+        // ensurePaymentSheetReady() 将在 StripePaymentView 的 onAppear 中调用
         
         // 加载可用优惠券
         loadAvailableCoupons()
@@ -321,8 +320,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             return
         }
 
-        // 延迟初始化 PaymentSheet，避免在切换支付方式时阻塞 UI
+        // 延迟初始化 PaymentSheet，避免阻塞 UI
         // 使用异步延迟，让 UI 先响应切换操作
+        // 注意：PaymentSheet 的创建必须在主线程执行
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             // 再次检查，避免重复创建

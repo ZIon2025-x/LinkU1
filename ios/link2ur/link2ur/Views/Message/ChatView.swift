@@ -373,6 +373,7 @@ struct MessageBubble: View {
     @State private var showOriginal = false
     @State private var needsTranslation = false
     @State private var hasCheckedTranslation = false // 是否已检查过是否需要翻译
+    @State private var showTranslationError = false // 显示翻译错误提示
     
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
@@ -475,53 +476,48 @@ struct MessageBubble: View {
                                 }) {
                                     Label("复制", systemImage: "doc.on.doc")
                                 }
-                            }
-                        
-                        // 翻译按钮和状态（仅非当前用户的消息）
-                        if !isFromCurrentUser {
-                            HStack(spacing: 6) {
-                                if isTranslating {
-                                    CompactLoadingView()
-                                    Text(LocalizationKey.translationTranslating.localized)
-                                        .font(AppTypography.caption2)
-                                        .foregroundColor(AppColors.textTertiary)
-                                } else if let translated = translatedText, translated != content {
-                                    // 已翻译，显示切换按钮
-                                    Button(action: {
-                                        showOriginal.toggle()
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: showOriginal ? "arrow.uturn.backward" : "text.bubble")
-                                                .font(.system(size: 10))
-                                            Text(showOriginal ? LocalizationKey.translationShowTranslation.localized : LocalizationKey.translationShowOriginal.localized)
-                                                .font(AppTypography.caption2)
+                                
+                                // 翻译选项（仅非当前用户的消息）
+                                if !isFromCurrentUser {
+                                    Divider()
+                                    
+                                    if isTranslating {
+                                        // 正在翻译中
+                                        Button(action: {}) {
+                                            Label(LocalizationKey.translationTranslating.localized, systemImage: "hourglass")
                                         }
-                                        .foregroundColor(AppColors.primary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(AppColors.primaryLight.opacity(0.3))
-                                        .cornerRadius(AppCornerRadius.small)
-                                    }
-                                } else if needsTranslation {
-                                    // 需要翻译但未翻译，显示翻译按钮
-                                    Button(action: {
-                                        translateMessage(content: content)
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "text.bubble")
-                                                .font(.system(size: 10))
-                                            Text(LocalizationKey.translationTranslate.localized)
-                                                .font(AppTypography.caption2)
+                                        .disabled(true)
+                                    } else if let translated = translatedText, translated != content {
+                                        // 已翻译，显示切换原文/翻译选项
+                                        Button(action: {
+                                            showOriginal.toggle()
+                                        }) {
+                                            Label(
+                                                showOriginal ? LocalizationKey.translationShowTranslation.localized : LocalizationKey.translationShowOriginal.localized,
+                                                systemImage: showOriginal ? "text.bubble" : "arrow.uturn.backward"
+                                            )
                                         }
-                                        .foregroundColor(AppColors.primary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(AppColors.primaryLight.opacity(0.3))
-                                        .cornerRadius(AppCornerRadius.small)
+                                    } else {
+                                        // 未翻译，总是显示翻译选项（即使自动检测失败，也允许用户手动翻译）
+                                        Button(action: {
+                                            translateMessage(content: content)
+                                        }) {
+                                            Label(LocalizationKey.translationTranslate.localized, systemImage: "text.bubble")
+                                        }
                                     }
                                 }
                             }
+                        
+                        // 翻译状态指示（仅非当前用户的消息，正在翻译时显示）
+                        if !isFromCurrentUser && isTranslating {
+                            HStack(spacing: 6) {
+                                CompactLoadingView()
+                                Text(LocalizationKey.translationTranslating.localized)
+                                    .font(AppTypography.caption2)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
                             .padding(.horizontal, AppSpacing.xs)
+                            .padding(.top, 2)
                         }
                     }
                 }
@@ -566,8 +562,16 @@ struct MessageBubble: View {
         .onAppear {
             // 检查是否需要翻译（仅对非当前用户的消息，但不自动翻译）
             if !isFromCurrentUser, !hasCheckedTranslation, let content = message.content, !content.isEmpty, content != "[图片]" {
+                // 先尝试从缓存恢复翻译状态
+                restoreTranslationFromCache(content: content)
+                // 然后检查是否需要翻译
                 checkIfNeedsTranslation(content: content)
             }
+        }
+        .alert("翻译失败", isPresented: $showTranslationError) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text("无法翻译此消息，请检查网络连接后重试")
         }
     }
     
@@ -575,11 +579,44 @@ struct MessageBubble: View {
         return DateFormatterHelper.shared.formatTime(timeString)
     }
     
-    /// 检查是否需要翻译（不自动翻译）
-    private func checkIfNeedsTranslation(content: String) {
-        hasCheckedTranslation = true
+    /// 从缓存恢复翻译状态
+    private func restoreTranslationFromCache(content: String) {
         // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
         _Concurrency.Task { @MainActor in
+            let targetLang = TranslationService.shared.getUserSystemLanguage()
+            let sourceLang = TranslationService.shared.detectLanguage(content)
+            
+            // 尝试从缓存获取翻译
+            if let cached = TranslationCacheManager.shared.getCachedTranslation(
+                text: content,
+                targetLanguage: targetLang,
+                sourceLanguage: sourceLang
+            ) {
+                // 如果缓存中有翻译，恢复翻译状态
+                translatedText = cached
+                showOriginal = false // 默认显示翻译后的文本
+                Logger.debug("从缓存恢复翻译: \(content.prefix(20))...", category: .cache)
+            }
+        }
+    }
+    
+    /// 检查是否需要翻译（不自动翻译，延迟检测以优化性能）
+    private func checkIfNeedsTranslation(content: String) {
+        hasCheckedTranslation = true
+        // 延迟检测，避免阻塞UI（如果已经有翻译，就不需要检测了）
+        if translatedText != nil {
+            return // 已经有翻译，跳过检测
+        }
+        
+        // 使用 _Concurrency.Task 避免与项目中的 Task 模型冲突
+        _Concurrency.Task { @MainActor in
+            // 延迟检测，避免阻塞UI（优化性能：不在消息出现时立即检测）
+            // 延迟500ms，让用户先看到消息，然后再在后台检测
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 延迟500ms
+            
+            // 如果在这期间用户已经翻译了，跳过检测
+            guard translatedText == nil else { return }
+            
             // 检查是否需要翻译
             let needs = TranslationService.shared.needsTranslation(content)
             needsTranslation = needs
@@ -601,6 +638,8 @@ struct MessageBubble: View {
                 Logger.error("翻译失败: \(error.localizedDescription)", category: .ui)
                 // 翻译失败时显示原文
                 translatedText = nil
+                // 显示错误提示
+                showTranslationError = true
             }
             isTranslating = false
         }

@@ -117,13 +117,6 @@ struct FleaMarketItem: Codable, Identifiable {
         pendingPaymentCurrency = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCurrency)
         pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
         pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
-        pendingPaymentTaskId = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentTaskId)
-        pendingPaymentClientSecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentClientSecret)
-        pendingPaymentAmount = try container.decodeIfPresent(Int.self, forKey: .pendingPaymentAmount)
-        pendingPaymentAmountDisplay = try container.decodeIfPresent(String.self, forKey: .pendingPaymentAmountDisplay)
-        pendingPaymentCurrency = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCurrency)
-        pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
-        pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
     }
     
     // 自定义编码

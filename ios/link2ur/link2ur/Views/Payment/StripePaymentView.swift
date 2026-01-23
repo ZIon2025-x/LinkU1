@@ -77,8 +77,11 @@ struct StripePaymentView: View {
                 if clientSecret == nil {
                     viewModel.createPaymentIntent()
                 } else {
-                    // 已提供 client_secret：确保 PaymentSheet 已预热（避免等待）
-                    viewModel.ensurePaymentSheetReady()
+                    // 已提供 client_secret：延迟初始化 PaymentSheet，让 sheet 先显示
+                    // 使用短暂延迟，确保 sheet 动画完成后再初始化，提升用户体验
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        viewModel.ensurePaymentSheetReady()
+                    }
                 }
             }
             .alert(LocalizationKey.paymentError.localized, isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
