@@ -1678,6 +1678,15 @@ def accept_task(
         if not updated_task:
             raise HTTPException(status_code=400, detail="Failed to accept task")
 
+        # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+        try:
+            from app.services.task_service import TaskService
+            TaskService.invalidate_cache(task_id)
+            from app.redis_cache import invalidate_tasks_cache
+            invalidate_tasks_cache()
+            logger.info(f"✅ 已清除任务 {task_id} 的缓存（接受任务）")
+        except Exception as e:
+            logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
         # 发送通知给任务发布者
         if background_tasks:
@@ -1779,6 +1788,16 @@ def approve_task_taker(
     # 如果已经是 in_progress，不需要更新
     
     db.refresh(db_task)
+    
+    # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+    try:
+        from app.services.task_service import TaskService
+        TaskService.invalidate_cache(task_id)
+        from app.redis_cache import invalidate_tasks_cache
+        invalidate_tasks_cache()
+        logger.info(f"✅ 已清除任务 {task_id} 的缓存（批准任务）")
+    except Exception as e:
+        logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
     # 创建通知给任务接受者
     if background_tasks and db_task.taker_id:
@@ -1827,6 +1846,16 @@ def reject_task_taker(
     db_task.taker_id = None
     db.commit()
     db.refresh(db_task)
+    
+    # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+    try:
+        from app.services.task_service import TaskService
+        TaskService.invalidate_cache(task_id)
+        from app.redis_cache import invalidate_tasks_cache
+        invalidate_tasks_cache()
+        logger.info(f"✅ 已清除任务 {task_id} 的缓存（拒绝任务接受者）")
+    except Exception as e:
+        logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
     # 创建通知给被拒绝的接受者
     if background_tasks and rejected_taker_id:
@@ -2045,6 +2074,16 @@ def complete_task(
     db_task.completed_at = get_utc_time()
     db.commit()
     db.refresh(db_task)
+    
+    # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+    try:
+        from app.services.task_service import TaskService
+        TaskService.invalidate_cache(task_id)
+        from app.redis_cache import invalidate_tasks_cache
+        invalidate_tasks_cache()
+        logger.info(f"✅ 已清除任务 {task_id} 的缓存（完成任务）")
+    except Exception as e:
+        logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
     # 发送系统消息到任务聊天框
     try:
@@ -2523,6 +2562,16 @@ def confirm_task_completion(
     db.commit()
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)
+    
+    # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+    try:
+        from app.services.task_service import TaskService
+        TaskService.invalidate_cache(task_id)
+        from app.redis_cache import invalidate_tasks_cache
+        invalidate_tasks_cache()
+        logger.info(f"✅ 已清除任务 {task_id} 的缓存（确认任务完成）")
+    except Exception as e:
+        logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
     # 发送系统消息到任务聊天框
     try:
@@ -2965,6 +3014,17 @@ def cancel_task(
         cancelled_task = crud.cancel_task(db, task_id, current_user.id)
         if not cancelled_task:
             raise HTTPException(status_code=400, detail="Task cannot be cancelled")
+        
+        # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+        try:
+            from app.services.task_service import TaskService
+            TaskService.invalidate_cache(task_id)
+            from app.redis_cache import invalidate_tasks_cache
+            invalidate_tasks_cache()
+            logger.info(f"✅ 已清除任务 {task_id} 的缓存（取消任务）")
+        except Exception as e:
+            logger.warning(f"⚠️ 清除任务缓存失败: {e}")
+        
         return cancelled_task
 
     # 如果任务已被接受或正在进行中，创建取消请求等待客服审核
@@ -6188,6 +6248,16 @@ def admin_review_cancel_request(
                 cancel_request.requester_id,
                 is_admin_review=True,
             )
+            
+            # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+            try:
+                from app.services.task_service import TaskService
+                TaskService.invalidate_cache(cancel_request.task_id)
+                from app.redis_cache import invalidate_tasks_cache
+                invalidate_tasks_cache()
+                logger.info(f"✅ 已清除任务 {cancel_request.task_id} 的缓存（管理员审核取消）")
+            except Exception as e:
+                logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
             # 通知请求者
             crud.create_notification(
@@ -7378,6 +7448,16 @@ def cs_review_cancel_request(
                 cancel_request.requester_id,
                 is_admin_review=True,
             )
+            
+            # ⚠️ 清除任务缓存，确保前端立即看到更新后的状态
+            try:
+                from app.services.task_service import TaskService
+                TaskService.invalidate_cache(cancel_request.task_id)
+                from app.redis_cache import invalidate_tasks_cache
+                invalidate_tasks_cache()
+                logger.info(f"✅ 已清除任务 {cancel_request.task_id} 的缓存（客服审核取消）")
+            except Exception as e:
+                logger.warning(f"⚠️ 清除任务缓存失败: {e}")
 
             # 通知请求者
             crud.create_notification(
