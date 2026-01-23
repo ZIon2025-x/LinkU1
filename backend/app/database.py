@@ -194,7 +194,8 @@ async def get_pool_status():
         "checked_in": pool.checkedin(),
         "checked_out": pool.checkedout(),
         "overflow": pool.overflow(),
-        "invalid": pool.invalid(),
+        # 注意：QueuePool 没有 invalid() 方法，移除该调用
+        # "invalid": pool.invalid(),
     }
 
 

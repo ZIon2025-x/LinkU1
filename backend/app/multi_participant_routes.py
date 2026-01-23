@@ -891,6 +891,33 @@ def complete_participant_task(
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # ⚠️ 安全修复：检查支付状态，确保只有已支付的任务才能完成
+    # 注意：如果任务状态是 pending_payment，说明需要支付但未支付，不允许完成
+    # 如果任务状态是 in_progress 但 is_paid=0，需要检查是否有 payment_intent_id
+    # 如果有 payment_intent_id，说明需要支付但未支付，不允许完成
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # 如果任务状态是 pending_payment，必须支付才能完成
+    if db_task.status == "pending_payment":
+        logger.warning(
+            f"⚠️ 安全警告：用户 {current_user.id} 尝试完成待支付状态的任务 {parsed_task_id}（多人任务参与者完成）"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="任务尚未支付，无法完成。请联系发布者完成支付。"
+        )
+    
+    # 如果任务状态是 in_progress 但未支付，且存在 payment_intent_id，说明需要支付但未支付
+    if db_task.status == "in_progress" and not db_task.is_paid and db_task.payment_intent_id:
+        logger.warning(
+            f"⚠️ 安全警告：用户 {current_user.id} 尝试完成未支付的任务 {parsed_task_id}（多人任务参与者完成，有支付意图但未支付）"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="任务尚未支付，无法完成。请联系发布者完成支付。"
+        )
+    
     # 检查任务完成条件
     if db_task.completion_rule == "all":
         # 检查是否所有in_progress的参与者都完成

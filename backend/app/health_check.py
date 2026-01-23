@@ -59,7 +59,7 @@ class HealthChecker:
         try:
             async with async_engine.connect() as conn:
                 result = await conn.execute(text("SELECT 1"))
-                await result.fetchone()
+                result.scalar()  # 获取标量值，不需要 await
             
             duration = time.time() - start_time
             return {
@@ -166,7 +166,8 @@ class HealthChecker:
             pool_size = pool.size()
             checked_out = pool.checkedout()
             overflow = pool.overflow()
-            invalid = pool.invalid()
+            # 注意：QueuePool 没有 invalid() 方法，移除该调用
+            invalid = 0  # 设置为默认值
             
             # 计算使用率
             usage_percent = (checked_out / pool_size * 100) if pool_size > 0 else 0
