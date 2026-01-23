@@ -1034,7 +1034,7 @@ class PointsTransaction(Base):
         Index("ix_points_transactions_created", created_at),
         Index("ix_points_transactions_related", related_type, related_id),
         CheckConstraint(
-            "(type = 'earn' AND amount > 0) OR (type = 'spend' AND amount < 0) OR (type = 'refund' AND amount > 0) OR (type = 'expire' AND amount < 0)",
+            "(type = 'earn' AND amount > 0) OR (type = 'spend' AND amount < 0) OR (type = 'refund' AND amount > 0) OR (type = 'expire' AND amount < 0) OR (type = 'coupon_redeem' AND amount < 0)",
             name="chk_points_amount_sign"
         ),
     )

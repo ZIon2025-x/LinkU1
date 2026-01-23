@@ -1063,7 +1063,10 @@ def adjust_user_points(
     else:
         points_account.total_spent += abs(old_balance - new_balance)
     
-    # 创建交易记录
+    # 创建交易记录（使用幂等键防止重复操作）
+    import uuid
+    from app.utils.time_utils import get_utc_time
+    admin_adjust_idempotency_key = f"admin_adjust_{current_admin.id}_{user_id}_{uuid.uuid4()}"
     transaction = models.PointsTransaction(
         user_id=user_id,
         type=transaction_type,
@@ -1071,10 +1074,42 @@ def adjust_user_points(
         balance_after=new_balance,
         source="admin_adjust",
         description=description,
-        batch_id=None
+        batch_id=None,
+        idempotency_key=admin_adjust_idempotency_key
     )
     
     db.add(transaction)
+    
+    # 创建审计日志（记录管理员操作）
+    try:
+        from app.crud import create_audit_log
+        from app.utils.request_utils import get_client_ip
+        create_audit_log(
+            db=db,
+            action_type="points_adjust",
+            entity_type="points_account",
+            entity_id=user_id,
+            admin_id=current_admin.id,
+            old_value={
+                "balance": old_balance,
+                "total_earned": points_account.total_earned - (abs(new_balance - old_balance) if transaction_type == "earn" else 0),
+                "total_spent": points_account.total_spent - (abs(old_balance - new_balance) if transaction_type == "spend" else 0)
+            },
+            new_value={
+                "balance": new_balance,
+                "total_earned": points_account.total_earned,
+                "total_spent": points_account.total_spent
+            },
+            reason=adjust_data.reason or f"管理员{adjust_data.action}积分操作",
+            ip_address=None,  # TODO: 从request获取IP
+            device_fingerprint=None
+        )
+    except Exception as e:
+        # 审计日志失败不影响主流程，但记录错误
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"创建积分调整审计日志失败: {e}", exc_info=True)
+    
     db.commit()
     db.refresh(points_account)
     db.refresh(transaction)
@@ -1201,7 +1236,8 @@ def batch_reward_points(
                 # 获取或创建积分账户
                 points_account = get_or_create_points_account(db, user_id)
                 
-                # 添加积分
+                # 添加积分（使用幂等键防止重复发放）
+                batch_idempotency_key = f"admin_batch_{admin_reward.id}_{user_id}"
                 add_points_transaction(
                     db,
                     user_id,
@@ -1209,7 +1245,8 @@ def batch_reward_points(
                     amount=request.amount,
                     source="admin_batch_reward",
                     description=request.description,
-                    batch_id=str(admin_reward.id)
+                    batch_id=str(admin_reward.id),
+                    idempotency_key=batch_idempotency_key
                 )
                 
                 # 创建详情记录

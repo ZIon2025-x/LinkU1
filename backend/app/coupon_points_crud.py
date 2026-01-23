@@ -720,9 +720,11 @@ def use_invitation_code(
     
     # 发放奖励
     try:
-        # 积分奖励
+        # 积分奖励（使用幂等键防止重复发放）
         if invitation_code.reward_type in ["points", "both"] and invitation_code.points_reward:
             account = get_or_create_points_account(db, user_id)
+            # 生成幂等键：用户ID + 邀请码ID，确保每个用户每个邀请码只能获得一次奖励
+            invite_idempotency_key = f"invite_{user_id}_{invitation_code_id}"
             add_points_transaction(
                 db,
                 user_id,
@@ -731,7 +733,8 @@ def use_invitation_code(
                 source="invite_bonus",
                 related_id=invitation_code_id,
                 related_type="invitation_code",
-                description=f"使用邀请码 {invitation_code.code} 获得积分奖励"
+                description=f"使用邀请码 {invitation_code.code} 获得积分奖励",
+                idempotency_key=invite_idempotency_key
             )
             usage.points_received = invitation_code.points_reward
         

@@ -216,13 +216,20 @@ def redeem_coupon(
     if not user_coupon:
         raise HTTPException(status_code=400, detail="领取失败，请检查优惠券是否可用或已达到领取限制")
     
-    # 6. 扣除积分
+    # 6. 扣除积分（使用幂等键防止重复扣除）
+    from app.utils.time_utils import get_utc_time
+    import uuid
+    redeem_idempotency_key = request.idempotency_key or f"coupon_redeem_{current_user.id}_{request.coupon_id}_{uuid.uuid4()}"
     add_points_transaction(
         db,
         current_user.id,
-        -points_required,
-        "coupon_redeem",
-        f"积分兑换优惠券: {coupon.name}"
+        type="coupon_redeem",
+        amount=-points_required,
+        source="coupon_redeem",
+        related_id=request.coupon_id,
+        related_type="coupon",
+        description=f"积分兑换优惠券: {coupon.name}",
+        idempotency_key=redeem_idempotency_key
     )
     
     return {
@@ -516,23 +523,72 @@ def create_task_payment(
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
+        # 获取支付历史记录以获取优惠券信息
+        payment_history = db.query(models.PaymentHistory).filter(
+            models.PaymentHistory.task_id == task_id,
+            models.PaymentHistory.user_id == current_user.id
+        ).order_by(models.PaymentHistory.created_at.desc()).first()
+        
+        coupon_discount = payment_history.coupon_discount if payment_history else 0
+        coupon_info = None
+        if payment_history and payment_history.coupon_usage_log_id:
+            coupon_usage_log = db.query(models.CouponUsageLog).filter(
+                models.CouponUsageLog.id == payment_history.coupon_usage_log_id
+            ).first()
+            if coupon_usage_log:
+                user_coupon = db.query(models.UserCoupon).filter(
+                    models.UserCoupon.id == coupon_usage_log.user_coupon_id
+                ).first()
+                if user_coupon:
+                    coupon = db.query(models.Coupon).filter(models.Coupon.id == user_coupon.coupon_id).first()
+                    if coupon:
+                        coupon_info = {
+                            "name": coupon.name,
+                            "type": coupon.type,
+                            "description": coupon.description
+                        }
+        
+        # 构建计算过程步骤
+        calculation_steps = [
+            {
+                "label": "任务金额",
+                "amount": task_amount_pence,
+                "amount_display": f"{task_amount_pence / 100:.2f}",
+                "type": "original"
+            }
+        ]
+        if coupon_discount > 0:
+            calculation_steps.append({
+                "label": f"优惠券折扣" + (f"（{coupon_info['name'] if coupon_info else ''}）" if coupon_info else ""),
+                "amount": -coupon_discount,
+                "amount_display": f"-{coupon_discount / 100:.2f}",
+                "type": "discount"
+            })
+        calculation_steps.append({
+            "label": "最终支付金额",
+            "amount": 0,
+            "amount_display": "0.00",
+            "type": "final"
+        })
+        
         return {
             "payment_id": None,
             "fee_type": "task_amount",
-            "total_amount": task_amount_pence,
-            "total_amount_display": f"{task_amount_pence / 100:.2f}",
-            "points_used": None,
-            "points_used_display": None,
-            "coupon_discount": None,
-            "coupon_discount_display": None,
-            "stripe_amount": None,
-            "stripe_amount_display": None,
-            "currency": "GBP",
+            "original_amount": task_amount_pence,
+            "original_amount_display": f"{task_amount_pence / 100:.2f}",
+            "coupon_discount": coupon_discount if coupon_discount > 0 else None,
+            "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount > 0 else None,
+            "coupon_name": coupon_info['name'] if coupon_info else None,
+            "coupon_type": coupon_info['type'] if coupon_info else None,
+            "coupon_description": coupon_info['description'] if coupon_info else None,
             "final_amount": 0,
             "final_amount_display": "0.00",
-            "checkout_url": None,
+            "currency": "GBP",
             "client_secret": None,
-            "payment_intent_id": None,
+            "payment_intent_id": task.payment_intent_id,
+            "customer_id": None,
+            "ephemeral_key_secret": None,
+            "calculation_steps": calculation_steps,
             "note": "任务已支付"
         }
     
@@ -552,23 +608,71 @@ def create_task_payment(
                     from app.utils.fee_calculator import calculate_application_fee_pence
                     application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                     
+                    # 获取支付历史记录以获取优惠券信息
+                    payment_history = db.query(models.PaymentHistory).filter(
+                        models.PaymentHistory.payment_intent_id == task.payment_intent_id
+                    ).first()
+                    
+                    coupon_discount = payment_history.coupon_discount if payment_history else 0
+                    coupon_info = None
+                    if payment_history and payment_history.coupon_usage_log_id:
+                        coupon_usage_log = db.query(models.CouponUsageLog).filter(
+                            models.CouponUsageLog.id == payment_history.coupon_usage_log_id
+                        ).first()
+                        if coupon_usage_log:
+                            user_coupon = db.query(models.UserCoupon).filter(
+                                models.UserCoupon.id == coupon_usage_log.user_coupon_id
+                            ).first()
+                            if user_coupon:
+                                coupon = db.query(models.Coupon).filter(models.Coupon.id == user_coupon.coupon_id).first()
+                                if coupon:
+                                    coupon_info = {
+                                        "name": coupon.name,
+                                        "type": coupon.type,
+                                        "description": coupon.description
+                                    }
+                    
+                    # 构建计算过程步骤
+                    calculation_steps = [
+                        {
+                            "label": "任务金额",
+                            "amount": task_amount_pence,
+                            "amount_display": f"{task_amount_pence / 100:.2f}",
+                            "type": "original"
+                        }
+                    ]
+                    if coupon_discount > 0:
+                        calculation_steps.append({
+                            "label": f"优惠券折扣" + (f"（{coupon_info['name'] if coupon_info else ''}）" if coupon_info else ""),
+                            "amount": -coupon_discount,
+                            "amount_display": f"-{coupon_discount / 100:.2f}",
+                            "type": "discount"
+                        })
+                    calculation_steps.append({
+                        "label": "最终支付金额",
+                        "amount": 0,
+                        "amount_display": "0.00",
+                        "type": "final"
+                    })
+                    
                     return {
                         "payment_id": None,
                         "fee_type": "task_amount",
-                        "total_amount": task_amount_pence,
-                        "total_amount_display": f"{task_amount_pence / 100:.2f}",
-                        "points_used": None,
-                        "points_used_display": None,
-                        "coupon_discount": None,
-                        "coupon_discount_display": None,
-                        "stripe_amount": None,
-                        "stripe_amount_display": None,
-                        "currency": "GBP",
+                        "original_amount": task_amount_pence,
+                        "original_amount_display": f"{task_amount_pence / 100:.2f}",
+                        "coupon_discount": coupon_discount if coupon_discount > 0 else None,
+                        "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount > 0 else None,
+                        "coupon_name": coupon_info['name'] if coupon_info else None,
+                        "coupon_type": coupon_info['type'] if coupon_info else None,
+                        "coupon_description": coupon_info['description'] if coupon_info else None,
                         "final_amount": 0,
                         "final_amount_display": "0.00",
-                        "checkout_url": None,
+                        "currency": "GBP",
                         "client_secret": None,
                         "payment_intent_id": task.payment_intent_id,
+                        "customer_id": None,
+                        "ephemeral_key_secret": None,
+                        "calculation_steps": calculation_steps,
                         "note": "任务已支付"
                     }
                 elif payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
@@ -579,23 +683,72 @@ def create_task_payment(
                     from app.utils.fee_calculator import calculate_application_fee_pence
                     application_fee_pence = calculate_application_fee_pence(task_amount_pence)
                     
+                    # 从 PaymentIntent metadata 获取优惠券信息
+                    metadata = payment_intent.get("metadata", {})
+                    coupon_discount = int(metadata.get("coupon_discount", 0)) if metadata.get("coupon_discount") else 0
+                    coupon_info = None
+                    if coupon_discount > 0 and metadata.get("coupon_usage_log_id"):
+                        try:
+                            coupon_usage_log_id = int(metadata.get("coupon_usage_log_id"))
+                            coupon_usage_log = db.query(models.CouponUsageLog).filter(
+                                models.CouponUsageLog.id == coupon_usage_log_id
+                            ).first()
+                            if coupon_usage_log:
+                                user_coupon = db.query(models.UserCoupon).filter(
+                                    models.UserCoupon.id == coupon_usage_log.user_coupon_id
+                                ).first()
+                                if user_coupon:
+                                    coupon = db.query(models.Coupon).filter(models.Coupon.id == user_coupon.coupon_id).first()
+                                    if coupon:
+                                        coupon_info = {
+                                            "name": coupon.name,
+                                            "type": coupon.type,
+                                            "description": coupon.description
+                                        }
+                        except Exception as e:
+                            logger.warning(f"获取优惠券信息失败: {e}")
+                    
+                    # 构建计算过程步骤
+                    calculation_steps = [
+                        {
+                            "label": "任务金额",
+                            "amount": task_amount_pence,
+                            "amount_display": f"{task_amount_pence / 100:.2f}",
+                            "type": "original"
+                        }
+                    ]
+                    if coupon_discount > 0:
+                        calculation_steps.append({
+                            "label": f"优惠券折扣" + (f"（{coupon_info['name'] if coupon_info else ''}）" if coupon_info else ""),
+                            "amount": -coupon_discount,
+                            "amount_display": f"-{coupon_discount / 100:.2f}",
+                            "type": "discount"
+                        })
+                    calculation_steps.append({
+                        "label": "最终支付金额",
+                        "amount": payment_intent.amount,
+                        "amount_display": f"{payment_intent.amount / 100:.2f}",
+                        "type": "final"
+                    })
+                    
                     return {
                         "payment_id": None,
                         "fee_type": "task_amount",
-                        "total_amount": task_amount_pence,
-                        "total_amount_display": f"{task_amount_pence / 100:.2f}",
-                        "points_used": None,
-                        "points_used_display": None,
-                        "coupon_discount": None,
-                        "coupon_discount_display": None,
-                        "stripe_amount": payment_intent.amount,
-                        "stripe_amount_display": f"{payment_intent.amount / 100:.2f}",
-                        "currency": "GBP",
+                        "original_amount": task_amount_pence,
+                        "original_amount_display": f"{task_amount_pence / 100:.2f}",
+                        "coupon_discount": coupon_discount if coupon_discount > 0 else None,
+                        "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount > 0 else None,
+                        "coupon_name": coupon_info['name'] if coupon_info else None,
+                        "coupon_type": coupon_info['type'] if coupon_info else None,
+                        "coupon_description": coupon_info['description'] if coupon_info else None,
                         "final_amount": payment_intent.amount,
                         "final_amount_display": f"{payment_intent.amount / 100:.2f}",
-                        "checkout_url": None,
+                        "currency": "GBP",
                         "client_secret": payment_intent.client_secret,
                         "payment_intent_id": payment_intent.id,
+                        "customer_id": None,
+                        "ephemeral_key_secret": None,
+                        "calculation_steps": calculation_steps,
                         "note": "请完成支付以确认批准申请"
                     }
             except Exception as e:
@@ -924,8 +1077,8 @@ def create_task_payment(
                 "taker_id": str(task.taker_id),
                 "taker_stripe_account_id": taker.stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
                 "task_amount": str(task_amount_pence),  # 任务金额
-                "points_used": str(points_used) if points_used else "",
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
+                "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
                 "application_fee": str(application_fee_pence)  # 保存服务费金额，用于后续转账时扣除
             },
             description=f"任务 #{task_id} 任务金额支付 - {task.title}",

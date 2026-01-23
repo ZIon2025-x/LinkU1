@@ -69,6 +69,7 @@ const TaskExpertDashboard = lazyWithRetry(() => import('./pages/TaskExpertDashbo
 const MyServiceApplications = lazyWithRetry(() => import('./pages/MyServiceApplications'));
 const VIP = lazyWithRetry(() => import('./pages/VIP'));
 const Wallet = lazyWithRetry(() => import('./pages/Wallet'));
+const Coupons = lazyWithRetry(() => import('./pages/Coupons'));
 const Settings = lazyWithRetry(() => import('./pages/Settings'));
 const About = lazyWithRetry(() => import('./pages/About'));
 const JoinUs = lazyWithRetry(() => import('./pages/JoinUs'));
@@ -252,6 +253,11 @@ const LanguageRoutes: React.FC = () => {
               <Wallet />
             </ProtectedRoute>
           } />
+          <Route path={`/${lang}/coupons`} element={
+            <ProtectedRoute>
+              <Coupons />
+            </ProtectedRoute>
+          } />
           <Route path={`/${lang}/payment-history`} element={
             <ProtectedRoute>
               <PaymentHistory />
@@ -300,6 +306,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/users/me/service-applications" element={<Navigate to={`/${DEFAULT_LANGUAGE}/users/me/service-applications`} replace />} />
       <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
       <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
+      <Route path="/coupons" element={<Navigate to={`/${DEFAULT_LANGUAGE}/coupons`} replace />} />
       <Route path="/settings" element={<Navigate to={`/${DEFAULT_LANGUAGE}/settings`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
       <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />

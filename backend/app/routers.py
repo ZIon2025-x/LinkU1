@@ -5013,6 +5013,28 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.warning(f"  - 错误信息: {error_message}")
         logger.warning(f"  - 完整错误: {json.dumps(payment_intent.get('last_payment_error', {}), ensure_ascii=False)}")
         
+        # 更新支付历史记录状态为失败
+        if payment_intent_id:
+            try:
+                payment_history = db.query(models.PaymentHistory).filter(
+                    models.PaymentHistory.payment_intent_id == payment_intent_id
+                ).first()
+                if payment_history:
+                    payment_history.status = "failed"
+                    payment_history.updated_at = get_utc_time()
+                    if not payment_history.extra_metadata:
+                        payment_history.extra_metadata = {}
+                    payment_history.extra_metadata.update({
+                        "payment_failed": True,
+                        "error_message": error_message,
+                        "webhook_event_id": event_id,
+                        "failed_at": get_utc_time().isoformat()
+                    })
+                    db.commit()
+                    logger.info(f"✅ [WEBHOOK] 已更新支付历史记录状态为失败: payment_history_id={payment_history.id}")
+            except Exception as e:
+                logger.error(f"❌ [WEBHOOK] 更新支付历史记录失败: {e}", exc_info=True)
+        
         # 支付失败时，清除 payment_intent_id（申请状态保持为 pending，可以重新尝试）
         if task_id and application_id_str:
             application_id = int(application_id_str)

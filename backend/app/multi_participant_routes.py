@@ -1638,8 +1638,12 @@ def create_expert_activity(
                 detail=f"积分余额不足。需要预扣 {reserved_points_total} 积分（每人 {activity.applicant_points_reward} × {activity.max_participants} 人），但您当前余额为 {points_account.balance} 积分。"
             )
         
-        # 预扣积分（创建交易记录）
+        # 预扣积分（创建交易记录，使用幂等键防止重复预扣）
         from app.coupon_points_crud import add_points_transaction
+        from app.utils.time_utils import get_utc_time
+        import uuid
+        # 使用UUID确保幂等键唯一性，避免时间戳导致的并发问题
+        activity_reserve_idempotency_key = f"activity_reserve_{current_user.id}_{uuid.uuid4()}"
         try:
             add_points_transaction(
                 db=db,
@@ -1649,7 +1653,7 @@ def create_expert_activity(
                 source="activity_points_reserve",
                 related_type="activity",
                 description=f"创建活动预扣积分奖励（{activity.applicant_points_reward}积分 × {activity.max_participants}人）",
-                idempotency_key=f"activity_reserve_{current_user.id}_{activity.title}_{reserved_points_total}_{db.execute(select(func.now())).scalar()}"
+                idempotency_key=activity_reserve_idempotency_key
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))

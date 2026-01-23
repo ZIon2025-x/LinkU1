@@ -1626,6 +1626,45 @@ export const getPaymentHistory = async (params?: {
   return res.data;
 };
 
+// ==================== 优惠券系统 API ====================
+
+// 获取可用优惠券列表
+export const getAvailableCoupons = async () => {
+  const res = await api.get('/api/coupon-points/coupons/available');
+  return res.data;
+};
+
+// 获取我的优惠券列表
+export const getMyCoupons = async (params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const res = await api.get('/api/coupon-points/coupons/my', { params });
+  return res.data;
+};
+
+// 领取优惠券（通过优惠券ID或兑换码）
+export const claimCoupon = async (data: {
+  coupon_id?: number;
+  promotion_code?: string;
+}) => {
+  const res = await api.post('/api/coupon-points/coupons/claim', data);
+  return res.data;
+};
+
+// 积分兑换优惠券
+export const redeemCouponWithPoints = async (data: {
+  coupon_id: number;
+  idempotency_key?: string;
+}) => {
+  const res = await api.post('/api/coupon-points/points/redeem/coupon', {
+    coupon_id: data.coupon_id,
+    idempotency_key: data.idempotency_key || `redeem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  });
+  return res.data;
+};
+
 // ===========================================
 // 多人任务相关API
 // ===========================================
