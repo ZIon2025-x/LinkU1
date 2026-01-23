@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var showTaskDetail = false // 控制是否显示任务详情页
     @State private var navigateToPostId: Int? = nil // 用于深度链接导航到帖子详情
     @State private var showPostDetail = false // 控制是否显示帖子详情页
+    @State private var navigateToFleaMarketItemId: String? = nil // 用于深度链接导航到商品详情
+    @State private var showFleaMarketItemDetail = false // 控制是否显示商品详情页
     
     // 监听重置通知
     private let resetNotification = NotificationCenter.default.publisher(for: .resetHomeView)
@@ -171,6 +173,11 @@ struct HomeView: View {
                     ForumPostDetailView(postId: postId)
                 }
             }
+            .navigationDestination(isPresented: $showFleaMarketItemDetail) {
+                if let itemId = navigateToFleaMarketItemId {
+                    FleaMarketDetailView(itemId: itemId)
+                }
+            }
         }
     }
     
@@ -192,6 +199,11 @@ struct HomeView: View {
             print("🔗 [HomeView] 处理帖子深度链接: \(id)")
             navigateToPostId = id
             showPostDetail = true
+        case .fleaMarketItem(let id):
+            // 导航到跳蚤市场商品详情页
+            print("🔗 [HomeView] 处理商品深度链接: \(id)")
+            navigateToFleaMarketItemId = id
+            showFleaMarketItemDetail = true
         default:
             // 其他类型的链接暂时不处理
             print("🔗 [HomeView] 未知深度链接类型")

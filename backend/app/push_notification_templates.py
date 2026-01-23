@@ -226,6 +226,54 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
+    # 跳蚤市场支付提醒
+    "flea_market_pending_payment": {
+        "en": {
+            "title": "💳 Payment Reminder",
+            "body_template": "Please complete payment for「{item_title}」within 24 hours"
+        },
+        "zh": {
+            "title": "💳 支付提醒",
+            "body_template": "请在24小时内完成「{item_title}」的支付"
+        }
+    },
+    
+    # 跳蚤市场卖家议价
+    "flea_market_seller_counter_offer": {
+        "en": {
+            "title": "💰 New Counter Offer",
+            "body_template": "{seller_name} proposed a new price for「{item_title}」: £{counter_price:.2f}"
+        },
+        "zh": {
+            "title": "💰 卖家提出新价格",
+            "body_template": "{seller_name} 对「{item_title}」提出了新价格：£{counter_price:.2f}"
+        }
+    },
+    
+    # 跳蚤市场购买申请被拒绝
+    "flea_market_purchase_rejected": {
+        "en": {
+            "title": "❌ Purchase Request Rejected",
+            "body_template": "Your purchase request for「{item_title}」has been rejected by {seller_name}"
+        },
+        "zh": {
+            "title": "❌ 购买申请已拒绝",
+            "body_template": "您对「{item_title}」的购买申请已被 {seller_name} 拒绝"
+        }
+    },
+    
+    # 跳蚤市场（通用，用于其他情况）
+    "flea_market_generic": {
+        "en": {
+            "title": "🛒 Flea Market",
+            "body_template": "You have a new update about「{item_title}」"
+        },
+        "zh": {
+            "title": "💰 商品已售出",
+            "body_template": "{buyer_name} 直接购买了「{item_title}」"
+        }
+    },
+    
     # 任务消息（任务聊天）
     "task_message": {
         "en": {

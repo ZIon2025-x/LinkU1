@@ -1239,6 +1239,9 @@
 "flea_market.message_to_seller" = "Message to Seller (Optional)";
 "flea_market.message_placeholder" = "e.g., Hope to meet in person, can you include shipping, etc...";
 "flea_market.enter_amount" = "Enter amount";
+"flea_market.negotiate_request_sent" = "Negotiation Request Sent";
+"flea_market.negotiate_request_sent_message" = "You will receive a notification when the seller agrees, and you can proceed with payment";
+"flea_market.negotiate_request_failed" = "Failed to send negotiation request. Please try again.";
 
 // MARK: - Task Preferences
 "task_preferences.title" = "Task Preferences";

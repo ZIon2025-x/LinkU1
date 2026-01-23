@@ -27,60 +27,31 @@ public struct ContentView: View {
                     Color.black.opacity(0.05)
                         .ignoresSafeArea()
                     
-                    // 右上角倒计时圆圈（可选，如果需要显示加载进度）
+                    // 右上角跳过按钮
                     VStack {
                         HStack {
                             Spacer()
-                            ZStack {
-                                // 背景圆圈
-                                Circle()
-                                    .stroke(AppColors.separator.opacity(0.3), lineWidth: 3)
-                                    .frame(width: 40, height: 40)
+                            Button(action: {
+                                // 停止定时器（如果存在）
+                                timer?.invalidate()
+                                timer = nil
                                 
-                                // 进度圆圈（带动画）
-                                Circle()
-                                    .trim(from: 0, to: CGFloat(progress))
-                                    .stroke(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: AppColors.gradientPrimary),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
-                                    )
-                                    .frame(width: 40, height: 40)
-                                    .rotationEffect(.degrees(-90))
-                                
-                                // 时间文字
-                                Text("\(max(0, Int(ceil(remainingTime))))")
-                                    .font(.system(size: 14, weight: .semibold))
+                                // 直接结束视频加载，进入主界面
+                                appState.isCheckingLoginStatus = false
+                            }) {
+                                Text(LocalizationKey.onboardingSkip.localized)
+                                    .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(AppColors.textPrimary)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        Capsule()
+                                            .fill(.ultraThinMaterial)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
                             }
-                            .padding(.top, 8)
+                            .padding(.top, 12)
                             .padding(.trailing, 16)
-                            .onAppear {
-                                // 当加载界面出现时，立即启动动画
-                                if appState.isCheckingLoginStatus && !hasStartedAnimation {
-                                    remainingTime = 3.0
-                                    progress = 0.0  // 从空开始
-                                    hasStartedAnimation = true
-                                    
-                                    // 立即启动动画，从空到满
-                                    withAnimation(.linear(duration: 3.0)) {
-                                        progress = 1.0
-                                    }
-                                    
-                                    // 使用定时器更新显示的数字
-                                    timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-                                        if remainingTime > 0 {
-                                            remainingTime = max(0, remainingTime - 0.1)
-                                        } else {
-                                            timer?.invalidate()
-                                            timer = nil
-                                        }
-                                    }
-                                }
-                            }
                         }
                         Spacer()
                     }
@@ -225,11 +196,36 @@ public struct ContentView: View {
                 print("🔔 [ContentView] 跳转到任务聊天: \(taskId)")
                 navigateToTask(id: taskId)
             }
-        case "flea_market_purchase_accepted", "flea_market_purchase_request", "flea_market_direct_purchase":
-            // 跳蚤市场相关通知，跳转到对应任务
+        case "flea_market_purchase_request":
+            // 买家发送议价请求 → 通知卖家，跳转到商品详情页
+            if let itemId = extractItemId(from: userInfo) {
+                print("🔔 [ContentView] 跳蚤市场议价请求通知，跳转到商品详情: \(itemId)")
+                navigateToFleaMarketItem(id: itemId)
+            }
+        case "flea_market_purchase_accepted":
+            // 卖家同意议价 → 通知买家，跳转到任务详情（支付页面）
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场通知，跳转到任务: \(taskId)")
+                print("🔔 [ContentView] 跳蚤市场议价已同意，跳转到任务支付: \(taskId)")
                 navigateToTask(id: taskId)
+            } else if let itemId = extractItemId(from: userInfo) {
+                // 如果没有taskId，跳转到商品详情页
+                print("🔔 [ContentView] 跳蚤市场议价已同意，跳转到商品详情: \(itemId)")
+                navigateToFleaMarketItem(id: itemId)
+            }
+        case "flea_market_direct_purchase":
+            // 直接购买 → 跳转到任务详情（支付页面）
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 跳蚤市场直接购买通知，跳转到任务支付: \(taskId)")
+                navigateToTask(id: taskId)
+            }
+        case "flea_market_pending_payment":
+            // 支付提醒 → 跳转到任务详情或商品详情
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 跳蚤市场支付提醒，跳转到任务支付: \(taskId)")
+                navigateToTask(id: taskId)
+            } else if let itemId = extractItemId(from: userInfo) {
+                print("🔔 [ContentView] 跳蚤市场支付提醒，跳转到商品详情: \(itemId)")
+                navigateToFleaMarketItem(id: itemId)
             }
         default:
             // 其他通知类型，跳转到通知列表
@@ -279,6 +275,40 @@ public struct ContentView: View {
     // 导航到论坛帖子详情页
     private func navigateToPost(id: Int) {
         if let url = DeepLinkHandler.generateURL(for: .post(id: id)) {
+            DeepLinkHandler.shared.handle(url)
+        }
+    }
+    
+    // 从 userInfo 中提取商品 ID
+    private func extractItemId(from userInfo: [AnyHashable: Any]) -> String? {
+        // 优先尝试从 data 字典中获取
+        if let data = userInfo["data"] as? [String: Any],
+           let itemIdValue = data["item_id"] {
+            return parseItemId(itemIdValue)
+        }
+        
+        // 直接从 userInfo 获取
+        if let itemIdValue = userInfo["item_id"] {
+            return parseItemId(itemIdValue)
+        }
+        
+        return nil
+    }
+    
+    // 解析商品 ID（支持 Int 和 String 类型）
+    private func parseItemId(_ value: Any) -> String? {
+        if let stringValue = value as? String {
+            return stringValue
+        }
+        if let intValue = value as? Int {
+            return String(intValue)
+        }
+        return nil
+    }
+    
+    // 导航到跳蚤市场商品详情页
+    private func navigateToFleaMarketItem(id: String) {
+        if let url = DeepLinkHandler.generateURL(for: .fleaMarketItem(id: id)) {
             DeepLinkHandler.shared.handle(url)
         }
     }

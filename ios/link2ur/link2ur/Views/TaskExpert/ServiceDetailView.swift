@@ -227,7 +227,6 @@ struct ServiceDetailView: View {
     }
     
     @ViewBuilder
-    @ViewBuilder
     private func reviewsCard(reviews: [PublicReview], isLoading: Bool) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {

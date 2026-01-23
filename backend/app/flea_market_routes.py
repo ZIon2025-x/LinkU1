@@ -78,6 +78,8 @@ from app.flea_market_extensions import (
     send_purchase_request_notification,
     send_purchase_accepted_notification,
     send_direct_purchase_notification,
+    send_seller_counter_offer_notification,
+    send_purchase_rejected_notification,
     get_cache_key_for_items,
     get_cache_key_for_item_detail,
     invalidate_item_cache
@@ -1524,6 +1526,296 @@ async def create_purchase_request(
         )
 
 
+# ==================== 卖家同意议价API ====================
+
+@flea_market_router.post("/purchase-requests/{request_id}/approve", response_model=dict)
+async def approve_purchase_request(
+    request_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """卖家同意买家的议价请求（直接同意，不需要再议价）"""
+    try:
+        # 解析请求ID（支持格式化ID和数字ID）
+        try:
+            db_request_id = parse_flea_market_id(request_id)
+        except (ValueError, AttributeError):
+            # 如果不是格式化ID，尝试直接解析为整数
+            try:
+                db_request_id = int(request_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"无效的请求ID格式: {request_id}"
+                )
+        
+        # 查询购买申请（使用FOR UPDATE锁，防止并发）
+        request_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == db_request_id)
+            .with_for_update()
+        )
+        purchase_request = request_result.scalar_one_or_none()
+        
+        if not purchase_request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="购买申请不存在"
+            )
+        
+        # 查询商品（使用FOR UPDATE锁，防止并发）
+        item_result = await db.execute(
+            select(models.FleaMarketItem)
+            .where(models.FleaMarketItem.id == purchase_request.item_id)
+            .with_for_update()
+        )
+        item = item_result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 权限验证：只有商品所有者可以同意申请
+        if item.seller_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此申请"
+            )
+        
+        # 状态验证：必须是pending状态
+        if purchase_request.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该申请已被处理"
+            )
+        
+        # 商品状态验证：必须是active状态
+        if item.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该商品已售出或已下架"
+            )
+        
+        # 确定最终成交价（使用买家的议价，如果没有则使用原价）
+        final_price = purchase_request.proposed_price if purchase_request.proposed_price else item.price
+        
+        # 解析images JSON
+        images = []
+        if item.images:
+            try:
+                images = json.loads(item.images)
+            except:
+                images = []
+        
+        # 合并description（包含分类和联系方式）
+        description = item.description
+        if item.category:
+            description = f"{description}\n\n分类：{item.category}"
+        if item.contact:
+            description = f"{description}\n\n联系方式：{item.contact}"
+        
+        # 检查卖家是否有 Stripe Connect 账户（用于接收任务奖励）
+        seller = await db.get(models.User, item.seller_id)
+        taker_stripe_account_id = seller.stripe_account_id if seller else None
+        
+        if not taker_stripe_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="卖家尚未创建 Stripe Connect 收款账户，无法完成购买。请联系卖家先创建收款账户。",
+                headers={"X-Stripe-Connect-Required": "true"}
+            )
+        
+        # 创建任务时设置为 pending_payment 状态，等待支付完成
+        new_task = models.Task(
+            title=item.title,
+            description=description,
+            reward=float(final_price),
+            base_reward=item.price,
+            agreed_reward=final_price,  # 最终成交价（买家议价）
+            currency="GBP",
+            location=item.location or "Online",
+            task_type="Second-hand & Rental",
+            poster_id=purchase_request.buyer_id,  # 买家
+            taker_id=item.seller_id,  # 卖家
+            status="pending_payment",  # 等待支付，不直接进入进行中状态
+            is_paid=0,  # 明确标记为未支付
+            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+            is_flexible=1,  # 灵活时间模式
+            deadline=None,  # 无截止日期
+            images=json.dumps(images) if images else None,
+        )
+        db.add(new_task)
+        await db.flush()  # 获取任务ID
+        
+        # 获取买家信息（用于创建PaymentIntent和发送通知）
+        buyer_result = await db.execute(
+            select(models.User).where(models.User.id == purchase_request.buyer_id)
+        )
+        buyer = buyer_result.scalar_one_or_none()
+        
+        if not buyer:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="买家不存在"
+            )
+        
+        # 创建支付意图
+        import stripe
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        task_amount_pence = int(float(final_price) * 100)
+        from app.utils.fee_calculator import calculate_application_fee_pence
+        application_fee_pence = calculate_application_fee_pence(task_amount_pence)
+        
+        try:
+            # 使用托管模式（与其他支付功能一致）
+            payment_intent = stripe.PaymentIntent.create(
+                amount=task_amount_pence,
+                currency="gbp",
+                payment_method_types=["card", "wechat_pay"],
+                description=f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
+                metadata={
+                    "task_id": str(new_task.id),
+                    "task_title": item.title[:200] if item.title else "",
+                    "poster_id": str(purchase_request.buyer_id),
+                    "poster_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
+                    "taker_id": str(item.seller_id),
+                    "taker_name": seller.name if seller else f"User {item.seller_id}",
+                    "taker_stripe_account_id": taker_stripe_account_id,
+                    "application_fee": str(application_fee_pence),
+                    "task_amount": str(task_amount_pence),
+                    "task_amount_display": f"{final_price:.2f}",
+                    "platform": "Link²Ur",
+                    "payment_type": "flea_market_purchase_request",
+                    "flea_market_item_id": str(item.id),
+                    "purchase_request_id": str(db_request_id)
+                },
+            )
+            
+            # 更新任务的 payment_intent_id
+            new_task.payment_intent_id = payment_intent.id
+        except Exception as e:
+            # 如果创建 PaymentIntent 失败，回滚整个事务
+            await db.rollback()
+            logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="创建支付失败，请稍后重试"
+            )
+        
+        # 不立即更新商品状态为 sold，而是先关联任务ID
+        # 商品状态在支付成功后才更新为 sold（在 webhook 中处理）
+        update_result = await db.execute(
+            update(models.FleaMarketItem)
+            .where(
+                and_(
+                    models.FleaMarketItem.id == purchase_request.item_id,
+                    models.FleaMarketItem.status == "active",
+                    models.FleaMarketItem.sold_task_id.is_(None)  # 确保商品未被其他购买预留
+                )
+            )
+            .values(
+                sold_task_id=new_task.id  # 只关联任务ID，不改变状态
+            )
+        )
+        
+        # 检查是否成功更新
+        if update_result.rowcount == 0:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该商品已被其他用户购买"
+            )
+        
+        # 更新购买申请状态为accepted
+        await db.execute(
+            update(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == db_request_id)
+            .values(status="accepted")
+        )
+        
+        # 自动拒绝其他pending状态的申请
+        await db.execute(
+            update(models.FleaMarketPurchaseRequest)
+            .where(
+                and_(
+                    models.FleaMarketPurchaseRequest.item_id == purchase_request.item_id,
+                    models.FleaMarketPurchaseRequest.status == "pending",
+                    models.FleaMarketPurchaseRequest.id != db_request_id
+                )
+            )
+            .values(status="rejected")
+        )
+        
+        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建）
+        await db.commit()
+        
+        # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
+        customer_id = None
+        ephemeral_key_secret = None
+        try:
+            existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(purchase_request.buyer_id)})
+            if existing_customers.data:
+                customer_id = existing_customers.data[0].id
+            else:
+                customer = stripe.Customer.create(
+                    metadata={
+                        "user_id": str(purchase_request.buyer_id),
+                        "user_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
+                    }
+                )
+                customer_id = customer.id
+
+            ephemeral_key = stripe.EphemeralKey.create(
+                customer=customer_id,
+                stripe_version="2025-04-30.preview",
+            )
+            ephemeral_key_secret = ephemeral_key.secret
+        except Exception as e:
+            logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
+            customer_id = None
+            ephemeral_key_secret = None
+        
+        # 发送通知给买家
+        await send_purchase_accepted_notification(
+            db, item, buyer, new_task.id, float(final_price)
+        )
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
+        
+        return {
+            "success": True,
+            "data": {
+                "task_id": str(new_task.id),  # 任务ID直接返回整数（转为字符串），不使用格式化
+                "item_status": "reserved",  # 商品状态为预留，等待支付完成
+                "task_status": "pending_payment",  # 返回任务状态
+                "final_price": float(final_price),
+                "purchase_request_status": "accepted",
+                "payment_intent_id": payment_intent.id,
+                "client_secret": payment_intent.client_secret,
+                "amount": payment_intent.amount,
+                "amount_display": f"{payment_intent.amount / 100:.2f}",
+                "currency": payment_intent.currency.upper(),
+                "customer_id": customer_id,
+                "ephemeral_key_secret": ephemeral_key_secret,
+            },
+            "message": "议价已同意，请完成支付。支付完成后商品将自动下架。"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"同意议价请求失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="同意议价请求失败"
+        )
+
+
 # ==================== 接受购买API ====================
 
 @flea_market_router.post("/items/{item_id}/accept-purchase", response_model=dict)
@@ -1967,7 +2259,21 @@ async def reject_purchase_request(
         
         await db.commit()
         
-        # TODO: 发送通知给买家（可选）
+        # 获取买家和卖家信息，发送通知
+        buyer_result = await db.execute(
+            select(models.User).where(models.User.id == purchase_request.buyer_id)
+        )
+        buyer = buyer_result.scalar_one_or_none()
+        
+        seller_result = await db.execute(
+            select(models.User).where(models.User.id == item.seller_id)
+        )
+        seller = seller_result.scalar_one_or_none()
+        
+        if buyer and seller:
+            await send_purchase_rejected_notification(
+                db, item, buyer, seller
+            )
         
         return {
             "success": True,
@@ -2052,7 +2358,21 @@ async def seller_counter_offer(
         
         await db.commit()
         
-        # TODO: 发送通知给买家（可选）
+        # 获取买家和卖家信息，发送通知
+        buyer_result = await db.execute(
+            select(models.User).where(models.User.id == purchase_request.buyer_id)
+        )
+        buyer = buyer_result.scalar_one_or_none()
+        
+        seller_result = await db.execute(
+            select(models.User).where(models.User.id == item.seller_id)
+        )
+        seller = seller_result.scalar_one_or_none()
+        
+        if buyer and seller:
+            await send_seller_counter_offer_notification(
+                db, item, buyer, seller, float(counter_data.counter_price)
+            )
         
         return {
             "success": True,

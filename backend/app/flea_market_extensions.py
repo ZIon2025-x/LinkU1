@@ -250,3 +250,97 @@ def invalidate_item_cache(item_id: Optional[int] = None):
     except Exception as e:
         logger.warning(f"清除商品缓存失败: {e}")
 
+
+async def send_seller_counter_offer_notification(
+    db: AsyncSession,
+    item: models.FleaMarketItem,
+    buyer: models.User,
+    seller: models.User,
+    counter_price: float
+):
+    """发送卖家议价通知给买家"""
+    try:
+        seller_name = seller.name if seller else f"用户{seller.id}" if seller else "卖家"
+        content = f"卖家对您的购买申请提出了新价格。\n商品：{item.title}\n卖家议价：£{counter_price:.2f}\n原价：£{float(item.price):.2f}\n\n请查看并决定是否接受。"
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=buyer.id,
+            notification_type="flea_market_seller_counter_offer",
+            title="卖家提出新价格",
+            content=content,
+            related_id=str(item.id),
+        )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=buyer.id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="flea_market_seller_counter_offer",
+                data={
+                    "item_id": item.id
+                },
+                template_vars={
+                    "seller_name": seller_name,
+                    "item_title": item.title,
+                    "counter_price": counter_price
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送卖家议价推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
+        logger.info(f"卖家议价通知已发送给买家 {buyer.id}")
+    except Exception as e:
+        logger.error(f"发送卖家议价通知失败: {e}")
+
+
+async def send_purchase_rejected_notification(
+    db: AsyncSession,
+    item: models.FleaMarketItem,
+    buyer: models.User,
+    seller: models.User
+):
+    """发送购买申请被拒绝通知给买家"""
+    try:
+        seller_name = seller.name if seller else f"用户{seller.id}" if seller else "卖家"
+        content = f"很抱歉，您的购买申请已被拒绝。\n商品：{item.title}\n卖家：{seller_name}\n\n您可以继续浏览其他商品。"
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=buyer.id,
+            notification_type="flea_market_purchase_rejected",
+            title="购买申请已拒绝",
+            content=content,
+            related_id=str(item.id),
+        )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification_async_safe
+            send_push_notification_async_safe(
+                async_db=db,
+                user_id=buyer.id,
+                title=None,  # 从模板生成（会根据用户语言偏好）
+                body=None,  # 从模板生成（会根据用户语言偏好）
+                notification_type="flea_market_purchase_rejected",
+                data={
+                    "item_id": item.id
+                },
+                template_vars={
+                    "seller_name": seller_name,
+                    "item_title": item.title
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送购买拒绝推送通知失败: {e}")
+            # 推送通知失败不影响主流程
+        
+        logger.info(f"购买拒绝通知已发送给买家 {buyer.id}")
+    except Exception as e:
+        logger.error(f"发送购买拒绝通知失败: {e}")
+

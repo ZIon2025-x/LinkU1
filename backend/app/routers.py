@@ -4623,11 +4623,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             db_item_id = parse_flea_market_id(flea_market_item_id)
                             
                             # 更新商品状态为 sold（支付成功后）
+                            # ⚠️ 优化：支持 active 或 reserved 状态（reserved 是已关联任务但未支付的状态）
                             flea_item = db.query(FleaMarketItem).filter(
                                 and_(
                                     FleaMarketItem.id == db_item_id,
                                     FleaMarketItem.sold_task_id == task_id,
-                                    FleaMarketItem.status == "active"  # 确保商品仍然是 active 状态
+                                    FleaMarketItem.status.in_(["active", "reserved"])  # 支持 active 和 reserved 状态
                                 )
                             ).first()
                             
@@ -4636,6 +4637,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 # 确保 sold_task_id 已设置（双重保险）
                                 if flea_item.sold_task_id != task_id:
                                     flea_item.sold_task_id = task_id
+                                db.commit()  # 立即提交，确保状态更新及时
                                 logger.info(f"✅ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 支付成功，状态已更新为 sold (task_id: {task_id})")
                                 
                                 # 清除商品缓存（invalidate_item_cache 会自动清除列表缓存和详情缓存）
@@ -4643,7 +4645,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 invalidate_item_cache(flea_item.id)
                                 logger.info(f"✅ [WEBHOOK] 已清除跳蚤市场商品缓存（包括列表和详情）")
                             else:
-                                logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配 (db_id: {db_item_id}, task_id: {task_id}, status: {flea_item.status if flea_item else 'None'})")
+                                logger.warning(f"⚠️ [WEBHOOK] 跳蚤市场商品 {flea_market_item_id} 未找到或状态不匹配 (db_id: {db_item_id}, task_id: {task_id})")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 更新跳蚤市场商品状态失败: {e}", exc_info=True)
                 application_id_str = metadata.get("application_id")

@@ -5,9 +5,6 @@ struct FleaMarketDetailView: View {
     @StateObject private var viewModel = FleaMarketDetailViewModel()
     @EnvironmentObject var appState: AppState
     @State private var showPurchaseSheet = false
-    @State private var purchaseType: PurchaseType = .direct
-    @State private var proposedPrice: Double?
-    @State private var purchaseMessage = ""
     @State private var showLogin = false
     @State private var currentImageIndex = 0
     @State private var isRefreshing = false
@@ -19,11 +16,7 @@ struct FleaMarketDetailView: View {
     @State private var paymentCustomerId: String?
     @State private var paymentEphemeralKeySecret: String?
     @State private var isPreparingPayment = false
-    
-    enum PurchaseType {
-        case direct
-        case negotiate
-    }
+    @State private var showNegotiateSuccess = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -136,58 +129,73 @@ struct FleaMarketDetailView: View {
         }
         .sheet(isPresented: $showPurchaseSheet) {
             if let item = viewModel.item {
-            PurchaseSheet(
+                PurchaseDetailView(
                     item: item,
-                purchaseType: purchaseType,
-                proposedPrice: $proposedPrice,
-                message: $purchaseMessage,
-                onPurchase: {
-                    if purchaseType == .direct {
-                        viewModel.directPurchase(itemId: itemId) { purchaseData in
-                            if let data = purchaseData {
-                                // 如果返回了支付信息，显示支付页面
-                                if data.taskStatus == "pending_payment",
-                                   let taskId = Int(data.taskId),
-                                   let clientSecret = data.clientSecret {
-                                    showPurchaseSheet = false
-                                    // 设置支付参数
-                                    paymentTaskId = taskId
-                                    paymentClientSecret = clientSecret
-                                    // 计算支付金额（amount 是分为单位，需要转换为元）
-                                    if let amount = data.amount {
-                                        paymentAmount = Double(amount) / 100.0
-                                    } else if let amountDisplay = data.amountDisplay, let amountValue = Double(amountDisplay) {
-                                        paymentAmount = amountValue
-                                    } else {
-                                        paymentAmount = 0.0
-                                    }
-                                    paymentCustomerId = data.customerId
-                                    paymentEphemeralKeySecret = data.ephemeralKeySecret
-                                    // 显示支付页面
-                                    showPaymentView = true
-                                } else {
-                                    // 没有支付信息，只关闭购买弹窗
-                                    showPurchaseSheet = false
-                                }
+                    itemId: itemId,
+                    viewModel: viewModel,
+                    onPurchaseComplete: { purchaseData in
+                        showPurchaseSheet = false
+                        // 如果返回了支付信息，显示支付页面
+                        if let data = purchaseData,
+                           data.taskStatus == "pending_payment",
+                           let clientSecret = data.clientSecret {
+                            // 转换 taskId（支持字符串和数字格式）
+                            let taskIdInt: Int?
+                            if let taskIdValue = Int(data.taskId) {
+                                taskIdInt = taskIdValue
+                            } else {
+                                Logger.error("无法转换 taskId 为 Int: \(data.taskId)", category: .network)
+                                taskIdInt = nil
+                            }
+                            
+                            guard let taskId = taskIdInt else {
+                                Logger.error("taskId 转换失败，无法显示支付页面", category: .network)
+                                return
+                            }
+                            
+                            // 设置支付参数
+                            paymentTaskId = taskId
+                            paymentClientSecret = clientSecret
+                            // 计算支付金额（amount 是分为单位，需要转换为元）
+                            if let amount = data.amount {
+                                paymentAmount = Double(amount) / 100.0
+                            } else if let amountDisplay = data.amountDisplay, let amountValue = Double(amountDisplay) {
+                                paymentAmount = amountValue
+                            } else {
+                                paymentAmount = 0.0
+                            }
+                            paymentCustomerId = data.customerId
+                            paymentEphemeralKeySecret = data.ephemeralKeySecret
+                            // 显示支付页面
+                            showPaymentView = true
+                        } else if let data = purchaseData {
+                            // 如果没有支付信息，可能是直接购买成功（不需要支付）
+                            Logger.debug("直接购买成功，无需支付", category: .network)
+                            // 刷新商品信息
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                CacheManager.shared.invalidateFleaMarketCache()
+                                viewModel.loadItem(itemId: itemId, preserveItem: true)
                             }
                         }
-                    } else {
-                        viewModel.requestPurchase(itemId: itemId, proposedPrice: proposedPrice, message: purchaseMessage.isEmpty ? nil : purchaseMessage) { success in
-                            if success {
-                                showPurchaseSheet = false
-                                proposedPrice = nil
-                                purchaseMessage = ""
-                            }
-                        }
+                    },
+                    onNegotiateComplete: {
+                        showPurchaseSheet = false
+                        // 议价请求已发送，显示成功提示
+                        HapticFeedback.success()
+                        showNegotiateSuccess = true
                     }
-                }
-            )
+                )
             }
         }
         .alert(LocalizationKey.successRefreshSuccess.localized, isPresented: $showRefreshSuccess) {
             Button(LocalizationKey.commonOk.localized, role: .cancel) { }
         } message: {
             Text(LocalizationKey.successRefreshSuccessMessage.localized)
+        }
+        .alert(LocalizationKey.fleaMarketNegotiateRequestSent.localized, isPresented: $showNegotiateSuccess) {
+            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
+        } message: {
+            Text(LocalizationKey.fleaMarketNegotiateRequestSentMessage.localized)
         }
         .sheet(isPresented: $showPaymentView) {
             if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
@@ -201,13 +209,8 @@ struct FleaMarketDetailView: View {
                     onPaymentSuccess: {
                         showPaymentView = false
                         // 支付成功后，清除缓存并刷新商品信息
-                        // 等待后端 webhook 处理完成（通常需要 1-2 秒）
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            // 清除跳蚤市场缓存，确保获取最新状态
-                            CacheManager.shared.invalidateFleaMarketCache()
-                            // 重新加载商品信息
-                            viewModel.loadItem(itemId: itemId, preserveItem: true)
-                        }
+                        // 使用重试机制确保状态正确更新
+                        refreshItemAfterPayment(attempt: 1, maxAttempts: 5)
                     }
                 )
             }
@@ -399,17 +402,17 @@ struct FleaMarketDetailView: View {
                 // 状态标签
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(item.status == "active" ? Color.green : Color.gray)
+                        .fill(itemStatusColor(item.status))
                         .frame(width: 6, height: 6)
-                    Text(item.status == "active" ? LocalizationKey.fleaMarketStatusActive.localized : LocalizationKey.fleaMarketStatusDelisted.localized)
+                    Text(itemStatusText(item.status))
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(item.status == "active" ? .green : .gray)
+                        .foregroundColor(itemStatusColor(item.status))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(item.status == "active" ? Color.green.opacity(0.1) : Color.gray.opacity(0.1))
+                        .fill(itemStatusColor(item.status).opacity(0.1))
                 )
             }
             
@@ -587,6 +590,44 @@ struct FleaMarketDetailView: View {
         }
     }
     
+    // MARK: - 支付成功后刷新商品状态
+    
+    /// 支付成功后刷新商品信息（带重试机制）
+    private func refreshItemAfterPayment(attempt: Int, maxAttempts: Int) {
+        guard attempt <= maxAttempts else {
+            Logger.warning("支付成功后刷新商品状态失败，已达到最大重试次数", category: .network)
+            return
+        }
+        
+        // 延迟刷新，等待后端 webhook 处理完成
+        let delay = min(Double(attempt * attempt), 5.0) // 指数退避，最大5秒
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            // 清除跳蚤市场缓存，确保获取最新状态
+            CacheManager.shared.invalidateFleaMarketCache()
+            
+            // 重新加载商品信息
+            self.viewModel.loadItem(itemId: self.itemId, preserveItem: true)
+            
+            // 检查商品状态是否已更新
+            if let item = self.viewModel.item {
+                // 如果状态已更新为 sold 或 delisted，说明支付成功
+                if item.status == "sold" || item.status == "delisted" {
+                    Logger.success("商品状态已更新: \(item.status)", category: .network)
+                    HapticFeedback.success()
+                    return
+                }
+            }
+            
+            // 如果状态还未更新，继续重试
+            if attempt < maxAttempts {
+                self.refreshItemAfterPayment(attempt: attempt + 1, maxAttempts: maxAttempts)
+            } else {
+                Logger.warning("支付成功后商品状态未更新，可能后端处理延迟", category: .network)
+            }
+        }
+    }
+    
     // MARK: - 底部操作栏
     
     private var isSeller: Bool {
@@ -597,8 +638,37 @@ struct FleaMarketDetailView: View {
         return item.sellerId == currentUserId
     }
     
+    // 商品状态颜色（辅助函数）
+    private func itemStatusColor(_ status: String) -> Color {
+        switch status {
+        case "active":
+            return .green
+        case "sold":
+            return .blue
+        case "delisted":
+            return .gray
+        default:
+            return .gray
+        }
+    }
+    
+    // 商品状态文本（辅助函数）
+    private func itemStatusText(_ status: String) -> String {
+        switch status {
+        case "active":
+            return LocalizationKey.fleaMarketStatusActive.localized
+        case "sold":
+            return LocalizationKey.myItemsStatusSold.localized
+        case "delisted":
+            return LocalizationKey.fleaMarketStatusDelisted.localized
+        default:
+            return LocalizationKey.fleaMarketStatusDelisted.localized
+        }
+    }
+    
     @ViewBuilder
     private func bottomBar(item: FleaMarketItem) -> some View {
+        // 只有商品状态为 active 时才显示购买按钮
         if item.status == "active" {
             HStack(spacing: 12) {
                 // 如果是卖家，显示编辑和刷新按钮
@@ -731,53 +801,35 @@ struct FleaMarketDetailView: View {
                         }
                         .disabled(isPreparingPayment)
                     } else {
-                        // 没有未付款的购买，显示正常的购买按钮
-                        // 议价按钮
+                        // 没有未付款的购买，显示统一的购买按钮
                         Button(action: {
                             if appState.isAuthenticated {
-                                purchaseType = .negotiate
                                 showPurchaseSheet = true
                             } else {
                                 showLogin = true
                             }
                         }) {
-                            Text(LocalizationKey.fleaMarketNegotiate.localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(AppColors.primary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 25)
-                                        .stroke(AppColors.primary, lineWidth: 1.5)
-                                )
-                        }
-                        
-                        // 立即购买按钮
-                        Button(action: {
-                            if appState.isAuthenticated {
-                                purchaseType = .direct
-                                showPurchaseSheet = true
-                            } else {
-                                showLogin = true
+                            HStack(spacing: 8) {
+                                Image(systemName: "cart.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text(LocalizationKey.fleaMarketBuyNow.localized)
+                                    .font(.system(size: 16, weight: .semibold))
                             }
-                        }) {
-                            Text(LocalizationKey.fleaMarketBuyNow.localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            Color(red: 0.9, green: 0.3, blue: 0.2),
-                                            Color(red: 0.95, green: 0.4, blue: 0.3)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.9, green: 0.3, blue: 0.2),
+                                        Color(red: 0.95, green: 0.4, blue: 0.3)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 )
-                                .clipShape(RoundedRectangle(cornerRadius: 25))
-                                .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 25))
+                            .shadow(color: Color(red: 0.9, green: 0.3, blue: 0.2).opacity(0.4), radius: 8, x: 0, y: 4)
                         }
                     }
                 }
@@ -795,15 +847,21 @@ struct FleaMarketDetailView: View {
     }
 }
 
-// MARK: - 购买弹窗
+// MARK: - 购买详情页
 
-struct PurchaseSheet: View {
+struct PurchaseDetailView: View {
     let item: FleaMarketItem
-    let purchaseType: FleaMarketDetailView.PurchaseType
-    @Binding var proposedPrice: Double?
-    @Binding var message: String
-    let onPurchase: () -> Void
+    let itemId: String
+    let viewModel: FleaMarketDetailViewModel
+    let onPurchaseComplete: (DirectPurchaseResponse.DirectPurchaseData?) -> Void
+    let onNegotiateComplete: () -> Void
+    
     @Environment(\.dismiss) var dismiss
+    @State private var wantsNegotiate = false
+    @State private var proposedPrice: Double?
+    @State private var message = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
     
     var body: some View {
         NavigationView {
@@ -811,10 +869,10 @@ struct PurchaseSheet: View {
                 VStack(spacing: 24) {
                     // 商品预览卡片
                     HStack(spacing: 16) {
-                    if let images = item.images, let firstImage = images.first {
-                        AsyncImage(url: firstImage.toImageURL()) { image in
+                        if let images = item.images, let firstImage = images.first {
+                            AsyncImage(url: firstImage.toImageURL()) { image in
                                 image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
+                            } placeholder: {
                                 Color(UIColor.secondarySystemBackground)
                             }
                             .frame(width: 90, height: 90)
@@ -842,27 +900,47 @@ struct PurchaseSheet: View {
                     .background(Color(UIColor.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     
-                    if purchaseType == .negotiate {
-                        // 议价金额输入
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(LocalizationKey.fleaMarketYourBid.localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(AppColors.textSecondary)
-                            
-                            HStack {
-                                Text("£")
-                                    .font(.system(size: 18, weight: .semibold))
+                    // 我要议价复选框
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle(isOn: $wantsNegotiate) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "hand.raised.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(AppColors.primary)
+                                Text(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: AppColors.primary))
+                        
+                        if wantsNegotiate {
+                            // 议价金额输入
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(LocalizationKey.fleaMarketYourBid.localized)
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(AppColors.textSecondary)
                                 
-                                TextField(LocalizationKey.fleaMarketEnterAmount.localized, value: $proposedPrice, format: .number)
-                                    .keyboardType(.decimalPad)
-                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                HStack {
+                                    Text("£")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    TextField(LocalizationKey.fleaMarketEnterAmount.localized, value: $proposedPrice, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                }
+                                .padding(16)
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .padding(16)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
+                    .padding(16)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .animation(.easeInOut(duration: 0.2), value: wantsNegotiate)
                     
                     // 留言输入
                     VStack(alignment: .leading, spacing: 10) {
@@ -891,32 +969,98 @@ struct PurchaseSheet: View {
                             )
                     }
                     
+                    // 错误提示
+                    if let errorMessage = errorMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(AppColors.error)
+                            Text(errorMessage)
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.error)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppColors.error.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    
                     Spacer(minLength: 40)
                 }
                 .padding(20)
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color(UIColor.systemBackground))
-            .navigationTitle(purchaseType == .direct ? LocalizationKey.fleaMarketConfirmPurchase.localized : LocalizationKey.fleaMarketBidPurchase.localized)
+            .navigationTitle(LocalizationKey.fleaMarketConfirmPurchase.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(LocalizationKey.commonCancel.localized) { dismiss() }
+                        .disabled(isSubmitting)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onPurchase) {
-                        Text(purchaseType == .direct ? LocalizationKey.fleaMarketConfirm.localized : LocalizationKey.fleaMarketSubmit.localized)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(AppColors.primary)
-                            .clipShape(Capsule())
+                    Button(action: submitPurchase) {
+                        if isSubmitting {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        } else {
+                            Text(LocalizationKey.fleaMarketConfirm.localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(isSubmitting ? Color.gray : AppColors.primary)
+                    .clipShape(Capsule())
+                    .disabled(isSubmitting)
                 }
             }
             .enableSwipeBack()
+        }
+    }
+    
+    private func submitPurchase() {
+        // 验证议价金额
+        if wantsNegotiate {
+            guard let price = proposedPrice, price > 0 else {
+                errorMessage = LocalizationKey.fleaMarketNegotiatePriceInvalid.localized
+                return
+            }
+            if price >= item.price {
+                errorMessage = LocalizationKey.fleaMarketNegotiatePriceTooHigh.localized
+                return
+            }
+        }
+        
+        isSubmitting = true
+        errorMessage = nil
+        
+        if wantsNegotiate {
+            // 发送议价请求
+            viewModel.requestPurchase(
+                itemId: itemId,
+                proposedPrice: proposedPrice,
+                message: message.isEmpty ? nil : message
+            ) { [self] success in
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    if success {
+                        onNegotiateComplete()
+                    } else {
+                        errorMessage = LocalizationKey.fleaMarketNegotiateRequestFailed.localized
+                    }
+                }
+            }
+        } else {
+            // 直接购买
+            viewModel.directPurchase(itemId: itemId) { [self] purchaseData in
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    onPurchaseComplete(purchaseData)
+                }
+            }
         }
     }
 }

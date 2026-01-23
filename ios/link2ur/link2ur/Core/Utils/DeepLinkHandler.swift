@@ -16,6 +16,7 @@ public class DeepLinkHandler: ObservableObject {
         case forum(categoryId: Int?)
         case leaderboard(itemId: Int?)
         case activity(id: Int)  // 活动详情
+        case fleaMarketItem(id: String)  // 跳蚤市场商品详情
         case unknown(String)
     }
     
@@ -94,6 +95,11 @@ public class DeepLinkHandler: ObservableObject {
                 currentLink = .activity(id: id)
             }
             
+        case "/flea-market/item":
+            if let id = queryItems.first(where: { $0.name == "id" })?.value {
+                currentLink = .fleaMarketItem(id: id)
+            }
+            
         default:
             currentLink = .unknown(path)
         }
@@ -144,6 +150,17 @@ public class DeepLinkHandler: ObservableObject {
             }
         }
         
+        // 解析跳蚤市场商品路径：/zh/flea-market/item/{id} 或 /en/flea-market/item/{id} 等
+        if path.contains("/flea-market/item/") {
+            let pathComponents = path.components(separatedBy: "/")
+            if let itemIndex = pathComponents.firstIndex(where: { $0 == "item" }),
+               itemIndex + 1 < pathComponents.count {
+                let itemId = pathComponents[itemIndex + 1]
+                currentLink = .fleaMarketItem(id: itemId)
+                return
+            }
+        }
+        
         currentLink = .unknown(path)
     }
     
@@ -184,6 +201,10 @@ public class DeepLinkHandler: ObservableObject {
         case .activity(let id):
             components.path = "/activity"
             components.queryItems = [URLQueryItem(name: "id", value: "\(id)")]
+            
+        case .fleaMarketItem(let id):
+            components.path = "/flea-market/item"
+            components.queryItems = [URLQueryItem(name: "id", value: id)]
             
         case .unknown:
             return nil
