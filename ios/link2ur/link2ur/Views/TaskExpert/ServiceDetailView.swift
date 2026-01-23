@@ -39,10 +39,8 @@ struct ServiceDetailView: View {
                             // 服务详情卡片
                             descriptionCard(service: service)
                             
-                            // 评价卡片
-                            if !viewModel.reviews.isEmpty || viewModel.isLoadingReviews {
-                                reviewsCard(reviews: viewModel.reviews, isLoading: viewModel.isLoadingReviews)
-                            }
+                            // 评价卡片（始终显示，即使没有评价也显示"暂无评价"）
+                            reviewsCard(reviews: viewModel.reviews, isLoading: viewModel.isLoadingReviews)
                             
                             // 可选时间段
                             if service.hasTimeSlots == true {

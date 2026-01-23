@@ -2211,13 +2211,23 @@ async def get_service_reviews(
     from sqlalchemy import func
     
     try:
+        # 可选：验证服务是否存在（如果服务不存在，返回空列表也是合理的）
+        # 但为了更好的错误提示，可以添加验证
+        service = await db.get(models.TaskExpertService, service_id)
+        if not service:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="服务不存在"
+            )
         # 查询条件：任务关联了该服务（expert_service_id=service_id）
+        # 并且是达人创建的任务（created_by_expert=True）
         # 并且任务已完成，有评价
         base_query = (
             select(models.Review)
             .join(models.Task, models.Review.task_id == models.Task.id)
             .where(
                 and_(
+                    models.Task.created_by_expert == True,  # 确保是达人创建的任务
                     models.Task.expert_service_id == service_id,
                     models.Task.status == "completed",
                     models.Review.is_anonymous == 0  # 只返回非匿名评价
@@ -2232,6 +2242,7 @@ async def get_service_reviews(
             .join(models.Task, models.Review.task_id == models.Task.id)
             .where(
                 and_(
+                    models.Task.created_by_expert == True,  # 确保是达人创建的任务
                     models.Task.expert_service_id == service_id,
                     models.Task.status == "completed",
                     models.Review.is_anonymous == 0
