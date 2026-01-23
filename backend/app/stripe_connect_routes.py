@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
 
-# 设置 Stripe API Key
+# 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
+# 这里只设置api_key作为向后兼容，实际超时配置在startup_event中完成
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # V2 API 辅助函数：由于 Python SDK 可能不支持 v2.core.accounts，
@@ -40,7 +41,7 @@ import requests
 
 def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
     """
-    直接使用 HTTP 请求调用 Stripe V2 API
+    直接使用 HTTP 请求调用 Stripe V2 API（带超时设置）
     
     Args:
         method: HTTP 方法 ('GET', 'POST', 'PUT', 'DELETE')
@@ -54,6 +55,9 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
     api_key = os.getenv("STRIPE_SECRET_KEY")
     if not api_key:
         raise ValueError("STRIPE_SECRET_KEY not set")
+    
+    # 获取超时配置（默认10秒）
+    timeout = int(os.getenv("STRIPE_API_TIMEOUT", "10"))
     
     url = f"https://api.stripe.com/v2/core/{endpoint}"
     headers = {
@@ -73,13 +77,13 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
                 include_list = data.get("include", [])
                 if include_list:
                     query_params["include[]"] = include_list
-            response = requests.get(url, headers=headers, params=query_params)
+            response = requests.get(url, headers=headers, params=query_params, timeout=timeout)
         elif method.upper() == "POST":
-            response = requests.post(url, headers=headers, json=data)
+            response = requests.post(url, headers=headers, json=data, timeout=timeout)
         elif method.upper() == "PUT":
-            response = requests.put(url, headers=headers, json=data)
+            response = requests.put(url, headers=headers, json=data, timeout=timeout)
         elif method.upper() == "DELETE":
-            response = requests.delete(url, headers=headers)
+            response = requests.delete(url, headers=headers, timeout=timeout)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
         

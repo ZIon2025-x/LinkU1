@@ -79,6 +79,8 @@ from app.email_utils import (
 )
 from app.models import CustomerService, User
 
+# 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
+# 这里只设置api_key作为向后兼容，实际超时配置在startup_event中完成
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_replace_with_real_key")
 
 router = APIRouter()

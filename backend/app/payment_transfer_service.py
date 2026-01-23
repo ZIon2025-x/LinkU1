@@ -172,7 +172,7 @@ def execute_transfer(
         # 创建 Transfer（从主账户转到 Connect 子账户）
         # 注意：Transfer 使用主账户的可用余额（available balance），不是总余额
         # 如果资金还在 pending 状态，需要等待资金可用后才能转账
-        transfer = stripe.Transfer.create(
+        transfer = stripe_client.Transfer.create(
             amount=transfer_amount_pence,
             currency=transfer_record.currency.lower(),
             destination=taker_stripe_account_id,  # Connect 子账户 ID
@@ -217,7 +217,7 @@ def execute_transfer(
         # 对于余额不足错误，提供更详细的说明
         if error_code == 'balance_insufficient':
             try:
-                balance = stripe.Balance.retrieve()
+                balance = stripe_client.Balance.retrieve()
                 available_balance = balance.available[0].amount if balance.available else 0
                 pending_balance = balance.pending[0].amount if balance.pending else 0
                 logger.error(

@@ -714,6 +714,14 @@ async def startup_event():
     set_main_event_loop(loop)
     logger.info("主事件循环已保存")
     
+    # 初始化 Stripe API 配置（设置超时）
+    try:
+        from app.stripe_config import configure_stripe
+        configure_stripe()
+        logger.info("Stripe API 配置已初始化（带超时设置）")
+    except Exception as e:
+        logger.warning(f"初始化 Stripe API 配置失败: {e}")
+    
     # 初始化 Prometheus 指标
     try:
         from app.metrics import update_health_status
