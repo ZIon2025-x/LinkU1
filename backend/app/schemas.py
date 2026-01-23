@@ -3433,3 +3433,39 @@ class BannerOrderUpdate(BaseModel):
     """Banner 排序更新 Schema"""
     id: int
     order: int
+
+
+# ==================== 审计日志相关 Schemas ====================
+
+class AuditLogOut(BaseModel):
+    """审计日志输出 Schema"""
+    id: int
+    action_type: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    user_id: Optional[str] = None
+    admin_id: Optional[str] = None
+    old_value: Optional[Dict[str, Any]] = None
+    new_value: Optional[Dict[str, Any]] = None
+    reason: Optional[str] = None
+    ip_address: Optional[str] = None
+    device_fingerprint: Optional[str] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AuditLogList(BaseModel):
+    """审计日志列表分页响应"""
+    total: int
+    page: int
+    limit: int
+    data: List[AuditLogOut]
+
+
+class AuditLogDetail(AuditLogOut):
+    """审计日志详情 Schema"""
+    pass

@@ -5,7 +5,7 @@ import logging
 from typing import Optional, List
 from datetime import datetime, timezone as tz
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 
@@ -21,6 +21,26 @@ from app.coupon_points_crud import (
 
 logger = logging.getLogger(__name__)
 
+
+def get_client_ip(request: Request) -> Optional[str]:
+    """获取客户端IP地址"""
+    # 检查X-Forwarded-For头（代理/负载均衡器）
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # 取第一个IP（原始客户端IP）
+        return forwarded_for.split(",")[0].strip()
+    
+    # 检查X-Real-IP头
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+    
+    # 回退到直接客户端IP
+    if request.client:
+        return request.client.host
+    
+    return None
+
 router = APIRouter(prefix="/api/admin", tags=["管理员-优惠券和积分系统"])
 
 
@@ -29,10 +49,28 @@ router = APIRouter(prefix="/api/admin", tags=["管理员-优惠券和积分系�
 @router.post("/coupons", response_model=schemas.CouponAdminOut)
 def create_coupon(
     coupon_data: schemas.CouponCreate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """创建优惠券（管理员）"""
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_coupon_operation", {"limit": 30, "window": 300})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        request,
+        "admin_coupon_operation",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"优惠券操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
+        )
+    
     # 检查优惠券代码是否已存在（不区分大小写）
     existing = get_coupon_by_code(db, coupon_data.code)
     if existing:
@@ -90,6 +128,33 @@ def create_coupon(
     db.commit()
     db.refresh(coupon)
     
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db,
+            action_type="coupon_create",
+            entity_type="coupon",
+            entity_id=str(coupon.id),
+            admin_id=current_admin.id,
+            old_value=None,
+            new_value={
+                "code": coupon.code,
+                "name": coupon.name,
+                "type": coupon.type,
+                "discount_value": coupon.discount_value,
+                "min_amount": coupon.min_amount,
+                "valid_from": str(coupon.valid_from),
+                "valid_until": str(coupon.valid_until),
+                "status": coupon.status
+            },
+            reason=f"管理员创建优惠券: {coupon.name}",
+            ip_address=get_client_ip(request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建优惠券审计日志失败: {e}", exc_info=True)
+    
     # 格式化返回
     discount_value_display = f"{coupon.discount_value / 100:.2f}"
     min_amount_display = f"{coupon.min_amount / 100:.2f}"
@@ -115,16 +180,43 @@ def create_coupon(
 def update_coupon(
     coupon_id: int,
     coupon_data: schemas.CouponUpdate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """更新优惠券（管理员）"""
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_coupon_operation", {"limit": 30, "window": 300})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        request,
+        "admin_coupon_operation",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"优惠券操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
+        )
+    
     coupon = get_coupon_by_id(db, coupon_id)
     if not coupon:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="优惠券不存在"
         )
+    
+    # 记录旧值用于审计日志
+    old_values = {
+        "name": coupon.name,
+        "description": coupon.description,
+        "valid_until": str(coupon.valid_until),
+        "status": coupon.status,
+        "usage_conditions": coupon.usage_conditions
+    }
     
     # 更新字段
     if coupon_data.name is not None:
@@ -145,6 +237,31 @@ def update_coupon(
     
     db.commit()
     db.refresh(coupon)
+    
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        new_values = {
+            "name": coupon.name,
+            "description": coupon.description,
+            "valid_until": str(coupon.valid_until),
+            "status": coupon.status,
+            "usage_conditions": coupon.usage_conditions
+        }
+        create_audit_log(
+            db=db,
+            action_type="coupon_update",
+            entity_type="coupon",
+            entity_id=str(coupon_id),
+            admin_id=current_admin.id,
+            old_value=old_values,
+            new_value=new_values,
+            reason=f"管理员更新优惠券: {coupon.name}",
+            ip_address=get_client_ip(request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建优惠券更新审计日志失败: {e}", exc_info=True)
     
     return {
         "success": True,
@@ -278,16 +395,42 @@ def get_coupon_detail(
 def delete_coupon(
     coupon_id: int,
     force: bool = Query(False, description="是否强制删除（即使有使用记录）"),
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """删除优惠券（管理员）"""
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_coupon_operation", {"limit": 30, "window": 300})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        request,
+        "admin_coupon_operation",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"优惠券操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
+        )
+    
     coupon = get_coupon_by_id(db, coupon_id)
     if not coupon:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="优惠券不存在"
         )
+    
+    # 记录旧值用于审计日志
+    old_values = {
+        "code": coupon.code,
+        "name": coupon.name,
+        "status": coupon.status,
+        "used_count": 0
+    }
     
     # 检查是否有使用记录
     used_count = db.query(func.count(models.UserCoupon.id)).filter(
@@ -296,6 +439,8 @@ def delete_coupon(
             models.UserCoupon.status == "used"
         )
     ).scalar() or 0
+    
+    old_values["used_count"] = used_count
     
     if used_count > 0 and not force:
         raise HTTPException(
@@ -313,6 +458,24 @@ def delete_coupon(
     coupon.status = "inactive"
     db.commit()
     
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db,
+            action_type="coupon_delete",
+            entity_type="coupon",
+            entity_id=str(coupon_id),
+            admin_id=current_admin.id,
+            old_value=old_values,
+            new_value={"status": "inactive", "force_delete": force},
+            reason=f"管理员删除优惠券: {coupon.name} (强制删除: {force})",
+            ip_address=get_client_ip(request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建优惠券删除审计日志失败: {e}", exc_info=True)
+    
     return {
         "success": True,
         "message": "优惠券删除成功"
@@ -324,6 +487,7 @@ def delete_coupon(
 @router.post("/invitation-codes", response_model=schemas.InvitationCodeOut)
 def create_invitation_code(
     invitation_data: schemas.InvitationCodeCreate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -558,6 +722,7 @@ def get_invitation_code_detail(
 def update_invitation_code(
     invitation_id: int,
     invitation_data: schemas.InvitationCodeUpdate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -571,6 +736,18 @@ def update_invitation_code(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="邀请码不存在"
         )
+    
+    # 记录旧值用于审计日志
+    old_values = {
+        "name": invitation_code.name,
+        "description": invitation_code.description,
+        "is_active": invitation_code.is_active,
+        "max_uses": invitation_code.max_uses,
+        "valid_from": str(invitation_code.valid_from),
+        "valid_until": str(invitation_code.valid_until),
+        "points_reward": invitation_code.points_reward,
+        "coupon_id": invitation_code.coupon_id
+    }
     
     # 更新字段
     if invitation_data.name is not None:
@@ -608,6 +785,34 @@ def update_invitation_code(
     db.commit()
     db.refresh(invitation_code)
     
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        new_values = {
+            "name": invitation_code.name,
+            "description": invitation_code.description,
+            "is_active": invitation_code.is_active,
+            "max_uses": invitation_code.max_uses,
+            "valid_from": str(invitation_code.valid_from),
+            "valid_until": str(invitation_code.valid_until),
+            "points_reward": invitation_code.points_reward,
+            "coupon_id": invitation_code.coupon_id
+        }
+        create_audit_log(
+            db=db,
+            action_type="invitation_code_update",
+            entity_type="invitation_code",
+            entity_id=str(invitation_id),
+            admin_id=current_admin.id,
+            old_value=old_values,
+            new_value=new_values,
+            reason=f"管理员更新邀请码: {invitation_code.name}",
+            ip_address=get_client_ip(request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建邀请码更新审计日志失败: {e}", exc_info=True)
+    
     return {
         "success": True,
         "message": "邀请码更新成功",
@@ -623,6 +828,7 @@ def update_invitation_code(
 def delete_invitation_code(
     invitation_id: int,
     force: bool = Query(False, description="是否强制删除（即使有使用记录）"),
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -637,6 +843,14 @@ def delete_invitation_code(
             detail="邀请码不存在"
         )
     
+    # 记录旧值用于审计日志
+    old_values = {
+        "code": invitation_code.code,
+        "name": invitation_code.name,
+        "is_active": invitation_code.is_active,
+        "used_count": 0
+    }
+    
     # 检查是否有使用记录
     used_count = db.query(func.count(models.UserInvitationUsage.id)).filter(
         and_(
@@ -645,11 +859,32 @@ def delete_invitation_code(
         )
     ).scalar() or 0
     
+    old_values["used_count"] = used_count
+    
     if used_count > 0 and not force:
         # 软删除：设置状态为inactive并设置过期时间
         invitation_code.is_active = False
         invitation_code.valid_until = get_utc_time()
         db.commit()
+        
+        # 创建审计日志
+        try:
+            from app.crud import create_audit_log
+            create_audit_log(
+                db=db,
+                action_type="invitation_code_delete",
+                entity_type="invitation_code",
+                entity_id=str(invitation_id),
+                admin_id=current_admin.id,
+                old_value=old_values,
+                new_value={"is_active": False, "valid_until": str(get_utc_time()), "force_delete": False},
+                reason=f"管理员删除邀请码: {invitation_code.name} (软删除)",
+                ip_address=get_client_ip(request),
+                device_fingerprint=None
+            )
+        except Exception as e:
+            logger.error(f"创建邀请码删除审计日志失败: {e}", exc_info=True)
+        
         return {
             "success": True,
             "message": "邀请码已禁用（软删除）",
@@ -665,6 +900,24 @@ def delete_invitation_code(
     # 硬删除：删除邀请码记录
     db.delete(invitation_code)
     db.commit()
+    
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db,
+            action_type="invitation_code_delete",
+            entity_type="invitation_code",
+            entity_id=str(invitation_id),
+            admin_id=current_admin.id,
+            old_value=old_values,
+            new_value={"status": "deleted", "force_delete": force},
+            reason=f"管理员删除邀请码: {invitation_code.name} (强制删除: {force})",
+            ip_address=get_client_ip(request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建邀请码删除审计日志失败: {e}", exc_info=True)
     
     return {
         "success": True,
@@ -1009,10 +1262,36 @@ def get_user_details(
 def adjust_user_points(
     user_id: str,
     adjust_data: schemas.UserPointsAdjustRequest,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """调整用户积分（管理员）"""
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_points_adjust", {"limit": 50, "window": 300})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        request,
+        "admin_points_adjust",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"积分调整操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
+        )
+    
+    # 单次调整金额上限验证（单次最多调整100万积分，即£10,000）
+    MAX_ADJUST_AMOUNT = 100_000_000  # 100万积分
+    if adjust_data.amount > MAX_ADJUST_AMOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"单次积分调整不能超过 {MAX_ADJUST_AMOUNT / 100:.0f} 积分（£{MAX_ADJUST_AMOUNT / 10000:.2f}）"
+        )
+    
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -1083,7 +1362,6 @@ def adjust_user_points(
     # 创建审计日志（记录管理员操作）
     try:
         from app.crud import create_audit_log
-        from app.utils.request_utils import get_client_ip
         create_audit_log(
             db=db,
             action_type="points_adjust",
@@ -1101,13 +1379,11 @@ def adjust_user_points(
                 "total_spent": points_account.total_spent
             },
             reason=adjust_data.reason or f"管理员{adjust_data.action}积分操作",
-            ip_address=None,  # TODO: 从request获取IP
+            ip_address=get_client_ip(request),
             device_fingerprint=None
         )
     except Exception as e:
         # 审计日志失败不影响主流程，但记录错误
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"创建积分调整审计日志失败: {e}", exc_info=True)
     
     db.commit()
@@ -1130,11 +1406,39 @@ def adjust_user_points(
 @router.post("/rewards/points/batch", response_model=schemas.BatchRewardResponse)
 def batch_reward_points(
     request: schemas.BatchRewardRequest,
+    http_request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """批量发放积分（管理员）"""
     import json
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_batch_reward", {"limit": 5, "window": 3600})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        http_request,
+        "admin_batch_reward",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"批量发放操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 3600))}
+        )
+    
+    # 金额上限验证（单次批量发放最多100万积分，即£10,000）
+    MAX_BATCH_POINTS = 100_000_000  # 100万积分（以分为单位）
+    if request.amount > MAX_BATCH_POINTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"单次批量发放积分不能超过 {MAX_BATCH_POINTS / 100:.0f} 积分（£{MAX_BATCH_POINTS / 10000:.2f}）"
+        )
+    
+    # 用户数量上限验证（单次最多发放给10,000个用户）
+    MAX_BATCH_USERS = 10000
     
     # 解析目标用户
     target_user_ids = []
@@ -1180,6 +1484,23 @@ def batch_reward_points(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="没有找到符合条件的用户"
+        )
+    
+    # 用户数量上限验证（单次最多发放给10,000个用户）
+    if len(target_user_ids) > MAX_BATCH_USERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"单次批量发放用户数量不能超过 {MAX_BATCH_USERS} 个，当前：{len(target_user_ids)} 个"
+        )
+    
+    # 总金额上限验证（总发放金额不能超过1000万积分，即£100,000）
+    MAX_TOTAL_POINTS = 1_000_000_000  # 1000万积分
+    total_points = request.amount * len(target_user_ids)
+    if total_points > MAX_TOTAL_POINTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"批量发放总金额不能超过 {MAX_TOTAL_POINTS / 100:.0f} 积分（£{MAX_TOTAL_POINTS / 10000:.2f}），"
+                   f"当前：{total_points / 100:.0f} 积分（£{total_points / 10000:.2f}）"
         )
     
     # 创建发放记录
@@ -1291,6 +1612,33 @@ def batch_reward_points(
         
         db.commit()
         
+        # 创建审计日志
+        try:
+            from app.crud import create_audit_log
+            create_audit_log(
+                db=db,
+                action_type="batch_reward_points",
+                entity_type="admin_reward",
+                entity_id=str(admin_reward.id),
+                admin_id=current_admin.id,
+                old_value=None,
+                new_value={
+                    "reward_type": "points",
+                    "target_type": request.target_type,
+                    "target_value": request.target_value,
+                    "points_value": request.amount,
+                    "total_users": len(target_user_ids),
+                    "success_count": success_count,
+                    "failed_count": failed_count,
+                    "status": admin_reward.status
+                },
+                reason=f"管理员批量发放积分: {request.description or '无说明'}",
+                ip_address=get_client_ip(http_request),
+                device_fingerprint=None
+            )
+        except Exception as e:
+            logger.error(f"创建批量发放积分审计日志失败: {e}", exc_info=True)
+        
         return {
             "reward_id": admin_reward.id,
             "status": "completed" if failed_count == 0 else "processing",
@@ -1304,11 +1652,28 @@ def batch_reward_points(
 @router.post("/rewards/coupons/batch", response_model=schemas.BatchRewardResponse)
 def batch_reward_coupons(
     request: schemas.BatchCouponRequest,
+    http_request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):
     """批量发放优惠券（管理员）"""
     import json
+    from app.rate_limiting import rate_limiter, RATE_LIMITS
+    
+    # 频率限制检查
+    rate_limit_config = RATE_LIMITS.get("admin_batch_reward", {"limit": 5, "window": 3600})
+    rate_limit_info = rate_limiter.check_rate_limit(
+        http_request,
+        "admin_batch_reward",
+        limit=rate_limit_config["limit"],
+        window=rate_limit_config["window"]
+    )
+    if not rate_limit_info.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"批量发放操作过于频繁，请稍后再试。限制：{rate_limit_config['limit']}次/{rate_limit_config['window']}秒",
+            headers={"Retry-After": str(rate_limit_info.get("retry_after", 3600))}
+        )
     
     # 验证优惠券是否存在
     coupon = get_coupon_by_id(db, request.coupon_id)
@@ -1458,6 +1823,33 @@ def batch_reward_coupons(
         admin_reward.completed_at = get_utc_time()
         
         db.commit()
+        
+        # 创建审计日志
+        try:
+            from app.crud import create_audit_log
+            create_audit_log(
+                db=db,
+                action_type="batch_reward_coupons",
+                entity_type="admin_reward",
+                entity_id=str(admin_reward.id),
+                admin_id=current_admin.id,
+                old_value=None,
+                new_value={
+                    "reward_type": "coupon",
+                    "target_type": request.target_type,
+                    "target_value": request.target_value,
+                    "coupon_id": request.coupon_id,
+                    "total_users": len(target_user_ids),
+                    "success_count": success_count,
+                    "failed_count": failed_count,
+                    "status": admin_reward.status
+                },
+                reason=f"管理员批量发放优惠券: {request.description or '无说明'}",
+                ip_address=get_client_ip(http_request),
+                device_fingerprint=None
+            )
+        except Exception as e:
+            logger.error(f"创建批量发放优惠券审计日志失败: {e}", exc_info=True)
         
         return {
             "reward_id": admin_reward.id,
@@ -1951,10 +2343,127 @@ def update_task_points_reward(
     db.commit()
     db.refresh(task)
     
+    # 创建审计日志
+    try:
+        from app.crud import create_audit_log
+        create_audit_log(
+            db=db,
+            action_type="task_points_reward_update",
+            entity_type="task",
+            entity_id=str(task_id),
+            admin_id=current_admin.id,
+            old_value={"points_reward": old_points_reward},
+            new_value={"points_reward": request.points_reward},
+            reason=f"管理员更新任务积分奖励: 任务ID {task_id}",
+            ip_address=get_client_ip(http_request),
+            device_fingerprint=None
+        )
+    except Exception as e:
+        logger.error(f"创建任务积分奖励更新审计日志失败: {e}", exc_info=True)
+    
     return {
         "success": True,
         "message": "任务积分奖励已更新",
         "task_id": task_id,
         "points_reward": task.points_reward
+    }
+
+
+# ==================== 审计日志查询 API ====================
+
+@router.get("/audit-logs", response_model=schemas.AuditLogList)
+def get_audit_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    action_type: Optional[str] = Query(None, description="操作类型筛选"),
+    entity_type: Optional[str] = Query(None, description="实体类型筛选"),
+    admin_id: Optional[str] = Query(None, description="管理员ID筛选"),
+    start_date: Optional[datetime] = Query(None, description="开始日期"),
+    end_date: Optional[datetime] = Query(None, description="结束日期"),
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """获取审计日志列表（管理员）"""
+    from app.models import AuditLog
+    
+    query = db.query(AuditLog)
+    
+    # 筛选条件
+    if action_type:
+        query = query.filter(AuditLog.action_type == action_type)
+    if entity_type:
+        query = query.filter(AuditLog.entity_type == entity_type)
+    if admin_id:
+        query = query.filter(AuditLog.admin_id == admin_id)
+    if start_date:
+        query = query.filter(AuditLog.created_at >= start_date)
+    if end_date:
+        query = query.filter(AuditLog.created_at <= end_date)
+    
+    # 总数
+    total = query.count()
+    
+    # 分页
+    logs = query.order_by(AuditLog.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    
+    # 格式化数据
+    data = []
+    for log in logs:
+        data.append({
+            "id": log.id,
+            "action_type": log.action_type,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "user_id": log.user_id,
+            "admin_id": log.admin_id,
+            "old_value": log.old_value,
+            "new_value": log.new_value,
+            "reason": log.reason,
+            "ip_address": str(log.ip_address) if log.ip_address else None,
+            "device_fingerprint": log.device_fingerprint,
+            "error_code": log.error_code,
+            "error_message": log.error_message,
+            "created_at": log.created_at
+        })
+    
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "data": data
+    }
+
+
+@router.get("/audit-logs/{log_id}", response_model=schemas.AuditLogDetail)
+def get_audit_log_detail(
+    log_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """获取审计日志详情（管理员）"""
+    from app.models import AuditLog
+    
+    log = db.query(AuditLog).filter(AuditLog.id == log_id).first()
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="审计日志不存在"
+        )
+    
+    return {
+        "id": log.id,
+        "action_type": log.action_type,
+        "entity_type": log.entity_type,
+        "entity_id": log.entity_id,
+        "user_id": log.user_id,
+        "admin_id": log.admin_id,
+        "old_value": log.old_value,
+        "new_value": log.new_value,
+        "reason": log.reason,
+        "ip_address": str(log.ip_address) if log.ip_address else None,
+        "device_fingerprint": log.device_fingerprint,
+        "error_code": log.error_code,
+        "error_message": log.error_message,
+        "created_at": log.created_at
     }
 

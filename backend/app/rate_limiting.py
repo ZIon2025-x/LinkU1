@@ -224,6 +224,9 @@ RATE_LIMITS = {
     "admin_operation": {"limit": 100, "window": 60},  # 100次/分钟
     "admin_sensitive_operation": {"limit": 20, "window": 60},  # 敏感操作 20次/分钟
     "admin_verification_code": {"limit": 3, "window": 300},  # 验证码 3次/5分钟
+    "admin_batch_reward": {"limit": 5, "window": 3600},  # 批量发放 5次/小时
+    "admin_points_adjust": {"limit": 50, "window": 300},  # 积分调整 50次/5分钟
+    "admin_coupon_operation": {"limit": 30, "window": 300},  # 优惠券操作 30次/5分钟
 }
 
 def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int] = None):
