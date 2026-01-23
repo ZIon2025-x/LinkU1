@@ -155,7 +155,9 @@ class Config:
         "X-Total-Count",
         "X-Page-Count",
         "X-Page-Size",
-        "X-Current-Page"
+        "X-Current-Page",
+        "X-Requires-2FA",  # 2FA 验证需要
+        "X-Requires-Verification"  # 邮箱验证需要
     ]
 
     # 邮箱配置

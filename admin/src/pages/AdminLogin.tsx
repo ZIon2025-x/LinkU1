@@ -38,6 +38,7 @@ const AdminLogin: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [is2FAMode, setIs2FAMode] = useState(false); // 标记是否为 2FA 验证模式
 
   const handleLogin = async (values: AdminLoginData) => {
     setLoading(true);
@@ -50,11 +51,15 @@ const AdminLogin: React.FC = () => {
       
       // 检查是否需要 2FA 验证码
       if (response.status === 202) {
-        const requires2FA = response.headers['x-requires-2fa'] === 'true';
-        const requiresVerification = response.headers['x-requires-verification'] === 'true';
+        // 优先从响应头读取，如果无法读取则从响应体判断
+        const requires2FA = response.headers['x-requires-2fa'] === 'true' || 
+                           (response.data?.detail && response.data.detail.includes('2FA'));
+        const requiresVerification = response.headers['x-requires-verification'] === 'true' ||
+                                    (response.data?.detail && response.data.detail.includes('验证码'));
         
         if (requires2FA) {
           // 需要 2FA 验证码
+          setIs2FAMode(true);
           setStep('verification');
           setSuccess('请输入 Authenticator 应用中的 6 位验证码');
           message.info('请输入 2FA 验证码');
@@ -70,6 +75,12 @@ const AdminLogin: React.FC = () => {
           setStep('verification');
           setSuccess('验证码已发送到管理员邮箱，请检查邮箱并输入验证码');
           message.success('验证码已发送到管理员邮箱');
+        } else {
+          // 如果无法判断，默认显示 2FA 输入（因为 202 通常表示需要额外验证）
+          setIs2FAMode(true);
+          setStep('verification');
+          setSuccess('请输入 Authenticator 应用中的 6 位验证码');
+          message.info('请输入 2FA 验证码');
         }
       } else {
         // 正常登录成功（未启用 2FA 和邮箱验证）
@@ -86,6 +97,7 @@ const AdminLogin: React.FC = () => {
     } catch (error: any) {
       // 检查是否是 2FA 验证失败
       if (error?.response?.status === 202 && error?.response?.headers['x-requires-2fa'] === 'true') {
+        setIs2FAMode(true);
         setStep('verification');
         setSuccess('请输入 Authenticator 应用中的 6 位验证码');
         message.info('请输入 2FA 验证码');
@@ -109,22 +121,42 @@ const AdminLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/auth/admin/verify-code', {
-        ...verificationData,
-        code: values.code
-      });
-      
-      // 验证成功后获取CSRF token
-      try {
-        await api.get('/api/csrf/token');
-      } catch (error) {
-        console.error('获取CSRF token失败:', error);
+      // 判断是 2FA 验证还是邮箱验证码验证
+      if (is2FAMode) {
+        // 2FA 验证：重新调用登录接口，带上 totp_code
+        const response = await api.post('/api/auth/admin/login', {
+          ...loginData,
+          totp_code: values.code
+        });
+        
+        // 登录成功后获取CSRF token
+        try {
+          await api.get('/api/csrf/token');
+        } catch (error) {
+          console.error('获取CSRF token失败:', error);
+        }
+        
+        message.success('登录成功');
+        navigate('/');
+      } else {
+        // 邮箱验证码验证
+        const response = await api.post('/api/auth/admin/verify-code', {
+          ...verificationData,
+          code: values.code
+        });
+        
+        // 验证成功后获取CSRF token
+        try {
+          await api.get('/api/csrf/token');
+        } catch (error) {
+          console.error('获取CSRF token失败:', error);
+        }
+        
+        message.success('验证成功，正在跳转...');
+        navigate('/');
       }
-      
-      message.success('验证成功，正在跳转...');
-      navigate('/');
     } catch (error: any) {
-      let errorMsg = '验证码验证失败';
+      let errorMsg = '验证失败';
       if (error?.response?.data?.detail) {
         errorMsg = error.response.data.detail;
       } else if (error?.message) {
@@ -164,6 +196,7 @@ const AdminLogin: React.FC = () => {
     setError('');
     setSuccess('');
     setCodeValue(''); // 清空验证码输入
+    setIs2FAMode(false);
     setVerificationData({ admin_id: '', code: '' });
     verificationForm.resetFields();
   };
@@ -202,12 +235,14 @@ const AdminLogin: React.FC = () => {
               <SafetyOutlined style={{ fontSize: 32, color: '#fff' }} />
             </div>
             <Title level={3} style={{ margin: 0 }}>
-              {step === 'login' ? 'LinkU 管理后台' : '邮箱验证码验证'}
+              {step === 'login' ? 'LinkU 管理后台' : (is2FAMode ? '2FA 验证' : '邮箱验证码验证')}
             </Title>
             <Text type="secondary">
               {step === 'login' 
                 ? '请使用管理员账号登录' 
-                : '请输入发送到管理员邮箱的6位验证码'
+                : (is2FAMode 
+                  ? '请输入 Authenticator 应用中的 6 位验证码' 
+                  : '请输入发送到管理员邮箱的6位验证码')
               }
             </Text>
           </div>
@@ -338,24 +373,27 @@ const AdminLogin: React.FC = () => {
               </Form.Item>
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <Button
-                  onClick={handleResendCode}
-                  disabled={loading}
-                  block
-                  style={{
-                    height: 40,
-                    borderColor: '#d9d9d9'
-                  }}
-                >
-                  重新发送
-                </Button>
+                {!is2FAMode && (
+                  <Button
+                    onClick={handleResendCode}
+                    disabled={loading}
+                    block
+                    style={{
+                      height: 40,
+                      borderColor: '#d9d9d9'
+                    }}
+                  >
+                    重新发送
+                  </Button>
+                )}
                 <Button
                   onClick={handleBackToLogin}
                   disabled={loading}
                   block
                   style={{
                     height: 40,
-                    borderColor: '#d9d9d9'
+                    borderColor: '#d9d9d9',
+                    flex: is2FAMode ? 1 : undefined
                   }}
                 >
                   返回登录
