@@ -74,6 +74,7 @@ enum TaskTab: String, CaseIterable {
     case all
     case posted
     case taken
+    case inProgress
     case pending
     case completed
     case cancelled
@@ -83,6 +84,7 @@ enum TaskTab: String, CaseIterable {
         case .all: return LocalizationKey.myTasksTabAll.localized
         case .posted: return LocalizationKey.myTasksTabPosted.localized
         case .taken: return LocalizationKey.myTasksTabTaken.localized
+        case .inProgress: return LocalizationKey.profileInProgress.localized
         case .pending: return LocalizationKey.myTasksTabPending.localized
         case .completed: return LocalizationKey.myTasksTabCompleted.localized
         case .cancelled: return LocalizationKey.myTasksTabCancelled.localized
@@ -94,6 +96,7 @@ enum TaskTab: String, CaseIterable {
         case .all: return "📋"
         case .posted: return "📤"
         case .taken: return "📥"
+        case .inProgress: return "🔄"
         case .pending: return "⏳"
         case .completed: return "✅"
         case .cancelled: return "❌"
@@ -328,6 +331,8 @@ class MyTasksViewModel: ObservableObject {
                 }
                 return false
             }
+        case .inProgress:
+            filtered = tasks.filter { $0.status == .inProgress }
         case .pending:
             filtered = [] // 待处理申请显示在单独的列表中
         case .completed:
@@ -378,6 +383,8 @@ class MyTasksViewModel: ObservableObject {
         // 如果当前标签页是"已完成"，明确请求已完成的任务
         if currentTab == .completed {
             endpoint += "&status=completed"
+        } else if currentTab == .inProgress {
+            endpoint += "&status=in_progress"
         } else if let statusValue = statusFilter.apiValue {
             endpoint += "&status=\(statusValue)"
         }
@@ -460,7 +467,33 @@ class MyTasksViewModel: ObservableObject {
                     }
                 }
                 
-                self.tasks = filteredTasks
+                // 合并数据而不是覆盖，保留其他状态的任务
+                // 这样可以避免在特定标签页刷新时丢失其他状态的任务
+                // 策略：只更新/添加API返回的任务，不主动移除现有任务
+                // 这样可以避免API返回不完整数据时丢失任务
+                var mergedTasks = self.tasks
+                var newTaskIds = Set(filteredTasks.map { $0.id })
+                
+                // 更新或添加新加载的任务
+                for newTask in filteredTasks {
+                    if let existingIndex = mergedTasks.firstIndex(where: { $0.id == newTask.id }) {
+                        // 如果任务已存在，更新它（新数据可能更完整）
+                        mergedTasks[existingIndex] = newTask
+                    } else {
+                        // 如果任务不存在，添加它
+                        mergedTasks.append(newTask)
+                    }
+                }
+                
+                // 注意：我们不主动移除现有任务，因为：
+                // 1. API可能只返回部分数据（分页、筛选等）
+                // 2. 移除任务可能导致数据丢失
+                // 3. 如果任务状态真的改变了，会在下次"全部"标签页刷新时更新
+                
+                // 按创建时间倒序排序
+                mergedTasks.sort { $0.createdAt > $1.createdAt }
+                
+                self.tasks = mergedTasks
                 self.lastUpdateTime = Date()
                 
                 // 清除缓存，触发重新计算

@@ -94,7 +94,7 @@ def add_points_transaction(
     if type == "earn" or type == "refund":
         if amount <= 0:
             raise ValueError(f"类型 {type} 的 amount 必须为正数，当前值：{amount}")
-    elif type == "spend" or type == "expire":
+    elif type == "spend" or type == "expire" or type == "coupon_redeem":
         if amount >= 0:
             raise ValueError(f"类型 {type} 的 amount 必须为负数，当前值：{amount}")
         # 对于消费类型，检查余额是否足够
@@ -135,7 +135,7 @@ def add_points_transaction(
     account.balance = new_balance
     if type == "earn" or type == "refund":
         account.total_earned += abs(amount)
-    elif type == "spend" or type == "expire":
+    elif type == "spend" or type == "expire" or type == "coupon_redeem":
         account.total_spent += abs(amount)
     
     try:

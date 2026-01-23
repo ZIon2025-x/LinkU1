@@ -896,6 +896,7 @@
 "my_tasks.empty.all" = "您還沒有發布或接受任何任務";
 "my_tasks.empty.posted" = "您還沒有發布任何任務";
 "my_tasks.empty.taken" = "您還沒有接受任何任務";
+"my_tasks.empty.in_progress" = "您還沒有進行中的任務";
 "my_tasks.empty.pending" = "您還沒有待處理的申請記錄";
 "my_tasks.empty.completed" = "您還沒有已完成的任務";
 "my_tasks.empty.cancelled" = "您還沒有已取消的任務";

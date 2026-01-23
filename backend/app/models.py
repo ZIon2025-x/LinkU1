@@ -2733,7 +2733,7 @@ class PaymentHistory(Base):
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 支付者ID
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID
-    payment_method = Column(String(20), nullable=False)  # stripe, points, mixed
+    payment_method = Column(String(20), nullable=False)  # stripe（积分不能作为支付手段）
     total_amount = Column(BigInteger, nullable=False)  # 总金额（便士）
     points_used = Column(BigInteger, default=0)  # 使用的积分（便士）
     coupon_discount = Column(BigInteger, default=0)  # 优惠券折扣（便士）

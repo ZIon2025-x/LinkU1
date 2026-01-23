@@ -1186,6 +1186,7 @@ public enum LocalizationKey: String {
     case myTasksEmptyAll = "my_tasks.empty.all"
     case myTasksEmptyPosted = "my_tasks.empty.posted"
     case myTasksEmptyTaken = "my_tasks.empty.taken"
+    case myTasksEmptyInProgress = "my_tasks.empty.in_progress"
     case myTasksEmptyPending = "my_tasks.empty.pending"
     case myTasksEmptyCompleted = "my_tasks.empty.completed"
     case myTasksEmptyCancelled = "my_tasks.empty.cancelled"

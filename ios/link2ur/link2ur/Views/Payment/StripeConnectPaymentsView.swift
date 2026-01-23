@@ -565,16 +565,10 @@ struct TaskPaymentRowView: View {
                         .background(statusColor.opacity(0.1))
                         .cornerRadius(4)
                     
-                    // 支付方式
-                    if let pointsUsed = payment.pointsUsed, pointsUsed > 0 {
-                        Text(LocalizationKey.pointsPointsAndPayment.localized)
-                            .font(AppTypography.caption2)
-                            .foregroundColor(AppColors.textTertiary)
-                    } else {
-                        Text(paymentMethodText)
-                            .font(AppTypography.caption2)
-                            .foregroundColor(AppColors.textTertiary)
-                    }
+                    // 支付方式（不再显示积分支付）
+                    Text(paymentMethodText)
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textTertiary)
                     
                     // 时间
                     if let createdAt = payment.createdAt {

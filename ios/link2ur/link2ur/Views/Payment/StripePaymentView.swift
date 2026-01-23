@@ -274,51 +274,57 @@ struct StripePaymentView: View {
             // 优惠券选择卡片
             couponSelectionCard
             
-            // 支付信息卡片
+            // 支付信息卡片（显示详细计算过程）
             VStack(spacing: 16) {
-                // 总金额
-                PaymentInfoRow(
-                    label: LocalizationKey.paymentTotalAmount.localized,
-                    value: paymentResponse.totalAmountDisplay,
-                    currency: paymentResponse.currency,
-                    isHighlighted: false
-                )
-                
-                // 积分抵扣（如果有）
-                if let pointsUsed = paymentResponse.pointsUsedDisplay, !pointsUsed.isEmpty {
+                // 如果有计算步骤，使用计算步骤显示
+                if let calculationSteps = paymentResponse.calculationSteps, !calculationSteps.isEmpty {
+                    ForEach(Array(calculationSteps.enumerated()), id: \.offset) { index, step in
+                        if index > 0 {
+                            Divider()
+                        }
+                        PaymentInfoRow(
+                            label: step.label,
+                            value: step.amountDisplay,
+                            currency: paymentResponse.currency,
+                            isHighlighted: step.type == "discount" || step.type == "final",
+                            icon: step.type == "discount" ? "tag.fill" : nil,
+                            iconColor: step.type == "discount" ? .green : nil,
+                            isFinal: step.type == "final"
+                        )
+                    }
+                } else {
+                    // 兼容旧格式：如果没有计算步骤，使用原有显示方式
+                    // 原始金额
+                    PaymentInfoRow(
+                        label: LocalizationKey.paymentTotalAmount.localized,
+                        value: paymentResponse.originalAmountDisplay,
+                        currency: paymentResponse.currency,
+                        isHighlighted: false
+                    )
+                    
+                    // 优惠券折扣（如果有）
+                    if let couponDiscount = paymentResponse.couponDiscountDisplay, !couponDiscount.isEmpty {
+                        Divider()
+                        PaymentInfoRow(
+                            label: LocalizationKey.paymentCouponDiscount.localized + (paymentResponse.couponName != nil ? "（\(paymentResponse.couponName!)）" : ""),
+                            value: "-\(couponDiscount)",
+                            currency: paymentResponse.currency,
+                            isHighlighted: true,
+                            icon: "tag.fill",
+                            iconColor: .green
+                        )
+                    }
+                    
+                    // 最终支付金额
                     Divider()
                     PaymentInfoRow(
-                        label: LocalizationKey.pointsPointsDeduction.localized,
-                        value: "-\(pointsUsed)",
+                        label: LocalizationKey.paymentFinalPayment.localized,
+                        value: paymentResponse.finalAmountDisplay,
                         currency: paymentResponse.currency,
                         isHighlighted: true,
-                        icon: "star.fill",
-                        iconColor: .orange
+                        isFinal: true
                     )
                 }
-                
-                // 优惠券折扣（如果有）
-                if let couponDiscount = paymentResponse.couponDiscountDisplay, !couponDiscount.isEmpty {
-                    Divider()
-                    PaymentInfoRow(
-                        label: LocalizationKey.paymentCouponDiscount.localized,
-                        value: "-\(couponDiscount)",
-                        currency: paymentResponse.currency,
-                        isHighlighted: true,
-                        icon: "tag.fill",
-                        iconColor: .green
-                    )
-                }
-                
-                // 最终支付金额
-                Divider()
-                PaymentInfoRow(
-                    label: LocalizationKey.paymentFinalPayment.localized,
-                    value: paymentResponse.finalAmountDisplay,
-                    currency: paymentResponse.currency,
-                    isHighlighted: true,
-                    isFinal: true
-                )
             }
             .padding()
             .background(AppColors.cardBackground)

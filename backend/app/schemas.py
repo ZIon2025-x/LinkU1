@@ -1560,46 +1560,39 @@ class BatchRewardList(BaseModel):
 # ==================== 任务支付相关 Schemas ====================
 
 class TaskPaymentRequest(BaseModel):
-    payment_method: str  # points, stripe, mixed
-    points_amount: Optional[int] = Field(None, ge=0, description="积分数量（整数，最小货币单位，必须>=0）")  # 积分数量（整数，最小货币单位）
+    payment_method: str = "stripe"  # 只支持 stripe 支付
     coupon_code: Optional[str] = None  # 优惠券代码
     user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
-    stripe_amount: Optional[int] = Field(None, ge=0, description="Stripe支付金额（整数，最小货币单位，必须>=0）")  # Stripe支付金额（整数，最小货币单位）
     
     @validator('payment_method')
     def validate_payment_method(cls, v):
-        allowed_methods = ["points", "stripe", "mixed"]
-        if v not in allowed_methods:
-            raise ValueError(f"payment_method 必须是以下之一：{', '.join(allowed_methods)}")
-        return v
-    
-    @validator('points_amount')
-    def validate_points_amount(cls, v):
-        if v is not None and v <= 0:
-            raise ValueError("points_amount 必须大于0")
+        if v != "stripe":
+            raise ValueError("payment_method 必须是 'stripe'（积分不能作为支付手段，只能用于兑换优惠券）")
         return v
 
 
 class TaskPaymentResponse(BaseModel):
     payment_id: Optional[int] = None
     fee_type: str  # application_fee
-    total_amount: int  # 平台服务费总额（整数，最小货币单位）
-    total_amount_display: str
-    points_used: Optional[int] = None
-    points_used_display: Optional[str] = None
-    coupon_discount: Optional[int] = None
+    # 支付计算过程详情
+    original_amount: int  # 原始任务金额（便士）
+    original_amount_display: str
+    coupon_discount: Optional[int] = None  # 优惠券折扣金额（便士）
     coupon_discount_display: Optional[str] = None
-    stripe_amount: Optional[int] = None
-    stripe_amount_display: Optional[str] = None
-    currency: str
-    final_amount: int  # 最终需要支付的金额（整数，最小货币单位）
+    coupon_name: Optional[str] = None  # 优惠券名称
+    coupon_type: Optional[str] = None  # 优惠券类型：fixed_amount, percentage
+    coupon_description: Optional[str] = None  # 优惠券描述
+    final_amount: int  # 最终需要支付的金额（便士）
     final_amount_display: str
-    checkout_url: Optional[str] = None  # 保留兼容性，Payment Intent 不使用
+    currency: str
+    # Stripe 支付相关
     client_secret: Optional[str] = None  # Payment Intent 的 client_secret，前端需要
     payment_intent_id: Optional[str] = None  # Payment Intent ID
     customer_id: Optional[str] = None  # Stripe Customer ID，用于保存支付方式
     ephemeral_key_secret: Optional[str] = None  # Ephemeral Key Secret，用于访问 Customer 的支付方式
     note: str
+    # 计算过程说明（用于前端显示）
+    calculation_steps: Optional[List[Dict[str, Any]]] = None  # 计算步骤详情
 
 
 # ==================== Stripe Connect Schema ====================

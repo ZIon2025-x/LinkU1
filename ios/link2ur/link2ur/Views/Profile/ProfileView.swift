@@ -119,9 +119,15 @@ struct ProfileView: View {
     
     private var statsSection: some View {
         HStack(spacing: 0) {
-            StatItem(label: LocalizationKey.profileInProgress.localized, value: "\(tasksViewModel.inProgressTasksCount)", color: AppColors.primary)
+            NavigationLink(destination: MyTasksView(initialTab: .inProgress)) {
+                StatItem(label: LocalizationKey.profileInProgress.localized, value: "\(tasksViewModel.inProgressTasksCount)", color: AppColors.primary)
+            }
+            .buttonStyle(PlainButtonStyle())
             Divider().frame(height: 30)
-            StatItem(label: LocalizationKey.profileCompleted.localized, value: "\(tasksViewModel.completedTasksCount)", color: AppColors.success)
+            NavigationLink(destination: MyTasksView(initialTab: .completed)) {
+                StatItem(label: LocalizationKey.profileCompleted.localized, value: "\(tasksViewModel.completedTasksCount)", color: AppColors.success)
+            }
+            .buttonStyle(PlainButtonStyle())
             Divider().frame(height: 30)
             StatItem(
                 label: LocalizationKey.profileCreditScore.localized,

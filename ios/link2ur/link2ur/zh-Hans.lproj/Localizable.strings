@@ -1362,6 +1362,7 @@
 "my_tasks.empty.all" = "您还没有发布或接受任何任务";
 "my_tasks.empty.posted" = "您还没有发布任何任务";
 "my_tasks.empty.taken" = "您还没有接受任何任务";
+"my_tasks.empty.in_progress" = "您还没有进行中的任务";
 "my_tasks.empty.pending" = "您还没有待处理的申请记录";
 "my_tasks.empty.completed" = "您还没有已完成的任务";
 "my_tasks.empty.cancelled" = "您还没有已取消的任务";

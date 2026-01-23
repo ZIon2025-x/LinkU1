@@ -4,6 +4,7 @@ struct MyTasksView: View {
     @StateObject private var viewModel = MyTasksViewModel()
     @State private var selectedTab: TaskTab = .all
     @EnvironmentObject var appState: AppState
+    var initialTab: TaskTab? = nil
     
     var body: some View {
         ZStack {
@@ -30,6 +31,12 @@ struct MyTasksView: View {
             // 设置当前用户ID
             if let userId = appState.currentUser?.id {
                 viewModel.currentUserId = userId
+            }
+            
+            // 如果指定了初始标签页，设置它
+            if let initialTab = initialTab {
+                selectedTab = initialTab
+                viewModel.currentTab = initialTab
             }
             
             // 先尝试从缓存加载（立即显示）
@@ -71,6 +78,10 @@ struct MyTasksView: View {
                         // 切换标签页时，如果是"已完成"标签页，立即加载已完成的任务
                         if tab == .completed && previousTab != .completed {
                             viewModel.loadCompletedTasks()
+                        }
+                        // 切换标签页时，如果是"进行中"标签页，刷新任务列表
+                        if tab == .inProgress && previousTab != .inProgress {
+                            viewModel.loadTasks(forceRefresh: false)
                         }
                     }
                 }
@@ -215,6 +226,8 @@ struct MyTasksView: View {
             return viewModel.postedTasksCount
         case .taken:
             return viewModel.takenTasksCount
+        case .inProgress:
+            return viewModel.inProgressTasksCount
         case .pending:
             return viewModel.pendingApplicationsCount
         case .completed:
@@ -232,6 +245,8 @@ struct MyTasksView: View {
             return LocalizationKey.myTasksEmptyPosted.localized
         case .taken:
             return LocalizationKey.myTasksEmptyTaken.localized
+        case .inProgress:
+            return LocalizationKey.myTasksEmptyInProgress.localized
         case .pending:
             return LocalizationKey.myTasksEmptyPending.localized
         case .completed:

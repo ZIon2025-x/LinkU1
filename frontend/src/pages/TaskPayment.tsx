@@ -52,8 +52,7 @@ const TaskPayment: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'points' | 'mixed'>('stripe');
-  const [pointsAmount, setPointsAmount] = useState<number>(0);
+  const [paymentMethod] = useState<'stripe'>('stripe'); // 只支持 Stripe 支付
   const [couponCode, setCouponCode] = useState<string>('');
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -184,12 +183,8 @@ const TaskPayment: React.FC = () => {
     setLoading(true);
     try {
       const requestData: any = {
-        payment_method: paymentMethod,
+        payment_method: 'stripe', // 只支持 Stripe 支付
       };
-
-      if (paymentMethod === 'points' || paymentMethod === 'mixed') {
-        requestData.points_amount = pointsAmount * 100; // 转换为便士
-      }
 
       if (couponCode) {
         requestData.coupon_code = couponCode.toUpperCase();
@@ -202,7 +197,7 @@ const TaskPayment: React.FC = () => {
 
       setPaymentData(response.data);
 
-      // 如果纯积分支付，直接成功
+      // 如果使用优惠券全额抵扣，直接成功
       if (response.data.final_amount === 0) {
         message.success(language === 'zh' ? '支付成功！' : 'Payment successful!');
         
@@ -499,42 +494,6 @@ const TaskPayment: React.FC = () => {
                 {language === 'zh' ? '选择支付方式' : 'Select Payment Method'}
               </h2>
 
-              {/* 支付方式选择 */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
-                  {language === 'zh' ? '支付方式' : 'Payment Method'}
-                </label>
-                <Select
-                  value={paymentMethod}
-                  onChange={(value) => setPaymentMethod(value)}
-                  style={{ width: '100%' }}
-                  size="large"
-                >
-                  <Option value="stripe">Stripe（信用卡/借记卡/Apple Pay）</Option>
-                  <Option value="points">{language === 'zh' ? '积分支付' : 'Points Payment'}</Option>
-                  <Option value="mixed">{language === 'zh' ? '混合支付（积分 + Stripe）' : 'Mixed Payment (Points + Stripe)'}</Option>
-                </Select>
-              </div>
-
-              {/* 积分输入（如果使用积分或混合支付） */}
-              {(paymentMethod === 'points' || paymentMethod === 'mixed') && (
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
-                    {language === 'zh' ? `使用积分（当前余额: £${(pointsBalance / 100).toFixed(2)}）` : `Use Points (Balance: £${(pointsBalance / 100).toFixed(2)})`}
-                  </label>
-                  <Input
-                    type="number"
-                    value={pointsAmount}
-                    onChange={(e) => setPointsAmount(parseFloat(e.target.value) || 0)}
-                    placeholder={language === 'zh' ? '输入积分数量' : 'Enter points amount'}
-                    addonAfter="GBP"
-                    min={0}
-                    max={pointsBalance / 100}
-                    size="large"
-                  />
-                </div>
-              )}
-
               {/* 优惠券输入 */}
               <div style={{ marginBottom: '32px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
@@ -588,12 +547,6 @@ const TaskPayment: React.FC = () => {
                     £{paymentData.total_amount_display}
                   </span>
                 </div>
-                {paymentData.points_used_display && (
-                  <div style={{ marginBottom: '12px', color: '#52c41a', fontSize: '16px' }}>
-                    <strong>{language === 'zh' ? '积分抵扣:' : 'Points Used:'}</strong> 
-                    <span style={{ marginLeft: '8px' }}>£{paymentData.points_used_display}</span>
-                  </div>
-                )}
                 {paymentData.coupon_discount_display && (
                   <div style={{ marginBottom: '12px', color: '#52c41a', fontSize: '16px' }}>
                     <strong>{language === 'zh' ? '优惠券折扣:' : 'Coupon Discount:'}</strong> 

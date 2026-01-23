@@ -381,7 +381,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         }
     }
     
-    func createPaymentIntent(paymentMethod: String = "stripe", pointsAmount: Double? = nil, couponCode: String? = nil) {
+    func createPaymentIntent(couponCode: String? = nil, userCouponId: Int? = nil) {
         // 防止重复请求
         guard !isCreatingPaymentIntent else {
             Logger.debug("支付意图创建中，跳过重复请求", category: .network)
@@ -393,17 +393,15 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         errorMessage = nil
         
         var requestBody: [String: Any] = [
-            "payment_method": paymentMethod
+            "payment_method": "stripe"  // 只支持 Stripe 支付
         ]
-        
-        if let pointsAmount = pointsAmount {
-            requestBody["points_amount"] = Int(pointsAmount * 100) // 转换为便士
-        }
         
         // 优先使用传入的 couponCode，否则使用已选择的优惠券
         let finalCouponCode = couponCode ?? selectedCoupon?.coupon.code
         if let finalCouponCode = finalCouponCode {
             requestBody["coupon_code"] = finalCouponCode.uppercased()
+        } else if let userCouponId = userCouponId ?? selectedCoupon?.id {
+            requestBody["user_coupon_id"] = userCouponId
         }
         
         // 调用 API - 使用 Combine Publisher
@@ -435,9 +433,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         Logger.debug("处理支付响应: finalAmount=\(response.finalAmount), hasClientSecret=\(response.clientSecret != nil)", category: .api)
         
-        // 如果纯积分支付，直接成功
+        // 如果使用优惠券全额抵扣，直接成功（无需支付）
         if response.finalAmount == 0 {
-            Logger.info("纯积分支付，无需支付", category: .api)
+            Logger.info("优惠券全额抵扣，无需支付", category: .api)
             paymentSuccess = true
             return
         }
@@ -694,37 +692,63 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
 }
 
 // MARK: - Payment Response Model
+// 计算步骤模型
+struct CalculationStep: Codable {
+    let label: String
+    let amount: Int
+    let amountDisplay: String
+    let type: String  // original, discount, final
+}
+
 struct PaymentResponse: Codable {
     let paymentId: Int?
     let feeType: String
-    let totalAmount: Int
-    let totalAmountDisplay: String
-    let pointsUsed: Int?
-    let pointsUsedDisplay: String?
+    // 新的支付计算详情
+    let originalAmount: Int
+    let originalAmountDisplay: String
     let couponDiscount: Int?
     let couponDiscountDisplay: String?
-    let stripeAmount: Int?
-    let stripeAmountDisplay: String?
+    let couponName: String?
+    let couponType: String?
+    let couponDescription: String?
     let currency: String
     let finalAmount: Int
     let finalAmountDisplay: String
-    let checkoutUrl: String?
     let clientSecret: String?
     let paymentIntentId: String?
     let customerId: String?
     let ephemeralKeySecret: String?
+    let calculationSteps: [CalculationStep]?
     let note: String
+    
+    // 兼容旧字段（用于向后兼容）
+    var totalAmount: Int { originalAmount }
+    var totalAmountDisplay: String { originalAmountDisplay }
+    var pointsUsed: Int? { nil }  // 不再使用积分支付
+    var pointsUsedDisplay: String? { nil }
+    var stripeAmount: Int? { finalAmount }
+    var stripeAmountDisplay: String? { finalAmountDisplay }
+    var checkoutUrl: String? { nil }
     
     enum CodingKeys: String, CodingKey {
         case paymentId = "payment_id"
         case feeType = "fee_type"
-        case totalAmount = "total_amount"
-        case totalAmountDisplay = "total_amount_display"
-        case pointsUsed = "points_used"
-        case pointsUsedDisplay = "points_used_display"
+        case originalAmount = "original_amount"
+        case originalAmountDisplay = "original_amount_display"
         case couponDiscount = "coupon_discount"
         case couponDiscountDisplay = "coupon_discount_display"
-        case stripeAmount = "stripe_amount"
+        case couponName = "coupon_name"
+        case couponType = "coupon_type"
+        case couponDescription = "coupon_description"
+        case currency
+        case finalAmount = "final_amount"
+        case finalAmountDisplay = "final_amount_display"
+        case clientSecret = "client_secret"
+        case paymentIntentId = "payment_intent_id"
+        case customerId = "customer_id"
+        case ephemeralKeySecret = "ephemeral_key_secret"
+        case calculationSteps = "calculation_steps"
+        case note
         case stripeAmountDisplay = "stripe_amount_display"
         case currency
         case finalAmount = "final_amount"

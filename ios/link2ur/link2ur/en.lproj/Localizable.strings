@@ -1192,6 +1192,7 @@
 "my_tasks.empty.all" = "You haven't posted or accepted any tasks yet";
 "my_tasks.empty.posted" = "You haven't posted any tasks yet";
 "my_tasks.empty.taken" = "You haven't accepted any tasks yet";
+"my_tasks.empty.in_progress" = "You have no in-progress tasks yet";
 "my_tasks.empty.pending" = "You have no pending application records yet";
 "my_tasks.empty.completed" = "You have no completed tasks yet";
 "my_tasks.empty.cancelled" = "You have no cancelled tasks yet";

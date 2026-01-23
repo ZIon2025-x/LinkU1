@@ -36,7 +36,7 @@ COMMENT ON COLUMN payment_history.id IS '支付记录ID';
 COMMENT ON COLUMN payment_history.task_id IS '关联的任务ID';
 COMMENT ON COLUMN payment_history.user_id IS '支付者用户ID';
 COMMENT ON COLUMN payment_history.payment_intent_id IS 'Stripe Payment Intent ID';
-COMMENT ON COLUMN payment_history.payment_method IS '支付方式：stripe, points, mixed';
+COMMENT ON COLUMN payment_history.payment_method IS '支付方式：stripe（积分不能作为支付手段）';
 COMMENT ON COLUMN payment_history.total_amount IS '总金额（便士）';
 COMMENT ON COLUMN payment_history.points_used IS '使用的积分（便士）';
 COMMENT ON COLUMN payment_history.coupon_discount IS '优惠券折扣（便士）';

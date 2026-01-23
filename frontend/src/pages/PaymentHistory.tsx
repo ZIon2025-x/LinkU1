@@ -110,8 +110,9 @@ const PaymentHistory: React.FC = () => {
   const getPaymentMethodText = (method: string) => {
     const methodMap: Record<string, string> = {
       stripe: 'Stripe 支付',
-      points: '积分支付',
-      mixed: '混合支付',
+      // 积分不能作为支付手段，只保留向后兼容
+      points: 'Stripe 支付',
+      mixed: 'Stripe 支付',
     };
     return methodMap[method] || method;
   };
@@ -149,14 +150,7 @@ const PaymentHistory: React.FC = () => {
         <span>£{amount}</span>
       ),
     },
-    {
-      title: '积分抵扣',
-      dataIndex: 'points_used_display',
-      key: 'points_used',
-      render: (amount: string | null) => (
-        amount ? <span style={{ color: '#52c41a' }}>£{amount}</span> : <span>-</span>
-      ),
-    },
+    // 积分不能作为支付手段，移除积分抵扣列
     {
       title: '优惠券',
       dataIndex: 'coupon_discount_display',

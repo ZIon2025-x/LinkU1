@@ -5542,13 +5542,51 @@ def confirm_task_complete(
         
         logger.info(f"✅ Transfer 创建成功: transfer_id={transfer.id}, amount=£{task.escrow_amount:.2f}")
         
+        # 创建 PaymentTransfer 记录（用于累计获得统计）
+        from app.payment_transfer_service import create_transfer_record
+        from decimal import Decimal
+        try:
+            # 检查是否已存在转账记录（防止重复创建）
+            existing_transfer = db.query(models.PaymentTransfer).filter(
+                and_(
+                    models.PaymentTransfer.task_id == task_id,
+                    models.PaymentTransfer.transfer_id == transfer.id
+                )
+            ).first()
+            
+            if not existing_transfer:
+                transfer_record = create_transfer_record(
+                    db,
+                    task_id=task_id,
+                    taker_id=task.taker_id,
+                    poster_id=current_user.id,
+                    amount=Decimal(str(task.escrow_amount)),
+                    currency="GBP",
+                    metadata={
+                        "task_title": task.title,
+                        "transfer_source": "confirm_complete"
+                    }
+                )
+                # 更新转账记录：设置 transfer_id 和状态
+                transfer_record.transfer_id = transfer.id
+                transfer_record.status = "succeeded"  # 直接设为成功，因为 Transfer 已创建
+                transfer_record.succeeded_at = get_utc_time()
+                db.commit()
+                logger.info(f"✅ 已创建 PaymentTransfer 记录: transfer_record_id={transfer_record.id}")
+            else:
+                # 如果记录已存在，更新状态
+                existing_transfer.status = "succeeded"
+                existing_transfer.succeeded_at = get_utc_time()
+                db.commit()
+                logger.info(f"✅ 已更新现有 PaymentTransfer 记录: transfer_record_id={existing_transfer.id}")
+        except Exception as e:
+            logger.error(f"创建 PaymentTransfer 记录失败: {e}", exc_info=True)
+            # 不影响主流程，继续执行
+        
         # 更新任务状态
         task.is_confirmed = 1
         task.paid_to_user_id = task.taker_id
         task.escrow_amount = 0.0  # 转账后清空托管金额
-        
-        # 可以在这里添加转账记录到数据库（如果需要）
-        # TODO: 创建 PaymentTransfer 记录
         
         db.commit()
         

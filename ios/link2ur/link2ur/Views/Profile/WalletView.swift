@@ -189,6 +189,17 @@ class WalletViewModel: ObservableObject {
 struct PointsAccountCard: View {
     let account: PointsAccount
     
+    // 格式化货币显示（将便士转换为英镑）
+    private func formatCurrency(_ pence: Int, currency: String) -> String {
+        let pounds = Double(pence) / 100.0
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: pounds)) ?? "£\(String(format: "%.2f", pounds))"
+    }
+    
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             // 余额显示
@@ -215,13 +226,13 @@ struct PointsAccountCard: View {
             HStack(spacing: AppSpacing.xl) {
                 StatItem(
                     label: LocalizationKey.pointsTotalEarned.localized,
-                    value: "\(account.totalEarned)",
+                    value: formatCurrency(account.totalEarned, currency: account.currency),
                     color: AppColors.success
                 )
                 
                 StatItem(
                     label: LocalizationKey.pointsTotalSpent.localized,
-                    value: "\(account.totalSpent)",
+                    value: formatCurrency(account.totalSpent, currency: account.currency),
                     color: AppColors.warning
                 )
             }

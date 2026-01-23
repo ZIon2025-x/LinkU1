@@ -4256,7 +4256,7 @@ const MessagePage: React.FC = () => {
                                               }, 500);
                                             }
                                           } else {
-                                            // 如果没有支付信息，说明可能已经支付成功或使用积分支付
+                                            // 如果没有支付信息，说明可能已经支付成功或使用优惠券全额抵扣
                                             if (activeTaskId) {
                                           await loadTaskMessages(activeTaskId);
                                           await loadApplications(activeTaskId);
@@ -6300,7 +6300,7 @@ const MessagePage: React.FC = () => {
                                   }, 500);
                                 }
                               } else {
-                                // 如果没有支付信息，说明可能已经支付成功或使用积分支付
+                                // 如果没有支付信息，说明可能已经支付成功或使用优惠券全额抵扣
                                 setShowApplicationListModal(false);
                                 if (activeTaskId) {
                                   await loadTaskMessages(activeTaskId);

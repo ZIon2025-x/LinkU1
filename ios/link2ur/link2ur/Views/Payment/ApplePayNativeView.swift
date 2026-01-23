@@ -178,15 +178,7 @@ struct ApplePayNativeView: View {
                             .fontWeight(.semibold)
                     }
                     
-                    if let pointsUsed = paymentResponse.pointsUsed, pointsUsed > 0 {
-                        HStack {
-                            Text("使用积分")
-                            Spacer()
-                            Text("-\(paymentResponse.pointsUsedDisplay ?? "0")")
-                                .foregroundColor(.green)
-                        }
-                    }
-                    
+                    // 优惠券折扣（如果有）
                     if let couponDiscount = paymentResponse.couponDiscount, couponDiscount > 0 {
                         HStack {
                             Text("优惠券折扣")

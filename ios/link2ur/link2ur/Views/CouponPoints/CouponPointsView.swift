@@ -264,6 +264,17 @@ struct PointsView: View {
 struct PointsBalanceCard: View {
     let account: PointsAccount
     
+    // 格式化货币显示（将便士转换为英镑）
+    private func formatCurrency(_ pence: Int, currency: String) -> String {
+        let pounds = Double(pence) / 100.0
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currency
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: pounds)) ?? "£\(String(format: "%.2f", pounds))"
+    }
+    
     var body: some View {
         ZStack {
             // Gradient Background
@@ -313,7 +324,7 @@ struct PointsBalanceCard: View {
                 HStack {
                     BalanceStatItem(
                         label: LocalizationKey.pointsTotalEarned.localized,
-                        value: "\(account.totalEarned)",
+                        value: formatCurrency(account.totalEarned, currency: account.currency),
                         icon: "arrow.down.circle.fill"
                     )
                     
@@ -327,7 +338,7 @@ struct PointsBalanceCard: View {
                     
                     BalanceStatItem(
                         label: LocalizationKey.pointsTotalSpent.localized,
-                        value: "\(account.totalSpent)",
+                        value: formatCurrency(account.totalSpent, currency: account.currency),
                         icon: "arrow.up.circle.fill"
                     )
                 }

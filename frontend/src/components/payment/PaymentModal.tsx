@@ -198,8 +198,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const { navigate: localizedNavigate } = useLocalizedNavigation();
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'points' | 'mixed'>('stripe');
-  const [pointsAmount, setPointsAmount] = useState<number>(0);
+  // 只支持 Stripe 支付，积分不能作为支付手段
   const [couponCode, setCouponCode] = useState<string>('');
   const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [stripeLoaded, setStripeLoaded] = useState(false);
@@ -237,12 +236,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setLoading(true);
     try {
       const requestData: any = {
-        payment_method: paymentMethod,
+        payment_method: 'stripe', // 只支持 Stripe 支付
       };
-
-      if (paymentMethod === 'points' || paymentMethod === 'mixed') {
-        requestData.points_amount = pointsAmount * 100; // 转换为便士
-      }
 
       if (couponCode) {
         requestData.coupon_code = couponCode.toUpperCase();
@@ -255,7 +250,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
       setPaymentData(response.data);
 
-      // 如果纯积分支付，直接成功
+      // 如果使用优惠券全额抵扣，直接成功
       if (response.data.final_amount === 0) {
         message.success('支付成功！');
         onSuccess();
@@ -315,40 +310,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     >
       {!paymentData && !propClientSecret ? (
         <div>
-          {/* 支付方式选择 */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              支付方式
-            </label>
-            <Select
-              value={paymentMethod}
-              onChange={(value) => setPaymentMethod(value)}
-              style={{ width: '100%' }}
-            >
-              <Option value="stripe">Stripe（信用卡/借记卡/Apple Pay）</Option>
-              <Option value="points">积分支付</Option>
-              <Option value="mixed">混合支付（积分 + Stripe）</Option>
-            </Select>
-          </div>
-
-          {/* 积分输入（如果使用积分或混合支付） */}
-          {(paymentMethod === 'points' || paymentMethod === 'mixed') && (
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                使用积分（当前余额: £{(pointsBalance / 100).toFixed(2)}）
-              </label>
-              <Input
-                type="number"
-                value={pointsAmount}
-                onChange={(e) => setPointsAmount(parseFloat(e.target.value) || 0)}
-                placeholder="输入积分数量"
-                addonAfter="GBP"
-                min={0}
-                max={pointsBalance / 100}
-              />
-            </div>
-          )}
-
           {/* 优惠券输入 */}
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -388,11 +349,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <div style={{ marginBottom: '12px' }}>
                 <strong>总金额:</strong> £{paymentData.total_amount_display}
               </div>
-              {paymentData.points_used_display && (
-                <div style={{ marginBottom: '12px', color: '#52c41a' }}>
-                  <strong>积分抵扣:</strong> £{paymentData.points_used_display}
-                </div>
-              )}
+              {/* 积分不能作为支付手段，已移除积分抵扣显示 */}
               {paymentData.coupon_discount_display && (
                 <div style={{ marginBottom: '12px', color: '#52c41a' }}>
                   <strong>优惠券折扣:</strong> £{paymentData.coupon_discount_display}
