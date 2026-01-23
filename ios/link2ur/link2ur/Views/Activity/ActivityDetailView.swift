@@ -16,6 +16,8 @@ struct ActivityDetailView: View {
     @State private var shareImage: UIImage?
     @State private var shareImageCancellable: AnyCancellable?
     @State private var isShareImageLoading = false // 分享图片加载状态
+    @State private var showPaymentView = false
+    @State private var paymentTaskId: Int?
     
     var body: some View {
         ZStack {
@@ -81,6 +83,10 @@ struct ActivityDetailView: View {
                         } else {
                             showLogin = true
                         }
+                    },
+                    onPayment: { taskId in
+                        paymentTaskId = taskId
+                        showPaymentView = true
                     }
                 )
             } else if viewModel.isLoading {
@@ -176,6 +182,13 @@ struct ActivityDetailView: View {
         }
         .sheet(isPresented: $showLogin) {
             LoginView()
+        }
+        .sheet(isPresented: $showPaymentView) {
+            if let taskId = paymentTaskId {
+                NavigationView {
+                    TaskDetailView(taskId: taskId)
+                }
+            }
         }
         .onAppear {
             viewModel.loadActivityDetail(activityId: activityId)
@@ -576,6 +589,7 @@ struct ActivityBottomBar: View {
     let isTogglingFavorite: Bool
     let onFavorite: () -> Void
     let onApply: () -> Void
+    let onPayment: (Int) -> Void // 跳转到支付页面
     
     var body: some View {
         VStack {
@@ -618,8 +632,49 @@ struct ActivityBottomBar: View {
                             .frame(height: 50)
                             .background(AppColors.textQuaternary)
                             .cornerRadius(AppCornerRadius.medium)
+                    } else if activity.hasApplied == true, let taskId = activity.userTaskId {
+                        // 已申请，根据状态显示不同按钮
+                        if let hasNegotiation = activity.userTaskHasNegotiation, hasNegotiation,
+                           let taskStatus = activity.userTaskStatus, taskStatus == "pending_payment" {
+                            // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）
+                            Text(LocalizationKey.activityWaitingExpertResponse.localized)
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(AppColors.textQuaternary)
+                                .cornerRadius(AppCornerRadius.medium)
+                        } else if let taskStatus = activity.userTaskStatus, taskStatus == "pending_payment",
+                                  let isPaid = activity.userTaskIsPaid, !isPaid {
+                            // 待支付且未支付，显示继续支付按钮
+                            Button(action: {
+                                onPayment(taskId)
+                            }) {
+                                Text(LocalizationKey.activityContinuePayment.localized)
+                                    .font(AppTypography.bodyBold)
+                            }
+                            .buttonStyle(PrimaryButtonStyle())
+                        } else if let hasNegotiation = activity.userTaskHasNegotiation, hasNegotiation {
+                            // 有议价但状态不是待支付，可能是等待达人回应
+                            Text(LocalizationKey.activityWaitingExpertResponse.localized)
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(AppColors.textQuaternary)
+                                .cornerRadius(AppCornerRadius.medium)
+                        } else {
+                            // 其他情况，显示已申请（灰色不可点击）
+                            Text(LocalizationKey.activityApplied.localized)
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(AppColors.textQuaternary)
+                                .cornerRadius(AppCornerRadius.medium)
+                        }
                     } else if activity.hasApplied == true {
-                        // 已申请状态：显示"已申请"，灰色，不可点击
+                        // 已申请但没有任务ID，显示已申请（灰色不可点击）
                         Text(LocalizationKey.activityApplied.localized)
                             .font(AppTypography.bodyBold)
                             .foregroundColor(.white)

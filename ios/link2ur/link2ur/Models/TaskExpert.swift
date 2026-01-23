@@ -226,6 +226,13 @@ struct TaskExpertService: Codable, Identifiable {
     let viewCount: Int? // 后端返回的字段
     let applicationCount: Int? // 后端返回的字段
     let createdAt: String? // 后端返回的字段
+    // 用户申请的服务申请信息（如果已申请）
+    let userApplicationId: Int? // 用户申请的服务申请ID
+    let userApplicationStatus: String? // 申请状态
+    let userTaskId: Int? // 申请后创建的任务ID（如果已批准）
+    let userTaskStatus: String? // 任务状态
+    let userTaskIsPaid: Bool? // 任务是否已支付
+    let userApplicationHasNegotiation: Bool? // 是否有议价
     
     enum CodingKeys: String, CodingKey {
         case id, description, images, status, currency
@@ -238,6 +245,12 @@ struct TaskExpertService: Codable, Identifiable {
         case viewCount = "view_count"
         case applicationCount = "application_count"
         case createdAt = "created_at"
+        case userApplicationId = "user_application_id"
+        case userApplicationStatus = "user_application_status"
+        case userTaskId = "user_task_id"
+        case userTaskStatus = "user_task_status"
+        case userTaskIsPaid = "user_task_is_paid"
+        case userApplicationHasNegotiation = "user_application_has_negotiation"
     }
 }
 

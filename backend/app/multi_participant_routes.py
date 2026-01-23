@@ -381,18 +381,20 @@ def apply_to_activity(
     # 如果活动不是奖励申请者模式（reward_applicants=False），则需要支付
     needs_payment = not (hasattr(db_activity, 'reward_applicants') and db_activity.reward_applicants)
     
-    # 对于有时间段的活动申请（无论是单个任务还是多人任务），如果需要支付则进入"待支付"状态，否则进入"进行中"状态
-    # 对于无时间段的多人活动，如果需要支付则进入"待支付"状态，否则进入"进行中"状态
-    # 对于无时间段的单人任务，如果需要支付则进入"待支付"状态，否则保持open状态等待审核
+    # 对于有时间段的活动申请（无论是单个任务还是多人任务），如果需要支付且价格>0则进入"待支付"状态，否则进入"进行中"状态
+    # 对于无时间段的多人活动，如果需要支付且价格>0则进入"待支付"状态，否则进入"进行中"状态
+    # 对于无时间段的单人任务，如果需要支付且价格>0则进入"待支付"状态，否则保持open状态等待审核
+    # 注意：如果价格为0，即使needs_payment=True，也视为不需要支付，直接进入进行中或open状态
     if needs_payment and price > 0:
         initial_status = "pending_payment"
     elif db_activity.has_time_slots:
+        # 有时间段且不需要支付（或价格为0），直接进入进行中状态
         initial_status = "in_progress"
     elif is_multi_participant:
-        # 无时间段的多人活动，申请后直接进入进行中状态
+        # 无时间段的多人活动，不需要支付（或价格为0），直接进入进行中状态
         initial_status = "in_progress"
     else:
-        # 无时间段的单人任务，保持open状态等待审核
+        # 无时间段的单人任务，不需要支付（或价格为0），保持open状态等待审核
         initial_status = "open"
     
     # 创建新任务

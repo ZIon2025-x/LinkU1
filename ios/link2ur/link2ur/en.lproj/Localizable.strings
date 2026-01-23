@@ -1571,3 +1571,13 @@
 "forum.request_icon_too_long" = "Icon cannot exceed %d characters";
 "forum.request_submit_failed" = "Submission failed, please check if the input is correct";
 "forum.request_login_expired" = "Login expired, please login again";
+
+// MARK: - Activity Payment
+"activity.applied" = "Applied";
+"activity.waiting_expert_response" = "Waiting for Expert Response";
+"activity.continue_payment" = "Continue Payment";
+
+// MARK: - Service Payment
+"service.applied" = "Applied";
+"service.waiting_expert_response" = "Waiting for Expert Response";
+"service.continue_payment" = "Continue Payment";

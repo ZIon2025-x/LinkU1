@@ -26,6 +26,11 @@ struct Activity: Codable, Identifiable {
     let images: [String]?
     let hasTimeSlots: Bool
     let hasApplied: Bool? // 当前用户是否已申请（可选，需要用户认证）
+    // 用户申请的任务信息（如果已申请）
+    let userTaskId: Int? // 用户申请后创建的任务ID
+    let userTaskStatus: String? // 任务状态
+    let userTaskIsPaid: Bool? // 任务是否已支付
+    let userTaskHasNegotiation: Bool? // 是否有议价
     
     enum CodingKeys: String, CodingKey {
         case id, title, description
@@ -49,6 +54,10 @@ struct Activity: Codable, Identifiable {
         case images
         case hasTimeSlots = "has_time_slots"
         case hasApplied = "has_applied"
+        case userTaskId = "user_task_id"
+        case userTaskStatus = "user_task_status"
+        case userTaskIsPaid = "user_task_is_paid"
+        case userTaskHasNegotiation = "user_task_has_negotiation"
     }
     
     /// 活动是否已结束（状态为 ended/cancelled/completed 或已过截止日期/结束日期）

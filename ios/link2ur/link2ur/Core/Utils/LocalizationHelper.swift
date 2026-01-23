@@ -379,6 +379,8 @@ public enum LocalizationKey: String {
     case activityApplyToJoin = "activity.apply_to_join"
     case activityApply = "activity.apply"
     case activityApplied = "activity.applied"
+    case activityWaitingExpertResponse = "activity.waiting_expert_response"
+    case activityContinuePayment = "activity.continue_payment"
     case activityPerson = "activity.person"
     case activityPersonsBooked = "activity.persons_booked"
     
@@ -1401,6 +1403,9 @@ public enum LocalizationKey: String {
     case serviceLoading = "service.loading"
     case serviceLoadFailed = "service.load_failed"
     case serviceNeedDescription = "service.need_description"
+    case serviceApplied = "service.applied"
+    case serviceWaitingExpertResponse = "service.waiting_expert_response"
+    case serviceContinuePayment = "service.continue_payment"
     
     // MARK: - Location
     case locationGoogleMaps = "location.google_maps"

@@ -1571,3 +1571,13 @@
 "forum.request_icon_too_long" = "图标不能超过%d个字符";
 "forum.request_submit_failed" = "提交失败，请检查输入内容是否正确";
 "forum.request_login_expired" = "登录已过期，请重新登录";
+
+// MARK: - Activity Payment
+"activity.applied" = "已申请";
+"activity.waiting_expert_response" = "等待达人回应";
+"activity.continue_payment" = "继续支付";
+
+// MARK: - Service Payment
+"service.applied" = "已申请";
+"service.waiting_expert_response" = "等待达人回应";
+"service.continue_payment" = "继续支付";

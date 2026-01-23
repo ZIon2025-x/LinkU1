@@ -8,6 +8,8 @@ struct ServiceDetailView: View {
     @State private var counterPrice: Double?
     @State private var showCounterPrice = false
     @State private var currentImageIndex = 0
+    @State private var showPaymentView = false
+    @State private var paymentTaskId: Int?
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -99,6 +101,13 @@ struct ServiceDetailView: View {
         .onChange(of: viewModel.service?.hasTimeSlots) { hasSlots in
             if hasSlots == true {
                 viewModel.loadTimeSlots(serviceId: serviceId)
+            }
+        }
+        .sheet(isPresented: $showPaymentView) {
+            if let taskId = paymentTaskId {
+                NavigationView {
+                    TaskDetailView(taskId: taskId)
+                }
             }
         }
     }
@@ -386,18 +395,70 @@ struct ServiceDetailView: View {
     @ViewBuilder
     private func bottomApplyBar(service: TaskExpertService) -> some View {
         HStack {
-            Button(action: {
-                showApplySheet = true
-                HapticFeedback.selection()
-            }) {
-                Text(LocalizationKey.taskExpertApplyService.localized)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(AppColors.primary)
-                    .cornerRadius(27)
-                    .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+            if let applicationId = service.userApplicationId {
+                // 已申请，根据状态显示不同按钮
+                if let hasNegotiation = service.userApplicationHasNegotiation, hasNegotiation,
+                   let taskStatus = service.userTaskStatus, taskStatus == "pending_payment" {
+                    // 有议价且待支付，显示等待达人回应按钮（灰色不可点击）
+                    Text(LocalizationKey.serviceWaitingExpertResponse.localized)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(AppColors.textQuaternary)
+                        .cornerRadius(27)
+                } else if let taskStatus = service.userTaskStatus, taskStatus == "pending_payment",
+                          let isPaid = service.userTaskIsPaid, !isPaid,
+                          let taskId = service.userTaskId {
+                    // 待支付且未支付，显示继续支付按钮
+                    Button(action: {
+                        paymentTaskId = taskId
+                        showPaymentView = true
+                    }) {
+                        Text(LocalizationKey.serviceContinuePayment.localized)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(AppColors.primary)
+                            .cornerRadius(27)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                } else if let hasNegotiation = service.userApplicationHasNegotiation, hasNegotiation,
+                          let appStatus = service.userApplicationStatus, appStatus == "pending" {
+                    // 有议价且申请状态为pending，等待达人回应
+                    Text(LocalizationKey.serviceWaitingExpertResponse.localized)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(AppColors.textQuaternary)
+                        .cornerRadius(27)
+                } else {
+                    // 其他情况，显示已申请（灰色不可点击）
+                    Text(LocalizationKey.serviceApplied.localized)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(AppColors.textQuaternary)
+                        .cornerRadius(27)
+                }
+            } else {
+                // 未申请，显示申请按钮
+                Button(action: {
+                    showApplySheet = true
+                    HapticFeedback.selection()
+                }) {
+                    Text(LocalizationKey.taskExpertApplyService.localized)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(AppColors.primary)
+                        .cornerRadius(27)
+                        .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
             }
         }
         .padding(.horizontal, 24)
