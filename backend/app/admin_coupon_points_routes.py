@@ -394,8 +394,8 @@ def get_coupon_detail(
 @router.delete("/coupons/{coupon_id}")
 def delete_coupon(
     coupon_id: int,
-    force: bool = Query(False, description="是否强制删除（即使有使用记录）"),
     request: Request,
+    force: bool = Query(False, description="是否强制删除（即使有使用记录）"),
     current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
     db: Session = Depends(get_db)
 ):

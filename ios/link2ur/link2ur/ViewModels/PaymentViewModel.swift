@@ -749,15 +749,5 @@ struct PaymentResponse: Codable {
         case ephemeralKeySecret = "ephemeral_key_secret"
         case calculationSteps = "calculation_steps"
         case note
-        case stripeAmountDisplay = "stripe_amount_display"
-        case currency
-        case finalAmount = "final_amount"
-        case finalAmountDisplay = "final_amount_display"
-        case checkoutUrl = "checkout_url"
-        case clientSecret = "client_secret"
-        case paymentIntentId = "payment_intent_id"
-        case customerId = "customer_id"
-        case ephemeralKeySecret = "ephemeral_key_secret"
-        case note
     }
 }
