@@ -1242,6 +1242,9 @@
 "flea_market.negotiate_request_sent" = "Negotiation Request Sent";
 "flea_market.negotiate_request_sent_message" = "You will receive a notification when the seller agrees, and you can proceed with payment";
 "flea_market.negotiate_request_failed" = "Failed to send negotiation request. Please try again.";
+"flea_market.negotiate_price_invalid" = "Please enter a valid negotiation price.";
+"flea_market.negotiate_price_too_high" = "Negotiation price cannot be higher than the original price.";
+"flea_market.negotiate_price_too_low" = "Negotiation price must be greater than 0.";
 
 // MARK: - Task Preferences
 "task_preferences.title" = "Task Preferences";

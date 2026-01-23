@@ -168,7 +168,7 @@ struct FleaMarketDetailView: View {
                             paymentEphemeralKeySecret = data.ephemeralKeySecret
                             // 显示支付页面
                             showPaymentView = true
-                        } else if let data = purchaseData {
+                        } else if purchaseData != nil {
                             // 如果没有支付信息，可能是直接购买成功（不需要支付）
                             Logger.debug("直接购买成功，无需支付", category: .network)
                             // 刷新商品信息

@@ -2210,65 +2210,71 @@ async def get_service_reviews(
     """
     from sqlalchemy import func
     
-    # 查询条件：任务关联了该服务（expert_service_id=service_id）
-    # 并且任务已完成，有评价
-    base_query = (
-        select(models.Review)
-        .join(models.Task, models.Review.task_id == models.Task.id)
-        .where(
-            and_(
-                models.Task.expert_service_id == service_id,
-                models.Task.status == "completed",
-                models.Review.is_anonymous == 0  # 只返回非匿名评价
+    try:
+        # 查询条件：任务关联了该服务（expert_service_id=service_id）
+        # 并且任务已完成，有评价
+        base_query = (
+            select(models.Review)
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .where(
+                and_(
+                    models.Task.expert_service_id == service_id,
+                    models.Task.status == "completed",
+                    models.Review.is_anonymous == 0  # 只返回非匿名评价
+                )
             )
         )
-    )
-    
-    # 获取总数
-    count_query = (
-        select(func.count(models.Review.id))
-        .select_from(
-            models.Review.join(models.Task, models.Review.task_id == models.Task.id)
-        )
-        .where(
-            and_(
-                models.Task.expert_service_id == service_id,
-                models.Task.status == "completed",
-                models.Review.is_anonymous == 0
+        
+        # 获取总数（使用与 base_query 相同的查询条件）
+        count_query = (
+            select(func.count(models.Review.id))
+            .select_from(models.Review)
+            .join(models.Task, models.Review.task_id == models.Task.id)
+            .where(
+                and_(
+                    models.Task.expert_service_id == service_id,
+                    models.Task.status == "completed",
+                    models.Review.is_anonymous == 0
+                )
             )
         )
-    )
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-    
-    # 获取分页数据
-    reviews_query = (
-        base_query
-        .order_by(models.Review.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
-    
-    result = await db.execute(reviews_query)
-    reviews = result.scalars().all()
-    
-    # 转换为公开评价格式（不包含user_id等私人信息）
-    return {
-        "total": total,
-        "items": [
-            schemas.ReviewPublicOut(
-                id=review.id,
-                task_id=review.task_id,
-                rating=review.rating,
-                comment=review.comment,
-                created_at=review.created_at
-            )
-            for review in reviews
-        ],
-        "limit": limit,
-        "offset": offset,
-        "has_more": (offset + limit) < total
-    }
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 获取分页数据
+        reviews_query = (
+            base_query
+            .order_by(models.Review.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        
+        result = await db.execute(reviews_query)
+        reviews = result.scalars().all()
+        
+        # 转换为公开评价格式（不包含user_id等私人信息）
+        return {
+            "total": total,
+            "items": [
+                schemas.ReviewPublicOut(
+                    id=review.id,
+                    task_id=review.task_id,
+                    rating=review.rating,
+                    comment=review.comment,
+                    created_at=review.created_at
+                )
+                for review in reviews
+            ],
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + limit) < total
+        }
+    except Exception as e:
+        logger.error(f"获取服务评价失败 (service_id={service_id}): {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取服务评价失败: {str(e)}"
+        )
 
 
 @task_expert_router.get("/{expert_id}/services")

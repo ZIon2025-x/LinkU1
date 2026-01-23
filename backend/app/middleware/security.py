@@ -15,7 +15,11 @@ async def security_headers_middleware(request: Request, call_next):
     ⚠️ 注意：SPA 应用建议避免内联脚本，使用外部 JS 文件
     这样就不需要 nonce，CSP 更简单且安全
     """
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        # 让异常传播到全局异常处理器
+        raise
     
     # CSP 策略（SPA 场景，避免内联脚本）
     # 从配置中获取允许的 API 域名

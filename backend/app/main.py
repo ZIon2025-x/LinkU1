@@ -177,7 +177,11 @@ app.middleware("http")(admin_security_middleware)
 @app.middleware("http")
 async def add_noindex_header(request: Request, call_next):
     """为API端点添加noindex头，防止搜索引擎索引"""
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        # 让异常传播到全局异常处理器
+        raise
     
     # 检查是否是API端点或API域名
     is_api_path = request.url.path.startswith("/api")
@@ -237,12 +241,8 @@ async def custom_cors_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        # 即使出现异常，也要设置CORS头
-        response = JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
-        )
-        set_cors_headers(response)
+        # 让异常传播到全局异常处理器，异常处理器会设置CORS头
+        # 不要在这里创建响应，否则会导致响应状态不一致
         raise
     
     # 强制设置CORS头（包括错误响应）

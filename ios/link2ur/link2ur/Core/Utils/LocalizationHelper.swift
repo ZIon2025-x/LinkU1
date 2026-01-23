@@ -1233,6 +1233,9 @@ public enum LocalizationKey: String {
     case fleaMarketNegotiateRequestSent = "flea_market.negotiate_request_sent"
     case fleaMarketNegotiateRequestSentMessage = "flea_market.negotiate_request_sent_message"
     case fleaMarketNegotiateRequestFailed = "flea_market.negotiate_request_failed"
+    case fleaMarketNegotiatePriceInvalid = "flea_market.negotiate_price_invalid"
+    case fleaMarketNegotiatePriceTooHigh = "flea_market.negotiate_price_too_high"
+    case fleaMarketNegotiatePriceTooLow = "flea_market.negotiate_price_too_low"
     
     // MARK: - Task Preferences
     case taskPreferencesTitle = "task_preferences.title"
