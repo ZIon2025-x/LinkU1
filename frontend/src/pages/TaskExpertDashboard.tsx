@@ -2732,9 +2732,15 @@ const TaskExpertDashboard: React.FC = () => {
                       fontSize: '14px',
                     }}
                   >
-                    <option value="Skill Service">Skill Service</option>
                     <option value="Housekeeping">Housekeeping</option>
                     <option value="Campus Life">Campus Life</option>
+                    <option value="Second-hand & Rental">Second-hand & Rental</option>
+                    <option value="Errand Running">Errand Running</option>
+                    <option value="Skill Service">Skill Service</option>
+                    <option value="Social Help">Social Help</option>
+                    <option value="Transportation">Transportation</option>
+                    <option value="Pet Care">Pet Care</option>
+                    <option value="Life Convenience">Life Convenience</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>

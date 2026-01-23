@@ -173,7 +173,9 @@ class RecommendationQueryOptimizer:
                 base_score = min(1.0, base_score + time_bonus)
             
             if base_score > 0:
-                reason = engine._generate_recommendation_reason(user_vector, task, base_score)
+                reason = engine._generate_recommendation_reason(
+                    user_vector, task, base_score, user_id=user.id
+                )
                 if engine._is_new_user_task(task):
                     reason = "新用户发布，优先推荐；" + reason
                 elif engine._is_new_task(task):

@@ -410,7 +410,9 @@ class TaskRecommendationEngine:
                 base_score = min(1.0, base_score + time_bonus)
             
             if base_score > 0:  # 只返回有匹配度的任务
-                reason = self._generate_recommendation_reason(user_vector, task, base_score)
+                reason = self._generate_recommendation_reason(
+                    user_vector, task, base_score, user_id=user.id
+                )
                 # 如果是新用户发布的任务，在理由中说明
                 if self._is_new_user_task(task):
                     reason = "新用户发布，优先推荐；" + reason
@@ -1898,6 +1900,26 @@ class TaskRecommendationEngine:
         ).order_by(desc(TaskHistory.timestamp)).limit(1000).all()
         return {h.task_id for h in history}
     
+    def _get_user_accepted_task_types(self, user_id: str) -> set:
+        """获取用户实际接受过的任务类型集合"""
+        # 从TaskHistory中获取用户接受或完成的任务
+        history = self.db.query(TaskHistory).filter(
+            TaskHistory.user_id == user_id,
+            TaskHistory.action.in_(["accepted", "completed"])
+        ).order_by(desc(TaskHistory.timestamp)).limit(100).all()
+        
+        if not history:
+            return set()
+        
+        # 获取这些任务的任务类型
+        task_ids = [h.task_id for h in history]
+        task_types = self.db.query(Task.task_type).filter(
+            Task.id.in_(task_ids),
+            Task.task_type.isnot(None)
+        ).distinct().all()
+        
+        return {t[0] for t in task_types if t[0]}
+    
     def _has_enough_data(self, user_id: str) -> bool:
         """检查用户是否有足够的数据进行协同过滤"""
         interactions = self._get_user_interactions(user_id)
@@ -1908,16 +1930,28 @@ class TaskRecommendationEngine:
         user_vector: Dict, 
         task: Task, 
         score: float,
-        language: str = "zh"
+        language: str = "zh",
+        user_id: Optional[str] = None,
+        accepted_task_types: Optional[set] = None
     ) -> str:
         """生成推荐理由（智能生成，支持多语言）"""
         reasons = []
         
+        # 获取用户实际接受过的任务类型（用于验证推荐理由的准确性）
+        if accepted_task_types is None and user_id:
+            accepted_task_types = self._get_user_accepted_task_types(user_id)
+        elif accepted_task_types is None:
+            accepted_task_types = set()
+        
         # 多语言支持
         if language == "en":
             # 英文理由
-            if user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+            # 只有当用户实际接受过该类型的任务时，才显示"经常接受"的理由
+            if task.task_type and task.task_type in accepted_task_types:
                 reasons.append(f"You often accept {task.task_type} tasks")
+            elif user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+                # 如果任务类型在偏好中，但不是实际接受过的，使用更温和的表述
+                reasons.append(f"Matches your interest in {task.task_type} tasks")
             
             if user_vector["locations"] and task.location:
                 for loc in user_vector["locations"]:
@@ -1960,8 +1994,12 @@ class TaskRecommendationEngine:
                 intensity = "可能"
             
             # 任务类型匹配
-            if user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+            # 只有当用户实际接受过该类型的任务时，才显示"经常接受"的理由
+            if task.task_type and task.task_type in accepted_task_types:
                 reasons.append(f"您常接受{task.task_type}类任务")
+            elif user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+                # 如果任务类型在偏好中，但不是实际接受过的，使用更温和的表述
+                reasons.append(f"符合您对{task.task_type}类任务的兴趣")
             
             # 位置匹配
             if user_vector["locations"] and task.location:

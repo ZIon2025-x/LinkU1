@@ -902,7 +902,7 @@
 "activity.status" = "Status";
 "activity.ended" = "Ended";
 "activity.full" = "Full";
-"activity.hot_recruiting" = "Hot Recruiting";
+"activity.hot_recruiting" = "Open";
 "activity.location" = "Location";
 "activity.type" = "Activity Type";
 "activity.time_arrangement" = "Time Arrangement";
