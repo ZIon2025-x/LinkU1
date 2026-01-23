@@ -1297,6 +1297,10 @@ async def direct_purchase_item(
                 detail="该商品已被其他用户购买或正在处理中"
             )
         
+        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
+        invalidate_item_cache(item.id)
+        logger.info(f"✅ 商品 {item_id} 已预留，已清除缓存")
+        
         # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
         # 在提交事务之前，先检查卖家是否有 Stripe Connect 账户
         seller = await db.get(models.User, item.seller_id)
@@ -1396,7 +1400,7 @@ async def direct_purchase_item(
         # 发送通知给卖家
         await send_direct_purchase_notification(db, item, current_user, new_task.id)
         
-        # 清除缓存
+        # 再次清除缓存（确保缓存已清除）
         invalidate_item_cache(item.id)
         
         return {
@@ -1730,6 +1734,10 @@ async def approve_purchase_request(
                 detail="该商品已被其他用户购买"
             )
         
+        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
+        invalidate_item_cache(purchase_request.item_id)
+        logger.info(f"✅ 商品 {purchase_request.item_id} 已预留，已清除缓存")
+        
         # 更新购买申请状态为accepted
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
@@ -2032,6 +2040,10 @@ async def accept_purchase_request(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="该商品已被其他用户购买"
             )
+        
+        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
+        invalidate_item_cache(db_id)
+        logger.info(f"✅ 商品 {item_id} 已预留，已清除缓存")
         
         # 更新购买申请状态为accepted
         await db.execute(

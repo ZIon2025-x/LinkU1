@@ -1746,15 +1746,36 @@ def approve_task_taker(
         )
 
     # 更新任务状态为进行中（如果还不是）
+    # ⚠️ 安全修复：确保只有已支付的任务才能进入 in_progress 状态
     if db_task.status == "pending_payment":
+        # 再次确认支付状态（双重检查）
+        if db_task.is_paid != 1:
+            logger.error(
+                f"🔴 安全错误：任务 {task_id} 状态为 pending_payment 但 is_paid={db_task.is_paid}，"
+                f"不允许进入 in_progress 状态"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="任务尚未支付，无法进入进行中状态。请先完成支付。"
+            )
         db_task.status = "in_progress"
         db.commit()
-        logger.info(f"✅ 任务 {task_id} 状态从 pending_payment 更新为 in_progress")
+        logger.info(f"✅ 任务 {task_id} 状态从 pending_payment 更新为 in_progress（已确认支付）")
     elif db_task.status == "taken":
         # 兼容旧流程：如果状态是 taken，也更新为 in_progress
+        # ⚠️ 安全修复：确保已支付
+        if db_task.is_paid != 1:
+            logger.error(
+                f"🔴 安全错误：任务 {task_id} 状态为 taken 但 is_paid={db_task.is_paid}，"
+                f"不允许进入 in_progress 状态"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="任务尚未支付，无法进入进行中状态。请先完成支付。"
+            )
         db_task.status = "in_progress"
         db.commit()
-        logger.info(f"✅ 任务 {task_id} 状态从 taken 更新为 in_progress（旧流程兼容）")
+        logger.info(f"✅ 任务 {task_id} 状态从 taken 更新为 in_progress（旧流程兼容，已确认支付）")
     # 如果已经是 in_progress，不需要更新
     
     db.refresh(db_task)

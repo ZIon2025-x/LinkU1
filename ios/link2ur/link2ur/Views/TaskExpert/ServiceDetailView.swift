@@ -10,6 +10,8 @@ struct ServiceDetailView: View {
     @State private var currentImageIndex = 0
     @State private var showPaymentView = false
     @State private var paymentTaskId: Int?
+    @State private var selectedDeadline: Date?
+    @State private var isFlexible: Bool = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -77,13 +79,24 @@ struct ServiceDetailView: View {
                 message: $applicationMessage,
                 counterPrice: $counterPrice,
                 showCounterPrice: $showCounterPrice,
+                selectedDeadline: $selectedDeadline,
+                isFlexible: $isFlexible,
+                hasTimeSlots: viewModel.service?.hasTimeSlots == true,
                 onApply: {
-                    viewModel.applyService(serviceId: serviceId, message: applicationMessage.isEmpty ? nil : applicationMessage, counterPrice: counterPrice) { success in
+                    viewModel.applyService(
+                        serviceId: serviceId,
+                        message: applicationMessage.isEmpty ? nil : applicationMessage,
+                        counterPrice: counterPrice,
+                        deadline: isFlexible ? nil : selectedDeadline,
+                        isFlexible: isFlexible ? 1 : 0
+                    ) { success in
                         if success {
                             HapticFeedback.success()
                             showApplySheet = false
                             applicationMessage = ""
                             counterPrice = nil
+                            selectedDeadline = nil
+                            isFlexible = false
                         }
                     }
                 }
@@ -528,6 +541,9 @@ struct ApplyServiceSheet: View {
     @Binding var message: String
     @Binding var counterPrice: Double?
     @Binding var showCounterPrice: Bool
+    @Binding var selectedDeadline: Date?
+    @Binding var isFlexible: Bool
+    let hasTimeSlots: Bool
     let onApply: () -> Void
     @Environment(\.dismiss) var dismiss
     
@@ -594,6 +610,57 @@ struct ApplyServiceSheet: View {
                     .background(Color(UIColor.secondarySystemBackground).opacity(0.3))
                     .cornerRadius(16)
                     
+                    // 日期和灵活模式（仅当服务没有时间段时显示）
+                    if !hasTimeSlots {
+                        VStack(spacing: 16) {
+                            // 灵活模式选项
+                            Toggle(isOn: $isFlexible) {
+                                HStack {
+                                    Image(systemName: "clock.fill")
+                                        .foregroundColor(.blue)
+                                    Text("灵活时间")
+                                        .font(.system(size: 15, weight: .medium))
+                                }
+                            }
+                            .tint(AppColors.primary)
+                            
+                            // 日期选择器（非灵活模式时显示）
+                            if !isFlexible {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("期望完成日期")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(AppColors.textSecondary)
+                                    
+                                    DatePicker(
+                                        "选择日期",
+                                        selection: Binding(
+                                            get: { 
+                                                if let deadline = selectedDeadline {
+                                                    return deadline
+                                                } else {
+                                                    // 默认选择7天后
+                                                    let defaultDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+                                                    selectedDeadline = defaultDate
+                                                    return defaultDate
+                                                }
+                                            },
+                                            set: { selectedDeadline = $0 }
+                                        ),
+                                        in: Date()..., // 只能选择今天及以后的日期
+                                        displayedComponents: [.date]
+                                    )
+                                    .datePickerStyle(.compact)
+                                    .padding(12)
+                                    .background(Color(UIColor.secondarySystemBackground))
+                                    .cornerRadius(12)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(Color(UIColor.secondarySystemBackground).opacity(0.3))
+                        .cornerRadius(16)
+                    }
+                    
                     Spacer(minLength: 40)
                 }
                 .padding(24)
@@ -609,7 +676,14 @@ struct ApplyServiceSheet: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onApply) {
+                    Button(action: {
+                        // 验证：如果服务没有时间段且不是灵活模式，必须选择日期
+                        if !hasTimeSlots && !isFlexible && selectedDeadline == nil {
+                            // 设置默认日期（7天后）
+                            selectedDeadline = Calendar.current.date(byAdding: .day, value: 7, to: Date())
+                        }
+                        onApply()
+                    }) {
                         Text("提交")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)

@@ -811,6 +811,15 @@ def start_multi_participant_task(
             detail=f"Task requires at least {db_task.min_participants} participants, currently has {current_count}"
         )
     
+    # ⚠️ 安全修复：检查支付状态，未支付的任务不能进入 in_progress 状态
+    # 对于需要支付的任务（有 payment_intent_id 或 reward > 0），必须已支付
+    if db_task.payment_intent_id or (db_task.reward and db_task.reward > 0):
+        if db_task.is_paid != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="任务尚未支付，无法开始。请先完成支付。"
+            )
+    
     # 更新任务状态
     db_task.status = "in_progress"
     db_task.accepted_at = get_utc_time()
@@ -1956,6 +1965,15 @@ def start_expert_multi_participant_task(
             status_code=400,
             detail=f"Task requires at least {db_task.min_participants} participants, currently has {current_count}"
         )
+    
+    # ⚠️ 安全修复：检查支付状态，未支付的任务不能进入 in_progress 状态
+    # 对于需要支付的任务（有 payment_intent_id 或 reward > 0），必须已支付
+    if db_task.payment_intent_id or (db_task.reward and db_task.reward > 0):
+        if db_task.is_paid != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="任务尚未支付，无法开始。请先完成支付。"
+            )
     
     # 更新任务状态
     db_task.status = "in_progress"

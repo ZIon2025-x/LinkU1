@@ -519,14 +519,36 @@ class ServiceDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func applyService(serviceId: Int, message: String?, counterPrice: Double?, completion: @escaping (Bool) -> Void) {
+    func applyService(serviceId: Int, message: String?, counterPrice: Double?, deadline: Date?, isFlexible: Int, completion: @escaping (Bool) -> Void) {
         var body: [String: Any] = [:]
         if let message = message {
             body["application_message"] = message
         }
         if let counterPrice = counterPrice {
-            body["counter_price"] = counterPrice
+            body["negotiated_price"] = counterPrice
         }
+        // 添加日期和灵活模式字段
+        // 只有在非灵活模式时才发送 deadline
+        if isFlexible == 0, let deadline = deadline {
+            // 转换为 ISO 8601 格式（包含时间部分）
+            // 将日期设置为当天的23:59:59 UTC，确保是有效的截止时间
+            var calendar = Calendar.current
+            calendar.timeZone = TimeZone(identifier: "UTC")!
+            let components = calendar.dateComponents([.year, .month, .day], from: deadline)
+            if let dateWithTime = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: calendar.date(from: components) ?? deadline) {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime]
+                formatter.timeZone = TimeZone(identifier: "UTC")
+                body["deadline"] = formatter.string(from: dateWithTime)
+            } else {
+                // 如果转换失败，使用原始日期
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime]
+                formatter.timeZone = TimeZone(identifier: "UTC")
+                body["deadline"] = formatter.string(from: deadline)
+            }
+        }
+        body["is_flexible"] = isFlexible
         
         apiService.request(ServiceApplication.self, "/api/task-experts/services/\(serviceId)/apply", method: "POST", body: body)
             .sink(receiveCompletion: { result in
