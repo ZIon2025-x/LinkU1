@@ -951,34 +951,56 @@ def get_task(db: Session, task_id: int):
 
 
 def accept_task(db: Session, task_id: int, taker_id: str):
+    """
+    接受任务（带并发控制）
+    使用 SELECT FOR UPDATE 防止并发问题
+    """
     from app.models import Task, User
+    from sqlalchemy import select
+    from app.transaction_utils import safe_commit
+    import logging
+    
+    logger = logging.getLogger(__name__)
 
     try:
-        task = db.query(Task).filter(Task.id == task_id).first()
-        taker = db.query(User).filter(User.id == taker_id).first()
-
+        # 使用 SELECT FOR UPDATE 锁定任务行，防止并发接受
+        task_query = select(Task).where(Task.id == task_id).with_for_update()
+        task_result = db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
         # 基本验证
         if not task:
-            print(f"DEBUG: Task {task_id} not found")
+            logger.warning(f"任务 {task_id} 不存在")
             return None
+        
+        taker = db.query(User).filter(User.id == taker_id).first()
         if not taker:
-            print(f"DEBUG: User {taker_id} not found")
+            logger.warning(f"用户 {taker_id} 不存在")
             return None
 
+        # 检查任务状态（在锁内检查，确保状态一致）
         if task.status != "open":
-            print(f"DEBUG: Task {task_id} status is {task.status}, not open")
+            logger.warning(f"任务 {task_id} 状态为 {task.status}，不是 open")
+            return None
+        
+        # 检查任务是否已被接受（双重检查）
+        if task.taker_id is not None:
+            logger.warning(f"任务 {task_id} 已被用户 {task.taker_id} 接受")
             return None
 
-        # 简单更新
+        # 更新任务（在锁内更新，确保原子性）
         task.taker_id = str(taker_id)
         task.status = "taken"
-        db.commit()
+        
+        # 安全提交
+        if not safe_commit(db, f"接受任务 {task_id}"):
+            return None
+        
         db.refresh(task)
-
-        print(f"DEBUG: Successfully accepted task {task_id} by user {taker_id}")
+        logger.info(f"成功接受任务 {task_id}，接收者: {taker_id}")
         return task
     except Exception as e:
-        print(f"DEBUG: Error in accept_task: {e}")
+        logger.error(f"接受任务 {task_id} 失败: {e}", exc_info=True)
         db.rollback()
         return None
 
@@ -1235,11 +1257,20 @@ def create_review(
     if existing_review:
         return None
 
+    # 清理评价内容（防止XSS攻击）
+    cleaned_comment = None
+    if review.comment:
+        from html import escape
+        cleaned_comment = escape(review.comment.strip())
+        # 限制长度（虽然schema已经验证，但这里再次确保）
+        if len(cleaned_comment) > 500:
+            cleaned_comment = cleaned_comment[:500]
+    
     db_review = Review(
         user_id=user_id,
         task_id=task_id,
         rating=review.rating,
-        comment=review.comment,
+        comment=cleaned_comment,
         is_anonymous=1 if review.is_anonymous else 0,
     )
     db.add(db_review)
@@ -1248,7 +1279,27 @@ def create_review(
 
     # 自动更新被评价用户的平均评分和统计信息
     # 确定被评价的用户（不是评价者）
-    reviewed_user_id = task.taker_id if user_id == task.poster_id else task.poster_id
+    # 对于单人任务：发布者评价接受者，接受者评价发布者
+    # 对于多人任务（达人创建的活动）：
+    #   - 参与者评价达人（expert_creator_id）
+    #   - 达人评价第一个参与者（originating_user_id，即第一个申请者）
+    reviewed_user_id = None
+    if task.is_multi_participant:
+        # 多人任务
+        if task.created_by_expert and task.expert_creator_id:
+            # 如果评价者是参与者（不是达人），被评价者是达人
+            if user_id != task.expert_creator_id:
+                reviewed_user_id = task.expert_creator_id
+            # 如果评价者是达人，被评价者是第一个参与者（originating_user_id）
+            elif task.originating_user_id:
+                reviewed_user_id = task.originating_user_id
+        elif task.taker_id and user_id != task.taker_id:
+            # 如果taker_id存在且不是评价者，则被评价者是taker_id
+            reviewed_user_id = task.taker_id
+    else:
+        # 单人任务：发布者评价接受者，接受者评价发布者
+        reviewed_user_id = task.taker_id if user_id == task.poster_id else task.poster_id
+    
     if reviewed_user_id:
         update_user_statistics(db, reviewed_user_id)
 

@@ -299,12 +299,18 @@ class TaskExpertViewModel: ObservableObject {
 class TaskExpertDetailViewModel: ObservableObject {
     @Published var expert: TaskExpert?
     @Published var services: [TaskExpertService] = []
+    @Published var reviews: [PublicReview] = []
+    @Published var reviewsTotal: Int = 0
+    @Published var hasMoreReviews = false
     @Published var isLoading = false
+    @Published var isLoadingReviews = false
+    @Published var isLoadingMoreReviews = false
     @Published var errorMessage: String?
     
     // 使用依赖注入获取服务
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
+    private let reviewsPageSize = 20
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
@@ -329,6 +335,54 @@ class TaskExpertDetailViewModel: ObservableObject {
                 self?.expert = expert
             })
             .store(in: &cancellables)
+    }
+    
+    func loadReviews(expertId: String, limit: Int = 20, offset: Int = 0) {
+        if offset == 0 {
+            isLoadingReviews = true
+        } else {
+            isLoadingMoreReviews = true
+        }
+        
+        struct ReviewsResponse: Decodable {
+            let total: Int
+            let items: [PublicReview]
+            let limit: Int
+            let offset: Int
+            let hasMore: Bool
+            
+            enum CodingKeys: String, CodingKey {
+                case total, items, limit, offset
+                case hasMore = "has_more"
+            }
+        }
+        
+        apiService.request(ReviewsResponse.self, "/api/task-experts/\(expertId)/reviews?limit=\(limit)&offset=\(offset)", method: "GET")
+            .sink(receiveCompletion: { [weak self] completion in
+                if offset == 0 {
+                    self?.isLoadingReviews = false
+                } else {
+                    self?.isLoadingMoreReviews = false
+                }
+                if case .failure(let error) = completion {
+                    // 评价加载失败不影响页面显示，只记录错误
+                    Logger.error("加载达人评价失败: \(error)", category: .api)
+                }
+            }, receiveValue: { [weak self] response in
+                if offset == 0 {
+                    self?.reviews = response.items
+                } else {
+                    self?.reviews.append(contentsOf: response.items)
+                }
+                self?.reviewsTotal = response.total
+                self?.hasMoreReviews = response.hasMore
+            })
+            .store(in: &cancellables)
+    }
+    
+    func loadMoreReviews(expertId: String) {
+        guard !isLoadingMoreReviews && hasMoreReviews else { return }
+        loadReviews(expertId: expertId, limit: reviewsPageSize, offset: reviews.count)
     }
     
     func loadServices(expertId: String) {
@@ -371,12 +425,18 @@ class TaskExpertDetailViewModel: ObservableObject {
 class ServiceDetailViewModel: ObservableObject {
     @Published var service: TaskExpertService?
     @Published var timeSlots: [ServiceTimeSlot] = []
+    @Published var reviews: [PublicReview] = []
+    @Published var reviewsTotal: Int = 0
+    @Published var hasMoreReviews = false
     @Published var isLoading = false
+    @Published var isLoadingReviews = false
+    @Published var isLoadingMoreReviews = false
     @Published var errorMessage: String?
     
     // 使用依赖注入获取服务
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
+    private let reviewsPageSize = 20
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
@@ -401,6 +461,54 @@ class ServiceDetailViewModel: ObservableObject {
                 self?.service = service
             })
             .store(in: &cancellables)
+    }
+    
+    func loadReviews(serviceId: Int, limit: Int = 20, offset: Int = 0) {
+        if offset == 0 {
+            isLoadingReviews = true
+        } else {
+            isLoadingMoreReviews = true
+        }
+        
+        struct ReviewsResponse: Decodable {
+            let total: Int
+            let items: [PublicReview]
+            let limit: Int
+            let offset: Int
+            let hasMore: Bool
+            
+            enum CodingKeys: String, CodingKey {
+                case total, items, limit, offset
+                case hasMore = "has_more"
+            }
+        }
+        
+        apiService.request(ReviewsResponse.self, "/api/task-experts/services/\(serviceId)/reviews?limit=\(limit)&offset=\(offset)", method: "GET")
+            .sink(receiveCompletion: { [weak self] completion in
+                if offset == 0 {
+                    self?.isLoadingReviews = false
+                } else {
+                    self?.isLoadingMoreReviews = false
+                }
+                if case .failure(let error) = completion {
+                    // 评价加载失败不影响页面显示，只记录错误
+                    Logger.error("加载服务评价失败: \(error)", category: .api)
+                }
+            }, receiveValue: { [weak self] response in
+                if offset == 0 {
+                    self?.reviews = response.items
+                } else {
+                    self?.reviews.append(contentsOf: response.items)
+                }
+                self?.reviewsTotal = response.total
+                self?.hasMoreReviews = response.hasMore
+            })
+            .store(in: &cancellables)
+    }
+    
+    func loadMoreReviews(serviceId: Int) {
+        guard !isLoadingMoreReviews && hasMoreReviews else { return }
+        loadReviews(serviceId: serviceId, limit: reviewsPageSize, offset: reviews.count)
     }
     
     func loadTimeSlots(serviceId: Int) {

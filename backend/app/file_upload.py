@@ -187,8 +187,14 @@ class SecureFileUploader:
     ) -> Dict[str, Any]:
         """安全上传文件"""
         try:
-            # 读取文件内容
-            file_content = await file.read()
+            # 使用流式读取文件内容，避免大文件一次性读入内存
+            from app.file_stream_utils import read_file_with_size_check
+            
+            # 获取最大文件大小
+            max_size = self.ALLOWED_TYPES[category]["max_size"]
+            
+            # 流式读取文件内容
+            file_content, file_size = await read_file_with_size_check(file, max_size)
             
             # 验证文件类型
             self._validate_file_type(file, category)

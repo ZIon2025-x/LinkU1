@@ -30,7 +30,16 @@ struct TaskExpertDetailView: View {
                             .padding(.top, -60)
                         
                         VStack(spacing: 24) {
-                            // 3. 服务菜单标题
+                            // 3. 专业信息卡片（专业领域、特色技能、成就勋章）
+                            expertInfoCard(expert: expert)
+                                .padding(.top, 8)
+                            
+                            // 4. 评价卡片
+                            if !viewModel.reviews.isEmpty || viewModel.isLoadingReviews {
+                                reviewsCard(reviews: viewModel.reviews, isLoading: viewModel.isLoadingReviews)
+                            }
+                            
+                            // 5. 服务菜单标题
                             HStack {
                                 RoundedRectangle(cornerRadius: 2)
                                     .fill(AppColors.primary)
@@ -49,7 +58,7 @@ struct TaskExpertDetailView: View {
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
                             
-                            // 4. 服务列表内容
+                            // 6. 服务列表内容
                             if viewModel.services.isEmpty {
                                 emptyServicesView()
                             } else {
@@ -93,6 +102,7 @@ struct TaskExpertDetailView: View {
         .onAppear {
             viewModel.loadExpert(expertId: expertId)
             viewModel.loadServices(expertId: expertId)
+            viewModel.loadReviews(expertId: expertId)
         }
     }
     
@@ -146,7 +156,7 @@ struct TaskExpertDetailView: View {
                         .foregroundColor(AppColors.primary)
                 }
                 
-                if let bio = expert.bio {
+                if let bio = expert.localizedBio {
                     Text(bio)
                         .font(.system(size: 14))
                         .foregroundColor(AppColors.textSecondary)
@@ -199,6 +209,245 @@ struct TaskExpertDetailView: View {
         Rectangle()
             .fill(Color(UIColor.separator).opacity(0.5))
             .frame(width: 1, height: 24)
+    }
+    
+    @ViewBuilder
+    private func expertInfoCard(expert: TaskExpert) -> some View {
+        let hasExpertiseAreas = expert.localizedExpertiseAreas?.isEmpty == false
+        let hasFeaturedSkills = expert.localizedFeaturedSkills?.isEmpty == false
+        let hasAchievements = expert.localizedAchievements?.isEmpty == false
+        let hasResponseTime = expert.localizedResponseTime?.isEmpty == false
+        let hasAnyInfo = hasExpertiseAreas || hasFeaturedSkills || hasAchievements || hasResponseTime
+        
+        if hasAnyInfo {
+            VStack(spacing: 0) {
+                // 响应时间（如果有）
+                if hasResponseTime, let responseTime = expert.localizedResponseTime {
+                    responseTimeSection(responseTime: responseTime)
+                }
+                
+                // 专业领域
+                if hasExpertiseAreas, let expertiseAreas = expert.localizedExpertiseAreas {
+                    if hasResponseTime {
+                        Divider()
+                            .padding(.vertical, 8)
+                    }
+                    infoSection(
+                        title: LocalizationKey.taskExpertExpertiseAreas.localized,
+                        items: expertiseAreas
+                    )
+                }
+                
+                // 特色技能
+                if hasFeaturedSkills, let featuredSkills = expert.localizedFeaturedSkills {
+                    if hasResponseTime || hasExpertiseAreas {
+                        Divider()
+                            .padding(.vertical, 8)
+                    }
+                    infoSection(
+                        title: LocalizationKey.taskExpertFeaturedSkills.localized,
+                        items: featuredSkills
+                    )
+                }
+                
+                // 成就勋章
+                if hasAchievements, let achievements = expert.localizedAchievements {
+                    if hasResponseTime || hasExpertiseAreas || hasFeaturedSkills {
+                        Divider()
+                            .padding(.vertical, 8)
+                    }
+                    infoSection(
+                        title: LocalizationKey.taskExpertAchievements.localized,
+                        items: achievements
+                    )
+                }
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(UIColor.systemBackground))
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
+            )
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    @ViewBuilder
+    private func responseTimeSection(responseTime: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 14))
+                .foregroundColor(AppColors.primary)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(LocalizationKey.taskExpertResponseTime.localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(AppColors.textTertiary)
+                
+                Text(responseTime)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+    
+    @ViewBuilder
+    private func infoSection(title: String, items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 3, height: 16)
+                
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            FlowLayout(spacing: 8) {
+                ForEach(items, id: \.self) { item in
+                    Text(item)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(AppColors.primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(AppColors.primary.opacity(0.12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .stroke(AppColors.primary.opacity(0.2), lineWidth: 0.5)
+                                )
+                        )
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func reviewsCard(reviews: [PublicReview], isLoading: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 18)
+                
+                Text(LocalizationKey.taskExpertReviews.localized)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Spacer()
+                
+                if viewModel.reviewsTotal > 0 {
+                    Text(String(format: LocalizationKey.taskExpertReviewsCount.localized, viewModel.reviewsTotal))
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            
+            if isLoading && reviews.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else if reviews.isEmpty {
+                Text(LocalizationKey.taskExpertNoReviews.localized)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(reviews) { review in
+                        reviewRow(review: review)
+                    }
+                    
+                    // 加载更多按钮
+                    if viewModel.hasMoreReviews {
+                        Button(action: {
+                            viewModel.loadMoreReviews(expertId: expertId)
+                        }) {
+                            HStack(spacing: 8) {
+                                if viewModel.isLoadingMoreReviews {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "arrow.down.circle")
+                                        .font(.system(size: 14))
+                                }
+                                Text(viewModel.isLoadingMoreReviews ? LocalizationKey.commonLoading.localized : LocalizationKey.commonLoadMore.localized)
+                                    .font(.system(size: 13))
+                            }
+                            .foregroundColor(AppColors.textSecondary)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                        }
+                        .disabled(viewModel.isLoadingMoreReviews)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    @ViewBuilder
+    private func reviewRow(review: PublicReview) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                // 星级评分（支持0.5星）
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { star in
+                        let fullStars = Int(review.rating)
+                        let hasHalfStar = review.rating - Double(fullStars) >= 0.5
+                        
+                        if star <= fullStars {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.warning)
+                        } else if star == fullStars + 1 && hasHalfStar {
+                            Image(systemName: "star.lefthalf.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.warning)
+                        } else {
+                            Image(systemName: "star")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textTertiary)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // 评价时间
+                Text(DateFormatterHelper.shared.formatTime(review.createdAt))
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            if let comment = review.comment, !comment.isEmpty {
+                // 注意：后端已经做了HTML转义，这里直接显示是安全的
+                Text(comment)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineSpacing(4)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppColors.cardBackground)
+        )
     }
     
     @ViewBuilder

@@ -16,7 +16,7 @@ struct TaskDetailView: View {
     @State private var selectedImageIndex = 0
     @State private var actionLoading = false
     @State private var showReviewModal = false
-    @State private var reviewRating = 5
+    @State private var reviewRating: Double = 5.0
     @State private var reviewComment = ""
     @State private var isAnonymousReview = false
     @State private var selectedReviewTags: [String] = []
@@ -69,10 +69,33 @@ struct TaskDetailView: View {
     // 判断是否可以评价
     private var canReview: Bool {
         guard let task = viewModel.task,
-              appState.currentUser != nil else {
+              let currentUserId = appState.currentUser?.id else {
             return false
         }
-        return task.status == .completed && (isPoster || isTaker)
+        
+        // 任务必须已完成
+        guard task.status == .completed else {
+            return false
+        }
+        
+        // 单人任务：发布者或接受者可以评价
+        if task.isMultiParticipant != true {
+            return isPoster || isTaker
+        }
+        
+        // 多人任务：参与者可以评价达人创建者
+        // 检查是否是参与者（通过originatingUserId或TaskParticipant）
+        // 注意：iOS端可能没有完整的参与者列表，这里先检查基本条件
+        // 如果用户是originatingUserId（第一个申请者）或takerId（达人），可以评价
+        if let originatingUserId = task.originatingUserId, String(originatingUserId) == currentUserId {
+            return true  // 第一个申请者可以评价
+        }
+        if isTaker {
+            return true  // 达人可以评价（虽然通常达人评价参与者，但这里先允许）
+        }
+        // 对于其他参与者，后端会验证，这里暂时允许（后端会最终验证）
+        // 如果任务在"我的任务"中显示，说明用户是参与者
+        return true  // 后端会最终验证用户是否是参与者
     }
     
     // 判断是否已评价
@@ -409,13 +432,13 @@ struct TaskDetailView: View {
             onSubmit: {
                 viewModel.createReview(
                     taskId: taskId,
-                    rating: Double(reviewRating),
+                    rating: reviewRating,
                     comment: reviewComment.isEmpty ? nil : reviewComment,
                     isAnonymous: isAnonymousReview
                 ) { success in
                     if success {
                         showReviewModal = false
-                        reviewRating = 5
+                        reviewRating = 5.0
                         reviewComment = ""
                         isAnonymousReview = false
                         selectedReviewTags = []
@@ -427,6 +450,8 @@ struct TaskDetailView: View {
                         }
                         HapticFeedback.success()
                     }
+                    // 错误信息已通过ErrorHandler统一显示，不需要在这里额外处理
+                    // 如果失败，保持弹窗打开，让用户可以看到错误并重试
                 }
             }
         )
@@ -1008,7 +1033,7 @@ struct TaskDetailContentView: View {
     @Binding var showNegotiatePrice: Bool
     @Binding var actionLoading: Bool
     @Binding var showReviewModal: Bool
-    @Binding var reviewRating: Int
+    @Binding var reviewRating: Double
     @Binding var reviewComment: String
     @Binding var isAnonymousReview: Bool
     @Binding var selectedReviewTags: [String]
@@ -1750,10 +1775,21 @@ struct ReviewRow: View {
                 
                 Spacer()
                 
-                HStack(spacing: 4) {
+                HStack(spacing: 2) {
                     ForEach(1...5, id: \.self) { star in
-                        IconStyle.icon("star.fill", size: IconStyle.small)
-                            .foregroundColor(star <= Int(review.rating) ? AppColors.warning : AppColors.textTertiary)
+                        let fullStars = Int(review.rating)
+                        let hasHalfStar = review.rating - Double(fullStars) >= 0.5
+                        
+                        if star <= fullStars {
+                            IconStyle.icon("star.fill", size: IconStyle.small)
+                                .foregroundColor(AppColors.warning)
+                        } else if star == fullStars + 1 && hasHalfStar {
+                            IconStyle.icon("star.lefthalf.fill", size: IconStyle.small)
+                                .foregroundColor(AppColors.warning)
+                        } else {
+                            IconStyle.icon("star", size: IconStyle.small)
+                                .foregroundColor(AppColors.textTertiary)
+                        }
                     }
                 }
             }
@@ -1762,6 +1798,8 @@ struct ReviewRow: View {
                 Text(comment)
                     .font(AppTypography.body)
                     .foregroundColor(AppColors.textSecondary)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
             Text(DateFormatterHelper.shared.formatTime(review.createdAt))
@@ -2387,7 +2425,7 @@ struct ApplicationMessageSheet: View {
 
 // 评价弹窗（参考 frontend）
 struct ReviewModal: View {
-    @Binding var rating: Int
+    @Binding var rating: Double
     @Binding var comment: String
     @Binding var isAnonymous: Bool
     @Binding var selectedTags: [String]
@@ -2395,32 +2433,58 @@ struct ReviewModal: View {
     let isPoster: Bool
     let onSubmit: () -> Void
     @Environment(\.dismiss) var dismiss
-    @State private var hoverRating = 0
+    @State private var hoverRating: Double = 0
     
     private var reviewTags: [String] {
         guard task != nil else { return [] }
         
         if isPoster {
             return [
-                "完成质量高", "准时到达", "态度负责", "沟通愉快",
-                "专业高效", "值得信赖", "强烈推荐", "非常优秀"
+                LocalizationKey.ratingTagHighQuality.localized,
+                LocalizationKey.ratingTagOnTime.localized,
+                LocalizationKey.ratingTagResponsible.localized,
+                LocalizationKey.ratingTagGoodCommunication.localized,
+                LocalizationKey.ratingTagProfessionalEfficient.localized,
+                LocalizationKey.ratingTagTrustworthy.localized,
+                LocalizationKey.ratingTagStronglyRecommended.localized,
+                LocalizationKey.ratingTagExcellent.localized
             ]
         } else {
             return [
-                "任务描述清晰", "沟通及时", "付款爽快", "要求合理",
-                "合作愉快", "强烈推荐", "值得信赖", "非常专业"
+                LocalizationKey.ratingTagClearTask.localized,
+                LocalizationKey.ratingTagTimelyCommunication.localized,
+                LocalizationKey.ratingTagTimelyPayment.localized,
+                LocalizationKey.ratingTagReasonableRequirements.localized,
+                LocalizationKey.ratingTagPleasantCooperation.localized,
+                LocalizationKey.ratingTagStronglyRecommended.localized,
+                LocalizationKey.ratingTagTrustworthy.localized,
+                LocalizationKey.ratingTagVeryProfessional.localized
             ]
         }
     }
     
     private var ratingText: String {
-        switch rating {
-        case 1: return LocalizationKey.ratingVeryPoor.localized
-        case 2: return LocalizationKey.ratingPoor.localized
-        case 3: return LocalizationKey.ratingAverage.localized
-        case 4: return LocalizationKey.ratingGood.localized
-        case 5: return LocalizationKey.ratingExcellent.localized
-        default: return ""
+        let fullStars = Int(rating)
+        let hasHalfStar = rating - Double(fullStars) >= 0.5
+        
+        if hasHalfStar {
+            switch fullStars {
+            case 0: return LocalizationKey.rating05Stars.localized
+            case 1: return LocalizationKey.rating15Stars.localized
+            case 2: return LocalizationKey.rating25Stars.localized
+            case 3: return LocalizationKey.rating35Stars.localized
+            case 4: return LocalizationKey.rating45Stars.localized
+            default: return ""
+            }
+        } else {
+            switch fullStars {
+            case 1: return LocalizationKey.ratingVeryPoor.localized
+            case 2: return LocalizationKey.ratingPoor.localized
+            case 3: return LocalizationKey.ratingAverage.localized
+            case 4: return LocalizationKey.ratingGood.localized
+            case 5: return LocalizationKey.ratingExcellent.localized
+            default: return ""
+            }
         }
     }
     
@@ -2439,13 +2503,11 @@ struct ReviewModal: View {
                             VStack(spacing: AppSpacing.sm) {
                                 HStack(spacing: AppSpacing.md) {
                                     ForEach(1...5, id: \.self) { star in
-                                        Button(action: {
-                                            rating = star
-                                            HapticFeedback.selection()
-                                        }) {
-                                            IconStyle.icon(star <= rating ? "star.fill" : "star", size: 36)
-                                                .foregroundColor(star <= rating ? AppColors.warning : AppColors.textQuaternary)
-                                        }
+                                        StarRatingButton(
+                                            starNumber: star,
+                                            rating: $rating,
+                                            hoverRating: $hoverRating
+                                        )
                                     }
                                 }
                                 
@@ -2526,10 +2588,16 @@ struct ReviewModal: View {
                         
                         // 提交按钮
                         Button(action: {
+                            // 验证评分是否有效
+                            guard rating >= 0.5 && rating <= 5.0 else {
+                                return
+                            }
+                            
                             HapticFeedback.success()
                             // 将标签添加到评论中
                             if !selectedTags.isEmpty {
-                                let tagsText = selectedTags.joined(separator: "、")
+                                let separator = LocalizationKey.commonTagSeparator.localized
+                                let tagsText = selectedTags.joined(separator: separator)
                                 if comment.isEmpty {
                                     comment = tagsText
                                 } else {
@@ -2545,6 +2613,8 @@ struct ReviewModal: View {
                             }
                         }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(rating < 0.5 || rating > 5.0)
+                        .opacity((rating >= 0.5 && rating <= 5.0) ? 1.0 : 0.6)
                         .padding(.top, AppSpacing.lg)
                         .padding(.bottom, AppSpacing.xxl)
                     }
@@ -2561,6 +2631,96 @@ struct ReviewModal: View {
                 }
             }
         }
+    }
+}
+
+// 支持0.5星选择的星级按钮
+struct StarRatingButton: View {
+    let starNumber: Int
+    @Binding var rating: Double
+    @Binding var hoverRating: Double
+    
+    private var displayRating: Double {
+        hoverRating > 0 ? hoverRating : rating
+    }
+    
+    private var starState: StarState {
+        let fullStars = Int(displayRating)
+        let hasHalfStar = displayRating - Double(fullStars) >= 0.5
+        
+        if starNumber <= fullStars {
+            return .filled
+        } else if starNumber == fullStars + 1 && hasHalfStar {
+            return .halfFilled
+        } else {
+            return .empty
+        }
+    }
+    
+    enum StarState {
+        case filled
+        case halfFilled
+        case empty
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // 背景（空星）
+                Image(systemName: "star")
+                    .font(.system(size: 36))
+                    .foregroundColor(AppColors.textQuaternary)
+                
+                // 根据评分显示填充
+                switch starState {
+                case .filled:
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(AppColors.warning)
+                case .halfFilled:
+                    Image(systemName: "star.lefthalf.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(AppColors.warning)
+                case .empty:
+                    EmptyView()
+                }
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let x = value.location.x
+                        let width = geometry.size.width
+                        let isLeftHalf = x < width / 2
+                        
+                        if isLeftHalf {
+                            // 点击左半部分：0.5星（确保不小于0.5）
+                            rating = max(0.5, Double(starNumber) - 0.5)
+                        } else {
+                            // 点击右半部分：整数星
+                            rating = Double(starNumber)
+                        }
+                        HapticFeedback.selection()
+                    }
+                    .onEnded { _ in
+                        hoverRating = 0
+                    }
+            )
+            .onTapGesture { location in
+                let width = geometry.size.width
+                let isLeftHalf = location.x < width / 2
+                
+                if isLeftHalf {
+                    // 点击左半部分：0.5星（确保不小于0.5）
+                    rating = max(0.5, Double(starNumber) - 0.5)
+                } else {
+                    // 点击右半部分：整数星
+                    rating = Double(starNumber)
+                }
+                HapticFeedback.selection()
+            }
+        }
+        .frame(width: 36, height: 36)
     }
 }
 

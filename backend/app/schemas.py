@@ -578,9 +578,31 @@ class TaskUpdate(BaseModel):
 
 
 class ReviewBase(BaseModel):
-    rating: float
-    comment: Optional[str] = None
+    rating: float = Field(..., ge=0.5, le=5.0, description="评分范围：0.5-5.0，支持0.5星间隔")
+    comment: Optional[str] = Field(None, max_length=500, description="评价内容（可选，最多500字符）")
     is_anonymous: bool = False  # 是否匿名评价
+    
+    @validator('comment')
+    def validate_comment(cls, v):
+        """验证评价内容长度"""
+        if v is not None:
+            v = v.strip()
+            if len(v) > 500:
+                raise ValueError('评价内容不能超过500个字符')
+            if len(v) == 0:
+                return None  # 空字符串转为None
+        return v
+    
+    @validator('rating')
+    def validate_rating_step(cls, v):
+        """验证评分是否为0.5的倍数（0.5, 1.0, 1.5, ..., 5.0）"""
+        if v < 0.5 or v > 5.0:
+            raise ValueError('评分必须在0.5到5.0之间')
+        # 检查是否为0.5的倍数（允许小的浮点误差）
+        remainder = (v * 2) % 1
+        if remainder > 0.01 and remainder < 0.99:
+            raise ValueError('评分必须是0.5的倍数（如0.5, 1.0, 1.5等）')
+        return round(v * 2) / 2  # 标准化到最近的0.5倍数
 
 
 class ReviewCreate(ReviewBase):
@@ -591,6 +613,18 @@ class ReviewOut(ReviewBase):
     id: int
     task_id: int
     user_id: str  # 现在ID是字符串类型
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReviewPublicOut(BaseModel):
+    """公开评价输出（不包含评价人私人信息）"""
+    id: int
+    task_id: int
+    rating: float
+    comment: Optional[str] = None
     created_at: datetime.datetime
 
     class Config:

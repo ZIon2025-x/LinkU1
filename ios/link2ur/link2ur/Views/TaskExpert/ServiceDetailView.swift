@@ -37,6 +37,11 @@ struct ServiceDetailView: View {
                             // 服务详情卡片
                             descriptionCard(service: service)
                             
+                            // 评价卡片
+                            if !viewModel.reviews.isEmpty || viewModel.isLoadingReviews {
+                                reviewsCard(reviews: viewModel.reviews, isLoading: viewModel.isLoadingReviews)
+                            }
+                            
                             // 可选时间段
                             if service.hasTimeSlots == true {
                                 timeSlotsCard()
@@ -86,6 +91,7 @@ struct ServiceDetailView: View {
         }
         .onAppear {
             viewModel.loadService(serviceId: serviceId)
+            viewModel.loadReviews(serviceId: serviceId)
             if viewModel.service?.hasTimeSlots == true {
                 viewModel.loadTimeSlots(serviceId: serviceId)
             }
@@ -221,6 +227,127 @@ struct ServiceDetailView: View {
     }
     
     @ViewBuilder
+    @ViewBuilder
+    private func reviewsCard(reviews: [PublicReview], isLoading: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.primary)
+                    .frame(width: 4, height: 18)
+                
+                Text(LocalizationKey.taskExpertReviews.localized)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Spacer()
+                
+                if viewModel.reviewsTotal > 0 {
+                    Text(String(format: LocalizationKey.taskExpertReviewsCount.localized, viewModel.reviewsTotal))
+                        .font(.system(size: 13))
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            
+            if isLoading && reviews.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else if reviews.isEmpty {
+                Text(LocalizationKey.taskExpertNoReviews.localized)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(reviews) { review in
+                        reviewRow(review: review)
+                    }
+                    
+                    // 加载更多按钮
+                    if viewModel.hasMoreReviews {
+                        Button(action: {
+                            viewModel.loadMoreReviews(serviceId: serviceId)
+                        }) {
+                            HStack(spacing: 8) {
+                                if viewModel.isLoadingMoreReviews {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "arrow.down.circle")
+                                        .font(.system(size: 14))
+                                }
+                                Text(viewModel.isLoadingMoreReviews ? LocalizationKey.commonLoading.localized : LocalizationKey.commonLoadMore.localized)
+                                    .font(.system(size: 13))
+                            }
+                            .foregroundColor(AppColors.textSecondary)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                        }
+                        .disabled(viewModel.isLoadingMoreReviews)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    @ViewBuilder
+    private func reviewRow(review: PublicReview) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                // 星级评分（支持0.5星）
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { star in
+                        let fullStars = Int(review.rating)
+                        let hasHalfStar = review.rating - Double(fullStars) >= 0.5
+                        
+                        if star <= fullStars {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.warning)
+                        } else if star == fullStars + 1 && hasHalfStar {
+                            Image(systemName: "star.lefthalf.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.warning)
+                        } else {
+                            Image(systemName: "star")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textTertiary)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // 评价时间
+                Text(DateFormatterHelper.shared.formatTime(review.createdAt))
+                    .font(.system(size: 12))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            if let comment = review.comment, !comment.isEmpty {
+                Text(comment)
+                    .font(.system(size: 14))
+                    .foregroundColor(AppColors.textPrimary)
+                    .lineSpacing(4)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppColors.cardBackground)
+        )
+    }
+    
     private func timeSlotsCard() -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {

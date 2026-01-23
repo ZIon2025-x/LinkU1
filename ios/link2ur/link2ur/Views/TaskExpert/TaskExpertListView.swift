@@ -289,7 +289,7 @@ struct ExpertCard: View {
                         .foregroundColor(AppColors.primary)
                 }
                 
-                if let bio = expert.bio, !bio.isEmpty {
+                if let bio = expert.localizedBio, !bio.isEmpty {
                     Text(bio)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)

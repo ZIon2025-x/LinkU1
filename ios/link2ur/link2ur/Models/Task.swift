@@ -259,3 +259,18 @@ struct Review: Codable, Identifiable {
         case reviewer
     }
 }
+
+// 公开评价模型（不包含评价人私人信息）
+struct PublicReview: Codable, Identifiable {
+    let id: Int
+    let taskId: Int
+    let rating: Double
+    let comment: String?
+    let createdAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, rating, comment
+        case taskId = "task_id"
+        case createdAt = "created_at"
+    }
+}

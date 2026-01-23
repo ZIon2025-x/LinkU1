@@ -19,6 +19,7 @@
 "common.all" = "全部";
 "common.filter" = "筛选";
 "common.load_more" = "加载更多";
+"common.tag_separator" = "、";
 "common.copy" = "复制";
 "common.copied" = "已复制: %@";
 "common.tap" = "点击";
@@ -695,6 +696,26 @@
 "rating.submit" = "提交评价";
 "rating.anonymous_rating" = "匿名评价";
 "rating.submit_rating" = "提交评价";
+"rating.half_star" = "%@星";
+"rating.0.5_stars" = "0.5星";
+"rating.1.5_stars" = "1.5星";
+"rating.2.5_stars" = "2.5星";
+"rating.3.5_stars" = "3.5星";
+"rating.4.5_stars" = "4.5星";
+"rating.tag.high_quality" = "完成质量高";
+"rating.tag.on_time" = "准时到达";
+"rating.tag.responsible" = "态度负责";
+"rating.tag.good_communication" = "沟通愉快";
+"rating.tag.professional_efficient" = "专业高效";
+"rating.tag.trustworthy" = "值得信赖";
+"rating.tag.strongly_recommended" = "强烈推荐";
+"rating.tag.excellent" = "非常优秀";
+"rating.tag.clear_task" = "任务描述清晰";
+"rating.tag.timely_communication" = "沟通及时";
+"rating.tag.timely_payment" = "付款爽快";
+"rating.tag.reasonable_requirements" = "要求合理";
+"rating.tag.pleasant_cooperation" = "合作愉快";
+"rating.tag.very_professional" = "非常专业";
 
 // MARK: - Task Application
 "task_application.apply_task" = "申请任务";
@@ -1077,6 +1098,16 @@
 "task_expert.no_activities" = "暂无活动";
 "task_expert.no_activities_message" = "目前还没有活动记录";
 "task_expert.no_applied_message" = "您还没有申请过任何活动";
+"task_expert.expertise_areas" = "专业领域";
+"task_expert.featured_skills" = "特色技能";
+"task_expert.achievements" = "成就勋章";
+"task_expert.response_time" = "响应时间";
+"task_expert.reviews" = "评价";
+"task_expert.no_reviews" = "暂无评价";
+"task_expert.reviews_count" = "%d 条评价";
+"task_expert.no_expertise_areas" = "暂无专业领域";
+"task_expert.no_featured_skills" = "暂无特色技能";
+"task_expert.no_achievements" = "暂无成就勋章";
 "task_expert.no_experts" = "暂无达人";
 "task_expert.no_experts_message" = "目前还没有任务达人，敬请期待...";
 "task_expert.no_experts_search_message" = "尝试调整筛选条件";
@@ -1481,6 +1512,7 @@
 "flea_market.saving" = "正在保存...";
 "flea_market.save_changes" = "保存修改";
 "flea_market.edit_item" = "编辑商品";
+"flea_market.edit_item_title" = "编辑商品";
 "flea_market.category.electronics" = "电子产品";
 "flea_market.category.clothing" = "服装配饰";
 "flea_market.category.furniture" = "家具家电";

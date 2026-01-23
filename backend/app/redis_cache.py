@@ -36,16 +36,23 @@ class RedisCache:
                 if settings.REDIS_URL and not settings.REDIS_URL.startswith("redis://localhost"):
                     # 使用REDIS_URL连接
                     logger.info(f"[DEBUG] Redis连接 - 使用REDIS_URL: {settings.REDIS_URL[:20]}...")
+                    # 优化Redis连接池配置
+                    max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "50"))
                     self.redis_client = redis.from_url(
                         settings.REDIS_URL,
                         decode_responses=False,  # 使用二进制模式以支持pickle
                         socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
                         socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
                         retry_on_timeout=True,
-                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30"))
+                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30")),
+                        max_connections=max_connections,  # 连接池大小
+                        socket_keepalive=True,  # 保持连接活跃
+                        socket_keepalive_options={}  # TCP keepalive选项
                     )
                 else:
                     # 使用单独的环境变量连接
+                    # 优化Redis连接池配置
+                    max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", "50"))
                     self.redis_client = redis.Redis(
                         host=settings.REDIS_HOST,
                         port=settings.REDIS_PORT,
@@ -55,7 +62,10 @@ class RedisCache:
                         socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
                         socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
                         retry_on_timeout=True,
-                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30"))
+                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30")),
+                        max_connections=max_connections,  # 连接池大小
+                        socket_keepalive=True,  # 保持连接活跃
+                        socket_keepalive_options={}  # TCP keepalive选项
                     )
                 # 测试连接
                 self.redis_client.ping()

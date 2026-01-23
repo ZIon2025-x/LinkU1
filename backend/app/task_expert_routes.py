@@ -197,11 +197,16 @@ async def get_experts_list(
                 "total_tasks": expert.total_tasks or 0,
                 "completion_rate": round(expert.completion_rate or 0, 1),
                 "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+                "expertise_areas_en": json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else [],
                 "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+                "featured_skills_en": json.loads(expert.featured_skills_en) if expert.featured_skills_en else [],
                 "achievements": json.loads(expert.achievements) if expert.achievements else [],
+                "achievements_en": json.loads(expert.achievements_en) if expert.achievements_en else [],
                 "is_verified": bool(expert.is_verified),
                 "bio": expert.bio or "",
+                "bio_en": expert.bio_en or "",
                 "response_time": expert.response_time or "",
+                "response_time_en": expert.response_time_en or "",
                 "success_rate": expert.success_rate or 0,
                 "location": expert.location if expert.location and expert.location.strip() else "Online",
                 "category": expert.category,  # 添加类别字段
@@ -299,6 +304,7 @@ async def get_expert(
             "expert_name": featured_expert.name,
             "name": featured_expert.name,  # 兼容前端
             "bio": featured_expert.bio,
+            "bio_en": featured_expert.bio_en or "",
             "avatar": featured_expert.avatar or "",
             "user_level": featured_expert.user_level,
             "avg_rating": featured_expert.avg_rating or 0.0,
@@ -307,10 +313,14 @@ async def get_expert(
             "total_tasks": featured_expert.total_tasks or 0,
             "completion_rate": round(featured_expert.completion_rate or 0.0, 1),  # 从数据库读取，保留1位小数
             "expertise_areas": json.loads(featured_expert.expertise_areas) if featured_expert.expertise_areas else [],
+            "expertise_areas_en": json.loads(featured_expert.expertise_areas_en) if featured_expert.expertise_areas_en else [],
             "featured_skills": json.loads(featured_expert.featured_skills) if featured_expert.featured_skills else [],
+            "featured_skills_en": json.loads(featured_expert.featured_skills_en) if featured_expert.featured_skills_en else [],
             "achievements": json.loads(featured_expert.achievements) if featured_expert.achievements else [],
+            "achievements_en": json.loads(featured_expert.achievements_en) if featured_expert.achievements_en else [],
             "is_verified": bool(featured_expert.is_verified),
             "response_time": featured_expert.response_time,
+            "response_time_en": featured_expert.response_time_en or "",
             "success_rate": featured_expert.success_rate or 0.0,
             "location": featured_expert.location or "Online",
             "category": featured_expert.category,
@@ -2070,6 +2080,156 @@ async def get_service_detail(
 
 
 # 获取任务达人的公开服务列表（放在 /services/{service_id} 之后，避免路由冲突）
+@task_expert_router.get("/{expert_id}/reviews")
+async def get_expert_reviews(
+    expert_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务达人作为达人身份获得的评价（不包含评价人私人信息）
+    
+    只返回与达人创建的服务/活动相关的任务评价
+    """
+    from sqlalchemy import and_, func
+    
+    # 查询条件：任务是由该达人创建的（created_by_expert=True 且 expert_creator_id=expert_id）
+    # 并且任务已完成，有评价
+    base_query = (
+        select(models.Review)
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(
+            and_(
+                models.Task.created_by_expert == True,
+                models.Task.expert_creator_id == expert_id,
+                models.Task.status == "completed",
+                models.Review.is_anonymous == 0  # 只返回非匿名评价
+            )
+        )
+    )
+    
+    # 获取总数
+    count_query = (
+        select(func.count(models.Review.id))
+        .select_from(
+            models.Review.join(models.Task, models.Review.task_id == models.Task.id)
+        )
+        .where(
+            and_(
+                models.Task.created_by_expert == True,
+                models.Task.expert_creator_id == expert_id,
+                models.Task.status == "completed",
+                models.Review.is_anonymous == 0
+            )
+        )
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 获取分页数据
+    reviews_query = (
+        base_query
+        .order_by(models.Review.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    
+    result = await db.execute(reviews_query)
+    reviews = result.scalars().all()
+    
+    # 转换为公开评价格式（不包含user_id等私人信息）
+    return {
+        "total": total,
+        "items": [
+            schemas.ReviewPublicOut(
+                id=review.id,
+                task_id=review.task_id,
+                rating=review.rating,
+                comment=review.comment,
+                created_at=review.created_at
+            )
+            for review in reviews
+        ],
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total
+    }
+
+
+@task_expert_router.get("/services/{service_id}/reviews")
+async def get_service_reviews(
+    service_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取服务获得的评价（不包含评价人私人信息）
+    
+    只返回与该服务相关的任务评价
+    """
+    from sqlalchemy import func
+    
+    # 查询条件：任务关联了该服务（expert_service_id=service_id）
+    # 并且任务已完成，有评价
+    base_query = (
+        select(models.Review)
+        .join(models.Task, models.Review.task_id == models.Task.id)
+        .where(
+            and_(
+                models.Task.expert_service_id == service_id,
+                models.Task.status == "completed",
+                models.Review.is_anonymous == 0  # 只返回非匿名评价
+            )
+        )
+    )
+    
+    # 获取总数
+    count_query = (
+        select(func.count(models.Review.id))
+        .select_from(
+            models.Review.join(models.Task, models.Review.task_id == models.Task.id)
+        )
+        .where(
+            and_(
+                models.Task.expert_service_id == service_id,
+                models.Task.status == "completed",
+                models.Review.is_anonymous == 0
+            )
+        )
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 获取分页数据
+    reviews_query = (
+        base_query
+        .order_by(models.Review.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    
+    result = await db.execute(reviews_query)
+    reviews = result.scalars().all()
+    
+    # 转换为公开评价格式（不包含user_id等私人信息）
+    return {
+        "total": total,
+        "items": [
+            schemas.ReviewPublicOut(
+                id=review.id,
+                task_id=review.task_id,
+                rating=review.rating,
+                comment=review.comment,
+                created_at=review.created_at
+            )
+            for review in reviews
+        ],
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total
+    }
+
+
 @task_expert_router.get("/{expert_id}/services")
 async def get_expert_services(
     expert_id: str,

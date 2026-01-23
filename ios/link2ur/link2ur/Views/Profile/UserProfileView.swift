@@ -549,11 +549,24 @@ struct ReviewRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                HStack(spacing: 4) {
-                    ForEach(0..<5) { index in
-                        Image(systemName: index < Int(review.rating) ? "star.fill" : "star")
-                            .font(.system(size: 14))
-                            .foregroundColor(index < Int(review.rating) ? .yellow : AppColors.textTertiary)
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { star in
+                        let fullStars = Int(review.rating)
+                        let hasHalfStar = review.rating - Double(fullStars) >= 0.5
+                        
+                        if star <= fullStars {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.yellow)
+                        } else if star == fullStars + 1 && hasHalfStar {
+                            Image(systemName: "star.lefthalf.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.yellow)
+                        } else {
+                            Image(systemName: "star")
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textTertiary)
+                        }
                     }
                     Text(String(format: "%.1f", review.rating))
                         .font(AppTypography.caption)

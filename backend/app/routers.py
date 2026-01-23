@@ -1880,6 +1880,7 @@ def update_task_visibility(
 
 
 @router.post("/tasks/{task_id}/review", response_model=schemas.ReviewOut)
+@rate_limit("api_write", limit=10, window=60)  # 限制：10次/分钟，防止刷评价
 def create_review(
     task_id: int,
     review: schemas.ReviewCreate = Body(...),
@@ -1898,6 +1899,15 @@ def create_review(
             detail="Cannot create review. Task may not be completed, you may not be a participant, or you may have already reviewed this task.",
         )
     
+    # 清除评价列表缓存，确保新评价立即显示
+    try:
+        from app.cache import invalidate_cache
+        # 清除该任务的所有评价缓存（使用通配符匹配所有可能的缓存键）
+        invalidate_cache(f"task_reviews:get_task_reviews:*")
+        logger.info(f"已清除任务 {task_id} 的评价列表缓存")
+    except Exception as e:
+        logger.warning(f"清除评价缓存失败: {e}")
+    
     # P2 优化：异步处理非关键操作（发送通知等）
     if background_tasks:
         def send_review_notification():
@@ -1905,11 +1915,29 @@ def create_review(
             try:
                 # 获取任务信息
                 task = crud.get_task(db, task_id)
-                if task and task.poster_id != current_user.id:
-                    # 通知任务发布者
+                if not task:
+                    return
+                
+                # 确定被评价的用户（不是评价者）
+                reviewed_user_id = None
+                if task.is_multi_participant:
+                    # 多人任务：参与者评价达人，达人评价第一个参与者
+                    if task.created_by_expert and task.expert_creator_id:
+                        if current_user.id != task.expert_creator_id:
+                            reviewed_user_id = task.expert_creator_id
+                        elif task.originating_user_id:
+                            reviewed_user_id = task.originating_user_id
+                    elif task.taker_id and current_user.id != task.taker_id:
+                        reviewed_user_id = task.taker_id
+                else:
+                    # 单人任务：发布者评价接受者，接受者评价发布者
+                    reviewed_user_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
+                
+                # 通知被评价的用户
+                if reviewed_user_id and reviewed_user_id != current_user.id:
                     crud.create_notification(
                         db,
-                        task.poster_id,
+                        reviewed_user_id,
                         "review_created",
                         "收到新评价",
                         f"任务 '{task.title}' 收到了新评价",
@@ -6993,12 +7021,38 @@ async def upload_customer_service_chat_file(
         raise HTTPException(status_code=400, detail="Chat has ended")
     
     try:
-        # 读取文件内容（流式读取，避免大文件占内存）
-        content = await file.read()
-        file_size = len(content)
+        # 使用流式读取文件内容，避免大文件一次性读入内存
+        from app.file_stream_utils import read_file_with_size_check
         
-        # 验证文件类型和大小
-        # 使用智能扩展名检测（支持从 filename、Content-Type 或 magic bytes 检测）
+        # 优化：先尝试从Content-Type检测文件类型（最快，不需要读取文件）
+        # 这对于iOS上传特别有用，因为iOS会设置正确的Content-Type
+        content_type = (file.content_type or "").lower()
+        is_image_from_type = any(ext in content_type for ext in ['jpeg', 'jpg', 'png', 'gif', 'webp'])
+        is_document_from_type = any(ext in content_type for ext in ['pdf', 'msword', 'word', 'plain'])
+        
+        # 从filename检测（如果filename存在）
+        from app.file_utils import get_file_extension_from_filename
+        file_ext = get_file_extension_from_filename(file.filename)
+        is_image = file_ext in ALLOWED_EXTENSIONS or is_image_from_type
+        is_document = file_ext in {".pdf", ".doc", ".docx", ".txt"} or is_document_from_type
+        
+        # 如果还是无法确定，先读取少量内容用于magic bytes检测
+        # 注意：FastAPI的UploadFile不支持seek，所以我们需要在流式读取时处理
+        # 这里先不读取，等流式读取时再检测
+        
+        if not (is_image or is_document):
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
+            )
+        
+        # 确定最大文件大小
+        max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(file, max_size)
+        
+        # 最终验证：使用完整内容再次检测（确保准确性）
         from app.file_utils import get_file_extension_from_upload
         file_ext = get_file_extension_from_upload(file, content=content)
         
@@ -7012,25 +7066,6 @@ async def upload_customer_service_chat_file(
         # 检查是否为危险文件类型
         if file_ext in DANGEROUS_EXTENSIONS:
             raise HTTPException(status_code=400, detail=f"不允许上传 {file_ext} 类型的文件")
-        
-        # 判断文件类型（图片或文档）
-        is_image = file_ext in ALLOWED_EXTENSIONS
-        is_document = file_ext in {".pdf", ".doc", ".docx", ".txt"}
-        
-        if not (is_image or is_document):
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
-            )
-        
-        # 验证文件大小
-        max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
-        if file_size > max_size:
-            size_mb = max_size / (1024 * 1024)
-            raise HTTPException(
-                status_code=413,
-                detail=f"文件大小不能超过 {size_mb}MB"
-            )
         
         # 使用私密文件系统上传
         from app.file_system import private_file_system
@@ -7095,20 +7130,30 @@ async def upload_customer_service_file(
         raise HTTPException(status_code=400, detail="Chat has ended")
     
     try:
-        # 验证文件类型和大小
-        if not file.filename:
-            raise HTTPException(status_code=400, detail="文件名不能为空")
+        # 优化：先尝试从Content-Type检测文件类型（最快，不需要读取文件）
+        # 这对于iOS上传特别有用，因为iOS会设置正确的Content-Type
+        content_type = (file.content_type or "").lower()
+        is_image_from_type = any(ext in content_type for ext in ['jpeg', 'jpg', 'png', 'gif', 'webp'])
+        is_document_from_type = any(ext in content_type for ext in ['pdf', 'msword', 'word', 'plain'])
         
-        # 获取文件扩展名
-        file_ext = Path(file.filename).suffix.lower()
+        # 从filename检测（如果filename存在）
+        file_ext = None
+        if file.filename:
+            file_ext = Path(file.filename).suffix.lower()
+        else:
+            # 如果没有filename，尝试从Content-Type推断
+            if is_image_from_type:
+                file_ext = ".jpg"  # 默认使用jpg
+            elif is_document_from_type:
+                file_ext = ".pdf"  # 默认使用pdf
         
         # 检查是否为危险文件类型
-        if file_ext in DANGEROUS_EXTENSIONS:
+        if file_ext and file_ext in DANGEROUS_EXTENSIONS:
             raise HTTPException(status_code=400, detail=f"不允许上传 {file_ext} 类型的文件")
         
         # 判断文件类型（图片或文档）
-        is_image = file_ext in ALLOWED_EXTENSIONS
-        is_document = file_ext in {".pdf", ".doc", ".docx", ".txt"}
+        is_image = (file_ext and file_ext in ALLOWED_EXTENSIONS) or is_image_from_type
+        is_document = (file_ext and file_ext in {".pdf", ".doc", ".docx", ".txt"}) or is_document_from_type
         
         if not (is_image or is_document):
             raise HTTPException(
@@ -7116,18 +7161,32 @@ async def upload_customer_service_file(
                 detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
             )
         
-        # 读取文件内容（流式读取，避免大文件占内存）
-        content = await file.read()
-        file_size = len(content)
+        # 使用流式读取文件内容，避免大文件一次性读入内存
+        from app.file_stream_utils import read_file_with_size_check
         
-        # 验证文件大小
+        # 确定最大文件大小
         max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
-        if file_size > max_size:
-            size_mb = max_size / (1024 * 1024)
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(file, max_size)
+        
+        # 最终验证：使用完整内容再次检测（确保准确性）
+        from app.file_utils import get_file_extension_from_upload
+        file_ext = get_file_extension_from_upload(file, content=content)
+        
+        # 如果无法检测到扩展名
+        if not file_ext:
             raise HTTPException(
-                status_code=413,
-                detail=f"文件大小不能超过 {size_mb}MB"
+                status_code=400,
+                detail="无法检测文件类型，请确保上传的是有效的文件（图片或文档）"
             )
+        
+        # 再次检查是否为危险文件类型（使用最终检测结果）
+        if file_ext in DANGEROUS_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"不允许上传 {file_ext} 类型的文件")
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(file, max_size)
         
         # 使用私密文件系统上传
         from app.file_system import private_file_system
@@ -8485,8 +8544,14 @@ async def upload_image(
     - chat_id: 客服聊天时提供，图片会存储在 chats/{chat_id}/ 文件夹
     """
     try:
-        # 读取文件内容
-        content = await image.read()
+        # 使用流式读取文件内容，避免大文件一次性读入内存
+        from app.file_stream_utils import read_file_with_size_check
+        
+        # 图片最大大小：5MB
+        MAX_IMAGE_SIZE = 5 * 1024 * 1024
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(image, MAX_IMAGE_SIZE)
         
         # 使用新的私密图片系统上传
         from app.image_system import private_image_system
@@ -8618,8 +8683,14 @@ async def upload_public_image(
             is_temp = True
             actual_resource_id = None  # 服务会自动使用 user_id 构建临时目录
         
-        # 读取文件内容
-        content = await image.read()
+        # 使用流式读取文件内容，避免大文件一次性读入内存
+        from app.file_stream_utils import read_file_with_size_check
+        
+        # 公开图片最大大小：5MB
+        MAX_PUBLIC_IMAGE_SIZE = 5 * 1024 * 1024
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(image, MAX_PUBLIC_IMAGE_SIZE)
         
         # 使用图片上传服务
         service = get_image_upload_service()
@@ -8903,8 +8974,14 @@ async def upload_file(
     - chat_id: 客服聊天时提供，文件会存储在 chats/{chat_id}/ 文件夹
     """
     try:
-        # 读取文件内容
-        content = await file.read()
+        # 使用流式读取文件内容，避免大文件一次性读入内存
+        from app.file_stream_utils import read_file_with_size_check
+        
+        # 文件最大大小：10MB（支持文档等大文件）
+        MAX_FILE_SIZE_UPLOAD = 10 * 1024 * 1024
+        
+        # 流式读取文件内容
+        content, file_size = await read_file_with_size_check(file, MAX_FILE_SIZE_UPLOAD)
         
         # 使用新的私密文件系统上传
         from app.file_system import private_file_system

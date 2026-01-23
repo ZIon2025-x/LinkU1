@@ -696,6 +696,26 @@
 "rating.submit" = "Submit Rating";
 "rating.anonymous_rating" = "Anonymous Rating";
 "rating.submit_rating" = "Submit Rating";
+"rating.half_star" = "%@ stars";
+"rating.0.5_stars" = "0.5 stars";
+"rating.1.5_stars" = "1.5 stars";
+"rating.2.5_stars" = "2.5 stars";
+"rating.3.5_stars" = "3.5 stars";
+"rating.4.5_stars" = "4.5 stars";
+"rating.tag.high_quality" = "High Quality";
+"rating.tag.on_time" = "On Time";
+"rating.tag.responsible" = "Responsible";
+"rating.tag.good_communication" = "Good Communication";
+"rating.tag.professional_efficient" = "Professional & Efficient";
+"rating.tag.trustworthy" = "Trustworthy";
+"rating.tag.strongly_recommended" = "Strongly Recommended";
+"rating.tag.excellent" = "Excellent";
+"rating.tag.clear_task" = "Clear Task Description";
+"rating.tag.timely_communication" = "Timely Communication";
+"rating.tag.timely_payment" = "Timely Payment";
+"rating.tag.reasonable_requirements" = "Reasonable Requirements";
+"rating.tag.pleasant_cooperation" = "Pleasant Cooperation";
+"rating.tag.very_professional" = "Very Professional";
 
 // MARK: - Task Application
 "task_application.apply_task" = "Apply for Task";
@@ -1287,6 +1307,16 @@
 "task_expert.no_favorites_message" = "You have not favorited any activities";
 "task_expert.no_applied_message" = "You have not applied for any activities";
 "task_expert.no_activities_message" = "You have not applied or favorited any activities";
+"task_expert.expertise_areas" = "Expertise Areas";
+"task_expert.featured_skills" = "Featured Skills";
+"task_expert.achievements" = "Achievements";
+"task_expert.response_time" = "Response Time";
+"task_expert.reviews" = "Reviews";
+"task_expert.no_reviews" = "No reviews yet";
+"task_expert.reviews_count" = "%d reviews";
+"task_expert.no_expertise_areas" = "No expertise areas";
+"task_expert.no_featured_skills" = "No featured skills";
+"task_expert.no_achievements" = "No achievements";
 
 // MARK: - Leaderboard
 "leaderboard.apply_title" = "Apply for New Leaderboard";
@@ -1363,6 +1393,7 @@
 "notification.system" = "System";
 "notification.system_message" = "System Message";
 "common.load_more" = "Load More";
+"common.tag_separator" = ", ";
 "common.copy" = "Copy";
 "common.copied" = "Copied: %@";
 "common.tap" = "Tap";
@@ -1481,6 +1512,7 @@
 "flea_market.saving" = "Saving...";
 "flea_market.save_changes" = "Save Changes";
 "flea_market.edit_item" = "Edit Item";
+"flea_market.edit_item_title" = "Edit Item";
 "flea_market.category.electronics" = "Electronics";
 "flea_market.category.clothing" = "Clothing & Accessories";
 "flea_market.category.furniture" = "Furniture & Appliances";

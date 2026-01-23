@@ -1323,7 +1323,7 @@ struct SearchExpertCard: View {
                     .foregroundColor(AppColors.textPrimary)
                     .lineLimit(1)
                 
-                if let bio = expert.bio {
+                if let bio = expert.localizedBio {
                     Text(bio)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)

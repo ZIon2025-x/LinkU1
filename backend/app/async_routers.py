@@ -1284,12 +1284,21 @@ async def create_review_async(
         if existing_review:
             raise HTTPException(status_code=400, detail="You have already reviewed this task")
         
+        # 清理评价内容（防止XSS攻击）
+        cleaned_comment = None
+        if review.comment:
+            from html import escape
+            cleaned_comment = escape(review.comment.strip())
+            # 限制长度（虽然schema已经验证，但这里再次确保）
+            if len(cleaned_comment) > 500:
+                cleaned_comment = cleaned_comment[:500]
+        
         # 创建评价
         db_review = models.Review(
             user_id=current_user.id,
             task_id=task_id,
             rating=review.rating,
-            comment=review.comment,
+            comment=cleaned_comment,
             is_anonymous=1 if review.is_anonymous else 0,
         )
         
@@ -1297,8 +1306,50 @@ async def create_review_async(
         await db.commit()
         await db.refresh(db_review)
         
-        # 注意：统计信息更新暂时跳过，避免异步/同步混用问题
-        # 统计信息可以通过后台任务或定时任务更新
+        # 清除评价列表缓存，确保新评价立即显示
+        try:
+            from app.cache import invalidate_cache
+            # 清除该任务的所有评价缓存（使用通配符匹配所有可能的缓存键）
+            invalidate_cache(f"task_reviews:get_task_reviews:*")
+            logger.info(f"已清除任务 {task_id} 的评价列表缓存（异步路由）")
+        except Exception as e:
+            logger.warning(f"清除评价缓存失败（异步路由）: {e}")
+        
+        # 更新被评价用户的统计信息（使用同步数据库会话）
+        # 确定被评价的用户（不是评价者）
+        # 对于单人任务：发布者评价接受者，接受者评价发布者
+        # 对于多人任务（达人创建的活动）：
+        #   - 参与者评价达人（expert_creator_id）
+        #   - 达人评价第一个参与者（originating_user_id，即第一个申请者）
+        reviewed_user_id = None
+        if task.is_multi_participant:
+            # 多人任务
+            if task.created_by_expert and task.expert_creator_id:
+                # 如果评价者是参与者（不是达人），被评价者是达人
+                if current_user.id != task.expert_creator_id:
+                    reviewed_user_id = task.expert_creator_id
+                # 如果评价者是达人，被评价者是第一个参与者（originating_user_id）
+                elif task.originating_user_id:
+                    reviewed_user_id = task.originating_user_id
+            elif task.taker_id and current_user.id != task.taker_id:
+                # 如果taker_id存在且不是评价者，则被评价者是taker_id
+                reviewed_user_id = task.taker_id
+        else:
+            # 单人任务：发布者评价接受者，接受者评价发布者
+            reviewed_user_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
+        
+        if reviewed_user_id:
+            # 使用同步数据库会话更新统计信息
+            try:
+                from app.database import SessionLocal
+                sync_db = SessionLocal()
+                try:
+                    from app import crud
+                    crud.update_user_statistics(sync_db, reviewed_user_id)
+                finally:
+                    sync_db.close()
+            except Exception as e:
+                logger.warning(f"更新用户统计信息失败（异步路由）: {e}，将通过定时任务更新")
         
         return db_review
         

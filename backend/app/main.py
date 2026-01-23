@@ -1815,93 +1815,22 @@ def read_root():
 
 @app.get("/health")
 async def health_check():
-    """完整的健康检查 - 高优先级优化"""
-    import time
-    from datetime import datetime
-    from sqlalchemy import text
+    """完整的健康检查 - 使用增强的健康检查模块"""
+    from app.health_check import health_checker
     
-    start_time = time.time()
-    health_status = {
-        "status": "healthy",
-        "timestamp": format_iso_utc(get_utc_time()),
-        "checks": {}
-    }
-    
-    # 检查数据库连接
-    db_healthy = False
-    try:
-        from app.database import sync_engine
-        with sync_engine.connect() as conn:
-            result = conn.execute(text("SELECT 1"))
-            result.fetchone()
-        health_status["checks"]["database"] = "ok"
-        db_healthy = True
-        logger.debug("✅ 数据库连接检查通过")
-    except Exception as e:
-        health_status["checks"]["database"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
-        logger.error(f"❌ 数据库连接失败: {e}")
+    health_status = await health_checker.comprehensive_health_check()
     
     # 更新 Prometheus 指标
     try:
-        from app.metrics import update_health_status
-        update_health_status("database", db_healthy)
-    except Exception:
-        pass
-    
-    # 检查Redis连接
-    redis_healthy = False
-    try:
-        from app.redis_cache import get_redis_client
-        redis_client = get_redis_client()
-        if redis_client:
-            redis_client.ping()
-            health_status["checks"]["redis"] = "ok"
-            redis_healthy = True
-            logger.debug("✅ Redis连接检查通过")
-        else:
-            health_status["checks"]["redis"] = "not configured"
-            logger.info("ℹ️  Redis未配置")
-    except Exception as e:
-        health_status["checks"]["redis"] = f"error: {str(e)}"
-        logger.warning(f"⚠️  Redis连接失败: {e}")
-    
-    # 更新 Prometheus 指标
-    try:
-        from app.metrics import update_health_status
-        update_health_status("redis", redis_healthy)
-    except Exception:
-        pass
-    
-    # 检查磁盘空间（上传目录）
-    try:
-        from pathlib import Path
-        upload_dir = Path("uploads")
-        if upload_dir.exists():
-            stat = upload_dir.stat()
-            health_status["checks"]["disk"] = "ok"
-            logger.debug("✅ 磁盘空间检查通过")
-        else:
-            health_status["checks"]["disk"] = "directory missing"
-            logger.warning("⚠️  上传目录不存在")
-    except Exception as e:
-        health_status["checks"]["disk"] = f"error: {str(e)}"
-        logger.error(f"❌ 磁盘检查失败: {e}")
-    
-    # 更新整体健康状态
-    try:
-        from app.metrics import update_health_status
-        overall_healthy = health_status["status"] == "healthy"
-        update_health_status("overall", overall_healthy)
-    except Exception:
-        pass
-    
-    # 记录 HTTP 请求指标
-    try:
-        from app.metrics import record_http_request
-        duration = time.time() - start_time
+        from app.metrics import update_health_status, record_http_request
+        update_health_status("database", health_status["checks"].get("database_sync", {}).get("status") == "healthy")
+        update_health_status("redis", health_status["checks"].get("redis", {}).get("status") == "healthy")
+        update_health_status("overall", health_status["status"] == "healthy")
+        
+        # 记录 HTTP 请求指标
+        response_time = health_status["summary"].get("response_time_ms", 0) / 1000
         status_code = 200 if health_status["status"] == "healthy" else 503
-        record_http_request("GET", "/health", status_code, duration)
+        record_http_request("GET", "/health", status_code, response_time)
     except Exception:
         pass
     
@@ -1909,9 +1838,10 @@ async def health_check():
     if health_status["status"] == "healthy":
         return health_status
     else:
-        # 如果数据库不可用，返回503状态码
+        # 如果关键服务不可用，返回503状态码
+        status_code = 503 if health_status["status"] == "unhealthy" else 200
         return JSONResponse(
-            status_code=503,
+            status_code=status_code,
             content=health_status
         )
 
@@ -1919,6 +1849,17 @@ async def health_check():
 def ping():
     """简单的ping端点 - 用于健康检查"""
     return "pong"
+
+
+@app.get("/metrics/performance")
+async def performance_metrics():
+    """获取性能监控指标"""
+    try:
+        from app.performance_metrics import performance_metrics
+        return performance_metrics.get_comprehensive_metrics()
+    except Exception as e:
+        logger.error(f"获取性能指标失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取性能指标失败")
 
 
 @app.get("/metrics")

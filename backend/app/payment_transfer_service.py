@@ -14,8 +14,12 @@ from sqlalchemy import select, and_, or_
 
 from app import models
 from app.utils.time_utils import get_utc_time
+from app.stripe_config import configure_stripe, get_stripe_client
 
 logger = logging.getLogger(__name__)
+
+# 初始化 Stripe 配置（带超时）
+configure_stripe()
 
 # 重试延迟配置（指数退避）
 RETRY_DELAYS = [
@@ -55,7 +59,12 @@ def create_transfer_record(
         extra_metadata=metadata or {}
     )
     db.add(transfer_record)
-    db.commit()
+    
+    # 使用安全提交，带错误处理和回滚
+    from app.transaction_utils import safe_commit
+    if not safe_commit(db, f"创建转账记录 task_id={task_id}"):
+        raise Exception("创建转账记录失败")
+    
     db.refresh(transfer_record)
     
     logger.info(f"✅ 创建转账记录: task_id={task_id}, amount={amount}, transfer_record_id={transfer_record.id}")
@@ -78,7 +87,10 @@ def execute_transfer(
     Returns:
         (success, transfer_id, error_message)
     """
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    # 使用配置好的 Stripe 客户端（已设置超时）
+    stripe_client = get_stripe_client()
+    if not stripe_client or not stripe_client.api_key:
+        return False, None, "Stripe API 未配置"
     
     try:
         # 检查任务状态
@@ -100,9 +112,9 @@ def execute_transfer(
                 logger.info(f"任务 {transfer_record.task_id} 已有成功的转账记录，跳过")
                 return True, existing_success.transfer_id, None
         
-        # 验证 Stripe Connect 账户状态
+        # 验证 Stripe Connect 账户状态（带超时）
         try:
-            account = stripe.Account.retrieve(taker_stripe_account_id)
+            account = stripe_client.Account.retrieve(taker_stripe_account_id)
             if not account.details_submitted:
                 error_msg = "任务接受人的 Stripe Connect 账户尚未完成设置"
                 logger.warning(f"{error_msg}: taker_id={transfer_record.taker_id}")
@@ -128,7 +140,7 @@ def execute_transfer(
         # 注意：Transfer 使用主账户的可用余额（available balance），不是总余额
         # 如果资金还在 pending 状态，需要等待资金可用后才能转账
         try:
-            balance = stripe.Balance.retrieve()
+            balance = stripe_client.Balance.retrieve()
             available_balance = balance.available[0].amount if balance.available else 0
             pending_balance = balance.pending[0].amount if balance.pending else 0
             logger.info(
@@ -187,7 +199,10 @@ def execute_transfer(
         # task.paid_to_user_id = transfer_record.taker_id
         # task.escrow_amount = Decimal('0.0')
         
-        db.commit()
+        # 使用安全提交，带错误处理和回滚
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"更新转账记录 transfer_id={transfer.id}"):
+            raise Exception("更新转账记录失败")
         
         logger.info(f"✅ 任务 {transfer_record.task_id} Transfer 已创建，等待 webhook 确认: transfer_id={transfer.id}")
         return True, transfer.id, None
@@ -230,11 +245,10 @@ def execute_transfer(
                 transfer_record.status = "failed"
                 transfer_record.next_retry_at = None
                 logger.error(f"❌ 转账失败且已达到最大重试次数: transfer_record_id={transfer_record.id}")
-            try:
-                db.commit()
-            except Exception as commit_error:
-                logger.error(f"更新转账记录失败: {commit_error}")
-                db.rollback()
+            # 使用安全提交，带错误处理和回滚
+            from app.transaction_utils import safe_commit
+            if not safe_commit(db, f"更新转账记录状态 transfer_record_id={transfer_record.id}"):
+                logger.error(f"更新转账记录状态失败: transfer_record_id={transfer_record.id}")
         
         return False, None, error_msg
     except Exception as e:
@@ -261,7 +275,9 @@ def retry_failed_transfer(
     if transfer_record.retry_count >= transfer_record.max_retries:
         transfer_record.status = "failed"
         transfer_record.next_retry_at = None
-        db.commit()
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"标记转账记录为失败 transfer_record_id={transfer_record.id}"):
+            logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
         logger.warning(f"转账记录 {transfer_record.id} 已达到最大重试次数，标记为失败")
         return False, "已达到最大重试次数"
     
@@ -276,14 +292,18 @@ def retry_failed_transfer(
         error_msg = "任务接受人不存在"
         transfer_record.status = "failed"
         transfer_record.last_error = error_msg
-        db.commit()
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"标记转账记录为失败（接受人不存在） transfer_record_id={transfer_record.id}"):
+            logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
         return False, error_msg
     
     if not taker.stripe_account_id:
         error_msg = "任务接受人尚未创建 Stripe Connect 账户"
         transfer_record.status = "failed"
         transfer_record.last_error = error_msg
-        db.commit()
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"标记转账记录为失败（无Stripe账户） transfer_record_id={transfer_record.id}"):
+            logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
         return False, error_msg
     
     # 更新重试次数和状态
@@ -314,7 +334,9 @@ def retry_failed_transfer(
             transfer_record.next_retry_at = None
             logger.error(f"❌ 转账记录 {transfer_record.id} 重试失败，已达到最大重试次数")
         
-        db.commit()
+        from app.transaction_utils import safe_commit
+        if not safe_commit(db, f"更新转账记录重试状态 transfer_record_id={transfer_record.id}"):
+            logger.error(f"更新转账记录重试状态失败: transfer_record_id={transfer_record.id}")
         return False, error_msg
 
 
@@ -354,14 +376,15 @@ def check_transfer_timeout(db: Session, timeout_hours: int = 24) -> Dict[str, An
             stats["checked"] += 1
             
             try:
-                # 检查 Stripe Transfer 状态
-                import stripe
-                import os
-                stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+                # 检查 Stripe Transfer 状态（带超时）
+                stripe_client = get_stripe_client()
+                if not stripe_client or not stripe_client.api_key:
+                    logger.error("Stripe API 未配置，无法检查转账状态")
+                    continue
                 
                 if transfer_record.transfer_id:
                     try:
-                        transfer = stripe.Transfer.retrieve(transfer_record.transfer_id)
+                        transfer = stripe_client.Transfer.retrieve(transfer_record.transfer_id)
                         
                         # 根据 Stripe Transfer 状态更新本地记录
                         if transfer.reversed:
@@ -385,7 +408,9 @@ def check_transfer_timeout(db: Session, timeout_hours: int = 24) -> Dict[str, An
                             logger.warning(f"⚠️ 转账 {transfer_record.id} 超时，未收到 webhook，标记为需要重试")
                         
                         stats["updated"] += 1
-                        db.commit()
+                        from app.transaction_utils import safe_commit
+                        if not safe_commit(db, f"更新转账记录超时状态 transfer_record_id={transfer_record.id}"):
+                            logger.error(f"更新转账记录超时状态失败: transfer_record_id={transfer_record.id}")
                         
                     except stripe.error.StripeError as e:
                         logger.error(f"❌ 查询 Stripe Transfer 状态失败: transfer_id={transfer_record.transfer_id}, error={e}")
@@ -394,7 +419,9 @@ def check_transfer_timeout(db: Session, timeout_hours: int = 24) -> Dict[str, An
                         transfer_record.last_error = f"Failed to check Stripe Transfer status: {str(e)}"
                         transfer_record.retry_count += 1
                         stats["updated"] += 1
-                        db.commit()
+                        from app.transaction_utils import safe_commit
+                        if not safe_commit(db, f"更新转账记录错误状态 transfer_record_id={transfer_record.id}"):
+                            logger.error(f"更新转账记录错误状态失败: transfer_record_id={transfer_record.id}")
             
             except Exception as e:
                 logger.error(f"处理转账超时检查失败: transfer_record_id={transfer_record.id}, error={e}", exc_info=True)
@@ -453,7 +480,9 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                 if not taker or not taker.stripe_account_id:
                     transfer_record.status = "failed"
                     transfer_record.last_error = "任务接受人没有 Stripe Connect 账户"
-                    db.commit()
+                    from app.transaction_utils import safe_commit
+                    if not safe_commit(db, f"标记转账记录为失败（无Stripe账户） transfer_record_id={transfer_record.id}"):
+                        logger.error(f"标记转账记录为失败时提交失败: transfer_record_id={transfer_record.id}")
                     stats["failed"] += 1
                     continue
                 
@@ -490,10 +519,9 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     else:
                         transfer_record.status = "failed"
                         transfer_record.next_retry_at = None
-                    db.commit()
-                except Exception as commit_error:
-                    logger.error(f"更新转账记录失败: {commit_error}")
-                    db.rollback()
+                    from app.transaction_utils import safe_commit
+                    if not safe_commit(db, f"更新转账记录异常状态 transfer_record_id={transfer_record.id}"):
+                        logger.error(f"更新转账记录异常状态失败: transfer_record_id={transfer_record.id}")
         
         logger.info(f"✅ 转账处理完成: {stats}")
         return stats

@@ -91,3 +91,18 @@ def get_file_extension_from_upload(
         content=content
     )
 
+
+def get_file_extension_from_filename(filename: Optional[str]) -> str:
+    """
+    从文件名获取扩展名（简单版本，不检测内容）
+    
+    Args:
+        filename: 文件名
+    
+    Returns:
+        文件扩展名（如 ".jpg"），如果无法检测则返回空字符串
+    """
+    if not filename:
+        return ''
+    return Path(filename).suffix.lower()
+

@@ -36,23 +36,23 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         process_time = time.time() - start_time
         self.total_response_time += process_time
         
-        # 记录慢查询
+        # 只记录慢请求，减少日志I/O开销
         if process_time > self.slow_query_threshold:
             logger.warning(
                 f"Slow request: {request.method} {request.url.path} "
                 f"took {process_time:.3f}s"
             )
+        # 对于正常请求，使用debug级别（生产环境通常不记录）
+        elif process_time > 0.5:  # 超过500ms但未达到慢查询阈值
+            logger.debug(
+                f"Request: {request.method} {request.url.path} "
+                f"Status: {response.status_code} "
+                f"Time: {process_time:.3f}s"
+            )
         
         # 添加性能头
         response.headers["X-Process-Time"] = str(process_time)
         response.headers["X-Request-Count"] = str(self.request_count)
-        
-        # 记录性能日志
-        logger.info(
-            f"Request: {request.method} {request.url.path} "
-            f"Status: {response.status_code} "
-            f"Time: {process_time:.3f}s"
-        )
         
         return response
     

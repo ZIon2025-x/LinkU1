@@ -11,6 +11,7 @@ import os
 from typing import Optional
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioException, TwilioRestException
+from app.twilio_config import create_twilio_client_with_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +36,13 @@ class TwilioSMS:
             self.verify_client = None
         else:
             try:
-                self.client = Client(self.account_sid, self.auth_token)
-                if self.use_verify_api:
+                # 使用带超时的客户端创建函数
+                self.client = create_twilio_client_with_timeout()
+                if self.client and self.use_verify_api:
                     # Verify API 使用相同的 client，但通过 verify.v2.services 访问
                     self.verify_client = self.client.verify.v2.services(self.verify_service_sid)
                     logger.info(f"Twilio Verify API 初始化成功 (Service SID: {self.verify_service_sid})")
-                elif self.from_number:
+                elif self.client and self.from_number:
                     logger.info("Twilio Messages API 初始化成功")
                 else:
                     logger.warning("Twilio 配置不完整：未配置 TWILIO_PHONE_NUMBER 或 TWILIO_VERIFY_SERVICE_SID")

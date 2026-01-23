@@ -253,8 +253,11 @@ class TaskDetailViewModel: ObservableObject {
     
     func createReview(taskId: Int, rating: Double, comment: String?, isAnonymous: Bool = false, completion: @escaping (Bool) -> Void) {
         apiService.reviewTask(taskId: taskId, rating: rating, comment: comment, isAnonymous: isAnonymous)
-            .sink(receiveCompletion: { result in
-                if case .failure = result {
+            .sink(receiveCompletion: { [weak self] result in
+                if case .failure(let error) = result {
+                    // 使用 ErrorHandler 统一处理错误
+                    ErrorHandler.shared.handle(error, context: "提交评价")
+                    self?.errorMessage = error.userFriendlyMessage
                     completion(false)
                 } else {
                     completion(true)

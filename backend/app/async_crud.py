@@ -1740,46 +1740,102 @@ class AsyncBatchOperations:
 
     @staticmethod
     async def batch_create_notifications(
-        db: AsyncSession, notifications: List[Dict[str, Any]]
+        db: AsyncSession, notifications: List[Dict[str, Any]], batch_size: int = 100
     ) -> List[models.Notification]:
-        """批量创建通知"""
+        """
+        批量创建通知（优化版：分批处理避免单次事务过大）
+        
+        Args:
+            db: 异步数据库会话
+            notifications: 通知数据列表
+            batch_size: 每批处理的数量（默认100）
+        
+        Returns:
+            创建的通知列表
+        """
+        if not notifications:
+            return []
+        
+        all_notifications = []
+        
         try:
-            db_notifications = [
-                models.Notification(**notification) for notification in notifications
-            ]
-            db.add_all(db_notifications)
+            # 分批处理，避免单次事务过大
+            for i in range(0, len(notifications), batch_size):
+                batch = notifications[i:i + batch_size]
+                db_notifications = [
+                    models.Notification(**notification) for notification in batch
+                ]
+                db.add_all(db_notifications)
+                await db.flush()  # 刷新以获取ID，但不提交
+                all_notifications.extend(db_notifications)
+            
+            # 一次性提交所有批次
             await db.commit()
-
-            for notification in db_notifications:
+            
+            # 刷新所有通知以获取完整数据
+            for notification in all_notifications:
                 await db.refresh(notification)
-
-            return db_notifications
+            
+            return all_notifications
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error batch creating notifications: {e}")
+            logger.error(f"批量创建通知失败: {e}", exc_info=True)
             raise
 
     @staticmethod
     async def batch_update_tasks(
-        db: AsyncSession, task_updates: List[Dict[str, Any]]
+        db: AsyncSession, task_updates: List[Dict[str, Any]], batch_size: int = 50
     ) -> int:
-        """批量更新任务"""
+        """
+        批量更新任务（优化版：分批处理避免单次事务过大）
+        
+        Args:
+            db: 异步数据库会话
+            task_updates: 更新数据列表，每个字典包含 'id' 和要更新的字段
+            batch_size: 每批处理的数量（默认50）
+        
+        Returns:
+            更新的记录数
+        """
+        if not task_updates:
+            return 0
+        
+        from sqlalchemy import update
+        
         try:
             updated_count = 0
-            for update_data in task_updates:
-                task_id = update_data.pop("id")
-                result = await db.execute(
-                    update(models.Task)
-                    .where(models.Task.id == task_id)
-                    .values(**update_data)
-                )
-                updated_count += result.rowcount
-
+            
+            # 分批处理，避免单次事务过大
+            for i in range(0, len(task_updates), batch_size):
+                batch = task_updates[i:i + batch_size]
+                
+                # 按任务ID分组，相同ID的更新合并
+                updates_by_id = {}
+                for update_data in batch:
+                    task_id = update_data.pop("id")
+                    if task_id in updates_by_id:
+                        updates_by_id[task_id].update(update_data)
+                    else:
+                        updates_by_id[task_id] = update_data
+                
+                # 执行批量更新
+                for task_id, update_data in updates_by_id.items():
+                    result = await db.execute(
+                        update(models.Task)
+                        .where(models.Task.id == task_id)
+                        .values(**update_data)
+                    )
+                    updated_count += result.rowcount
+                
+                # 每批刷新一次，但不提交
+                await db.flush()
+            
+            # 一次性提交所有批次
             await db.commit()
             return updated_count
         except Exception as e:
             await db.rollback()
-            logger.error(f"Error batch updating tasks: {e}")
+            logger.error(f"批量更新任务失败: {e}", exc_info=True)
             raise
 
 
