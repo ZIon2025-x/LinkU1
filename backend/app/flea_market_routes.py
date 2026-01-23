@@ -532,6 +532,18 @@ async def get_flea_market_item(
                 except Exception as e:
                     logger.warning(f"获取支付信息失败: {e}")
         
+        # ⚠️ 检查商品是否可购买（未被其他用户购买或预留）
+        is_available = True
+        if item.sold_task_id is not None:
+            # 如果 sold_task_id 不为空，检查是否是当前用户的未付款购买
+            if not pending_payment_task_id:
+                # 不是当前用户的未付款购买，说明已被其他用户购买或预留
+                is_available = False
+        
+        # 如果商品状态不是 active，也不可购买
+        if item.status != "active":
+            is_available = False
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -556,6 +568,7 @@ async def get_flea_market_item(
             pending_payment_currency=pending_payment_currency,
             pending_payment_customer_id=pending_payment_customer_id,
             pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
+            is_available=is_available,  # 标识商品是否可购买
         )
     except HTTPException:
         raise
@@ -1225,6 +1238,29 @@ async def direct_purchase_item(
                 detail="该商品已售出或已下架"
             )
         
+        # ⚠️ 安全修复：检查商品是否已被其他用户购买或预留
+        if item.sold_task_id is not None:
+            # 检查是否是当前用户的未付款购买
+            task_result = await db.execute(
+                select(models.Task).where(
+                    and_(
+                        models.Task.id == item.sold_task_id,
+                        models.Task.poster_id == current_user.id,  # 当前用户是买家
+                        models.Task.status == "pending_payment",  # 待支付状态
+                        models.Task.is_paid == 0  # 未支付
+                    )
+                )
+            )
+            task = task_result.scalar_one_or_none()
+            
+            if not task:
+                # 不是当前用户的未付款购买，说明已被其他用户购买或预留
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="该商品已被其他用户购买或正在处理中"
+                )
+            # 如果是当前用户的未付款购买，允许继续支付流程
+        
         # 不能购买自己的商品
         if item.seller_id == current_user.id:
             raise HTTPException(
@@ -1297,10 +1333,6 @@ async def direct_purchase_item(
                 detail="该商品已被其他用户购买或正在处理中"
             )
         
-        # ⚠️ 立即清除缓存，确保商品不再显示在列表中
-        invalidate_item_cache(item.id)
-        logger.info(f"✅ 商品 {item_id} 已预留，已清除缓存")
-        
         # ⚠️ 安全修复：创建支付意图，确保跳蚤市场购买也需要支付
         # 在提交事务之前，先检查卖家是否有 Stripe Connect 账户
         seller = await db.get(models.User, item.seller_id)
@@ -1371,6 +1403,10 @@ async def direct_purchase_item(
         # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建）
         await db.commit()
         
+        # ⚠️ 事务提交成功后，立即清除缓存，确保商品不再显示在列表中
+        invalidate_item_cache(item.id)
+        logger.info(f"✅ 商品 {item_id} 已预留，事务已提交，缓存已清除")
+        
         # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
         customer_id = None
         ephemeral_key_secret = None
@@ -1400,7 +1436,7 @@ async def direct_purchase_item(
         # 发送通知给卖家
         await send_direct_purchase_notification(db, item, current_user, new_task.id)
         
-        # 再次清除缓存（确保缓存已清除）
+        # 再次清除缓存（确保缓存已清除，防止通知发送过程中的任何延迟）
         invalidate_item_cache(item.id)
         
         return {
@@ -1461,6 +1497,13 @@ async def create_purchase_request(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="该商品已售出或已下架"
+            )
+        
+        # ⚠️ 安全修复：检查商品是否已被其他用户购买或预留
+        if item.sold_task_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该商品已被其他用户购买或正在处理中"
             )
         
         # 不能申请购买自己的商品

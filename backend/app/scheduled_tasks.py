@@ -650,6 +650,170 @@ def check_expired_payment_tasks(db: Session):
         return 0
 
 
+def send_deadline_reminders(db: Session, hours_before: int):
+    """
+    发送任务截止日期提醒通知
+    
+    Args:
+        db: 数据库会话
+        hours_before: 截止日期前多少小时发送提醒（24、12、6、1）
+    """
+    try:
+        from app.push_notification_service import send_push_notification
+        from app.utils.time_utils import format_iso_utc, get_utc_time
+        from app import crud
+        
+        current_time = get_utc_time()
+        reminder_time = current_time + timedelta(hours=hours_before)
+        
+        # 查询即将在指定小时后到期的进行中任务
+        # 使用时间范围查询（±5分钟窗口，避免重复发送）
+        start_time = reminder_time - timedelta(minutes=5)
+        end_time = reminder_time + timedelta(minutes=5)
+        
+        tasks_to_remind = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "in_progress",  # 只处理进行中的任务
+                models.Task.deadline.isnot(None),  # 必须有截止日期
+                models.Task.deadline >= start_time,
+                models.Task.deadline <= end_time,
+                models.Task.is_flexible != 1  # 排除灵活模式任务（灵活模式没有截止日期）
+            )
+        ).all()
+        
+        sent_count = 0
+        failed_count = 0
+        skipped_count = 0
+        
+        for task in tasks_to_remind:
+            try:
+                # 检查是否已经发送过相同时间的提醒（避免重复发送）
+                # 检查最近1小时内是否已有相同类型的提醒通知
+                recent_reminder = db.query(models.Notification).filter(
+                    and_(
+                        models.Notification.related_id == str(task.id),
+                        models.Notification.type == "deadline_reminder",
+                        models.Notification.created_at >= current_time - timedelta(hours=1)
+                    )
+                ).first()
+                
+                if recent_reminder:
+                    # 最近1小时内已发送过提醒，跳过（避免重复）
+                    skipped_count += 1
+                    logger.debug(f"跳过任务 {task.id} 的截止日期提醒（最近1小时内已发送过）")
+                    continue
+                
+                # 计算剩余时间
+                time_remaining = task.deadline - current_time
+                hours_remaining = int(time_remaining.total_seconds() / 3600)
+                minutes_remaining = int((time_remaining.total_seconds() % 3600) / 60)
+                
+                # 格式化剩余时间文本
+                if hours_remaining >= 1:
+                    time_text = f"{hours_remaining}小时"
+                    if minutes_remaining > 0:
+                        time_text += f"{minutes_remaining}分钟"
+                else:
+                    time_text = f"{minutes_remaining}分钟"
+                
+                # 发送通知给任务发布者
+                if task.poster_id:
+                    try:
+                        # 创建站内通知
+                        notification_content = f"任务「{task.title}」将在{time_text}后到期，请及时关注任务进度。"
+                        notification_content_en = f"Task「{task.title}」will expire in {time_text}. Please pay attention to the task progress."
+                        
+                        crud.create_notification(
+                            db=db,
+                            user_id=task.poster_id,
+                            type="deadline_reminder",
+                            title="任务截止日期提醒",
+                            content=notification_content,
+                            title_en="Task Deadline Reminder",
+                            content_en=notification_content_en,
+                            related_id=str(task.id),
+                            auto_commit=False
+                        )
+                        
+                        # 发送推送通知
+                        send_push_notification(
+                            db=db,
+                            user_id=task.poster_id,
+                            title="任务截止日期提醒",
+                            body=f"任务「{task.title}」将在{time_text}后到期",
+                            notification_type="deadline_reminder",
+                            data={"task_id": task.id},
+                            template_vars={
+                                "task_title": task.title,
+                                "task_id": task.id,
+                                "hours_remaining": hours_remaining,
+                                "time_text": time_text,
+                                "deadline": format_iso_utc(task.deadline)
+                            }
+                        )
+                        sent_count += 1
+                        logger.info(f"已发送截止日期提醒通知给发布者 {task.poster_id}（任务 {task.id}，{time_text}后到期）")
+                    except Exception as e:
+                        failed_count += 1
+                        logger.error(f"发送截止日期提醒通知失败（任务 {task.id}，发布者 {task.poster_id}）: {e}", exc_info=True)
+                
+                # 发送通知给任务接受者
+                if task.taker_id and task.taker_id != task.poster_id:
+                    try:
+                        # 创建站内通知
+                        notification_content = f"任务「{task.title}」将在{time_text}后到期，请及时完成。"
+                        notification_content_en = f"Task「{task.title}」will expire in {time_text}. Please complete it in time."
+                        
+                        crud.create_notification(
+                            db=db,
+                            user_id=task.taker_id,
+                            type="deadline_reminder",
+                            title="任务截止日期提醒",
+                            content=notification_content,
+                            title_en="Task Deadline Reminder",
+                            content_en=notification_content_en,
+                            related_id=str(task.id),
+                            auto_commit=False
+                        )
+                        
+                        # 发送推送通知
+                        send_push_notification(
+                            db=db,
+                            user_id=task.taker_id,
+                            title="任务截止日期提醒",
+                            body=f"任务「{task.title}」将在{time_text}后到期",
+                            notification_type="deadline_reminder",
+                            data={"task_id": task.id},
+                            template_vars={
+                                "task_title": task.title,
+                                "task_id": task.id,
+                                "hours_remaining": hours_remaining,
+                                "time_text": time_text,
+                                "deadline": format_iso_utc(task.deadline)
+                            }
+                        )
+                        sent_count += 1
+                        logger.info(f"已发送截止日期提醒通知给接受者 {task.taker_id}（任务 {task.id}，{time_text}后到期）")
+                    except Exception as e:
+                        failed_count += 1
+                        logger.error(f"发送截止日期提醒通知失败（任务 {task.id}，接受者 {task.taker_id}）: {e}", exc_info=True)
+                
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"处理任务 {task.id} 的截止日期提醒时出错: {e}", exc_info=True)
+                continue
+        
+        if sent_count > 0:
+            db.commit()
+        
+        logger.info(f"截止日期提醒通知发送完成：成功 {sent_count}，失败 {failed_count}，跳过 {skipped_count}（{hours_before}小时前提醒）")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"发送截止日期提醒通知失败: {e}", exc_info=True)
+        raise
+
+
 def send_payment_reminders(db: Session, hours_before: int):
     """
     发送支付提醒通知
@@ -765,6 +929,15 @@ def run_scheduled_tasks():
             send_payment_reminders(db, hours_before=1)
         except Exception as e:
             logger.error(f"发送支付提醒失败: {e}", exc_info=True)
+        
+        # 发送任务截止日期提醒（24小时前、12小时前、6小时前、1小时前）
+        try:
+            send_deadline_reminders(db, hours_before=24)
+            send_deadline_reminders(db, hours_before=12)
+            send_deadline_reminders(db, hours_before=6)
+            send_deadline_reminders(db, hours_before=1)
+        except Exception as e:
+            logger.error(f"发送任务截止日期提醒失败: {e}", exc_info=True)
         
         # 处理过期认证（每小时执行一次，这里作为兜底）
         try:

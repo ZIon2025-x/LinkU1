@@ -2224,6 +2224,7 @@ class FleaMarketItemResponse(BaseModel):
     pending_payment_currency: Optional[str] = None  # 支付货币
     pending_payment_customer_id: Optional[str] = None  # Stripe客户ID
     pending_payment_ephemeral_key_secret: Optional[str] = None  # Stripe临时密钥
+    is_available: Optional[bool] = True  # 商品是否可购买（未被其他用户购买或预留）
 
     class Config:
         from_attributes = True

@@ -370,6 +370,18 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
+    # 任务截止日期提醒
+    "deadline_reminder": {
+        "en": {
+            "title": "⏰ Deadline Reminder",
+            "body_template": "Task「{task_title}」will expire in {time_text}. Please pay attention to the task progress."
+        },
+        "zh": {
+            "title": "⏰ 截止日期提醒",
+            "body_template": "任务「{task_title}」将在{time_text}后到期，请及时关注任务进度。"
+        }
+    },
+    
     # 通用通知
     "general": {
         "en": {

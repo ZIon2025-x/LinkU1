@@ -221,10 +221,34 @@ def apply_to_activity(
     
     # 检查截止日期（非时间段服务）
     if not db_activity.has_time_slots:
+        # 检查活动本身的截止日期是否已过期
         if db_activity.deadline:
             current_time = get_utc_time()
             if current_time > db_activity.deadline:
                 raise HTTPException(status_code=400, detail="Activity has expired")
+        
+        # ⚠️ 验证用户申请的截止日期（类似服务申请的验证逻辑）
+        if request.is_flexible_time:
+            # 灵活模式，不需要截止日期
+            preferred_deadline = None
+        elif request.preferred_deadline is None:
+            # 非灵活模式，必须提供截止日期
+            raise HTTPException(
+                status_code=400,
+                detail="非灵活模式必须提供截止日期"
+            )
+        else:
+            # 验证截止日期不能早于当前时间
+            current_time = get_utc_time()
+            if request.preferred_deadline < current_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail="截止日期不能早于当前时间"
+                )
+            preferred_deadline = request.preferred_deadline
+    else:
+        # 如果活动启用了时间段，不需要截止日期（时间段已经包含了日期信息）
+        preferred_deadline = None
     
     # 对于多人任务且有时间段的情况，检查是否已经有任务关联到这个时间段
     # 如果有，让新用户加入现有任务，而不是创建新任务
@@ -330,6 +354,28 @@ def apply_to_activity(
             time_slot.current_participants += 1
             db.add(time_slot)
         
+        # ⚠️ 验证截止日期（对于非时间段服务，加入现有任务时也需要验证）
+        validated_preferred_deadline = None
+        if not db_activity.has_time_slots:
+            if request.is_flexible_time:
+                # 灵活模式，不需要截止日期
+                validated_preferred_deadline = None
+            elif request.preferred_deadline is None:
+                # 非灵活模式，必须提供截止日期
+                raise HTTPException(
+                    status_code=400,
+                    detail="非灵活模式必须提供截止日期"
+                )
+            else:
+                # 验证截止日期不能早于当前时间
+                current_time = get_utc_time()
+                if request.preferred_deadline < current_time:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="截止日期不能早于当前时间"
+                    )
+                validated_preferred_deadline = request.preferred_deadline
+        
         # 创建TaskParticipant记录，让新用户加入现有任务
         participant_status = "accepted" if db_activity.has_time_slots else "pending"
         participant = TaskParticipant(
@@ -338,7 +384,7 @@ def apply_to_activity(
             activity_id=activity_id,
             status=participant_status,
             time_slot_id=request.time_slot_id if db_activity.has_time_slots else None,
-            preferred_deadline=request.preferred_deadline,
+            preferred_deadline=validated_preferred_deadline,
             is_flexible_time=request.is_flexible_time,
             is_expert_task=True,
             is_official_task=False,
@@ -401,11 +447,21 @@ def apply_to_activity(
     # 重要：任务方向逻辑
     # - 对于单人任务：poster_id（发布者）= 付钱的人 = 申请活动的普通用户，taker_id（接收者）= 收钱的人 = 任务达人
     # - 对于多人任务：poster_id 应该为 None，因为所有参与者都通过 TaskParticipant 表管理，不应该有单一的发布者
+    # 确定任务的截止日期
+    # 对于非时间段服务：使用验证后的 preferred_deadline（如果用户提供了）或活动的 deadline
+    # 对于时间段服务：不需要截止日期（时间段已包含日期信息）
+    if not db_activity.has_time_slots:
+        task_deadline = preferred_deadline if preferred_deadline else db_activity.deadline
+        task_is_flexible = 1 if request.is_flexible_time else 0
+    else:
+        task_deadline = None  # 时间段服务不需要截止日期
+        task_is_flexible = 0  # 时间段服务不是灵活模式
+    
     new_task = Task(
         title=db_activity.title,
         description=db_activity.description,
-        deadline=request.preferred_deadline if request.preferred_deadline else db_activity.deadline,
-        is_flexible=1 if request.is_flexible_time else 0,
+        deadline=task_deadline,
+        is_flexible=task_is_flexible,
         reward=price,
         base_reward=price,
         currency=db_activity.currency,
@@ -519,7 +575,7 @@ def apply_to_activity(
             activity_id=activity_id,  # 冗余字段：关联的活动ID
             status=participant_status,
             time_slot_id=request.time_slot_id if db_activity.has_time_slots else None,
-            preferred_deadline=request.preferred_deadline,
+            preferred_deadline=preferred_deadline,  # 使用验证后的截止日期
             is_flexible_time=request.is_flexible_time,
             is_expert_task=True,
             is_official_task=False,
