@@ -4802,7 +4802,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     if flea_market_item_id:
                         try:
                             from app.models import FleaMarketItem
-                            from app.flea_market_extensions import parse_flea_market_id
+                            from app.id_generator import parse_flea_market_id
                             db_item_id = parse_flea_market_id(flea_market_item_id)
                             
                             # 更新商品状态为 sold（支付成功后）
