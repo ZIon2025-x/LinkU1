@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import api from '../api';
 import { getPublicSystemSettings } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -66,8 +67,9 @@ const VIP: React.FC = () => {
   };
 
   const handleUpgrade = (level: string) => {
-    // 这里可以添加支付逻辑
-    alert(`升级到${getLevelText(level)}功能正在开发中，请联系管理员手动升级！`);
+    // VIP功能即将推出
+    // 暂时移除购买功能，符合App Store审核要求
+    message.info(t('vip.comingSoon') || 'VIP功能即将推出，敬请期待！');
   };
 
   if (loading) {
@@ -313,24 +315,39 @@ const VIP: React.FC = () => {
               <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布VIP任务 (≥{systemSettings.vip_price_threshold}元)</li>
               <li style={{ marginBottom: '10px', color: '#999', fontSize: '14px' }}>✗ 发布超级任务 (≥{systemSettings.super_vip_price_threshold}元)</li>
             </ul>
-            <button
-              onClick={() => handleUpgrade('vip')}
-              disabled={user?.user_level === 'vip'}
-              style={{
+            {user?.user_level === 'vip' ? (
+              <button
+                disabled
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'default',
+                  background: '#e0e0e0',
+                  color: '#999',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {t('vip.currentPlan') || '当前套餐'}
+              </button>
+            ) : (
+              <div style={{
                 width: '100%',
                 padding: '15px',
-                border: 'none',
                 borderRadius: '10px',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                cursor: user?.user_level === 'vip' ? 'default' : 'pointer',
-                background: user?.user_level === 'vip' ? '#e0e0e0' : '#ffc107',
-                color: user?.user_level === 'vip' ? '#999' : '#fff',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {user?.user_level === 'vip' ? '当前套餐' : '升级到VIP'}
-            </button>
+                textAlign: 'center',
+                background: '#f0f0f0',
+                color: '#666',
+                border: '2px dashed #ccc'
+              }}>
+                {t('vip.comingSoon') || 'VIP功能即将推出'}
+              </div>
+            )}
           </div>
 
           {/* 超级会员 */}
@@ -373,24 +390,39 @@ const VIP: React.FC = () => {
               <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布VIP任务 (≥{systemSettings.vip_price_threshold}元)</li>
               <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布超级任务 (≥{systemSettings.super_vip_price_threshold}元)</li>
             </ul>
-            <button
-              onClick={() => handleUpgrade('super')}
-              disabled={user?.user_level === 'super'}
-              style={{
+            {user?.user_level === 'super' ? (
+              <button
+                disabled
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'default',
+                  background: '#e0e0e0',
+                  color: '#999',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {t('vip.currentPlan') || '当前套餐'}
+              </button>
+            ) : (
+              <div style={{
                 width: '100%',
                 padding: '15px',
-                border: 'none',
                 borderRadius: '10px',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                cursor: user?.user_level === 'super' ? 'default' : 'pointer',
-                background: user?.user_level === 'super' ? '#e0e0e0' : '#dc3545',
-                color: user?.user_level === 'super' ? '#999' : '#fff',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {user?.user_level === 'super' ? '当前套餐' : '升级到超级会员'}
-            </button>
+                textAlign: 'center',
+                background: '#f0f0f0',
+                color: '#666',
+                border: '2px dashed #ccc'
+              }}>
+                {t('vip.comingSoon') || 'VIP功能即将推出'}
+              </div>
+            )}
           </div>
         </div>
 

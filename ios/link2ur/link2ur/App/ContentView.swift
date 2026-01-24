@@ -357,7 +357,7 @@ public struct ContentView: View {
         }
     }
     
-    // 视频播放完成后请求通知权限
+    // 视频播放完成后请求通知权限和追踪权限
     private func requestNotificationPermissionAfterVideo() {
         // 检查是否已经请求过通知权限
         let hasRequestedNotification = UserDefaults.standard.bool(forKey: "has_requested_notification_permission")

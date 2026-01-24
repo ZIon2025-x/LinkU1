@@ -1155,6 +1155,7 @@ public enum LocalizationKey: String {
     case vipFaqWhenEffectiveAnswer = "vip.faq_when_effective_answer"
     case vipFaqCanCancel = "vip.faq_can_cancel"
     case vipFaqCanCancelAnswer = "vip.faq_can_cancel_answer"
+    case vipComingSoon = "vip.coming_soon"
     
     // MARK: - Flea Market Additional
     case fleaMarketNoImage = "flea_market.no_image"

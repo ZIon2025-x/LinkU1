@@ -4421,6 +4421,108 @@ def unregister_device_token(
         raise HTTPException(status_code=404, detail="Device token not found")
 
 
+@router.delete("/users/account")
+def delete_user_account(
+    request: Request,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """删除用户账户及其所有相关数据"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user_id = current_user.id
+    
+    try:
+        # 检查用户是否有进行中的任务
+        from app.models import Task
+        active_tasks = db.query(Task).filter(
+            (Task.poster_id == user_id) | (Task.taker_id == user_id),
+            Task.status.in_(['open', 'assigned', 'in_progress', 'pending_payment'])
+        ).count()
+        
+        if active_tasks > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="无法删除账户：您有进行中的任务。请先完成或取消所有任务后再删除账户。"
+            )
+        
+        # 删除用户相关的所有数据
+        # 1. 删除设备令牌
+        from app.models import DeviceToken
+        db.query(DeviceToken).filter(DeviceToken.user_id == user_id).delete()
+        
+        # 2. 删除通知
+        from app.models import Notification
+        db.query(Notification).filter(
+            (Notification.user_id == user_id) | (Notification.related_id == user_id)
+        ).delete()
+        
+        # 3. 删除消息（保留消息历史，但移除用户关联）
+        from app.models import Message
+        # 将消息的发送者ID设为NULL（如果数据库允许）
+        # 或者删除用户相关的消息
+        db.query(Message).filter(
+            (Message.sender_id == user_id) | (Message.receiver_id == user_id)
+        ).delete()
+        
+        # 4. 删除任务申请
+        from app.models import TaskApplication
+        db.query(TaskApplication).filter(TaskApplication.user_id == user_id).delete()
+        
+        # 5. 删除评价（保留评价，但移除用户关联）
+        from app.models import Review
+        db.query(Review).filter(
+            (Review.reviewer_id == user_id) | (Review.reviewee_id == user_id)
+        ).delete()
+        
+        # 6. 删除收藏（如果存在Favorite模型）
+        try:
+            from app.models import Favorite
+            db.query(Favorite).filter(Favorite.user_id == user_id).delete()
+        except Exception:
+            pass  # 如果模型不存在，跳过
+        
+        # 7. 删除用户偏好设置
+        from app.models import UserPreferences
+        db.query(UserPreferences).filter(UserPreferences.user_id == user_id).delete()
+        
+        # 8. 删除Stripe Connect账户关联（不删除Stripe账户本身）
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            user.stripe_account_id = None
+        
+        # 9. 删除用户会话（通过secure_auth系统）
+        from app.secure_auth import SecureAuthManager
+        try:
+            SecureAuthManager().revoke_all_user_sessions(user_id)
+        except Exception as e:
+            logger.warning(f"删除用户会话时出错: {e}")
+        
+        # 10. 最后删除用户本身
+        db.delete(user)
+        db.commit()
+        
+        logger.info(f"用户账户已删除: {user_id}")
+        
+        # 清除响应中的认证信息
+        response = JSONResponse(content={"message": "账户已成功删除"})
+        response.delete_cookie("session_id", path="/")
+        response.delete_cookie("csrf_token", path="/")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"删除用户账户失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"删除账户时发生错误: {str(e)}"
+        )
+
+
 @router.post("/notifications/read-all")
 def mark_all_notifications_read_api(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)

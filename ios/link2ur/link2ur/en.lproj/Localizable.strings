@@ -1095,6 +1095,7 @@
 "vip.faq_when_effective_answer" = "Membership benefits take effect immediately after upgrade, and you can immediately enjoy the corresponding privileged services.";
 "vip.faq_can_cancel" = "Can I cancel membership at any time?";
 "vip.faq_can_cancel_answer" = "Yes, you can contact the administrator to cancel membership service at any time. The cancellation will take effect in the next billing cycle.";
+"vip.coming_soon" = "VIP feature coming soon, stay tuned!";
 
 // MARK: - Wallet
 "wallet.quick_actions" = "Quick Actions";
@@ -1168,6 +1169,8 @@
 "settings.setup_payment_account" = "Setup Payment Account";
 "settings.account" = "Account";
 "settings.user_id" = "User ID";
+"settings.delete_account" = "Delete Account";
+"settings.delete_account_message" = "Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.";
 "theme.system" = "Follow System";
 "theme.light" = "Light";
 "theme.dark" = "Dark";

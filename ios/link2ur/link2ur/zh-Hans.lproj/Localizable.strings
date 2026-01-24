@@ -1203,6 +1203,7 @@
 "vip.faq_when_effective_answer" = "会员权益在升级后立即生效，您可以立即享受相应的特权服务。";
 "vip.faq_can_cancel" = "可以随时取消会员吗？";
 "vip.faq_can_cancel_answer" = "是的，您可以随时联系管理员取消会员服务，取消后将在下个计费周期生效。";
+"vip.coming_soon" = "VIP功能即将推出，敬请期待！";
 
 // MARK: - Share
 "share.wechat" = "微信";
@@ -1246,6 +1247,8 @@
 "settings.setup_payment_account" = "设置收款账户";
 "settings.account" = "账户信息";
 "settings.user_id" = "用户ID";
+"settings.delete_account" = "删除账户";
+"settings.delete_account_message" = "确定要删除您的账户吗？此操作无法撤销。您的所有数据将被永久删除。";
 
 // MARK: - Theme
 "theme.system" = "跟随系统";

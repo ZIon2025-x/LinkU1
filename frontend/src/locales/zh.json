@@ -1418,7 +1418,8 @@
     "cancelSuccess": "订阅取消成功",
     "cancelError": "订阅取消失败，请重试。",
     "renewSuccess": "订阅续费成功",
-    "renewError": "订阅续费失败，请重试。"
+    "renewError": "订阅续费失败，请重试。",
+    "comingSoon": "VIP功能即将推出，敬请期待！"
   },
   "admin": {
     "title": "管理后台",

@@ -11,6 +11,25 @@ struct VIPView: View {
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.top, AppSpacing.md)
                 
+                // VIP功能即将推出提示
+                VStack(spacing: AppSpacing.md) {
+                    Text(LocalizationKey.vipComingSoon.localized)
+                        .font(AppTypography.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.vertical, AppSpacing.md)
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCornerRadius.large)
+                                .stroke(Color.gray.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                        )
+                }
+                .padding(.horizontal, AppSpacing.md)
+                
                 // 会员权益
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
                     Text(LocalizationKey.infoMemberBenefits.localized)
@@ -59,7 +78,7 @@ struct VIPView: View {
                     
                     FAQRow(
                         question: LocalizationKey.vipFaqHowToUpgrade.localized,
-                        answer: LocalizationKey.vipFaqHowToUpgradeAnswer.localized
+                        answer: LocalizationKey.vipComingSoon.localized
                     )
                     
                     FAQRow(

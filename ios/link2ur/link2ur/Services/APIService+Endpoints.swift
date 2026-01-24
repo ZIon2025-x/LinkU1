@@ -226,6 +226,11 @@ extension APIService {
         return request(EmptyResponse.self, APIEndpoints.Auth.logout, method: "POST")
     }
     
+    /// 删除账户
+    func deleteAccount() -> AnyPublisher<EmptyResponse, APIError> {
+        return request(EmptyResponse.self, APIEndpoints.Users.deleteAccount, method: "DELETE")
+    }
+    
     // MARK: - User Profile (用户资料)
     
     /// 获取当前用户信息

@@ -1,9 +1,13 @@
 import SwiftUI
+import Combine
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var appTheme = AppTheme.shared
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    @State private var showDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
+    private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
         ZStack {
@@ -156,14 +160,65 @@ struct SettingsView: View {
                         }
                     }
                 }
+                
+                // 危险操作
+                Section {
+                    Button(action: {
+                        showDeleteAccountAlert = true
+                    }) {
+                        HStack {
+                            if isDeletingAccount {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "trash.fill")
+                                    .foregroundColor(.red)
+                            }
+                            Text(LocalizationKey.settingsDeleteAccount.localized)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    .disabled(isDeletingAccount)
+                }
             }
             .listStyle(InsetGroupedListStyle())
-        }
+            .alert(LocalizationKey.settingsDeleteAccount.localized, isPresented: $showDeleteAccountAlert) {
+                Button(LocalizationKey.commonCancel.localized, role: .cancel) {}
+                Button(LocalizationKey.settingsDeleteAccount.localized, role: .destructive) {
+                    deleteAccount()
+                }
+            } message: {
+                Text(LocalizationKey.settingsDeleteAccountMessage.localized)
+            }
         .navigationTitle(LocalizationKey.profileSettings.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+    }
+    
+    private func deleteAccount() {
+        isDeletingAccount = true
+        
+        APIService.shared.deleteAccount()
+            .sink(
+                receiveCompletion: { result in
+                    isDeletingAccount = false
+                    if case .failure(let error) = result {
+                        // 显示错误提示
+                        print("删除账户失败: \(error.localizedDescription)")
+                        // 这里可以添加错误提示UI
+                    } else {
+                        // 删除成功，登出并返回登录页面
+                        appState.logout()
+                    }
+                },
+                receiveValue: { _ in
+                    // 删除成功
+                    appState.logout()
+                }
+            )
+            .store(in: &cancellables)
     }
 }
 

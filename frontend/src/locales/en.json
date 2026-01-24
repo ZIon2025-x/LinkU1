@@ -1472,7 +1472,8 @@
     "cancelSuccess": "Subscription cancelled successfully",
     "cancelError": "Failed to cancel subscription. Please try again.",
     "renewSuccess": "Subscription renewed successfully",
-    "renewError": "Failed to renew subscription. Please try again."
+    "renewError": "Failed to renew subscription. Please try again.",
+    "comingSoon": "VIP feature coming soon, stay tuned!"
   },
   "admin": {
     "title": "Admin Dashboard",

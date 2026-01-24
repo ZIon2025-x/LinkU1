@@ -66,6 +66,7 @@ enum APIEndpoints {
             "/api/users/tasks/\(taskId)/complete"
         }
         static let myServiceApplications = "/api/users/me/service-applications"
+        static let deleteAccount = "/api/users/account"
     }
     
     // MARK: - Tasks (任务)
