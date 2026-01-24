@@ -231,6 +231,8 @@ class Task(Base):
     parent_activity_id = Column(Integer, ForeignKey("activities.id", ondelete="RESTRICT"), nullable=True)
     # 记录实际申请人（如果任务是从活动申请创建的）
     originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
+    task_source = Column(String(20), default="normal", nullable=False)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
     # 关系

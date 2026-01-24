@@ -1303,6 +1303,7 @@ async def direct_purchase_item(
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
+            task_source="flea_market",  # 跳蚤市场任务
         )
         db.add(new_task)
         await db.flush()  # 获取任务ID
@@ -1692,6 +1693,7 @@ async def approve_purchase_request(
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
+            task_source="flea_market",  # 跳蚤市场任务
         )
         db.add(new_task)
         await db.flush()  # 获取任务ID
@@ -2001,6 +2003,7 @@ async def accept_purchase_request(
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
+            task_source="flea_market",  # 跳蚤市场任务
         )
         db.add(new_task)
         await db.flush()  # 获取任务ID

@@ -2619,7 +2619,8 @@ async def apply_for_service(
             is_paid=0,  # 明确标记为未支付
             payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
             images=images_json,  # 存储为JSON字符串
-            accepted_at=get_utc_time()
+            accepted_at=get_utc_time(),
+            task_source="expert_service",  # 达人服务任务
         )
         
         db.add(new_task)
@@ -3009,7 +3010,8 @@ async def approve_service_application(
         is_paid=0,  # 明确标记为未支付
         payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
         images=images_json,  # 存储为JSON字符串
-        accepted_at=get_utc_time()
+        accepted_at=get_utc_time(),
+        task_source="expert_service",  # 达人服务任务
     )
     
     db.add(new_task)

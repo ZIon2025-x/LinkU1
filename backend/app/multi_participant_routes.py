@@ -500,6 +500,7 @@ def apply_to_activity(
         # 如果需要支付，设置支付过期时间（24小时）
         payment_expires_at=get_utc_time() + timedelta(hours=24) if (needs_payment and price > 0) else None,
         is_paid=0,  # 明确标记为未支付
+        task_source="expert_activity",  # 达人活动任务
     )
     
     db.add(new_task)
