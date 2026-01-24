@@ -91,13 +91,29 @@ extension APIError {
     
     /// 从 HTTP 响应数据解析错误
     /// 返回 (APIError, 错误消息)
+    /// 支持两种格式：
+    /// 1. FastAPI HTTPException: {"detail": "错误消息"}
+    /// 2. 标准错误响应: {"error": true, "message": "...", "error_code": "...", "status_code": 409}
     nonisolated static func parse(from data: Data) -> (error: APIError, message: String)? {
         // 在非隔离上下文中解码，避免 Swift 6 兼容性问题
         let decoder = JSONDecoder()
-        guard let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) else {
-            return nil
+        
+        // 首先尝试解析标准错误响应格式
+        if let errorResponse = try? decoder.decode(APIErrorResponse.self, from: data) {
+            return (from(errorResponse: errorResponse), errorResponse.message)
         }
-        return (from(errorResponse: errorResponse), errorResponse.message)
+        
+        // 如果标准格式解析失败，尝试解析 FastAPI HTTPException 格式 {"detail": "..."}
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let detail = json["detail"] as? String {
+            // FastAPI HTTPException 格式，需要从 HTTP 状态码推断错误类型
+            // 这里返回一个通用的 serverError，状态码需要从外部传入
+            // 但为了保持接口一致性，我们返回一个包含消息的 serverError
+            // 注意：这里无法获取状态码，所以返回 httpError(0)，调用方需要根据实际状态码处理
+            return (.serverError(0, detail), detail)
+        }
+        
+        return nil
     }
     
     // 注意：userFriendlyMessage 已在 ErrorHandler.swift 中定义，这里不再重复定义

@@ -601,6 +601,36 @@ def create_task_payment(
             # 检查 PaymentIntent 状态
             try:
                 payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                
+                # ⚠️ 安全验证：如果提供了 application_id，验证 PaymentIntent 是否属于此申请者
+                if payment_request.application_id is not None:
+                    payment_intent_application_id = payment_intent.get("metadata", {}).get("application_id")
+                    if payment_intent_application_id:
+                        # PaymentIntent 有 application_id metadata，必须匹配
+                        if str(payment_intent_application_id) != str(payment_request.application_id):
+                            logger.warning(
+                                f"⚠️ PaymentIntent 申请者不匹配: "
+                                f"PaymentIntent metadata.application_id={payment_intent_application_id}, "
+                                f"请求的 application_id={payment_request.application_id}, "
+                                f"payment_intent_id={task.payment_intent_id}"
+                            )
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"PaymentIntent 不属于申请者 {payment_request.application_id}。请先批准该申请者。"
+                            )
+                        logger.info(f"✅ PaymentIntent 申请者验证通过: application_id={payment_request.application_id}")
+                    else:
+                        # PaymentIntent 没有 application_id metadata（可能是旧数据或非申请批准流程创建的）
+                        logger.warning(
+                            f"⚠️ PaymentIntent 缺少 application_id metadata: "
+                            f"payment_intent_id={task.payment_intent_id}, "
+                            f"请求的 application_id={payment_request.application_id}"
+                        )
+                        # 为了安全，不允许使用没有 application_id 的 PaymentIntent 进行申请者支付
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"PaymentIntent 缺少申请者信息，无法验证。请先批准该申请者。"
+                        )
                 if payment_intent.status == "succeeded":
                     # 支付已完成，返回已支付信息
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
@@ -983,6 +1013,24 @@ def create_task_payment(
         if task.payment_intent_id:
             try:
                 existing_payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                
+                # ⚠️ 安全验证：如果提供了 application_id，验证 PaymentIntent 是否属于此申请者
+                if payment_request.application_id is not None:
+                    payment_intent_application_id = existing_payment_intent.get("metadata", {}).get("application_id")
+                    if payment_intent_application_id and str(payment_intent_application_id) != str(payment_request.application_id):
+                        logger.warning(
+                            f"⚠️ PaymentIntent 申请者不匹配（复用检查）: "
+                            f"PaymentIntent metadata.application_id={payment_intent_application_id}, "
+                            f"请求的 application_id={payment_request.application_id}, "
+                            f"payment_intent_id={task.payment_intent_id}"
+                        )
+                        # 如果 PaymentIntent 不属于当前申请者，清除它并创建新的
+                        logger.info(f"清除不匹配的 PaymentIntent，将创建新的 PaymentIntent")
+                        task.payment_intent_id = None
+                        db.commit()
+                    elif payment_intent_application_id:
+                        logger.info(f"✅ PaymentIntent 申请者验证通过（复用）: application_id={payment_request.application_id}")
+                
                 # 如果 PaymentIntent 状态是未完成状态，复用已有的 PaymentIntent
                 if existing_payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
                     logger.info(f"复用已有的 PaymentIntent: {task.payment_intent_id}, 状态: {existing_payment_intent.status}")

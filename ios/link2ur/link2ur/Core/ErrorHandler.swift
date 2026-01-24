@@ -69,6 +69,9 @@ extension APIError {
                 return LocalizationKey.errorForbidden.localized
             case 404:
                 return LocalizationKey.errorNotFound.localized
+            case 409:
+                // 409 Conflict - 直接返回后端错误消息（如"该商品已被其他用户购买或正在处理中"）
+                return message
             case 413:
                 return "文件过大: \(message)"
             case 429:

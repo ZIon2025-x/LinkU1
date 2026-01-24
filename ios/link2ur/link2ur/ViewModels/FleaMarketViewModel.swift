@@ -202,10 +202,21 @@ class FleaMarketDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func directPurchase(itemId: String, completion: @escaping (DirectPurchaseResponse.DirectPurchaseData?) -> Void) {
+    func directPurchase(itemId: String, completion: @escaping (DirectPurchaseResponse.DirectPurchaseData?) -> Void, onError: ((String) -> Void)? = nil) {
         apiService.request(DirectPurchaseResponse.self, "/api/flea-market/items/\(itemId)/direct-purchase", method: "POST", body: [:])
             .sink(receiveCompletion: { result in
-                if case .failure = result {
+                if case .failure(let error) = result {
+                    // 提取用户友好的错误消息
+                    let errorMessage: String
+                    if let apiError = error as? APIError {
+                        errorMessage = apiError.userFriendlyMessage
+                    } else {
+                        errorMessage = error.localizedDescription
+                    }
+                    // 调用错误回调
+                    onError?(errorMessage)
+                    // 使用 ErrorHandler 处理错误（用于统一错误处理）
+                    ErrorHandler.shared.handle(error, context: "直接购买跳蚤市场商品")
                     completion(nil)
                 }
             }, receiveValue: { response in

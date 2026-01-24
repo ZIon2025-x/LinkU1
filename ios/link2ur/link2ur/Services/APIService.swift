@@ -136,7 +136,12 @@ public class APIService {
                                         let apiError: APIError
                                         if let (parsedError, errorMessage) = APIError.parse(from: data) {
                                             Logger.error("API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
-                                            apiError = parsedError
+                                            // 如果解析出的错误状态码为0（FastAPI detail格式），使用实际HTTP状态码
+                                            if case .serverError(0, let message) = parsedError {
+                                                apiError = .serverError(httpResponse.statusCode, message)
+                                            } else {
+                                                apiError = parsedError
+                                            }
                                         } else {
                                             // 尝试从响应中提取错误详情
                                             if let errorData = String(data: data, encoding: .utf8) {
@@ -157,7 +162,12 @@ public class APIService {
                     let apiError: APIError
                     if let (parsedError, errorMessage) = APIError.parse(from: data) {
                         Logger.error("API错误 (\(endpoint)): \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
-                        apiError = parsedError
+                        // 如果解析出的错误状态码为0（FastAPI detail格式），使用实际HTTP状态码
+                        if case .serverError(0, let message) = parsedError {
+                            apiError = .serverError(httpResponse.statusCode, message)
+                        } else {
+                            apiError = parsedError
+                        }
                     } else {
                         // 记录详细的错误响应内容
                         if let errorData = String(data: data, encoding: .utf8) {

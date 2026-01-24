@@ -1567,6 +1567,7 @@ class TaskPaymentRequest(BaseModel):
     payment_method: str = "stripe"  # 只支持 stripe 支付
     coupon_code: Optional[str] = None  # 优惠券代码
     user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
+    application_id: Optional[int] = None  # 申请ID（用于验证 PaymentIntent 是否属于此申请者）
     
     @validator('payment_method')
     def validate_payment_method(cls, v):

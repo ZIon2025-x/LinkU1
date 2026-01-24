@@ -1526,6 +1526,39 @@ async def accept_application(
                     import os
                     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
                     payment_intent = stripe.PaymentIntent.retrieve(locked_task.payment_intent_id)
+                    
+                    # ⚠️ 安全验证：验证 PaymentIntent 是否属于当前申请者
+                    payment_intent_application_id = payment_intent.get("metadata", {}).get("application_id")
+                    if payment_intent_application_id and str(payment_intent_application_id) != str(application_id):
+                        logger.warning(
+                            f"⚠️ PaymentIntent 申请者不匹配: "
+                            f"PaymentIntent metadata.application_id={payment_intent_application_id}, "
+                            f"当前请求的 application_id={application_id}, "
+                            f"payment_intent_id={locked_task.payment_intent_id}"
+                        )
+                        # 如果 PaymentIntent 不属于当前申请者，清除它并抛出异常，让调用方重新创建
+                        locked_task.payment_intent_id = None
+                        await db.commit()
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"PaymentIntent 不属于申请者 {application_id}。请重新批准该申请者。"
+                        )
+                    elif payment_intent_application_id:
+                        logger.info(f"✅ PaymentIntent 申请者验证通过: application_id={application_id}")
+                    else:
+                        # PaymentIntent 没有 application_id metadata（可能是旧数据）
+                        logger.warning(
+                            f"⚠️ PaymentIntent 缺少 application_id metadata: "
+                            f"payment_intent_id={locked_task.payment_intent_id}, "
+                            f"当前请求的 application_id={application_id}"
+                        )
+                        # 为了安全，清除它并抛出异常
+                        locked_task.payment_intent_id = None
+                        await db.commit()
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="PaymentIntent 缺少申请者信息，无法验证。请重新批准该申请者。"
+                        )
 
                     # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
                     customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(

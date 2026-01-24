@@ -1055,10 +1055,18 @@ struct PurchaseDetailView: View {
             }
         } else {
             // 直接购买
-            viewModel.directPurchase(itemId: itemId) { [self] purchaseData in
+            viewModel.directPurchase(itemId: itemId, onError: { [self] errorMsg in
                 DispatchQueue.main.async {
                     isSubmitting = false
-                    onPurchaseComplete(purchaseData)
+                    errorMessage = errorMsg
+                }
+            }) { [self] purchaseData in
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    if purchaseData != nil {
+                        onPurchaseComplete(purchaseData)
+                    }
+                    // 如果 purchaseData 为 nil，说明购买失败，错误信息已通过 onError 回调设置
                 }
             }
         }
