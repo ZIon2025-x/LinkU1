@@ -4857,8 +4857,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         # 批准申请
                         application.status = "approved"
                         task.taker_id = application.applicant_id
-                        task.status = "pending_payment"  # 先设置为 pending_payment，下面会更新为 in_progress
-                        logger.info(f"✅ [WEBHOOK] 申请已批准，任务状态设置为 pending_payment, taker_id={task.taker_id}")
+                        # ⚠️ 新流程：支付成功后，任务状态直接设置为 in_progress（不再使用 pending_payment）
+                        task.status = "in_progress"
+                        logger.info(f"✅ [WEBHOOK] 申请已批准，任务状态设置为 in_progress, taker_id={task.taker_id}")
                         
                         # 如果申请包含议价，更新 agreed_reward
                         if application.negotiated_price is not None:
@@ -5316,17 +5317,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         task_id = int(payment_intent.get("metadata", {}).get("task_id", 0))
         logger.warning(f"⚠️ [WEBHOOK] Payment intent canceled: payment_intent_id={payment_intent_id}, task_id={task_id}")
         
-        # ⚠️ 安全修复：处理 PaymentIntent 取消事件
-        # 如果任务处于 pending_payment 状态，可以选择：
-        # 1. 保持 pending_payment 状态，等待超时处理（推荐）
-        # 2. 立即回滚任务状态（如果业务需要）
-        # 这里选择保持状态，等待超时处理，避免频繁状态变更
+        # ⚠️ 处理 PaymentIntent 取消事件
+        # 新流程：任务保持 open 状态，支付取消时只需清除 payment_intent_id
+        # 这样用户可以继续批准其他申请者或重新批准同一个申请者
         if task_id:
             task = crud.get_task(db, task_id)
-            if task and task.status == "pending_payment" and task.payment_intent_id == payment_intent_id:
+            # 检查任务状态：open 或 pending_payment（兼容旧流程）
+            if task and task.payment_intent_id == payment_intent_id and task.status in ["open", "pending_payment"]:
                 logger.info(
                     f"ℹ️ [WEBHOOK] 任务 {task_id} 的 PaymentIntent 已取消，"
-                    f"任务状态保持为 pending_payment，等待超时处理或用户重新支付"
+                    f"任务状态: {task.status}，清除 payment_intent_id，允许用户重新创建支付"
                 )
                 # 清除 payment_intent_id，允许用户重新创建支付
                 task.payment_intent_id = None
@@ -5334,7 +5334,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的 payment_intent_id，允许重新创建支付")
             else:
                 logger.info(
-                    f"ℹ️ [WEBHOOK] 任务 {task_id} 状态不是 pending_payment 或 payment_intent_id 不匹配，"
+                    f"ℹ️ [WEBHOOK] 任务 {task_id} 状态不匹配或 payment_intent_id 不匹配，"
                     f"当前状态: {task.status if task else 'N/A'}, payment_intent_id: {task.payment_intent_id if task else 'N/A'}"
                 )
     

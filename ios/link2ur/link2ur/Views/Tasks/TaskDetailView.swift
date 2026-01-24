@@ -42,13 +42,15 @@ struct TaskDetailView: View {
     @State private var retryWorkItem: DispatchWorkItem? // 用于取消递归重试任务
     
     // 判断当前用户是否是任务发布者
+    // ⚠️ 重要：确保类型比较正确
     private var isPoster: Bool {
         guard let task = viewModel.task,
               let currentUserId = appState.currentUser?.id,
               let posterId = task.posterId else {
             return false
         }
-        return String(posterId) == currentUserId
+        // posterId 和 currentUserId 都是 String 类型，直接比较
+        return posterId == currentUserId
     }
     
     // 判断当前用户是否是任务接受者
@@ -1623,14 +1625,17 @@ struct TaskActionButtonsView: View {
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
-            // 支付按钮（发布者已接受申请且任务未支付时显示）
+            // ⚠️ 支付按钮（发布者已接受申请且任务未支付时显示）
             // 支付条件：
-            // 1. 发布者已接受申请（takerId != nil）
+            // 1. 用户是发布者（isPoster == true）
             // 2. 任务状态是 pendingPayment（已接受但未支付，等待支付后进入进行中状态）
-            // 注意：pendingConfirmation 状态不应该显示支付按钮，因为任务已经支付过了
+            // 注意：
+            // - pendingConfirmation 状态不应该显示支付按钮，因为任务已经支付过了
+            // - takerId 可能为 nil（后端在 accept_application 时不设置 taker_id，等待支付成功后由 webhook 设置）
+            //   所以不检查 takerId，只要状态是 pendingPayment 且用户是发布者，就显示支付按钮
             // ⚠️ 重要：即使奖励金额为 0，也要显示支付按钮，因为可能涉及平台服务费或其他费用
             // StripePaymentView 会自动处理金额为 0 的情况（优惠券全额抵扣等）
-            if isPoster && task.takerId != nil && task.status == .pendingPayment {
+            if isPoster && task.status == .pendingPayment {
                 Button(action: {
                     // 优化：如果已有支付信息，直接使用；否则让 StripePaymentView 自动获取
                     // 后端 API 会复用已有的 PaymentIntent（如果存在且未完成），不会创建新的
@@ -1642,7 +1647,12 @@ struct TaskActionButtonsView: View {
                     // 后端会检查是否有已有的 PaymentIntent，如果有且未完成，会复用而不是创建新的
                     showPaymentView = true
                 }) {
-                    Label("支付平台服务费", systemImage: "creditcard.fill")
+                    HStack {
+                        Image(systemName: "creditcard.fill")
+                        Text("支付平台服务费")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
@@ -1977,7 +1987,14 @@ struct ApplicationStatusCard: View {
         case "pending":
             return AppColors.warning
         case "approved":
-            return task.status == .pendingConfirmation ? Color.purple : AppColors.success
+            // ⚠️ 重要：如果任务状态是待支付，使用警告颜色（橙色），而不是成功颜色（绿色）
+            if task.status == .pendingPayment {
+                return AppColors.warning
+            } else if task.status == .pendingConfirmation {
+                return Color.purple
+            } else {
+                return AppColors.success
+            }
         case "rejected":
             return AppColors.error
         default:
@@ -1990,7 +2007,14 @@ struct ApplicationStatusCard: View {
         case "pending":
             return LocalizationKey.taskDetailWaitingReview.localized
         case "approved":
-            return task.status == .pendingConfirmation ? LocalizationKey.taskDetailTaskCompleted.localized : LocalizationKey.taskDetailApplicationApproved.localized
+            // ⚠️ 重要：如果任务状态是待支付，显示待支付状态，而不是"申请已批准"
+            if task.status == .pendingPayment {
+                return LocalizationKey.taskStatusPendingPayment.localized
+            } else if task.status == .pendingConfirmation {
+                return LocalizationKey.taskDetailTaskCompleted.localized
+            } else {
+                return LocalizationKey.taskDetailApplicationApproved.localized
+            }
         case "rejected":
             return LocalizationKey.taskDetailApplicationRejected.localized
         default:
@@ -2003,9 +2027,14 @@ struct ApplicationStatusCard: View {
         case "pending":
             return LocalizationKey.taskDetailApplicationSuccess.localized
         case "approved":
-            return task.status == .pendingConfirmation
-                ? LocalizationKey.taskDetailTaskCompletedMessage.localized
-                : LocalizationKey.taskDetailApplicationApprovedMessage.localized
+            // ⚠️ 重要：如果任务状态是待支付，显示待支付描述
+            if task.status == .pendingPayment {
+                return LocalizationKey.taskDetailPendingPaymentMessage.localized
+            } else if task.status == .pendingConfirmation {
+                return LocalizationKey.taskDetailTaskCompletedMessage.localized
+            } else {
+                return LocalizationKey.taskDetailApplicationApprovedMessage.localized
+            }
         case "rejected":
             return LocalizationKey.taskDetailApplicationRejectedMessage.localized
         default:
@@ -2071,7 +2100,14 @@ struct ApplicationStatusCard: View {
         case "pending":
             return "clock.fill"
         case "approved":
-            return task.status == .pendingConfirmation ? "checkmark.seal.fill" : "checkmark.circle.fill"
+            // ⚠️ 重要：如果任务状态是待支付，使用支付图标
+            if task.status == .pendingPayment {
+                return "creditcard.fill"
+            } else if task.status == .pendingConfirmation {
+                return "checkmark.seal.fill"
+            } else {
+                return "checkmark.circle.fill"
+            }
         case "rejected":
             return "xmark.circle.fill"
         default:

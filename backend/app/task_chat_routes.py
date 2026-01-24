@@ -1501,8 +1501,10 @@ async def accept_application(
                     "is_paid": True
                 }
             
-            # 如果任务有 payment_intent_id 且状态是 pending_payment，返回支付信息
-            if locked_task.payment_intent_id and locked_task.status == "pending_payment":
+            # ⚠️ 新流程：如果任务有 payment_intent_id 且状态是 open 或 pending_payment，返回支付信息
+            # open 状态：新流程，任务保持 open 状态等待支付
+            # pending_payment 状态：兼容旧流程
+            if locked_task.payment_intent_id and locked_task.status in ["open", "pending_payment"]:
                 try:
                     import stripe
                     import os
@@ -1698,14 +1700,13 @@ async def accept_application(
         if application.negotiated_price is not None:
             locked_task.agreed_reward = application.negotiated_price
         
-        # ⚠️ 优化：立即更新任务状态为 pending_payment，并设置支付过期时间
-        # 这样定时任务可以检查支付过期，并发送提醒通知
-        locked_task.status = "pending_payment"
-        locked_task.is_paid = 0
-        locked_task.payment_expires_at = current_time + timedelta(hours=24)
-        
-        # 不更新申请状态，保持为 pending（等待支付成功后由 webhook 更新）
+        # ⚠️ 新流程：任务保持 open 状态，不进入 pending_payment
+        # 只有支付成功后才设置 taker_id 并将状态改为 in_progress
+        # 如果支付失败/取消，任务状态保持 open，可以继续批准其他申请者
+        # 不更新任务状态，保持为 open
         # 不设置 taker_id，等待支付成功后再设置（由 webhook 处理）
+        # 不设置 payment_expires_at，因为任务状态保持 open，不需要支付过期检查
+        # 不更新申请状态，保持为 pending（等待支付成功后由 webhook 更新）
         # 这样确保只有支付成功后才真正批准申请
         
         await db.commit()
