@@ -1167,6 +1167,9 @@ struct TaskDetailContentView: View {
                         showCancelConfirm: $showCancelConfirm,
                         showLogin: $showLogin,
                         showPaymentView: $showPaymentView,
+                        paymentClientSecret: $paymentClientSecret,
+                        paymentCustomerId: $paymentCustomerId,
+                        paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                         showCompleteTaskSheet: $showCompleteTaskSheet,
                         showNegotiatePrice: $showNegotiatePrice,
@@ -1607,6 +1610,9 @@ struct TaskActionButtonsView: View {
     @Binding var showCancelConfirm: Bool
     @Binding var showLogin: Bool
     @Binding var showPaymentView: Bool
+    @Binding var paymentClientSecret: String?
+    @Binding var paymentCustomerId: String?
+    @Binding var paymentEphemeralKeySecret: String?
     @Binding var showConfirmCompletionSuccess: Bool
     @Binding var showCompleteTaskSheet: Bool
     @Binding var showNegotiatePrice: Bool
@@ -1621,25 +1627,40 @@ struct TaskActionButtonsView: View {
             // 支付条件：
             // 1. 发布者已接受申请（takerId != nil）
             // 2. 任务状态是 pendingPayment（已接受但未支付，等待支付后进入进行中状态）
-            // 3. 任务有奖励金额需要支付
             // 注意：pendingConfirmation 状态不应该显示支付按钮，因为任务已经支付过了
+            // ⚠️ 重要：即使奖励金额为 0，也要显示支付按钮，因为可能涉及平台服务费或其他费用
+            // StripePaymentView 会自动处理金额为 0 的情况（优惠券全额抵扣等）
             if isPoster && task.takerId != nil && task.status == .pendingPayment {
-                let hasReward = task.agreedReward != nil || task.baseReward != nil || task.reward > 0
-                
-                if hasReward {
-                    Button(action: {
-                        showPaymentView = true
-                    }) {
-                        Label("支付平台服务费", systemImage: "creditcard.fill")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+                Button(action: {
+                    // 优化：如果已有支付信息，直接使用；否则让 StripePaymentView 自动获取
+                    // 后端 API 会复用已有的 PaymentIntent（如果存在且未完成），不会创建新的
+                    // 只有在以下情况才清除支付信息：
+                    // 1. 支付信息不存在（首次支付）
+                    // 2. 需要刷新支付信息（比如优惠券变更等）
+                    // 这里不清除，让 StripePaymentView 根据 clientSecret 是否存在来决定是否调用 API
+                    // 如果 clientSecret 为 nil，StripePaymentView 会自动调用 API 获取
+                    // 后端会检查是否有已有的 PaymentIntent，如果有且未完成，会复用而不是创建新的
+                    showPaymentView = true
+                }) {
+                    Label("支付平台服务费", systemImage: "creditcard.fill")
                 }
+                .buttonStyle(PrimaryButtonStyle())
             }
             
             // 申请按钮或状态显示
             if !isPoster {
+                // 如果用户是接受者且任务状态是待支付，显示继续支付按钮
+                if isTaker && task.status == .pendingPayment {
+                    Button(action: {
+                        // 打开支付页面，StripePaymentView 会自动获取支付信息
+                        showPaymentView = true
+                    }) {
+                        Label(LocalizationKey.activityContinuePayment.localized, systemImage: "creditcard.fill")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
                 // 如果用户已申请，无论任务状态如何，都显示申请状态卡片
-                if let userApp = viewModel.userApplication {
+                else if let userApp = viewModel.userApplication {
                     ApplicationStatusCard(application: userApp, task: task, isTaker: isTaker)
                 }
                 // 如果用户未申请，且任务状态为 open 且没有接受者，显示申请按钮

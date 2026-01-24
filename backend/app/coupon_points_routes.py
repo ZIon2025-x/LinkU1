@@ -978,6 +978,139 @@ def create_task_payment(
     if final_amount > 0:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
         
+        # ⚠️ 重要：检查是否已有未完成的 PaymentIntent，避免重复创建
+        # 如果任务已有 payment_intent_id，检查其状态，如果未完成则复用
+        if task.payment_intent_id:
+            try:
+                existing_payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
+                # 如果 PaymentIntent 状态是未完成状态，复用已有的 PaymentIntent
+                if existing_payment_intent.status in ["requires_payment_method", "requires_confirmation", "requires_action"]:
+                    logger.info(f"复用已有的 PaymentIntent: {task.payment_intent_id}, 状态: {existing_payment_intent.status}")
+                    
+                    # 获取任务接受人的 Stripe Connect 账户 ID
+                    taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
+                    if not taker or not taker.stripe_account_id:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
+                        )
+                    
+                    # 创建或获取 Stripe Customer（用于保存支付方式）
+                    customer_id = None
+                    ephemeral_key_secret = None
+                    
+                    try:
+                        # 尝试从 metadata 查找现有 Customer（通过 user_id）
+                        existing_customers = stripe.Customer.list(
+                            limit=1,
+                            metadata={"user_id": str(current_user.id)}
+                        )
+                        
+                        if existing_customers.data:
+                            customer_id = existing_customers.data[0].id
+                        else:
+                            # 创建新的 Stripe Customer
+                            customer = stripe.Customer.create(
+                                metadata={
+                                    "user_id": str(current_user.id),
+                                    "user_name": current_user.name
+                                }
+                            )
+                            customer_id = customer.id
+                        
+                        # 创建 Ephemeral Key
+                        ephemeral_key = stripe.EphemeralKey.create(
+                            customer=customer_id,
+                            stripe_version="2025-04-30.preview"
+                        )
+                        ephemeral_key_secret = ephemeral_key.secret
+                    except Exception as e:
+                        logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {str(e)}")
+                        customer_id = None
+                        ephemeral_key_secret = None
+                    
+                    # 从 PaymentIntent metadata 获取优惠券信息
+                    metadata = existing_payment_intent.get("metadata", {})
+                    coupon_discount = int(metadata.get("coupon_discount", 0)) if metadata.get("coupon_discount") else 0
+                    coupon_info = None
+                    if coupon_discount > 0 and metadata.get("coupon_usage_log_id"):
+                        try:
+                            coupon_usage_log_id = int(metadata.get("coupon_usage_log_id"))
+                            coupon_usage_log = db.query(models.CouponUsageLog).filter(
+                                models.CouponUsageLog.id == coupon_usage_log_id
+                            ).first()
+                            if coupon_usage_log:
+                                user_coupon = db.query(models.UserCoupon).filter(
+                                    models.UserCoupon.id == coupon_usage_log.user_coupon_id
+                                ).first()
+                                if user_coupon:
+                                    coupon = db.query(models.Coupon).filter(models.Coupon.id == user_coupon.coupon_id).first()
+                                    if coupon:
+                                        coupon_info = {
+                                            "name": coupon.name,
+                                            "type": coupon.type,
+                                            "description": coupon.description
+                                        }
+                        except Exception as e:
+                            logger.warning(f"获取优惠券信息失败: {e}")
+                    
+                    # 构建计算过程步骤
+                    calculation_steps = [
+                        {
+                            "label": "任务金额",
+                            "amount": original_amount,
+                            "amount_display": f"{original_amount / 100:.2f}",
+                            "type": "original"
+                        }
+                    ]
+                    if coupon_discount > 0:
+                        calculation_steps.append({
+                            "label": f"优惠券折扣" + (f"（{coupon_info['name'] if coupon_info else ''}）" if coupon_info else ""),
+                            "amount": -coupon_discount,
+                            "amount_display": f"-{coupon_discount / 100:.2f}",
+                            "type": "discount"
+                        })
+                    calculation_steps.append({
+                        "label": "最终支付金额",
+                        "amount": existing_payment_intent.amount,
+                        "amount_display": f"{existing_payment_intent.amount / 100:.2f}",
+                        "type": "final"
+                    })
+                    
+                    return {
+                        "payment_id": None,
+                        "fee_type": "task_amount",
+                        "original_amount": original_amount,
+                        "original_amount_display": f"{original_amount / 100:.2f}",
+                        "coupon_discount": coupon_discount if coupon_discount > 0 else None,
+                        "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount > 0 else None,
+                        "coupon_name": coupon_info['name'] if coupon_info else None,
+                        "coupon_type": coupon_info['type'] if coupon_info else None,
+                        "coupon_description": coupon_info['description'] if coupon_info else None,
+                        "final_amount": existing_payment_intent.amount,
+                        "final_amount_display": f"{existing_payment_intent.amount / 100:.2f}",
+                        "currency": "GBP",
+                        "client_secret": existing_payment_intent.client_secret,
+                        "payment_intent_id": existing_payment_intent.id,
+                        "customer_id": customer_id,
+                        "ephemeral_key_secret": ephemeral_key_secret,
+                        "calculation_steps": calculation_steps,
+                        "note": "请完成支付，任务接受人将获得 {:.2f} 镑（已扣除平台服务费 {:.2f} 镑）".format(
+                            task_amount - (application_fee_pence / 100.0),
+                            application_fee_pence / 100.0
+                        )
+                    }
+                elif existing_payment_intent.status == "succeeded":
+                    # PaymentIntent 已完成，但任务状态可能未更新，返回已支付信息
+                    logger.info(f"PaymentIntent 已完成: {task.payment_intent_id}")
+                    # 这里应该返回已支付信息，但为了安全，继续正常流程检查任务状态
+                    pass
+                else:
+                    # PaymentIntent 状态是 canceled 或其他最终状态，需要创建新的
+                    logger.info(f"PaymentIntent 状态为 {existing_payment_intent.status}，将创建新的 PaymentIntent")
+            except Exception as e:
+                logger.warning(f"获取已有 PaymentIntent 失败: {e}，将创建新的 PaymentIntent")
+        
         # 获取任务接受人的 Stripe Connect 账户 ID
         taker = db.query(models.User).filter(models.User.id == task.taker_id).first()
         if not taker or not taker.stripe_account_id:
@@ -1106,6 +1239,12 @@ def create_task_payment(
                     logger.warning("⚠️ 未找到 WeChat Pay 在 Payment Method Configuration 中的配置")
         except Exception as e:
             logger.debug(f"无法获取 Payment Method Configuration: {e}")
+        
+        # ⚠️ 重要：更新任务的 payment_intent_id，确保下次调用 API 时能复用
+        # 这样即使前端清除 clientSecret，后端也能复用已有的 PaymentIntent，避免重复创建
+        if not task.payment_intent_id or task.payment_intent_id != payment_intent.id:
+            task.payment_intent_id = payment_intent.id
+            logger.info(f"更新任务的 payment_intent_id: {payment_intent.id}")
         
         # 创建支付历史记录（待支付状态）
         # 安全：Stripe 支付的状态更新必须通过 Webhook 处理
