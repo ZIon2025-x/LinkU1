@@ -602,6 +602,8 @@ public enum LocalizationKey: String {
     case settingsSetupPaymentAccount = "settings.setup_payment_account"
     case settingsAccount = "settings.account"
     case settingsUserID = "settings.user_id"
+    case settingsDeleteAccount = "settings.delete_account"
+    case settingsDeleteAccountMessage = "settings.delete_account_message"
     
     // MARK: - Theme
     case themeSystem = "theme.system"

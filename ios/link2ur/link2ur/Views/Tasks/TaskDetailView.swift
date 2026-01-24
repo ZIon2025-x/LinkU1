@@ -1107,23 +1107,42 @@ struct TaskDetailContentView: View {
                                                 paymentEphemeralKeySecret = ephemeralKeySecret
                                                 showPaymentView = true
                                             } else {
-                                                // 没有 client_secret，重新加载任务信息
+                                                // 没有立即返回 client_secret，重新加载任务信息并检查是否需要支付
                                                 paymentClientSecret = nil
                                                 paymentCustomerId = nil
                                                 paymentEphemeralKeySecret = nil
+                                                
+                                                // 重新加载任务信息
                                                 viewModel.loadTask(taskId: taskId)
                                                 viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
                                                 
                                                 // 延迟检查是否需要支付（等待任务信息更新）
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                                // 使用多次检查，确保任务状态更新后能正确显示支付页面
+                                                var checkCount = 0
+                                                let maxChecks = 3
+                                                let checkInterval = 0.5
+                                                
+                                                func checkAndShowPayment() {
+                                                    checkCount += 1
+                                                    
                                                     // 检查任务是否有接受者且需要支付
-                                                    // 注意：pendingConfirmation 状态不应该显示支付界面，因为任务已经支付过了
                                                     if let updatedTask = viewModel.task,
                                                        updatedTask.takerId != nil,
                                                        updatedTask.status == .pendingPayment {
                                                         // 任务已接受但未支付，显示支付界面
+                                                        // StripePaymentView 会在 clientSecret 为 nil 时自动调用 API 获取支付信息
                                                         showPaymentView = true
+                                                    } else if checkCount < maxChecks {
+                                                        // 如果任务状态还没更新，继续检查
+                                                        DispatchQueue.main.asyncAfter(deadline: .now() + checkInterval) {
+                                                            checkAndShowPayment()
+                                                        }
                                                     }
+                                                }
+                                                
+                                                // 开始第一次检查
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + checkInterval) {
+                                                    checkAndShowPayment()
                                                 }
                                             }
                                         }

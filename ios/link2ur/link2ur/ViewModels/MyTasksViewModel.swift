@@ -472,7 +472,6 @@ class MyTasksViewModel: ObservableObject {
                 // 策略：只更新/添加API返回的任务，不主动移除现有任务
                 // 这样可以避免API返回不完整数据时丢失任务
                 var mergedTasks = self.tasks
-                var newTaskIds = Set(filteredTasks.map { $0.id })
                 
                 // 更新或添加新加载的任务
                 for newTask in filteredTasks {

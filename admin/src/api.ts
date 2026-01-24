@@ -543,8 +543,6 @@ export interface CouponData {
     locations?: string[];
     task_types?: string[];
   };
-  per_device_limit?: number;
-  per_ip_limit?: number;
   eligibility_type?: string;
   eligibility_value?: string;
   per_day_limit?: number;

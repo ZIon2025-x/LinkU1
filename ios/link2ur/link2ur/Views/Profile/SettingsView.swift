@@ -7,7 +7,7 @@ struct SettingsView: View {
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @State private var showDeleteAccountAlert = false
     @State private var isDeletingAccount = false
-    private var cancellables = Set<AnyCancellable>()
+    @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
         ZStack {
@@ -190,11 +190,12 @@ struct SettingsView: View {
             } message: {
                 Text(LocalizationKey.settingsDeleteAccountMessage.localized)
             }
-        .navigationTitle(LocalizationKey.profileSettings.localized)
-        .navigationBarTitleDisplayMode(.inline)
-        .enableSwipeBack()
-        .toolbarBackground(AppColors.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+            .navigationTitle(LocalizationKey.profileSettings.localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .enableSwipeBack()
+            .toolbarBackground(AppColors.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+        }
     }
     
     private func deleteAccount() {

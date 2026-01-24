@@ -183,17 +183,25 @@ struct VIPCardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(AppSpacing.xl)
-        .cardStyle(cornerRadius: AppCornerRadius.large)
         .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    (isVIP ? Color.yellow : AppColors.primary).opacity(0.1),
-                    (isVIP ? Color.orange : AppColors.primary).opacity(0.05)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ZStack {
+                // 先设置纯色背景
+                AppColors.cardBackground
+                // 再叠加渐变（使用 ZStack 确保渐变在背景之上）
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        (isVIP ? Color.yellow : AppColors.primary).opacity(0.1),
+                        (isVIP ? Color.orange : AppColors.primary).opacity(0.05)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         )
+        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.large, style: .continuous))
+        // 使用双层阴影，减少容器边界感（借鉴钱包余额视图的做法）
+        .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
     }
 }
 

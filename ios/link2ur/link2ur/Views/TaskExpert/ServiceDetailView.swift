@@ -406,7 +406,7 @@ struct ServiceDetailView: View {
     @ViewBuilder
     private func bottomApplyBar(service: TaskExpertService) -> some View {
         HStack {
-            if let applicationId = service.userApplicationId {
+            if service.userApplicationId != nil {
                 // 已申请，根据状态显示不同按钮
                 if let hasNegotiation = service.userApplicationHasNegotiation, hasNegotiation,
                    let taskStatus = service.userTaskStatus, taskStatus == "pending_payment" {
