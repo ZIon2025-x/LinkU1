@@ -1118,7 +1118,7 @@ class CouponUsageConditions(BaseModel):
 
 
 class CouponBase(BaseModel):
-    code: str
+    code: Optional[str] = None  # 优惠券代码（可选，如果为空则只能通过积分兑换）
     name: str
     description: Optional[str] = None
     type: str  # fixed_amount, percentage
@@ -1128,6 +1128,8 @@ class CouponBase(BaseModel):
     currency: str = "GBP"
     total_quantity: Optional[int] = None
     per_user_limit: int = 1
+    per_device_limit: Optional[int] = None
+    per_ip_limit: Optional[int] = None
     can_combine: bool = False
     combine_limit: int = 1
     apply_order: int = 0
@@ -1136,6 +1138,8 @@ class CouponBase(BaseModel):
     usage_conditions: Optional[Dict[str, Any]] = None
     eligibility_type: Optional[str] = None
     eligibility_value: Optional[str] = None
+    per_day_limit: Optional[int] = None
+    vat_category: Optional[str] = None
 
 
 class CouponCreate(CouponBase):

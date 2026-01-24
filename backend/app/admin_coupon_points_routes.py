@@ -71,13 +71,28 @@ def create_coupon(
             headers={"Retry-After": str(rate_limit_info.get("retry_after", 300))}
         )
     
-    # 检查优惠券代码是否已存在（不区分大小写）
-    existing = get_coupon_by_code(db, coupon_data.code)
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"优惠券代码 {coupon_data.code} 已存在"
-        )
+    # 处理优惠券代码：如果为空，自动生成唯一代码
+    coupon_code = coupon_data.code
+    if not coupon_code or not coupon_code.strip():
+        # 生成唯一代码：COUPON + 时间戳 + 随机数
+        import random
+        import string
+        timestamp = int(datetime.now(tz).timestamp())
+        random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        coupon_code = f"COUPON{timestamp}{random_suffix}"
+        # 确保代码唯一
+        while get_coupon_by_code(db, coupon_code):
+            random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            coupon_code = f"COUPON{timestamp}{random_suffix}"
+    else:
+        coupon_code = coupon_code.strip().upper()
+        # 检查优惠券代码是否已存在（不区分大小写）
+        existing = get_coupon_by_code(db, coupon_code)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"优惠券代码 {coupon_code} 已存在"
+            )
     
     # 验证折扣值
     if coupon_data.type == "fixed_amount":
@@ -102,7 +117,7 @@ def create_coupon(
     
     # 创建优惠券
     coupon = models.Coupon(
-        code=coupon_data.code.upper(),
+        code=coupon_code,
         name=coupon_data.name,
         description=coupon_data.description,
         type=coupon_data.type,
@@ -112,6 +127,8 @@ def create_coupon(
         currency=coupon_data.currency,
         total_quantity=coupon_data.total_quantity,
         per_user_limit=coupon_data.per_user_limit,
+        per_device_limit=coupon_data.per_device_limit,
+        per_ip_limit=coupon_data.per_ip_limit,
         can_combine=coupon_data.can_combine,
         combine_limit=coupon_data.combine_limit,
         apply_order=coupon_data.apply_order,
@@ -121,6 +138,7 @@ def create_coupon(
         eligibility_type=coupon_data.eligibility_type,
         eligibility_value=coupon_data.eligibility_value,
         per_day_limit=coupon_data.per_day_limit,
+        vat_category=coupon_data.vat_category,
         status="active"
     )
     

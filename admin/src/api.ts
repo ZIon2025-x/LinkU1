@@ -521,7 +521,7 @@ export const reviewProfileUpdateRequest = async (requestId: number, data: { acti
 // ==================== 优惠券管理 API ====================
 
 export interface CouponData {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   type: 'fixed_amount' | 'percentage';
@@ -531,6 +531,8 @@ export interface CouponData {
   currency?: string;
   total_quantity?: number;
   per_user_limit?: number;
+  per_device_limit?: number;
+  per_ip_limit?: number;
   can_combine?: boolean;
   combine_limit?: number;
   apply_order?: number;
@@ -541,6 +543,8 @@ export interface CouponData {
     locations?: string[];
     task_types?: string[];
   };
+  per_device_limit?: number;
+  per_ip_limit?: number;
   eligibility_type?: string;
   eligibility_value?: string;
   per_day_limit?: number;

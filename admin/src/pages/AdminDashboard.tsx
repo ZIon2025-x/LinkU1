@@ -321,11 +321,29 @@ const AdminDashboard: React.FC = () => {
     type: 'fixed_amount' as 'fixed_amount' | 'percentage',
     discount_value: 0,
     min_amount: 0,
+    max_discount: undefined as number | undefined,
+    currency: 'GBP',
     total_quantity: undefined as number | undefined,
     per_user_limit: 1,
+    per_device_limit: undefined as number | undefined,
+    per_ip_limit: undefined as number | undefined,
+    can_combine: false,
+    combine_limit: 1,
+    apply_order: 0,
     valid_from: '',
     valid_until: '',
     points_required: 0,
+    eligibility_type: '' as '' | 'first_order' | 'new_user' | 'user_type' | 'member' | 'all',
+    eligibility_value: '' as '' | 'normal' | 'vip' | 'super',
+    per_day_limit: undefined as number | undefined,
+    vat_category: '' as '' | 'standard' | 'reduced' | 'zero' | 'exempt',
+    // 使用场景和限制
+    applicable_scenarios: [] as string[], // task, activity, service, flea_market
+    task_types: [] as string[], // 任务类型
+    locations: [] as string[], // 地点限制
+    excluded_task_types: [] as string[], // 排除的任务类型
+    min_task_amount: undefined as number | undefined,
+    max_task_amount: undefined as number | undefined,
   });
   const [couponsLoading, setCouponsLoading] = useState(false);
 
@@ -4544,8 +4562,8 @@ const AdminDashboard: React.FC = () => {
   }, [couponsPage, couponsStatusFilter]);
 
   const handleCreateCoupon = async () => {
-    if (!couponForm.code || !couponForm.name || !couponForm.valid_from || !couponForm.valid_until) {
-      message.warning('请填写优惠券代码、名称和有效期');
+    if (!couponForm.name || !couponForm.valid_from || !couponForm.valid_until) {
+      message.warning('请填写优惠券名称和有效期');
       return;
     }
     if (couponForm.discount_value <= 0) {
@@ -4555,19 +4573,51 @@ const AdminDashboard: React.FC = () => {
     
     try {
       const data: CouponData = {
-        code: couponForm.code.toUpperCase(),
+        code: couponForm.code && couponForm.code.trim() ? couponForm.code.toUpperCase() : undefined,
         name: couponForm.name,
         description: couponForm.description || undefined,
         type: couponForm.type,
         discount_value: couponForm.discount_value,
         min_amount: couponForm.min_amount || 0,
+        max_discount: couponForm.max_discount,
+        currency: couponForm.currency,
         total_quantity: couponForm.total_quantity,
         per_user_limit: couponForm.per_user_limit || 1,
+        can_combine: couponForm.can_combine,
+        combine_limit: couponForm.combine_limit || 1,
+        apply_order: couponForm.apply_order || 0,
         valid_from: couponForm.valid_from,
         valid_until: couponForm.valid_until,
-        usage_conditions: couponForm.points_required > 0 ? {
-          points_required: couponForm.points_required
-        } : undefined
+        usage_conditions: (() => {
+          const conditions: any = {};
+          if (couponForm.points_required > 0) {
+            conditions.points_required = couponForm.points_required;
+          }
+          if (couponForm.task_types.length > 0) {
+            conditions.task_types = couponForm.task_types;
+          }
+          if (couponForm.excluded_task_types.length > 0) {
+            conditions.excluded_task_types = couponForm.excluded_task_types;
+          }
+          if (couponForm.locations.length > 0) {
+            conditions.locations = couponForm.locations;
+          }
+          if (couponForm.min_task_amount) {
+            conditions.min_task_amount = couponForm.min_task_amount;
+          }
+          if (couponForm.max_task_amount) {
+            conditions.max_task_amount = couponForm.max_task_amount;
+          }
+          if (couponForm.applicable_scenarios.length > 0) {
+            conditions.applicable_scenarios = couponForm.applicable_scenarios;
+          }
+          return Object.keys(conditions).length > 0 ? conditions : undefined;
+        })(),
+        per_device_limit: couponForm.per_device_limit,
+        per_ip_limit: couponForm.per_ip_limit,
+        per_day_limit: couponForm.per_day_limit,
+        eligibility_type: couponForm.eligibility_type || undefined,
+        eligibility_value: couponForm.eligibility_value || undefined,
       };
       
       if (couponForm.id) {
@@ -4592,11 +4642,28 @@ const AdminDashboard: React.FC = () => {
         type: 'fixed_amount',
         discount_value: 0,
         min_amount: 0,
+        max_discount: undefined,
+        currency: 'GBP',
         total_quantity: undefined,
         per_user_limit: 1,
+        per_device_limit: undefined,
+        per_ip_limit: undefined,
+        can_combine: false,
+        combine_limit: 1,
+        apply_order: 0,
         valid_from: '',
         valid_until: '',
         points_required: 0,
+        eligibility_type: '',
+        eligibility_value: '',
+        per_day_limit: undefined,
+        vat_category: '',
+        applicable_scenarios: [],
+        task_types: [],
+        locations: [],
+        excluded_task_types: [],
+        min_task_amount: undefined,
+        max_task_amount: undefined,
       });
       loadCoupons();
     } catch (error: any) {
@@ -4634,11 +4701,28 @@ const AdminDashboard: React.FC = () => {
               type: 'fixed_amount',
               discount_value: 0,
               min_amount: 0,
+              max_discount: undefined,
+              currency: 'GBP',
               total_quantity: undefined,
               per_user_limit: 1,
+              per_device_limit: undefined,
+              per_ip_limit: undefined,
+              can_combine: false,
+              combine_limit: 1,
+              apply_order: 0,
               valid_from: dayjs().format('YYYY-MM-DDTHH:mm'),
               valid_until: dayjs().add(30, 'day').format('YYYY-MM-DDTHH:mm'),
               points_required: 0,
+              eligibility_type: '',
+              eligibility_value: '',
+              per_day_limit: undefined,
+              vat_category: '',
+              applicable_scenarios: [],
+              task_types: [],
+              locations: [],
+              excluded_task_types: [],
+              min_task_amount: undefined,
+              max_task_amount: undefined,
             });
             setShowCouponModal(true);
           }}
@@ -4746,100 +4830,738 @@ const AdminDashboard: React.FC = () => {
       {/* 创建/编辑模态框 */}
       {showCouponModal && (
         <div className={styles.modalOverlay} onClick={() => setShowCouponModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>{couponForm.id ? '编辑优惠券' : '创建优惠券'}</h3>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '2px solid #e9ecef', paddingBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '22px', fontWeight: 600, color: '#333' }}>
+                {couponForm.id ? '编辑优惠券' : '创建优惠券'}
+              </h3>
+              <button
+                onClick={() => setShowCouponModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#999',
+                  padding: '0',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ display: 'grid', gap: '20px' }}>
             <div className={styles.formGroup}>
-              <label>优惠券代码 <span style={{ color: 'red' }}>*</span></label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                优惠券代码
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （可选，留空则只能通过积分兑换）
+                </span>
+              </label>
               <input
                 type="text"
                 value={couponForm.code}
                 onChange={(e) => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})}
-                placeholder="例如：WELCOME50"
+                placeholder="例如：WELCOME50（留空则自动生成）"
                 disabled={!!couponForm.id}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  marginBottom: '4px'
+                }}
               />
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                {couponForm.code ? '用户可以通过输入此代码兑换优惠券' : '留空后只能通过积分兑换，系统会自动生成唯一代码'}
+              </small>
             </div>
             <div className={styles.formGroup}>
-              <label>名称 <span style={{ color: 'red' }}>*</span></label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                名称 <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="text"
                 value={couponForm.name}
                 onChange={(e) => setCouponForm({...couponForm, name: e.target.value})}
                 placeholder="优惠券名称"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>描述</label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                描述
+              </label>
               <textarea
                 value={couponForm.description}
                 onChange={(e) => setCouponForm({...couponForm, description: e.target.value})}
                 placeholder="优惠券描述（可选）"
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>类型</label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                类型
+              </label>
               <select
                 value={couponForm.type}
                 onChange={(e) => setCouponForm({...couponForm, type: e.target.value as 'fixed_amount' | 'percentage'})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff'
+                }}
               >
                 <option value="fixed_amount">满减（固定金额）</option>
                 <option value="percentage">折扣（百分比）</option>
               </select>
             </div>
             <div className={styles.formGroup}>
-              <label>折扣值（便士/基点）<span style={{ color: 'red' }}>*</span></label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                折扣值（便士/基点）<span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="number"
                 value={couponForm.discount_value}
                 onChange={(e) => setCouponForm({...couponForm, discount_value: parseInt(e.target.value) || 0})}
                 placeholder={couponForm.type === 'fixed_amount' ? '例如：500 = £5.00' : '例如：1000 = 10%'}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  marginBottom: '4px'
+                }}
               />
-              <small style={{ color: '#666' }}>
+              <small style={{ color: '#666', fontSize: '12px', display: 'block' }}>
                 {couponForm.type === 'fixed_amount' 
                   ? `当前值：£${(couponForm.discount_value / 100).toFixed(2)}` 
                   : `当前值：${(couponForm.discount_value / 100).toFixed(2)}%`}
               </small>
             </div>
             <div className={styles.formGroup}>
-              <label>最低使用金额（便士）</label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                最低使用金额（便士）
+              </label>
               <input
                 type="number"
                 value={couponForm.min_amount}
                 onChange={(e) => setCouponForm({...couponForm, min_amount: parseInt(e.target.value) || 0})}
                 placeholder="例如：1000 = £10.00"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  marginBottom: '4px'
+                }}
               />
-              <small style={{ color: '#666' }}>当前值：£{(couponForm.min_amount / 100).toFixed(2)}</small>
+              <small style={{ color: '#666', fontSize: '12px', display: 'block' }}>
+                当前值：£{(couponForm.min_amount / 100).toFixed(2)}
+              </small>
+            </div>
+            {couponForm.type === 'percentage' && (
+              <div className={styles.formGroup}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                  最大折扣金额（便士）
+                  <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                    （百分比券限制最大折扣）
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  value={couponForm.max_discount || ''}
+                  onChange={(e) => setCouponForm({...couponForm, max_discount: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="例如：5000 = £50.00（留空表示无限制）"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    marginBottom: '4px'
+                  }}
+                />
+                <small style={{ color: '#666', fontSize: '12px', display: 'block' }}>
+                  {couponForm.max_discount ? `当前值：£${(couponForm.max_discount / 100).toFixed(2)}` : '无限制'}
+                </small>
+              </div>
+            )}
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                货币类型
+              </label>
+              <select
+                value={couponForm.currency}
+                onChange={(e) => setCouponForm({...couponForm, currency: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="GBP">GBP (£)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="CNY">CNY (¥)</option>
+              </select>
             </div>
             <div className={styles.formGroup}>
-              <label>积分兑换所需积分（0表示不支持积分兑换）</label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                总发放数量
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （留空表示无限制）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.total_quantity || ''}
+                onChange={(e) => setCouponForm({...couponForm, total_quantity: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="例如：1000"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                每个用户限用次数
+              </label>
+              <input
+                type="number"
+                value={couponForm.per_user_limit}
+                onChange={(e) => setCouponForm({...couponForm, per_user_limit: parseInt(e.target.value) || 1})}
+                placeholder="例如：1"
+                min={1}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                每个设备限用次数
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （留空表示无限制）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.per_device_limit || ''}
+                onChange={(e) => setCouponForm({...couponForm, per_device_limit: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="例如：1"
+                min={1}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                每个IP限用次数
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （留空表示无限制）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.per_ip_limit || ''}
+                onChange={(e) => setCouponForm({...couponForm, per_ip_limit: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="例如：1"
+                min={1}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                每日限用次数
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （留空表示无限制）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.per_day_limit || ''}
+                onChange={(e) => setCouponForm({...couponForm, per_day_limit: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="例如：10"
+                min={1}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                是否可与其他优惠叠加
+              </label>
+              <select
+                value={couponForm.can_combine ? 'true' : 'false'}
+                onChange={(e) => setCouponForm({...couponForm, can_combine: e.target.value === 'true'})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="false">不可叠加</option>
+                <option value="true">可叠加</option>
+              </select>
+            </div>
+            {couponForm.can_combine && (
+              <div className={styles.formGroup}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                  最多可叠加数量
+                </label>
+                <input
+                  type="number"
+                  value={couponForm.combine_limit}
+                  onChange={(e) => setCouponForm({...couponForm, combine_limit: parseInt(e.target.value) || 1})}
+                  placeholder="例如：2"
+                  min={1}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            )}
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                应用顺序
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （数字越小越先应用，0为默认）
+                </span>
+              </label>
+              <input
+                type="number"
+                value={couponForm.apply_order}
+                onChange={(e) => setCouponForm({...couponForm, apply_order: parseInt(e.target.value) || 0})}
+                placeholder="例如：0"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                使用资格类型
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （留空表示所有用户可用）
+                </span>
+              </label>
+              <select
+                value={couponForm.eligibility_type}
+                onChange={(e) => setCouponForm({...couponForm, eligibility_type: e.target.value as any, eligibility_value: ''})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="">所有用户</option>
+                <option value="first_order">首单用户</option>
+                <option value="new_user">新用户</option>
+                <option value="user_type">指定用户类型</option>
+                <option value="member">会员用户</option>
+                <option value="all">全部用户</option>
+              </select>
+            </div>
+            {couponForm.eligibility_type === 'user_type' && (
+              <div className={styles.formGroup}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                  用户类型
+                  <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                    （选择可使用的用户等级）
+                  </span>
+                </label>
+                <select
+                  value={couponForm.eligibility_value}
+                  onChange={(e) => setCouponForm({...couponForm, eligibility_value: e.target.value as any})}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff'
+                  }}
+                >
+                  <option value="">请选择用户类型</option>
+                  <option value="normal">普通用户</option>
+                  <option value="vip">VIP用户</option>
+                  <option value="super">超级用户</option>
+                </select>
+              </div>
+            )}
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                适用场景
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （可多选，留空表示所有场景）
+                </span>
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {['task', 'activity', 'service', 'flea_market'].map((scenario) => (
+                  <label key={scenario} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={couponForm.applicable_scenarios.includes(scenario)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCouponForm({
+                            ...couponForm,
+                            applicable_scenarios: [...couponForm.applicable_scenarios, scenario]
+                          });
+                        } else {
+                          setCouponForm({
+                            ...couponForm,
+                            applicable_scenarios: couponForm.applicable_scenarios.filter(s => s !== scenario)
+                          });
+                        }
+                      }}
+                      style={{ marginRight: '6px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '14px' }}>
+                      {scenario === 'task' ? '任务' : scenario === 'activity' ? '活动' : scenario === 'service' ? '服务' : '跳蚤市场'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {(couponForm.applicable_scenarios.includes('task') || couponForm.applicable_scenarios.length === 0) && (
+              <>
+                <div className={styles.formGroup}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                    适用任务类型
+                    <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                      （可多选，留空表示所有任务类型）
+                    </span>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '200px', overflowY: 'auto', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    {['Housekeeping', 'Campus Life', 'Second-hand & Rental', 'Errand Running', 'Skill Service', 'Social Help', 'Transportation', 'Pet Care', 'Life Convenience', 'Other'].map((taskType) => (
+                      <label key={taskType} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
+                        <input
+                          type="checkbox"
+                          checked={couponForm.task_types.includes(taskType)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCouponForm({
+                                ...couponForm,
+                                task_types: [...couponForm.task_types, taskType]
+                              });
+                            } else {
+                              setCouponForm({
+                                ...couponForm,
+                                task_types: couponForm.task_types.filter(t => t !== taskType)
+                              });
+                            }
+                          }}
+                          style={{ marginRight: '6px', cursor: 'pointer' }}
+                        />
+                        <span>{taskType}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                    排除的任务类型
+                    <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                      （可多选，这些任务类型不能使用此优惠券）
+                    </span>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '200px', overflowY: 'auto', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    {['Housekeeping', 'Campus Life', 'Second-hand & Rental', 'Errand Running', 'Skill Service', 'Social Help', 'Transportation', 'Pet Care', 'Life Convenience', 'Other'].map((taskType) => (
+                      <label key={taskType} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
+                        <input
+                          type="checkbox"
+                          checked={couponForm.excluded_task_types.includes(taskType)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCouponForm({
+                                ...couponForm,
+                                excluded_task_types: [...couponForm.excluded_task_types, taskType]
+                              });
+                            } else {
+                              setCouponForm({
+                                ...couponForm,
+                                excluded_task_types: couponForm.excluded_task_types.filter(t => t !== taskType)
+                              });
+                            }
+                          }}
+                          style={{ marginRight: '6px', cursor: 'pointer' }}
+                        />
+                        <span>{taskType}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                    任务金额限制（便士）
+                    <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                      （可选）
+                    </span>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <input
+                        type="number"
+                        value={couponForm.min_task_amount || ''}
+                        onChange={(e) => setCouponForm({...couponForm, min_task_amount: e.target.value ? parseInt(e.target.value) : undefined})}
+                        placeholder="最低金额（便士）"
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {couponForm.min_task_amount && (
+                        <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                          最低：£{(couponForm.min_task_amount / 100).toFixed(2)}
+                        </small>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        value={couponForm.max_task_amount || ''}
+                        onChange={(e) => setCouponForm({...couponForm, max_task_amount: e.target.value ? parseInt(e.target.value) : undefined})}
+                        placeholder="最高金额（便士）"
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {couponForm.max_task_amount && (
+                        <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                          最高：£{(couponForm.max_task_amount / 100).toFixed(2)}
+                        </small>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                地点限制
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （可多选，留空表示所有地点）
+                </span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', maxHeight: '200px', overflowY: 'auto', padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                {['Online', 'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow', 'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle', 'Southampton', 'Liverpool', 'Cardiff', 'Coventry', 'Exeter', 'Leicester', 'York', 'Aberdeen', 'Bath', 'Dundee', 'Reading', 'St Andrews', 'Belfast', 'Brighton', 'Durham', 'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 'Warwick', 'Cambridge', 'Oxford', 'Other'].map((location) => (
+                  <label key={location} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
+                    <input
+                      type="checkbox"
+                      checked={couponForm.locations.includes(location)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setCouponForm({
+                            ...couponForm,
+                            locations: [...couponForm.locations, location]
+                          });
+                        } else {
+                          setCouponForm({
+                            ...couponForm,
+                            locations: couponForm.locations.filter(l => l !== location)
+                          });
+                        }
+                      }}
+                      style={{ marginRight: '6px', cursor: 'pointer' }}
+                    />
+                    <span>{location}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                VAT分类
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （可选）
+                </span>
+              </label>
+              <select
+                value={couponForm.vat_category}
+                onChange={(e) => setCouponForm({...couponForm, vat_category: e.target.value as any})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="">不设置</option>
+                <option value="standard">标准税率</option>
+                <option value="reduced">降低税率</option>
+                <option value="zero">零税率</option>
+                <option value="exempt">免税</option>
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                积分兑换所需积分
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （0表示不支持积分兑换）
+                </span>
+              </label>
               <input
                 type="number"
                 value={couponForm.points_required}
                 onChange={(e) => setCouponForm({...couponForm, points_required: parseInt(e.target.value) || 0})}
                 placeholder="例如：500 积分"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>有效期开始 <span style={{ color: 'red' }}>*</span></label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                有效期开始 <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="datetime-local"
                 value={couponForm.valid_from}
                 onChange={(e) => setCouponForm({...couponForm, valid_from: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
               />
             </div>
             <div className={styles.formGroup}>
-              <label>有效期结束 <span style={{ color: 'red' }}>*</span></label>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                有效期结束 <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="datetime-local"
                 value={couponForm.valid_until}
                 onChange={(e) => setCouponForm({...couponForm, valid_until: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
               />
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button onClick={handleCreateCoupon} className={styles.primaryButton}>
-                {couponForm.id ? '保存' : '创建'}
-              </button>
-              <button onClick={() => setShowCouponModal(false)} className={styles.button}>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e9ecef' }}>
+              <button 
+                onClick={() => setShowCouponModal(false)} 
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff',
+                  color: '#333',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+              >
                 取消
+              </button>
+              <button 
+                onClick={handleCreateCoupon} 
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: '#007bff',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0056b3'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+              >
+                {couponForm.id ? '保存' : '创建'}
               </button>
             </div>
           </div>
