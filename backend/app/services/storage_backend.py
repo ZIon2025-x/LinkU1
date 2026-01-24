@@ -528,9 +528,17 @@ class S3StorageBackend(StorageBackend):
         path = path.lstrip('/')
         
         if self.public_url:
+            # 使用公开 URL（永久有效）
             return f"{self.public_url}/{path}"
         else:
-            # 生成预签名 URL
+            # ⚠️ 警告：没有配置 public_url，使用预签名 URL（1小时有效期）
+            # 这会导致图片 URL 在 1 小时后失效！
+            # 建议配置 S3_PUBLIC_URL 或 R2_PUBLIC_URL 环境变量
+            logger.warning(
+                f"S3 存储未配置 public_url，生成的预签名 URL 将在 1 小时后过期。"
+                f"建议配置 S3_PUBLIC_URL 或 R2_PUBLIC_URL 环境变量以生成永久 URL。"
+            )
+            # 生成预签名 URL（1小时有效期）
             return self.client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': self.bucket_name, 'Key': path},

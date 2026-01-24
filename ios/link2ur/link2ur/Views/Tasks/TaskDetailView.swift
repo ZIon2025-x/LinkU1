@@ -1094,57 +1094,49 @@ struct TaskDetailContentView: View {
                                     let applicantName = application?.applicantName
                                     
                                     viewModel.approveApplication(taskId: taskId, applicationId: applicationId) { success, clientSecret, customerId, ephemeralKeySecret in
-                                        actionLoading = false
                                         if success {
                                             // 保存申请者名字
                                             approvedApplicantName = applicantName
                                             
-                                            // 如果返回了 client_secret，直接显示支付界面
+                                            // 如果返回了 client_secret，立即显示支付界面（不等待任务重新加载）
                                             if let clientSecret = clientSecret, !clientSecret.isEmpty {
-                                                // 保存 client_secret 并显示支付界面
+                                                // 保存 client_secret 并立即显示支付界面
                                                 paymentClientSecret = clientSecret
                                                 paymentCustomerId = customerId
                                                 paymentEphemeralKeySecret = ephemeralKeySecret
-                                                showPaymentView = true
+                                                
+                                                // 立即显示支付界面，不等待
+                                                DispatchQueue.main.async {
+                                                    actionLoading = false
+                                                    showPaymentView = true
+                                                }
+                                                
+                                                // 在后台重新加载任务信息（不阻塞支付界面显示）
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                                    viewModel.loadTask(taskId: taskId)
+                                                    viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                                                }
                                             } else {
-                                                // 没有立即返回 client_secret，重新加载任务信息并检查是否需要支付
+                                                // 没有立即返回 client_secret，立即显示支付界面
+                                                // StripePaymentView 会自动调用 API 获取支付信息
                                                 paymentClientSecret = nil
                                                 paymentCustomerId = nil
                                                 paymentEphemeralKeySecret = nil
                                                 
-                                                // 重新加载任务信息
-                                                viewModel.loadTask(taskId: taskId)
-                                                viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
-                                                
-                                                // 延迟检查是否需要支付（等待任务信息更新）
-                                                // 使用多次检查，确保任务状态更新后能正确显示支付页面
-                                                var checkCount = 0
-                                                let maxChecks = 3
-                                                let checkInterval = 0.5
-                                                
-                                                func checkAndShowPayment() {
-                                                    checkCount += 1
-                                                    
-                                                    // 检查任务是否有接受者且需要支付
-                                                    if let updatedTask = viewModel.task,
-                                                       updatedTask.takerId != nil,
-                                                       updatedTask.status == .pendingPayment {
-                                                        // 任务已接受但未支付，显示支付界面
-                                                        // StripePaymentView 会在 clientSecret 为 nil 时自动调用 API 获取支付信息
-                                                        showPaymentView = true
-                                                    } else if checkCount < maxChecks {
-                                                        // 如果任务状态还没更新，继续检查
-                                                        DispatchQueue.main.asyncAfter(deadline: .now() + checkInterval) {
-                                                            checkAndShowPayment()
-                                                        }
-                                                    }
+                                                // 立即显示支付界面，让 StripePaymentView 自动获取支付信息
+                                                DispatchQueue.main.async {
+                                                    actionLoading = false
+                                                    showPaymentView = true
                                                 }
                                                 
-                                                // 开始第一次检查
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + checkInterval) {
-                                                    checkAndShowPayment()
+                                                // 在后台重新加载任务信息
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                                    viewModel.loadTask(taskId: taskId)
+                                                    viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
                                                 }
                                             }
+                                        } else {
+                                            actionLoading = false
                                         }
                                     }
                                 },
@@ -2127,6 +2119,7 @@ struct ApplicationItemCard: View {
     let onApprove: () -> Void
     let onReject: () -> Void
     @State private var showMessageSheet = false
+    @State private var showRejectConfirm = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -2195,10 +2188,14 @@ struct ApplicationItemCard: View {
                     }
                     .buttonStyle(ScaleButtonStyle())
                     
+                    // 增加间距，防止误触
+                    Spacer()
+                        .frame(width: 16)
+                    
                     // 拒绝按钮 - 图标样式
                     Button(action: {
                         HapticFeedback.warning()
-                        onReject()
+                        showRejectConfirm = true
                     }) {
                         IconStyle.icon("xmark.circle.fill", size: 24)
                             .foregroundColor(.white)
@@ -2253,6 +2250,16 @@ struct ApplicationItemCard: View {
                 taskId: taskId,
                 taskTitle: taskTitle
             )
+        }
+        .alert(LocalizationKey.taskDetailRejectApplication.localized, isPresented: $showRejectConfirm) {
+            Button(LocalizationKey.commonCancel.localized, role: .cancel) {
+                showRejectConfirm = false
+            }
+            Button(LocalizationKey.commonConfirm.localized, role: .destructive) {
+                onReject()
+            }
+        } message: {
+            Text(LocalizationKey.taskDetailRejectApplicationConfirm.localized)
         }
     }
     

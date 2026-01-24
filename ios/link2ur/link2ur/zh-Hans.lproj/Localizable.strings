@@ -617,6 +617,8 @@
 "task_detail.pending_review" = "待审核";
 "task_detail.approved" = "已通过";
 "task_detail.rejected" = "已拒绝";
+"task_detail.reject_application" = "拒绝申请";
+"task_detail.reject_application_confirm" = "确定要拒绝这个申请吗？拒绝后无法撤销。";
 "task_detail.unknown" = "未知";
 "task_detail.quality_good" = "工作质量好";
 "task_detail.on_time" = "准时";

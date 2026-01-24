@@ -430,6 +430,8 @@
 "task_detail.pending_review" = "待審核";
 "task_detail.approved" = "已通過";
 "task_detail.rejected" = "已拒絕";
+"task_detail.reject_application" = "拒絕申請";
+"task_detail.reject_application_confirm" = "確定要拒絕這個申請嗎？拒絕後無法撤銷。";
 "task_detail.unknown" = "未知";
 "task_detail.quality_good" = "工作質量好";
 "task_detail.on_time" = "準時";

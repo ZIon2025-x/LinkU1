@@ -617,6 +617,8 @@
 "task_detail.pending_review" = "Pending Review";
 "task_detail.approved" = "Approved";
 "task_detail.rejected" = "Rejected";
+"task_detail.reject_application" = "Reject Application";
+"task_detail.reject_application_confirm" = "Are you sure you want to reject this application? This action cannot be undone.";
 "task_detail.unknown" = "Unknown";
 "task_detail.quality_good" = "Good Quality";
 "task_detail.on_time" = "On Time";

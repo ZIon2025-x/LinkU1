@@ -165,14 +165,19 @@ class TaskDetailViewModel: ObservableObject {
                 if case .failure = result {
                     completion(false, nil, nil, nil)
                 } else {
-                    // 重新加载任务以获取最新状态
-                    self?.loadTask(taskId: taskId)
+                    // 在后台重新加载任务以获取最新状态（不阻塞 completion 回调）
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self?.loadTask(taskId: taskId)
+                    }
                 }
             }, receiveValue: { [weak self] response in
                 // 如果返回了 client_secret，说明需要支付
+                // 立即调用 completion，不等待任务重新加载
                 completion(true, response.clientSecret, response.customerId, response.ephemeralKeySecret)
-                // 重新加载任务以获取最新状态
-                self?.loadTask(taskId: taskId)
+                // 在后台重新加载任务以获取最新状态（不阻塞 completion 回调）
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self?.loadTask(taskId: taskId)
+                }
             })
             .store(in: &cancellables)
     }
