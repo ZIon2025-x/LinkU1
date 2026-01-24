@@ -698,6 +698,13 @@ struct CalculationStep: Codable {
     let amount: Int
     let amountDisplay: String
     let type: String  // original, discount, final
+    
+    enum CodingKeys: String, CodingKey {
+        case label
+        case amount
+        case amountDisplay = "amount_display"
+        case type
+    }
 }
 
 struct PaymentResponse: Codable {

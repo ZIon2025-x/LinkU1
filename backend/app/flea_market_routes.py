@@ -1412,10 +1412,26 @@ async def direct_purchase_item(
         customer_id = None
         ephemeral_key_secret = None
         try:
-            existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(current_user.id)})
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-            else:
+            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
+            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
+            try:
+                search_result = stripe.Customer.search(
+                    query=f"metadata['user_id']:'{current_user.id}'",
+                    limit=1
+                )
+                if search_result.data:
+                    customer_id = search_result.data[0].id
+                else:
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(current_user.id),
+                            "user_name": current_user.name or f"User {current_user.id}",
+                        }
+                    )
+                    customer_id = customer.id
+            except Exception as search_error:
+                # 如果 Search API 不可用或失败，直接创建新的 Customer
+                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
                 customer = stripe.Customer.create(
                     metadata={
                         "user_id": str(current_user.id),
@@ -1810,10 +1826,26 @@ async def approve_purchase_request(
         customer_id = None
         ephemeral_key_secret = None
         try:
-            existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(purchase_request.buyer_id)})
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-            else:
+            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
+            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
+            try:
+                search_result = stripe.Customer.search(
+                    query=f"metadata['user_id']:'{purchase_request.buyer_id}'",
+                    limit=1
+                )
+                if search_result.data:
+                    customer_id = search_result.data[0].id
+                else:
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(purchase_request.buyer_id),
+                            "user_name": buyer.name if buyer else f"User {purchase_request.buyer_id}",
+                        }
+                    )
+                    customer_id = customer.id
+            except Exception as search_error:
+                # 如果 Search API 不可用或失败，直接创建新的 Customer
+                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
                 customer = stripe.Customer.create(
                     metadata={
                         "user_id": str(purchase_request.buyer_id),
@@ -2118,10 +2150,26 @@ async def accept_purchase_request(
         customer_id = None
         ephemeral_key_secret = None
         try:
-            existing_customers = stripe.Customer.list(limit=1, metadata={"user_id": str(purchase_request.buyer_id)})
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-            else:
+            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
+            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
+            try:
+                search_result = stripe.Customer.search(
+                    query=f"metadata['user_id']:'{purchase_request.buyer_id}'",
+                    limit=1
+                )
+                if search_result.data:
+                    customer_id = search_result.data[0].id
+                else:
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(purchase_request.buyer_id),
+                            "user_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
+                        }
+                    )
+                    customer_id = customer.id
+            except Exception as search_error:
+                # 如果 Search API 不可用或失败，直接创建新的 Customer
+                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
                 customer = stripe.Customer.create(
                     metadata={
                         "user_id": str(purchase_request.buyer_id),

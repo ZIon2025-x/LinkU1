@@ -1000,16 +1000,27 @@ def create_task_payment(
                     ephemeral_key_secret = None
                     
                     try:
-                        # 尝试从 metadata 查找现有 Customer（通过 user_id）
-                        existing_customers = stripe.Customer.list(
-                            limit=1,
-                            metadata={"user_id": str(current_user.id)}
-                        )
-                        
-                        if existing_customers.data:
-                            customer_id = existing_customers.data[0].id
-                        else:
-                            # 创建新的 Stripe Customer
+                        # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
+                        # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
+                        try:
+                            search_result = stripe.Customer.search(
+                                query=f"metadata['user_id']:'{current_user.id}'",
+                                limit=1
+                            )
+                            if search_result.data:
+                                customer_id = search_result.data[0].id
+                            else:
+                                # 创建新的 Stripe Customer
+                                customer = stripe.Customer.create(
+                                    metadata={
+                                        "user_id": str(current_user.id),
+                                        "user_name": current_user.name
+                                    }
+                                )
+                                customer_id = customer.id
+                        except Exception as search_error:
+                            # 如果 Search API 不可用或失败，直接创建新的 Customer
+                            logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
                             customer = stripe.Customer.create(
                                 metadata={
                                     "user_id": str(current_user.id),
@@ -1126,16 +1137,27 @@ def create_task_payment(
         # 检查用户是否已有 Stripe Customer ID（可以存储在 User 模型中，这里先检查数据库）
         # 如果没有，创建一个新的 Customer
         try:
-            # 尝试从 metadata 查找现有 Customer（通过 user_id）
-            existing_customers = stripe.Customer.list(
-                limit=1,
-                metadata={"user_id": str(current_user.id)}
-            )
-            
-            if existing_customers.data:
-                customer_id = existing_customers.data[0].id
-            else:
-                # 创建新的 Stripe Customer
+            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
+            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
+            try:
+                search_result = stripe.Customer.search(
+                    query=f"metadata['user_id']:'{current_user.id}'",
+                    limit=1
+                )
+                if search_result.data:
+                    customer_id = search_result.data[0].id
+                else:
+                    # 创建新的 Stripe Customer
+                    customer = stripe.Customer.create(
+                        metadata={
+                            "user_id": str(current_user.id),
+                            "user_name": current_user.name
+                        }
+                    )
+                    customer_id = customer.id
+            except Exception as search_error:
+                # 如果 Search API 不可用或失败，直接创建新的 Customer
+                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
                 customer = stripe.Customer.create(
                     metadata={
                         "user_id": str(current_user.id),
