@@ -67,7 +67,8 @@ class CreateFleaMarketItemViewModel: ObservableObject {
                 continue
             }
             
-            apiService.uploadImage(imageData, filename: "item_\(UUID().uuidString).jpg")
+            // 跳蚤市场商品图片使用公开图片上传API（所有人可访问，永久URL）
+            apiService.uploadPublicImage(imageData, filename: "item_\(UUID().uuidString).jpg", category: "flea_market")
                 .sink(receiveCompletion: { result in
                     if case .failure(let error) = result {
                         // 使用 ErrorHandler 统一处理错误

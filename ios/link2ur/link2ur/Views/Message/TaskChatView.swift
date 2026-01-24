@@ -374,7 +374,8 @@ struct TaskChatView: View {
         viewModel.isSending = true
         let filename = "chat_image_\(Int(Date().timeIntervalSince1970)).jpg"
         
-        APIService.shared.uploadImage(imageData, filename: filename)
+        // 任务聊天图片使用私密图片上传API（需要token验证，24小时有效期，但任务进行中可访问）
+        APIService.shared.uploadImage(imageData, filename: filename, taskId: taskId)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak viewModel] completion in

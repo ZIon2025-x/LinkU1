@@ -705,6 +705,24 @@ struct CalculationStep: Codable {
         case amountDisplay = "amount_display"
         case type
     }
+    
+    // 显式实现解码，确保 CodingKeys 生效
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        label = try container.decode(String.self, forKey: .label)
+        amount = try container.decode(Int.self, forKey: .amount)
+        amountDisplay = try container.decode(String.self, forKey: .amountDisplay)
+        type = try container.decode(String.self, forKey: .type)
+    }
+    
+    // 显式实现编码
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(label, forKey: .label)
+        try container.encode(amount, forKey: .amount)
+        try container.encode(amountDisplay, forKey: .amountDisplay)
+        try container.encode(type, forKey: .type)
+    }
 }
 
 struct PaymentResponse: Codable {

@@ -146,8 +146,18 @@ class PrivateImageSystem:
         
         return f"{data_string}:{signature}"
     
-    def verify_access_token(self, token: str, image_id: str, user_id: str) -> bool:
-        """验证访问令牌"""
+    def verify_access_token(self, token: str, image_id: str, user_id: str, db: Session = None) -> bool:
+        """验证访问令牌
+        
+        Args:
+            token: 访问令牌
+            image_id: 图片ID
+            user_id: 用户ID
+            db: 数据库会话（可选，用于任务聊天场景下的扩展验证）
+        
+        Returns:
+            bool: 是否验证通过
+        """
         try:
             parts = token.split(':')
             if len(parts) < 5:
@@ -193,8 +203,45 @@ class PrivateImageSystem:
             
             # 检查时间戳（令牌有效期24小时）
             current_time = time.time()
-            if current_time - timestamp > 24 * 60 * 60:
-                logger.error(f"令牌已过期: current_time={current_time}, timestamp={timestamp}, diff={current_time - timestamp}")
+            token_age = current_time - timestamp
+            is_token_expired = token_age > 24 * 60 * 60
+            
+            # 如果token过期，但提供了数据库会话，尝试扩展验证（任务聊天场景）
+            if is_token_expired and db is not None:
+                # 检查是否是任务聊天中的图片，且任务还在进行中
+                from app.models import Message
+                task_message = db.query(Message).filter(Message.image_id == image_id).first()
+                if task_message and task_message.task_id:
+                    from app import crud
+                    task = crud.get_task(db, task_message.task_id)
+                    if task:
+                        # 任务状态：open, in_progress, pending_payment, pending_confirmation 都视为进行中
+                        active_statuses = ["open", "in_progress", "pending_payment", "pending_confirmation"]
+                        if task.status in active_statuses:
+                            # 验证用户是否是任务的参与者
+                            is_poster = task.poster_id == user_id
+                            is_taker = task.taker_id == user_id
+                            if is_poster or is_taker:
+                                logger.info(f"Token已过期但任务仍在进行中，允许访问: task_id={task.id}, status={task.status}, user_id={user_id}")
+                                # 即使token过期，只要用户是任务参与者且任务在进行中，也允许访问
+                                # 但仍需验证签名以确保token未被篡改
+                                data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(participants))}:{timestamp}"
+                                expected_signature = hmac.new(
+                                    self.access_secret.encode('utf-8'),
+                                    data_string.encode('utf-8'),
+                                    hashlib.sha256
+                                ).hexdigest()
+                                
+                                is_valid = hmac.compare_digest(signature, expected_signature)
+                                if is_valid:
+                                    return True
+                                else:
+                                    logger.error(f"签名验证失败（任务聊天场景）: expected={expected_signature}, actual={signature}")
+                                    return False
+            
+            # 如果token过期且不是任务聊天场景，拒绝访问
+            if is_token_expired:
+                logger.error(f"令牌已过期: current_time={current_time}, timestamp={timestamp}, diff={token_age}")
                 return False
             
             # 验证签名
@@ -275,8 +322,8 @@ class PrivateImageSystem:
     def get_image(self, image_id: str, user_id: str, access_token: str, db: Session) -> FileResponse:
         """获取图片（需要验证访问权限）"""
         try:
-            # 验证访问令牌
-            if not self.verify_access_token(access_token, image_id, user_id):
+            # 验证访问令牌（传入db用于任务聊天场景下的扩展验证）
+            if not self.verify_access_token(access_token, image_id, user_id, db=db):
                 raise HTTPException(status_code=403, detail="无权访问此图片")
             
             # 优化：先从数据库查询消息，获取task_id或chat_id，直接定位文件夹

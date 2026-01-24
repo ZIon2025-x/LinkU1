@@ -291,7 +291,8 @@ struct SubmitLeaderboardItemView: View {
                 continue
             }
             
-            apiService.uploadImage(imageData, filename: "item_\(UUID().uuidString).jpg")
+            // 榜单竞品图片使用公开图片上传API（所有人可访问，永久URL）
+            apiService.uploadPublicImage(imageData, filename: "item_\(UUID().uuidString).jpg", category: "leaderboard_item")
                 .sink(receiveCompletion: { completion in
                     if case .failure = completion {
                         uploadErrors.append(NSError(domain: "UploadError", code: 0))

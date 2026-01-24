@@ -569,8 +569,13 @@ public class APIService {
     }
     
     // 文件上传
-    func uploadImage(_ data: Data, filename: String = "image.jpg") -> AnyPublisher<String, APIError> {
-        guard let url = URL(string: "\(baseURL)\(APIEndpoints.Common.uploadImage)") else {
+    /// 上传公开图片（任务图片、头像等，所有人可访问）
+    func uploadPublicImage(_ data: Data, filename: String = "image.jpg", category: String = "public", resourceId: String? = nil) -> AnyPublisher<String, APIError> {
+        var urlString = "\(baseURL)\(APIEndpoints.Common.uploadPublicImage)?category=\(category)"
+        if let resourceId = resourceId {
+            urlString += "&resource_id=\(resourceId)"
+        }
+        guard let url = URL(string: urlString) else {
             return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
         }
         
@@ -625,14 +630,14 @@ public class APIService {
                     return self.handle401Error()
                         .flatMap { () -> AnyPublisher<String, APIError> in
                             // 重试上传
-                            return self.uploadImage(data, filename: filename)
+                            return self.uploadPublicImage(data, filename: filename, category: category, resourceId: resourceId)
                         }
                         .eraseToAnyPublisher()
                 } else {
                     // 尝试解析后端标准错误响应
                     let apiError: APIError
                     if let (parsedError, errorMessage) = APIError.parse(from: data) {
-                        Logger.error("上传图片API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
+                        Logger.error("上传公开图片API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
                         apiError = parsedError
                     } else {
                         apiError = APIError.httpError(httpResponse.statusCode)
@@ -644,7 +649,87 @@ public class APIService {
             .eraseToAnyPublisher()
     }
     
-    /// 上传图片的便捷方法 (支持 UIImage 和 path)
+    /// 上传私密图片（任务聊天、客服聊天，需要token验证，返回Publisher）
+    func uploadImage(_ data: Data, filename: String = "image.jpg", taskId: Int? = nil) -> AnyPublisher<String, APIError> {
+        var urlString = "\(baseURL)\(APIEndpoints.Common.uploadImage)"
+        if let taskId = taskId {
+            urlString += "?task_id=\(taskId)"
+        }
+        guard let url = URL(string: urlString) else {
+            return Fail(error: APIError.invalidURL).eraseToAnyPublisher()
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        // 设置multipart/form-data
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        
+        // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
+        if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+            request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            // 添加应用签名
+            AppSignature.signRequest(&request, sessionId: sessionId)
+        }
+        
+        // 构建multipart body
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        return session.dataTaskPublisher(for: request)
+            .mapError { APIError.requestFailed($0) }
+            .flatMap { data, response -> AnyPublisher<String, APIError> in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    return Fail(error: APIError.invalidResponse).eraseToAnyPublisher()
+                }
+                
+                if (200...299).contains(httpResponse.statusCode) {
+                    // 解析JSON响应: {"success": true, "url": "..."}
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let url = json["url"] as? String {
+                        return Just(url).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                    } else if let urlString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                              urlString.hasPrefix("http") {
+                        return Just(urlString).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                    } else {
+                        return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应"]))).eraseToAnyPublisher()
+                    }
+                } else if httpResponse.statusCode == 401 {
+                    // Token过期，尝试刷新
+                    return self.handle401Error()
+                        .flatMap { () -> AnyPublisher<String, APIError> in
+                            // 重试上传
+                            return self.uploadImage(data, filename: filename, taskId: taskId)
+                        }
+                        .eraseToAnyPublisher()
+                } else {
+                    // 尝试解析后端标准错误响应
+                    let apiError: APIError
+                    if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                        Logger.error("上传私密图片API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
+                        apiError = parsedError
+                    } else {
+                        apiError = APIError.httpError(httpResponse.statusCode)
+                    }
+                    return Fail(error: apiError).eraseToAnyPublisher()
+                }
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+    
+    /// 上传图片的便捷方法 (支持 UIImage 和 path，使用 completion handler)
     func uploadImage(_ image: UIImage, path: String, taskId: Int? = nil, completion: @escaping (Result<String, APIError>) -> Void) {
         // 压缩图片，质量0.7（避免重复压缩）
         guard let data = image.jpegData(compressionQuality: 0.7) else {

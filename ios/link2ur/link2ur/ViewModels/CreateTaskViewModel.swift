@@ -87,7 +87,8 @@ class CreateTaskViewModel: ObservableObject {
                 continue
             }
             
-            apiService.uploadImage(imageData, filename: "task_image_\(UUID().uuidString).jpg")
+            // 使用公开图片上传API（任务图片应该所有人可访问，永久URL）
+            apiService.uploadPublicImage(imageData, filename: "task_image_\(UUID().uuidString).jpg", category: "public")
                 .sink(receiveCompletion: { result in
                     if case .failure(let error) = result {
                         // 使用 ErrorHandler 统一处理错误
