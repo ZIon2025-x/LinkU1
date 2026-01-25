@@ -2408,16 +2408,16 @@ def cleanup_completed_tasks_files(db: Session):
     
     优化：只处理有图片的任务，清理后将images字段设为空，避免重复处理
     """
+    import os
     from app.models import Task
     from datetime import timedelta
     from sqlalchemy import or_, and_
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
-    # 计算3天前的时间
+    days = int(os.getenv("CLEANUP_COMPLETED_TASK_DAYS", "3"))
     now_utc = get_utc_time()
-    three_days_ago = now_utc - timedelta(days=3)
+    three_days_ago = now_utc - timedelta(days=days)
     
     # 处理时区：将 three_days_ago 转换为 naive datetime（与数据库中的 completed_at 格式一致）
     three_days_ago_naive = three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else three_days_ago
@@ -2475,18 +2475,18 @@ def cleanup_expired_tasks_files(db: Session):
     
     优化：只处理有图片的任务，清理后将images字段设为空，避免重复处理
     """
+    import os
     from app.models import Task, TaskHistory
     from datetime import timedelta, datetime as dt, timezone
     from app.utils.time_utils import get_utc_time
     from sqlalchemy import or_, and_, func
     from sqlalchemy.orm import selectinload
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
-    # 获取当前UTC时间（带时区）
+    days = int(os.getenv("CLEANUP_EXPIRED_TASK_DAYS", "3"))
     now_utc = get_utc_time()
-    three_days_ago = now_utc - timedelta(days=3)
+    three_days_ago = now_utc - timedelta(days=days)
     
     # 优化：只查询有图片的已取消任务
     # 1. 先获取所有已取消且有图片的任务ID

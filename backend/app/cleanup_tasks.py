@@ -1,16 +1,60 @@
 """
 定期清理任务模块
 用于清理过期的会话、缓存等数据
+
+注意：当前所有文件/图片清理均针对本地磁盘（Path）。若 STORAGE_BACKEND 为 s3 或 r2，
+云存储上的对象不会由本模块清理，需后续通过 storage_backend 的 delete/delete_directory 扩展。
+
+小容量挂载卷优化：可通过环境变量调高清理频率、缩短保留期，并开启低磁盘紧急模式。
+  CLEANUP_INTERVAL=1800           # 清理周期(秒)，默认 3600，小卷可 1800
+  CLEANUP_TEMP_IMAGE_HOURS=12     # 临时图保留小时，默认 24，小卷可 12
+  CLEANUP_ORPHAN_FILE_DAYS=3      # 孤立文件保留天数，默认 7，小卷可 3
+  CLEANUP_OLD_FORMAT_DAYS=14      # 旧格式图保留天数，默认 30，小卷可 14
+  CLEANUP_MAX_FILES_ORPHAN=1000   # 单次孤儿文件上限，默认 500
+  CLEANUP_MAX_FILES_TEMP=2000     # 单次临时图上限，默认 1000
+  CLEANUP_MAX_DIRS_ORPHAN_ENTITY=200  # 单次孤儿实体目录上限，默认 100
+  CLEANUP_LOW_DISK_PERCENT=85     # 设定后：当 uploads 所在分区使用率>=该值，本轮回合
+                                  # 临时改用 6h/2天/14天 及 2 倍单次上限
+  CLEANUP_COMPLETED_TASK_DAYS=1   # 已完成任务文件保留天数，默认 3（crud）
+  CLEANUP_EXPIRED_TASK_DAYS=1     # 过期任务文件保留天数，默认 3（crud）
 """
 
 import asyncio
 import logging
+import os
+import shutil
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 logger = logging.getLogger(__name__)
+
+
+def _env_int(key: str, default: int) -> int:
+    try:
+        return int(os.getenv(key, str(default)))
+    except ValueError:
+        return default
+
+
+def _get_base_upload_dir() -> Path:
+    return Path("/data/uploads") if os.getenv("RAILWAY_ENVIRONMENT") else Path("uploads")
+
+
+def _is_low_disk(base: Path) -> bool:
+    """当 CLEANUP_LOW_DISK_PERCENT 已设置且 uploads 所在分区使用率>=该值时返回 True"""
+    pct = os.getenv("CLEANUP_LOW_DISK_PERCENT")
+    if not pct:
+        return False
+    try:
+        u = shutil.disk_usage(str(base.resolve())) if base.exists() else None
+        if not u or u.total == 0:
+            return False
+        return (u.used / u.total) >= (int(pct) / 100.0)
+    except Exception:
+        return False
 
 
 def get_redis_distributed_lock(lock_key: str, lock_ttl: int = 3600) -> bool:
@@ -73,7 +117,7 @@ class CleanupTasks:
     
     def __init__(self):
         self.running = False
-        self.cleanup_interval = 3600  # 1小时清理一次
+        self.cleanup_interval = _env_int("CLEANUP_INTERVAL", 3600)
         self.last_completed_tasks_cleanup_date = None  # 上次清理已完成任务的日期
         self.last_expired_tasks_cleanup_date = None  # 上次清理过期任务的日期
         self.last_orphan_files_cleanup_date = None  # 上次清理孤立文件的日期
@@ -104,26 +148,21 @@ class CleanupTasks:
             
             # 清理过期会话
             await self._cleanup_expired_sessions()
-            
             # 清理过期缓存
             await self._cleanup_expired_cache()
-            
+            # 清理未使用的临时图片（每次循环都执行，优先释放空间）
+            await self._cleanup_unused_temp_images()
             # 清理已完成和过期任务的文件（每天检查一次）
             await self._cleanup_completed_tasks_files()
             await self._cleanup_expired_tasks_files()
-            
             # 清理过期跳蚤市场商品（每天检查一次）
             await self._cleanup_expired_flea_market_items()
-            
-            # 清理未使用的临时图片（每次循环都执行）
-            await self._cleanup_unused_temp_images()
-            
             # 清理孤立文件（每周检查一次）
             await self._cleanup_orphan_files()
-            
             # 清理不存在实体的图片文件夹（每周检查一次）
             await self._cleanup_orphan_entity_images()
-            
+            # 清理空目录（释放 inode，减轻小卷压力）
+            await self._cleanup_empty_dirs()
             # 清理旧格式图片（直接保存在 /uploads/images/ 下的，每周检查一次）
             await self._cleanup_old_format_images()
             
@@ -272,16 +311,16 @@ class CleanupTasks:
                 base_public_dir = Path("uploads/public/images")
             
             temp_base_dir = base_public_dir / "public"
-            
-            # 如果临时文件夹不存在，直接返回
             if not temp_base_dir.exists():
                 return
-            
-            # 计算24小时前的时间
-            cutoff_time = get_utc_time() - timedelta(hours=24)
+
+            base_upload = _get_base_upload_dir()
+            is_low = _is_low_disk(base_upload)
+            temp_hours = 6 if is_low else _env_int("CLEANUP_TEMP_IMAGE_HOURS", 24)
+            max_files_per_run = _env_int("CLEANUP_MAX_FILES_TEMP", 1000) * (2 if is_low else 1)
+            cutoff_time = get_utc_time() - timedelta(hours=temp_hours)
             cleaned_count = 0
-            max_files_per_run = 1000  # 每次最多处理1000个文件，避免IO压力过大
-            
+
             # 遍历所有临时文件夹（temp_*）
             for temp_dir in temp_base_dir.iterdir():
                 if cleaned_count >= max_files_per_run:
@@ -565,11 +604,14 @@ class CleanupTasks:
             else:
                 base_upload_dir = Path("uploads")
             
-            # 计算7天前的时间
-            cutoff_time = get_utc_time() - timedelta(days=7)
+            base_upload = base_upload_dir  # 与下方 expected_dirs 一致
+            is_low = _is_low_disk(base_upload)
+            orphan_days = 2 if is_low else _env_int("CLEANUP_ORPHAN_FILE_DAYS", 7)
+            max_files_per_run = _env_int("CLEANUP_MAX_FILES_ORPHAN", 500) * (2 if is_low else 1)
+            cutoff_time = get_utc_time() - timedelta(days=orphan_days)
             cleaned_count = 0
-            max_files_per_run = 500  # 每次最多处理500个文件，避免IO压力过大
-            
+            bytes_freed = 0
+
             # 定义预期的目录结构（允许的子目录）
             expected_dirs = {
                 # 公开图片目录
@@ -578,6 +620,7 @@ class CleanupTasks:
                 base_upload_dir / "public" / "images" / "public": True,  # 允许 task_id 或 temp_* 子目录
                 base_upload_dir / "public" / "images" / "leaderboard_items": True,  # 允许 item_id 或 temp_* 子目录
                 base_upload_dir / "public" / "images" / "leaderboard_covers": True,  # 允许 leaderboard_id 或 temp_* 子目录
+                base_upload_dir / "public" / "images" / "banner": True,  # 允许 banner_id 或 temp_* 子目录
                 # 公开文件目录
                 base_upload_dir / "public" / "files": False,  # 不允许子目录，文件直接在此目录
                 # 私密图片目录
@@ -593,8 +636,8 @@ class CleanupTasks:
             # 递归扫描上传目录，找出不在预期位置的文件
             def scan_directory(dir_path: Path, depth: int = 0, max_depth: int = 5):
                 """递归扫描目录，找出孤立文件"""
-                nonlocal cleaned_count
-                
+                nonlocal cleaned_count, bytes_freed
+
                 if cleaned_count >= max_files_per_run:
                     return
                 
@@ -629,7 +672,10 @@ class CleanupTasks:
                                 try:
                                     file_mtime = file_timestamp_to_utc(item.stat().st_mtime)
                                     if file_mtime < cutoff_time:
-                                        # 超过7天未使用，删除
+                                        try:
+                                            bytes_freed += item.stat().st_size
+                                        except Exception:
+                                            pass
                                         item.unlink()
                                         cleaned_count += 1
                                         logger.info(f"删除孤立文件: {item}")
@@ -654,18 +700,18 @@ class CleanupTasks:
                 scan_directory(base_upload_dir, depth=0, max_depth=5)
             
             if cleaned_count > 0:
-                logger.info(f"清理了 {cleaned_count} 个孤立文件")
+                mb = bytes_freed / (1024 * 1024)
+                logger.info(f"清理了 {cleaned_count} 个孤立文件，释放约 {mb:.2f} MB")
                 self.last_orphan_files_cleanup_date = today
             else:
                 logger.debug("未发现需要清理的孤立文件")
                 self.last_orphan_files_cleanup_date = today
-                
+
         except Exception as e:
             logger.error(f"清理孤立文件失败: {e}", exc_info=True)
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
-    
+
     async def _cleanup_orphan_entity_images(self):
         """清理不存在实体的图片文件夹（竞品、商品、任务），每周检查一次，使用分布式锁"""
         # 检查是否已经在本周执行过
@@ -694,13 +740,20 @@ class CleanupTasks:
                 base_upload_dir = Path("/data/uploads")
             else:
                 base_upload_dir = Path("uploads")
-            
+
+            is_low = _is_low_disk(base_upload_dir)
             cleaned_count = 0
-            max_dirs_per_run = 100  # 每次最多处理100个目录，避免IO压力过大
-            
+            max_dirs_per_run = _env_int("CLEANUP_MAX_DIRS_ORPHAN_ENTITY", 100) * (2 if is_low else 1)
+
             # 获取数据库会话
             db = next(get_sync_db())
             try:
+                # 预取实体 ID，供任务公开图、榜单封面、私有任务/聊天目录的孤儿清理使用
+                from sqlalchemy import select
+                _existing_task_ids = {r[0] for r in db.execute(select(models.Task.id)).all()}
+                _existing_chat_ids = {r[0] for r in db.execute(select(models.CustomerServiceChat.chat_id)).all()}
+                _existing_leaderboard_ids = {r[0] for r in db.execute(select(models.CustomLeaderboard.id)).all()}
+
                 # 1. 清理不存在竞品的图片文件夹
                 leaderboard_items_dir = base_upload_dir / "public" / "images" / "leaderboard_items"
                 if leaderboard_items_dir.exists():
@@ -758,11 +811,7 @@ class CleanupTasks:
                 # 3. 清理不存在任务的图片文件夹
                 tasks_public_dir = base_upload_dir / "public" / "images" / "public"
                 if tasks_public_dir.exists():
-                    # 获取所有存在的任务ID
-                    from sqlalchemy import select
-                    tasks_result = db.execute(select(models.Task.id))
-                    existing_task_ids = {task_id for task_id, in tasks_result.all()}
-                    
+                    existing_task_ids = _existing_task_ids
                     # 遍历目录，找出不存在的任务ID对应的文件夹
                     for task_dir in tasks_public_dir.iterdir():
                         if cleaned_count >= max_dirs_per_run:
@@ -859,7 +908,85 @@ class CleanupTasks:
                             except (ValueError, Exception) as e:
                                 logger.debug(f"跳过无效的Banner目录: {banner_item_dir.name}: {e}")
                                 continue
-                
+
+                # 7. 清理不存在榜单的封面文件夹
+                leaderboard_covers_dir = base_upload_dir / "public" / "images" / "leaderboard_covers"
+                if leaderboard_covers_dir.exists():
+                    for lb_dir in leaderboard_covers_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        if lb_dir.is_dir() and not lb_dir.name.startswith("temp_"):
+                            try:
+                                lb_id = int(lb_dir.name)
+                                if lb_id not in _existing_leaderboard_ids:
+                                    shutil.rmtree(lb_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在榜单 {lb_id} 的封面文件夹: {lb_dir}")
+                            except (ValueError, Exception) as e:
+                                logger.debug(f"跳过无效的榜单封面目录: {lb_dir.name}: {e}")
+                                continue
+
+                # 8. 清理不存在任务的私密图片文件夹
+                private_tasks_img_dir = base_upload_dir / "private_images" / "tasks"
+                if private_tasks_img_dir.exists():
+                    for task_dir in private_tasks_img_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        if task_dir.is_dir():
+                            try:
+                                task_id = int(task_dir.name)
+                                if task_id not in _existing_task_ids:
+                                    shutil.rmtree(task_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在任务 {task_id} 的私密图片文件夹: {task_dir}")
+                            except (ValueError, Exception) as e:
+                                logger.debug(f"跳过无效的任务私密图片目录: {task_dir.name}: {e}")
+                                continue
+
+                # 9. 清理不存在客服聊天的私密图片文件夹
+                private_chats_img_dir = base_upload_dir / "private_images" / "chats"
+                if private_chats_img_dir.exists():
+                    for chat_dir in private_chats_img_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        if chat_dir.is_dir() and chat_dir.name not in _existing_chat_ids:
+                            shutil.rmtree(chat_dir)
+                            cleaned_count += 1
+                            logger.info(f"删除不存在客服聊天 {chat_dir.name} 的私密图片文件夹: {chat_dir}")
+
+                # 10. 清理不存在任务的私密文件文件夹
+                private_tasks_file_dir = base_upload_dir / "private_files" / "tasks"
+                if private_tasks_file_dir.exists():
+                    for task_dir in private_tasks_file_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        if task_dir.is_dir():
+                            try:
+                                task_id = int(task_dir.name)
+                                if task_id not in _existing_task_ids:
+                                    shutil.rmtree(task_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在任务 {task_id} 的私密文件文件夹: {task_dir}")
+                            except (ValueError, Exception) as e:
+                                logger.debug(f"跳过无效的任务私密文件目录: {task_dir.name}: {e}")
+                                continue
+
+                # 11. 清理不存在客服聊天的私密文件文件夹
+                private_chats_file_dir = base_upload_dir / "private_files" / "chats"
+                if private_chats_file_dir.exists():
+                    for chat_dir in private_chats_file_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        if chat_dir.is_dir() and chat_dir.name not in _existing_chat_ids:
+                            shutil.rmtree(chat_dir)
+                            cleaned_count += 1
+                            logger.info(f"删除不存在客服聊天 {chat_dir.name} 的私密文件文件夹: {chat_dir}")
+
             finally:
                 db.close()
             
@@ -871,9 +998,35 @@ class CleanupTasks:
         except Exception as e:
             logger.error(f"清理不存在实体的图片文件夹失败: {e}", exc_info=True)
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
-    
+
+    async def _cleanup_empty_dirs(self):
+        """清理 uploads 下的空目录，释放 inode，减轻小卷压力。每轮执行。"""
+        try:
+            base = _get_base_upload_dir()
+            if not base.exists() or not base.is_dir():
+                return
+            removed = 0
+            for root, dirs, files in os.walk(str(base), topdown=False):
+                for d in dirs:
+                    p = os.path.join(root, d)
+                    if os.path.isdir(p) and len(os.listdir(p)) == 0:
+                        try:
+                            os.rmdir(p)
+                            removed += 1
+                        except OSError:
+                            pass
+                if root != str(base) and len(os.listdir(root)) == 0:
+                    try:
+                        os.rmdir(root)
+                        removed += 1
+                    except OSError:
+                        pass
+            if removed > 0:
+                logger.info(f"清理了 {removed} 个空目录")
+        except Exception as e:
+            logger.warning(f"清理空目录失败: {e}")
+
     async def _cleanup_old_format_images(self):
         """清理旧格式图片（直接保存在 /uploads/images/ 下的，不在子目录中），每周检查一次，使用分布式锁"""
         # 检查是否已经在本周执行过
@@ -906,14 +1059,15 @@ class CleanupTasks:
             # - /uploads/images/ (根目录)
             # - /uploads/public/images/ (不在子目录中)
             old_format_dirs = [
-                base_upload_dir / "images",  # 旧格式：直接在 images 目录下
-                base_upload_dir / "public" / "images",  # 旧格式：直接在 public/images 目录下
+                base_upload_dir / "images",
+                base_upload_dir / "public" / "images",
             ]
-            
-            # 计算30天前的时间（旧格式图片如果30天未使用，可能是无用的）
-            cutoff_time = get_utc_time() - timedelta(days=30)
+
+            is_low = _is_low_disk(base_upload_dir)
+            old_days = 14 if is_low else _env_int("CLEANUP_OLD_FORMAT_DAYS", 30)
+            max_files_per_run = 200 * (2 if is_low else 1)
+            cutoff_time = get_utc_time() - timedelta(days=old_days)
             cleaned_count = 0
-            max_files_per_run = 200  # 每次最多处理200个文件
             
             for old_dir in old_format_dirs:
                 if cleaned_count >= max_files_per_run:

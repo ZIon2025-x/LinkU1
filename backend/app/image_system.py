@@ -154,7 +154,7 @@ class PrivateImageSystem:
             token: 访问令牌
             image_id: 图片ID
             user_id: 用户ID
-            db: 数据库会话（可选，用于任务聊天场景下的扩展验证）
+            db: 数据库会话（可选，保留兼容）
         
         Returns:
             bool: 是否验证通过
@@ -202,49 +202,7 @@ class PrivateImageSystem:
                 logger.error(f"用户不在参与者列表中: user_id={user_id}, participants={participants}")
                 return False
             
-            # 检查时间戳（令牌有效期24小时）
-            current_time = time.time()
-            token_age = current_time - timestamp
-            is_token_expired = token_age > 24 * 60 * 60
-            
-            # 如果token过期，但提供了数据库会话，尝试扩展验证（任务聊天场景）
-            if is_token_expired and db is not None:
-                # 检查是否是任务聊天中的图片，且任务还在进行中
-                from app.models import Message
-                task_message = db.query(Message).filter(Message.image_id == image_id).first()
-                if task_message and task_message.task_id:
-                    from app import crud
-                    task = crud.get_task(db, task_message.task_id)
-                    if task:
-                        # 任务状态：open, in_progress, pending_payment, pending_confirmation 都视为进行中
-                        active_statuses = ["open", "in_progress", "pending_payment", "pending_confirmation"]
-                        if task.status in active_statuses:
-                            # 验证用户是否是任务的参与者
-                            is_poster = task.poster_id == user_id
-                            is_taker = task.taker_id == user_id
-                            if is_poster or is_taker:
-                                logger.info(f"Token已过期但任务仍在进行中，允许访问: task_id={task.id}, status={task.status}, user_id={user_id}")
-                                # 即使token过期，只要用户是任务参与者且任务在进行中，也允许访问
-                                # 但仍需验证签名以确保token未被篡改
-                                data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(participants))}:{timestamp}"
-                                expected_signature = hmac.new(
-                                    self.access_secret.encode('utf-8'),
-                                    data_string.encode('utf-8'),
-                                    hashlib.sha256
-                                ).hexdigest()
-                                
-                                is_valid = hmac.compare_digest(signature, expected_signature)
-                                if is_valid:
-                                    return True
-                                else:
-                                    logger.error(f"签名验证失败（任务聊天场景）: expected={expected_signature}, actual={signature}")
-                                    return False
-            
-            # 如果token过期且不是任务聊天场景，拒绝访问
-            if is_token_expired:
-                logger.error(f"令牌已过期: current_time={current_time}, timestamp={timestamp}, diff={token_age}")
-                return False
-            
+            # 不校验时间戳过期：任务可能长时间进行或需回看已完成任务的聊天图片，仅校验签名与参与者
             # 验证签名
             data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(participants))}:{timestamp}"
             expected_signature = hmac.new(
