@@ -1276,12 +1276,10 @@ async def direct_purchase_item(
             except:
                 images = []
         
-        # 合并description（包含分类和联系方式）
+        # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
         description = item.description
         if item.category:
-            description = f"{description}\n\n分类：{item.category}"
-        if item.contact:
-            description = f"{description}\n\n联系方式：{item.contact}"
+            description = f"{description}\n\nCategory: {item.category}"
         
         # ⚠️ 安全修复：跳蚤市场直接购买需要支付
         # 创建任务时设置为 pending_payment 状态，等待支付完成
@@ -1673,12 +1671,10 @@ async def approve_purchase_request(
             except:
                 images = []
         
-        # 合并description（包含分类和联系方式）
+        # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
         description = item.description
         if item.category:
-            description = f"{description}\n\n分类：{item.category}"
-        if item.contact:
-            description = f"{description}\n\n联系方式：{item.contact}"
+            description = f"{description}\n\nCategory: {item.category}"
         
         # 检查卖家是否有 Stripe Connect 账户（用于接收任务奖励）
         seller = await db.get(models.User, item.seller_id)
@@ -1998,12 +1994,10 @@ async def accept_purchase_request(
             except:
                 images = []
         
-        # 合并description（包含分类和联系方式）
+        # 合并description（仅包含分类，分类用英文 "Category:" 便于解析；联系方式已去掉，统一用 app 消息交流）
         description = item.description
         if item.category:
-            description = f"{description}\n\n分类：{item.category}"
-        if item.contact:
-            description = f"{description}\n\n联系方式：{item.contact}"
+            description = f"{description}\n\nCategory: {item.category}"
         
         # ⚠️ 安全修复：跳蚤市场接受购买申请需要支付
         # 检查卖家是否有 Stripe Connect 账户（用于接收任务奖励）

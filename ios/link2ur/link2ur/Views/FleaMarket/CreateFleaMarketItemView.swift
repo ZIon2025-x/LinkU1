@@ -78,14 +78,6 @@ struct CreateFleaMarketItemView: View {
                             
                             // 位置选择 - 带搜索建议
                             locationInputSection
-                            
-                            // 联系方式
-                            EnhancedTextField(
-                                title: LocalizationKey.fleaMarketContact.localized,
-                                placeholder: LocalizationKey.fleaMarketContactPlaceholder.localized,
-                                text: $viewModel.contact,
-                                icon: "phone.fill"
-                            )
                         }
                     }
                     .padding(AppSpacing.md)

@@ -86,14 +86,6 @@ struct EditFleaMarketItemView: View {
                             
                             // 位置选择 - 带搜索建议
                             locationInputSection
-                            
-                            // 联系方式
-                            EnhancedTextField(
-                                title: LocalizationKey.fleaMarketContact.localized,
-                                placeholder: LocalizationKey.fleaMarketContactPlaceholder.localized,
-                                text: $viewModel.contact,
-                                icon: "phone.fill"
-                            )
                         }
                     }
                     .padding(AppSpacing.md)
@@ -599,7 +591,6 @@ class EditFleaMarketItemViewModel: ObservableObject {
     @Published var latitude: Double?
     @Published var longitude: Double?
     @Published var category = ""
-    @Published var contact = ""
     @Published var selectedImages: [UIImage] = []
     @Published var uploadedImageUrls: [String] = []
     @Published var existingImageUrls: [String] = []
@@ -728,9 +719,6 @@ class EditFleaMarketItemViewModel: ObservableObject {
             
             if !self.category.isEmpty {
                 body["category"] = self.category
-            }
-            if !self.contact.isEmpty {
-                body["contact"] = self.contact
             }
             if !allImageUrls.isEmpty {
                 body["images"] = allImageUrls

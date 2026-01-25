@@ -13,7 +13,6 @@ class CreateFleaMarketItemViewModel: ObservableObject {
     @Published var latitude: Double?
     @Published var longitude: Double?
     @Published var category = ""
-    @Published var contact = ""
     @Published var selectedImages: [UIImage] = []
     @Published var uploadedImageUrls: [String] = []
     @Published var isLoading = false
@@ -133,9 +132,6 @@ class CreateFleaMarketItemViewModel: ObservableObject {
             if !self.category.isEmpty {
                 body["category"] = self.category
             }
-            if !self.contact.isEmpty {
-                body["contact"] = self.contact
-            }
             if !self.uploadedImageUrls.isEmpty {
                 body["images"] = self.uploadedImageUrls
             }
@@ -187,7 +183,6 @@ class CreateFleaMarketItemViewModel: ObservableObject {
         latitude = nil
         longitude = nil
         category = ""
-        contact = ""
         selectedImages = []
         uploadedImageUrls = []
         errorMessage = nil
