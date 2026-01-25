@@ -49,7 +49,10 @@ struct ImagePicker: UIViewControllerRepresentable {
                         return
                     }
                     self.parent.selectedImage = image as? UIImage
-                    self.parent.dismiss()
+                    // 稍迟 dismiss，确保父视图的 onChange(of: selectedImage) 先执行并启动上传
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        self.parent.dismiss()
+                    }
                 }
             }
         }

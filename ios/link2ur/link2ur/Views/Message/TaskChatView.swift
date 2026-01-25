@@ -385,27 +385,34 @@ struct TaskChatView: View {
         // 设置上传状态
         viewModel.isSending = true
         let filename = "chat_image_\(Int(Date().timeIntervalSince1970)).jpg"
+        Logger.debug("开始上传并发送图片，大小: \(imageData.count) bytes", category: .api)
         
         // 任务聊天图片使用私密图片上传API（需要token验证，24小时有效期，但任务进行中可访问）
         APIService.shared.uploadImage(imageData, filename: filename, taskId: taskId)
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak viewModel] completion in
-                    viewModel?.isSending = false
                     if case .failure(let error) = completion {
+                        viewModel?.isSending = false
+                        Logger.error("图片上传失败: \(error)", category: .api)
                         viewModel?.errorMessage = "图片上传失败: \(error.userFriendlyMessage)"
                     }
+                    // 成功时 .finished：receiveValue 已把 isSending 清掉并交给 sendMessageWithAttachment，不再置 false 以免覆盖 send 的 isSending=true
                 },
                 receiveValue: { [weak viewModel] imageUrl in
-                    guard let viewModel = viewModel else { return }
+                    guard let viewModel = viewModel else {
+                        Logger.warning("uploadAndSendImage receiveValue: viewModel 为 nil", category: .api)
+                        return
+                    }
+                    // 上传完成，先清掉 isSending，否则 sendMessageWithAttachment 的 guard !isSending 会直接 return，导致从不请求 /send、message 表无记录
+                    viewModel.isSending = false
+                    Logger.debug("上传成功，获得 url，正在发送消息: \(imageUrl.prefix(80))...", category: .api)
                     viewModel.sendMessageWithAttachment(
                         content: "[图片]",
                         attachmentType: "image",
                         attachmentUrl: imageUrl
                     ) { success in
-                        // ✅ 修复：struct 是值类型，不会有循环引用，可以直接捕获
-                        // 如果成功，viewModel 会更新 messages，触发 onChange(of: viewModel.messages.count)
-                        // 从而自动滚动到底部（如果用户在底部或正在输入）
+                        // 如果成功，viewModel 会更新 messages，触发 onChange，自动滚动到底部
                     }
                 }
             )

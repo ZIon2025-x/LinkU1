@@ -705,15 +705,18 @@ public class APIService {
                 }
                 
                 if (200...299).contains(httpResponse.statusCode) {
-                    // 解析JSON响应: {"success": true, "url": "..."}
+                    // 解析JSON响应: {"success": true, "url": "..."} 或 {"success": true, "image_id": "..."}
                     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let url = json["url"] as? String {
+                       let url = json["url"] as? String, !url.isEmpty {
+                        Logger.debug("上传私密图片成功，获得 url: \(url.prefix(80))...", category: .api)
                         return Just(url).setFailureType(to: APIError.self).eraseToAnyPublisher()
                     } else if let urlString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
                               urlString.hasPrefix("http") {
                         return Just(urlString).setFailureType(to: APIError.self).eraseToAnyPublisher()
                     } else {
-                        return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应"]))).eraseToAnyPublisher()
+                        let snippet = String(data: data, encoding: .utf8).map { String($0.prefix(400)) } ?? ""
+                        Logger.error("上传私密图片：无法解析 url。响应片段: \(snippet)", category: .api)
+                        return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应，缺少 url"]))).eraseToAnyPublisher()
                     }
                 } else if httpResponse.statusCode == 401 {
                     // Token过期，尝试刷新

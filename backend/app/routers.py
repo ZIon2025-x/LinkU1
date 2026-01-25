@@ -8822,45 +8822,57 @@ async def upload_image(
         from app.image_system import private_image_system
         result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=image.content_type)
         
-        # 生成图片访问 URL（确保总是返回 URL）
+        # 生成图片访问 URL（确保总是返回 URL，否则 iOS 无法解析并继续发送消息）
         if result.get("success") and result.get("image_id"):
             participants = []
-            
-            # 如果有 task_id，获取任务参与者
-            if task_id:
-                task = crud.get_task(db, task_id)
-                if task:
-                    if task.poster_id:
-                        participants.append(task.poster_id)
-                    if task.taker_id:
-                        participants.append(task.taker_id)
-                    # 多人任务：加入 TaskParticipant 及 expert_creator_id，确保接收方能加载私密图片
-                    if getattr(task, "is_multi_participant", False):
-                        if getattr(task, "expert_creator_id", None) and task.expert_creator_id not in participants:
-                            participants.append(task.expert_creator_id)
-                        for p in db.query(models.TaskParticipant).filter(
-                            models.TaskParticipant.task_id == task_id,
-                            models.TaskParticipant.status.in_(["accepted", "in_progress"]),
-                        ).all():
-                            if p.user_id and p.user_id not in participants:
-                                participants.append(p.user_id)
-            
-            # 添加当前用户（如果不在列表中）
-            if current_user.id not in participants:
-                participants.append(current_user.id)
-            
-            # 如果没有参与者（不应该发生），至少包含当前用户
-            if not participants:
+            try:
+                # 如果有 task_id，获取任务参与者
+                if task_id:
+                    task = crud.get_task(db, task_id)
+                    if task:
+                        if task.poster_id:
+                            participants.append(task.poster_id)
+                        if task.taker_id:
+                            participants.append(task.taker_id)
+                        # 多人任务：加入 TaskParticipant 及 expert_creator_id，确保接收方能加载私密图片
+                        if getattr(task, "is_multi_participant", False):
+                            if getattr(task, "expert_creator_id", None) and task.expert_creator_id not in participants:
+                                participants.append(task.expert_creator_id)
+                            for p in db.query(models.TaskParticipant).filter(
+                                models.TaskParticipant.task_id == task_id,
+                                models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                            ).all():
+                                if p.user_id and p.user_id not in participants:
+                                    participants.append(p.user_id)
+                
+                # 添加当前用户（如果不在列表中）
+                if current_user.id not in participants:
+                    participants.append(current_user.id)
+                
+                # 如果没有参与者（不应该发生），至少包含当前用户
+                if not participants:
+                    participants = [current_user.id]
+                
+                # 生成图片访问 URL
+                image_url = private_image_system.generate_image_url(
+                    result["image_id"],
+                    current_user.id,
+                    participants
+                )
+                result["url"] = image_url
+                logger.debug("upload/image: 已写入 result[url], image_id=%s", result.get("image_id"))
+            except Exception as e:
+                logger.warning("upload/image: 构建 participants 或 generate_image_url 失败: %s，使用仅当前用户生成 url", e)
                 participants = [current_user.id]
-            
-            # 生成图片访问 URL
-            image_url = private_image_system.generate_image_url(
-                result["image_id"],
-                current_user.id,
-                participants
-            )
-            result["url"] = image_url
+                image_url = private_image_system.generate_image_url(
+                    result["image_id"],
+                    current_user.id,
+                    participants
+                )
+                result["url"] = image_url
         
+        if result.get("image_id") and "url" not in result:
+            logger.error("upload/image: image_id 存在但 result 中无 url，iOS 将无法解析。result keys=%s", list(result.keys()))
         return JSONResponse(content=result)
 
     except HTTPException:
