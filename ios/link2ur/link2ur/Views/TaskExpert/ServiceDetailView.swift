@@ -127,22 +127,22 @@ struct ServiceDetailView: View {
     
     @ViewBuilder
     private func serviceImageGallery(service: TaskExpertService) -> some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let imageHeight: CGFloat = screenWidth * 0.8
-        
         if let images = service.images, !images.isEmpty {
+            // 使用 maxWidth + aspectRatio 替代 UIScreen.main.bounds，避免申请弹窗出现时
+            // 父级尺寸变化导致图片右侧和底部被裁切、露出背后容器
             ZStack(alignment: .bottom) {
                 TabView(selection: $currentImageIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
                         AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: screenWidth, height: imageHeight)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipped()
                             .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: imageHeight)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(5 / 4, contentMode: .fit)
                 
                 if images.count > 1 {
                     HStack(spacing: 6) {
@@ -159,6 +159,8 @@ struct ServiceDetailView: View {
                     .padding(.bottom, 50)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(5 / 4, contentMode: .fit)
         } else {
             ZStack {
                 LinearGradient(
@@ -175,7 +177,8 @@ struct ServiceDetailView: View {
                         .foregroundColor(AppColors.primary.opacity(0.4))
                 }
             }
-            .frame(width: screenWidth, height: 240)
+            .frame(maxWidth: .infinity)
+            .frame(height: 240)
         }
     }
     

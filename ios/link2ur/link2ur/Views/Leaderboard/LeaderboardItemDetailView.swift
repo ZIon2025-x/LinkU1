@@ -624,22 +624,21 @@ struct LeaderboardItemImageSection: View {
     @Binding var selectedIndex: Int
     
     var body: some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let imageHeight: CGFloat = screenWidth * 0.85
-        
         if !images.isEmpty {
+            // 使用 maxWidth + aspectRatio 替代 UIScreen.main.bounds，避免弹窗出现时图片右侧和底部被裁切
             ZStack(alignment: .bottom) {
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
                         AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: screenWidth, height: imageHeight)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipped()
                             .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: imageHeight)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(20 / 17, contentMode: .fit)
                 
                 // 自定义指示器
                 if images.count > 1 {
@@ -657,6 +656,8 @@ struct LeaderboardItemImageSection: View {
                     .padding(.bottom, 50) // 避开卡片覆盖
                 }
             }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(20 / 17, contentMode: .fit)
         } else {
             ZStack {
                 LinearGradient(
@@ -673,7 +674,8 @@ struct LeaderboardItemImageSection: View {
                         .foregroundColor(AppColors.primary.opacity(0.4))
                 }
             }
-            .frame(width: screenWidth, height: 200)
+            .frame(maxWidth: .infinity)
+            .frame(height: 200)
         }
     }
 }

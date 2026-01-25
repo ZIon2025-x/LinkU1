@@ -440,7 +440,13 @@ class TaskOut(TaskBase):
                 parsed = json.loads(images_value)
                 images_list = parsed if isinstance(parsed, list) else []
             except (json.JSONDecodeError, TypeError):
-                images_list = []
+                # 容错：若曾是 list 直接赋给 Text 列，可能被存成 Python repr，如 "['url']"
+                try:
+                    import ast
+                    parsed = ast.literal_eval(images_value)
+                    images_list = [str(x) for x in parsed if isinstance(x, str)] if isinstance(parsed, list) else []
+                except (ValueError, SyntaxError, TypeError):
+                    images_list = []
         elif isinstance(images_value, dict):
             # 如果是字典（如JSONB返回的{}），返回空列表
             images_list = []

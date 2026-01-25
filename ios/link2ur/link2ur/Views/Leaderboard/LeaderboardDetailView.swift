@@ -201,15 +201,16 @@ struct LeaderboardHeroSection: View {
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // 背景图 - 修复拉伸问题
+            // 背景图 - 使用 maxWidth 替代 UIScreen.main.bounds，避免弹窗出现时右侧和底部被裁切
             if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
                 AsyncImageView(
                     urlString: coverImage,
                     placeholder: Image(systemName: "photo.fill")
                 )
-                .aspectRatio(contentMode: .fill) // 确保图片按比例填充
-                .frame(width: UIScreen.main.bounds.width, height: 240) // 显式限制宽度为屏幕宽度，防止宽图撑开容器
-                .clipped() // 裁剪超出部分
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity)
+                .frame(height: 240)
+                .clipped()
             } else {
                 Rectangle()
                     .fill(
@@ -219,7 +220,8 @@ struct LeaderboardHeroSection: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: UIScreen.main.bounds.width, height: 240)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
             }
             
             // 渐变蒙层
@@ -228,7 +230,8 @@ struct LeaderboardHeroSection: View {
                 startPoint: .bottom,
                 endPoint: .center
             )
-            .frame(width: UIScreen.main.bounds.width, height: 240)
+            .frame(maxWidth: .infinity)
+            .frame(height: 240)
             
             // 标题
             VStack(alignment: .leading, spacing: 4) {
@@ -240,7 +243,8 @@ struct LeaderboardHeroSection: View {
             .padding(AppSpacing.md)
             .padding(.bottom, 8) // 稍微上移一点，避免离底部太近
         }
-        .frame(width: UIScreen.main.bounds.width, height: 240) // 强制整个 Hero 区域宽度
+        .frame(maxWidth: .infinity)
+        .frame(height: 240)
     }
 }
 

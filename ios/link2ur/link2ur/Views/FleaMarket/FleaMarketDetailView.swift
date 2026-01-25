@@ -317,10 +317,8 @@ struct FleaMarketDetailView: View {
     
     @ViewBuilder
     private func imageGallery(item: FleaMarketItem) -> some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let imageHeight: CGFloat = screenWidth * 0.9
-        
         if let images = item.images, !images.isEmpty {
+            // 使用 maxWidth + aspectRatio 替代 UIScreen.main.bounds，避免弹窗出现时图片右侧和底部被裁切
             ZStack(alignment: .bottom) {
                 TabView(selection: $currentImageIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
@@ -341,13 +339,14 @@ struct FleaMarketDetailView: View {
                                 placeholderImage
                             }
                         }
-                        .frame(width: screenWidth, height: imageHeight)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
                         .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: imageHeight)
+                .frame(maxWidth: .infinity)
+                .aspectRatio(10 / 9, contentMode: .fit)
                 
                 // 自定义页面指示器
                 if images.count > 1 {
@@ -365,17 +364,21 @@ struct FleaMarketDetailView: View {
                     .padding(.bottom, 40)
                 }
                 
-                // 图片计数
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(10 / 9, contentMode: .fit)
+            .overlay(alignment: .topTrailing) {
                 Text("\(currentImageIndex + 1)/\(images.count)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Capsule().fill(Color.black.opacity(0.4)))
-                    .position(x: screenWidth - 40, y: 60)
+                    .padding(24)
             }
         } else {
             placeholderImage
+                .frame(maxWidth: .infinity)
                 .frame(height: 280)
         }
     }

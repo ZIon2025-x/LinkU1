@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from typing import List, Optional
 from datetime import datetime, time, timedelta
+import json
 import uuid
 
 from app.database import get_db
@@ -457,6 +458,19 @@ def apply_to_activity(
         task_deadline = None  # 时间段服务不需要截止日期
         task_is_flexible = 0  # 时间段服务不是灵活模式
     
+    # Activity.images 为 JSONB（Python list），Task.images 为 Text（JSON 字符串），必须序列化
+    images_for_task = None
+    if db_activity.images is not None:
+        if isinstance(db_activity.images, list):
+            images_for_task = json.dumps(db_activity.images) if db_activity.images else None
+        elif isinstance(db_activity.images, str):
+            images_for_task = db_activity.images
+        else:
+            try:
+                images_for_task = json.dumps(list(db_activity.images))
+            except (TypeError, ValueError):
+                pass
+    
     new_task = Task(
         title=db_activity.title,
         description=db_activity.description,
@@ -475,7 +489,7 @@ def apply_to_activity(
         task_level="expert",
         is_public=1 if db_activity.is_public else 0,
         visibility=db_activity.visibility,
-        images=db_activity.images,
+        images=images_for_task,
         points_reward=db_activity.points_reward,
         # 关联到活动
         parent_activity_id=activity_id,
