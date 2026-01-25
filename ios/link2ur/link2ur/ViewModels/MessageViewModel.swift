@@ -424,9 +424,10 @@ class TaskChatDetailViewModel: ObservableObject {
         }
         
         // 直接使用任务聊天专用端点：/api/messages/task/{taskId}（注意是单数 task）
-        // 这个端点返回格式：{ messages: [...], cursor?: string, has_more?: bool }
+        // 这个端点返回格式：{ messages: [...], task: {...}, next_cursor?: string, has_more?: bool }
         Logger.debug("请求任务聊天消息，任务ID: \(taskId)", category: .api)
         apiService.request(TaskMessagesResponse.self, endpoint, method: "GET")
+            .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
                 self?.isLoading = false

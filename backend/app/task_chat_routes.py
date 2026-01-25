@@ -973,9 +973,9 @@ async def send_task_message(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail="附件必须包含 attachment_type 字段"
                     )
-                # 检查 url 和 blob_id 必须二选一
-                has_url = "url" in att and att["url"]
-                has_blob_id = "blob_id" in att and att["blob_id"]
+                # 检查 url 和 blob_id 必须二选一（转为 bool，避免 has_url 为 str 时 has_url ^ has_blob_id 报错）
+                has_url = ("url" in att) and bool(att.get("url"))
+                has_blob_id = ("blob_id" in att) and bool(att.get("blob_id"))
                 if not (has_url ^ has_blob_id):
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
