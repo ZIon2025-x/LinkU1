@@ -8834,6 +8834,16 @@ async def upload_image(
                         participants.append(task.poster_id)
                     if task.taker_id:
                         participants.append(task.taker_id)
+                    # 多人任务：加入 TaskParticipant 及 expert_creator_id，确保接收方能加载私密图片
+                    if getattr(task, "is_multi_participant", False):
+                        if getattr(task, "expert_creator_id", None) and task.expert_creator_id not in participants:
+                            participants.append(task.expert_creator_id)
+                        for p in db.query(models.TaskParticipant).filter(
+                            models.TaskParticipant.task_id == task_id,
+                            models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                        ).all():
+                            if p.user_id and p.user_id not in participants:
+                                participants.append(p.user_id)
             
             # 添加当前用户（如果不在列表中）
             if current_user.id not in participants:

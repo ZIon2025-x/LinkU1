@@ -634,25 +634,24 @@ class TaskChatDetailViewModel: ObservableObject {
     func sendMessageWithAttachment(content: String, attachmentType: String, attachmentUrl: String, completion: @escaping (Bool) -> Void) {
         guard !isSending else { return }
         
-        // 构建附件数据
+        // 构建附件数据（original_filename 取 URL 路径最后一段，不含 query）
+        let filename = (URL(string: attachmentUrl)?.lastPathComponent).flatMap { $0.isEmpty ? nil : $0 } ?? "image.jpg"
         let attachment: [String: Any] = [
             "attachment_type": attachmentType,
             "url": attachmentUrl,
-            "meta": [
-                "original_filename": attachmentUrl.components(separatedBy: "/").last ?? "image.jpg"
-            ]
+            "meta": ["original_filename": filename]
         ]
         
-        // 使用任务聊天专用发送端点
+        // 使用任务聊天专用发送端点（body 不含 task_id，已体现在 path 中）
         let body: [String: Any] = [
-            "task_id": taskId,
             "content": content,
             "attachments": [attachment]
         ]
         
         isSending = true
-        Logger.debug("📤 发送带附件的任务聊天消息，任务ID: \(taskId), 附件类型: \(attachmentType)", category: .api)
+        Logger.debug("📤 发送带附件的任务聊天消息，任务ID: \(taskId), 附件类型: \(attachmentType), url: \(attachmentUrl.prefix(80))...", category: .api)
         apiService.request(Message.self, "/api/messages/task/\(taskId)/send", method: "POST", body: body)
+            .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isSending = false
                 if case .failure(let error) = result {
@@ -663,6 +662,9 @@ class TaskChatDetailViewModel: ObservableObject {
             }, receiveValue: { [weak self] message in
                 guard let self = self else { return }
                 self.isSending = false
+                
+                // 调试：确认服务端返回了 attachments，便于排查图片不显示
+                Logger.debug("✅ 带附件消息发送成功，attachments: \(message.attachments?.count ?? 0), firstImageUrl: \(message.firstImageUrl ?? "nil")", category: .api)
                 
                 // 优化：使用二分插入保持有序，避免每次都完整排序
                 let messageTime = message.createdAt ?? ""
@@ -675,7 +677,6 @@ class TaskChatDetailViewModel: ObservableObject {
                 // 保存到缓存（内部已实现防抖）
                 self.saveToCache()
                 
-                Logger.debug("✅ 带附件消息发送成功", category: .api)
                 completion(true)
             })
             .store(in: &cancellables)
