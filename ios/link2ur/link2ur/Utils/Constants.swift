@@ -142,6 +142,19 @@ extension String {
             }
         }
         
+        // 如果是后端存储相对路径（无前导 /），需补上 /uploads/ 前缀
+        // 格式：public/images/...、flea_market/...
+        if self.hasPrefix("public/") || self.hasPrefix("flea_market/") {
+            let fullURL = "\(Constants.Frontend.baseURL)/uploads/\(self)"
+            return URL(string: fullURL)
+        }
+        // 旧格式 images/...（如 images/service_images/、images/leaderboard_covers/）
+        // 实际文件在 public/images/ 下，需补为 /uploads/public/images/...
+        if self.hasPrefix("images/") {
+            let fullURL = "\(Constants.Frontend.baseURL)/uploads/public/\(self)"
+            return URL(string: fullURL)
+        }
+        
         // 如果是相对路径，使用前端服务器 URL（静态资源在前端 public/static 文件夹中）
         let baseURL = Constants.Frontend.baseURL
         let imagePath = self.hasPrefix("/") ? self : "/\(self)"

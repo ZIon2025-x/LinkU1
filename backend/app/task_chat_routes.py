@@ -1122,12 +1122,18 @@ async def send_task_message(
             # WebSocket广播失败不应该影响消息发送
             logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)
         
+        # 确保 sender_id 为字符串，与 iOS Message 模型 decodeIfPresent(String.self) 兼容；
+        # 补全 message_type、is_read、sender_name、sender_avatar，与 GET 消息格式一致，便于发送后即展示
         return {
             "id": new_message.id,
-            "sender_id": new_message.sender_id,
+            "sender_id": str(new_message.sender_id) if new_message.sender_id is not None else None,
+            "sender_name": current_user.name if new_message.sender_id else None,
+            "sender_avatar": getattr(current_user, "avatar", None) if new_message.sender_id else None,
             "content": new_message.content,
+            "message_type": new_message.message_type or "normal",
             "task_id": new_message.task_id,
             "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
+            "is_read": False,
             "attachments": attachments_data
         }
     

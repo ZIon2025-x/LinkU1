@@ -4,6 +4,25 @@
  */
 
 /**
+ * 将后端返回的图片路径转换为可用的完整 URL
+ * - 完整 http(s) URL：原样返回（后端会做 images/ -> public/images/ 的兼容）
+ * - 以 / 开头的路径（如 /uploads/...、/static/...）：原样返回（相对当前站点）
+ * - 存储相对路径 public/...、flea_market/...：补上 /uploads/ 前缀
+ * - 旧格式 images/...（如 images/service_images/、images/leaderboard_covers/）：
+ *   实际文件在 public/images/ 下，补为 /uploads/public/images/...
+ * 用于达人头像、榜单图片、服务图片等从 API 取得的图片
+ */
+export function formatImageUrl(imagePath: string | null | undefined): string {
+  if (imagePath == null || imagePath === '') return '';
+  const s = String(imagePath).trim();
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+  if (s.startsWith('/')) return s;
+  if (s.startsWith('public/') || s.startsWith('flea_market/')) return `/uploads/${s}`;
+  if (s.startsWith('images/')) return `/uploads/public/${s}`;
+  return `/${s}`;
+}
+
+/**
  * 检测浏览器是否支持 WebP 格式
  */
 export function supportsWebP(): boolean {

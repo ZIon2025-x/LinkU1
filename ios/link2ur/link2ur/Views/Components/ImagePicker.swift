@@ -31,20 +31,25 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            parent.dismiss()
+            guard let result = results.first else {
+                parent.dismiss()
+                return
+            }
             
-            guard let result = results.first else { return }
+            guard result.itemProvider.canLoadObject(ofClass: UIImage.self) else {
+                parent.dismiss()
+                return
+            }
             
-            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] image, error in
-                    if let error = error {
-                        print("Error loading image: \(error.localizedDescription)")
+            result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] image, error in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    if error != nil {
+                        self.parent.dismiss()
                         return
                     }
-                    
-                    DispatchQueue.main.async {
-                        self?.parent.selectedImage = image as? UIImage
-                    }
+                    self.parent.selectedImage = image as? UIImage
+                    self.parent.dismiss()
                 }
             }
         }

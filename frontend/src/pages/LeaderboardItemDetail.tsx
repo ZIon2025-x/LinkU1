@@ -21,6 +21,7 @@ import {
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { compressImage } from '../utils/imageCompression';
+import { formatImageUrl } from '../utils/imageUtils';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -278,7 +279,7 @@ const LeaderboardItemDetail: React.FC = () => {
               <Image.PreviewGroup>
                 <Image
                   className="item-main-image"
-                  src={item.images[0]}
+                  src={formatImageUrl(item.images[0])}
                   alt={item.name}
                   width={250}
                   height={250}
@@ -290,7 +291,7 @@ const LeaderboardItemDetail: React.FC = () => {
                     {item.images.slice(1).map((img: string, idx: number) => (
                       <Image
                         key={idx}
-                        src={img}
+                        src={formatImageUrl(img)}
                         alt={`${item.name} - ${t('forum.image')} ${idx + 2}`}
                         width={70}
                         height={70}

@@ -2,8 +2,9 @@
  * 图片懒加载组件
  * 使用 Intersection Observer API 实现图片懒加载，提升页面性能
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Spin } from 'antd';
+import { formatImageUrl } from '../utils/imageUtils';
 
 interface LazyImageProps {
   src: string;
@@ -49,12 +50,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // 先将后端返回的相对路径（如 public/...、flea_market/...）转为可用的 /uploads/... 等
+  const resolvedSrc = formatImageUrl(src);
+
   // 优化图片 URL：尝试使用 WebP 格式（如果浏览器支持）
   const optimizedSrc = useMemo(() => {
-    if (!src) return src;
+    if (!resolvedSrc) return resolvedSrc;
     
     // 如果已经指定了 srcSet，直接返回原 src
-    if (srcSet) return src;
+    if (srcSet) return resolvedSrc;
     
     // 检查浏览器是否支持 WebP
     const supportsWebP = () => {
@@ -65,16 +69,16 @@ const LazyImage: React.FC<LazyImageProps> = ({
     };
     
     // 如果浏览器支持 WebP 且原图不是 WebP，尝试使用 WebP 版本
-    if (supportsWebP() && !src.toLowerCase().endsWith('.webp')) {
+    if (supportsWebP() && !resolvedSrc.toLowerCase().endsWith('.webp')) {
       // 尝试将 .jpg/.jpeg/.png 替换为 .webp
-      const webpSrc = src.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+      const webpSrc = resolvedSrc.replace(/\.(jpg|jpeg|png)$/i, '.webp');
       // 注意：这里假设服务器支持 WebP，实际使用时需要确保服务器确实提供 WebP 版本
       // 如果服务器不支持，图片加载会失败并回退到原图
       return webpSrc;
     }
     
-    return src;
-  }, [src, srcSet]);
+    return resolvedSrc;
+  }, [resolvedSrc, srcSet]);
 
   useEffect(() => {
     // 如果图片是绝对定位的，直接加载（因为绝对定位的图片通常需要立即显示）
@@ -279,9 +283,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
           fetchPriority={fetchPriority}
           onLoad={handleLoad}
           onError={(e) => {
-            // 如果 WebP 加载失败，回退到原图
-            if (optimizedSrc !== src && (e.currentTarget.src === optimizedSrc)) {
-              e.currentTarget.src = src;
+            // 如果 WebP 加载失败，回退到原图（使用 resolvedSrc，已处理相对路径）
+            if (optimizedSrc !== resolvedSrc && (e.currentTarget.src === optimizedSrc)) {
+              e.currentTarget.src = resolvedSrc;
               return;
             }
             handleError(e);

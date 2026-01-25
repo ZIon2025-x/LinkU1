@@ -17,6 +17,7 @@ import {
 import { fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
 import { compressImage } from '../utils/imageCompression';
+import { formatImageUrl } from '../utils/imageUtils';
 import api from '../api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
@@ -1337,7 +1338,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           {leaderboard.cover_image && (
             <div className="leaderboard-cover-image-wrapper">
               <Image
-                src={leaderboard.cover_image}
+                src={formatImageUrl(leaderboard.cover_image)}
                 alt={leaderboard.name}
                 width={200}
                 height={150}
@@ -1527,7 +1528,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                 {images.map((imgUrl: string, imgIndex: number) => (
                                   <Image
                                     key={imgIndex}
-                                    src={imgUrl}
+                                    src={formatImageUrl(imgUrl)}
                                     alt={`${item.name} - ${t('forum.image')} ${imgIndex + 1}`}
                                     width={100}
                                     height={100}

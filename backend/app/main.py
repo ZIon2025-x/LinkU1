@@ -441,8 +441,13 @@ if RAILWAY_ENVIRONMENT:
         # 支持跳蚤市场图片路径：/uploads/flea_market/{item_id}/{filename}
         # 其他公开文件：/uploads/public/images/public/{task_id}/{filename} 等
         # 存储 path 格式为 "public/images/public/163/xxx" 或 "flea_market/..."，均在 /data/uploads 下
+        #
+        # 兼容旧格式：/uploads/images/service_images/...、/uploads/images/leaderboard_covers/... 等
+        # 实际文件在 public/images/... 下，将 images/ 重写为 public/images/
+        if file_path.startswith("images/") and not file_path.startswith("public/"):
+            file_path = "public/" + file_path
         file_full_path = Path("/data/uploads") / file_path
-        
+
         # 安全检查：确保路径在 /data/uploads 内，防止路径遍历
         try:
             file_full_path.resolve().relative_to(Path("/data/uploads").resolve())
@@ -503,6 +508,28 @@ else:
                 "Cache-Control": "public, max-age=31536000",
                 "Access-Control-Allow-Origin": "*"
             }
+        )
+
+    # 兼容旧格式：/uploads/images/service_images/...、/uploads/images/leaderboard_covers/... 等
+    # 实际文件在 uploads/public/images/ 下
+    @app.get("/uploads/images/{file_path:path}")
+    async def serve_uploads_images_compat(file_path: str):
+        from fastapi.responses import FileResponse
+        import mimetypes
+        file_full_path = Path("uploads/public/images") / file_path
+        try:
+            file_full_path.resolve().relative_to(Path("uploads/public/images").resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="访问被拒绝")
+        if not file_full_path.exists() or not file_full_path.is_file():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        media_type, _ = mimetypes.guess_type(str(file_full_path))
+        if not media_type:
+            media_type = "application/octet-stream"
+        return FileResponse(
+            path=str(file_full_path),
+            media_type=media_type,
+            headers={"Cache-Control": "public, max-age=31536000", "Access-Control-Allow-Origin": "*"}
         )
 
 # 使用 WebSocket 管理器进行连接池管理
