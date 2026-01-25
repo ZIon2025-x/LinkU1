@@ -105,7 +105,7 @@ def send_task_application_notification(
 ):
     """发送任务申请通知和邮件给发布者"""
     try:
-        print(f"DEBUG: 开始发送任务申请通知，任务ID: {task.id}, 发布者ID: {task.poster_id}, 申请者: {applicant.name}")
+        logger.debug("开始发送任务申请通知，任务ID: %s, 发布者ID: %s, 申请者: %s", task.id, task.poster_id, applicant.name)
         
         # ⚠️ 直接使用文本内容，不存储 JSON
         applicant_name = applicant.name or f"用户{applicant.id}"
@@ -151,7 +151,7 @@ def send_task_application_notification(
             content_en=notification_content_en,
             related_id=str(task.id)  # 始终使用 task_id，确保前端可以正确跳转
         )
-        print(f"DEBUG: 通知创建结果: {notification}")
+        logger.debug("通知创建结果: %s", notification)
         
         # 发送推送通知
         try:

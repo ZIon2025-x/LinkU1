@@ -888,12 +888,13 @@ async def startup_event():
     else:
         logger.info("✅ 所有必要的环境变量已设置")
     
-    # 生产环境：校验关键密钥已配置且不得为占位符
-    if os.getenv("ENVIRONMENT", "").lower() == "production":
+    # 生产环境：校验关键密钥已配置且不得为占位符（与 Config.IS_PRODUCTION 对齐）
+    if Config.IS_PRODUCTION:
         _checks = [
             ("STRIPE_SECRET_KEY", os.getenv("STRIPE_SECRET_KEY"), ["placeholder", "replace_with_real", "replace_with"]),
             ("IMAGE_ACCESS_SECRET", os.getenv("IMAGE_ACCESS_SECRET"), ["your-image-secret", "change-in-production", "change_in_production"]),
             ("STRIPE_WEBHOOK_SECRET", os.getenv("STRIPE_WEBHOOK_SECRET"), ["yourkey", "...yourkey..."]),
+            ("SECRET_KEY", Config.SECRET_KEY, ["change-this-secret-key-in-production", "dev-secret-key-change-in-production", "change-in-production"]),
         ]
         for _name, _val, _bad in _checks:
             if not _val or not _val.strip():
@@ -901,7 +902,7 @@ async def startup_event():
             _v = (_val or "").lower()
             if any(_b in _v for _b in _bad):
                 raise RuntimeError(f"生产环境 {_name} 不得使用占位符/示例值，请配置真实密钥")
-        logger.info("✅ 生产环境密钥校验通过（STRIPE_SECRET_KEY, IMAGE_ACCESS_SECRET, STRIPE_WEBHOOK_SECRET）")
+        logger.info("✅ 生产环境密钥校验通过（STRIPE_SECRET_KEY, IMAGE_ACCESS_SECRET, STRIPE_WEBHOOK_SECRET, SECRET_KEY）")
     
     # 环境检测和配置信息
     environment = os.getenv("ENVIRONMENT", "development")

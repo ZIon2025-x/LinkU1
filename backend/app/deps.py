@@ -79,12 +79,12 @@ def authenticate_with_session(request: Request, db: Session = Depends(get_sync_d
                     status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
                 )
             
-            print(f"[DEBUG] 会话认证成功，返回用户: {user.id}")
+            logger.debug("会话认证成功，返回用户: %s", user.id)
             return user
         else:
-            print(f"[DEBUG] 用户查询失败，用户ID: {session.user_id}")
+            logger.debug("用户查询失败，用户ID: %s", session.user_id)
     else:
-        print(f"[DEBUG] 会话验证失败")
+        logger.debug("会话验证失败")
     return None
 
 # 新的安全认证依赖
@@ -97,12 +97,12 @@ async def get_current_user_secure(
     # 首先尝试使用会话认证
     from app.secure_auth import validate_session
     
-    print(f"[DEBUG] get_current_user_secure - URL: {request.url}")
-    print(f"[DEBUG] get_current_user_secure - Cookies: {dict(request.cookies)}")
+    logger.debug("get_current_user_secure - URL: %s", request.url)
+    logger.debug("get_current_user_secure - Cookies: %s", dict(request.cookies))
     
     session = validate_session(request)
     if session:
-        print(f"[DEBUG] 会话认证成功，用户ID: {session.user_id}")
+        logger.debug("会话认证成功，用户ID: %s", session.user_id)
         user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
         if user:
             # 检查用户状态
@@ -258,14 +258,14 @@ def get_current_customer_service_or_user(
     ])
     
     if is_mobile:
-        print(f"[DEBUG] 移动端检测: {is_mobile}")
-        print(f"[DEBUG] 移动端User-Agent: {user_agent}")
+        logger.debug("移动端检测: %s", is_mobile)
+        logger.debug("移动端User-Agent: %s", user_agent)
         
         # 移动端Cookie缺失时，尝试从Authorization头获取token
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-            print(f"[DEBUG] 移动端备用认证 - 从Authorization头获取token: {token[:20]}...")
+            logger.debug("移动端备用认证 - 从Authorization头获取token: %s...", token[:20])
             
             # 验证token
             try:
@@ -274,20 +274,18 @@ def get_current_customer_service_or_user(
                     user_id = payload["sub"]
                     user = crud.get_user_by_id(db, user_id)
                     if user:
-                        print(f"[DEBUG] 移动端备用认证成功 - 用户: {user.id}")
-                        # 记录移动端认证成功
-                        print(f"[DEBUG] 移动端认证方式: JWT token (Cookie不可用)")
+                        logger.debug("移动端备用认证成功 - 用户: %s", user.id)
                         return user
                     else:
-                        print(f"[DEBUG] 移动端备用认证失败 - 用户不存在: {user_id}")
+                        logger.debug("移动端备用认证失败 - 用户不存在: %s", user_id)
                 else:
-                    print(f"[DEBUG] 移动端备用认证失败 - token无效")
+                    logger.debug("移动端备用认证失败 - token无效")
             except Exception as e:
-                print(f"[DEBUG] 移动端备用认证异常: {e}")
+                logger.debug("移动端备用认证异常: %s", e)
         else:
-            print(f"[DEBUG] 移动端未找到Authorization头")
+            logger.debug("移动端未找到Authorization头")
     else:
-        print(f"[DEBUG] 非移动端设备")
+        logger.debug("非移动端设备")
     
     # 如果会话认证失败，回退到JWT认证
     if not credentials:

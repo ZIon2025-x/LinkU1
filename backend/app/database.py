@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -24,7 +27,7 @@ try:
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False
-    print("⚠️  asyncpg not available, using sync mode only")
+    logger.warning("asyncpg not available, using sync mode only")
 
 # 连接池配置 - 根据环境优化
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -178,7 +181,7 @@ async def check_database_health():
             result = await session.execute(text("SELECT 1"))
             return True
     except Exception as e:
-        print(f"Database health check failed: {e}")
+        logger.warning("Database health check failed: %s", e)
         return False
 
 

@@ -455,14 +455,14 @@ async def create_task_async(
                     detail='您的学生认证已过期，请先续期后再发布"校园生活"类型的任务'
                 )
 
-        print(f"DEBUG: 开始创建任务，用户ID: {current_user.id}")
-        print(f"DEBUG: 任务数据: {task}")
+        logger.debug("开始创建任务，用户ID: %s", current_user.id)
+        logger.debug("任务数据: %s", task)
         
         db_task = await async_crud.async_task_crud.create_task(
             db, task, current_user.id
         )
         
-        print(f"DEBUG: 任务创建成功，任务ID: {db_task.id}")
+        logger.debug("任务创建成功，任务ID: %s", db_task.id)
         
         # 迁移临时图片到正式的任务ID文件夹（使用图片上传服务）
         if task.images and len(task.images) > 0:
@@ -516,9 +516,9 @@ async def create_task_async(
             for pattern in patterns:
                 deleted = redis_cache.delete_pattern(pattern)
                 if deleted > 0:
-                    print(f"DEBUG: 清除模式 {pattern}，删除了 {deleted} 个键")
+                    logger.debug("清除模式 %s，删除了 %s 个键", pattern, deleted)
         except Exception as e:
-            print(f"DEBUG: 额外清除缓存失败: {e}")
+            logger.debug("额外清除缓存失败: %s", e)
         
         # 处理图片字段：将JSON字符串解析为列表（使用迁移后的URL）
         import json
@@ -555,11 +555,11 @@ async def create_task_async(
         
     except HTTPException as e:
         # Re-raise HTTPExceptions to preserve error details
-        print(f"DEBUG: HTTPException in task creation: {e.detail}")
+        logger.debug("HTTPException in task creation: %s", e.detail)
         logger.error(f"HTTPException in task creation: {e.detail}")
         raise
     except Exception as e:
-        print(f"DEBUG: Exception in task creation: {e}")
+        logger.debug("Exception in task creation: %s", e)
         logger.error(f"Error creating task: {e}")
         import traceback
         traceback.print_exc()
@@ -576,7 +576,7 @@ async def apply_for_task_test(
     """申请任务测试端点（简化版本）"""
     try:
         message = request_data.get('message', None)
-        print(f"DEBUG: 测试申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
+        logger.debug("测试申请任务，任务ID: %s, 用户ID: %s, message: %s", task_id, current_user.id, message)
         
         # 检查任务是否存在
         task_query = select(models.Task).where(models.Task.id == task_id)
@@ -586,7 +586,7 @@ async def apply_for_task_test(
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
-        print(f"DEBUG: 任务存在: {task.title}")
+        logger.debug("任务存在: %s", task.title)
         
         return {
             "message": "测试成功",
@@ -648,7 +648,7 @@ async def apply_for_task(
         currency = request_data.get('currency', None)
         
         logger.info(f"开始申请任务 - 任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}, negotiated_price: {negotiated_price}, currency: {currency}")
-        print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}, negotiated_price: {negotiated_price}")
+        logger.debug("开始申请任务，任务ID: %s, 用户ID: %s, message: %s, negotiated_price: %s", task_id, current_user.id, message, negotiated_price)
         
         # 检查任务是否存在
         task_query = select(models.Task).where(models.Task.id == task_id)
@@ -1175,58 +1175,56 @@ async def get_task_reviews_async(
         
         # 尝试获取当前用户
         current_user = None
-        print(f"DEBUG: Cookie headers: {request.headers.get('cookie')}")
-        print(f"DEBUG: 请求Cookie: {request.cookies}")
+        logger.debug("Cookie headers: %s", request.headers.get('cookie'))
+        logger.debug("请求Cookie: %s", request.cookies)
         try:
             # 尝试从Cookie中获取用户
             session_id = request.cookies.get("session_id")
-            print(f"DEBUG: 从Cookie获取的session_id: {session_id}")
+            logger.debug("从Cookie获取的session_id: %s", session_id)
             if session_id:
                 from app.secure_auth import validate_session
-                session_info = validate_session(session_id, request, update_activity=False)
-                print(f"DEBUG: 验证session结果: {session_info}")
+                session_info = validate_session(request)
+                logger.debug("验证session结果: %s", session_info)
                 if session_info:
                     user_query = select(models.User).where(models.User.id == session_info.user_id)
                     user_result = await db.execute(user_query)
                     current_user = user_result.scalar_one_or_none()
-                    print(f"DEBUG: 获取到当前用户: {current_user.id if current_user else None}")
+                    logger.debug("获取到当前用户: %s", current_user.id if current_user else None)
         except Exception as e:
-            print(f"DEBUG: 获取用户失败: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.debug("获取用户失败: %s", e, exc_info=True)
             pass  # 未登录用户
         
-        print(f"DEBUG: 所有评价数量: {len(all_reviews)}")
-        print(f"DEBUG: 当前用户ID: {current_user.id if current_user else None}")
+        logger.debug("所有评价数量: %s", len(all_reviews))
+        logger.debug("当前用户ID: %s", current_user.id if current_user else None)
         
         # 过滤出非匿名评价供公开显示
         # 如果当前用户已评价，也要返回他们自己的评价（包括匿名）
         public_reviews = []
         
         if current_user:
-            print(f"DEBUG: 当前用户已登录: {current_user.id}")
+            logger.debug("当前用户已登录: %s", current_user.id)
             for review in all_reviews:
-                print(f"DEBUG: 检查评价 - review.user_id: {review.user_id}, is_anonymous: {review.is_anonymous}, current_user.id: {current_user.id}")
+                logger.debug("检查评价 - review.user_id: %s, is_anonymous: %s, current_user.id: %s", review.user_id, review.is_anonymous, current_user.id)
                 is_current_user_review = str(review.user_id) == str(current_user.id)
-                print(f"DEBUG: 是否当前用户评价: {is_current_user_review}")
+                logger.debug("是否当前用户评价: %s", is_current_user_review)
                 if is_current_user_review:
                     # 始终包含当前用户自己的评价，即使是匿名的
-                    print(f"DEBUG: 包含当前用户自己的评价: {review.id}")
+                    logger.debug("包含当前用户自己的评价: %s", review.id)
                     public_reviews.append(review)
                 elif review.is_anonymous == 0:
                     # 只包含非匿名的其他用户评价
-                    print(f"DEBUG: 包含非匿名评价: {review.id}")
+                    logger.debug("包含非匿名评价: %s", review.id)
                     public_reviews.append(review)
         else:
             # 未登录用户只看到非匿名评价
-            print(f"DEBUG: 用户未登录，只返回非匿名评价")
+            logger.debug("用户未登录，只返回非匿名评价")
             for review in all_reviews:
                 if review.is_anonymous == 0:
                     public_reviews.append(review)
         
-        print(f"DEBUG: 返回评价数量: {len(public_reviews)}")
-        print(f"DEBUG: 返回的评价ID: {[r.id for r in public_reviews]}")
-        print(f"DEBUG: 返回的评价用户ID: {[r.user_id for r in public_reviews]}")
+        logger.debug("返回评价数量: %s", len(public_reviews))
+        logger.debug("返回的评价ID: %s", [r.id for r in public_reviews])
+        logger.debug("返回的评价用户ID: %s", [r.user_id for r in public_reviews])
         return public_reviews
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")

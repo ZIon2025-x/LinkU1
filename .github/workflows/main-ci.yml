@@ -13,6 +13,30 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
+      TEST_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
+      REDIS_URL: redis://localhost:6379/0
     
     steps:
     - name: Checkout code
@@ -42,6 +66,13 @@ jobs:
         echo "🔍 Checking Python syntax..."
         python -m compileall app/ || exit 1
         echo "✅ All Python files have valid syntax"
+
+    - name: Run tests
+      run: |
+        echo "🔍 Running pytest..."
+        export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+        python -m pytest tests/ -v --tb=short -x
+        echo "✅ Tests passed"
 
   # 前端验证
   frontend-validation:

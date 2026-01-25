@@ -78,6 +78,7 @@ from app.email_utils import (
     send_task_update_email,
 )
 from app.models import CustomerService, User
+from app.config import Config
 
 # 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
 # 这里只设置api_key作为向后兼容，生产环境在startup中会校验 STRIPE_SECRET_KEY 必须正确配置
@@ -99,14 +100,14 @@ def admin_required(current_user=Depends(get_current_admin_user)):
 
 
 def require_debug_environment() -> None:
-    """生产环境下拒绝 debug 路由，返回 404"""
-    if os.getenv("ENVIRONMENT", "").lower() == "production":
+    """生产环境下拒绝 debug 路由，返回 404（与 Config.IS_PRODUCTION 对齐，含 Railway 等）"""
+    if Config.IS_PRODUCTION:
         raise HTTPException(status_code=404, detail="Not Found")
 
 
 @router.post("/register/test")
-def register_test(user: schemas.UserCreate):
-    """测试注册数据格式"""
+def register_test(user: schemas.UserCreate, _: None = Depends(require_debug_environment)):
+    """测试注册数据格式（仅非生产可访问）"""
     return {
         "message": "数据格式正确",
         "data": user.dict(),

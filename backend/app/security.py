@@ -43,9 +43,9 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
     except jwt.InvalidTokenError:
         return None
 
-# JWT配置
-# 开发环境使用固定密钥，生产环境必须设置环境变量
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+# JWT配置：统一从 app.config.Config 读取 SECRET_KEY，生产启动时在 main 中校验
+from app.config import Config
+SECRET_KEY = Config.SECRET_KEY
 ALGORITHM = "HS256"
 
 # Token过期时间配置
@@ -58,8 +58,6 @@ REFRESH_TOKEN_EXPIRE_HOURS = int(os.getenv("REFRESH_TOKEN_EXPIRE_HOURS", "12")) 
 CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))  # 5分钟
 
 # Redis配置（用于Token黑名单）
-from app.config import Config
-
 redis_client = None
 
 # 检查是否启用Redis
@@ -521,16 +519,15 @@ class SyncCookieHTTPBearer(HTTPBearer):
     def __call__(
         self, request: Request
     ) -> Optional[HTTPAuthorizationCredentials]:
-        # 调试信息
-        print(f"[DEBUG] SyncCookieHTTPBearer - URL: {request.url}")
-        print(f"[DEBUG] SyncCookieHTTPBearer - Headers: {dict(request.headers)}")
-        print(f"[DEBUG] SyncCookieHTTPBearer - Cookies: {dict(request.cookies)}")
+        logger.debug("SyncCookieHTTPBearer - URL: %s", request.url)
+        logger.debug("SyncCookieHTTPBearer - Headers: %s", dict(request.headers))
+        logger.debug("SyncCookieHTTPBearer - Cookies: %s", dict(request.cookies))
         
         # 首先尝试从Authorization头获取
         authorization_header = request.headers.get("Authorization")
         if authorization_header and authorization_header.startswith("Bearer "):
             token = authorization_header.split(" ")[1]
-            print(f"[DEBUG] 从Authorization头获取token: {token[:20]}...")
+            logger.debug("从Authorization头获取token: %s...", token[:20])
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=token
             )
@@ -538,7 +535,7 @@ class SyncCookieHTTPBearer(HTTPBearer):
         # 如果Authorization头没有，尝试从X-Session-ID头获取
         session_id = request.headers.get("X-Session-ID")
         if session_id:
-            print(f"[DEBUG] 从X-Session-ID头获取session_id: {session_id[:20]}...")
+            logger.debug("从X-Session-ID头获取session_id: %s...", session_id[:20])
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=session_id
             )
@@ -546,7 +543,7 @@ class SyncCookieHTTPBearer(HTTPBearer):
         # 如果X-Session-ID头没有，尝试从Cookie获取session_id
         session_id = request.cookies.get("session_id")
         if session_id:
-            print(f"[DEBUG] 从Cookie获取session_id: {session_id[:20]}...")
+            logger.debug("从Cookie获取session_id: %s...", session_id[:20])
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=session_id
             )
@@ -557,7 +554,7 @@ class SyncCookieHTTPBearer(HTTPBearer):
             request.cookies.get("js_session_id")
         )
         if session_id:
-            print(f"[DEBUG] 从其他Cookie获取session_id: {session_id[:20]}...")
+            logger.debug("从其他Cookie获取session_id: %s...", session_id[:20])
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=session_id
             )
@@ -570,13 +567,13 @@ class SyncCookieHTTPBearer(HTTPBearer):
         ])
         
         if is_mobile:
-            print(f"[DEBUG] 移动端检测到Cookie缺失 - User-Agent: {user_agent}")
-            print(f"[DEBUG] 移动端Cookie问题 - 可能是SameSite/Secure设置问题")
-            print(f"[DEBUG] 建议检查移动端Cookie设置")
+            logger.debug("移动端检测到Cookie缺失 - User-Agent: %s", user_agent)
+            logger.debug("移动端Cookie问题 - 可能是SameSite/Secure设置问题")
+            logger.debug("建议检查移动端Cookie设置")
         
-        print("[DEBUG] 未找到认证信息")
+        logger.debug("未找到认证信息")
         if self.auto_error:
-            print("[DEBUG] 抛出401错误 - 未提供认证信息")
+            logger.debug("抛出401错误 - 未提供认证信息")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
             )
