@@ -35,6 +35,10 @@ class SensitiveDataFilter(logging.Filter):
         # 信用卡相关（如果涉及支付）
         (r'card_number["\']?\s*[:=]\s*["\']?([^"\'\s]+)', 'card_number=***'),
         (r'cvv["\']?\s*[:=]\s*["\']?([^"\'\s]+)', 'cvv=***'),
+        # Stripe 与客户端敏感字段
+        (r'client_secret["\']?\s*[:=]\s*["\']?([^"\'\s]+)', 'client_secret=***'),
+        (r'ephemeral_key_secret["\']?\s*[:=]\s*["\']?([^"\'\s]+)', 'ephemeral_key_secret=***'),
+        (r'device_token["\']?\s*[:=]\s*["\']?([^"\'\s]+)', 'device_token=***'),
     ]
     
     def filter(self, record: logging.LogRecord) -> bool:

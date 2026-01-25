@@ -40,7 +40,8 @@ class PrivateImageSystem:
         self.max_file_size = 5 * 1024 * 1024  # 5MB
         
         # 图片访问密钥（用于生成访问令牌）
-        self.access_secret = os.getenv("IMAGE_ACCESS_SECRET", "your-image-secret-key-change-in-production")
+        # 生产环境在 main 启动时校验 IMAGE_ACCESS_SECRET 必须配置；开发环境未配置时 HMAC 校验会失败
+        self.access_secret = os.getenv("IMAGE_ACCESS_SECRET")
     
     def generate_image_id(self, user_id: str, original_filename: str) -> str:
         """生成唯一的图片ID"""

@@ -1274,14 +1274,14 @@ class AsyncTaskCRUD:
             task = existing_task.scalar_one_or_none()
             
             if not task:
-                print(f"DEBUG: 任务 {task_id} 不存在")
+                logger.debug(f"任务 {task_id} 不存在")
                 return None
             
-            print(f"DEBUG: 任务 {task_id} 当前状态: {task.status}")
+            logger.debug(f"任务 {task_id} 当前状态: {task.status}")
             
             # 检查任务状态是否允许申请
             if task.status not in ["open", "taken"]:
-                print(f"DEBUG: 任务 {task_id} 状态 {task.status} 不允许申请")
+                logger.debug(f"任务 {task_id} 状态 {task.status} 不允许申请")
                 return None
             
 
@@ -1291,7 +1291,7 @@ class AsyncTaskCRUD:
             user = user_result.scalar_one_or_none()
             
             if not user:
-                print(f"DEBUG: 用户 {applicant_id} 不存在")
+                logger.debug(f"用户 {applicant_id} 不存在")
                 return None
             
             # 等级匹配检查
@@ -1310,7 +1310,7 @@ class AsyncTaskCRUD:
             if task_level_str == "expert":
                 pass  # expert 任务不检查用户等级
             elif user_level_value < task_level_value:
-                print(f"DEBUG: 用户等级 {user.user_level} 不足以申请 {task.task_level} 任务")
+                logger.debug(f"用户等级 {user.user_level} 不足以申请 {task.task_level} 任务")
                 return None
             
             # 检查是否已经申请过
@@ -1324,7 +1324,7 @@ class AsyncTaskCRUD:
                 )
             )
             if existing_application.scalar_one_or_none():
-                print(f"DEBUG: 用户 {applicant_id} 已经申请过任务 {task_id}")
+                logger.debug(f"用户 {applicant_id} 已经申请过任务 {task_id}")
                 return None
             
             # 创建申请记录
@@ -1337,7 +1337,7 @@ class AsyncTaskCRUD:
             db.add(application)
             await db.commit()
             await db.refresh(application)
-            print(f"DEBUG: 成功创建申请记录，ID: {application.id}")
+            logger.debug(f"成功创建申请记录，ID: {application.id}")
             
             # 注意：新流程中，申请后任务保持 open 状态
             # 只有发布者批准申请后，任务才变为 in_progress 状态
@@ -1350,7 +1350,7 @@ class AsyncTaskCRUD:
                 
                 # 获取任务发布者 ID（确保是字符串）
                 poster_id = str(getattr(task, 'poster_id', ''))
-                print(f"DEBUG: 发布者 ID: {poster_id}")
+                logger.debug(f"发布者 ID: {poster_id}")
                 
                 # 创建自动消息
                 auto_message = Message(
@@ -1360,17 +1360,17 @@ class AsyncTaskCRUD:
                 )
                 db.add(auto_message)
                 await db.commit()
-                print(f"DEBUG: 已添加申请消息到数据库")
+                logger.debug(f"已添加申请消息到数据库")
             except Exception as e:
-                print(f"DEBUG: 添加自动消息失败（不影响申请流程）: {e}")
+                logger.debug(f"添加自动消息失败（不影响申请流程）: {e}")
                 logger.error(f"Failed to add auto message for task application: {e}")
             
-            print(f"DEBUG: 成功申请任务 {task_id}，申请者: {applicant_id}")
+            logger.debug(f"成功申请任务 {task_id}，申请者: {applicant_id}")
             
             return application
             
         except Exception as e:
-            print(f"DEBUG: 申请任务时发生错误: {e}")
+            logger.error(f"申请任务时发生错误: {e}")
             await db.rollback()
             logger.error(f"Error applying for task {task_id}: {e}")
             return None
@@ -1412,7 +1412,7 @@ class AsyncTaskCRUD:
             application = application.scalar_one_or_none()
             
             if not application:
-                print(f"DEBUG: 申请记录不存在: task_id={task_id}, applicant_id={applicant_id}")
+                logger.debug(f"申请记录不存在: task_id={task_id}, applicant_id={applicant_id}")
                 return None
             
             # ⚠️ 安全修复：检查任务支付状态
@@ -1423,12 +1423,12 @@ class AsyncTaskCRUD:
             task = task_result.scalar_one_or_none()
             
             if not task:
-                print(f"DEBUG: 任务不存在: task_id={task_id}")
+                logger.debug(f"任务不存在: task_id={task_id}")
                 return None
             
             # ⚠️ 安全修复：只有已支付的任务才能批准申请
             if not task.is_paid:
-                print(f"DEBUG: 任务 {task_id} 尚未支付，无法批准申请")
+                logger.debug(f"任务 {task_id} 尚未支付，无法批准申请")
                 # 注意：此方法可能已废弃，新的流程使用 accept_application
                 # 但为了安全，仍然添加支付检查
                 return None
@@ -1465,14 +1465,14 @@ class AsyncTaskCRUD:
                 
                 await db.commit()
                 await db.refresh(task)
-                print(f"DEBUG: 成功批准申请: task_id={task_id}, applicant_id={applicant_id}")
+                logger.debug(f"成功批准申请: task_id={task_id}, applicant_id={applicant_id}")
                 return task
             else:
-                print(f"DEBUG: 更新任务失败: task_id={task_id}")
+                logger.debug(f"更新任务失败: task_id={task_id}")
                 return None
                 
         except Exception as e:
-            print(f"DEBUG: 批准申请时发生错误: {e}")
+            logger.error(f"批准申请时发生错误: {e}")
             await db.rollback()
             logger.error(f"Error approving application: {e}")
             return None

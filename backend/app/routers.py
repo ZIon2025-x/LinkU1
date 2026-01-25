@@ -80,8 +80,8 @@ from app.email_utils import (
 from app.models import CustomerService, User
 
 # 注意：Stripe API配置在应用启动时通过stripe_config模块统一配置（带超时）
-# 这里只设置api_key作为向后兼容，实际超时配置在startup_event中完成
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_replace_with_real_key")
+# 这里只设置api_key作为向后兼容，生产环境在startup中会校验 STRIPE_SECRET_KEY 必须正确配置
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 router = APIRouter()
 
@@ -96,6 +96,12 @@ async def csp_report(report: dict):
 
 def admin_required(current_user=Depends(get_current_admin_user)):
     return current_user
+
+
+def require_debug_environment() -> None:
+    """生产环境下拒绝 debug 路由，返回 404"""
+    if os.getenv("ENVIRONMENT", "").lower() == "production":
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 @router.post("/register/test")
@@ -137,7 +143,7 @@ def validate_password_strength(
     }
 
 @router.post("/register/debug")
-def register_debug(request_data: dict):
+def register_debug(request_data: dict, _: None = Depends(require_debug_environment)):
     """调试注册数据 - 接受原始JSON"""
     return {
         "message": "收到原始数据",
@@ -304,18 +310,18 @@ async def register(
                 sync_db, validated_data['invitation_code']
             )
             if inviter_id:
-                print(f"邀请人ID验证成功: {inviter_id}")
+                logger.debug(f"邀请人ID验证成功: {inviter_id}")
             elif invitation_code_id:
-                print(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
+                logger.debug(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
             elif error_msg:
-                print(f"邀请码/用户ID验证失败: {error_msg}")
+                logger.debug(f"邀请码/用户ID验证失败: {error_msg}")
                 # 邀请码/用户ID无效不影响注册，只记录警告
         finally:
             sync_db.close()
     
     # 检查是否跳过邮件验证（开发环境）
     if Config.SKIP_EMAIL_VERIFICATION:
-        print("开发环境：跳过邮件验证，直接创建用户")
+        logger.info("开发环境：跳过邮件验证，直接创建用户")
         
         # 使用异步CRUD创建用户
         user_data = schemas.UserCreate(**validated_data)
@@ -346,9 +352,9 @@ async def register(
             try:
                 success, error_msg = use_invitation_code(sync_db, new_user.id, invitation_code_id)
                 if success:
-                    print(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
+                    logger.info(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
                 else:
-                    print(f"邀请码奖励发放失败: {error_msg}")
+                    logger.warning(f"邀请码奖励发放失败: {error_msg}")
             finally:
                 sync_db.close()
         
@@ -362,7 +368,7 @@ async def register(
         }
     else:
         # 生产环境：需要邮箱验证
-        print("生产环境：需要邮箱验证")
+        logger.info("生产环境：需要邮箱验证")
         
         # 生成验证令牌
         verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
@@ -656,7 +662,7 @@ def get_user_info(
 # 调试端点已移除 - 安全考虑
 
 @router.get("/debug/test-token/{token}")
-def debug_test_token(token: str):
+def debug_test_token(token: str, _: None = Depends(require_debug_environment)):
     """调试token解析"""
     from app.email_utils import confirm_token
     from app.config import Config
@@ -687,12 +693,12 @@ def debug_test_token(token: str):
     return result
 
 @router.get("/debug/simple-test")
-def debug_simple_test():
+def debug_simple_test(_: None = Depends(require_debug_environment)):
     """最简单的测试端点"""
     return {"message": "Simple test works", "status": "ok"}
 
 @router.post("/debug/fix-avatar-null")
-def fix_avatar_null(db: Session = Depends(get_db)):
+def fix_avatar_null(db: Session = Depends(get_db), _: None = Depends(require_debug_environment)):
     """修复数据库中avatar字段为NULL的用户"""
     try:
         # 查找所有avatar为NULL的用户
@@ -713,7 +719,7 @@ def fix_avatar_null(db: Session = Depends(get_db)):
         return {"error": str(e)}
 
 @router.get("/debug/check-user-avatar/{user_id}")
-def check_user_avatar(user_id: str, db: Session = Depends(get_db)):
+def check_user_avatar(user_id: str, db: Session = Depends(get_db), _: None = Depends(require_debug_environment)):
     """检查指定用户的头像数据"""
     try:
         # 直接从数据库查询
@@ -734,12 +740,12 @@ def check_user_avatar(user_id: str, db: Session = Depends(get_db)):
         return {"error": str(e)}
 
 @router.get("/debug/test-reviews/{user_id}")
-def debug_test_reviews(user_id: str):
+def debug_test_reviews(user_id: str, _: None = Depends(require_debug_environment)):
     """测试reviews端点是否工作"""
     return {"message": f"Reviews endpoint works for user {user_id}", "status": "ok"}
 
 @router.get("/debug/session-status")
-def debug_session_status(request: Request, db: Session = Depends(get_db)):
+def debug_session_status(request: Request, db: Session = Depends(get_db), _: None = Depends(require_debug_environment)):
     """调试会话状态"""
     from app.secure_auth import validate_session, SecureAuthManager
     
@@ -777,7 +783,7 @@ def debug_session_status(request: Request, db: Session = Depends(get_db)):
     return result
 
 @router.get("/debug/check-pending/{email}")
-def debug_check_pending(email: str, db: Session = Depends(get_db)):
+def debug_check_pending(email: str, db: Session = Depends(get_db), _: None = Depends(require_debug_environment)):
     """检查PendingUser表中的用户"""
     from app.models import PendingUser
     from datetime import datetime
@@ -825,7 +831,7 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
     return result
 
 @router.get("/debug/test-confirm-simple")
-def debug_test_confirm_simple():
+def debug_test_confirm_simple(_: None = Depends(require_debug_environment)):
     """简单的确认测试端点"""
     return {
         "message": "confirm endpoint is working",
@@ -1701,7 +1707,7 @@ def accept_task(
                     current_user.id,
                 )
             except Exception as e:
-                print(f"Failed to create notification: {e}")
+                logger.warning(f"Failed to create notification: {e}")
                 # 不要因为通知失败而影响任务接受
 
         return updated_task
@@ -1812,7 +1818,7 @@ def approve_task_taker(
                 current_user.id,
             )
         except Exception as e:
-            print(f"Failed to create notification: {e}")
+            logger.warning(f"Failed to create notification: {e}")
 
     return db_task
 
@@ -1884,7 +1890,7 @@ def reject_task_taker(
                 logger.warning(f"发送任务拒绝推送通知失败: {e}")
                 # 推送通知失败不影响主流程
         except Exception as e:
-            print(f"Failed to create notification: {e}")
+            logger.warning(f"Failed to create notification: {e}")
 
     return db_task
 
@@ -2148,7 +2154,7 @@ def complete_task(
         
         db.commit()
     except Exception as e:
-        print(f"Failed to send system message: {e}")
+        logger.warning(f"Failed to send system message: {e}")
         # 系统消息发送失败不影响任务完成流程
 
     # 发送任务完成通知和邮件给发布者
@@ -2170,14 +2176,14 @@ def complete_task(
                 taker=current_user
             )
     except Exception as e:
-        print(f"Failed to send task completion notification: {e}")
+        logger.warning(f"Failed to send task completion notification: {e}")
         # 通知发送失败不影响任务完成流程
 
     # 检查任务接受者是否满足VIP晋升条件
     try:
         crud.check_and_upgrade_vip_to_super(db, current_user.id)
     except Exception as e:
-        print(f"Failed to check VIP upgrade: {e}")
+        logger.warning(f"Failed to check VIP upgrade: {e}")
 
     return db_task
 
@@ -2603,7 +2609,7 @@ def confirm_task_completion(
         db.add(system_message)
         db.commit()
     except Exception as e:
-        print(f"Failed to send system message: {e}")
+        logger.warning(f"Failed to send system message: {e}")
         # 系统消息发送失败不影响任务确认流程
 
     # 发送任务确认完成通知和邮件给接收者
@@ -2626,7 +2632,7 @@ def confirm_task_completion(
                     taker=taker
                 )
         except Exception as e:
-            print(f"Failed to send task confirmation notification: {e}")
+            logger.warning(f"Failed to send task confirmation notification: {e}")
             # 通知发送失败不影响任务确认流程
 
     # 自动更新相关用户的统计信息
@@ -4625,7 +4631,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # 获取请求信息
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
-    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_...yourkey...")
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
     content_type = request.headers.get("content-type", "unknown")
     user_agent = request.headers.get("user-agent", "unknown")
     client_ip = request.client.host if request.client else "unknown"
@@ -4639,12 +4645,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     logger.info(f"  - Content-Type: {content_type}")
     logger.info(f"  - Payload 大小: {len(payload)} bytes")
     logger.info(f"  - Signature 前缀: {sig_header[:30] if sig_header else 'None'}...")
-    logger.info(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret and endpoint_secret != 'whsec_...yourkey...' else '❌ 未配置或默认值'}")
+    logger.info(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret else '❌ 未配置'}")
     
     # 严格验证 Webhook 签名（安全要求）
     # 只有通过 Stripe 签名验证的请求才能处理
-    if not endpoint_secret or endpoint_secret == "whsec_...yourkey...":
-        logger.error(f"❌ [WEBHOOK] 安全错误：Webhook Secret 未正确配置")
+    if not endpoint_secret:
+        logger.error(f"❌ [WEBHOOK] 安全错误：STRIPE_WEBHOOK_SECRET 未配置")
         return {"error": "Webhook secret not configured"}, 500
     
     if not sig_header:
@@ -5250,8 +5256,39 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         dispute = event_data
         charge_id = dispute.get("charge")
         task_id = int(dispute.get("metadata", {}).get("task_id", 0))
-        logger.warning(f"Dispute created for charge {charge_id}, task {task_id}: {dispute.get('reason')}")
-        # TODO: 处理争议逻辑，可能需要冻结资金、通知用户等
+        reason = dispute.get("reason", "unknown")
+        amount = (dispute.get("amount") or 0) / 100.0
+        logger.warning(f"Stripe 争议 charge.dispute.created: charge={charge_id}, task_id={task_id}, reason={reason}, amount={amount}")
+        try:
+            # 通知 poster、taker、管理员
+            if task_id:
+                task = crud.get_task(db, task_id)
+                if task:
+                    # 通知发布者
+                    crud.create_notification(
+                        db, str(task.poster_id),
+                        "stripe_dispute", "Stripe 支付争议",
+                        f"您的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，请及时关注。原因: {reason}，金额: £{amount:.2f}",
+                        related_id=str(task_id), auto_commit=False
+                    )
+                    # 通知接受者（如有）
+                    if task.taker_id:
+                        crud.create_notification(
+                            db, str(task.taker_id),
+                            "stripe_dispute", "Stripe 支付争议",
+                            f"您参与的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，请及时关注。原因: {reason}，金额: £{amount:.2f}",
+                            related_id=str(task_id), auto_commit=False
+                        )
+            # 通知所有管理员
+            admins = db.query(models.AdminUser).filter(models.AdminUser.is_active == True).all()
+            admin_content = f"Stripe 争议: charge={charge_id}, task_id={task_id or 'N/A'}, reason={reason}, amount=£{amount:.2f}"
+            for admin in admins:
+                crud.create_notification(
+                    db, admin.id, "stripe_dispute", "Stripe 支付争议", admin_content,
+                    related_id=str(task_id) if task_id else (charge_id or ""), auto_commit=False
+                )
+        except Exception as e:
+            logger.error(f"charge.dispute.created 通知处理失败: {e}", exc_info=True)
     
     elif event_type == "charge.dispute.updated":
         dispute = event_data
@@ -6229,7 +6266,7 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Se
     try:
         from app.models import Message, User
         
-        print(f"DEBUG: 开始获取联系人，用户ID: {current_user.id}")
+        logger.debug(f"开始获取联系人，用户ID: {current_user.id}")
 
         # 简化版本：直接获取所有与当前用户有消息往来的用户
         # 获取发送的消息
@@ -6254,10 +6291,10 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Se
         # 排除自己
         contact_ids.discard(current_user.id)
         
-        print(f"DEBUG: 找到 {len(contact_ids)} 个联系人ID: {list(contact_ids)}")
+        logger.debug(f"找到 {len(contact_ids)} 个联系人ID: {list(contact_ids)}")
 
         if not contact_ids:
-            print("DEBUG: 没有找到联系人，返回空列表")
+            logger.debug("没有找到联系人，返回空列表")
             return []
 
         # 使用一次查询获取所有用户信息和最新消息时间
@@ -6318,7 +6355,7 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Se
                     "is_verified": False
                 }
                 contacts_with_last_message.append(contact_info)
-                print(f"DEBUG: 添加联系人: {contact_info['name']} (ID: {contact_info['id']})")
+                logger.debug(f"添加联系人: {contact_info['name']} (ID: {contact_info['id']})")
         
         # 按最新消息时间排序
         contacts_with_last_message.sort(
@@ -6326,13 +6363,11 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Se
             reverse=True
         )
 
-        print(f"DEBUG: 成功获取 {len(contacts_with_last_message)} 个联系人")
+        logger.debug(f"成功获取 {len(contacts_with_last_message)} 个联系人")
         return contacts_with_last_message
         
     except Exception as e:
-        print(f"DEBUG: contacts API发生错误: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.warning(f"contacts API发生错误: {e}", exc_info=True)
         return []
 
 

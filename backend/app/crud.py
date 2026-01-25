@@ -1,4 +1,5 @@
 import datetime
+import logging
 from datetime import timezone
 from typing import Optional
 from dateutil.relativedelta import relativedelta
@@ -7,6 +8,8 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+
+logger = logging.getLogger(__name__)
 from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 from app.flea_market_constants import AUTO_DELETE_DAYS
 from app.push_notification_service import send_push_notification
@@ -647,7 +650,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         for pattern in patterns:
             deleted = redis_cache.delete_pattern(pattern)
             if deleted > 0:
-                print(f"DEBUG: 清除模式 {pattern}，删除了 {deleted} 个键")
+                logger.debug(f"清除模式 {pattern}，删除了 {deleted} 个键")
         
         # 清除推荐缓存，确保新任务能立即被推荐
         # 清除所有用户的推荐缓存（因为新任务可能对所有用户都有价值）
@@ -675,7 +678,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
             except Exception as e:
                 logger.warning(f"异步更新热门任务失败: {e}")
     except Exception as e:
-        print(f"清除缓存失败: {e}")
+        logger.warning(f"清除缓存失败: {e}")
 
     return db_task
 
@@ -1370,7 +1373,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             .first()
         )
         if existing_by_id:
-            print(f"检测到重复消息ID，跳过保存: {message_id}")
+            logger.debug(f"检测到重复消息ID，跳过保存: {message_id}")
             return existing_by_id
 
     # 检查是否在最近5秒内发送过完全相同的消息（防止重复发送）
@@ -1388,7 +1391,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
     )
     
     if existing_message:
-        print(f"检测到重复消息，跳过保存: {content} (时间差: {(get_utc_time() - existing_message.created_at).total_seconds():.2f}秒)")
+        logger.debug(f"检测到重复消息，跳过保存: {content} (时间差: {(get_utc_time() - existing_message.created_at).total_seconds():.2f}秒)")
         return existing_message
 
     # 处理时间 - 统一使用UTC时间
@@ -1430,9 +1433,9 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
     # 如果image_id字段存在，则添加它
     if hasattr(Message, 'image_id') and image_id:
         msg_data['image_id'] = image_id
-        print(f"🔍 [DEBUG] 设置image_id: {image_id}")
+        logger.debug(f"设置image_id: {image_id}")
     else:
-        print(f"🔍 [DEBUG] 未设置image_id - hasattr: {hasattr(Message, 'image_id')}, image_id: {image_id}")
+        logger.debug(f"未设置image_id - hasattr: {hasattr(Message, 'image_id')}, image_id: {image_id}")
     
     msg = Message(**msg_data)
     
@@ -4085,7 +4088,7 @@ def check_and_upgrade_vip_to_super(db: Session, user_id: str):
                 related_id="system",
             )
         except Exception as e:
-            print(f"Failed to create upgrade notification: {e}")
+            logger.warning(f"Failed to create upgrade notification: {e}")
 
         return True
 
@@ -4720,7 +4723,7 @@ def save_customer_service_message(
     # 如果image_id字段存在，则添加它
     if hasattr(CustomerServiceMessage, 'image_id') and image_id:
         message_data['image_id'] = image_id
-        print(f"🔍 [DEBUG] 客服消息设置image_id: {image_id}")
+        logger.debug(f"客服消息设置image_id: {image_id}")
     
     # 设置消息状态和时间戳
     from app.utils.time_utils import get_utc_time

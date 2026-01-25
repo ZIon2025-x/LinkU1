@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta, timezone as tz, datetime
 from app.utils.time_utils import get_utc_time
 
@@ -25,6 +26,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, INET
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, relationship
+
+logger = logging.getLogger(__name__)
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -97,7 +100,7 @@ def get_uk_time_online():
     
     # 检查是否启用在线时间
     if not config.enable_online_time:
-        print("在线时间获取已禁用，使用本地时间")
+        logger.debug("在线时间获取已禁用，使用本地时间")
         from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
         utc_time = get_utc_time()
         return to_user_timezone(utc_time, LONDON)
@@ -108,27 +111,27 @@ def get_uk_time_online():
     for attempt in range(config.max_retries):
         for api in apis:
             try:
-                print(f"尝试使用 {api['name']} 获取英国时间... (尝试 {attempt + 1}/{config.max_retries})")
+                logger.debug(f"尝试使用 {api['name']} 获取英国时间... (尝试 {attempt + 1}/{config.max_retries})")
                 response = requests.get(api['url'], timeout=config.timeout_seconds)
                 if response.status_code == 200:
                     data = response.json()
                     uk_time = api['parser'](data)
-                    print(f"成功从 {api['name']} 获取英国时间: {uk_time}")
+                    logger.debug(f"成功从 {api['name']} 获取英国时间: {uk_time}")
                     return uk_time
                 else:
-                    print(f"{api['name']} API失败，状态码: {response.status_code}")
+                    logger.debug(f"{api['name']} API失败，状态码: {response.status_code}")
             except Exception as e:
-                print(f"{api['name']} 获取时间失败: {e}")
+                logger.debug(f"{api['name']} 获取时间失败: {e}")
                 continue
     
     # 所有API都失败时回退到本地时间
     if config.fallback_to_local:
-        print("所有在线时间API都失败，使用本地时间")
+        logger.warning("所有在线时间API都失败，使用本地时间")
         from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
         utc_time = get_utc_time()
         return to_user_timezone(utc_time, LONDON)
     else:
-        print("所有在线时间API都失败，且禁用本地时间回退")
+        logger.warning("所有在线时间API都失败，且禁用本地时间回退")
         raise Exception("无法获取英国时间")
 
 class User(Base):
