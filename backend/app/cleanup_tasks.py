@@ -118,9 +118,12 @@ class CleanupTasks:
     def __init__(self):
         self.running = False
         self.cleanup_interval = _env_int("CLEANUP_INTERVAL", 3600)
-        self.last_completed_tasks_cleanup_date = None  # 上次清理已完成任务的日期
-        self.last_expired_tasks_cleanup_date = None  # 上次清理过期任务的日期
-        self.last_orphan_files_cleanup_date = None  # 上次清理孤立文件的日期
+        self.last_completed_tasks_cleanup_date = None  # 同日只跑一次，避免每轮都调 crud
+        self.last_expired_tasks_cleanup_date = None
+        self.last_flea_cleanup_date = None
+        self.last_orphan_files_cleanup_date = None  # 孤立文件：同日一次
+        self.last_orphan_entity_cleanup_date = None  # 孤儿实体目录：同日一次（与 orphan_files 独立）
+        self.last_old_format_cleanup_date = None  # 旧格式图：同日一次（与 orphan_files 独立）
     
     async def start_cleanup_tasks(self):
         """启动清理任务"""
@@ -198,93 +201,81 @@ class CleanupTasks:
         pass
     
     async def _cleanup_completed_tasks_files(self):
-        """清理已完成超过3天的任务的图片和文件（每天检查一次，使用分布式锁）"""
+        """清理已完成超过3天的任务的图片和文件，同日只跑一次，使用分布式锁"""
+        today = get_utc_time().date()
+        if self.last_completed_tasks_cleanup_date == today:
+            return
         lock_key = "scheduled_task:cleanup_completed_tasks_files:lock"
-        lock_ttl = 3600  # 1小时
-        
-        # 尝试获取分布式锁
+        lock_ttl = 3600
         if not get_redis_distributed_lock(lock_key, lock_ttl):
             logger.debug("清理已完成任务文件：其他实例正在执行，跳过")
             return
-        
         try:
             from app.deps import get_sync_db
             from app.crud import cleanup_completed_tasks_files
-            
-            # 获取数据库会话
             db = next(get_sync_db())
             try:
-                # 调用清理函数
                 cleaned_count = cleanup_completed_tasks_files(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个已完成任务的文件")
             finally:
                 db.close()
-                
+            self.last_completed_tasks_cleanup_date = today
         except Exception as e:
             logger.error(f"清理已完成任务文件失败: {e}")
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_tasks_files(self):
-        """清理过期任务（已取消或deadline已过超过3天）的文件（每天检查一次，使用分布式锁）"""
+        """清理过期任务（已取消或 deadline 已过超过3天）的文件，同日只跑一次，使用分布式锁"""
+        today = get_utc_time().date()
+        if self.last_expired_tasks_cleanup_date == today:
+            return
         lock_key = "scheduled_task:cleanup_expired_tasks_files:lock"
-        lock_ttl = 3600  # 1小时
-        
-        # 尝试获取分布式锁
+        lock_ttl = 3600
         if not get_redis_distributed_lock(lock_key, lock_ttl):
             logger.debug("清理过期任务文件：其他实例正在执行，跳过")
             return
-        
         try:
             from app.deps import get_sync_db
             from app.crud import cleanup_expired_tasks_files
-            
-            # 获取数据库会话
             db = next(get_sync_db())
             try:
-                # 调用清理函数
                 cleaned_count = cleanup_expired_tasks_files(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期任务的文件")
             finally:
                 db.close()
-                
+            self.last_expired_tasks_cleanup_date = today
         except Exception as e:
             logger.error(f"清理过期任务文件失败: {e}")
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_flea_market_items(self):
-        """清理超过10天未刷新的跳蚤市场商品（每天检查一次，使用分布式锁）"""
+        """清理超过10天未刷新的跳蚤市场商品，同日只跑一次，使用分布式锁"""
+        today = get_utc_time().date()
+        if self.last_flea_cleanup_date == today:
+            return
         lock_key = "scheduled_task:cleanup_expired_flea_market_items:lock"
-        lock_ttl = 3600  # 1小时
-        
-        # 尝试获取分布式锁
+        lock_ttl = 3600
         if not get_redis_distributed_lock(lock_key, lock_ttl):
             logger.debug("清理过期跳蚤市场商品：其他实例正在执行，跳过")
             return
-        
         try:
             from app.deps import get_sync_db
             from app.crud import cleanup_expired_flea_market_items
-            
-            # 获取数据库会话
             db = next(get_sync_db())
             try:
-                # 调用清理函数
                 cleaned_count = cleanup_expired_flea_market_items(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期跳蚤市场商品")
             finally:
                 db.close()
-                
+            self.last_flea_cleanup_date = today
         except Exception as e:
             logger.error(f"清理过期跳蚤市场商品失败: {e}")
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
     
     async def _cleanup_unused_temp_images(self):
@@ -713,12 +704,11 @@ class CleanupTasks:
             release_redis_distributed_lock(lock_key)
 
     async def _cleanup_orphan_entity_images(self):
-        """清理不存在实体的图片文件夹（竞品、商品、任务），每周检查一次，使用分布式锁"""
-        # 检查是否已经在本周执行过
+        """清理不存在实体的图片文件夹（竞品、商品、任务），同日只跑一次，使用分布式锁"""
         today = get_utc_time().date()
-        if self.last_orphan_files_cleanup_date == today:
+        if self.last_orphan_entity_cleanup_date == today:
             return
-        
+
         lock_key = "scheduled_task:cleanup_orphan_entity_images:lock"
         lock_ttl = 7200  # 2小时
         
@@ -994,7 +984,8 @@ class CleanupTasks:
                 logger.info(f"清理了 {cleaned_count} 个不存在实体的图片文件夹")
             else:
                 logger.debug("未发现需要清理的不存在实体的图片文件夹")
-                
+            self.last_orphan_entity_cleanup_date = today
+
         except Exception as e:
             logger.error(f"清理不存在实体的图片文件夹失败: {e}", exc_info=True)
         finally:
@@ -1028,12 +1019,11 @@ class CleanupTasks:
             logger.warning(f"清理空目录失败: {e}")
 
     async def _cleanup_old_format_images(self):
-        """清理旧格式图片（直接保存在 /uploads/images/ 下的，不在子目录中），每周检查一次，使用分布式锁"""
-        # 检查是否已经在本周执行过
+        """清理旧格式图片（直接保存在 /uploads/images/ 下的），同日只跑一次，使用分布式锁"""
         today = get_utc_time().date()
-        if self.last_orphan_files_cleanup_date == today:
+        if self.last_old_format_cleanup_date == today:
             return
-        
+
         lock_key = "scheduled_task:cleanup_old_format_images:lock"
         lock_ttl = 7200  # 2小时
         
@@ -1102,13 +1092,13 @@ class CleanupTasks:
                 logger.info(f"清理了 {cleaned_count} 个旧格式图片")
             else:
                 logger.debug("未发现需要清理的旧格式图片")
-                
+            self.last_old_format_cleanup_date = today
+
         except Exception as e:
             logger.error(f"清理旧格式图片失败: {e}", exc_info=True)
         finally:
-            # 释放锁
             release_redis_distributed_lock(lock_key)
-    
+
     async def _cleanup_expired_time_slots(self):
         """清理过期时间段（超过30天且任务已完成/取消的时间段，每天检查一次，使用分布式锁）"""
         lock_key = "scheduled_task:cleanup_expired_time_slots:lock"
