@@ -324,7 +324,8 @@ async def get_task_chat_list(
                 # 多人任务相关字段
                 "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
-                "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False
+                "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
+                "task_source": getattr(task, 'task_source', 'normal')  # 任务来源
             }
             task_list.append(task_data)
         
@@ -644,7 +645,8 @@ async def get_task_messages(
             # 多人任务相关字段
             "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
             "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
-            "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False
+            "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
+            "task_source": getattr(task, 'task_source', 'normal')  # 任务来源
         }
         
         return {

@@ -202,6 +202,7 @@ async def get_tasks(
                 "max_participants": int(task.max_participants) if hasattr(task, 'max_participants') and task.max_participants else None,
                 "min_participants": int(task.min_participants) if hasattr(task, 'min_participants') and task.min_participants else None,
                 "current_participants": int(task.current_participants) if hasattr(task, 'current_participants') and task.current_participants is not None else 0,
+                "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
@@ -301,6 +302,7 @@ async def get_tasks(
             "max_participants": int(task.max_participants) if hasattr(task, 'max_participants') and task.max_participants else None,
             "min_participants": int(task.min_participants) if hasattr(task, 'min_participants') and task.min_participants else None,
             "current_participants": int(task.current_participants) if hasattr(task, 'current_participants') and task.current_participants is not None else 0,
+            "task_source": getattr(task, 'task_source', 'normal'),  # 任务来源
             "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
             "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
             "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
