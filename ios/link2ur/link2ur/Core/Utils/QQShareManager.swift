@@ -72,13 +72,16 @@ import TencentOpenAPI
                 
                 DispatchQueue.main.async {
                     // 创建网页对象
-                    let webpageObject = QQApiNewsObject.object(
+                    guard let webpageObject = QQApiNewsObject.object(
                         with: URL(string: url.absoluteString),
                         title: title,
                         description: description,
                         previewImageData: imageData,
                         targetContentType: QQApiURLTargetTypeNews
-                    ) as! QQApiNewsObject
+                    ) as? QQApiNewsObject else {
+                        completion(false, "创建分享对象失败")
+                        return
+                    }
                     
                     // 创建分享请求
                     let req = SendMessageToQQReq(content: webpageObject)
@@ -103,13 +106,16 @@ import TencentOpenAPI
                 previewImageURL = nil
             }
             
-            let webpageObject = QQApiNewsObject.object(
+            guard let webpageObject = QQApiNewsObject.object(
                 with: URL(string: url.absoluteString),
                 title: title,
                 description: description,
                 previewImageURL: previewImageURL,
                 targetContentType: QQApiURLTargetTypeNews
-            ) as! QQApiNewsObject
+            ) as? QQApiNewsObject else {
+                completion(false, "创建分享对象失败")
+                return
+            }
             
             // 创建分享请求
             let req = SendMessageToQQReq(content: webpageObject)

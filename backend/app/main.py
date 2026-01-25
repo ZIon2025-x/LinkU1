@@ -439,21 +439,13 @@ if RAILWAY_ENVIRONMENT:
         import mimetypes
         
         # 支持跳蚤市场图片路径：/uploads/flea_market/{item_id}/{filename}
-        if file_path.startswith("flea_market/"):
-            # 跳蚤市场图片
-            file_full_path = Path("/data/uploads") / file_path
-        else:
-            # 其他公开文件
-            file_full_path = Path("/data/uploads/public") / file_path
+        # 其他公开文件：/uploads/public/images/public/{task_id}/{filename} 等
+        # 存储 path 格式为 "public/images/public/163/xxx" 或 "flea_market/..."，均在 /data/uploads 下
+        file_full_path = Path("/data/uploads") / file_path
         
-        # 安全检查：确保文件在允许的目录内
+        # 安全检查：确保路径在 /data/uploads 内，防止路径遍历
         try:
-            if file_path.startswith("flea_market/"):
-                # 跳蚤市场图片：允许访问
-                file_full_path.resolve().relative_to(Path("/data/uploads").resolve())
-            else:
-                # 其他文件：必须在公开目录内
-                file_full_path.resolve().relative_to(Path("/data/uploads/public").resolve())
+            file_full_path.resolve().relative_to(Path("/data/uploads").resolve())
         except ValueError:
             raise HTTPException(status_code=403, detail="访问被拒绝")
         

@@ -762,7 +762,9 @@ struct FleaMarketDetailView: View {
                                 isPreparingPayment = true
                                 
                                 // 在后台线程准备支付参数，避免阻塞主线程
-                                DispatchQueue.main.async { [self] in
+                                // 使用 [weak viewModel] 避免页面已退出时更新 @State 导致闪退
+                                DispatchQueue.main.async { [weak viewModel] in
+                                    guard viewModel != nil else { return }
                                     // 设置支付参数
                                     paymentTaskId = pendingTaskId
                                     paymentClientSecret = clientSecret
@@ -778,7 +780,8 @@ struct FleaMarketDetailView: View {
                                     paymentEphemeralKeySecret = item.pendingPaymentEphemeralKeySecret
                                     
                                     // 短暂延迟后显示支付页面，让加载状态可见
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak viewModel] in
+                                        guard viewModel != nil else { return }
                                         isPreparingPayment = false
                                         showPaymentView = true
                                     }
