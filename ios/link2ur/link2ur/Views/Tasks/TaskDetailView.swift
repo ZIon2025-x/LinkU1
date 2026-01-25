@@ -1061,9 +1061,9 @@ struct TaskDetailContentView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // 图片轮播区域
+                // 图片轮播区域（过滤掉空或纯空格的 URL，避免占位无效条目）
                 TaskImageCarouselView(
-                    images: task.images ?? [],
+                    images: (task.images ?? []).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty },
                     selectedIndex: $selectedImageIndex,
                     showFullScreen: $showFullScreenImage
                 )

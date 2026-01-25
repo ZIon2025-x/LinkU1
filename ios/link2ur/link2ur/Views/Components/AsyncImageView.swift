@@ -12,6 +12,8 @@ struct AsyncImageView: View {
     let height: CGFloat?
     let contentMode: ContentMode
     let cornerRadius: CGFloat
+    /// 占位背景色；nil 时用 cardBackground。全屏查看等深色场景可传 Color.black 避免露出浅色「容器」
+    let placeholderBackground: Color?
     
     @StateObject private var imageLoader = AsyncImageLoader()
     @State private var isLoading = false
@@ -23,7 +25,8 @@ struct AsyncImageView: View {
         width: CGFloat? = nil,
         height: CGFloat? = nil,
         contentMode: ContentMode = .fill,
-        cornerRadius: CGFloat = 0
+        cornerRadius: CGFloat = 0,
+        placeholderBackground: Color? = nil
     ) {
         self.urlString = urlString
         self.placeholder = placeholder
@@ -31,6 +34,7 @@ struct AsyncImageView: View {
         self.height = height
         self.contentMode = contentMode
         self.cornerRadius = cornerRadius
+        self.placeholderBackground = placeholderBackground
         
         // 立即检查缓存，如果存在则立即设置图片（避免闪烁）
         if let urlString = urlString, !urlString.isEmpty {
@@ -46,7 +50,7 @@ struct AsyncImageView: View {
                 .aspectRatio(contentMode: .fit)
                 .foregroundColor(AppColors.textTertiary)
                 .frame(width: width, height: height)
-                .background(AppColors.cardBackground)
+                .background(placeholderBackground ?? AppColors.cardBackground)
                 .cornerRadius(cornerRadius)
             
             // 实际图片（优先使用缓存的图片，然后使用加载器加载的图片）

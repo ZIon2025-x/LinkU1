@@ -5888,6 +5888,10 @@ def admin_update_task(
             ip_address=ip_address,
         )
 
+    # 使任务详情缓存失效，确保下次请求拿到最新数据（含 images 等）
+    from app.services.task_service import TaskService
+    TaskService.invalidate_cache(task_id)
+
     return {"message": "任务更新成功", "task": updated_task}
 
 
@@ -5955,6 +5959,7 @@ def admin_batch_update_tasks(
 ):
     """管理员批量更新任务"""
     from app.security import get_client_ip
+    from app.services.task_service import TaskService
     
     updated_tasks = []
     failed_tasks = []
@@ -5988,6 +5993,7 @@ def admin_batch_update_tasks(
                         reason=f"管理员 {current_user.id} ({current_user.name}) 批量更新了任务信息",
                         ip_address=ip_address,
                     )
+                TaskService.invalidate_cache(task_id)
                 updated_tasks.append(updated_task)
             else:
                 failed_tasks.append({"task_id": task_id, "error": "任务不存在"})
@@ -8262,6 +8268,9 @@ def update_task_by_admin(
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    from app.services.task_service import TaskService
+    TaskService.invalidate_cache(task_id)
 
     return {"message": "Task updated successfully", "task": task}
 

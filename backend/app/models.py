@@ -245,6 +245,8 @@ class Task(Base):
     participant_rewards = relationship("TaskParticipantReward", back_populates="task", cascade="all, delete-orphan")
     audit_logs = relationship("TaskAuditLog", back_populates="task", cascade="all, delete-orphan")
     parent_activity = relationship("Activity", back_populates="created_tasks", foreign_keys=[parent_activity_id])
+    expert_service = relationship("TaskExpertService", foreign_keys=[expert_service_id])  # 达人服务，用于任务无图时回退 service.images
+    flea_market_item = relationship("FleaMarketItem", primaryjoin="Task.id == FleaMarketItem.sold_task_id", uselist=False)  # 跳蚤市场商品（sold_task_id=本任务），用于任务无图时回退 item.images
 
 
 class Review(Base):

@@ -55,7 +55,7 @@ class TaskChatViewModel: ObservableObject {
                     Logger.debug("尝试使用备用解析方法...", category: .api)
                     // 如果包装对象失败，尝试使用备用方法
                     self?.loadTaskChatsWithFallback()
-                    self?.errorMessage = (error as? APIError)?.userFriendlyMessage ?? LocalizationKey.errorNetworkRequestFailed.localized
+                    self?.errorMessage = error.userFriendlyMessage
                 } else {
                     // 记录成功请求的性能指标
                     self?.performanceMonitor.recordNetworkRequest(
@@ -188,7 +188,8 @@ class TaskChatViewModel: ObservableObject {
             .sink(receiveCompletion: { [weak self] result in
                 self?.isRequesting = false
                 if case .failure(let error) = result {
-                    self?.errorMessage = (error as? APIError)?.userFriendlyMessage ?? LocalizationKey.errorNetworkRequestFailed.localized
+                    // 备用方法用 URLSession.dataTaskPublisher，Failure 为 Error；仅当为 APIError 时使用 userFriendlyMessage
+                    self?.errorMessage = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
                     Logger.error("备用解析方法也失败: \(error)", category: .api)
                 }
             }, receiveValue: { [weak self] taskChats in

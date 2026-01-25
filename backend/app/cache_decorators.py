@@ -13,7 +13,8 @@ from app.utils.time_utils import format_iso_utc
 logger = logging.getLogger(__name__)
 
 # 缓存版本号（用于失效策略）
-CACHE_VERSION = "v3"
+# v4: 修复任务详情中 images 从 DB 有值但缓存返回空的问题（提升版本使旧缓存失效）
+CACHE_VERSION = "v4"
 
 
 def cache_task_detail_sync(ttl: int = 300):

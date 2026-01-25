@@ -358,12 +358,17 @@ struct ChatView: View {
     }
 }
 
+/// 用于 fullScreenCover(item:) 的图片 URL 包装，避免 isPresented+if let 导致 content 为 EmptyView 出现全白无按钮
+private struct IdentifiableImageUrl: Identifiable {
+    let id = UUID()
+    let url: String
+}
+
 // 消息气泡组件 - 更现代的设计
 struct MessageBubble: View {
     let message: Message
     let isFromCurrentUser: Bool
-    @State private var showFullImage = false
-    @State private var selectedImageUrl: String?
+    @State private var selectedImageItem: IdentifiableImageUrl?
     @State private var selectedImageIndex: Int = 0
     @State private var showUserProfile = false
     
@@ -418,8 +423,7 @@ struct MessageBubble: View {
                 // 图片附件（如果有）
                 if message.hasImageAttachment, let imageUrl = message.firstImageUrl {
                     Button(action: {
-                        selectedImageUrl = imageUrl
-                        showFullImage = true
+                        selectedImageItem = IdentifiableImageUrl(url: imageUrl)
                     }) {
                         AsyncImageView(
                             urlString: imageUrl,
@@ -554,10 +558,12 @@ struct MessageBubble: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showFullImage) {
-            if let imageUrl = selectedImageUrl {
-                FullScreenImageView(images: [imageUrl], selectedIndex: $selectedImageIndex, isPresented: $showFullImage)
-            }
+        .fullScreenCover(item: $selectedImageItem) { item in
+            FullScreenImageView(
+                images: [item.url],
+                selectedIndex: $selectedImageIndex,
+                isPresented: Binding(get: { true }, set: { if !$0 { selectedImageItem = nil } })
+            )
         }
         .onAppear {
             // 检查是否需要翻译（仅对非当前用户的消息，但不自动翻译）

@@ -34,6 +34,7 @@ struct FullScreenImageView: View {
                             }
                         }
                     )
+                    .background(Color.black)
                     .tag(index)
                 }
             }
@@ -49,31 +50,28 @@ struct FullScreenImageView: View {
                 }
             }
             
-            // 顶部关闭按钮（可隐藏）
-            if showControls {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            withAnimation {
-                                isPresented = false
-                            }
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 32))
-                                .foregroundColor(.white)
-                                .background(
-                                    Circle()
-                                        .fill(Color.black.opacity(0.4))
-                                        .frame(width: 36, height: 36)
-                                )
-                        }
-                        .padding(.trailing, AppSpacing.md)
-                        .padding(.top, AppSpacing.md)
-                    }
+            // 顶部关闭按钮（始终可见，避免用户单击图片后找不到关闭入口）
+            VStack {
+                HStack {
                     Spacer()
+                    Button(action: {
+                        withAnimation {
+                            isPresented = false
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.white)
+                            .background(
+                                Circle()
+                                    .fill(Color.black.opacity(0.4))
+                                    .frame(width: 36, height: 36)
+                            )
+                    }
+                    .padding(.trailing, AppSpacing.md)
+                    .padding(.top, AppSpacing.md)
                 }
-                .transition(.opacity)
+                Spacer()
             }
             
             // 底部图片指示器（如果有多张图片，可隐藏）
@@ -98,6 +96,8 @@ struct FullScreenImageView: View {
                 .transition(.opacity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.all)
         .statusBarHidden()
         .onAppear {
             // 重置状态
@@ -121,88 +121,80 @@ struct ImageViewWithGestures: View {
     
     var body: some View {
         GeometryReader { geometry in
-            AsyncImage(url: imageUrl.toImageURL()) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .scaleEffect(scale)
-                        .offset(offset)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipped()
-                        .gesture(
-                            // 双击缩放
-                            TapGesture(count: 2)
-                                .onEnded {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                        if scale > 1.0 {
-                                            scale = 1.0
-                                            offset = .zero
-                                            lastOffset = .zero
-                                        } else {
-                                            scale = 2.5
-                                        }
-                                    }
-                                }
-                        )
-                        .simultaneousGesture(
-                            // 单击切换控制栏
-                            TapGesture(count: 1)
-                                .onEnded {
-                                    onSingleTap()
-                                }
-                        )
-                        .simultaneousGesture(
-                            // 捏合缩放
-                            MagnificationGesture()
-                                .onChanged { value in
-                                    let delta = value / lastScale
-                                    lastScale = value
-                                    let newScale = scale * delta
-                                    scale = min(max(newScale, 1.0), 5.0)
-                                }
-                                .onEnded { _ in
-                                    lastScale = 1.0
-                                    if scale < 1.0 {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            scale = 1.0
-                                            offset = .zero
-                                            lastOffset = .zero
-                                        }
-                                    }
-                                }
-                        )
-                        .simultaneousGesture(
-                            // 拖拽（仅在缩放时可用）
-                            DragGesture()
-                                .onChanged { value in
-                                    if scale > 1.0 {
-                                        offset = CGSize(
-                                            width: lastOffset.width + value.translation.width,
-                                            height: lastOffset.height + value.translation.height
-                                        )
-                                    }
-                                }
-                                .onEnded { _ in
-                                    lastOffset = offset
-                                }
-                        )
-                case .failure(_), .empty:
-                    ZStack {
-                        Color.black
-                        VStack(spacing: AppSpacing.md) {
-                            ProgressView()
-                                .tint(.white)
-                            Text(LocalizationKey.webviewLoading.localized)
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.7))
+            let w = max(1, geometry.size.width)
+            let h = max(1, geometry.size.height)
+            // 使用 AsyncImageView（与气泡一致），走 ImageCache，可正确加载私密图 URL（含 token）
+            // placeholderBackground: .black 避免 .fit 时两侧/上下留白露出浅色“容器”
+            AsyncImageView(
+                urlString: imageUrl,
+                placeholder: Image(systemName: "photo"),
+                width: w,
+                height: h,
+                contentMode: .fit,
+                cornerRadius: 0,
+                placeholderBackground: .black
+            )
+            .scaleEffect(scale)
+            .offset(offset)
+            .frame(width: w, height: h)
+            .clipped()
+            .gesture(
+                // 双击缩放
+                TapGesture(count: 2)
+                    .onEnded {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            if scale > 1.0 {
+                                scale = 1.0
+                                offset = .zero
+                                lastOffset = .zero
+                            } else {
+                                scale = 2.5
+                            }
                         }
                     }
-                @unknown default:
-                    Color.black
-                }
-            }
+            )
+            .simultaneousGesture(
+                // 单击切换控制栏（多图时底部页指示显隐）
+                TapGesture(count: 1)
+                    .onEnded {
+                        onSingleTap()
+                    }
+            )
+            .simultaneousGesture(
+                // 捏合缩放
+                MagnificationGesture()
+                    .onChanged { value in
+                        let delta = value / lastScale
+                        lastScale = value
+                        let newScale = scale * delta
+                        scale = min(max(newScale, 1.0), 5.0)
+                    }
+                    .onEnded { _ in
+                        lastScale = 1.0
+                        if scale < 1.0 {
+                            withAnimation(.spring(response: 0.3)) {
+                                scale = 1.0
+                                offset = .zero
+                                lastOffset = .zero
+                            }
+                        }
+                    }
+            )
+            .simultaneousGesture(
+                // 拖拽（仅在缩放时可用）
+                DragGesture()
+                    .onChanged { value in
+                        if scale > 1.0 {
+                            offset = CGSize(
+                                width: lastOffset.width + value.translation.width,
+                                height: lastOffset.height + value.translation.height
+                            )
+                        }
+                    }
+                    .onEnded { _ in
+                        lastOffset = offset
+                    }
+            )
         }
     }
 }

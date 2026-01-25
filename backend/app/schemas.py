@@ -446,12 +446,45 @@ class TaskOut(TaskBase):
                     parsed = ast.literal_eval(images_value)
                     images_list = [str(x) for x in parsed if isinstance(x, str)] if isinstance(parsed, list) else []
                 except (ValueError, SyntaxError, TypeError):
-                    images_list = []
+                    # 若 DB 存的是单个完整 URL 字符串（非 JSON 数组），则包成单元素列表
+                    if (images_value or "").strip().startswith(("http://", "https://")):
+                        images_list = [images_value.strip()]
+                    else:
+                        images_list = []
         elif isinstance(images_value, dict):
             # 如果是字典（如JSONB返回的{}），返回空列表
             images_list = []
         else:
             images_list = []
+        
+        # 来源于活动的任务：若任务自身无图片，则回退使用父活动的图片
+        # 解决活动有图片但申请生成的任务在创建时未复制到 task.images 或历史数据为空的情况
+        if (images_list is None or (isinstance(images_list, list) and len(images_list) == 0)) and getattr(obj, 'parent_activity_id', None) and hasattr(obj, 'parent_activity') and obj.parent_activity is not None:
+            pa_imgs = getattr(obj.parent_activity, 'images', None)
+            if pa_imgs and isinstance(pa_imgs, list) and len(pa_imgs) > 0:
+                images_list = [str(u) for u in pa_imgs if u and isinstance(u, str)]
+        
+        # 来源于达人服务的任务：若任务自身无图片且未从活动回退到，则回退使用关联达人服务的 service.images
+        # 解决 service_images/27167013 等图片在 task_expert_services.images 而 task.images 为空的情况
+        if (images_list is None or (isinstance(images_list, list) and len(images_list) == 0)) and getattr(obj, 'expert_service_id', None) and hasattr(obj, 'expert_service') and obj.expert_service is not None:
+            svc_imgs = getattr(obj.expert_service, 'images', None)
+            if svc_imgs and isinstance(svc_imgs, list) and len(svc_imgs) > 0:
+                images_list = [str(u) for u in svc_imgs if u and isinstance(u, str)]
+        
+        # 来源于跳蚤市场的任务：若任务自身无图片且未从活动/服务回退到，则回退使用关联商品的 flea_market_item.images
+        # 解决 flea_market 商品图在 flea_market_items.images 而 task.images 为空的情况（sold_task_id=本任务）
+        if (images_list is None or (isinstance(images_list, list) and len(images_list) == 0)) and hasattr(obj, 'flea_market_item') and obj.flea_market_item is not None:
+            fmi_imgs = getattr(obj.flea_market_item, 'images', None)
+            if fmi_imgs:
+                if isinstance(fmi_imgs, list) and len(fmi_imgs) > 0:
+                    images_list = [str(u) for u in fmi_imgs if u and isinstance(u, str)]
+                elif isinstance(fmi_imgs, str) and fmi_imgs.strip():
+                    try:
+                        parsed = json.loads(fmi_imgs)
+                        if isinstance(parsed, list) and len(parsed) > 0:
+                            images_list = [str(u) for u in parsed if u and isinstance(u, str)]
+                    except (json.JSONDecodeError, TypeError):
+                        pass
         
         data = {
             "id": obj.id,

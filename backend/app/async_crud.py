@@ -215,6 +215,9 @@ class AsyncTaskCRUD:
                 .options(selectinload(models.Task.taker))
                 .options(selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot))
                 .options(selectinload(models.Task.participants))  # 加载参与者关系，用于动态计算current_participants
+                .options(selectinload(models.Task.parent_activity))  # 预加载父活动，供 TaskOut.from_orm 在任务无图片时回退使用活动图片
+                .options(selectinload(models.Task.expert_service))  # 预加载达人服务，供 TaskOut.from_orm 在任务无图时回退 service.images
+                .options(selectinload(models.Task.flea_market_item))  # 预加载跳蚤市场商品，供 TaskOut.from_orm 在任务无图时回退 item.images
                 .where(models.Task.id == task_id)
             )
             return result.scalar_one_or_none()

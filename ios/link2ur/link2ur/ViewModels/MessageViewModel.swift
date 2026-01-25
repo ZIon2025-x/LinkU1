@@ -657,7 +657,7 @@ class TaskChatDetailViewModel: ObservableObject {
                 self?.isSending = false
                 if case .failure(let error) = result {
                     Logger.error("❌ 发送带附件消息失败: \(error)", category: .api)
-                    self?.errorMessage = (error as? APIError)?.userFriendlyMessage ?? LocalizationKey.errorNetworkRequestFailed.localized
+                    self?.errorMessage = error.userFriendlyMessage
                     completion(false)
                 }
             }, receiveValue: { [weak self] message in

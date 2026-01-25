@@ -127,7 +127,7 @@ public final class SecurityManager {
         return true // 开发环境允许所有证书
         #else
         // 生产环境验证逻辑
-        guard let serverTrust = challenge.protectionSpace.serverTrust else {
+        guard challenge.protectionSpace.serverTrust != nil else {
             return false
         }
         

@@ -936,6 +936,8 @@ def get_task(db: Session, task_id: int):
             selectinload(Task.participants),  # 预加载参与者信息，用于动态计算current_participants
             selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联，用于获取时间段信息
             selectinload(Task.parent_activity).selectinload(Activity.time_slot_relations).selectinload(ActivityTimeSlotRelation.time_slot),  # 预加载父活动的时间段关联（多人任务）
+            selectinload(Task.expert_service),  # 预加载达人服务，供 TaskOut.from_orm 在任务无图时回退 service.images
+            selectinload(Task.flea_market_item),  # 预加载跳蚤市场商品，供 TaskOut.from_orm 在任务无图时回退 item.images
         )
         .filter(Task.id == task_id)
         .first()
