@@ -688,7 +688,8 @@ def create_connect_account(
             account_status = not deadline_status or deadline_status == "eventually_due"
             
             # 检查 recipient 配置中的 capabilities（用于接收支付）
-            recipient_config = v2_account.get("configuration", {}).get("recipient", {})
+            configuration = v2_account.get("configuration") or {}
+            recipient_config = configuration.get("recipient") or {}
             recipient_capabilities = recipient_config.get("capabilities", {})
             stripe_balance = recipient_capabilities.get("stripe_balance", {})
             stripe_transfers = stripe_balance.get("stripe_transfers", {})
@@ -700,7 +701,7 @@ def create_connect_account(
             
             # 如果 recipient 不可用，回退到 merchant 配置
             if not charges_enabled:
-                merchant_config = v2_account.get("configuration", {}).get("merchant", {})
+                merchant_config = configuration.get("merchant") or {}
                 merchant_capabilities = merchant_config.get("capabilities", {})
                 card_payments = merchant_capabilities.get("card_payments", {})
                 charges_enabled = card_payments.get("status") == "active"
@@ -1039,7 +1040,8 @@ def get_account_status(
             details_submitted = not deadline_status or deadline_status == "eventually_due"
             
             # 检查 recipient 配置中的 capabilities（用于接收支付）
-            recipient_config = account.get("configuration", {}).get("recipient", {})
+            configuration = account.get("configuration") or {}
+            recipient_config = configuration.get("recipient") or {}
             recipient_capabilities = recipient_config.get("capabilities", {})
             stripe_balance = recipient_capabilities.get("stripe_balance", {})
             stripe_transfers = stripe_balance.get("stripe_transfers", {})
@@ -1051,7 +1053,7 @@ def get_account_status(
             
             # 如果 recipient 不可用，回退到 merchant 配置
             if not charges_enabled:
-                merchant_config = account.get("configuration", {}).get("merchant", {})
+                merchant_config = configuration.get("merchant") or {}
                 merchant_capabilities = merchant_config.get("capabilities", {})
                 card_payments = merchant_capabilities.get("card_payments", {})
                 charges_enabled = card_payments.get("status") == "active"
@@ -1937,7 +1939,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 return {"status": "success"}
             
             # 尝试通过 metadata 查找用户
-            user_id = account.get("metadata", {}).get("user_id")
+            metadata = account.get("metadata") or {}
+            user_id = metadata.get("user_id")
             if user_id:
                 user = db.query(models.User).filter(models.User.id == int(user_id)).first()
                 if user:
@@ -2050,7 +2053,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"Account updated (V1) for user {user.id}: account_id={account_id}, details_submitted={details_submitted}, charges_enabled={charges_enabled}, payouts_enabled={payouts_enabled}")
                 
                 # 检查状态变化（对 V1 和 V2 都适用）
-                previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                event_data = event.get("data") or {}
+                previous_attributes = event_data.get("previous_attributes", {})
                 was_charges_enabled = previous_attributes.get("charges_enabled", charges_enabled)
                 was_payouts_enabled = previous_attributes.get("payouts_enabled", payouts_enabled)
                 
@@ -2063,7 +2067,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"Stripe Connect account payouts enabled for user {user.id}: account_id={account_id}")
             else:
                 # 如果通过 account_id 找不到，尝试通过 metadata
-                user_id = account.get("metadata", {}).get("user_id")
+                metadata = account.get("metadata") or {}
+                user_id = metadata.get("user_id")
                 if user_id:
                     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
                     if user:
@@ -2120,14 +2125,15 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 deadline_status = minimum_deadline.get("status") if minimum_deadline else None
                 
                 # 检查能力状态
-                configuration = account.get("configuration", {})
-                merchant = configuration.get("merchant", {})
+                configuration = account.get("configuration") or {}
+                merchant = configuration.get("merchant") or {}
                 capabilities = merchant.get("capabilities", {})
                 card_payments = capabilities.get("card_payments", {})
                 charges_enabled = card_payments.get("status") == "active"
                 
                 # 检查状态变化
-                previous_attributes = event.get("data", {}).get("previous_attributes", {})
+                event_data = event.get("data") or {}
+                previous_attributes = event_data.get("previous_attributes", {})
                 prev_requirements = previous_attributes.get("requirements", {})
                 prev_currently_due = prev_requirements.get("currently_due", [])
                 
@@ -2150,7 +2156,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                 )
             else:
                 # 如果通过 account_id 找不到，尝试通过 metadata
-                user_id = account.get("metadata", {}).get("user_id")  # 从 metadata 获取 user_id
+                metadata = account.get("metadata") or {}
+                user_id = metadata.get("user_id")  # 从 metadata 获取 user_id
                 if user_id:
                     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
                     if user:
@@ -2260,7 +2267,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"Account deauthorized for user {user.id}: account_id={account_id}")
                 else:
                     # 尝试通过 metadata
-                    user_id = account.get("metadata", {}).get("user_id")
+                    metadata = account.get("metadata") or {}
+                    user_id = metadata.get("user_id")
                     if user_id:
                         user = db.query(models.User).filter(models.User.id == int(user_id)).first()
                         if user:

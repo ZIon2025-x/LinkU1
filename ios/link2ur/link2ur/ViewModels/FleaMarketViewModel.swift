@@ -207,12 +207,8 @@ class FleaMarketDetailViewModel: ObservableObject {
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
                     // 提取用户友好的错误消息
-                    let errorMessage: String
-                    if let apiError = error as? APIError {
-                        errorMessage = apiError.userFriendlyMessage
-                    } else {
-                        errorMessage = error.localizedDescription
-                    }
+                    // 注意：error 已经是 APIError 类型（因为 request 方法返回 AnyPublisher<T, APIError>）
+                    let errorMessage = error.userFriendlyMessage
                     // 调用错误回调
                     onError?(errorMessage)
                     // 使用 ErrorHandler 处理错误（用于统一错误处理）

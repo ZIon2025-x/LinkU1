@@ -587,6 +587,8 @@
 "task_detail.publish_time" = "Publish Time";
 "task_detail.deadline" = "Deadline";
 "task_detail.publisher" = "Publisher";
+"task_detail.buyer" = "Buyer";
+"task_detail.seller" = "Seller";
 "task_detail.email_not_provided" = "Email not provided";
 "task_detail.your_task" = "This is your task";
 "task_detail.manage_task" = "You can view applicants and manage the task below";

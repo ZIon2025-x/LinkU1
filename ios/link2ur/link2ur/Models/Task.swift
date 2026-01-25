@@ -36,6 +36,7 @@ struct Task: Codable, Identifiable, Equatable {
     let isRecommended: Bool?  // 是否为推荐任务
     let matchScore: Double?  // 推荐匹配分数
     let recommendationReason: String?  // 推荐原因
+    let taskSource: String?  // 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
@@ -65,6 +66,7 @@ struct Task: Codable, Identifiable, Equatable {
         case isRecommended = "is_recommended"
         case matchScore = "match_score"
         case recommendationReason = "recommendation_reason"
+        case taskSource = "task_source"
     }
     
     // 兼容旧代码的 computed properties
@@ -121,6 +123,11 @@ struct Task: Codable, Identifiable, Equatable {
         } else {
             return descriptionEn?.isEmpty == false ? descriptionEn! : description
         }
+    }
+    
+    /// 是否为跳蚤市场任务
+    var isFleaMarketTask: Bool {
+        return taskSource == "flea_market"
     }
 }
 
@@ -214,7 +221,8 @@ struct RecommendationTask: Codable {
             poster: nil,
             isRecommended: true,
             matchScore: matchScore,
-            recommendationReason: recommendationReason
+            recommendationReason: recommendationReason,
+            taskSource: nil  // 推荐任务默认为普通任务
         )
     }
 }

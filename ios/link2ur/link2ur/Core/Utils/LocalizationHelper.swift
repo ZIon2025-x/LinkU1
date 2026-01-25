@@ -890,6 +890,8 @@ public enum LocalizationKey: String {
     case taskDetailPublishTime = "task_detail.publish_time"
     case taskDetailDeadline = "task_detail.deadline"
     case taskDetailPublisher = "task_detail.publisher"
+    case taskDetailBuyer = "task_detail.buyer"
+    case taskDetailSeller = "task_detail.seller"
     case taskDetailEmailNotProvided = "task_detail.email_not_provided"
     case taskDetailYourTask = "task_detail.your_task"
     case taskDetailManageTask = "task_detail.manage_task"

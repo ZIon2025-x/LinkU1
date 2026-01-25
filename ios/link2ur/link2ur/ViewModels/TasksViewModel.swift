@@ -569,7 +569,8 @@ class TasksViewModel: ObservableObject {
                                     poster: task.poster,
                                     isRecommended: task.isRecommended,
                                     matchScore: task.matchScore,
-                                    recommendationReason: task.recommendationReason
+                                    recommendationReason: task.recommendationReason,
+                                    taskSource: task.taskSource
                                 )
                             }
                         }

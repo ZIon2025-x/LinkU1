@@ -1334,14 +1334,31 @@ struct TaskHeaderCard: View {
             
             // 分类和位置标签（位置模糊显示，只显示城市）
             HStack(spacing: AppSpacing.sm) {
-                Label(task.taskType, systemImage: "tag.fill")
-                    .font(AppTypography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppColors.primaryLight)
-                    .clipShape(Capsule())
+                // 跳蚤市场任务：不显示分类，显示任务描述的英文单词
+                if task.isFleaMarketTask {
+                    // 提取任务描述中的英文单词（取前几个单词）
+                    let englishWords = extractEnglishWords(from: task.displayDescription)
+                    if !englishWords.isEmpty {
+                        Label(englishWords, systemImage: "tag.fill")
+                            .font(AppTypography.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppColors.primary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(AppColors.primaryLight)
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    // 普通任务：显示分类
+                    Label(task.taskType, systemImage: "tag.fill")
+                        .font(AppTypography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppColors.primaryLight)
+                        .clipShape(Capsule())
+                }
                 
                 Label(task.location.obfuscatedLocation, systemImage: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill")
                     .font(AppTypography.caption)
@@ -1358,6 +1375,24 @@ struct TaskHeaderCard: View {
         .cornerRadius(AppCornerRadius.xlarge, corners: [.topLeft, .topRight])
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
         .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+    }
+    
+    /// 从描述中提取英文单词（取前3-5个单词）
+    private func extractEnglishWords(from text: String) -> String {
+        // 使用正则表达式提取英文单词
+        let pattern = "[a-zA-Z]+"
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let nsString = text as NSString
+        let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length)) ?? []
+        
+        let words = matches.prefix(5).compactMap { match -> String? in
+            if match.range.location != NSNotFound {
+                return nsString.substring(with: match.range)
+            }
+            return nil
+        }
+        
+        return words.joined(separator: " ")
     }
 }
 
@@ -1433,7 +1468,7 @@ struct TaskInfoCard: View {
                 Divider()
                     .background(AppColors.divider)
                 
-                TaskPosterInfoView(poster: poster)
+                TaskPosterInfoView(poster: poster, task: task)
             }
         }
         .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
@@ -1512,13 +1547,14 @@ struct TaskTimeInfoView: View {
 // MARK: - 发布者信息视图
 struct TaskPosterInfoView: View {
     let poster: User
+    let task: Task
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
                 IconStyle.icon("person.fill", size: 18)
                     .foregroundColor(AppColors.primary)
-                Text(LocalizationKey.taskDetailPublisher.localized)
+                Text(roleTitle)
                     .font(AppTypography.title3)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -1570,6 +1606,17 @@ struct TaskPosterInfoView: View {
                 .cornerRadius(AppCornerRadius.medium)
             }
             .buttonStyle(ScaleButtonStyle())
+        }
+    }
+    
+    /// 根据任务来源返回角色标题
+    private var roleTitle: String {
+        if task.isFleaMarketTask {
+            // 跳蚤市场任务：poster 是买家，taker 是卖家
+            // 这里显示的是 poster，所以是买家
+            return LocalizationKey.taskDetailBuyer.localized
+        } else {
+            return LocalizationKey.taskDetailPublisher.localized
         }
     }
 }

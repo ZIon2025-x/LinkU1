@@ -17,6 +17,7 @@ struct FleaMarketDetailView: View {
     @State private var paymentEphemeralKeySecret: String?
     @State private var isPreparingPayment = false
     @State private var showNegotiateSuccess = false
+    @State private var isProcessingPurchase = false  // 购买处理中状态
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -134,8 +135,7 @@ struct FleaMarketDetailView: View {
                     itemId: itemId,
                     viewModel: viewModel,
                     onPurchaseComplete: { purchaseData in
-                        showPurchaseSheet = false
-                        // 如果返回了支付信息，显示支付页面
+                        // 如果返回了支付信息，先设置支付参数，然后同时关闭购买页面和显示支付页面
                         if let data = purchaseData,
                            data.taskStatus == "pending_payment",
                            let clientSecret = data.clientSecret {
@@ -150,10 +150,12 @@ struct FleaMarketDetailView: View {
                             
                             guard let taskId = taskIdInt else {
                                 Logger.error("taskId 转换失败，无法显示支付页面", category: .network)
+                                isProcessingPurchase = false
+                                showPurchaseSheet = false
                                 return
                             }
                             
-                            // 设置支付参数
+                            // 先设置支付参数（在关闭购买页面前）
                             paymentTaskId = taskId
                             paymentClientSecret = clientSecret
                             // 计算支付金额（amount 是分为单位，需要转换为元）
@@ -166,16 +168,30 @@ struct FleaMarketDetailView: View {
                             }
                             paymentCustomerId = data.customerId
                             paymentEphemeralKeySecret = data.ephemeralKeySecret
-                            // 显示支付页面
-                            showPaymentView = true
+                            
+                            // 关闭购买页面，显示加载状态
+                            showPurchaseSheet = false
+                            isProcessingPurchase = true
+                            
+                            // 使用短暂延迟确保购买页面关闭动画完成后再显示支付页面
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                isProcessingPurchase = false
+                                showPaymentView = true
+                            }
                         } else if purchaseData != nil {
                             // 如果没有支付信息，可能是直接购买成功（不需要支付）
                             Logger.debug("直接购买成功，无需支付", category: .network)
+                            isProcessingPurchase = false
+                            showPurchaseSheet = false
                             // 刷新商品信息
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                 CacheManager.shared.invalidateFleaMarketCache()
                                 viewModel.loadItem(itemId: itemId, preserveItem: true)
                             }
+                        } else {
+                            // 购买失败，关闭购买页面
+                            isProcessingPurchase = false
+                            showPurchaseSheet = false
                         }
                     },
                     onNegotiateComplete: {
@@ -865,8 +881,9 @@ struct PurchaseDetailView: View {
     
     var body: some View {
         NavigationView {
-            KeyboardAvoidingScrollView(extraPadding: 20) {
-                VStack(spacing: 24) {
+            ZStack {
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: 24) {
                     // 商品预览卡片
                     HStack(spacing: 16) {
                         if let images = item.images, let firstImage = images.first {
@@ -985,36 +1002,57 @@ struct PurchaseDetailView: View {
                     }
                     
                     Spacer(minLength: 40)
+                    }
+                    .padding(20)
                 }
-                .padding(20)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .background(Color(UIColor.systemBackground))
-            .navigationTitle(LocalizationKey.fleaMarketConfirmPurchase.localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(LocalizationKey.commonCancel.localized) { dismiss() }
+                .scrollDismissesKeyboard(.interactively)
+                .background(Color(UIColor.systemBackground))
+                .navigationTitle(LocalizationKey.fleaMarketConfirmPurchase.localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(LocalizationKey.commonCancel.localized) { dismiss() }
+                            .disabled(isSubmitting)
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: submitPurchase) {
+                            if isSubmitting {
+                                ProgressView()
+                                    .tint(.white)
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text(LocalizationKey.fleaMarketConfirm.localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(isSubmitting ? Color.gray : AppColors.primary)
+                        .clipShape(Capsule())
                         .disabled(isSubmitting)
+                    }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: submitPurchase) {
-                        if isSubmitting {
-                            ProgressView()
-                                .tint(.white)
-                                .scaleEffect(0.8)
-                        } else {
-                            Text(LocalizationKey.fleaMarketConfirm.localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
+                // 购买处理中的加载指示器（覆盖整个购买页面）
+                if isSubmitting {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.white)
+                        Text(wantsNegotiate ? "正在发送议价请求..." : "正在处理购买...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(isSubmitting ? Color.gray : AppColors.primary)
-                    .clipShape(Capsule())
-                    .disabled(isSubmitting)
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.black.opacity(0.7))
+                    )
                 }
             }
             .enableSwipeBack()
@@ -1055,12 +1093,7 @@ struct PurchaseDetailView: View {
             }
         } else {
             // 直接购买
-            viewModel.directPurchase(itemId: itemId, onError: { [self] errorMsg in
-                DispatchQueue.main.async {
-                    isSubmitting = false
-                    errorMessage = errorMsg
-                }
-            }) { [self] purchaseData in
+            viewModel.directPurchase(itemId: itemId, completion: { [self] purchaseData in
                 DispatchQueue.main.async {
                     isSubmitting = false
                     if purchaseData != nil {
@@ -1068,7 +1101,12 @@ struct PurchaseDetailView: View {
                     }
                     // 如果 purchaseData 为 nil，说明购买失败，错误信息已通过 onError 回调设置
                 }
-            }
+            }, onError: { [self] errorMsg in
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    errorMessage = errorMsg
+                }
+            })
         }
     }
 }

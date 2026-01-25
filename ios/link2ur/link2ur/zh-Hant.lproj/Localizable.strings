@@ -400,6 +400,8 @@
 "task_detail.publish_time" = "發布時間";
 "task_detail.deadline" = "截止時間";
 "task_detail.publisher" = "發布者";
+"task_detail.buyer" = "買家";
+"task_detail.seller" = "賣家";
 "task_detail.email_not_provided" = "未提供郵箱";
 "task_detail.your_task" = "這是您發布的任務";
 "task_detail.manage_task" = "您可以在下方查看申請者並管理任務";
