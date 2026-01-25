@@ -1334,9 +1334,9 @@ struct TaskHeaderCard: View {
             
             // 分类和位置标签（位置模糊显示，只显示城市）
             HStack(spacing: AppSpacing.sm) {
-                // 跳蚤市场任务：显示商品类型（描述中最后一个英文单词，即分类后的那个）
+                // 跳蚤市场任务：从描述中的 "Category: {分类}" 定位商品分类（后端创建任务时追加）
                 if task.isFleaMarketTask {
-                    if let productType = extractLastEnglishWord(from: task.displayDescription), !productType.isEmpty {
+                    if let productType = extractFleaMarketCategoryFromDescription(task.displayDescription), !productType.isEmpty {
                         Label(productType, systemImage: "tag.fill")
                             .font(AppTypography.caption)
                             .fontWeight(.semibold)
@@ -1375,17 +1375,13 @@ struct TaskHeaderCard: View {
         .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
     }
     
-    /// 从描述中提取最后一个英文单词（作为跳蚤市场商品的商品类型/分类）
-    private func extractLastEnglishWord(from text: String) -> String? {
-        let pattern = "[a-zA-Z]+"
-        let regex = try? NSRegularExpression(pattern: pattern, options: [])
-        let nsString = text as NSString
-        let matches = regex?.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length)) ?? []
-        
-        guard let lastMatch = matches.last, lastMatch.range.location != NSNotFound else {
-            return nil
-        }
-        return nsString.substring(with: lastMatch.range)
+    /// 从描述中按 "Category: {分类}" 提取跳蚤市场商品分类（后端创建任务时在描述末尾追加）
+    private func extractFleaMarketCategoryFromDescription(_ text: String) -> String? {
+        let prefix = "Category: "
+        guard let range = text.range(of: prefix, options: .backwards) else { return nil }
+        let after = String(text[range.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return after.isEmpty ? nil : after
     }
 }
 

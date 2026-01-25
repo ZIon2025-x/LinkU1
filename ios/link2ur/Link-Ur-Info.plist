@@ -53,5 +53,8 @@
 	<!-- 加密合规声明：应用仅使用标准加密算法（HTTPS/TLS、CryptoKit、Keychain），无需出口合规文档 -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Stripe Connect 嵌入式组件（收款账号设置）需要相机拍摄身份证件，缺少此 key 会导致 assertion 闪退 -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app will use the camera to take photos of your ID documents for setting up your payment account.</string>
 </dict>
 </plist>

@@ -434,14 +434,18 @@ struct EnhancedTaskCard: View {
     }
     
     private var userRole: String {
-        // 对于多人任务，需要特殊处理
+        // 对于多人任务，需要特殊处理（按 task_source 与单人语义对齐）
         if task.isMultiParticipant == true {
-            // 多人任务中，用户可能是：
-            // 1. 第一个申请者（originatingUserId）
-            // 2. 参与者（通过 TaskParticipant 表关联，但 posterId 可能为 None）
-            // 3. 任务达人（takerId，创建者）
+            let source = task.taskSource ?? "normal"
+            // 多人任务中，用户可能是：taker(达人/创建者)、申请者、发布者、参与者
             if isTaker {
-                return LocalizationKey.myTasksRoleExpert.localized
+                // taker 按来源：expert_activity 为组织者，expert_service 为达人，flea_market 为卖家，normal 保持任务达人
+                switch source {
+                case "expert_activity": return LocalizationKey.myTasksRoleOrganizer.localized
+                case "expert_service": return LocalizationKey.myTasksRoleExpert.localized
+                case "flea_market": return LocalizationKey.taskDetailSeller.localized
+                default: return LocalizationKey.myTasksRoleExpert.localized
+                }
             } else if isOriginator {
                 return LocalizationKey.myTasksRoleApplicant.localized
             } else if isPoster {
@@ -451,21 +455,33 @@ struct EnhancedTaskCard: View {
                 return LocalizationKey.myTasksRoleParticipant.localized
             }
         } else {
-            // 单人任务：正常的发布者/接受者逻辑
+            // 单人任务：按任务来源使用不同称谓
+            let source = task.taskSource ?? "normal"
             if isPoster {
-                return LocalizationKey.myTasksRolePoster.localized
+                switch source {
+                case "flea_market": return LocalizationKey.taskDetailBuyer.localized
+                case "expert_service": return LocalizationKey.myTasksRoleUser.localized
+                case "expert_activity": return LocalizationKey.myTasksRoleParticipant.localized
+                default: return LocalizationKey.myTasksRolePoster.localized
+                }
             } else if isTaker {
-                return LocalizationKey.myTasksRoleTaker.localized
+                switch source {
+                case "flea_market": return LocalizationKey.taskDetailSeller.localized
+                case "expert_service": return LocalizationKey.myTasksRoleExpert.localized
+                case "expert_activity": return LocalizationKey.myTasksRoleOrganizer.localized
+                default: return LocalizationKey.myTasksRoleTaker.localized
+                }
             }
         }
         return LocalizationKey.myTasksRoleUnknown.localized
     }
     
     private func getRoleIcon() -> String {
-        // 对于多人任务，需要特殊处理
+        // 对于多人任务，需要特殊处理（图标与 task_source 下角色语义一致）
         if task.isMultiParticipant == true {
+            let source = task.taskSource ?? "normal"
             if isTaker {
-                return "star.fill"  // 任务达人
+                return (source == "expert_activity") ? "person.3.fill" : "star.fill"  // 组织者 / 达人
             } else if isOriginator {
                 return "person.badge.plus"  // 申请者
             } else if isPoster {
@@ -548,7 +564,12 @@ struct EnhancedTaskCard: View {
                 }
                 
                 HStack(spacing: 0) {
-                    InfoItemCompact(icon: "tag.fill", text: task.taskType, color: AppColors.warning)
+                    // 跳蚤市场：显示商品分类（从描述 "Category: " 解析），否则 taskType
+                    if task.isFleaMarketTask, let cat = extractFleaMarketCategoryFromDescription(task.displayDescription), !cat.isEmpty {
+                        InfoItemCompact(icon: "bag.fill", text: cat, color: AppColors.warning)
+                    } else {
+                        InfoItemCompact(icon: "tag.fill", text: task.taskType, color: AppColors.warning)
+                    }
                     Spacer()
                     if let deadline = task.deadline {
                         InfoItemCompact(icon: "clock.fill", text: DateFormatterHelper.shared.formatDeadline(deadline), color: AppColors.textSecondary)
@@ -600,6 +621,15 @@ struct EnhancedTaskCard: View {
         default:
             return ""
         }
+    }
+    
+    /// 从描述中按 "Category: {分类}" 提取跳蚤市场商品分类（后端创建任务时在描述末尾追加）
+    private func extractFleaMarketCategoryFromDescription(_ text: String) -> String? {
+        let prefix = "Category: "
+        guard let range = text.range(of: prefix, options: .backwards) else { return nil }
+        let after = String(text[range.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return after.isEmpty ? nil : after
     }
 }
 

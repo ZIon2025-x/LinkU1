@@ -2123,12 +2123,11 @@ def complete_task(
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=content_zh,  # 中文内容
-            content_en=content_en,  # 英文内容
+            content=content_zh,  # 中文内容（英文存于 meta.content_en 供客户端本地化）
             task_id=task_id,
             message_type="system",
             conversation_type="task",
-            meta=json.dumps({"system_action": "task_completed_by_taker"}),
+            meta=json.dumps({"system_action": "task_completed_by_taker", "content_en": content_en}),
             created_at=get_utc_time()
         )
         db.add(system_message)
@@ -2231,12 +2230,11 @@ def create_task_dispute(
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=content_zh,  # 中文内容
-            content_en=content_en,  # 英文内容
+            content=content_zh,  # 中文内容（英文存于 meta.content_en 供客户端本地化）
             task_id=task_id,
             message_type="system",
             conversation_type="task",
-            meta=json.dumps({"system_action": "task_dispute_created", "dispute_id": dispute.id}),
+            meta=json.dumps({"system_action": "task_dispute_created", "dispute_id": dispute.id, "content_en": content_en}),
             created_at=get_utc_time()
         )
         db.add(system_message)
@@ -2595,12 +2593,11 @@ def confirm_task_completion(
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
-            content=content_zh,  # 中文内容
-            content_en=content_en,  # 英文内容
+            content=content_zh,  # 中文内容（英文存于 meta.content_en 供客户端本地化）
             task_id=task_id,
             message_type="system",
             conversation_type="task",
-            meta=json.dumps({"system_action": "task_confirmed_by_poster"}),
+            meta=json.dumps({"system_action": "task_confirmed_by_poster", "content_en": content_en}),
             created_at=get_utc_time()
         )
         db.add(system_message)

@@ -22,6 +22,7 @@
 "common.next" = "下一步";
 "common.finish" = "完成";
 "common.done" = "完成";
+"common.notice" = "提示";
 "common.share" = "分享";
 "common.more" = "更多";
 "common.view_all" = "查看全部";
@@ -548,6 +549,8 @@
 "notification.agree" = "同意";
 "notification.reject" = "拒絕";
 "notification.expired" = "已過期";
+"notification.new_message" = "新消息";
+"notification.sending" = "發送中...";
 
 // MARK: - Customer Service (Extended)
 "customer_service.queue_position" = "排隊位置: 第 %d 位";
@@ -910,6 +913,8 @@
 "my_tasks.role.expert" = "任務達人";
 "my_tasks.role.applicant" = "申請者";
 "my_tasks.role.participant" = "參與者";
+"my_tasks.role.user" = "用戶";
+"my_tasks.role.organizer" = "組織者";
 "my_tasks.role.unknown" = "未知";
 "task_status.open" = "開放中";
 "task_status.in_progress" = "進行中";

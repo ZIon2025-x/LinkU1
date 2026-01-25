@@ -30,6 +30,7 @@
 "common.next" = "下一步";
 "common.finish" = "完成";
 "common.done" = "完成";
+"common.notice" = "提示";
 "common.share" = "分享";
 "common.more" = "更多";
 "common.view_all" = "查看全部";
@@ -765,6 +766,8 @@
 "notification.no_task_chat_message" = "还没有任务相关的聊天记录";
 "notification.no_messages" = "还没有消息";
 "notification.start_conversation" = "开始对话吧！";
+"notification.new_message" = "新消息";
+"notification.sending" = "发送中...";
 "notification.view_details" = "查看详情";
 "notification.image" = "图片";
 "notification.task_detail" = "任务详情";
@@ -1379,6 +1382,8 @@
 "my_tasks.role.expert" = "任务达人";
 "my_tasks.role.applicant" = "申请者";
 "my_tasks.role.participant" = "参与者";
+"my_tasks.role.user" = "用户";
+"my_tasks.role.organizer" = "组织者";
 "my_tasks.role.unknown" = "未知";
 "task_status.open" = "开放中";
 "task_status.in_progress" = "进行中";

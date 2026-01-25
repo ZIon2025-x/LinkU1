@@ -71,6 +71,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // WXApi.registerApp("YOUR_WECHAT_APPID", universalLink: "https://yourdomain.com/wechat/")
         #endif
         
+        // 强制 TabBar 使用不透明背景，避免从详情页返回或某些操作后整行背景消失、变透明
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor.systemBackground
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+
         return true
     }
     

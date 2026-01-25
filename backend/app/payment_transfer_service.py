@@ -522,6 +522,8 @@ def process_pending_transfers(db: Session) -> Dict[str, Any]:
                     from app.transaction_utils import safe_commit
                     if not safe_commit(db, f"更新转账记录异常状态 transfer_record_id={transfer_record.id}"):
                         logger.error(f"更新转账记录异常状态失败: transfer_record_id={transfer_record.id}")
+                except Exception as inner_e:
+                    logger.error(f"更新转账记录异常状态时发生错误: transfer_record_id={transfer_record.id}, error={inner_e}")
         
         logger.info(f"✅ 转账处理完成: {stats}")
         return stats

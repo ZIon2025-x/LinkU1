@@ -14,21 +14,29 @@ struct TaskChatMessageListView: View {
     @Binding var showNewMessageButton: Bool
     
     /// 滚动动画（用于同步滚动动画，可以是键盘动画或面板动画）
-    /// ✅ 修复：改名为更通用的 scrollAnimation，由外层决定传什么动画
     let scrollAnimation: Animation?
+    
+    /// 是否正在加载（首次加载时在消息区显示 Loading，避免「暂无消息」的误导）
+    let isLoading: Bool
+    
+    /// 下拉刷新回调（聊天内支持下拉重拉消息）
+    let onRefresh: () -> Void
     
     private let bottomAnchorId = TaskChatConstants.bottomAnchorId
     
     var body: some View {
-        // ✅ 修复：用外层 GeometryReader 拿到 ScrollView 可视高度
         GeometryReader { viewportGeo in
-            ScrollViewReader { proxy in
-                ZStack(alignment: .bottomTrailing) {
-                    ScrollView {
-                        LazyVStack(spacing: AppSpacing.sm) {
-                            if messages.isEmpty {
-                                emptyState
-                            } else {
+            if isLoading && messages.isEmpty {
+                LoadingView(message: LocalizationKey.commonLoading.localized)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollViewReader { proxy in
+                    ZStack(alignment: .bottomTrailing) {
+                        ScrollView {
+                            LazyVStack(spacing: AppSpacing.sm) {
+                                if messages.isEmpty {
+                                    emptyState
+                                } else {
                                 // 使用分组渲染逻辑
                                 ForEach(renderItems, id: \.id) { item in
                                     switch item {
@@ -64,11 +72,8 @@ struct TaskChatMessageListView: View {
                     }
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.sm)
-                    
-                    // ✅ 修复：移除列表内容的 bottom padding
-                    // 消息列表的可视区域只由 TaskChatView 的 .safeAreaInset(edge: .bottom) 决定
-                    // 这样点击输入框时不会再出现"先到键盘上方、再到输入框上方"的第二步
                     }
+                    .refreshable { onRefresh() }
                     .coordinateSpace(name: "task_chat_scroll")
                     .scrollContentBackground(.hidden)
                     .scrollDismissesKeyboard(.interactively) // ✅ 对标 WhatsApp：拖动列表收起键盘
@@ -104,7 +109,7 @@ struct TaskChatMessageListView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.down.circle.fill")
                                     .font(.system(size: 16, weight: .semibold))
-                                Text("新消息")
+                                Text(LocalizationKey.notificationNewMessage.localized)
                                     .font(AppTypography.caption)
                                     .fontWeight(.medium)
                             }
@@ -130,10 +135,9 @@ struct TaskChatMessageListView: View {
                 .onPreferenceChange(BottomAnchorMaxYPreferenceKey.self) { bottomMaxY in
                     let threshold: CGFloat = 200
                     let viewportHeight = viewportGeo.size.height
-                    // bottomMaxY <= viewportHeight 代表底部锚点已经进入可视区域底部
-                    // +threshold 代表"接近底部"的缓冲区
                     isNearBottom = bottomMaxY <= (viewportHeight + threshold)
                 }
+            }
             }
         }
     }

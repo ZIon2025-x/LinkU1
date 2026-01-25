@@ -185,7 +185,7 @@ struct TaskChatView: View {
                         Button {
                             showTaskDetail = true
                         } label: {
-                            Label("任务详情", systemImage: "doc.text")
+                            Label(LocalizationKey.notificationTaskDetail.localized, systemImage: "doc.text")
                         }
                         
                         Divider()
@@ -193,7 +193,7 @@ struct TaskChatView: View {
                         Button {
                             showCustomerService = true
                         } label: {
-                            Label("需要帮助", systemImage: "questionmark.circle")
+                            Label(LocalizationKey.infoNeedHelp.localized, systemImage: "questionmark.circle")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -205,6 +205,14 @@ struct TaskChatView: View {
                     .menuStyle(.automatic)
                     .menuIndicator(.hidden)
                 }
+            }
+            .alert(LocalizationKey.commonNotice.localized, isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )) {
+                Button(LocalizationKey.commonOk.localized) { viewModel.errorMessage = nil }
+            } message: {
+                if let msg = viewModel.errorMessage { Text(msg) }
             }
     }
     
@@ -232,22 +240,25 @@ struct TaskChatView: View {
         TaskChatMessageListView(
             messages: viewModel.messages,
             currentUserId: getCurrentUserId(),
-            bottomInset: inputAreaHeight, // ✅ 按照文档：始终使用输入区真实高度，不涉及 keyboardHeight
+            bottomInset: inputAreaHeight,
             scrollToBottomTrigger: $scrollToBottomTrigger,
             isNearBottom: $isNearBottom,
             showNewMessageButton: $showNewMessageButton,
             scrollAnimation: {
-                // ✅ 修复：统一滚动动画 - 键盘场景用键盘动画，面板场景用面板动画（fallback spring）
-                // 这样面板展开时的滚动动画也能和面板动画同频，更像 WhatsApp
                 if keyboardObserver.keyboardHeight > 0 {
                     return keyboardObserver.keyboardAnimation
                 } else if showActionMenu {
-                    // 面板展开时，使用与面板相同的 spring 动画
                     return Animation.spring(response: 0.28, dampingFraction: 0.86)
                 } else {
                     return nil
                 }
-            }()
+            }(),
+            isLoading: viewModel.isLoading,
+            onRefresh: {
+                if let uid = getCurrentUserId() {
+                    viewModel.loadMessages(currentUserId: uid)
+                }
+            }
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -348,6 +359,7 @@ struct TaskChatView: View {
         
         viewModel.sendMessage(content: trimmed) { success in
             if success {
+                HapticFeedback.success()
                 requestScrollToBottom()
             } else {
                 // 失败时恢复文本

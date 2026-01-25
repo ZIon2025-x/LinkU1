@@ -192,6 +192,8 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
     // 多人任务字段
     let isMultiParticipant: Bool?
     let expertCreatorId: String?
+    /// 任务来源：normal、expert_service、expert_activity、flea_market
+    let taskSource: String?
     
     enum CodingKeys: String, CodingKey {
         case id, title, status, images
@@ -206,6 +208,7 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
         case taskStatus = "task_status"
         case isMultiParticipant = "is_multi_participant"
         case expertCreatorId = "expert_creator_id"
+        case taskSource = "task_source"
     }
     
     // 自定义解码，如果 last_message_time 不存在，从 last_message.created_at 提取
@@ -238,6 +241,7 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
         
         isMultiParticipant = try container.decodeIfPresent(Bool.self, forKey: .isMultiParticipant)
         expertCreatorId = try container.decodeIfPresent(String.self, forKey: .expertCreatorId)
+        taskSource = try container.decodeIfPresent(String.self, forKey: .taskSource)
         
         // 先解码 lastMessage
         lastMessage = try container.decodeIfPresent(LastMessage.self, forKey: .lastMessage)
@@ -255,6 +259,26 @@ struct TaskChatItem: Codable, Identifiable, Equatable {
             // 如果解码失败，从 last_message.created_at 提取
             lastMessageTime = lastMessage?.createdAt
         }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(titleEn, forKey: .titleEn)
+        try container.encodeIfPresent(titleZh, forKey: .titleZh)
+        try container.encodeIfPresent(taskType, forKey: .taskType)
+        try container.encodeIfPresent(posterId, forKey: .posterId)
+        try container.encodeIfPresent(takerId, forKey: .takerId)
+        try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(taskStatus, forKey: .taskStatus)
+        try container.encodeIfPresent(unreadCount, forKey: .unreadCount)
+        try container.encodeIfPresent(lastMessageTime, forKey: .lastMessageTime)
+        try container.encodeIfPresent(lastMessage, forKey: .lastMessage)
+        try container.encodeIfPresent(images, forKey: .images)
+        try container.encodeIfPresent(isMultiParticipant, forKey: .isMultiParticipant)
+        try container.encodeIfPresent(expertCreatorId, forKey: .expertCreatorId)
+        try container.encodeIfPresent(taskSource, forKey: .taskSource)
     }
     
     // 根据当前语言获取显示标题

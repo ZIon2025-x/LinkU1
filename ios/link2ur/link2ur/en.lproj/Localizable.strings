@@ -22,6 +22,7 @@
 "common.next" = "Next";
 "common.finish" = "Finish";
 "common.done" = "Done";
+"common.notice" = "Notice";
 "common.share" = "Share";
 "common.more" = "More";
 "common.view_all" = "View All";
@@ -1209,6 +1210,8 @@
 "my_tasks.role.expert" = "Expert";
 "my_tasks.role.applicant" = "Applicant";
 "my_tasks.role.participant" = "Participant";
+"my_tasks.role.user" = "User";
+"my_tasks.role.organizer" = "Organizer";
 "my_tasks.role.unknown" = "Unknown";
 "task_status.open" = "Open";
 "task_status.in_progress" = "In Progress";
@@ -1354,6 +1357,8 @@
 "notification.no_task_chat_message" = "No task-related chat records yet";
 "notification.no_messages" = "No messages yet";
 "notification.start_conversation" = "Start a conversation!";
+"notification.new_message" = "New messages";
+"notification.sending" = "Sending...";
 "notification.view_details" = "View Details";
 "notification.image" = "Image";
 "notification.task_detail" = "Task Detail";

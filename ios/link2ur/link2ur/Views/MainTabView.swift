@@ -11,8 +11,7 @@ public struct MainTabView: View {
     @State private var searchKeyword: String? = nil // 用于搜索快捷指令
     
     public var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: Binding(
+        TabView(selection: Binding(
                 get: { selection },
                 set: { newValue in
                     // 如果点击的是首页 tab
@@ -96,8 +95,7 @@ public struct MainTabView: View {
                     .tag(4)
             }
             .tint(AppColors.primary) // 统一TabBar选中颜色
-            .toolbar(appState.hideTabBar ? .hidden : .visible, for: .tabBar)
-            .animation(.easeInOut(duration: 0.2), value: appState.hideTabBar)
+            .toolbarBackground(Color(UIColor.systemBackground), for: .tabBar) // 加固 TabBar 背景，避免从详情返回等操作后整行背景消失
             .onChange(of: selection) { newValue in
                 if newValue == 2 {
                     // 点击中间➕按钮时，不改变 selection，直接触发创建任务
@@ -144,26 +142,25 @@ public struct MainTabView: View {
                     handleSelectionChange(newValue, oldSelection: oldSelection)
                 }
             }
-        }
-        .sheet(isPresented: $showCreateTask) {
-            CreateTaskView()
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView()
-        }
-        .onChange(of: appState.isAuthenticated) { isAuthenticated in
-            // 登录成功后，如果之前点击的是消息，自动切换到消息页面
-            if isAuthenticated && previousSelection == 3 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    selection = 3
-                    previousSelection = 3
+            .sheet(isPresented: $showCreateTask) {
+                CreateTaskView()
+            }
+            .sheet(isPresented: $showLogin) {
+                LoginView()
+            }
+            .onChange(of: appState.isAuthenticated) { isAuthenticated in
+                // 登录成功后，如果之前点击的是消息，自动切换到消息页面
+                if isAuthenticated && previousSelection == 3 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        selection = 3
+                        previousSelection = 3
+                    }
                 }
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QuickAction"))) { notification in
-            // 处理快捷指令
-            handleQuickAction(notification.object as? String, userInfo: notification.userInfo)
-        }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QuickAction"))) { notification in
+                // 处理快捷指令
+                handleQuickAction(notification.object as? String, userInfo: notification.userInfo)
+            }
     }
     
     // 处理快捷指令

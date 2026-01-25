@@ -25,7 +25,6 @@ public class AppState: ObservableObject {
             updateAppIconBadge()
         }
     }
-    @Published public var hideTabBar: Bool = false // 控制是否隐藏底部 TabBar
     @Published public var isCheckingLoginStatus: Bool = true // 是否正在检查登录状态
     @Published public var userSkippedLogin: Bool = false // 用户是否选择跳过登录
     
@@ -45,10 +44,8 @@ public class AppState: ObservableObject {
     
     public init() {
         setupNotifications()
-        // 延迟检查登录状态，避免阻塞初始化
-        DispatchQueue.main.async { [weak self] in
-            self?.checkLoginStatus()
-        }
+        // 直接检查登录状态：Keychain 读取很快，网络请求异步；尽早设 isAuthenticated 避免用户点需登录功能时误弹登录框
+        checkLoginStatus()
         
         // 初始化时清除 Badge（如果未登录）
         // 登录后会自动更新 Badge
@@ -295,7 +292,9 @@ public class AppState: ObservableObject {
         preloadHomeData()
         
         if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty {
-            // 验证Token有效性并加载用户信息
+            // 有 token 即先视为已登录，避免 /me 返回前或用户跳过加载时点击需登录功能误弹登录框；/me 失败且刷新失败时会在 receiveCompletion 或 APIService 中置为 false
+            isAuthenticated = true
+            // 验证 Token 有效性并加载用户信息
             apiService.request(User.self, "/api/users/profile/me", method: "GET")
                 .sink(receiveCompletion: { [weak self] result in
                     let elapsed = Date().timeIntervalSince(startTime)
