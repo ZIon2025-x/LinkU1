@@ -480,7 +480,7 @@ class TaskOut(TaskBase):
             # 动态计算current_participants：如果是多人任务，只统计有效状态的参与者
             # 有效状态：accepted, in_progress, completed（排除pending, exit_requested, exited, rejected等）
             "current_participants": cls._calculate_current_participants(obj),
-            "task_source": getattr(obj, 'task_source', 'normal'),  # 任务来源：normal、expert_service、expert_activity、flea_market
+            "task_source": getattr(obj, 'task_source', None) or 'normal',  # 任务来源：normal、expert_service、expert_activity、flea_market（如果为None则默认为normal）
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if hasattr(obj, 'time_slot_start_time') and isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if hasattr(obj, 'time_slot_start_time') and obj.time_slot_start_time else None),
             "time_slot_end_time": obj.time_slot_end_time.isoformat() if hasattr(obj, 'time_slot_end_time') and isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if hasattr(obj, 'time_slot_end_time') and obj.time_slot_end_time else None),
             # 从TaskTimeSlotRelation获取时间段信息

@@ -1188,7 +1188,8 @@ def get_task_detail(
         thread = threading.Thread(target=trigger_translations_sync, daemon=True)
         thread.start()
     
-    return task
+    # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
+    return schemas.TaskOut.from_orm(task)
 
 
 @router.get("/recommendations")
