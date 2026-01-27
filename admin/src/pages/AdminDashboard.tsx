@@ -90,6 +90,7 @@ import api, {
   getAdminRefundRequests,
   approveRefundRequest,
   rejectRefundRequest,
+  getTaskDisputeTimeline,
   getCoupons,
   createCoupon,
   updateCoupon,
@@ -276,6 +277,10 @@ const AdminDashboard: React.FC = () => {
   const [disputeAction, setDisputeAction] = useState<'resolve' | 'dismiss'>('resolve');
   const [disputeResolutionNote, setDisputeResolutionNote] = useState('');
   const [processingDispute, setProcessingDispute] = useState(false);
+  // 退款申请争议详情相关状态
+  const [refundDisputeTimeline, setRefundDisputeTimeline] = useState<any>(null);
+  const [showRefundDisputeTimelineModal, setShowRefundDisputeTimelineModal] = useState(false);
+  const [loadingRefundDisputeTimeline, setLoadingRefundDisputeTimeline] = useState(false);
 
   // 信息修改请求审核相关状态
   const [profileUpdateRequests, setProfileUpdateRequests] = useState<any[]>([]);
@@ -4680,7 +4685,8 @@ const AdminDashboard: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>申请ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>任务ID</th>
                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>任务</th>
                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>发布者</th>
                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>退款原因类型</th>
@@ -4695,6 +4701,22 @@ const AdminDashboard: React.FC = () => {
               {refundRequests.map((refund: any) => (
                 <tr key={refund.id} style={{ borderBottom: '1px solid #dee2e6' }}>
                   <td style={{ padding: '12px' }}>{refund.id}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{ 
+                      fontFamily: 'monospace', 
+                      fontWeight: '600', 
+                      color: '#007bff',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      // 可以点击任务ID跳转到任务详情或复制
+                      navigator.clipboard.writeText(String(refund.task_id));
+                      message.success(`任务ID ${refund.task_id} 已复制到剪贴板`);
+                    }}
+                    title="点击复制任务ID">
+                      #{refund.task_id}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {refund.task?.title || `任务 #${refund.task_id}`}
                   </td>
@@ -4748,7 +4770,7 @@ const AdminDashboard: React.FC = () => {
                     {new Date(refund.created_at).toLocaleString('zh-CN')}
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => handleViewRefundRequestDetail(refund)}
                         style={{
@@ -4762,6 +4784,33 @@ const AdminDashboard: React.FC = () => {
                         }}
                       >
                         查看
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setLoadingRefundDisputeTimeline(true);
+                          try {
+                            const timeline = await getTaskDisputeTimeline(refund.task_id);
+                            setRefundDisputeTimeline(timeline);
+                            setShowRefundDisputeTimelineModal(true);
+                          } catch (error: any) {
+                            message.error(getErrorMessage(error));
+                          } finally {
+                            setLoadingRefundDisputeTimeline(false);
+                          }
+                        }}
+                        disabled={loadingRefundDisputeTimeline}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #ffc107',
+                          background: 'white',
+                          color: '#ffc107',
+                          borderRadius: '4px',
+                          cursor: loadingRefundDisputeTimeline ? 'not-allowed' : 'pointer',
+                          fontSize: '12px',
+                          opacity: loadingRefundDisputeTimeline ? 0.6 : 1
+                        }}
+                      >
+                        {loadingRefundDisputeTimeline ? '加载中...' : '争议详情'}
                       </button>
                       {refund.status === 'pending' && (
                         <>
@@ -4998,6 +5047,208 @@ const AdminDashboard: React.FC = () => {
               <strong>创建时间：</strong>
               {new Date(selectedRefundRequest.created_at).toLocaleString('zh-CN')}
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 退款申请争议详情弹窗 */}
+      {showRefundDisputeTimelineModal && refundDisputeTimeline && (
+        <Modal
+          title={`争议详情 - 任务 #${refundDisputeTimeline.task_id}`}
+          open={showRefundDisputeTimelineModal}
+          onCancel={() => {
+            setShowRefundDisputeTimelineModal(false);
+            setRefundDisputeTimeline(null);
+          }}
+          footer={null}
+          width={900}
+        >
+          <div style={{ padding: '20px', maxHeight: '70vh', overflow: 'auto' }}>
+            <div style={{ marginBottom: '20px', padding: '12px', background: '#f3f4f6', borderRadius: '8px' }}>
+              <strong>任务标题：</strong> {refundDisputeTimeline.task_title}
+            </div>
+
+            {refundDisputeTimeline.timeline && refundDisputeTimeline.timeline.length > 0 ? (
+              <div style={{ position: 'relative' }}>
+                {refundDisputeTimeline.timeline.map((item: any, index: number) => {
+                  const isLast = index === refundDisputeTimeline.timeline.length - 1;
+                  const actorColor = item.actor === 'poster' ? '#3b82f6' : 
+                                    item.actor === 'taker' ? '#10b981' : '#f59e0b';
+                  const actorName = item.actor === 'poster' ? '发布者' : 
+                                   item.actor === 'taker' ? '接单者' : 
+                                   (item.reviewer_name || item.resolver_name || '管理员');
+                  
+                  const iconMap: { [key: string]: string } = {
+                    'task_completed': '✅',
+                    'task_confirmed': '✓',
+                    'refund_request': '↩️',
+                    'rebuttal': '💬',
+                    'admin_review': '⚖️',
+                    'dispute': '⚠️',
+                    'dispute_resolution': '🔨'
+                  };
+                  
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      marginBottom: isLast ? 0 : '20px'
+                    }}>
+                      {/* 时间线指示器 */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        marginRight: '16px',
+                        width: '32px'
+                      }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: actorColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '16px',
+                          fontWeight: 'bold'
+                        }}>
+                          {iconMap[item.type] || '•'}
+                        </div>
+                        {!isLast && (
+                          <div style={{
+                            width: '2px',
+                            flex: 1,
+                            background: '#e5e7eb',
+                            marginTop: '8px'
+                          }} />
+                        )}
+                      </div>
+                      
+                      {/* 内容 */}
+                      <div style={{
+                        flex: 1,
+                        padding: '16px',
+                        background: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        marginBottom: isLast ? 0 : '20px'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              color: '#333',
+                              marginBottom: '4px'
+                            }}>
+                              {item.title}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: actorColor,
+                              fontWeight: '500'
+                            }}>
+                              {actorName}
+                            </div>
+                          </div>
+                          {item.timestamp && (
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#999'
+                            }}>
+                              {new Date(item.timestamp).toLocaleString('zh-CN')}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#666',
+                          lineHeight: '1.6',
+                          marginBottom: '8px'
+                        }}>
+                          {item.description}
+                        </div>
+                        
+                        {/* 显示状态 */}
+                        {item.status && (
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            marginBottom: '8px',
+                            background: item.status === 'pending' ? '#fff3cd' :
+                                       item.status === 'approved' || item.status === 'completed' || item.status === 'resolved' ? '#d4edda' :
+                                       item.status === 'rejected' || item.status === 'cancelled' || item.status === 'dismissed' ? '#f8d7da' : '#e5e7eb',
+                            color: item.status === 'pending' ? '#856404' :
+                                  item.status === 'approved' || item.status === 'completed' || item.status === 'resolved' ? '#155724' :
+                                  item.status === 'rejected' || item.status === 'cancelled' || item.status === 'dismissed' ? '#721c24' : '#666'
+                          }}>
+                            {item.status === 'pending' ? '待审核' :
+                             item.status === 'approved' ? '已批准' :
+                             item.status === 'rejected' ? '已拒绝' :
+                             item.status === 'completed' ? '已完成' :
+                             item.status === 'cancelled' ? '已取消' :
+                             item.status === 'resolved' ? '已解决' :
+                             item.status === 'dismissed' ? '已驳回' :
+                             item.status}
+                          </div>
+                        )}
+                        
+                        {/* 显示证据 */}
+                        {item.evidence && item.evidence.length > 0 && (
+                          <div style={{
+                            marginTop: '12px',
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {item.evidence.map((evidence: any, idx: number) => (
+                              <div key={idx} style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid #e5e7eb',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => window.open(evidence.url, '_blank')}
+                              title="点击查看大图">
+                                <LazyImage
+                                  src={evidence.url}
+                                  alt={`证据 ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#999'
+              }}>
+                暂无争议记录
+              </div>
+            )}
           </div>
         </Modal>
       )}

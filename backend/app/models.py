@@ -360,6 +360,10 @@ class RefundRequest(Base):
     refund_transfer_id = Column(String(255), nullable=True)  # 反向转账ID（如果已转账需要撤销）
     processed_at = Column(DateTime(timezone=True), nullable=True)  # 退款处理时间
     completed_at = Column(DateTime(timezone=True), nullable=True)  # 退款完成时间
+    rebuttal_text = Column(Text, nullable=True)  # 接单者反驳文字说明
+    rebuttal_evidence_files = Column(Text, nullable=True)  # 接单者反驳证据文件ID列表（JSON数组）
+    rebuttal_submitted_at = Column(DateTime(timezone=True), nullable=True)  # 反驳提交时间
+    rebuttal_submitted_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 提交反驳的接单者ID
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -367,6 +371,7 @@ class RefundRequest(Base):
     task = relationship("Task", backref="refund_requests")
     poster = relationship("User", foreign_keys=[poster_id])
     reviewer = relationship("User", foreign_keys=[reviewed_by])
+    rebuttal_submitter = relationship("User", foreign_keys=[rebuttal_submitted_by])
     
     __table_args__ = (
         Index("ix_refund_requests_task_id", task_id),

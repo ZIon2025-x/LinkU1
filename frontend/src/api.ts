@@ -999,10 +999,16 @@ export async function getMyTasks() {
 }
 
 // 完成任务
-export async function completeTask(taskId: number, evidenceImages?: string[]) {
-  const res = await api.post(`/api/users/tasks/${taskId}/complete`, {
-    evidence_images: evidenceImages || []
-  });
+export async function completeTask(taskId: number, evidenceImages?: string[], evidenceText?: string | null) {
+  const body: any = {};
+  if (evidenceImages && evidenceImages.length > 0) {
+    body.evidence_images = evidenceImages;
+  }
+  if (evidenceText && evidenceText.trim()) {
+    body.evidence_text = evidenceText.trim();
+  }
+  // 如果没有证据，发送空body
+  const res = await api.post(`/api/tasks/${taskId}/complete`, Object.keys(body).length > 0 ? body : {});
   return res.data;
 }
 
@@ -1060,6 +1066,24 @@ export async function getRefundHistory(taskId: number) {
 
 export async function cancelRefundRequest(taskId: number, refundId: number) {
   const response = await api.post(`/api/tasks/${taskId}/refund-request/${refundId}/cancel`);
+  return response.data;
+}
+
+export async function submitRefundRebuttal(
+  taskId: number,
+  refundId: number,
+  rebuttalText: string,
+  evidenceFiles?: string[]
+) {
+  const response = await api.post(`/api/tasks/${taskId}/refund-request/${refundId}/rebuttal`, {
+    rebuttal_text: rebuttalText,
+    evidence_files: evidenceFiles
+  });
+  return response.data;
+}
+
+export async function getTaskDisputeTimeline(taskId: number) {
+  const response = await api.get(`/api/tasks/${taskId}/dispute-timeline`);
   return response.data;
 }
 

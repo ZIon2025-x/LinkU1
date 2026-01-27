@@ -1213,6 +1213,13 @@ export async function getAdminCustomerServiceChatMessages() {
   return res.data;
 }
 
+// ==================== 争议详情 API ====================
+
+export async function getTaskDisputeTimeline(taskId: number) {
+  const res = await api.get(`/api/tasks/${taskId}/dispute-timeline`);
+  return res.data;
+}
+
 export async function sendAdminCustomerServiceChatMessage(content: string) {
   const res = await api.post('/api/admin/customer-service-chat', { content });
   return res.data;

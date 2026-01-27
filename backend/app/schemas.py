@@ -733,6 +733,10 @@ class RefundRequestOut(BaseModel):
     refund_transfer_id: Optional[str] = None
     processed_at: Optional[datetime.datetime] = None
     completed_at: Optional[datetime.datetime] = None
+    rebuttal_text: Optional[str] = None  # 接单者反驳文字说明
+    rebuttal_evidence_files: Optional[List[str]] = None  # 接单者反驳证据文件ID列表
+    rebuttal_submitted_at: Optional[datetime.datetime] = None  # 反驳提交时间
+    rebuttal_submitted_by: Optional[str] = None  # 提交反驳的接单者ID
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
@@ -749,6 +753,12 @@ class RefundRequestApprove(BaseModel):
 class RefundRequestReject(BaseModel):
     """拒绝退款申请"""
     admin_comment: str = Field(..., min_length=1, max_length=2000, description="拒绝理由")
+
+
+class RefundRequestRebuttal(BaseModel):
+    """接单者反驳退款申请"""
+    rebuttal_text: str = Field(..., min_length=10, max_length=2000, description="反驳文字说明（至少10个字符）")
+    evidence_files: Optional[List[str]] = Field(None, description="完成证据文件ID列表（最多5个）")
 
 
 class PartialTransferRequest(BaseModel):

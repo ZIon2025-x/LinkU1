@@ -90,6 +90,68 @@ def send_refund_request_notification_to_admin(
     background_tasks.add_task(_send_notifications)
 
 
+def send_refund_rebuttal_notification_to_admin(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    task: models.Task,
+    refund_request: models.RefundRequest,
+    taker: models.User
+):
+    """发送退款申请反驳通知给管理员（后台任务）"""
+    def _send_notifications():
+        """实际发送通知的函数（在后台任务中执行）"""
+        try:
+            # 创建新的数据库会话（后台任务需要独立的会话）
+            from app.database import SessionLocal
+            db_session = SessionLocal()
+            try:
+                # 获取所有管理员用户（通过 admin_users 表）
+                from app.models import AdminUser
+                admins = db_session.query(AdminUser).filter(AdminUser.is_active == True).all()
+                
+                if not admins:
+                    logger.warning("没有找到活跃的管理员用户")
+                    return
+                
+                # 构建通知内容
+                taker_name = taker.name or f"用户{taker.id}"
+                notification_content = (
+                    f"任务「{task.title}」（ID: {task.id}）的接单者 {taker_name} "
+                    f"提交了反驳证据。\n"
+                    f"反驳说明: {refund_request.rebuttal_text[:200] if refund_request.rebuttal_text else '无'}"
+                )
+                
+                # 为每个管理员创建通知
+                for admin in admins:
+                    try:
+                        crud.create_notification(
+                            db=db_session,
+                            user_id=admin.id,
+                            type="refund_rebuttal",
+                            title="收到反驳证据",
+                            content=notification_content,
+                            related_id=str(refund_request.id),
+                            auto_commit=False
+                        )
+                    except Exception as e:
+                        logger.error(f"为管理员 {admin.id} 创建反驳通知失败: {e}")
+                
+                db_session.commit()
+                logger.info(f"✅ 已为所有管理员发送反驳通知（refund_request_id={refund_request.id}）")
+                
+            except Exception as e:
+                logger.error(f"发送反驳通知时发生错误: {e}", exc_info=True)
+                db_session.rollback()
+            finally:
+                db_session.close()
+        
+        except Exception as e:
+            logger.error(f"反驳通知后台任务执行失败: {e}", exc_info=True)
+    
+    # 添加到后台任务
+    background_tasks.add_task(_send_notifications)
+
+
 def send_dispute_notification_to_admin(
     db: Session,
     background_tasks: BackgroundTasks,

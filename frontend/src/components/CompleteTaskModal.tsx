@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Modal, Upload, Button, Progress, message, Typography, Space } from 'antd';
+import { Modal, Upload, Button, Progress, message, Typography, Space, Input } from 'antd';
+
+const { TextArea } = Input;
 import { UploadOutlined, DeleteOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { compressImage } from '../utils/imageCompression';
@@ -31,6 +33,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [errors, setErrors] = useState<string[]>([]);
   const [sizeErrors, setSizeErrors] = useState<string[]>([]);
+  const [evidenceText, setEvidenceText] = useState<string>('');
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
   // 处理文件选择
@@ -197,11 +200,20 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
   // 提交完成任务
   const handleSubmit = useCallback(async () => {
-    if (fileList.length === 0) {
-      // 没有图片，直接提交
+    // 确认对话框
+    const confirmMessage = language === 'zh'
+      ? '确定任务已完成吗？提交后将等待发布者确认。'
+      : 'Are you sure the task is completed? It will wait for the poster to confirm.';
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    if (fileList.length === 0 && (!evidenceText || !evidenceText.trim())) {
+      // 没有图片和文字，直接提交
       try {
         setUploading(true);
-        await completeTask(taskId, []);
+        await completeTask(taskId, [], null);
         message.success(
           language === 'zh'
             ? '任务已标记为完成'
@@ -301,7 +313,8 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
     // 提交完成任务
     try {
-      await completeTask(taskId, uploadedUrls);
+      const finalEvidenceText = evidenceText && evidenceText.trim() ? evidenceText.trim() : null;
+      await completeTask(taskId, uploadedUrls.length > 0 ? uploadedUrls : [], finalEvidenceText);
       message.success(
         language === 'zh'
           ? '任务已标记为完成'
@@ -315,7 +328,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
     } finally {
       setUploading(false);
     }
-  }, [fileList, taskId, language, uploadImage, getDetailedErrorMessage, onSuccess]);
+  }, [fileList, taskId, evidenceText, language, uploadImage, getDetailedErrorMessage, onSuccess]);
 
   // 取消
   const handleCancel = useCallback(() => {
@@ -327,6 +340,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
     setErrors([]);
     setSizeErrors([]);
     setUploadProgress({ current: 0, total: 0 });
+    setEvidenceText('');
     onCancel();
   }, [onCancel]);
 
@@ -374,9 +388,27 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
         <div>
           <Text>
             {language === 'zh'
-              ? '您已完成此任务。请上传相关证据图片（可选），以便发布者确认任务完成情况。'
-              : 'You have completed this task. Please upload relevant evidence images (optional) for the poster to confirm task completion.'}
+              ? '您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。'
+              : 'You have completed this task. Please upload relevant evidence images or provide text description (optional) for the poster to confirm task completion.'}
           </Text>
+        </div>
+
+        {/* 文字证据输入 */}
+        <div>
+          <Text strong style={{ marginBottom: '8px', display: 'block' }}>
+            {language === 'zh' ? '文字说明（可选）' : 'Text Description (Optional)'}
+          </Text>
+          <TextArea
+            value={evidenceText}
+            onChange={(e) => setEvidenceText(e.target.value)}
+            placeholder={language === 'zh' 
+              ? '请描述任务完成情况，例如：已完成所有要求，质量符合预期...'
+              : 'Please describe the task completion, e.g., All requirements completed, quality meets expectations...'}
+            rows={4}
+            maxLength={500}
+            showCount
+            style={{ resize: 'none' }}
+          />
         </div>
 
         {/* 图片大小限制提示 */}

@@ -324,10 +324,13 @@ extension APIService {
     // 注意：acceptApplication 方法已移至 APIService+Chat.swift，这里不再重复定义
     
     /// 完成任务 (执行者)
-    func completeTask(taskId: Int, evidenceImages: [String]? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+    func completeTask(taskId: Int, evidenceImages: [String]? = nil, evidenceText: String? = nil) -> AnyPublisher<EmptyResponse, APIError> {
         var body: [String: Any] = [:]
         if let evidenceImages = evidenceImages, !evidenceImages.isEmpty {
             body["evidence_images"] = evidenceImages
+        }
+        if let evidenceText = evidenceText, !evidenceText.trimmingCharacters(in: .whitespaces).isEmpty {
+            body["evidence_text"] = evidenceText.trimmingCharacters(in: .whitespaces)
         }
         return request(EmptyResponse.self, APIEndpoints.Users.taskComplete(taskId), method: "POST", body: body.isEmpty ? nil : body)
     }
@@ -392,6 +395,28 @@ extension APIService {
     /// 撤销退款申请
     func cancelRefundRequest(taskId: Int, refundId: Int) -> AnyPublisher<RefundRequest, APIError> {
         return request(RefundRequest.self, APIEndpoints.Tasks.cancelRefundRequest(taskId, refundId), method: "POST")
+    }
+    
+    /// 提交退款申请反驳
+    func submitRefundRebuttal(
+        taskId: Int,
+        refundId: Int,
+        rebuttalText: String,
+        evidenceFiles: [String]? = nil
+    ) -> AnyPublisher<RefundRequest, APIError> {
+        let body = RefundRequestRebuttal(
+            rebuttalText: rebuttalText,
+            evidenceFiles: evidenceFiles
+        )
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
+            return Fail(error: APIError.unknown).eraseToAnyPublisher()
+        }
+        return request(RefundRequest.self, APIEndpoints.Tasks.submitRefundRebuttal(taskId, refundId), method: "POST", body: bodyDict)
+    }
+    
+    /// 获取任务争议时间线
+    func getTaskDisputeTimeline(taskId: Int) -> AnyPublisher<DisputeTimelineResponse, APIError> {
+        return request(DisputeTimelineResponse.self, APIEndpoints.Tasks.disputeTimeline(taskId))
     }
     
     /// 取消任务

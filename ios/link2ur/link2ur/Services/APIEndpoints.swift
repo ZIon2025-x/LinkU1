@@ -63,7 +63,7 @@ enum APIEndpoints {
         }
         static let customerServiceQueueStatus = "/api/users/user/customer-service/queue-status"
         static func taskComplete(_ taskId: Int) -> String {
-            "/api/users/tasks/\(taskId)/complete"
+            "/api/tasks/\(taskId)/complete"
         }
         static let myServiceApplications = "/api/users/me/service-applications"
         static let deleteAccount = "/api/users/account"
@@ -113,6 +113,12 @@ enum APIEndpoints {
         }
         static func cancelRefundRequest(_ taskId: Int, _ refundId: Int) -> String {
             "/api/tasks/\(taskId)/refund-request/\(refundId)/cancel"
+        }
+        static func submitRefundRebuttal(_ taskId: Int, _ refundId: Int) -> String {
+            "/api/tasks/\(taskId)/refund-request/\(refundId)/rebuttal"
+        }
+        static func disputeTimeline(_ taskId: Int) -> String {
+            "/api/tasks/\(taskId)/dispute-timeline"
         }
         static func participants(_ id: String) -> String {
             "/api/tasks/\(id)/participants"

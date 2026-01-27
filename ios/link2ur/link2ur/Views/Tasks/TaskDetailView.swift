@@ -38,7 +38,9 @@ struct TaskDetailView: View {
     @State private var showConfirmCompletionSheet = false // 显示确认完成页面
     @State private var showRefundRequestSheet = false // 显示退款申请页面
     @State private var showRefundHistorySheet = false // 显示退款历史记录页面
+    @State private var showRefundRebuttalSheet = false // 显示反驳页面
     @State private var showCancelRefundConfirm = false // 显示撤销退款确认对话框
+    @State private var showDisputeTimeline = false // 显示争议详情页面
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
@@ -236,6 +238,12 @@ struct TaskDetailView: View {
             .sheet(isPresented: $showRefundHistorySheet) {
                 refundHistorySheet
             }
+            .sheet(isPresented: $showRefundRebuttalSheet) {
+                refundRebuttalSheet
+            }
+            .sheet(isPresented: $showDisputeTimeline) {
+                disputeTimelineView
+            }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
             } message: {
@@ -299,6 +307,17 @@ struct TaskDetailView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             Menu {
+                // 如果有争议或退款申请，显示争议详情按钮
+                if hasDisputeOrRefund {
+                    Button {
+                        showDisputeTimeline = true
+                    } label: {
+                        Label("争议详情", systemImage: "clock.arrow.circlepath")
+                    }
+                    
+                    Divider()
+                }
+                
                 Button {
                     showShareSheet = true
                 } label: {
@@ -314,6 +333,22 @@ struct TaskDetailView: View {
             .menuStyle(.automatic)
             .menuIndicator(.hidden)
         }
+    }
+    
+    // 判断是否有争议或退款申请
+    // 注意：由于争议信息需要通过API获取，这里简化逻辑
+    // 只要有退款申请就显示按钮，或者任务状态为pending_confirmation也可能有争议
+    private var hasDisputeOrRefund: Bool {
+        // 检查是否有退款申请
+        if viewModel.refundRequest != nil {
+            return true
+        }
+        // 如果任务状态为pending_confirmation，也可能有争议（即使还没有退款申请）
+        // 让用户能够查看完整的时间线
+        if let task = viewModel.task, task.status == .pendingConfirmation {
+            return true
+        }
+        return false
     }
     
     @ViewBuilder
@@ -438,8 +473,12 @@ struct TaskDetailView: View {
             CompleteTaskSheet(
                 taskId: taskId,
                 task: task,
-                onComplete: { evidenceImageUrls in
-                    viewModel.completeTask(taskId: taskId, evidenceImages: evidenceImageUrls.isEmpty ? nil : evidenceImageUrls) { success in
+                onComplete: { evidenceImageUrls, evidenceText in
+                    viewModel.completeTask(
+                        taskId: taskId, 
+                        evidenceImages: evidenceImageUrls.isEmpty ? nil : evidenceImageUrls,
+                        evidenceText: evidenceText?.trimmingCharacters(in: .whitespaces).isEmpty == false ? evidenceText?.trimmingCharacters(in: .whitespaces) : nil
+                    ) { success in
                         if success {
                             showCompleteTaskSheet = false
                             viewModel.loadTask(taskId: taskId)
@@ -1815,8 +1854,22 @@ struct TaskActionButtonsView: View {
                     VStack(spacing: AppSpacing.sm) {
                         RefundRequestStatusCard(refundRequest: refundRequest)
                         
-                        // 撤销按钮（仅在pending状态时显示）
-                        if refundRequest.status == "pending" {
+                        // 如果是接单者且状态为pending且还没有提交反驳，显示提交反驳按钮
+                        if isTaker && refundRequest.status == "pending" && refundRequest.rebuttalText == nil {
+                            Button(action: {
+                                showRefundRebuttalSheet = true
+                            }) {
+                                HStack(spacing: AppSpacing.sm) {
+                                    IconStyle.icon("exclamationmark.bubble.fill", size: 20)
+                                    Text("提交反驳证据")
+                                }
+                            }
+                            .buttonStyle(PrimaryButtonStyle(useGradient: false))
+                            .tint(AppColors.warning)
+                        }
+                        
+                        // 撤销按钮（仅在pending状态时显示，且是发布者）
+                        if isPoster && refundRequest.status == "pending" {
                             HStack(spacing: AppSpacing.sm) {
                                 Button(action: {
                                     // 显示确认对话框
@@ -2285,6 +2338,34 @@ struct RefundRequestStatusCard: View {
                         .font(.system(size: 11))
                         .foregroundColor(AppColors.textTertiary)
                         .padding(.top, 2)
+                }
+                
+                // 显示反驳信息（如果有）
+                if let rebuttalText = refundRequest.rebuttalText, !rebuttalText.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            IconStyle.icon("exclamationmark.bubble.fill", size: 14)
+                            Text("接单者反驳")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundColor(AppColors.warning)
+                        .padding(.top, 4)
+                        
+                        Text(rebuttalText)
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textSecondary)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        if let evidenceFiles = refundRequest.rebuttalEvidenceFiles, !evidenceFiles.isEmpty {
+                            Text("已上传 \(evidenceFiles.count) 个证据文件")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppColors.textTertiary)
+                                .padding(.top, 2)
+                        }
+                    }
+                    .padding(.top, 4)
+                    .padding(.bottom, 2)
                 }
             }
             
@@ -3304,7 +3385,7 @@ struct StarRatingButton: View {
 struct CompleteTaskSheet: View {
     let taskId: Int
     let task: Task
-    let onComplete: ([String]) -> Void
+    let onComplete: ([String], String?) -> Void
     @Environment(\.dismiss) var dismiss
     
     @State private var selectedImages: [UIImage] = []
@@ -3314,6 +3395,7 @@ struct CompleteTaskSheet: View {
     @State private var errorMessage: String?
     @State private var uploadProgress: (current: Int, total: Int) = (0, 0)
     @State private var imageSizeErrors: [String] = []
+    @State private var evidenceText: String = ""
     
     var body: some View {
         NavigationView {
@@ -3334,7 +3416,7 @@ struct CompleteTaskSheet: View {
                                     .foregroundColor(AppColors.textPrimary)
                             }
                             
-                            Text("您已完成此任务。请上传相关证据图片（可选），以便发布者确认任务完成情况。")
+                            Text("您已完成此任务。请上传相关证据图片或填写文字说明（可选），以便发布者确认任务完成情况。")
                                 .font(AppTypography.body)
                                 .foregroundColor(AppColors.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -3344,7 +3426,43 @@ struct CompleteTaskSheet: View {
                         .cornerRadius(AppCornerRadius.large)
                         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
                         
-                        // 2. 证据图片上传
+                        // 2. 文字证据输入
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            SectionHeader(title: "文字说明（可选）", icon: "text.bubble")
+                            
+                            TextEditor(text: $evidenceText)
+                                .frame(minHeight: 100)
+                                .padding(8)
+                                .background(AppColors.background)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(AppColors.separator, lineWidth: 1)
+                                )
+                                .font(AppTypography.body)
+                            
+                            HStack {
+                                Spacer()
+                                Text("\(evidenceText.count)/500")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(evidenceText.count > 500 ? AppColors.error : AppColors.textTertiary)
+                            }
+                            
+                            if evidenceText.count > 500 {
+                                HStack(spacing: 4) {
+                                    IconStyle.icon("exclamationmark.triangle.fill", size: 12)
+                                    Text("文字说明不能超过500字")
+                                        .font(AppTypography.caption)
+                                }
+                                .foregroundColor(AppColors.error)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 3. 证据图片上传
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             HStack {
                                 SectionHeader(title: "证据图片（可选）", icon: "photo.on.rectangle")
@@ -3561,12 +3679,45 @@ struct CompleteTaskSheet: View {
     private func submitCompletion() {
         guard !isUploading else { return }
         
+        // 验证文字长度
+        let trimmedText = evidenceText.trimmingCharacters(in: .whitespaces)
+        if trimmedText.count > 500 {
+            errorMessage = "文字说明不能超过500字"
+            return
+        }
+        
+        // 如果没有图片也没有文字，显示确认对话框
+        if selectedImages.isEmpty && trimmedText.isEmpty {
+            let alert = UIAlertController(
+                title: "确认完成任务",
+                message: "确定任务已完成吗？提交后将等待发布者确认。",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "取消", style: .cancel))
+            alert.addAction(UIAlertAction(title: "确认", style: .default) { [weak self] _ in
+                guard let self = self else { return }
+                self.onComplete([], nil)
+                self.dismiss()
+            })
+            
+            // 获取当前窗口并显示对话框
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                var topController = rootViewController
+                while let presented = topController.presentedViewController {
+                    topController = presented
+                }
+                topController.present(alert, animated: true)
+            }
+            return
+        }
+        
         errorMessage = nil
         imageSizeErrors = []
         
         if selectedImages.isEmpty {
-            // 没有图片，直接提交
-            onComplete([])
+            // 没有图片，只有文字，直接提交
+            onComplete([], trimmedText.isEmpty ? nil : trimmedText)
             dismiss()
             return
         }
@@ -3627,26 +3778,27 @@ struct CompleteTaskSheet: View {
         }
         
         uploadGroup.notify(queue: .main) {
-            isUploading = false
+            self.isUploading = false
             
             if uploadErrors.isEmpty {
                 // 所有图片上传成功，提交完成任务
-                onComplete(uploadedImageUrls)
-                dismiss()
+                let trimmedText = self.evidenceText.trimmingCharacters(in: .whitespaces)
+                self.onComplete(self.uploadedImageUrls, trimmedText.isEmpty ? nil : trimmedText)
+                self.dismiss()
             } else {
                 // 生成详细的错误信息
                 var errorDetails: [String] = []
                 for (error, index) in uploadErrors {
-                    let errorDescription = getDetailedErrorMessage(error)
+                    let errorDescription = self.getDetailedErrorMessage(error)
                     errorDetails.append("第 \(index) 张图片：\(errorDescription)")
                 }
                 
                 if errorDetails.count == validImages.count {
                     // 所有图片都上传失败
-                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                    self.errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
                 } else {
                     // 部分图片上传失败
-                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    self.errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
                 }
             }
         }
@@ -3778,6 +3930,29 @@ extension TaskDetailView {
                 // 关闭 sheet
                 showRefundRequestSheet = false
             }
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+    
+    private var refundRebuttalSheet: some View {
+        Group {
+            if let task = viewModel.task, let refundRequest = viewModel.refundRequest {
+                RefundRebuttalSheet(
+                    taskId: taskId,
+                    refundId: refundRequest.id,
+                    task: task,
+                    onSuccess: {
+                        // 反驳提交成功
+                        HapticFeedback.success()
+                        // 立即强制刷新任务详情和退款状态以获取最新状态
+                        viewModel.loadTask(taskId: taskId, force: true)
+                        viewModel.loadRefundStatus(taskId: taskId)
+                        // 关闭 sheet
+                        showRefundRebuttalSheet = false
+                    }
                 )
             } else {
                 EmptyView()
@@ -4938,6 +5113,757 @@ struct RefundRequestSheet: View {
                 }
             case .serverError(let statusCode, let message):
                 return "服务器错误（\(statusCode)）：\(message)"
+            case .decodingError(let error):
+                return "解析响应失败：\(error.localizedDescription)"
+            case .invalidURL:
+                return "无效的URL"
+            case .invalidResponse:
+                return "服务器响应格式错误"
+            case .unauthorized:
+                return "未授权，请重新登录"
+            case .unknown:
+                return "未知错误，请重试"
+            }
+        }
+        return error.localizedDescription
+    }
+    
+    private var disputeTimelineView: some View {
+        Group {
+            if let task = viewModel.task {
+                DisputeTimelineView(
+                    taskId: taskId,
+                    task: task
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+}
+
+// MARK: - DisputeTimelineView
+struct DisputeTimelineView: View {
+    let taskId: Int
+    let task: Task
+    @Environment(\.dismiss) var dismiss
+    @StateObject private var viewModel = DisputeTimelineViewModel()
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea(.all)
+                
+                if viewModel.isLoading {
+                    LoadingView()
+                } else if let timeline = viewModel.timeline {
+                    ScrollView {
+                        VStack(spacing: AppSpacing.md) {
+                            // 任务标题
+                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                Text("任务争议详情")
+                                    .font(AppTypography.title2)
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                Text(task.displayTitle)
+                                    .font(AppTypography.body)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(AppSpacing.md)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
+                            
+                            // 时间线
+                            if timeline.timeline.isEmpty {
+                                VStack(spacing: AppSpacing.md) {
+                                    IconStyle.icon("clock", size: 50)
+                                        .foregroundColor(AppColors.textTertiary)
+                                    Text("暂无争议记录")
+                                        .font(AppTypography.body)
+                                        .foregroundColor(AppColors.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(AppSpacing.xl)
+                            } else {
+                                VStack(spacing: 0) {
+                                    ForEach(Array(timeline.timeline.enumerated()), id: \.element.id) { index, item in
+                                        TimelineItemView(item: item, isLast: index == timeline.timeline.count - 1)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                    }
+                } else if let error = viewModel.errorMessage {
+                    ErrorStateView(
+                        message: error,
+                        retryAction: {
+                            viewModel.loadTimeline(taskId: taskId)
+                        }
+                    )
+                }
+            }
+            .navigationTitle("争议详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                viewModel.loadTimeline(taskId: taskId)
+            }
+        }
+    }
+}
+
+// MARK: - TimelineItemView
+struct TimelineItemView: View {
+    let item: TimelineItem
+    let isLast: Bool
+    
+    private var actorColor: Color {
+        switch item.actor {
+        case "poster":
+            return AppColors.primary
+        case "taker":
+            return AppColors.success
+        case "admin":
+            return AppColors.warning
+        default:
+            return AppColors.textSecondary
+        }
+    }
+    
+    private var actorName: String {
+        switch item.actor {
+        case "poster":
+            return "发布者"
+        case "taker":
+            return "接单者"
+        case "admin":
+            return item.reviewerName ?? item.resolverName ?? "管理员"
+        default:
+            return "未知"
+        }
+    }
+    
+    private var iconName: String {
+        switch item.type {
+        case "task_completed":
+            return "checkmark.circle.fill"
+        case "task_confirmed":
+            return "checkmark.seal.fill"
+        case "refund_request":
+            return "arrow.uturn.backward.circle.fill"
+        case "rebuttal":
+            return "exclamationmark.bubble.fill"
+        case "admin_review":
+            return "person.badge.shield.checkmark.fill"
+        case "dispute":
+            return "exclamationmark.triangle.fill"
+        case "dispute_resolution":
+            return "gavel.fill"
+        default:
+            return "circle.fill"
+        }
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            // 时间线指示器
+            VStack(spacing: 0) {
+                ZStack {
+                    Circle()
+                        .fill(actorColor)
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: iconName)
+                        .font(.system(size: 16))
+                        .foregroundColor(.white)
+                }
+                
+                if !isLast {
+                    Rectangle()
+                        .fill(AppColors.separator)
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+            }
+            .frame(width: 32)
+            
+            // 内容
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                HStack {
+                    Text(item.title)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Spacer()
+                    
+                    if let timestamp = item.timestamp {
+                        Text(formatTimestamp(timestamp))
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+                
+                Text(actorName)
+                    .font(AppTypography.caption)
+                    .foregroundColor(actorColor)
+                
+                Text(item.description)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                // 显示状态（如果有）
+                if let status = item.status {
+                    HStack {
+                        Text("状态：\(statusText(status))")
+                            .font(AppTypography.caption)
+                            .foregroundColor(statusColor(status))
+                    }
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 4)
+                    .background(statusColor(status).opacity(0.1))
+                    .cornerRadius(AppCornerRadius.small)
+                }
+                
+                // 显示证据（如果有）
+                if let evidence = item.evidence, !evidence.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: AppSpacing.sm) {
+                            ForEach(evidence) { evidenceItem in
+                                if evidenceItem.type == "image" || evidenceItem.type == "file" {
+                                    AsyncImageView(
+                                        urlString: evidenceItem.url,
+                                        placeholder: Image(systemName: "photo"),
+                                        width: 80,
+                                        height: 80,
+                                        contentMode: .fill,
+                                        cornerRadius: AppCornerRadius.small
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(AppSpacing.md)
+            .background(AppColors.cardBackground)
+            .cornerRadius(AppCornerRadius.medium)
+        }
+    }
+    
+    private func formatTimestamp(_ timestamp: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        if let date = formatter.date(from: timestamp) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            displayFormatter.locale = Locale(identifier: "zh_CN")
+            return displayFormatter.string(from: date)
+        }
+        return timestamp
+    }
+    
+    private func statusText(_ status: String) -> String {
+        switch status {
+        case "pending":
+            return "待审核"
+        case "processing":
+            return "处理中"
+        case "approved":
+            return "已批准"
+        case "rejected":
+            return "已拒绝"
+        case "completed":
+            return "已完成"
+        case "cancelled":
+            return "已取消"
+        case "resolved":
+            return "已解决"
+        case "dismissed":
+            return "已驳回"
+        default:
+            return status
+        }
+    }
+    
+    private func statusColor(_ status: String) -> Color {
+        switch status {
+        case "pending":
+            return AppColors.warning
+        case "processing":
+            return AppColors.primary
+        case "approved", "completed", "resolved":
+            return AppColors.success
+        case "rejected", "cancelled", "dismissed":
+            return AppColors.error
+        default:
+            return AppColors.textSecondary
+        }
+    }
+}
+
+// MARK: - DisputeTimelineViewModel
+class DisputeTimelineViewModel: ObservableObject {
+    @Published var timeline: DisputeTimelineResponse?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let apiService: APIService
+    private var cancellables = Set<AnyCancellable>()
+    
+    init(apiService: APIService? = nil) {
+        self.apiService = apiService ?? APIService.shared
+    }
+    
+    func loadTimeline(taskId: Int) {
+        isLoading = true
+        errorMessage = nil
+        
+        apiService.getTaskDisputeTimeline(taskId: taskId)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoading = false
+                if case .failure(let error) = result {
+                    self?.errorMessage = error.localizedDescription
+                }
+            }, receiveValue: { [weak self] timeline in
+                DispatchQueue.main.async {
+                    self?.timeline = timeline
+                }
+            })
+            .store(in: &cancellables)
+    }
+}
+
+// MARK: - RefundRebuttalSheet
+struct RefundRebuttalSheet: View {
+    let taskId: Int
+    let refundId: Int
+    let task: Task
+    let onSuccess: () -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var rebuttalText: String = ""
+    @State private var selectedImages: [UIImage] = []
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isUploading = false
+    @State private var uploadedFileIds: [String] = []
+    @State private var errorMessage: String?
+    @State private var uploadProgress: (current: Int, total: Int) = (0, 0)
+    @State private var imageSizeErrors: [String] = []
+    @State private var isSubmitting = false
+    @State private var cancellables = Set<AnyCancellable>()
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 说明文字
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack(spacing: AppSpacing.sm) {
+                                IconStyle.icon("exclamationmark.bubble.fill", size: 24)
+                                    .foregroundColor(AppColors.warning)
+                                Text("提交反驳证据")
+                                    .font(AppTypography.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                            
+                            Text("请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 反驳文字说明
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            HStack {
+                                Text("反驳说明")
+                                    .font(AppTypography.bodyBold)
+                                    .foregroundColor(AppColors.textPrimary)
+                                Spacer()
+                                Text("\(rebuttalText.count)/2000")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(rebuttalText.count >= 10 ? AppColors.textSecondary : AppColors.error)
+                            }
+                            
+                            TextEditor(text: $rebuttalText)
+                                .frame(minHeight: 120)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.cardBackground)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(rebuttalText.count >= 10 ? AppColors.separator : AppColors.error, lineWidth: 1)
+                                )
+                            
+                            if rebuttalText.count < 10 {
+                                Text("反驳说明至少需要10个字符")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.error)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 3. 证据图片上传
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack {
+                                SectionHeader(title: "完成证据（可选）", icon: "photo.on.rectangle")
+                                Spacer()
+                                Text("\(selectedImages.count)/5")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            
+                            Text("最多上传5张图片或文件，每张不超过5MB")
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                            
+                            // 图片选择器
+                            PhotosPicker(
+                                selection: $selectedItems,
+                                maxSelectionCount: 5 - selectedImages.count,
+                                matching: .images
+                            ) {
+                                HStack {
+                                    IconStyle.icon("plus.circle.fill", size: 20)
+                                    Text("选择图片")
+                                }
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(AppSpacing.md)
+                                .background(AppColors.primaryLight)
+                                .cornerRadius(AppCornerRadius.medium)
+                            }
+                            .disabled(selectedImages.count >= 5 || isUploading || isSubmitting)
+                            .onChange(of: selectedItems) { _ in
+                                handleImageSelection()
+                            }
+                            
+                            // 显示已选择的图片
+                            if !selectedImages.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: AppSpacing.sm) {
+                                        ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                            ZStack(alignment: .topTrailing) {
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(width: 100, height: 100)
+                                                    .clipped()
+                                                    .cornerRadius(AppCornerRadius.small)
+                                                
+                                                Button(action: {
+                                                    selectedImages.remove(at: index)
+                                                }) {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .foregroundColor(.white)
+                                                        .background(Color.black.opacity(0.6))
+                                                        .clipShape(Circle())
+                                                }
+                                                .padding(4)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, AppSpacing.md)
+                                }
+                            }
+                            
+                            // 显示错误信息
+                            if !imageSizeErrors.isEmpty {
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    ForEach(imageSizeErrors, id: \.self) { error in
+                                        Text(error)
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.error)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 4. 提交按钮
+                        Button(action: {
+                            submitRebuttal()
+                        }) {
+                            HStack {
+                                if isSubmitting || isUploading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    IconStyle.icon("paperplane.fill", size: 20)
+                                }
+                                Text(isSubmitting || isUploading ? "提交中..." : "提交反驳")
+                            }
+                            .font(AppTypography.bodyBold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                (rebuttalText.count >= 10 && !isSubmitting && !isUploading) 
+                                ? AppColors.primary 
+                                : AppColors.textTertiary
+                            )
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        .disabled(rebuttalText.count < 10 || isSubmitting || isUploading)
+                        .padding(.horizontal, AppSpacing.md)
+                        
+                        // 5. 错误信息
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .font(AppTypography.caption)
+                                .foregroundColor(AppColors.error)
+                                .padding(.horizontal, AppSpacing.md)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        // 6. 上传进度
+                        if isUploading {
+                            VStack(spacing: AppSpacing.sm) {
+                                ProgressView(value: Double(uploadProgress.current), total: Double(uploadProgress.total))
+                                    .progressViewStyle(LinearProgressViewStyle())
+                                Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            .padding(.horizontal, AppSpacing.md)
+                        }
+                    }
+                    .padding(.vertical, AppSpacing.md)
+                }
+            }
+            .navigationTitle("提交反驳")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            var newSizeErrors: [String] = []
+            let maxImageSize = 5 * 1024 * 1024 // 5MB
+            
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    // 检查图片大小（压缩前）
+                    if data.count > maxImageSize {
+                        let sizeInMB = Double(data.count) / (1024 * 1024)
+                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        continue
+                    }
+                    
+                    if let image = UIImage(data: data) {
+                        // 在主线程更新UI
+                        DispatchQueue.main.async {
+                            if selectedImages.count < 5 {
+                                selectedImages.append(image)
+                            } else {
+                                newSizeErrors.append("最多只能上传 5 张图片")
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 在主线程更新UI
+            DispatchQueue.main.async {
+                imageSizeErrors = newSizeErrors
+                selectedItems = [] // 清空以备下次选择
+            }
+        }
+    }
+    
+    private func submitRebuttal() {
+        guard !isSubmitting && !isUploading else { return }
+        
+        // 验证反驳文字
+        guard rebuttalText.trimmingCharacters(in: .whitespaces).count >= 10 else {
+            errorMessage = "反驳说明至少需要10个字符"
+            return
+        }
+        
+        errorMessage = nil
+        
+        // 如果有图片，先上传图片
+        if !selectedImages.isEmpty {
+            uploadImages()
+        } else {
+            // 直接提交反驳
+            submitRebuttalWithFiles(fileIds: [])
+        }
+    }
+    
+    private func uploadImages() {
+        isUploading = true
+        uploadProgress = (0, selectedImages.count)
+        uploadedFileIds = []
+        
+        let uploadGroup = DispatchGroup()
+        var uploadErrors: [(Error, Int)] = []
+        
+        // 过滤有效的图片（确保不超过5张）
+        let validImages = Array(selectedImages.prefix(5))
+        
+        for (image, imageIndex) in validImages.enumerated() {
+            uploadGroup.enter()
+            // 先压缩图片
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                uploadGroup.leave()
+                continue
+            }
+            
+            // 使用文件上传API，获取文件ID
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let filename = "rebuttal_\(timestamp)_\(imageIndex).jpg"
+            APIService.shared.uploadFile(data: imageData, filename: filename, taskId: taskId) { result in
+                switch result {
+                case .success(let fileId):
+                    DispatchQueue.main.async {
+                        uploadedFileIds.append(fileId)
+                        uploadProgress.current += 1
+                    }
+                case .failure(let error):
+                    uploadErrors.append((error, imageIndex))
+                }
+                uploadGroup.leave()
+            }
+        }
+        
+        uploadGroup.notify(queue: .main) {
+            isUploading = false
+            
+            if uploadErrors.isEmpty {
+                // 所有图片上传成功，提交反驳
+                submitRebuttalWithFiles(fileIds: uploadedFileIds)
+            } else {
+                // 生成详细的错误信息
+                var errorDetails: [String] = []
+                for (error, index) in uploadErrors {
+                    let errorDescription = getDetailedErrorMessage(error)
+                    errorDetails.append("第 \(index + 1) 张图片：\(errorDescription)")
+                }
+                
+                if errorDetails.count == validImages.count {
+                    // 所有图片都上传失败
+                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                } else {
+                    // 部分图片上传失败，使用已上传的文件ID继续提交
+                    errorMessage = "部分图片上传失败，将使用已上传的图片继续提交：\n" + errorDetails.joined(separator: "\n")
+                    submitRebuttalWithFiles(fileIds: uploadedFileIds)
+                }
+            }
+        }
+    }
+    
+    private func submitRebuttalWithFiles(fileIds: [String]) {
+        isSubmitting = true
+        errorMessage = nil
+        
+        APIService.shared.submitRefundRebuttal(
+            taskId: taskId,
+            refundId: refundId,
+            rebuttalText: rebuttalText.trimmingCharacters(in: .whitespaces),
+            evidenceFiles: fileIds.isEmpty ? nil : fileIds
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [self] result in
+                isSubmitting = false
+                if case .failure(let error) = result {
+                    errorMessage = getDetailedErrorMessage(error)
+                }
+            },
+            receiveValue: { [self] _ in
+                // 反驳提交成功
+                HapticFeedback.success()
+                onSuccess()
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    /// 获取详细的错误信息
+    private func getDetailedErrorMessage(_ error: Error) -> String {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .requestFailed(let underlyingError):
+                if let urlError = underlyingError as? URLError {
+                    switch urlError.code {
+                    case .notConnectedToInternet, .networkConnectionLost:
+                        return "网络连接失败，请检查网络设置"
+                    case .timedOut:
+                        return "请求超时，请重试"
+                    case .cannotFindHost, .cannotConnectToHost:
+                        return "无法连接到服务器，请稍后重试"
+                    default:
+                        return "网络错误：\(urlError.localizedDescription)"
+                    }
+                }
+                return underlyingError.localizedDescription
+            case .httpError(let statusCode):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误，请重试"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传文件"
+                case 413:
+                    return "文件过大，请选择较小的文件"
+                case 500...599:
+                    return "服务器错误（\(statusCode)），请稍后重试"
+                default:
+                    return "服务器错误（\(statusCode)）"
+                }
+            case .serverError(let statusCode, let message):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误：\(message)"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传文件"
+                case 413:
+                    return "文件过大：\(message)"
+                case 500...599:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                default:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                }
             case .decodingError(let error):
                 return "解析响应失败：\(error.localizedDescription)"
             case .invalidURL:

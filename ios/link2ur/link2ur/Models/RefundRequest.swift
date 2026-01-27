@@ -19,6 +19,10 @@ struct RefundRequest: Codable, Identifiable {
     let refundTransferId: String?
     let processedAt: String?
     let completedAt: String?
+    let rebuttalText: String?  // 接单者反驳文字说明
+    let rebuttalEvidenceFiles: [String]?  // 接单者反驳证据文件ID列表
+    let rebuttalSubmittedAt: String?  // 反驳提交时间
+    let rebuttalSubmittedBy: String?  // 提交反驳的接单者ID
     let createdAt: String
     let updatedAt: String
     
@@ -40,8 +44,23 @@ struct RefundRequest: Codable, Identifiable {
         case refundTransferId = "refund_transfer_id"
         case processedAt = "processed_at"
         case completedAt = "completed_at"
+        case rebuttalText = "rebuttal_text"
+        case rebuttalEvidenceFiles = "rebuttal_evidence_files"
+        case rebuttalSubmittedAt = "rebuttal_submitted_at"
+        case rebuttalSubmittedBy = "rebuttal_submitted_by"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+}
+
+/// 提交反驳请求
+struct RefundRequestRebuttal: Codable {
+    let rebuttalText: String
+    let evidenceFiles: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case rebuttalText = "rebuttal_text"
+        case evidenceFiles = "evidence_files"
     }
 }
 

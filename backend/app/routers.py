@@ -2045,6 +2045,7 @@ def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
 def complete_task(
     task_id: int,
     evidence_images: Optional[List[str]] = Body(None, description="证据图片URL列表"),
+    evidence_text: Optional[str] = Body(None, description="文字证据说明（可选）"),
     background_tasks: BackgroundTasks = None,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -2100,8 +2101,9 @@ def complete_task(
         import json
         
         taker_name = current_user.name or f"用户{current_user.id}"
-        # 根据是否有证据图片显示不同的消息内容
-        if evidence_images and len(evidence_images) > 0:
+        # 根据是否有证据（图片或文字）显示不同的消息内容
+        has_evidence = (evidence_images and len(evidence_images) > 0) or (evidence_text and evidence_text.strip())
+        if has_evidence:
             # 使用国际化模板
             _, content_zh, _, content_en = get_notification_texts(
                 "task_completed",
@@ -2111,9 +2113,15 @@ def complete_task(
             )
             # 如果没有对应的模板，使用默认文本
             if not content_zh:
-                content_zh = "任务已完成，请查看证据图片。"
+                if evidence_text and evidence_text.strip():
+                    content_zh = f"任务已完成。{evidence_text[:50]}{'...' if len(evidence_text) > 50 else ''}"
+                else:
+                    content_zh = "任务已完成，请查看证据图片。"
             if not content_en:
-                content_en = "Task completed. Please check the evidence images."
+                if evidence_text and evidence_text.strip():
+                    content_en = f"Task completed. {evidence_text[:50]}{'...' if len(evidence_text) > 50 else ''}"
+                else:
+                    content_en = "Task completed. Please check the evidence images."
         else:
             _, content_zh, _, content_en = get_notification_texts(
                 "task_completed",
@@ -2127,6 +2135,16 @@ def complete_task(
             if not content_en:
                 content_en = f"Recipient {taker_name} has confirmed task completion, waiting for poster confirmation."
         
+        # 构建meta信息，包含证据信息
+        meta_data = {
+            "system_action": "task_completed_by_taker",
+            "content_en": content_en
+        }
+        if evidence_text and evidence_text.strip():
+            meta_data["evidence_text"] = evidence_text
+        if evidence_images and len(evidence_images) > 0:
+            meta_data["evidence_images_count"] = len(evidence_images)
+        
         system_message = Message(
             sender_id=None,  # 系统消息，sender_id为None
             receiver_id=None,
@@ -2134,7 +2152,7 @@ def complete_task(
             task_id=task_id,
             message_type="system",
             conversation_type="task",
-            meta=json.dumps({"system_action": "task_completed_by_taker", "content_en": content_en}),
+            meta=json.dumps(meta_data),
             created_at=get_utc_time()
         )
         db.add(system_message)
@@ -2804,6 +2822,58 @@ def create_refund_request(
     except Exception as e:
         logger.error(f"Failed to send system message: {e}")
     
+    # 通知接单者（如果有接单者）
+    if task.taker_id:
+        try:
+            # 创建应用内通知
+            crud.create_notification(
+                db=db,
+                user_id=task.taker_id,
+                type="refund_request",
+                title="退款申请通知",
+                content=f"任务「{task.title}」的发布者申请退款。原因：{reason_type_display}。请查看详情并可以提交反驳证据。",
+                related_id=str(task_id),
+                related_type="task_id",
+                auto_commit=False
+            )
+            
+            # 发送推送通知（后台任务）
+            if background_tasks:
+                from app.push_notification_service import send_push_notification
+                def _send_taker_notification():
+                    try:
+                        from app.database import SessionLocal
+                        db_session = SessionLocal()
+                        try:
+                            send_push_notification(
+                                db=db_session,
+                                user_id=task.taker_id,
+                                title=None,  # 从模板生成
+                                body=None,  # 从模板生成
+                                notification_type="refund_request",
+                                data={
+                                    "task_id": task_id,
+                                    "refund_request_id": refund_request.id,
+                                    "poster_id": current_user.id
+                                },
+                                template_vars={
+                                    "poster_name": poster_name,
+                                    "task_title": task.title,
+                                    "reason_type": reason_type_display,
+                                    "refund_type": refund_type_display,
+                                    "task_id": task_id,
+                                    "refund_request_id": refund_request.id
+                                }
+                            )
+                        finally:
+                            db_session.close()
+                    except Exception as e:
+                        logger.error(f"Failed to send push notification to taker: {e}")
+                
+                background_tasks.add_task(_send_taker_notification)
+        except Exception as e:
+            logger.error(f"Failed to send refund request notification to taker: {e}")
+    
     # 通知管理员（后台任务）
     if background_tasks:
         try:
@@ -2897,9 +2967,239 @@ def get_refund_status(
         refund_transfer_id=refund_request.refund_transfer_id,
         processed_at=refund_request.processed_at,
         completed_at=refund_request.completed_at,
+        rebuttal_text=refund_request.rebuttal_text,
+        rebuttal_evidence_files=json.loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
+        rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
+        rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
         created_at=refund_request.created_at,
         updated_at=refund_request.updated_at,
     )
+
+
+@router.get("/tasks/{task_id}/dispute-timeline")
+def get_task_dispute_timeline(
+    task_id: int,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """
+    获取任务的完整争议时间线
+    包括：任务完成时间线、退款申请、反驳、管理员裁定等所有相关信息
+    """
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # 验证用户权限：必须是任务参与者（发布者或接单者）
+    if task.poster_id != current_user.id and (not task.taker_id or task.taker_id != current_user.id):
+        raise HTTPException(status_code=403, detail="Only task participants can view dispute timeline")
+    
+    timeline_items = []
+    import json
+    from decimal import Decimal
+    
+    # 1. 任务完成时间线（从系统消息中获取）
+    completion_message = db.query(models.Message).filter(
+        models.Message.task_id == task_id,
+        models.Message.message_type == "system",
+        models.Message.meta.contains("task_completed_by_taker")
+    ).order_by(models.Message.created_at.asc()).first()
+    
+    if completion_message:
+        # 获取完成证据（附件）
+        completion_evidence = []
+        if completion_message.id:
+            attachments = db.query(models.MessageAttachment).filter(
+                models.MessageAttachment.message_id == completion_message.id
+            ).all()
+            for att in attachments:
+                completion_evidence.append({
+                    "type": att.attachment_type,
+                    "url": att.url,
+                    "file_id": att.blob_id
+                })
+        
+        timeline_items.append({
+            "type": "task_completed",
+            "title": "任务标记完成",
+            "description": completion_message.content,
+            "timestamp": completion_message.created_at.isoformat() if completion_message.created_at else None,
+            "actor": "taker",
+            "evidence": completion_evidence
+        })
+    
+    # 2. 确认完成时间线（如果有）
+    if task.completed_at and task.is_confirmed:
+        confirmation_message = db.query(models.Message).filter(
+            models.Message.task_id == task_id,
+            models.Message.message_type == "system",
+            models.Message.meta.contains("task_confirmed_by_poster")
+        ).order_by(models.Message.created_at.asc()).first()
+        
+        confirmation_evidence = []
+        if confirmation_message and confirmation_message.id:
+            attachments = db.query(models.MessageAttachment).filter(
+                models.MessageAttachment.message_id == confirmation_message.id
+            ).all()
+            for att in attachments:
+                confirmation_evidence.append({
+                    "type": att.attachment_type,
+                    "url": att.url,
+                    "file_id": att.blob_id
+                })
+        
+        timeline_items.append({
+            "type": "task_confirmed",
+            "title": "发布者确认完成",
+            "description": confirmation_message.content if confirmation_message else "发布者已确认任务完成",
+            "timestamp": task.completed_at.isoformat() if task.completed_at else None,
+            "actor": "poster",
+            "evidence": confirmation_evidence
+        })
+    
+    # 3. 退款申请时间线
+    refund_requests = db.query(models.RefundRequest).filter(
+        models.RefundRequest.task_id == task_id
+    ).order_by(models.RefundRequest.created_at.asc()).all()
+    
+    for refund_request in refund_requests:
+        # 解析退款原因
+        reason_type = None
+        refund_type = None
+        reason_text = refund_request.reason
+        
+        if "|" in refund_request.reason:
+            parts = refund_request.reason.split("|", 2)
+            if len(parts) >= 3:
+                reason_type = parts[0]
+                refund_type = parts[1]
+                reason_text = parts[2]
+        
+        # 获取退款申请证据
+        refund_evidence = []
+        if refund_request.evidence_files:
+            try:
+                evidence_file_ids = json.loads(refund_request.evidence_files)
+                # 从MessageAttachment中获取文件信息
+                for file_id in evidence_file_ids:
+                    attachment = db.query(models.MessageAttachment).filter(
+                        models.MessageAttachment.blob_id == file_id
+                    ).first()
+                    if attachment:
+                        refund_evidence.append({
+                            "type": attachment.attachment_type,
+                            "url": attachment.url,
+                            "file_id": attachment.blob_id
+                        })
+            except:
+                pass
+        
+        timeline_items.append({
+            "type": "refund_request",
+            "title": "退款申请",
+            "description": reason_text,
+            "reason_type": reason_type,
+            "refund_type": refund_type,
+            "refund_amount": float(refund_request.refund_amount) if refund_request.refund_amount else None,
+            "status": refund_request.status,
+            "timestamp": refund_request.created_at.isoformat() if refund_request.created_at else None,
+            "actor": "poster",
+            "evidence": refund_evidence,
+            "refund_request_id": refund_request.id
+        })
+        
+        # 4. 反驳时间线（如果有）
+        if refund_request.rebuttal_text:
+            # 获取反驳证据
+            rebuttal_evidence = []
+            if refund_request.rebuttal_evidence_files:
+                try:
+                    rebuttal_file_ids = json.loads(refund_request.rebuttal_evidence_files)
+                    for file_id in rebuttal_file_ids:
+                        attachment = db.query(models.MessageAttachment).filter(
+                            models.MessageAttachment.blob_id == file_id
+                        ).first()
+                        if attachment:
+                            rebuttal_evidence.append({
+                                "type": attachment.attachment_type,
+                                "url": attachment.url,
+                                "file_id": attachment.blob_id
+                            })
+                except:
+                    pass
+            
+            timeline_items.append({
+                "type": "rebuttal",
+                "title": "接单者反驳",
+                "description": refund_request.rebuttal_text,
+                "timestamp": refund_request.rebuttal_submitted_at.isoformat() if refund_request.rebuttal_submitted_at else None,
+                "actor": "taker",
+                "evidence": rebuttal_evidence,
+                "refund_request_id": refund_request.id
+            })
+        
+        # 5. 管理员裁定时间线（如果有）
+        if refund_request.reviewed_at:
+            reviewer_name = None
+            if refund_request.reviewed_by:
+                reviewer = crud.get_user_by_id(db, refund_request.reviewed_by)
+                if reviewer:
+                    reviewer_name = reviewer.name
+            
+            timeline_items.append({
+                "type": "admin_review",
+                "title": "管理员裁定",
+                "description": refund_request.admin_comment or f"管理员已{refund_request.status}退款申请",
+                "status": refund_request.status,
+                "timestamp": refund_request.reviewed_at.isoformat() if refund_request.reviewed_at else None,
+                "actor": "admin",
+                "reviewer_name": reviewer_name,
+                "refund_request_id": refund_request.id
+            })
+    
+    # 6. 任务争议时间线（如果有）
+    disputes = db.query(models.TaskDispute).filter(
+        models.TaskDispute.task_id == task_id
+    ).order_by(models.TaskDispute.created_at.asc()).all()
+    
+    for dispute in disputes:
+        timeline_items.append({
+            "type": "dispute",
+            "title": "任务争议",
+            "description": dispute.reason,
+            "status": dispute.status,
+            "timestamp": dispute.created_at.isoformat() if dispute.created_at else None,
+            "actor": "poster",
+            "dispute_id": dispute.id
+        })
+        
+        # 如果有管理员处理结果
+        if dispute.resolved_at:
+            resolver_name = None
+            if dispute.resolved_by:
+                resolver = crud.get_user_by_id(db, dispute.resolved_by)
+                if resolver:
+                    resolver_name = resolver.name
+            
+            timeline_items.append({
+                "type": "dispute_resolution",
+                "title": "争议处理结果",
+                "description": dispute.resolution_note or f"争议已{dispute.status}",
+                "status": dispute.status,
+                "timestamp": dispute.resolved_at.isoformat() if dispute.resolved_at else None,
+                "actor": "admin",
+                "resolver_name": resolver_name,
+                "dispute_id": dispute.id
+            })
+    
+    # 按时间排序
+    timeline_items.sort(key=lambda x: x.get("timestamp") or "")
+    
+    return {
+        "task_id": task_id,
+        "task_title": task.title,
+        "timeline": timeline_items
+    }
 
 
 @router.get("/tasks/{task_id}/refund-history", response_model=List[schemas.RefundRequestOut])
@@ -2954,6 +3254,14 @@ def get_refund_history(
             if task_amount > 0:
                 refund_percentage = float((refund_request.refund_amount / task_amount) * 100)
         
+        # 处理反驳证据文件
+        rebuttal_evidence_files = None
+        if refund_request.rebuttal_evidence_files:
+            try:
+                rebuttal_evidence_files = json.loads(refund_request.rebuttal_evidence_files)
+            except:
+                rebuttal_evidence_files = []
+        
         # 创建输出对象
         from app.schemas import RefundRequestOut
         result_list.append(RefundRequestOut(
@@ -2974,6 +3282,10 @@ def get_refund_history(
             refund_transfer_id=refund_request.refund_transfer_id,
             processed_at=refund_request.processed_at,
             completed_at=refund_request.completed_at,
+            rebuttal_text=refund_request.rebuttal_text,
+            rebuttal_evidence_files=rebuttal_evidence_files,
+            rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
+            rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
             created_at=refund_request.created_at,
             updated_at=refund_request.updated_at,
         ))
@@ -3100,8 +3412,279 @@ def cancel_refund_request(
         refund_transfer_id=refund_request.refund_transfer_id,
         processed_at=refund_request.processed_at,
         completed_at=refund_request.completed_at,
+        rebuttal_text=refund_request.rebuttal_text,
+        rebuttal_evidence_files=json.loads(refund_request.rebuttal_evidence_files) if refund_request.rebuttal_evidence_files else None,
+        rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
+        rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
         created_at=refund_request.created_at,
         updated_at=refund_request.updated_at,
+    )
+
+
+@router.post("/tasks/{task_id}/refund-request/{refund_id}/rebuttal", response_model=schemas.RefundRequestOut)
+def submit_refund_rebuttal(
+    task_id: int,
+    refund_id: int,
+    rebuttal_data: schemas.RefundRequestRebuttal,
+    background_tasks: BackgroundTasks = None,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """
+    接单者提交退款申请的反驳
+    允许接单者上传完成证据和文字说明来反驳退款申请
+    """
+    from sqlalchemy import select
+    from decimal import Decimal
+    import json
+    
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定退款申请记录
+    refund_query = select(models.RefundRequest).where(
+        models.RefundRequest.id == refund_id,
+        models.RefundRequest.task_id == task_id
+    ).with_for_update()
+    refund_result = db.execute(refund_query)
+    refund_request = refund_result.scalar_one_or_none()
+    
+    if not refund_request:
+        raise HTTPException(status_code=404, detail="Refund request not found")
+    
+    # 获取任务
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # 验证用户是接单者
+    if not task.taker_id or task.taker_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the task taker can submit a rebuttal")
+    
+    # 验证退款申请状态：只有在pending状态时才能提交反驳
+    if refund_request.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"只能对pending状态的退款申请提交反驳。当前状态: {refund_request.status}"
+        )
+    
+    # 检查是否已经提交过反驳
+    if refund_request.rebuttal_submitted_at is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="您已经提交过反驳，无法重复提交"
+        )
+    
+    # 验证证据文件数量（最多5个）
+    validated_evidence_files = []
+    if rebuttal_data.evidence_files:
+        if len(rebuttal_data.evidence_files) > 5:
+            raise HTTPException(
+                status_code=400,
+                detail="证据文件数量不能超过5个"
+            )
+        
+        from app.models import MessageAttachment
+        from app.file_system import PrivateFileSystem
+        
+        file_system = PrivateFileSystem()
+        for file_id in rebuttal_data.evidence_files:
+            try:
+                # 检查文件是否存在于MessageAttachment中，且与当前任务相关
+                attachment = db.query(MessageAttachment).filter(
+                    MessageAttachment.blob_id == file_id
+                ).first()
+                
+                if attachment:
+                    # 通过附件找到消息，验证是否属于当前任务
+                    from app.models import Message
+                    task_message = db.query(Message).filter(
+                        Message.id == attachment.message_id,
+                        Message.task_id == task_id
+                    ).first()
+                    
+                    if task_message:
+                        validated_evidence_files.append(file_id)
+                    else:
+                        logger.warning(f"文件 {file_id} 不属于任务 {task_id}，跳过")
+                else:
+                    # 检查文件是否存在于任务文件夹中
+                    task_dir = file_system.base_dir / "tasks" / str(task_id)
+                    file_exists = False
+                    if task_dir.exists():
+                        for ext_file in task_dir.glob(f"{file_id}.*"):
+                            if ext_file.is_file():
+                                file_exists = True
+                                break
+                    
+                    if file_exists:
+                        validated_evidence_files.append(file_id)
+                    else:
+                        logger.warning(f"文件 {file_id} 不存在或不属于任务 {task_id}，跳过")
+            except Exception as file_error:
+                logger.warning(f"验证文件 {file_id} 时发生错误: {file_error}，跳过")
+    
+    # 处理证据文件（JSON数组）
+    rebuttal_evidence_files_json = None
+    if validated_evidence_files:
+        rebuttal_evidence_files_json = json.dumps(validated_evidence_files)
+    
+    # 更新退款申请记录
+    refund_request.rebuttal_text = rebuttal_data.rebuttal_text
+    refund_request.rebuttal_evidence_files = rebuttal_evidence_files_json
+    refund_request.rebuttal_submitted_at = get_utc_time()
+    refund_request.rebuttal_submitted_by = current_user.id
+    refund_request.updated_at = get_utc_time()
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        taker_name = current_user.name or f"用户{current_user.id}"
+        content_zh = f"{taker_name} 提交了反驳证据：{rebuttal_data.rebuttal_text[:100]}"
+        content_en = f"{taker_name} has submitted rebuttal evidence: {rebuttal_data.rebuttal_text[:100]}"
+        
+        system_message = Message(
+            sender_id=None,  # 系统消息
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "refund_rebuttal_submitted",
+                "refund_request_id": refund_request.id,
+                "content_en": content_en
+            }),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+        db.flush()
+        
+        # 如果有证据文件，创建附件
+        if validated_evidence_files:
+            from app.models import MessageAttachment
+            from app.file_system import PrivateFileSystem
+            
+            file_system = PrivateFileSystem()
+            for file_id in validated_evidence_files:
+                try:
+                    # 生成文件访问URL
+                    participants = [task.poster_id]
+                    if task.taker_id:
+                        participants.append(task.taker_id)
+                    access_token = file_system.generate_access_token(
+                        file_id=file_id,
+                        user_id=current_user.id,
+                        chat_participants=participants
+                    )
+                    file_url = f"/api/private-file?file={file_id}&token={access_token}"
+                    
+                    attachment = MessageAttachment(
+                        message_id=system_message.id,
+                        attachment_type="file",
+                        url=file_url,
+                        blob_id=file_id,
+                        meta=json.dumps({"file_id": file_id}),
+                        created_at=get_utc_time()
+                    )
+                    db.add(attachment)
+                except Exception as file_error:
+                    logger.warning(f"Failed to create attachment for file {file_id}: {file_error}")
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    # 通知发布者和管理员（后台任务）
+    try:
+        # 通知发布者
+        crud.create_notification(
+            db=db,
+            user_id=task.poster_id,
+            type="refund_rebuttal",
+            title="收到反驳证据",
+            content=f"任务「{task.title}」的接单者提交了反驳证据，请查看详情。",
+            related_id=str(task_id),
+            related_type="task_id",
+            auto_commit=False
+        )
+        
+        # 通知管理员（后台任务）
+        if background_tasks:
+            try:
+                from app.task_notifications import send_refund_rebuttal_notification_to_admin
+                send_refund_rebuttal_notification_to_admin(
+                    db=db,
+                    background_tasks=background_tasks,
+                    task=task,
+                    refund_request=refund_request,
+                    taker=current_user
+                )
+            except Exception as e:
+                logger.error(f"Failed to send rebuttal notification to admin: {e}")
+    except Exception as e:
+        logger.error(f"Failed to send notifications: {e}")
+    
+    db.commit()
+    db.refresh(refund_request)
+    
+    # 处理输出格式（解析reason字段等）
+    evidence_files = None
+    if refund_request.evidence_files:
+        try:
+            evidence_files = json.loads(refund_request.evidence_files)
+        except:
+            evidence_files = []
+    
+    # 处理反驳证据文件
+    rebuttal_evidence_files = None
+    if refund_request.rebuttal_evidence_files:
+        try:
+            rebuttal_evidence_files = json.loads(refund_request.rebuttal_evidence_files)
+        except:
+            rebuttal_evidence_files = []
+    
+    # 解析退款原因字段
+    reason_type = None
+    refund_type = None
+    reason_text = refund_request.reason
+    refund_percentage = None
+    
+    if "|" in refund_request.reason:
+        parts = refund_request.reason.split("|", 2)
+        if len(parts) >= 3:
+            reason_type = parts[0]
+            refund_type = parts[1]
+            reason_text = parts[2]
+    
+    # 计算退款比例
+    if refund_request.refund_amount and task:
+        task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+        if task_amount > 0:
+            refund_percentage = float((refund_request.refund_amount / task_amount) * 100)
+    
+    from app.schemas import RefundRequestOut
+    return RefundRequestOut(
+        id=refund_request.id,
+        task_id=refund_request.task_id,
+        poster_id=refund_request.poster_id,
+        reason_type=reason_type,
+        refund_type=refund_type,
+        reason=reason_text,
+        evidence_files=evidence_files,
+        refund_amount=refund_request.refund_amount,
+        refund_percentage=refund_percentage,
+        status=refund_request.status,
+        admin_comment=refund_request.admin_comment,
+        reviewed_by=refund_request.reviewed_by,
+        reviewed_at=refund_request.reviewed_at,
+        refund_intent_id=refund_request.refund_intent_id,
+        refund_transfer_id=refund_request.refund_transfer_id,
+        processed_at=refund_request.processed_at,
+        completed_at=refund_request.completed_at,
+        rebuttal_text=refund_request.rebuttal_text,
+        rebuttal_evidence_files=rebuttal_evidence_files,
+        rebuttal_submitted_at=refund_request.rebuttal_submitted_at,
+        rebuttal_submitted_by=refund_request.rebuttal_submitted_by,
+        created_at=refund_request.created_at,
+        updated_at=refund_request.updated_at
     )
 
 

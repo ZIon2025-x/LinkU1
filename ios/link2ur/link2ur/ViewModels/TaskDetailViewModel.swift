@@ -16,6 +16,7 @@ class TaskDetailViewModel: ObservableObject {
     @Published var refundHistory: [RefundRequest] = []
     @Published var isLoadingRefundHistory = false
     @Published var isCancellingRefund = false
+    @Published var isSubmittingRebuttal = false
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -201,8 +202,8 @@ class TaskDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func completeTask(taskId: Int, evidenceImages: [String]? = nil, completion: @escaping (Bool) -> Void) {
-        apiService.completeTask(taskId: taskId, evidenceImages: evidenceImages)
+    func completeTask(taskId: Int, evidenceImages: [String]? = nil, evidenceText: String? = nil, completion: @escaping (Bool) -> Void) {
+        apiService.completeTask(taskId: taskId, evidenceImages: evidenceImages, evidenceText: evidenceText)
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure = result {
                     completion(false)
@@ -338,6 +339,31 @@ class TaskDetailViewModel: ObservableObject {
                 }
             })
             .store(in: &cancellables)
+    }
+    
+    func submitRefundRebuttal(taskId: Int, refundId: Int, rebuttalText: String, evidenceFiles: [String]? = nil) {
+        isSubmittingRebuttal = true
+        apiService.submitRefundRebuttal(
+            taskId: taskId,
+            refundId: refundId,
+            rebuttalText: rebuttalText,
+            evidenceFiles: evidenceFiles
+        )
+        .sink(receiveCompletion: { [weak self] result in
+            self?.isSubmittingRebuttal = false
+            if case .failure(let error) = result {
+                Logger.error("提交反驳失败: \(error.localizedDescription)", category: .api)
+            } else {
+                // 提交成功，重新加载退款状态和任务详情
+                self?.loadRefundStatus(taskId: taskId)
+                self?.loadTask(taskId: taskId, force: true)
+            }
+        }, receiveValue: { [weak self] refundRequest in
+            DispatchQueue.main.async {
+                self?.refundRequest = refundRequest
+            }
+        })
+        .store(in: &cancellables)
     }
 }
 

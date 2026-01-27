@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
 import { message } from 'antd';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute, createRefundRequest, getRefundStatus, getRefundHistory, cancelRefundRequest } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute, createRefundRequest, getRefundStatus, getRefundHistory, cancelRefundRequest, submitRefundRebuttal, getTaskDisputeTimeline } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -91,6 +91,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [refundHistory, setRefundHistory] = useState<any[]>([]);
   const [showRefundHistory, setShowRefundHistory] = useState(false);
   const [cancellingRefund, setCancellingRefund] = useState(false);
+  // 反驳相关状态
+  const [showRebuttalModal, setShowRebuttalModal] = useState(false);
+  const [rebuttalText, setRebuttalText] = useState('');
+  const [rebuttalEvidenceFiles, setRebuttalEvidenceFiles] = useState<string[]>([]);
+  const [uploadingRebuttalFiles, setUploadingRebuttalFiles] = useState(false);
+  const [submittingRebuttal, setSubmittingRebuttal] = useState(false);
+  // 争议详情相关状态
+  const [showDisputeTimeline, setShowDisputeTimeline] = useState(false);
+  const [disputeTimeline, setDisputeTimeline] = useState<any>(null);
+  const [loadingDisputeTimeline, setLoadingDisputeTimeline] = useState(false);
   
   // 退款原因类型选项
   const refundReasonTypes = [
@@ -3150,8 +3160,75 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     </div>
                   )}
                   
-                  {/* 撤销按钮（仅在pending状态时显示） */}
-                  {refundRequest.status === 'pending' && (
+                  {/* 显示反驳信息（如果有） */}
+                  {refundRequest.rebuttal_text && (
+                    <div style={{ 
+                      marginTop: '12px', 
+                      padding: '12px', 
+                      background: '#fff3cd', 
+                      border: '1px solid #ffc107',
+                      borderRadius: '6px'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        marginBottom: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#856404'
+                      }}>
+                        <span style={{ marginRight: '6px' }}>💬</span>
+                        {language === 'zh' ? '接单者反驳' : 'Taker Rebuttal'}
+                      </div>
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: '#666',
+                        lineHeight: '1.5',
+                        marginBottom: '6px'
+                      }}>
+                        {refundRequest.rebuttal_text}
+                      </div>
+                      {refundRequest.rebuttal_evidence_files && refundRequest.rebuttal_evidence_files.length > 0 && (
+                        <div style={{ 
+                          fontSize: '11px', 
+                          color: '#999',
+                          marginTop: '4px'
+                        }}>
+                          {language === 'zh' 
+                            ? `已上传 ${refundRequest.rebuttal_evidence_files.length} 个证据文件`
+                            : `${refundRequest.rebuttal_evidence_files.length} evidence file(s) uploaded`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 如果是接单者且状态为pending且还没有提交反驳，显示提交反驳按钮 */}
+                  {task && task.taker_id === user?.id && refundRequest.status === 'pending' && !refundRequest.rebuttal_text && (
+                    <div style={{ marginTop: '12px' }}>
+                      <button
+                        onClick={() => setShowRebuttalModal(true)}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#ffc107',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>💬</span>
+                        {language === 'zh' ? '提交反驳证据' : 'Submit Rebuttal Evidence'}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* 撤销按钮（仅在pending状态时显示，且是发布者） */}
+                  {task && task.poster_id === user?.id && refundRequest.status === 'pending' && (
                     <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => handleCancelRefund(refundRequest.id)}
@@ -3213,6 +3290,46 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </button>
                     </div>
                   )}
+                  
+                  {/* 争议详情按钮 - 始终显示，让用户查看完整时间线 */}
+                  <div style={{ marginTop: '12px' }}>
+                    <button
+                      onClick={async () => {
+                        setLoadingDisputeTimeline(true);
+                        try {
+                          const timeline = await getTaskDisputeTimeline(taskId!);
+                          setDisputeTimeline(timeline);
+                          setShowDisputeTimeline(true);
+                        } catch (error: any) {
+                          message.error(getErrorMessage(error));
+                        } finally {
+                          setLoadingDisputeTimeline(false);
+                        }
+                      }}
+                      disabled={loadingDisputeTimeline}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#ffc107',
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        cursor: loadingDisputeTimeline ? 'not-allowed' : 'pointer',
+                        opacity: loadingDisputeTimeline ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        width: '100%',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <span>⏱️</span>
+                      {loadingDisputeTimeline 
+                        ? (language === 'zh' ? '加载中...' : 'Loading...')
+                        : (language === 'zh' ? '查看争议详情' : 'View Dispute Timeline')}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : !loadingRefundStatus ? (
@@ -4969,6 +5086,584 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 反驳Modal */}
+      {showRebuttalModal && refundRequest && taskId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '12px'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#333',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span>💬</span>
+                {language === 'zh' ? '提交反驳证据' : 'Submit Rebuttal Evidence'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowRebuttalModal(false);
+                  setRebuttalText('');
+                  setRebuttalEvidenceFiles([]);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                padding: '12px',
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#856404',
+                lineHeight: '1.6'
+              }}>
+                {language === 'zh' 
+                  ? '请详细说明任务完成情况，并上传完成证据（如截图、文件等）。您的反驳将帮助管理员做出公正的裁定。'
+                  : 'Please provide detailed information about task completion and upload completion evidence (such as screenshots, files, etc.). Your rebuttal will help administrators make a fair decision.'}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#333'
+              }}>
+                {language === 'zh' ? '反驳说明' : 'Rebuttal Description'}
+                <span style={{ color: '#dc3545', marginLeft: '4px' }}>*</span>
+                <span style={{
+                  marginLeft: '8px',
+                  fontSize: '12px',
+                  color: rebuttalText.length >= 10 ? '#666' : '#dc3545',
+                  fontWeight: 'normal'
+                }}>
+                  ({rebuttalText.length}/2000)
+                </span>
+              </label>
+              <textarea
+                value={rebuttalText}
+                onChange={(e) => setRebuttalText(e.target.value)}
+                placeholder={language === 'zh' ? '请详细说明任务完成情况（至少10个字符）' : 'Please provide detailed information about task completion (at least 10 characters)'}
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `2px solid ${rebuttalText.length >= 10 ? '#e2e8f0' : '#dc3545'}`,
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  boxSizing: 'border-box'
+                }}
+                maxLength={2000}
+              />
+              {rebuttalText.length < 10 && (
+                <div style={{
+                  marginTop: '6px',
+                  fontSize: '12px',
+                  color: '#dc3545'
+                }}>
+                  {language === 'zh' ? '反驳说明至少需要10个字符' : 'Rebuttal description must be at least 10 characters'}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#333'
+              }}>
+                {language === 'zh' ? '完成证据（可选）' : 'Completion Evidence (Optional)'}
+                <span style={{
+                  marginLeft: '8px',
+                  fontSize: '12px',
+                  color: '#666',
+                  fontWeight: 'normal'
+                }}>
+                  ({rebuttalEvidenceFiles.length}/5)
+                </span>
+              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  
+                  if (rebuttalEvidenceFiles.length + files.length > 5) {
+                    message.warning(language === 'zh' ? '最多只能上传5个文件' : 'Maximum 5 files allowed');
+                    return;
+                  }
+                  
+                  setUploadingRebuttalFiles(true);
+                  try {
+                    const uploadedFiles: string[] = [];
+                    for (const file of files) {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const response = await api.post(`/api/upload/file?task_id=${taskId}`, formData, {
+                        headers: {
+                          'Content-Type': 'multipart/form-data',
+                        },
+                      });
+                      if (response.data.file_id) {
+                        uploadedFiles.push(response.data.file_id);
+                      }
+                    }
+                    setRebuttalEvidenceFiles([...rebuttalEvidenceFiles, ...uploadedFiles]);
+                    message.success(language === 'zh' ? '文件上传成功' : 'Files uploaded successfully');
+                  } catch (error: any) {
+                    message.error(getErrorMessage(error));
+                  } finally {
+                    setUploadingRebuttalFiles(false);
+                  }
+                }}
+                disabled={uploadingRebuttalFiles || rebuttalEvidenceFiles.length >= 5}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {rebuttalEvidenceFiles.length > 0 && (
+                <div style={{
+                  marginTop: '12px',
+                  fontSize: '14px',
+                  color: '#666'
+                }}>
+                  {language === 'zh' ? '已上传文件: ' : 'Uploaded files: '}
+                  {rebuttalEvidenceFiles.length}
+                  <button
+                    onClick={() => setRebuttalEvidenceFiles([])}
+                    style={{
+                      marginLeft: '12px',
+                      padding: '4px 12px',
+                      background: '#f3f4f6',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      color: '#666'
+                    }}
+                  >
+                    {language === 'zh' ? '清空' : 'Clear'}
+                  </button>
+                </div>
+              )}
+              <div style={{
+                marginTop: '6px',
+                fontSize: '12px',
+                color: '#999'
+              }}>
+                {language === 'zh' ? '最多上传5张图片或文件，每张不超过5MB' : 'Maximum 5 images or files, each file should not exceed 5MB'}
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end',
+              marginTop: '24px',
+              paddingTop: '20px',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <button
+                onClick={() => {
+                  setShowRebuttalModal(false);
+                  setRebuttalText('');
+                  setRebuttalEvidenceFiles([]);
+                }}
+                style={{
+                  padding: '10px 24px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
+              >
+                {language === 'zh' ? '取消' : 'Cancel'}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!rebuttalText.trim() || rebuttalText.trim().length < 10) {
+                    message.warning(language === 'zh' ? '请填写反驳说明（至少10个字符）' : 'Please provide rebuttal description (at least 10 characters)');
+                    return;
+                  }
+
+                  setSubmittingRebuttal(true);
+                  try {
+                    await submitRefundRebuttal(
+                      taskId,
+                      refundRequest.id,
+                      rebuttalText.trim(),
+                      rebuttalEvidenceFiles.length > 0 ? rebuttalEvidenceFiles : undefined
+                    );
+                    message.success(language === 'zh' ? '反驳提交成功' : 'Rebuttal submitted successfully');
+                    setShowRebuttalModal(false);
+                    setRebuttalText('');
+                    setRebuttalEvidenceFiles([]);
+                    // 重新加载退款状态
+                    await loadRefundStatus(taskId);
+                    // 重新加载任务详情
+                    if (taskId) {
+                      try {
+                        const response = await api.get(`/api/tasks/${taskId}`);
+                        setTask(response.data);
+                      } catch (error) {
+                        logger.error('Failed to reload task:', error);
+                      }
+                    }
+                  } catch (error: any) {
+                    message.error(getErrorMessage(error));
+                  } finally {
+                    setSubmittingRebuttal(false);
+                  }
+                }}
+                disabled={submittingRebuttal || !rebuttalText.trim() || rebuttalText.trim().length < 10 || uploadingRebuttalFiles}
+                style={{
+                  padding: '10px 24px',
+                  background: (submittingRebuttal || !rebuttalText.trim() || rebuttalText.trim().length < 10 || uploadingRebuttalFiles) ? '#ccc' : '#ffc107',
+                  color: (submittingRebuttal || !rebuttalText.trim() || rebuttalText.trim().length < 10 || uploadingRebuttalFiles) ? '#999' : '#000',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: (submittingRebuttal || !rebuttalText.trim() || rebuttalText.trim().length < 10 || uploadingRebuttalFiles) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {submittingRebuttal 
+                  ? (language === 'zh' ? '提交中...' : 'Submitting...')
+                  : (language === 'zh' ? '提交反驳' : 'Submit Rebuttal')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 争议详情Modal */}
+      {showDisputeTimeline && disputeTimeline && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '12px'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#333',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span>⏱️</span>
+                {language === 'zh' ? '争议详情' : 'Dispute Timeline'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDisputeTimeline(false);
+                  setDisputeTimeline(null);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                padding: '12px',
+                background: '#f3f4f6',
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#666'
+              }}>
+                <strong>{disputeTimeline.task_title}</strong>
+              </div>
+            </div>
+
+            {disputeTimeline.timeline && disputeTimeline.timeline.length > 0 ? (
+              <div style={{ position: 'relative' }}>
+                {/* 时间线 */}
+                {disputeTimeline.timeline.map((item: any, index: number) => {
+                  const isLast = index === disputeTimeline.timeline.length - 1;
+                  const actorColor = item.actor === 'poster' ? '#3b82f6' : 
+                                    item.actor === 'taker' ? '#10b981' : '#f59e0b';
+                  const actorName = item.actor === 'poster' ? '发布者' : 
+                                   item.actor === 'taker' ? '接单者' : 
+                                   (item.reviewer_name || item.resolver_name || '管理员');
+                  
+                  const iconMap: { [key: string]: string } = {
+                    'task_completed': '✅',
+                    'task_confirmed': '✓',
+                    'refund_request': '↩️',
+                    'rebuttal': '💬',
+                    'admin_review': '⚖️',
+                    'dispute': '⚠️',
+                    'dispute_resolution': '🔨'
+                  };
+                  
+                  return (
+                    <div key={index} style={{
+                      display: 'flex',
+                      marginBottom: isLast ? 0 : '20px'
+                    }}>
+                      {/* 时间线指示器 */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        marginRight: '16px',
+                        width: '32px'
+                      }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: actorColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '16px',
+                          fontWeight: 'bold'
+                        }}>
+                          {iconMap[item.type] || '•'}
+                        </div>
+                        {!isLast && (
+                          <div style={{
+                            width: '2px',
+                            flex: 1,
+                            background: '#e5e7eb',
+                            marginTop: '8px'
+                          }} />
+                        )}
+                      </div>
+                      
+                      {/* 内容 */}
+                      <div style={{
+                        flex: 1,
+                        padding: '16px',
+                        background: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        marginBottom: isLast ? 0 : '20px'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px'
+                        }}>
+                          <div>
+                            <div style={{
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              color: '#333',
+                              marginBottom: '4px'
+                            }}>
+                              {item.title}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: actorColor,
+                              fontWeight: '500'
+                            }}>
+                              {actorName}
+                            </div>
+                          </div>
+                          {item.timestamp && (
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#999'
+                            }}>
+                              {new Date(item.timestamp).toLocaleString('zh-CN')}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#666',
+                          lineHeight: '1.6',
+                          marginBottom: '8px'
+                        }}>
+                          {item.description}
+                        </div>
+                        
+                        {/* 显示状态 */}
+                        {item.status && (
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            marginBottom: '8px',
+                            background: item.status === 'pending' ? '#fff3cd' :
+                                       item.status === 'approved' || item.status === 'completed' || item.status === 'resolved' ? '#d4edda' :
+                                       item.status === 'rejected' || item.status === 'cancelled' || item.status === 'dismissed' ? '#f8d7da' : '#e5e7eb',
+                            color: item.status === 'pending' ? '#856404' :
+                                  item.status === 'approved' || item.status === 'completed' || item.status === 'resolved' ? '#155724' :
+                                  item.status === 'rejected' || item.status === 'cancelled' || item.status === 'dismissed' ? '#721c24' : '#666'
+                          }}>
+                            {item.status === 'pending' ? (language === 'zh' ? '待审核' : 'Pending') :
+                             item.status === 'approved' ? (language === 'zh' ? '已批准' : 'Approved') :
+                             item.status === 'rejected' ? (language === 'zh' ? '已拒绝' : 'Rejected') :
+                             item.status === 'completed' ? (language === 'zh' ? '已完成' : 'Completed') :
+                             item.status === 'cancelled' ? (language === 'zh' ? '已取消' : 'Cancelled') :
+                             item.status === 'resolved' ? (language === 'zh' ? '已解决' : 'Resolved') :
+                             item.status === 'dismissed' ? (language === 'zh' ? '已驳回' : 'Dismissed') :
+                             item.status}
+                          </div>
+                        )}
+                        
+                        {/* 显示证据 */}
+                        {item.evidence && item.evidence.length > 0 && (
+                          <div style={{
+                            marginTop: '12px',
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {item.evidence.map((evidence: any, idx: number) => (
+                              <div key={idx} style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid #e5e7eb'
+                              }}>
+                                <img
+                                  src={evidence.url}
+                                  alt={`证据 ${idx + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                  onError={(e: any) => {
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#999'
+              }}>
+                {language === 'zh' ? '暂无争议记录' : 'No dispute records'}
               </div>
             )}
           </div>
