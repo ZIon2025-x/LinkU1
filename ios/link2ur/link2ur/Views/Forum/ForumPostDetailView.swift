@@ -106,8 +106,7 @@ struct ForumPostDetailView: View {
                     post: post,
                     postId: postId
                 )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+                .adaptiveSheetPresentation(showDragIndicator: true)
             } else {
                 // 如果帖子数据未就绪，显示加载状态
                 VStack(spacing: AppSpacing.lg) {
@@ -117,7 +116,7 @@ struct ForumPostDetailView: View {
                         .foregroundColor(AppColors.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .presentationDetents([.medium])
+                .adaptiveSheetPresentation(style: .sheet)
             }
         }
         .sheet(isPresented: $showLogin) {

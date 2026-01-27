@@ -570,7 +570,11 @@ class TasksViewModel: ObservableObject {
                                     isRecommended: task.isRecommended,
                                     matchScore: task.matchScore,
                                     recommendationReason: task.recommendationReason,
-                                    taskSource: task.taskSource
+                                    taskSource: task.taskSource,
+                                    confirmationDeadline: task.confirmationDeadline,
+                                    confirmedAt: task.confirmedAt,
+                                    autoConfirmed: task.autoConfirmed,
+                                    confirmationReminderSent: task.confirmationReminderSent
                                 )
                             }
                         }

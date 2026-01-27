@@ -364,8 +364,7 @@ struct TaskDetailView: View {
                 shareImage: shareImage,
                 isShareImageLoading: isShareImageLoading
             )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+            .adaptiveSheetPresentation(showDragIndicator: true)
             .onAppear {
                 // 当分享面板出现时，开始加载图片（如果还没有加载）
                 if shareImage == nil && !isShareImageLoading {
@@ -381,7 +380,7 @@ struct TaskDetailView: View {
                     .foregroundColor(AppColors.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .presentationDetents([.medium])
+            .adaptiveSheetPresentation(style: .sheet)
         }
     }
     
@@ -1675,7 +1674,7 @@ struct ConfirmationCountdownView: View {
     }
     
     private func updateCountdown() {
-        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDatePublic(deadline) else {
             remainingSeconds = 0
             return
         }
@@ -3189,6 +3188,7 @@ struct ReviewModal: View {
     let isPoster: Bool
     let onSubmit: () -> Void
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var hoverRating: Double = 0
     
     private var reviewTags: [String] {
@@ -3283,10 +3283,11 @@ struct ReviewModal: View {
                         VStack(alignment: .leading, spacing: AppSpacing.md) {
                             SectionHeader(title: LocalizationKey.taskApplicationRatingTags.localized, icon: "tag.fill")
                             
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: AppSpacing.sm) {
+                            LazyVGrid(columns: AdaptiveLayout.adaptiveGridColumns(
+                                horizontalSizeClass: horizontalSizeClass,
+                                itemType: .standard,
+                                spacing: AppSpacing.sm
+                            ), spacing: AppSpacing.sm) {
                                 ForEach(reviewTags, id: \.self) { tag in
                                     Button(action: {
                                         if selectedTags.contains(tag) {
@@ -6050,7 +6051,7 @@ struct ConfirmationReminderCard: View {
     }
     
     private func updateCountdown() {
-        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDatePublic(deadline) else {
             remainingSeconds = 0
             return
         }
@@ -6132,7 +6133,7 @@ struct WaitingConfirmationCard: View {
     }
     
     private func updateCountdown() {
-        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDatePublic(deadline) else {
             remainingSeconds = 0
             return
         }

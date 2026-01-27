@@ -161,8 +161,7 @@ struct LeaderboardDetailView: View {
         .sheet(isPresented: $showShareSheet) {
             if let leaderboard = viewModel.leaderboard {
                 LeaderboardShareView(leaderboard: leaderboard, leaderboardId: leaderboardId)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
+                    .adaptiveSheetPresentation(showDragIndicator: true)
             }
         }
         .sheet(isPresented: $showLogin) {

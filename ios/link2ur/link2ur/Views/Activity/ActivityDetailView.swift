@@ -9,6 +9,7 @@ struct ActivityDetailView: View {
     @State private var showingApplySheet = false
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var showLogin = false
     @State private var currentImageIndex = 0
     @State private var isHeaderVisible = false
@@ -160,8 +161,7 @@ struct ActivityDetailView: View {
                     shareImage: shareImage,
                     isShareImageLoading: isShareImageLoading
                 )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+                .adaptiveSheetPresentation(showDragIndicator: true)
                 .onAppear {
                     // 当分享面板出现时，开始加载图片（如果还没有加载）
                     if shareImage == nil && !isShareImageLoading {
@@ -177,7 +177,7 @@ struct ActivityDetailView: View {
                         .foregroundColor(AppColors.textSecondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .presentationDetents([.medium])
+                .adaptiveSheetPresentation(style: .sheet)
             }
         }
         .sheet(isPresented: $showLogin) {
@@ -705,6 +705,7 @@ struct ActivityApplyView: View {
     let activityId: Int
     @ObservedObject var viewModel: ActivityViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     @State private var selectedTimeSlotId: Int?
     @State private var preferredDeadline: Date = Date()
@@ -791,7 +792,11 @@ struct ActivityApplyView: View {
                     .fontWeight(.bold)
                     .padding(.leading, 4)
                 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppSpacing.sm) {
+                LazyVGrid(columns: AdaptiveLayout.adaptiveGridColumns(
+                    horizontalSizeClass: horizontalSizeClass,
+                    itemType: .standard,
+                    spacing: AppSpacing.sm
+                ), spacing: AppSpacing.sm) {
                     ForEach(groupedTimeSlots[date] ?? []) { slot in
                         ActivityTimeSlotCard(
                             slot: slot,

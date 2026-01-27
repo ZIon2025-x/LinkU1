@@ -230,7 +230,11 @@ struct RecommendationTask: Codable {
             isRecommended: true,
             matchScore: matchScore,
             recommendationReason: recommendationReason,
-            taskSource: nil  // 推荐任务默认为普通任务
+            taskSource: nil,  // 推荐任务默认为普通任务
+            confirmationDeadline: nil,
+            confirmedAt: nil,
+            autoConfirmed: nil,
+            confirmationReminderSent: nil
         )
     }
 }
