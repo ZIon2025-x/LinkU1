@@ -32,6 +32,7 @@ from app.coupon_points_crud import (
     get_coupon_by_code,
 )
 from app import models
+from app.rate_limiting import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -473,6 +474,7 @@ def use_coupon_api(
 # ==================== 任务支付集成 API ====================
 
 @router.post("/tasks/{task_id}/payment", response_model=schemas.TaskPaymentResponse)
+@rate_limit("create_payment")
 def create_task_payment(
     task_id: int,
     payment_request: schemas.TaskPaymentRequest,

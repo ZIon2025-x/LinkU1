@@ -37,6 +37,10 @@ struct Task: Codable, Identifiable, Equatable {
     let matchScore: Double?  // 推荐匹配分数
     let recommendationReason: String?  // 推荐原因
     let taskSource: String?  // 任务来源：normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
+    let confirmationDeadline: String?  // 确认截止时间（completed_at + 5天）
+    let confirmedAt: String?  // 实际确认时间
+    let autoConfirmed: Bool?  // 是否自动确认
+    let confirmationReminderSent: Int?  // 提醒状态位掩码
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
@@ -67,6 +71,10 @@ struct Task: Codable, Identifiable, Equatable {
         case matchScore = "match_score"
         case recommendationReason = "recommendation_reason"
         case taskSource = "task_source"
+        case confirmationDeadline = "confirmation_deadline"
+        case confirmedAt = "confirmed_at"
+        case autoConfirmed = "auto_confirmed"
+        case confirmationReminderSent = "confirmation_reminder_sent"
     }
     
     // 兼容旧代码的 computed properties

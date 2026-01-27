@@ -195,6 +195,10 @@ class Task(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     accepted_at = Column(DateTime(timezone=True), nullable=True)  # 任务接受时间
     completed_at = Column(DateTime(timezone=True), nullable=True)  # 任务完成时间
+    confirmation_deadline = Column(DateTime(timezone=True), nullable=True)  # 确认截止时间（completed_at + 5天）
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)  # 实际确认时间（发布者确认或系统自动确认）
+    auto_confirmed = Column(Integer, default=0)  # 是否自动确认：1=自动确认，0=手动确认
+    confirmation_reminder_sent = Column(Integer, default=0)  # 提醒状态位掩码：位0=3天提醒，位1=1天提醒，位2=6小时提醒，位3=1小时提醒
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     payment_intent_id = Column(String(255), nullable=True)  # Stripe Payment Intent ID，用于关联支付记录
     payment_expires_at = Column(DateTime(timezone=True), nullable=True)  # 支付过期时间（待支付状态的任务）
@@ -326,6 +330,7 @@ class TaskDispute(Base):
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 发布者ID
     reason = Column(Text, nullable=False)  # 争议原因
+    evidence_files = Column(Text, nullable=True)  # JSON数组存储证据文件ID列表
     status = Column(String(20), default="pending")  # pending, resolved, dismissed
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     resolved_at = Column(DateTime(timezone=True), nullable=True)

@@ -1152,6 +1152,23 @@ struct TaskDetailContentView: View {
                     // 任务详情卡片
                     TaskInfoCard(task: task)
                     
+                    // 待确认任务提示 - 发布者确认提醒卡片
+                    if task.status == .pendingConfirmation && isPoster, let confirmationDeadline = task.confirmationDeadline {
+                        ConfirmationReminderCard(
+                            deadline: confirmationDeadline,
+                            onConfirm: {
+                                showConfirmCompletionSheet = true
+                            }
+                        )
+                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+                    }
+                    
+                    // 待确认任务提示 - 接单人等待提示
+                    if task.status == .pendingConfirmation && isTaker, let confirmationDeadline = task.confirmationDeadline {
+                        WaitingConfirmationCard(deadline: confirmationDeadline)
+                            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+                    }
+                    
                     // 发布者查看自己任务时的提示信息
                     if isPoster && task.status == .open {
                         PosterInfoCard()
@@ -1608,7 +1625,83 @@ struct TaskTimeInfoView: View {
                         Spacer()
                     }
                 }
+                
+                // 确认倒计时（如果任务状态为 pending_confirmation）
+                if task.status == .pendingConfirmation, let confirmationDeadline = task.confirmationDeadline {
+                    ConfirmationCountdownView(deadline: confirmationDeadline)
+                }
             }
+        }
+    }
+}
+
+// MARK: - 确认倒计时视图
+struct ConfirmationCountdownView: View {
+    let deadline: String
+    @State private var remainingSeconds: Int = 0
+    @State private var timer: Timer?
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            Circle()
+                .fill(AppColors.warning.opacity(0.1))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    IconStyle.icon("clock.badge.exclamationmark", size: 14)
+                        .foregroundColor(AppColors.warning)
+                )
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("确认截止时间")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                Text(formatCountdown(remainingSeconds))
+                    .font(AppTypography.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.warning)
+            }
+            
+            Spacer()
+        }
+        .onAppear {
+            updateCountdown()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                updateCountdown()
+            }
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func updateCountdown() {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+            remainingSeconds = 0
+            return
+        }
+        let now = Date()
+        let remaining = Int(deadlineDate.timeIntervalSince(now))
+        remainingSeconds = max(0, remaining)
+    }
+    
+    private func formatCountdown(_ seconds: Int) -> String {
+        if seconds <= 0 {
+            return "已过期"
+        }
+        
+        let days = seconds / 86400
+        let hours = (seconds % 86400) / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        
+        if days > 0 {
+            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+        } else if hours > 0 {
+            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+        } else if minutes > 0 {
+            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+        } else {
+            return String(format: "剩余 %d秒", secs)
         }
     }
 }
@@ -5882,5 +5975,190 @@ struct RefundRebuttalSheet: View {
             }
         }
         return error.localizedDescription
+    }
+}
+
+// MARK: - 确认提醒卡片（发布者）
+struct ConfirmationReminderCard: View {
+    let deadline: String
+    let onConfirm: () -> Void
+    @State private var remainingSeconds: Int = 0
+    @State private var timer: Timer?
+    
+    var body: some View {
+        VStack(spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.md) {
+                Image(systemName: remainingSeconds <= 3600 ? "exclamationmark.triangle.fill" : "clock.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.warning)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("请确认任务完成")
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.textPrimary)
+                    
+                    Text(formatCountdown(remainingSeconds))
+                        .font(AppTypography.body)
+                        .foregroundColor(remainingSeconds <= 3600 ? AppColors.error : AppColors.warning)
+                    
+                    if remainingSeconds <= 3600 {
+                        Text("即将自动确认，请立即确认！")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.error)
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: onConfirm) {
+                    Text("立即确认")
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.vertical, AppSpacing.md)
+                        .background(remainingSeconds <= 3600 ? AppColors.error : AppColors.primary)
+                        .cornerRadius(8)
+                }
+            }
+        }
+        .padding(AppSpacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(remainingSeconds <= 3600 
+                      ? AppColors.error.opacity(0.1)
+                      : remainingSeconds <= 86400
+                      ? AppColors.warning.opacity(0.1)
+                      : AppColors.primary.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(remainingSeconds <= 3600 
+                        ? AppColors.error
+                        : remainingSeconds <= 86400
+                        ? AppColors.warning
+                        : AppColors.primary, lineWidth: 2)
+        )
+        .onAppear {
+            updateCountdown()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                updateCountdown()
+            }
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func updateCountdown() {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+            remainingSeconds = 0
+            return
+        }
+        let now = Date()
+        let remaining = Int(deadlineDate.timeIntervalSince(now))
+        remainingSeconds = max(0, remaining)
+    }
+    
+    private func formatCountdown(_ seconds: Int) -> String {
+        if seconds <= 0 {
+            return "已过期"
+        }
+        
+        let days = seconds / 86400
+        let hours = (seconds % 86400) / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        
+        if days > 0 {
+            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+        } else if hours > 0 {
+            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+        } else if minutes > 0 {
+            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+        } else {
+            return String(format: "剩余 %d秒", secs)
+        }
+    }
+}
+
+// MARK: - 等待确认卡片（接单人）
+struct WaitingConfirmationCard: View {
+    let deadline: String
+    @State private var remainingSeconds: Int = 0
+    @State private var timer: Timer?
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 20))
+                .foregroundColor(AppColors.primary)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("等待发布者确认")
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(formatCountdown(remainingSeconds))
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+                
+                if remainingSeconds <= 86400 {
+                    Text("（到期将自动确认）")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(AppSpacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(AppColors.primary.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppColors.primary, lineWidth: 1)
+        )
+        .onAppear {
+            updateCountdown()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                updateCountdown()
+            }
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func updateCountdown() {
+        guard let deadlineDate = DateFormatterHelper.shared.parseDate(deadline) else {
+            remainingSeconds = 0
+            return
+        }
+        let now = Date()
+        let remaining = Int(deadlineDate.timeIntervalSince(now))
+        remainingSeconds = max(0, remaining)
+    }
+    
+    private func formatCountdown(_ seconds: Int) -> String {
+        if seconds <= 0 {
+            return "已过期"
+        }
+        
+        let days = seconds / 86400
+        let hours = (seconds % 86400) / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        
+        if days > 0 {
+            return String(format: "剩余 %d天 %d小时 %d分钟", days, hours, minutes)
+        } else if hours > 0 {
+            return String(format: "剩余 %d小时 %d分钟 %d秒", hours, minutes, secs)
+        } else if minutes > 0 {
+            return String(format: "剩余 %d分钟 %d秒", minutes, secs)
+        } else {
+            return String(format: "剩余 %d秒", secs)
+        }
     }
 }

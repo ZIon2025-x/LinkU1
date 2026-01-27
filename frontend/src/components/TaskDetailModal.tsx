@@ -115,6 +115,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [userParticipant, setUserParticipant] = useState<any>(null);
   // 时间段信息
   const [timeSlot, setTimeSlot] = useState<any>(null);
+  // 确认倒计时相关状态
+  const [confirmationRemainingSeconds, setConfirmationRemainingSeconds] = useState<number | null>(null);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -459,6 +461,61 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       checkUserApplication();
     }
   }, [user, task]);
+
+  // 计算和更新确认倒计时
+  useEffect(() => {
+    if (!task || task.status !== 'pending_confirmation' || !task.confirmation_deadline) {
+      setConfirmationRemainingSeconds(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const deadline = new Date(task.confirmation_deadline);
+      const now = new Date();
+      const remaining = Math.max(0, Math.floor((deadline.getTime() - now.getTime()) / 1000));
+      setConfirmationRemainingSeconds(remaining);
+    };
+
+    // 立即计算一次
+    updateCountdown();
+
+    // 每秒更新一次
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [task?.status, task?.confirmation_deadline]);
+
+  // 格式化倒计时显示
+  const formatCountdown = useCallback((seconds: number | null): string => {
+    if (seconds === null || seconds <= 0) {
+      return language === 'zh' ? '已过期' : 'Expired';
+    }
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (days > 0) {
+      return language === 'zh' 
+        ? `剩余 ${days}天 ${hours}小时 ${minutes}分钟`
+        : `${days}d ${hours}h ${minutes}m remaining`;
+    } else if (hours > 0) {
+      return language === 'zh'
+        ? `剩余 ${hours}小时 ${minutes}分钟 ${secs}秒`
+        : `${hours}h ${minutes}m ${secs}s remaining`;
+    } else if (minutes > 0) {
+      return language === 'zh'
+        ? `剩余 ${minutes}分钟 ${secs}秒`
+        : `${minutes}m ${secs}s remaining`;
+    } else {
+      return language === 'zh'
+        ? `剩余 ${secs}秒`
+        : `${secs}s remaining`;
+    }
+  }, [language]);
 
   const checkUserApplication = async () => {
     if (!user || !task || user.id === task.poster_id) {
@@ -1773,6 +1830,133 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           </div>
         )}
 
+        {/* 待确认任务提示 - 发布者确认提醒横幅 */}
+        {task.status === 'pending_confirmation' && user && task.poster_id === user.id && confirmationRemainingSeconds !== null && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '20px',
+            background: confirmationRemainingSeconds <= 3600 
+              ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
+              : confirmationRemainingSeconds <= 86400
+              ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+              : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+            borderRadius: '12px',
+            border: `2px solid ${confirmationRemainingSeconds <= 3600 ? '#ef4444' : confirmationRemainingSeconds <= 86400 ? '#f59e0b' : '#3b82f6'}`,
+            boxShadow: `0 4px 12px rgba(${confirmationRemainingSeconds <= 3600 ? '239, 68, 68' : confirmationRemainingSeconds <= 86400 ? '245, 158, 11' : '59, 130, 246'}, 0.3)`
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                <span style={{ fontSize: '28px', flexShrink: 0 }}>
+                  {confirmationRemainingSeconds <= 3600 ? '🚨' : '⏰'}
+                </span>
+                <div>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: confirmationRemainingSeconds <= 3600 ? '#991b1b' : confirmationRemainingSeconds <= 86400 ? '#92400e' : '#1e40af',
+                    marginBottom: '4px'
+                  }}>
+                    {language === 'zh' ? '请确认任务完成' : 'Please Confirm Task Completion'}
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: confirmationRemainingSeconds <= 3600 ? '#dc2626' : confirmationRemainingSeconds <= 86400 ? '#d97706' : '#2563eb'
+                  }}>
+                    {formatCountdown(confirmationRemainingSeconds)}
+                  </div>
+                  {confirmationRemainingSeconds <= 3600 && (
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#991b1b',
+                      marginTop: '4px',
+                      fontWeight: '500'
+                    }}>
+                      {language === 'zh' ? '即将自动确认，请立即确认！' : 'Will auto-confirm soon, please confirm immediately!'}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const confirmButton = document.querySelector('[data-action="confirm-completion"]') as HTMLElement;
+                  if (confirmButton) {
+                    confirmButton.click();
+                  }
+                }}
+                style={{
+                  background: confirmationRemainingSeconds <= 3600 ? '#ef4444' : '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+                }}
+              >
+                {language === 'zh' ? '立即确认' : 'Confirm Now'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 待确认任务提示 - 接单人等待提示 */}
+        {task.status === 'pending_confirmation' && user && task.taker_id === user.id && confirmationRemainingSeconds !== null && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+            borderRadius: '12px',
+            border: '2px solid #6366f1',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.2)'
+          }}>
+            <span style={{ fontSize: '24px', flexShrink: 0 }}>⏳</span>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontSize: '15px',
+                fontWeight: '600',
+                color: '#3730a3',
+                marginBottom: '4px'
+              }}>
+                {language === 'zh' ? '等待发布者确认' : 'Waiting for Poster Confirmation'}
+              </div>
+              <div style={{
+                fontSize: '13px',
+                color: '#4f46e5',
+                fontWeight: '500'
+              }}>
+                {formatCountdown(confirmationRemainingSeconds)}
+                {confirmationRemainingSeconds <= 86400 && (
+                  <span style={{ marginLeft: '8px' }}>
+                    {language === 'zh' ? '（到期将自动确认）' : '(Will auto-confirm when expired)'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 任务描述 */}
         <div style={{
           background: '#f8fafc',
@@ -3040,6 +3224,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {task.status === 'pending_confirmation' && isTaskPoster && (
             <>
             <button
+              data-action="confirm-completion"
               onClick={handleConfirmCompletion}
               disabled={actionLoading}
               style={{

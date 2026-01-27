@@ -2086,8 +2086,14 @@ def complete_task(
         )
 
     # 更新任务状态为等待确认
+    from datetime import timedelta
+    now = get_utc_time()
     db_task.status = "pending_confirmation"
-    db_task.completed_at = get_utc_time()
+    db_task.completed_at = now
+    # 设置确认截止时间：completed_at + 5天
+    db_task.confirmation_deadline = now + timedelta(days=5)
+    # 清除之前的提醒状态
+    db_task.confirmation_reminder_sent = 0
     db.commit()
     db.refresh(db_task)
     
@@ -2231,6 +2237,7 @@ def complete_task(
 
 
 @router.post("/tasks/{task_id}/dispute", response_model=schemas.TaskDisputeOut)
+@rate_limit("create_dispute")
 def create_task_dispute(
     task_id: int,
     dispute_data: schemas.TaskDisputeCreate,
@@ -2255,11 +2262,46 @@ def create_task_dispute(
     if existing_dispute:
         raise HTTPException(status_code=400, detail="您已经提交过争议，请等待管理员处理")
     
+    # ✅ 验证证据文件（如果提供）
+    validated_evidence_files = []
+    if dispute_data.evidence_files:
+        if len(dispute_data.evidence_files) > 10:
+            raise HTTPException(
+                status_code=400,
+                detail="证据文件数量不能超过10个"
+            )
+        
+        # 验证文件是否属于当前任务
+        from app.models import MessageAttachment, Message
+        for file_id in dispute_data.evidence_files:
+            # 检查文件是否存在于MessageAttachment中，且与当前任务相关
+            attachment = db.query(MessageAttachment).filter(
+                MessageAttachment.blob_id == file_id
+            ).first()
+            
+            if attachment:
+                # 通过附件找到消息，验证是否属于当前任务
+                task_message = db.query(Message).filter(
+                    Message.id == attachment.message_id,
+                    Message.task_id == task_id
+                ).first()
+                
+                if task_message:
+                    validated_evidence_files.append(file_id)
+                else:
+                    logger.warning(f"证据文件 {file_id} 不属于任务 {task_id}，已忽略")
+            else:
+                logger.warning(f"证据文件 {file_id} 不存在，已忽略")
+    
     # 创建争议记录
+    import json
+    evidence_files_json = json.dumps(validated_evidence_files) if validated_evidence_files else None
+    
     dispute = models.TaskDispute(
         task_id=task_id,
         poster_id=current_user.id,
         reason=dispute_data.reason,
+        evidence_files=evidence_files_json,
         status="pending",
         created_at=get_utc_time()
     )
@@ -2488,6 +2530,78 @@ def resolve_task_dispute(
     if dispute.status != "pending":
         raise HTTPException(status_code=400, detail="Dispute is not pending")
     
+    # 获取任务信息
+    task = crud.get_task(db, dispute.task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # ✅ 争议与退款联动：如果启用自动退款，创建并自动批准退款申请
+    refund_request_id = None
+    if resolve_data.auto_refund:
+        # 检查任务是否已支付
+        if not task.is_paid:
+            logger.warning(f"任务 {task.id} 未支付，无法自动退款")
+        else:
+            # 检查是否已有活跃的退款申请
+            existing_refund = db.query(models.RefundRequest).filter(
+                models.RefundRequest.task_id == dispute.task_id,
+                models.RefundRequest.status.in_(["pending", "processing"])
+            ).first()
+            
+            if existing_refund:
+                logger.info(f"任务 {task.id} 已有活跃退款申请 {existing_refund.id}，跳过自动创建")
+                refund_request_id = existing_refund.id
+            else:
+                # 创建全额退款申请
+                from decimal import Decimal
+                task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+                
+                refund_request = models.RefundRequest(
+                    task_id=dispute.task_id,
+                    poster_id=dispute.poster_id,
+                    reason=f"争议已解决：{resolve_data.resolution_note}",
+                    refund_amount=None,  # NULL表示全额退款
+                    status="approved",  # 直接设置为已批准
+                    admin_comment=f"争议解决后自动退款（争议ID: {dispute.id}）",
+                    reviewed_by=current_user.id,
+                    reviewed_at=get_utc_time(),
+                    processed_at=get_utc_time()
+                )
+                db.add(refund_request)
+                db.flush()  # 获取ID
+                refund_request_id = refund_request.id
+                
+                # 自动处理退款
+                try:
+                    from app.refund_service import process_refund
+                    success, refund_intent_id, refund_transfer_id, error_message = process_refund(
+                        db=db,
+                        refund_request=refund_request,
+                        task=task,
+                        refund_amount=float(task_amount)
+                    )
+                    
+                    if success:
+                        refund_request.refund_intent_id = refund_intent_id
+                        refund_request.refund_transfer_id = refund_transfer_id
+                        refund_request.status = "completed"
+                        refund_request.completed_at = get_utc_time()
+                        # 任务状态已在 process_refund 中更新：
+                        # - 全额退款：task.status = "cancelled"
+                        # - 部分退款：task.status = "completed"（并自动触发转账）
+                        if refund_request.refund_amount is None:  # NULL表示全额退款
+                            logger.info(f"✅ 争议全额退款成功，任务 {task.id} 状态已更新为 cancelled")
+                        else:
+                            logger.info(f"✅ 争议部分退款成功，任务 {task.id} 状态已更新为 completed，已自动触发转账")
+                    else:
+                        refund_request.status = "pending"
+                        refund_request.admin_comment = f"{refund_request.admin_comment}\n自动退款处理失败: {error_message}"
+                        logger.error(f"❌ 争议解决后自动退款失败：{error_message}")
+                except Exception as e:
+                    logger.error(f"处理自动退款时发生错误: {e}", exc_info=True)
+                    refund_request.status = "pending"
+                    refund_request.admin_comment = f"{refund_request.admin_comment}\n自动退款处理异常: {str(e)}"
+    
     # 更新争议状态
     dispute.status = "resolved"
     dispute.resolved_at = get_utc_time()
@@ -2500,14 +2614,22 @@ def resolve_task_dispute(
         import json
         
         resolver_name = current_user.name or f"管理员{current_user.id}"
+        content = f"管理员 {resolver_name} 已解决此争议：{resolve_data.resolution_note}"
+        if refund_request_id:
+            content += f"\n已自动创建并处理退款申请（ID: {refund_request_id}）"
+        
         system_message = Message(
             sender_id=None,
             receiver_id=None,
-            content=f"管理员 {resolver_name} 已解决此争议：{resolve_data.resolution_note}",
+            content=content,
             task_id=dispute.task_id,
             message_type="system",
             conversation_type="task",
-            meta=json.dumps({"system_action": "task_dispute_resolved", "dispute_id": dispute.id}),
+            meta=json.dumps({
+                "system_action": "task_dispute_resolved",
+                "dispute_id": dispute.id,
+                "refund_request_id": refund_request_id
+            }),
             created_at=get_utc_time()
         )
         db.add(system_message)
@@ -2570,6 +2692,7 @@ def dismiss_task_dispute(
 # ==================== 退款申请API ====================
 
 @router.post("/tasks/{task_id}/refund-request", response_model=schemas.RefundRequestOut)
+@rate_limit("refund_request")
 def create_refund_request(
     task_id: int,
     refund_data: schemas.RefundRequestCreate,
@@ -3881,6 +4004,13 @@ def approve_refund_request(
             detail=f"任务状态已改变（当前状态: {task.status}），无法处理退款。"
         )
     
+    # ✅ Stripe争议冻结检查：如果任务因Stripe争议被冻结，阻止退款处理
+    if hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="任务因Stripe争议已冻结，无法处理退款。请等待争议解决后再试。"
+        )
+    
     # 更新退款申请状态
     refund_request.status = "approved"
     refund_request.reviewed_by = current_user.id
@@ -4182,6 +4312,8 @@ def confirm_task_completion(
 
     # 将任务状态改为已完成
     task.status = "completed"
+    task.confirmed_at = get_utc_time()  # 记录确认时间
+    task.auto_confirmed = 0  # 手动确认
     db.commit()
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)
@@ -6355,16 +6487,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     user_agent = request.headers.get("user-agent", "unknown")
     client_ip = request.client.host if request.client else "unknown"
     
-    # 详细记录 webhook 接收信息
+    # 记录webhook接收（关键信息保留INFO，详细信息降级为DEBUG）
     logger.info("=" * 80)
     logger.info(f"🔔 [WEBHOOK] 收到 Stripe Webhook 请求")
-    logger.info(f"  - 时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
-    logger.info(f"  - 客户端IP: {client_ip}")
-    logger.info(f"  - User-Agent: {user_agent}")
-    logger.info(f"  - Content-Type: {content_type}")
-    logger.info(f"  - Payload 大小: {len(payload)} bytes")
-    logger.info(f"  - Signature 前缀: {sig_header[:30] if sig_header else 'None'}...")
-    logger.info(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret else '❌ 未配置'}")
+    logger.debug(f"  - 时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
+    logger.debug(f"  - 客户端IP: {client_ip}")
+    logger.debug(f"  - User-Agent: {user_agent}")
+    logger.debug(f"  - Content-Type: {content_type}")
+    logger.debug(f"  - Payload 大小: {len(payload)} bytes")
+    logger.debug(f"  - Signature 前缀: {sig_header[:30] if sig_header else 'None'}...")
+    logger.debug(f"  - Secret 配置: {'✅ 已配置' if endpoint_secret else '❌ 未配置'}")
     
     # 严格验证 Webhook 签名（安全要求）
     # 只有通过 Stripe 签名验证的请求才能处理
@@ -6379,7 +6511,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         # 严格验证 Webhook 签名
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-        logger.info(f"✅ [WEBHOOK] 事件验证成功（签名已验证）")
+        logger.debug(f"✅ [WEBHOOK] 事件验证成功（签名已验证）")
     except ValueError as e:
         logger.error(f"❌ [WEBHOOK] Invalid payload: {e}")
         logger.error(f"  - Payload 内容 (前500字符): {payload[:500].decode('utf-8', errors='ignore')}")
@@ -6402,12 +6534,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     livemode = event.get("livemode", False)
     created = event.get("created")
     
-    # 记录事件详细信息
-    logger.info(f"📦 [WEBHOOK] 事件详情:")
-    logger.info(f"  - 事件类型: {event_type}")
-    logger.info(f"  - 事件ID: {event_id}")
-    logger.info(f"  - Livemode: {livemode}")
-    logger.info(f"  - 创建时间: {created} ({time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created)) if created else 'N/A'})")
+    # 记录事件关键信息（详细信息降级为DEBUG）
+    logger.info(f"📦 [WEBHOOK] 事件: {event_type} (ID: {event_id})")
+    logger.debug(f"  - Livemode: {livemode}")
+    logger.debug(f"  - 创建时间: {created} ({time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(created)) if created else 'N/A'})")
     
     # Idempotency 检查：防止重复处理同一个 webhook 事件
     import json
@@ -6436,7 +6566,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             db.add(webhook_event)
             try:
                 db.commit()
-                logger.info(f"✅ [WEBHOOK] 已创建事件记录: event_id={event_id}")
+                logger.debug(f"✅ [WEBHOOK] 已创建事件记录: event_id={event_id}")
             except Exception as e:
                 db.rollback()
                 logger.error(f"❌ [WEBHOOK] 创建事件记录失败: {e}")
@@ -6467,21 +6597,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         logger.error(f"❌ [WEBHOOK] 更新事件处理状态失败: {e}")
         db.rollback()
     
-    # 如果是 payment_intent 相关事件，记录更多细节
+    # 如果是 payment_intent 相关事件，记录关键信息（详细信息降级为DEBUG）
     if "payment_intent" in event_type:
         payment_intent_id = event_data.get("id")
         payment_status = event_data.get("status")
         amount = event_data.get("amount")
         currency = event_data.get("currency", "unknown")
         metadata = event_data.get("metadata", {})
-        logger.info(f"💳 [WEBHOOK] Payment Intent 详情:")
-        logger.info(f"  - Payment Intent ID: {payment_intent_id}")
-        logger.info(f"  - 状态: {payment_status}")
-        logger.info(f"  - 金额: {amount / 100 if amount else 0:.2f} {currency.upper()}")
-        logger.info(f"  - Metadata: {json.dumps(metadata, ensure_ascii=False)}")
-        logger.info(f"  - Task ID (from metadata): {metadata.get('task_id', 'N/A')}")
-        logger.info(f"  - Application ID (from metadata): {metadata.get('application_id', 'N/A')}")
-        logger.info(f"  - Pending Approval (from metadata): {metadata.get('pending_approval', 'N/A')}")
+        logger.info(f"💳 [WEBHOOK] Payment Intent: {payment_intent_id}, 状态: {payment_status}, 金额: {amount / 100 if amount else 0:.2f} {currency.upper()}")
+        logger.debug(f"  - Metadata: {json.dumps(metadata, ensure_ascii=False)}")
+        logger.debug(f"  - Task ID: {metadata.get('task_id', 'N/A')}, Application ID: {metadata.get('application_id', 'N/A')}, Pending Approval: {metadata.get('pending_approval', 'N/A')}")
     
     # 处理 Payment Intent 事件（用于 Stripe Elements）
     if event_type == "payment_intent.succeeded":
@@ -6556,12 +6681,12 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             logger.error(f"❌ [WEBHOOK] 更新跳蚤市场商品状态失败: {e}", exc_info=True)
                 application_id_str = metadata.get("application_id")
                 
-                logger.info(f"🔍 Webhook检查: is_pending_approval={is_pending_approval}, application_id={application_id_str}, metadata={metadata}")
+                logger.debug(f"🔍 Webhook检查: is_pending_approval={is_pending_approval}, application_id={application_id_str}")
                 
                 if is_pending_approval and application_id_str:
                     # 这是批准申请时的支付，需要确认批准
                     application_id = int(application_id_str)
-                    logger.info(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
+                    logger.debug(f"🔍 查找申请: application_id={application_id}, task_id={task_id}")
                     
                     application = db.execute(
                         select(models.TaskApplication).where(
@@ -6573,7 +6698,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         )
                     ).scalar_one_or_none()
                     
-                    logger.info(f"🔍 找到申请: {application is not None}")
+                    logger.debug(f"🔍 找到申请: {application is not None}")
                     
                     if application:
                         logger.info(f"✅ [WEBHOOK] 开始批准申请 {application_id}, applicant_id={application.applicant_id}")
@@ -6615,7 +6740,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             responded_at=get_utc_time()
                         )
                         db.add(log_entry)
-                        logger.info(f"✅ [WEBHOOK] 已添加操作日志")
+                        logger.debug(f"✅ [WEBHOOK] 已添加操作日志")
                         
                         # 发送通知给申请者（支付成功后，任务已进入 in_progress 状态）
                         try:
@@ -6634,7 +6759,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     task=task,
                                     applicant=applicant
                                 )
-                                logger.info(f"✅ [WEBHOOK] 已发送接受申请通知给申请者 {application.applicant_id}")
+                                logger.debug(f"✅ [WEBHOOK] 已发送接受申请通知给申请者 {application.applicant_id}")
                             else:
                                 # 如果无法获取申请者信息，使用简单通知
                                 crud.create_notification(
@@ -6646,7 +6771,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     task.id,
                                     auto_commit=False,
                                 )
-                                logger.info(f"✅ [WEBHOOK] 已发送简单接受申请通知给申请者 {application.applicant_id}")
+                                logger.debug(f"✅ [WEBHOOK] 已发送简单接受申请通知给申请者 {application.applicant_id}")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 发送接受申请通知失败: {e}")
                         
@@ -6676,7 +6801,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     "webhook_event_id": event_id,
                                     "approved_at": get_utc_time().isoformat()
                                 })
-                                logger.info(f"✅ [WEBHOOK] 已更新支付历史记录: payment_history_id={payment_history.id}")
+                                logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录: payment_history_id={payment_history.id}")
                             else:
                                 # 创建新的支付历史记录（用于审计）
                                 from decimal import Decimal
@@ -6702,7 +6827,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                     }
                                 )
                                 db.add(payment_history)
-                                logger.info(f"✅ [WEBHOOK] 已创建支付历史记录: payment_history_id={payment_history.id}")
+                                logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录: payment_history_id={payment_history.id}")
                         except Exception as e:
                             logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败: {e}", exc_info=True)
                             # 支付历史记录失败不影响主流程
@@ -6738,7 +6863,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 }
                             )
                             db.add(payment_history)
-                            logger.info(f"✅ [WEBHOOK] 已创建支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                            logger.debug(f"✅ [WEBHOOK] 已创建支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
                         else:
                             # 更新现有记录
                             payment_history.status = "succeeded"
@@ -6751,7 +6876,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                                 "webhook_event_id": event_id,
                                 "approved_at": get_utc_time().isoformat()
                             })
-                            logger.info(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
+                            logger.debug(f"✅ [WEBHOOK] 已更新支付历史记录（非 pending_approval）: payment_history_id={payment_history.id}")
                     except Exception as e:
                         logger.error(f"❌ [WEBHOOK] 创建/更新支付历史记录失败（非 pending_approval）: {e}", exc_info=True)
                         # 支付历史记录失败不影响主流程
@@ -6768,16 +6893,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 
                 # 提交数据库更改
                 try:
-                    # 在提交前记录更新前的状态
-                    logger.info(f"📝 [WEBHOOK] 提交前任务状态:")
-                    logger.info(f"  - is_paid (更新前): {task.is_paid}")
-                    logger.info(f"  - status: {task.status}")
-                    logger.info(f"  - payment_intent_id: {task.payment_intent_id}")
-                    logger.info(f"  - escrow_amount: {task.escrow_amount}")
-                    logger.info(f"  - taker_id: {task.taker_id}")
+                    # 在提交前记录更新前的状态（DEBUG级别）
+                    logger.debug(f"📝 [WEBHOOK] 提交前任务状态: is_paid={task.is_paid}, status={task.status}, payment_intent_id={task.payment_intent_id}, escrow_amount={task.escrow_amount}, taker_id={task.taker_id}")
                     
                     db.commit()
-                    logger.info(f"✅ [WEBHOOK] 数据库提交成功")
+                    logger.debug(f"✅ [WEBHOOK] 数据库提交成功")
                     
                     # 刷新任务对象以获取最新状态
                     db.refresh(task)
@@ -6786,7 +6906,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     try:
                         from app.services.task_service import TaskService
                         TaskService.invalidate_cache(task_id)
-                        logger.info(f"✅ [WEBHOOK] 已清除任务 {task_id} 的缓存")
+                        logger.debug(f"✅ [WEBHOOK] 已清除任务 {task_id} 的缓存")
                     except Exception as e:
                         logger.warning(f"⚠️ [WEBHOOK] 清除任务缓存失败: {e}")
                     
@@ -6794,17 +6914,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     try:
                         from app.redis_cache import invalidate_tasks_cache
                         invalidate_tasks_cache()
-                        logger.info(f"✅ [WEBHOOK] 已清除任务列表缓存")
+                        logger.debug(f"✅ [WEBHOOK] 已清除任务列表缓存")
                     except Exception as e:
                         logger.warning(f"⚠️ [WEBHOOK] 清除任务列表缓存失败: {e}")
                     
-                    # 验证更新是否成功
-                    logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成（提交后验证）:")
-                    logger.info(f"  - 任务状态: {task.status}")
-                    logger.info(f"  - 是否已支付 (is_paid): {task.is_paid} {'✅' if task.is_paid == 1 else '❌'}")
-                    logger.info(f"  - Payment Intent ID: {task.payment_intent_id}")
-                    logger.info(f"  - Escrow 金额: {task.escrow_amount}")
-                    logger.info(f"  - Taker ID: {task.taker_id}")
+                    # 验证更新是否成功（关键信息保留INFO）
+                    logger.info(f"✅ [WEBHOOK] 任务 {task_id} 支付完成: status={task.status}, is_paid={task.is_paid}, taker_id={task.taker_id}")
+                    logger.debug(f"  - Payment Intent ID: {task.payment_intent_id}, Escrow 金额: {task.escrow_amount}")
                     
                     # 如果 is_paid 没有正确更新，记录警告
                     if task.is_paid != 1:
@@ -7102,15 +7218,44 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         amount = (dispute.get("amount") or 0) / 100.0
         logger.warning(f"Stripe 争议 charge.dispute.created: charge={charge_id}, task_id={task_id}, reason={reason}, amount={amount}")
         try:
-            # 通知 poster、taker、管理员
+            # 通知 poster、taker、管理员，并冻结任务状态
             if task_id:
                 task = crud.get_task(db, task_id)
                 if task:
+                    # ✅ Stripe争议冻结：冻结任务状态，防止资金继续流出
+                    if not hasattr(task, 'stripe_dispute_frozen') or task.stripe_dispute_frozen != 1:
+                        task.stripe_dispute_frozen = 1
+                        logger.warning(f"⚠️ 任务 {task_id} 因Stripe争议已冻结，防止资金继续流出")
+                        
+                        # 发送系统消息
+                        try:
+                            from app.models import Message
+                            import json
+                            
+                            system_message = Message(
+                                sender_id=None,
+                                receiver_id=None,
+                                content=f"⚠️ 此任务的支付发生Stripe争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}。在争议解决前，所有资金操作将被暂停。",
+                                task_id=task.id,
+                                message_type="system",
+                                conversation_type="task",
+                                meta=json.dumps({
+                                    "system_action": "stripe_dispute_frozen",
+                                    "charge_id": charge_id,
+                                    "reason": reason,
+                                    "amount": amount
+                                }),
+                                created_at=get_utc_time()
+                            )
+                            db.add(system_message)
+                        except Exception as e:
+                            logger.error(f"Failed to send system message for dispute freeze: {e}")
+                    
                     # 通知发布者
                     crud.create_notification(
                         db, str(task.poster_id),
                         "stripe_dispute", "Stripe 支付争议",
-                        f"您的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，请及时关注。原因: {reason}，金额: £{amount:.2f}",
+                        f"您的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}",
                         related_id=str(task_id), auto_commit=False
                     )
                     # 通知接受者（如有）
@@ -7118,7 +7263,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                         crud.create_notification(
                             db, str(task.taker_id),
                             "stripe_dispute", "Stripe 支付争议",
-                            f"您参与的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，请及时关注。原因: {reason}，金额: £{amount:.2f}",
+                            f"您参与的任务「{task.title}」（ID: {task_id}）的支付发生 Stripe 争议，任务状态已冻结。原因: {reason}，金额: £{amount:.2f}",
                             related_id=str(task_id), auto_commit=False
                         )
             # 通知所有管理员
@@ -7145,6 +7290,38 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         task_id = int(dispute.get("metadata", {}).get("task_id", 0))
         status = dispute.get("status")
         logger.info(f"Dispute closed for charge {charge_id}, task {task_id}: status={status}")
+        
+        # ✅ Stripe争议解冻：争议关闭后解冻任务状态
+        if task_id:
+            task = crud.get_task(db, task_id)
+            if task and hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
+                task.stripe_dispute_frozen = 0
+                logger.info(f"✅ 任务 {task_id} 的Stripe争议已关闭，已解冻任务状态")
+                
+                # 发送系统消息
+                try:
+                    from app.models import Message
+                    import json
+                    
+                    system_message = Message(
+                        sender_id=None,
+                        receiver_id=None,
+                        content=f"✅ Stripe争议已关闭（状态: {status}），任务状态已解冻，资金操作已恢复正常。",
+                        task_id=task.id,
+                        message_type="system",
+                        conversation_type="task",
+                        meta=json.dumps({
+                            "system_action": "stripe_dispute_unfrozen",
+                            "charge_id": charge_id,
+                            "status": status
+                        }),
+                        created_at=get_utc_time()
+                    )
+                    db.add(system_message)
+                    db.commit()
+                except Exception as e:
+                    logger.error(f"Failed to send system message for dispute unfreeze: {e}")
+                    db.rollback()
     
     elif event_type == "charge.dispute.funds_withdrawn":
         dispute = event_data
@@ -7415,16 +7592,16 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 webhook_event.processed_at = get_utc_time()
                 webhook_event.processing_error = None
                 db.commit()
-                logger.info(f"✅ [WEBHOOK] 事件处理完成，已标记: event_id={event_id}")
+                logger.debug(f"✅ [WEBHOOK] 事件处理完成，已标记: event_id={event_id}")
         except Exception as e:
             logger.error(f"❌ [WEBHOOK] 更新事件处理状态失败: {e}", exc_info=True)
             db.rollback()
     
     # 记录处理耗时和总结
     processing_time = time.time() - start_time
-    logger.info(f"⏱️ [WEBHOOK] 处理耗时: {processing_time:.3f} 秒")
+    logger.debug(f"⏱️ [WEBHOOK] 处理耗时: {processing_time:.3f} 秒")
     logger.info(f"✅ [WEBHOOK] Webhook 处理完成: {event_type}")
-    logger.info("=" * 80)
+    logger.debug("=" * 80)
     
     return {"status": "success"}
 

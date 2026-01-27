@@ -490,6 +490,183 @@ def send_task_completion_notification(
         logger.error(f"发送任务完成通知失败: {e}")
 
 
+def send_confirmation_reminder_notification(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    task: models.Task,
+    poster: models.User,
+    hours_remaining: int
+):
+    """发送确认提醒通知给发布者"""
+    try:
+        from app.utils.notification_templates import get_notification_texts
+        
+        # 根据剩余时间选择通知类型
+        reminder_type_map = {
+            72: "confirmation_reminder_3days",
+            24: "confirmation_reminder_1day",
+            6: "confirmation_reminder_6hours",
+            1: "confirmation_reminder_1hour"
+        }
+        notification_type = reminder_type_map.get(hours_remaining, "confirmation_reminder")
+        
+        # 获取通知文本
+        _, content_zh, _, content_en = get_notification_texts(
+            notification_type,
+            task_title=task.title,
+            hours_remaining=hours_remaining
+        )
+        
+        # 如果没有对应的模板，使用默认文本
+        if not content_zh:
+            if hours_remaining >= 24:
+                days = hours_remaining // 24
+                content_zh = f"任务「{task.title}」还有 {days} 天需要确认完成，请及时确认。"
+                content_en = f"Task '{task.title}' has {days} days left to confirm completion. Please confirm in time."
+            else:
+                content_zh = f"任务「{task.title}」还有 {hours_remaining} 小时需要确认完成，请及时确认。"
+                content_en = f"Task '{task.title}' has {hours_remaining} hours left to confirm completion. Please confirm in time."
+        
+        # 创建通知
+        crud.create_notification(
+            db=db,
+            user_id=poster.id,
+            type="confirmation_reminder",
+            title="任务确认提醒",
+            content=content_zh,
+            title_en="Task Confirmation Reminder",
+            content_en=content_en,
+            related_id=str(task.id)
+        )
+        
+        # 发送推送通知
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                db=db,
+                user_id=poster.id,
+                title=None,
+                body=None,
+                notification_type="confirmation_reminder",
+                data={"task_id": task.id, "hours_remaining": hours_remaining},
+                template_vars={
+                    "task_title": task.title,
+                    "task_id": task.id,
+                    "hours_remaining": hours_remaining
+                }
+            )
+        except Exception as e:
+            logger.warning(f"发送确认提醒推送通知失败: {e}")
+        
+        logger.info(f"确认提醒通知已发送给发布者 {poster.id}（任务 {task.id}，剩余 {hours_remaining} 小时）")
+        
+    except Exception as e:
+        logger.error(f"发送确认提醒通知失败: {e}")
+
+
+def send_auto_confirmation_notification(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    task: models.Task,
+    poster: Optional[models.User],
+    taker: Optional[models.User]
+):
+    """发送自动确认通知给发布者和接单人"""
+    try:
+        from app.utils.notification_templates import get_notification_texts
+        
+        # 发送通知给发布者
+        if poster:
+            try:
+                _, content_zh, _, content_en = get_notification_texts(
+                    "task_auto_confirmed_poster",
+                    task_title=task.title
+                )
+                if not content_zh:
+                    content_zh = f"任务「{task.title}」已自动确认完成（5天未确认，系统自动确认）。"
+                if not content_en:
+                    content_en = f"Task '{task.title}' has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+                
+                crud.create_notification(
+                    db=db,
+                    user_id=poster.id,
+                    type="task_auto_confirmed",
+                    title="任务已自动确认完成",
+                    content=content_zh,
+                    title_en="Task Auto-Confirmed",
+                    content_en=content_en,
+                    related_id=str(task.id)
+                )
+                
+                # 发送推送通知
+                try:
+                    from app.push_notification_service import send_push_notification
+                    send_push_notification(
+                        db=db,
+                        user_id=poster.id,
+                        title=None,
+                        body=None,
+                        notification_type="task_auto_confirmed",
+                        data={"task_id": task.id, "auto_confirmed": True},
+                        template_vars={
+                            "task_title": task.title,
+                            "task_id": task.id
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"发送自动确认推送通知失败（发布者 {poster.id}）: {e}")
+            except Exception as e:
+                logger.warning(f"发送自动确认通知给发布者失败: {e}")
+        
+        # 发送通知给接单人
+        if taker:
+            try:
+                _, content_zh, _, content_en = get_notification_texts(
+                    "task_auto_confirmed_taker",
+                    task_title=task.title
+                )
+                if not content_zh:
+                    content_zh = f"任务「{task.title}」已自动确认完成，奖励已发放。"
+                if not content_en:
+                    content_en = f"Task '{task.title}' has been automatically confirmed as completed. Reward has been issued."
+                
+                crud.create_notification(
+                    db=db,
+                    user_id=taker.id,
+                    type="task_auto_confirmed",
+                    title="任务已自动确认完成",
+                    content=content_zh,
+                    title_en="Task Auto-Confirmed",
+                    content_en=content_en,
+                    related_id=str(task.id)
+                )
+                
+                # 发送推送通知
+                try:
+                    from app.push_notification_service import send_push_notification
+                    send_push_notification(
+                        db=db,
+                        user_id=taker.id,
+                        title=None,
+                        body=None,
+                        notification_type="task_auto_confirmed",
+                        data={"task_id": task.id, "auto_confirmed": True},
+                        template_vars={
+                            "task_title": task.title,
+                            "task_id": task.id
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"发送自动确认推送通知失败（接单人 {taker.id}）: {e}")
+            except Exception as e:
+                logger.warning(f"发送自动确认通知给接单人失败: {e}")
+        
+        logger.info(f"自动确认通知已发送（任务 {task.id}）")
+        
+    except Exception as e:
+        logger.error(f"发送自动确认通知失败: {e}")
+
+
 def send_task_confirmation_notification(
     db: Session,
     background_tasks: BackgroundTasks,

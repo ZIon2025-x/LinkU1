@@ -814,6 +814,424 @@ def send_deadline_reminders(db: Session, hours_before: int):
         raise
 
 
+def auto_confirm_expired_tasks(db: Session):
+    """
+    自动确认超过5天未确认的任务
+    
+    Args:
+        db: 数据库会话
+    
+    Returns:
+        dict: 处理结果统计
+    """
+    try:
+        from app import crud
+        from app.task_notifications import send_auto_confirmation_notification
+        from fastapi import BackgroundTasks
+        from app.coupon_points_crud import add_points_transaction
+        from app.crud import get_system_setting
+        import uuid
+        
+        current_time = get_utc_time()
+        
+        # 查询所有 pending_confirmation 且已过期的任务
+        expired_tasks = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "pending_confirmation",
+                models.Task.confirmation_deadline.isnot(None),
+                models.Task.confirmation_deadline < current_time
+            )
+        ).all()
+        
+        if not expired_tasks:
+            return {"count": 0, "confirmed": 0, "skipped": 0}
+        
+        confirmed_count = 0
+        skipped_count = 0
+        
+        for task in expired_tasks:
+            try:
+                # 检查是否有活跃的退款申请（包括 pending, processing, approved）
+                active_refund = db.query(models.RefundRequest).filter(
+                    and_(
+                        models.RefundRequest.task_id == task.id,
+                        models.RefundRequest.status.in_(["pending", "processing", "approved"])
+                    )
+                ).first()
+                
+                if active_refund:
+                    logger.info(f"任务 {task.id} 有活跃退款申请 {active_refund.id}（状态：{active_refund.status}），跳过自动确认")
+                    skipped_count += 1
+                    continue
+                
+                # 检查是否有未解决的争议
+                active_dispute = db.query(models.TaskDispute).filter(
+                    and_(
+                        models.TaskDispute.task_id == task.id,
+                        models.TaskDispute.status == "pending"
+                    )
+                ).first()
+                
+                if active_dispute:
+                    logger.info(f"任务 {task.id} 有未解决争议 {active_dispute.id}，跳过自动确认")
+                    skipped_count += 1
+                    continue
+                
+                # 检查是否处于 Stripe 争议冻结状态
+                if hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
+                    logger.info(f"任务 {task.id} 处于 Stripe 争议冻结状态，跳过自动确认")
+                    skipped_count += 1
+                    continue
+                
+                # 新增：检查任务是否已全额退款
+                if task.is_paid == 0:
+                    logger.info(f"任务 {task.id} 已全额退款（is_paid=0），跳过自动确认")
+                    skipped_count += 1
+                    continue
+                
+                # 新增：检查托管金额是否为0
+                if task.escrow_amount <= 0:
+                    logger.info(f"任务 {task.id} 托管金额为0，跳过自动确认")
+                    skipped_count += 1
+                    continue
+                
+                # 自动确认任务
+                task.status = "completed"
+                task.confirmed_at = current_time
+                task.auto_confirmed = 1  # 标记为自动确认
+                db.flush()
+                
+                # 记录任务历史
+                crud.add_task_history(db, task.id, None, "auto_confirmed_completion")
+                
+                # 发送系统消息到任务聊天框
+                try:
+                    from app.models import Message
+                    from app.utils.notification_templates import get_notification_texts
+                    import json
+                    
+                    _, content_zh, _, content_en = get_notification_texts(
+                        "task_auto_confirmed",
+                        task_title=task.title
+                    )
+                    if not content_zh:
+                        content_zh = "任务已自动确认完成（5天未确认，系统自动确认）。"
+                    if not content_en:
+                        content_en = "Task has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+                    
+                    system_message = Message(
+                        sender_id=None,
+                        receiver_id=None,
+                        content=content_zh,
+                        task_id=task.id,
+                        message_type="system",
+                        conversation_type="task",
+                        meta=json.dumps({"system_action": "task_auto_confirmed", "content_en": content_en}),
+                        created_at=current_time
+                    )
+                    db.add(system_message)
+                except Exception as e:
+                    logger.warning(f"发送系统消息失败（任务 {task.id}）: {e}")
+                
+                # 发送通知给双方
+                try:
+                    background_tasks = BackgroundTasks()
+                    poster = crud.get_user_by_id(db, task.poster_id)
+                    taker = None
+                    if task.taker_id:
+                        taker = crud.get_user_by_id(db, task.taker_id)
+                    
+                    if poster or taker:
+                        send_auto_confirmation_notification(
+                            db=db,
+                            background_tasks=background_tasks,
+                            task=task,
+                            poster=poster,
+                            taker=taker
+                        )
+                except Exception as e:
+                    logger.warning(f"发送自动确认通知失败（任务 {task.id}）: {e}")
+                
+                # 自动更新相关用户的统计信息
+                try:
+                    crud.update_user_statistics(db, task.poster_id)
+                    if task.taker_id:
+                        crud.update_user_statistics(db, task.taker_id)
+                except Exception as e:
+                    logger.warning(f"更新用户统计失败（任务 {task.id}）: {e}")
+                
+                # 自动发放积分奖励
+                if task.taker_id:
+                    try:
+                        # 获取任务完成奖励积分
+                        points_amount = 0
+                        if hasattr(task, 'points_reward') and task.points_reward is not None:
+                            points_amount = int(task.points_reward)
+                        else:
+                            task_bonus_setting = get_system_setting(db, "points_task_complete_bonus")
+                            points_amount = int(task_bonus_setting.setting_value) if task_bonus_setting else 0
+                        
+                        if points_amount > 0:
+                            # 生成批次ID
+                            quarter = (current_time.month - 1) // 3 + 1
+                            batch_id = f"{current_time.year}Q{quarter}-COMP"
+                            
+                            # 计算过期时间
+                            expire_days_setting = get_system_setting(db, "points_expire_days")
+                            expire_days = int(expire_days_setting.setting_value) if expire_days_setting else 0
+                            expires_at = None
+                            if expire_days > 0:
+                                expires_at = current_time + timedelta(days=expire_days)
+                            
+                            # 生成幂等键
+                            idempotency_key = f"task_auto_confirm_{task.id}_{task.taker_id}"
+                            
+                            # 检查是否已发放
+                            from app.models import PointsTransaction
+                            existing = db.query(PointsTransaction).filter(
+                                PointsTransaction.idempotency_key == idempotency_key
+                            ).first()
+                            
+                            if not existing:
+                                add_points_transaction(
+                                    db,
+                                    task.taker_id,
+                                    type="earn",
+                                    amount=points_amount,
+                                    source="task_complete_bonus",
+                                    related_id=task.id,
+                                    related_type="task",
+                                    description=f"完成任务 #{task.id} 奖励（自动确认）",
+                                    batch_id=batch_id,
+                                    expires_at=expires_at,
+                                    idempotency_key=idempotency_key
+                                )
+                    except Exception as e:
+                        logger.warning(f"发放积分奖励失败（任务 {task.id}）: {e}")
+                
+                # 清除任务缓存
+                try:
+                    from app.services.task_service import TaskService
+                    TaskService.invalidate_cache(task.id)
+                    from app.redis_cache import invalidate_tasks_cache
+                    invalidate_tasks_cache()
+                except Exception as e:
+                    logger.warning(f"清除任务缓存失败（任务 {task.id}）: {e}")
+                
+                confirmed_count += 1
+                logger.info(f"✅ 自动确认任务 {task.id} 完成")
+                
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 的自动确认时出错: {e}", exc_info=True)
+                continue
+        
+        if confirmed_count > 0:
+            db.commit()
+        
+        result = {
+            "count": len(expired_tasks),
+            "confirmed": confirmed_count,
+            "skipped": skipped_count
+        }
+        
+        logger.info(f"自动确认任务完成：检查 {len(expired_tasks)} 个任务，确认 {confirmed_count} 个，跳过 {skipped_count} 个")
+        
+        return result
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"自动确认任务失败: {e}", exc_info=True)
+        raise
+
+
+def send_confirmation_reminders(db: Session):
+    """
+    发送确认提醒通知
+    
+    提醒时间点：
+    - 剩余3天（72小时）
+    - 剩余1天（24小时）
+    - 剩余6小时
+    - 剩余1小时
+    
+    Args:
+        db: 数据库会话
+    
+    Returns:
+        dict: 处理结果统计
+    """
+    try:
+        from app import crud
+        from app.task_notifications import send_confirmation_reminder_notification
+        from fastapi import BackgroundTasks
+        
+        current_time = get_utc_time()
+        
+        # 查询所有 pending_confirmation 状态的任务
+        pending_tasks = db.query(models.Task).filter(
+            and_(
+                models.Task.status == "pending_confirmation",
+                models.Task.confirmation_deadline.isnot(None),
+                models.Task.confirmation_deadline > current_time  # 还未过期
+            )
+        ).all()
+        
+        if not pending_tasks:
+            return {"count": 0, "sent": 0, "skipped": 0}
+        
+        sent_count = 0
+        skipped_count = 0
+        
+        # 提醒时间点配置（小时）
+        reminder_hours = [72, 24, 6, 1]
+        # 对应的位掩码位置
+        reminder_bits = [0, 1, 2, 3]
+        
+        for task in pending_tasks:
+            try:
+                # 计算剩余时间（小时）
+                remaining_time = task.confirmation_deadline - current_time
+                remaining_hours = remaining_time.total_seconds() / 3600
+                
+                # 检查每个提醒时间点
+                for hours, bit_pos in zip(reminder_hours, reminder_bits):
+                    # 检查是否在提醒时间窗口内（±15分钟）
+                    if hours - 0.25 <= remaining_hours <= hours + 0.25:
+                        # 检查是否已发送过此提醒
+                        bit_mask = 1 << bit_pos
+                        if task.confirmation_reminder_sent & bit_mask:
+                            # 已发送过，跳过
+                            continue
+                        
+                        # 发送提醒
+                        try:
+                            poster = crud.get_user_by_id(db, task.poster_id)
+                            if not poster:
+                                continue
+                            
+                            background_tasks = BackgroundTasks()
+                            send_confirmation_reminder_notification(
+                                db=db,
+                                background_tasks=background_tasks,
+                                task=task,
+                                poster=poster,
+                                hours_remaining=hours
+                            )
+                            
+                            # 标记已发送
+                            task.confirmation_reminder_sent |= bit_mask
+                            sent_count += 1
+                            logger.info(f"✅ 已发送任务 {task.id} 的确认提醒（剩余 {hours} 小时）")
+                            
+                        except Exception as e:
+                            logger.error(f"发送确认提醒失败（任务 {task.id}，剩余 {hours} 小时）: {e}")
+                
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 的确认提醒时出错: {e}", exc_info=True)
+                skipped_count += 1
+                continue
+        
+        if sent_count > 0:
+            db.commit()
+        
+        result = {
+            "count": len(pending_tasks),
+            "sent": sent_count,
+            "skipped": skipped_count
+        }
+        
+        logger.info(f"确认提醒通知发送完成：检查 {len(pending_tasks)} 个任务，发送 {sent_count} 个提醒，跳过 {skipped_count} 个")
+        
+        return result
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"发送确认提醒失败: {e}", exc_info=True)
+        raise
+
+
+def check_stale_disputes(db: Session, days: int = 7):
+    """
+    检查长期未处理的争议，并通知管理员
+    
+    Args:
+        db: 数据库会话
+        days: 超过多少天未处理视为超时（默认7天）
+    
+    Returns:
+        dict: 检查结果统计
+    """
+    try:
+        from app import crud
+        
+        current_time = get_utc_time()
+        threshold_time = current_time - timedelta(days=days)
+        
+        # 查询超过指定天数未处理的争议
+        stale_disputes = db.query(models.TaskDispute).filter(
+            and_(
+                models.TaskDispute.status == "pending",
+                models.TaskDispute.created_at < threshold_time
+            )
+        ).all()
+        
+        if not stale_disputes:
+            return {"count": 0, "notified": 0}
+        
+        notified_count = 0
+        
+        # 通知所有管理员
+        admins = db.query(models.AdminUser).filter(models.AdminUser.is_active == True).all()
+        
+        for dispute in stale_disputes:
+            # 获取任务信息
+            task = db.query(models.Task).filter(models.Task.id == dispute.task_id).first()
+            task_title = task.title if task else f"任务ID: {dispute.task_id}"
+            
+            # 计算超时天数
+            days_overdue = (current_time - dispute.created_at).days
+            
+            # 为每个管理员发送通知
+            for admin in admins:
+                try:
+                    crud.create_notification(
+                        db=db,
+                        user_id=admin.id,
+                        type="stale_dispute_alert",
+                        title="争议超时提醒",
+                        content=f"争议（ID: {dispute.id}）已超过{days_overdue}天未处理。任务：{task_title}，原因：{dispute.reason[:50]}...",
+                        related_id=str(dispute.id),
+                        auto_commit=False
+                    )
+                    notified_count += 1
+                except Exception as e:
+                    logger.error(f"发送争议超时通知失败（管理员 {admin.id}，争议 {dispute.id}）: {e}")
+        
+        db.commit()
+        
+        result = {
+            "count": len(stale_disputes),
+            "notified": notified_count,
+            "disputes": [
+                {
+                    "id": d.id,
+                    "task_id": d.task_id,
+                    "days_overdue": (current_time - d.created_at).days
+                }
+                for d in stale_disputes
+            ]
+        }
+        
+        logger.info(f"争议超时检查完成：发现 {len(stale_disputes)} 个超时争议，已通知 {notified_count} 次")
+        
+        return result
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"检查争议超时失败: {e}", exc_info=True)
+        raise
+
+
 def send_payment_reminders(db: Session, hours_before: int):
     """
     发送支付提醒通知
@@ -994,6 +1412,30 @@ def run_scheduled_tasks():
                 logger.info(f"清理长期无活动对话: {cleanup_result}")
         except Exception as e:
             logger.error(f"客服系统定时任务执行失败: {e}", exc_info=True)
+        
+        # ✅ 检查争议超时（超过7天未处理）
+        try:
+            check_stale_disputes_result = check_stale_disputes(db, days=7)
+            if check_stale_disputes_result:
+                logger.info(f"争议超时检查: {check_stale_disputes_result}")
+        except Exception as e:
+            logger.error(f"争议超时检查失败: {e}", exc_info=True)
+        
+        # ✅ 自动确认超过5天未确认的任务（每5分钟执行一次）
+        try:
+            auto_confirm_result = auto_confirm_expired_tasks(db)
+            if auto_confirm_result and auto_confirm_result.get("confirmed", 0) > 0:
+                logger.info(f"自动确认任务: {auto_confirm_result}")
+        except Exception as e:
+            logger.error(f"自动确认任务失败: {e}", exc_info=True)
+        
+        # ✅ 发送确认提醒通知（每15分钟执行一次）
+        try:
+            reminder_result = send_confirmation_reminders(db)
+            if reminder_result and reminder_result.get("sent", 0) > 0:
+                logger.info(f"确认提醒通知: {reminder_result}")
+        except Exception as e:
+            logger.error(f"发送确认提醒失败: {e}", exc_info=True)
         
         logger.info("定时任务执行完成")
     except Exception as e:

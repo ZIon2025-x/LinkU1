@@ -191,7 +191,11 @@ def process_refund(
             task.is_paid = 0
             task.payment_intent_id = None
             task.escrow_amount = 0.0
-            logger.info(f"✅ 全额退款，已更新任务支付状态")
+            # 新增：更新任务状态为已取消
+            task.status = "cancelled"
+            task.confirmed_at = get_utc_time()  # 记录确认时间
+            task.auto_confirmed = 1  # 标记为自动确认（通过退款）
+            logger.info(f"✅ 全额退款，任务状态已更新为 cancelled")
         else:
             # 部分退款：更新托管金额
             # ✅ 计算退款后的剩余金额（最终成交金额）
@@ -224,6 +228,114 @@ def process_refund(
             # 更新托管金额（确保不为负数）
             task.escrow_amount = float(max(Decimal('0'), new_escrow_amount))
             logger.info(f"✅ 部分退款：退款金额 £{refund_amount:.2f}，剩余任务金额 £{remaining_amount:.2f}，已转账 £{total_transferred:.2f}，服务费 £{application_fee:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
+            
+            # 新增：部分退款后，任务状态更新为 completed
+            # 原因：部分退款是发布者申请的，说明剩余部分已同意，应该给接单人
+            task.status = "completed"
+            task.confirmed_at = get_utc_time()  # 记录确认时间
+            task.auto_confirmed = 1  # 标记为自动确认（通过部分退款）
+            # 注意：is_confirmed 在转账成功后再更新，确保转账完成
+            
+            logger.info(f"✅ 部分退款：任务状态已更新为 completed，准备转账剩余金额 £{task.escrow_amount:.2f}")
+            
+            # 新增：自动触发转账给接单人（如果 escrow_amount > 0）
+            if task.taker_id and task.escrow_amount > 0:
+                try:
+                    from app.payment_transfer_service import create_transfer_record, execute_transfer
+                    from app import crud
+                    from sqlalchemy import and_, func
+                    
+                    # ✅ 安全检查：检查是否已有成功的转账记录（防止重复转账）
+                    existing_success_transfers = db.query(
+                        func.sum(models.PaymentTransfer.amount).label('total_transferred')
+                    ).filter(
+                        and_(
+                            models.PaymentTransfer.task_id == task.id,
+                            models.PaymentTransfer.status == "succeeded"
+                        )
+                    ).scalar() or Decimal('0')
+                    total_transferred_check = Decimal(str(existing_success_transfers))
+                    
+                    # 如果已全额转账，跳过
+                    if total_transferred_check >= Decimal(str(task.escrow_amount)):
+                        logger.info(f"任务 {task.id} 已全额转账，跳过部分退款后的转账")
+                        task.is_confirmed = 1
+                        task.paid_to_user_id = task.taker_id
+                        task.escrow_amount = 0.0
+                    else:
+                        # 计算剩余可转账金额
+                        remaining_escrow = Decimal(str(task.escrow_amount))
+                        remaining_after_transfer = remaining_escrow - total_transferred_check
+                        
+                        if remaining_after_transfer > 0:
+                            taker = crud.get_user_by_id(db, task.taker_id)
+                            if taker and taker.stripe_account_id:
+                                # ✅ 安全检查：检查是否已有待处理的转账记录
+                                existing_pending_transfer = db.query(models.PaymentTransfer).filter(
+                                    and_(
+                                        models.PaymentTransfer.task_id == task.id,
+                                        models.PaymentTransfer.status.in_(["pending", "retrying"])
+                                    )
+                                ).first()
+                                
+                                if existing_pending_transfer:
+                                    logger.info(f"任务 {task.id} 已有待处理的转账记录，使用现有记录")
+                                    transfer_record = existing_pending_transfer
+                                else:
+                                    # 创建转账记录
+                                    transfer_record = create_transfer_record(
+                                        db,
+                                        task_id=task.id,
+                                        taker_id=task.taker_id,
+                                        poster_id=task.poster_id,
+                                        amount=remaining_after_transfer,  # 只转账剩余部分
+                                        currency="GBP",
+                                        metadata={
+                                            "task_title": task.title,
+                                            "transfer_source": "partial_refund_auto",
+                                            "refund_request_id": str(refund_request.id),
+                                            "remaining_escrow": str(remaining_after_transfer),
+                                            "total_transferred": str(total_transferred_check)
+                                        }
+                                    )
+                                
+                                # 执行转账
+                                success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
+                                
+                                if success:
+                                    # 转账成功，更新任务状态
+                                    new_escrow = remaining_escrow - remaining_after_transfer
+                                    if new_escrow <= Decimal('0.01'):  # 允许小的浮点误差
+                                        task.escrow_amount = 0.0
+                                        task.is_confirmed = 1
+                                        task.paid_to_user_id = task.taker_id
+                                        logger.info(f"✅ 部分退款后自动转账成功：任务 {task.id}，已全额转账")
+                                    else:
+                                        task.escrow_amount = float(new_escrow)
+                                        logger.info(f"✅ 部分退款后自动转账成功：任务 {task.id}，转账金额 £{remaining_after_transfer:.2f}，剩余 £{new_escrow:.2f}")
+                                else:
+                                    # 转账失败，不更新 is_confirmed，等待定时任务重试
+                                    logger.warning(f"⚠️ 部分退款后自动转账失败：{error_msg}，转账记录已创建，定时任务将自动重试")
+                            elif taker and not taker.stripe_account_id:
+                                # 接单人未设置 Stripe 账户，创建转账记录等待设置
+                                create_transfer_record(
+                                    db,
+                                    task_id=task.id,
+                                    taker_id=task.taker_id,
+                                    poster_id=task.poster_id,
+                                    amount=remaining_after_transfer,
+                                    currency="GBP",
+                                    metadata={
+                                        "task_title": task.title,
+                                        "transfer_source": "partial_refund_auto",
+                                        "refund_request_id": str(refund_request.id),
+                                        "reason": "taker_stripe_account_not_setup"
+                                    }
+                                )
+                                logger.info(f"✅ 部分退款后已创建转账记录，等待接单人设置 Stripe 账户")
+                except Exception as e:
+                    logger.error(f"部分退款后自动转账失败：{e}", exc_info=True)
+                    # 转账失败不影响退款流程，定时任务会自动重试
         
         # 4. 退还优惠券（如果需要）
         # 注意：积分支付已禁用，不需要退还积分

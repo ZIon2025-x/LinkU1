@@ -331,6 +331,13 @@ class TaskOut(TaskBase):
     status: str
     task_level: str = "normal"  # normal, vip, super, expert（达人任务）
     created_at: datetime.datetime
+    accepted_at: Optional[datetime.datetime] = None  # 任务接受时间
+    completed_at: Optional[datetime.datetime] = None  # 任务完成时间
+    confirmation_deadline: Optional[datetime.datetime] = None  # 确认截止时间（completed_at + 5天）
+    confirmed_at: Optional[datetime.datetime] = None  # 实际确认时间（发布者确认或系统自动确认）
+    auto_confirmed: Optional[bool] = False  # 是否自动确认：True=自动确认，False=手动确认
+    confirmation_reminder_sent: Optional[int] = 0  # 提醒状态位掩码
+    confirmation_remaining_seconds: Optional[int] = None  # 计算字段：剩余确认时间（秒），仅当 status=pending_confirmation 时有效
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
@@ -676,6 +683,7 @@ class ReviewPublicOut(BaseModel):
 class TaskDisputeCreate(BaseModel):
     """创建任务争议"""
     reason: str = Field(..., min_length=10, max_length=2000, description="争议原因（至少10个字符）")
+    evidence_files: Optional[List[str]] = Field(None, max_length=10, description="证据文件ID列表（最多10个文件）")
 
 
 class TaskDisputeOut(BaseModel):
@@ -684,11 +692,25 @@ class TaskDisputeOut(BaseModel):
     task_id: int
     poster_id: str
     reason: str
+    evidence_files: Optional[List[str]] = None
     status: str
     created_at: datetime.datetime
     resolved_at: Optional[datetime.datetime] = None
     resolved_by: Optional[str] = None
     resolution_note: Optional[str] = None
+    
+    @validator('evidence_files', pre=True)
+    def parse_evidence_files(cls, v):
+        """解析JSON字符串为列表"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except:
+                return []
+        return v
     
     class Config:
         from_attributes = True
@@ -697,6 +719,7 @@ class TaskDisputeOut(BaseModel):
 class TaskDisputeResolve(BaseModel):
     """解决争议"""
     resolution_note: str = Field(..., min_length=1, max_length=2000, description="处理备注")
+    auto_refund: Optional[bool] = Field(False, description="是否自动创建全额退款申请")
 
 
 class TaskDisputeDismiss(BaseModel):

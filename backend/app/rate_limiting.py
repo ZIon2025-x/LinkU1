@@ -217,6 +217,11 @@ RATE_LIMITS = {
     "create_task": {"limit": 5, "window": 300},  # 5次/5分钟
     "accept_task": {"limit": 10, "window": 60},  # 10次/分钟
     
+    # 支付相关（专用限制）
+    "create_payment": {"limit": 10, "window": 3600},  # 10次/小时
+    "refund_request": {"limit": 5, "window": 3600},  # 5次/小时
+    "create_dispute": {"limit": 3, "window": 3600},  # 3次/小时
+    
     # 客服相关
     "customer_service": {"limit": 20, "window": 60},  # 20次/分钟
     

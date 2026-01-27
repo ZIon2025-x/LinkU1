@@ -71,6 +71,14 @@ try:
 except Exception as e:
     logger.warning(f"配置敏感信息日志过滤器时出错: {e}")
 
+# 配置webhook详细日志过滤器（减少生产环境日志量）
+try:
+    from app.logging_filters import setup_webhook_verbose_log_filter
+    setup_webhook_verbose_log_filter()
+    logger.info("Webhook详细日志过滤器已启用（详细日志已降级为DEBUG）")
+except Exception as e:
+    logger.warning(f"配置webhook详细日志过滤器时出错: {e}")
+
 # 添加日志过滤器，将 SQLAlchemy 连接池的事件循环错误降级为警告
 # 这些错误不影响应用功能，只是连接池内部清理时的常见问题
 class SQLAlchemyPoolErrorFilter(logging.Filter):

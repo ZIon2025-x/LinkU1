@@ -79,6 +79,90 @@ NOTIFICATION_TEMPLATES: Dict[str, Dict[str, Dict[str, str]]] = {
         }
     },
     
+    # 确认提醒（3天）
+    "confirmation_reminder_3days": {
+        "zh": {
+            "title": "任务确认提醒",
+            "content_template": "任务「{task_title}」还有 3 天需要确认完成，请及时确认。"
+        },
+        "en": {
+            "title": "Task Confirmation Reminder",
+            "content_template": "Task「{task_title}」has 3 days left to confirm completion. Please confirm in time."
+        }
+    },
+    
+    # 确认提醒（1天）
+    "confirmation_reminder_1day": {
+        "zh": {
+            "title": "任务确认提醒",
+            "content_template": "任务「{task_title}」还有 1 天需要确认完成，请及时确认。"
+        },
+        "en": {
+            "title": "Task Confirmation Reminder",
+            "content_template": "Task「{task_title}」has 1 day left to confirm completion. Please confirm in time."
+        }
+    },
+    
+    # 确认提醒（6小时）
+    "confirmation_reminder_6hours": {
+        "zh": {
+            "title": "任务确认提醒",
+            "content_template": "任务「{task_title}」还有 6 小时需要确认完成，请及时确认。"
+        },
+        "en": {
+            "title": "Task Confirmation Reminder",
+            "content_template": "Task「{task_title}」has 6 hours left to confirm completion. Please confirm in time."
+        }
+    },
+    
+    # 确认提醒（1小时）
+    "confirmation_reminder_1hour": {
+        "zh": {
+            "title": "任务确认提醒（紧急）",
+            "content_template": "任务「{task_title}」还有 1 小时需要确认完成，请立即确认，否则将自动确认。"
+        },
+        "en": {
+            "title": "Task Confirmation Reminder (Urgent)",
+            "content_template": "Task「{task_title}」has 1 hour left to confirm completion. Please confirm immediately, otherwise it will be auto-confirmed."
+        }
+    },
+    
+    # 任务自动确认（发布者）
+    "task_auto_confirmed_poster": {
+        "zh": {
+            "title": "任务已自动确认完成",
+            "content_template": "任务「{task_title}」已自动确认完成（5天未确认，系统自动确认）。"
+        },
+        "en": {
+            "title": "Task Auto-Confirmed",
+            "content_template": "Task「{task_title}」has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+        }
+    },
+    
+    # 任务自动确认（接单人）
+    "task_auto_confirmed_taker": {
+        "zh": {
+            "title": "任务已自动确认完成",
+            "content_template": "任务「{task_title}」已自动确认完成，奖励已发放。"
+        },
+        "en": {
+            "title": "Task Auto-Confirmed",
+            "content_template": "Task「{task_title}」has been automatically confirmed as completed. Reward has been issued."
+        }
+    },
+    
+    # 任务自动确认（通用）
+    "task_auto_confirmed": {
+        "zh": {
+            "title": "任务已自动确认完成",
+            "content_template": "任务「{task_title}」已自动确认完成（5天未确认，系统自动确认）。"
+        },
+        "en": {
+            "title": "Task Auto-Confirmed",
+            "content_template": "Task「{task_title}」has been automatically confirmed as completed (5 days unconfirmed, system auto-confirmed)."
+        }
+    },
+    
     # 任务已取消
     "task_cancelled": {
         "zh": {

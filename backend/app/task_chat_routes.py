@@ -1768,11 +1768,8 @@ async def accept_application(
         
         await db.commit()
         
-        # 记录详细的响应信息
-        logger.info(f"✅ 批准申请成功: task_id={task_id}, application_id={application_id}")
-        logger.info(f"✅ 创建 PaymentIntent: payment_intent_id={payment_intent.id}, amount={task_amount_pence}, currency=GBP")
-        logger.info(f"✅ PaymentIntent client_secret 存在: {bool(payment_intent.client_secret)}")
-        logger.info(f"✅ PaymentIntent client_secret 长度: {len(payment_intent.client_secret) if payment_intent.client_secret else 0}")
+        # 记录关键信息（INFO级别）
+        logger.info(f"✅ 批准申请成功: task_id={task_id}, application_id={application_id}, payment_intent_id={payment_intent.id}, amount={task_amount_pence/100:.2f} GBP")
         
         response_data = {
             "message": "请完成支付以确认批准申请",
@@ -1787,18 +1784,18 @@ async def accept_application(
             "ephemeral_key_secret": ephemeral_key_secret,
         }
         
-        # 记录响应数据的各个字段，确保格式正确
-        logger.info(f"✅ 返回响应数据字段检查:")
-        logger.info(f"  - message: {response_data.get('message')}")
-        logger.info(f"  - application_id: {response_data.get('application_id')} (类型: {type(response_data.get('application_id'))})")
-        logger.info(f"  - task_id: {response_data.get('task_id')} (类型: {type(response_data.get('task_id'))})")
-        logger.info(f"  - payment_intent_id: {response_data.get('payment_intent_id')} (类型: {type(response_data.get('payment_intent_id'))})")
-        logger.info(f"  - client_secret 存在: {bool(response_data.get('client_secret'))}")
-        logger.info(f"  - client_secret 类型: {type(response_data.get('client_secret'))}")
-        logger.info(f"  - client_secret 长度: {len(response_data.get('client_secret')) if response_data.get('client_secret') else 0}")
-        logger.info(f"  - amount: {response_data.get('amount')} (类型: {type(response_data.get('amount'))})")
-        logger.info(f"  - amount_display: {response_data.get('amount_display')} (类型: {type(response_data.get('amount_display'))})")
-        logger.info(f"  - currency: {response_data.get('currency')} (类型: {type(response_data.get('currency'))})")
+        # 详细的字段检查日志降级为DEBUG（仅在调试时可见）
+        logger.debug(f"✅ 创建 PaymentIntent: payment_intent_id={payment_intent.id}, amount={task_amount_pence}, currency=GBP")
+        logger.debug(f"✅ PaymentIntent client_secret 存在: {bool(payment_intent.client_secret)}, 长度: {len(payment_intent.client_secret) if payment_intent.client_secret else 0}")
+        logger.debug(f"✅ 返回响应数据字段检查:")
+        logger.debug(f"  - message: {response_data.get('message')}")
+        logger.debug(f"  - application_id: {response_data.get('application_id')} (类型: {type(response_data.get('application_id'))})")
+        logger.debug(f"  - task_id: {response_data.get('task_id')} (类型: {type(response_data.get('task_id'))})")
+        logger.debug(f"  - payment_intent_id: {response_data.get('payment_intent_id')} (类型: {type(response_data.get('payment_intent_id'))})")
+        logger.debug(f"  - client_secret 存在: {bool(response_data.get('client_secret'))}, 类型: {type(response_data.get('client_secret'))}, 长度: {len(response_data.get('client_secret')) if response_data.get('client_secret') else 0}")
+        logger.debug(f"  - amount: {response_data.get('amount')} (类型: {type(response_data.get('amount'))})")
+        logger.debug(f"  - amount_display: {response_data.get('amount_display')} (类型: {type(response_data.get('amount_display'))})")
+        logger.debug(f"  - currency: {response_data.get('currency')} (类型: {type(response_data.get('currency'))})")
         
         return response_data
     

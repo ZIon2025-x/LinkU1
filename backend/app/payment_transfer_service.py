@@ -98,6 +98,12 @@ def execute_transfer(
         if not task:
             return False, None, "任务不存在"
         
+        # ✅ Stripe争议冻结检查：如果任务因Stripe争议被冻结，阻止转账
+        if hasattr(task, 'stripe_dispute_frozen') and task.stripe_dispute_frozen == 1:
+            error_msg = "任务因Stripe争议已冻结，无法执行转账。请等待争议解决后再试。"
+            logger.warning(f"任务 {transfer_record.task_id} 因Stripe争议已冻结，阻止转账")
+            return False, None, error_msg
+        
         if task.is_confirmed == 1 and task.escrow_amount == 0:
             # 任务已确认且托管金额已清空，可能已经转账成功
             logger.warning(f"任务 {transfer_record.task_id} 已确认，但转账记录状态为 {transfer_record.status}")
