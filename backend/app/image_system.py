@@ -129,16 +129,19 @@ class PrivateImageSystem:
     
     def generate_access_token(self, image_id: str, user_id: str, chat_participants: List[str]) -> str:
         """生成图片访问令牌"""
+        # 确保所有participants都是字符串类型，并去重、排序
+        participants = sorted(set(str(p) for p in chat_participants if p))
+        
         # 创建令牌数据
         token_data = {
             "image_id": image_id,
             "user_id": user_id,
-            "participants": sorted(chat_participants),  # 排序确保一致性
+            "participants": participants,
             "timestamp": int(time.time())
         }
         
         # 生成签名
-        data_string = f"{image_id}:{user_id}:{':'.join(sorted(chat_participants))}:{token_data['timestamp']}"
+        data_string = f"{image_id}:{user_id}:{':'.join(participants)}:{token_data['timestamp']}"
         signature = hmac.new(
             self.access_secret.encode('utf-8'),
             data_string.encode('utf-8'),
@@ -203,8 +206,11 @@ class PrivateImageSystem:
                 return False
             
             # 不校验时间戳过期：任务可能长时间进行或需回看已完成任务的聊天图片，仅校验签名与参与者
-            # 验证签名
-            data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(participants))}:{timestamp}"
+            # 确保participants都是字符串类型，并去重、排序（与生成时保持一致）
+            participants_clean = sorted(set(str(p) for p in participants if p))
+            
+            # 验证签名（新逻辑：排序去重）
+            data_string = f"{token_image_id}:{token_user_id}:{':'.join(participants_clean)}:{timestamp}"
             expected_signature = hmac.new(
                 self.access_secret.encode('utf-8'),
                 data_string.encode('utf-8'),
@@ -212,8 +218,26 @@ class PrivateImageSystem:
             ).hexdigest()
             
             is_valid = hmac.compare_digest(signature, expected_signature)
+            
+            # 如果新逻辑验证失败，尝试旧逻辑（向后兼容旧token）
             if not is_valid:
-                logger.error(f"签名验证失败: expected={expected_signature}, actual={signature}")
+                # 旧逻辑：保持participants原始顺序，只转换为字符串（不去重不排序）
+                participants_old = [str(p) for p in participants if p]
+                data_string_old = f"{token_image_id}:{token_user_id}:{':'.join(participants_old)}:{timestamp}"
+                expected_signature_old = hmac.new(
+                    self.access_secret.encode('utf-8'),
+                    data_string_old.encode('utf-8'),
+                    hashlib.sha256
+                ).hexdigest()
+                
+                is_valid = hmac.compare_digest(signature, expected_signature_old)
+                if is_valid:
+                    logger.info(f"使用旧逻辑验证成功（向后兼容）: image_id={image_id}")
+                else:
+                    logger.error(f"签名验证失败（新旧逻辑都失败）: expected_new={expected_signature}, expected_old={expected_signature_old}, actual={signature}")
+                    logger.error(f"新逻辑数据字符串: {data_string}")
+                    logger.error(f"旧逻辑数据字符串: {data_string_old}")
+                    logger.error(f"participants原始: {participants}, 清理后: {participants_clean}")
             
             return is_valid
             

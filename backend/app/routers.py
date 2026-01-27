@@ -10894,42 +10894,47 @@ async def upload_image(
                     task = crud.get_task(db, task_id)
                     if task:
                         if task.poster_id:
-                            participants.append(task.poster_id)
+                            participants.append(str(task.poster_id))
                         if task.taker_id:
-                            participants.append(task.taker_id)
+                            participants.append(str(task.taker_id))
                         # 多人任务：加入 TaskParticipant 及 expert_creator_id，确保接收方能加载私密图片
                         if getattr(task, "is_multi_participant", False):
-                            if getattr(task, "expert_creator_id", None) and task.expert_creator_id not in participants:
-                                participants.append(task.expert_creator_id)
+                            if getattr(task, "expert_creator_id", None):
+                                expert_id = str(task.expert_creator_id)
+                                if expert_id not in participants:
+                                    participants.append(expert_id)
                             for p in db.query(models.TaskParticipant).filter(
                                 models.TaskParticipant.task_id == task_id,
                                 models.TaskParticipant.status.in_(["accepted", "in_progress"]),
                             ).all():
-                                if p.user_id and p.user_id not in participants:
-                                    participants.append(p.user_id)
+                                if p.user_id:
+                                    user_id_str = str(p.user_id)
+                                    if user_id_str not in participants:
+                                        participants.append(user_id_str)
                 
                 # 添加当前用户（如果不在列表中）
-                if current_user.id not in participants:
-                    participants.append(current_user.id)
+                current_user_id_str = str(current_user.id)
+                if current_user_id_str not in participants:
+                    participants.append(current_user_id_str)
                 
                 # 如果没有参与者（不应该发生），至少包含当前用户
                 if not participants:
-                    participants = [current_user.id]
+                    participants = [current_user_id_str]
                 
                 # 生成图片访问 URL
                 image_url = private_image_system.generate_image_url(
                     result["image_id"],
-                    current_user.id,
+                    current_user_id_str,
                     participants
                 )
                 result["url"] = image_url
                 logger.debug("upload/image: 已写入 result[url], image_id=%s", result.get("image_id"))
             except Exception as e:
                 logger.warning("upload/image: 构建 participants 或 generate_image_url 失败: %s，使用仅当前用户生成 url", e)
-                participants = [current_user.id]
+                participants = [str(current_user.id)]
                 image_url = private_image_system.generate_image_url(
                     result["image_id"],
-                    current_user.id,
+                    str(current_user.id),
                     participants
                 )
                 result["url"] = image_url
@@ -11266,27 +11271,50 @@ def generate_image_url(
                 raise HTTPException(status_code=404, detail="任务不存在")
             
             # 任务参与者：发布者和接受者
-            participants = [task.poster_id]
+            if task.poster_id:
+                participants.append(str(task.poster_id))
             if task.taker_id:
-                participants.append(task.taker_id)
+                participants.append(str(task.taker_id))
+            
+            # 多人任务：加入 TaskParticipant 及 expert_creator_id，确保所有参与者都能加载私密图片
+            if getattr(task, "is_multi_participant", False):
+                if getattr(task, "expert_creator_id", None):
+                    expert_id = str(task.expert_creator_id)
+                    if expert_id not in participants:
+                        participants.append(expert_id)
+                for p in db.query(models.TaskParticipant).filter(
+                    models.TaskParticipant.task_id == message.task_id,
+                    models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                ).all():
+                    if p.user_id:
+                        user_id_str = str(p.user_id)
+                        if user_id_str not in participants:
+                            participants.append(user_id_str)
             
             # 检查用户是否有权限访问此图片（必须是任务的参与者）
-            if current_user.id not in participants:
+            current_user_id_str = str(current_user.id)
+            if current_user_id_str not in participants:
                 raise HTTPException(status_code=403, detail="无权访问此图片")
         else:
             # 普通聊天：使用发送者和接收者
-            participants = [message.sender_id]
+            if message.sender_id:
+                participants.append(str(message.sender_id))
             if message.receiver_id:
-                participants.append(message.receiver_id)
+                participants.append(str(message.receiver_id))
             
             # 检查用户是否有权限访问此图片
-            if current_user.id not in participants:
+            current_user_id_str = str(current_user.id)
+            if current_user_id_str not in participants:
                 raise HTTPException(status_code=403, detail="无权访问此图片")
+        
+        # 如果没有参与者（不应该发生），至少包含当前用户
+        if not participants:
+            participants = [str(current_user.id)]
         
         # 生成访问URL
         image_url = private_image_system.generate_image_url(
             image_id,
-            current_user.id,
+            str(current_user.id),
             participants
         )
 

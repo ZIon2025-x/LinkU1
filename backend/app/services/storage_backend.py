@@ -354,7 +354,20 @@ class S3StorageBackend(StorageBackend):
         # 从环境变量获取凭证
         self.access_key_id = access_key_id or os.getenv('AWS_ACCESS_KEY_ID') or os.getenv('R2_ACCESS_KEY_ID')
         self.secret_access_key = secret_access_key or os.getenv('AWS_SECRET_ACCESS_KEY') or os.getenv('R2_SECRET_ACCESS_KEY')
-        self.endpoint_url = endpoint_url or os.getenv('S3_ENDPOINT_URL') or os.getenv('R2_ENDPOINT_URL')
+        raw_endpoint_url = endpoint_url or os.getenv('S3_ENDPOINT_URL') or os.getenv('R2_ENDPOINT_URL')
+        
+        # 处理endpoint URL：如果包含bucket名称，去掉它（boto3会在API调用中使用bucket_name参数）
+        if raw_endpoint_url:
+            # R2 endpoint格式应该是: https://{account_id}.r2.cloudflarestorage.com
+            # 如果URL末尾包含bucket名称，去掉它
+            if raw_endpoint_url.endswith(f'/{bucket_name}'):
+                self.endpoint_url = raw_endpoint_url[:-len(f'/{bucket_name}')]
+                logger.info(f"从endpoint URL中移除了bucket名称: {raw_endpoint_url} -> {self.endpoint_url}")
+            else:
+                self.endpoint_url = raw_endpoint_url
+        else:
+            self.endpoint_url = None
+        
         self.region_name = region_name
         
         # 延迟初始化 S3 客户端
@@ -503,6 +516,26 @@ class S3StorageBackend(StorageBackend):
             src_path = src_path.lstrip('/')
             dst_path = dst_path.lstrip('/')
             
+            # 先检查源文件是否存在
+            try:
+                self.client.head_object(Bucket=self.bucket_name, Key=src_path)
+                logger.debug(f"S3 源文件存在: {src_path}")
+            except self.client.exceptions.ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', '')
+                if error_code == '404' or error_code == 'NoSuchKey':
+                    logger.error(f"S3 源文件不存在: {src_path}, bucket={self.bucket_name}")
+                    # 尝试列出目录中的文件，帮助调试
+                    try:
+                        directory = '/'.join(src_path.split('/')[:-1]) + '/'
+                        files = self.list_files(directory)
+                        logger.error(f"目录 {directory} 中的文件: {files[:10]}")  # 只显示前10个
+                    except Exception as list_error:
+                        logger.error(f"列出目录失败: {list_error}")
+                    return False
+                else:
+                    logger.warning(f"S3 检查源文件时出错: {src_path}, 错误: {e}")
+                    # 继续尝试移动，可能是权限问题
+            
             # 复制文件
             self.client.copy_object(
                 Bucket=self.bucket_name,
@@ -516,11 +549,13 @@ class S3StorageBackend(StorageBackend):
                 Key=src_path
             )
             
-            logger.debug(f"S3 文件移动成功: {src_path} -> {dst_path}")
+            logger.info(f"S3 文件移动成功: {src_path} -> {dst_path}")
             return True
             
         except Exception as e:
-            logger.error(f"S3 文件移动失败: {src_path} -> {dst_path}, 错误: {e}")
+            logger.error(f"S3 文件移动失败: {src_path} -> {dst_path}, bucket={self.bucket_name}, 错误: {e}")
+            import traceback
+            logger.error(f"详细错误: {traceback.format_exc()}")
             return False
     
     def get_url(self, path: str) -> str:

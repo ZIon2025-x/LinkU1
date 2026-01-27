@@ -340,6 +340,12 @@ class ImageUploadService:
         
         new_urls = []
         temp_marker = f"/temp_{user_id}/"
+        temp_dir = f"temp_{user_id}"
+        
+        # 获取存储后端的public_url（如果有），用于从URL中提取相对路径
+        public_url = None
+        if hasattr(self.storage, 'public_url') and self.storage.public_url:
+            public_url = self.storage.public_url.rstrip('/')
         
         for url in image_urls:
             try:
@@ -349,15 +355,56 @@ class ImageUploadService:
                     new_urls.append(url)
                     continue
                 
-                # 从 URL 提取文件名
-                filename = url.split('/')[-1]
+                # 从 URL 提取相对路径
+                # 如果URL包含public_url前缀，去掉它
+                relative_path = url
+                
+                # 处理public_url匹配（支持有协议和无协议的URL）
+                if public_url:
+                    # 去掉public_url的协议部分用于比较
+                    public_url_no_protocol = public_url.replace('https://', '').replace('http://', '')
+                    url_no_protocol = url.replace('https://', '').replace('http://', '')
+                    
+                    if url.startswith(public_url) or url_no_protocol.startswith(public_url_no_protocol):
+                        # 使用原始public_url进行替换（保持协议一致性）
+                        if url.startswith(public_url):
+                            relative_path = url[len(public_url):].lstrip('/')
+                        else:
+                            # 如果URL没有协议，但域名匹配
+                            relative_path = url_no_protocol[len(public_url_no_protocol):].lstrip('/')
+                    else:
+                        # 尝试从URL中提取路径部分（去掉协议和域名）
+                        from urllib.parse import urlparse
+                        # 如果URL没有协议，添加https://以便urlparse正确解析
+                        url_to_parse = url if '://' in url else f'https://{url}'
+                        parsed = urlparse(url_to_parse)
+                        relative_path = parsed.path.lstrip('/')
+                else:
+                    # 尝试从URL中提取路径部分（去掉协议和域名）
+                    from urllib.parse import urlparse
+                    # 如果URL没有协议，添加https://以便urlparse正确解析
+                    url_to_parse = url if '://' in url else f'https://{url}'
+                    parsed = urlparse(url_to_parse)
+                    relative_path = parsed.path.lstrip('/')
+                
+                logger.debug(f"move_from_temp: URL={url}, public_url={public_url}, extracted_path={relative_path}")
+                
+                # 验证路径格式
+                if not relative_path.startswith(category.value):
+                    logger.warning(f"图片路径格式不正确: {relative_path}, 期望以 {category.value} 开头, URL={url}, public_url={public_url}")
+                    new_urls.append(url)
+                    continue
                 
                 # 构建源路径和目标路径
-                temp_dir = f"temp_{user_id}"
-                src_path = f"{category.value}/{temp_dir}/{filename}"
-                dst_path = f"{category.value}/{resource_id}/{filename}"
+                src_path = relative_path
+                # 替换临时目录为正式目录
+                dst_path = src_path.replace(f"{category.value}/{temp_dir}/", f"{category.value}/{resource_id}/")
+                
+                # 提取文件名（用于移动缩略图）
+                filename = src_path.split('/')[-1]
                 
                 # 移动文件
+                logger.info(f"尝试移动图片: src_path={src_path}, dst_path={dst_path}")
                 if self.storage.move(src_path, dst_path):
                     new_url = self.storage.get_url(dst_path)
                     new_urls.append(new_url)
@@ -365,14 +412,14 @@ class ImageUploadService:
                     # 同时移动缩略图
                     self._move_thumbnails(category, temp_dir, resource_id, filename)
                     
-                    logger.debug(f"图片移动成功: {src_path} -> {dst_path}")
+                    logger.info(f"图片移动成功: {src_path} -> {dst_path}, new_url={new_url}")
                 else:
                     # 移动失败，保留原 URL
                     new_urls.append(url)
-                    logger.warning(f"图片移动失败: {src_path}")
+                    logger.warning(f"图片移动失败: {src_path} -> {dst_path}, 保留原URL: {url}")
                     
             except Exception as e:
-                logger.error(f"图片移动异常: {url}, 错误: {e}")
+                logger.error(f"图片移动异常: {url}, 错误: {e}", exc_info=True)
                 new_urls.append(url)
         
         return new_urls

@@ -162,7 +162,13 @@ struct TasksView: View {
                                         .clipShape(cardShape)
                                         .contentShape(cardShape)
                                         // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
-                                        .contentShape(.interaction, cardShape)
+                                        // 这解决了iPad和iPhone上长按手势"容器感"差异的问题
+                                        // InteractionContentShapeModifier 已添加iOS版本检查，确保向后兼容
+                                        // 虽然项目最低版本是iOS 16，但不同设备/系统版本可能有行为差异
+                                        .modifier(InteractionContentShapeModifier(shape: cardShape))
+                                        // 修复真机长按显示灰色容器的问题：确保背景完全覆盖，防止系统高亮透出
+                                        .background(AppColors.cardBackground.clipShape(cardShape))
+                                        .drawingGroup() // 强制合成渲染，确保背景和圆角正确显示
                                         // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
                                         .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
                                         .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)

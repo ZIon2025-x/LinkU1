@@ -3,6 +3,67 @@ import SwiftUI
 // MARK: - 交互增强组件
 // 提供丝滑流畅的用户交互体验
 
+// MARK: - Interaction Content Shape Modifier (iOS 16+)
+
+/// 类型擦除的 Shape 包装器（用于支持 any Shape 类型）
+struct AnyShape: Shape {
+    private let _path: @Sendable (CGRect) -> Path
+    
+    init<S: Shape>(_ shape: S) {
+        _path = shape.path(in:)
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        _path(rect)
+    }
+}
+
+/// iOS 16+ 优化：使用 .interaction 精确控制交互区域，避免长按高亮在矩形容器上显示
+/// 
+/// 这个修饰符确保在不同iOS版本和设备上都能正确显示圆角高亮效果。
+/// 解决了iPad和iPhone上长按手势"容器感"差异的问题：
+/// - 使用 `.contentShape(.interaction, shape)` 精确控制交互区域
+/// - 确保长按高亮按照指定的形状（如圆角矩形）显示，而不是默认的矩形
+/// - 添加了iOS版本检查，确保向后兼容
+/// 
+/// 支持任何Shape类型，可用于RoundedRectangle、自定义气泡形状等
+/// 
+/// 使用示例：
+/// ```swift
+/// RoundedRectangle(cornerRadius: 12)
+///     .fill(Color.blue)
+///     .modifier(InteractionContentShapeModifier(shape: RoundedRectangle(cornerRadius: 12)))
+/// ```
+/// 
+/// 或者使用便捷扩展：
+/// ```swift
+/// RoundedRectangle(cornerRadius: 12)
+///     .fill(Color.blue)
+///     .interactionContentShape(RoundedRectangle(cornerRadius: 12))
+/// ```
+struct InteractionContentShapeModifier: ViewModifier {
+    let shape: any Shape
+    
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            // iOS 16+ 使用 .interaction 精确控制交互区域
+            // 这确保了长按高亮按照指定的形状显示，而不是默认的矩形
+            content.contentShape(.interaction, AnyShape(shape))
+        } else {
+            // iOS 16以下版本回退到普通contentShape
+            // 虽然项目最低版本是iOS 16，但为了代码健壮性保留此检查
+            content.contentShape(AnyShape(shape))
+        }
+    }
+}
+
+extension View {
+    /// 为视图添加交互区域形状控制（iOS 16+），避免长按高亮在矩形容器上显示
+    func interactionContentShape<S: Shape>(_ shape: S) -> some View {
+        modifier(InteractionContentShapeModifier(shape: shape))
+    }
+}
+
 // MARK: - 列表入场动画
 
 /// 列表项入场动画修饰符

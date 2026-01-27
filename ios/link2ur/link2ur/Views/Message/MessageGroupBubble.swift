@@ -441,6 +441,7 @@ struct MessageGroupBubbleView: View {
 // MARK: - Context Menu Preview Shape Modifier (iOS 17+)
 
 /// iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
+/// 注意：AnyShape 已在 InteractionEnhancements.swift 中定义
 struct ContextMenuPreviewShapeModifier: ViewModifier {
     let shape: any Shape
     
@@ -450,19 +451,6 @@ struct ContextMenuPreviewShapeModifier: ViewModifier {
         } else {
             content
         }
-    }
-}
-
-/// 类型擦除的 Shape 包装器
-struct AnyShape: Shape {
-    private let _path: @Sendable (CGRect) -> Path
-    
-    init<S: Shape>(_ shape: S) {
-        _path = shape.path(in:)
-    }
-    
-    func path(in rect: CGRect) -> Path {
-        _path(rect)
     }
 }
 
@@ -529,7 +517,11 @@ struct GroupMessageBubbleItem: View {
                 .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
                 .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
                 .contentShape(bubbleShape(r))
-                .contentShape(.interaction, bubbleShape(r))
+                // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
+                // 这解决了iPad和iPhone上长按手势"容器感"差异的问题
+                // InteractionContentShapeModifier 已添加iOS版本检查，确保向后兼容
+                // 虽然项目最低版本是iOS 16，但不同设备/系统版本可能有行为差异
+                .modifier(InteractionContentShapeModifier(shape: bubbleShape(r)))
                 .contextMenu {
                     // 长按菜单：复制消息
                     Button(action: {
