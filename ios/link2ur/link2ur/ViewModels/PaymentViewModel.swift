@@ -504,16 +504,35 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     
     /// 使用 Apple Pay 原生实现支付
     func payWithApplePay() {
+        // 记录设备信息用于调试
+        let deviceType = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        let deviceModel = UIDevice.current.model
+        Logger.debug("开始 Apple Pay 支付流程 - 设备类型: \(deviceType), 型号: \(deviceModel)", category: .api)
+        
         guard let merchantId = Constants.Stripe.applePayMerchantIdentifier else {
             errorMessage = "Apple Pay 未配置，请使用其他支付方式"
             Logger.warning("Apple Pay Merchant ID 未配置", category: .api)
             return
         }
 
+        // 检查设备是否支持 Apple Pay
+        guard ApplePayHelper.isApplePaySupported() else {
+            errorMessage = "此设备不支持 Apple Pay，请使用其他支付方式"
+            Logger.warning("设备不支持 Apple Pay - 设备类型: \(deviceType)", category: .api)
+            return
+        }
+        
+        // 检查用户是否已添加支付卡
+        guard ApplePayHelper.canMakePayments() else {
+            errorMessage = "请先在\"设置\"中添加支付卡以使用 Apple Pay"
+            Logger.warning("用户未添加支付卡 - 设备类型: \(deviceType)", category: .api)
+            return
+        }
+
         // 必须有 client_secret 才能确认 PaymentIntent
         guard activeClientSecret != nil else {
             errorMessage = "支付信息未准备好，请稍后再试"
-            Logger.warning("缺少 client_secret，无法使用 Apple Pay，尝试创建支付意图", category: .api)
+            Logger.warning("缺少 client_secret，无法使用 Apple Pay，尝试创建支付意图 - 设备类型: \(deviceType)", category: .api)
             createPaymentIntent()
             return
         }
@@ -531,6 +550,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             from: activeFinalAmountPence,
             currency: currency
         )
+        
+        Logger.debug("创建 Apple Pay 支付请求 - 金额: \(amountDecimal), 货币: \(currency), 设备类型: \(deviceType)", category: .api)
         
         // 创建摘要项
         var summaryItems: [PKPaymentSummaryItem] = []
@@ -558,17 +579,26 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         
         // 创建 Apple Pay Context
         guard let applePayContext = STPApplePayContext(paymentRequest: paymentRequest, delegate: self) else {
-            errorMessage = "无法创建 Apple Pay 支付表单"
+            let errorMsg = "无法创建 Apple Pay 支付表单 - 设备类型: \(deviceType)"
+            Logger.error(errorMsg, category: .api)
+            errorMessage = "无法启动 Apple Pay，请使用其他支付方式"
             return
         }
         
         self.applePayContext = applePayContext
         
         // 展示支付表单（使用新的 API，不需要传入 viewController）
-        Logger.debug("准备弹出 Apple Pay 表单", category: .api)
-        applePayContext.presentApplePay {
-            // completion 回调，错误会通过 delegate 方法处理
-            Logger.debug("Apple Pay 表单已显示", category: .api)
+        Logger.debug("准备弹出 Apple Pay 表单 - 设备类型: \(deviceType)", category: .api)
+        
+        // 在主线程执行，确保UI操作正确
+        DispatchQueue.main.async {
+            applePayContext.presentApplePay {
+                // completion 回调，成功时调用
+                Logger.debug("Apple Pay 表单已显示 - 设备类型: \(deviceType)", category: .api)
+            }
+            
+            // 注意：如果 presentApplePay 失败，错误会通过 delegate 方法处理
+            // 但为了更好的错误处理，我们也可以在这里添加超时检查
         }
     }
     
@@ -579,13 +609,23 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         didCreatePaymentMethod paymentMethod: StripeAPI.PaymentMethod,
         paymentInformation: PKPayment
     ) async throws -> String {
+        let deviceType = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        Logger.debug("Apple Pay 支付方法已创建 - 设备类型: \(deviceType)", category: .api)
+        
         guard let clientSecret = activeClientSecret else {
+            let errorMsg = "无法获取支付信息 - 设备类型: \(deviceType)"
+            Logger.error(errorMsg, category: .api)
             throw NSError(
                 domain: "ApplePayError",
                 code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "无法获取支付信息"]
+                userInfo: [
+                    NSLocalizedDescriptionKey: "无法获取支付信息",
+                    "device_type": deviceType
+                ]
             )
         }
+        
+        Logger.debug("返回 client_secret 用于确认支付 - 设备类型: \(deviceType)", category: .api)
         return clientSecret
     }
     
@@ -594,25 +634,46 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         didCompleteWith status: STPApplePayContext.PaymentStatus,
         error: Error?
     ) {
+        let deviceType = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        
         switch status {
         case .success:
-            Logger.info("Apple Pay 支付成功", category: .api)
+            Logger.info("Apple Pay 支付成功 - 设备类型: \(deviceType)", category: .api)
             paymentSuccess = true
             errorMessage = nil
             // 清除支付缓存，因为有了新的支付记录
             CacheManager.shared.invalidatePaymentCache()
         case .error:
             if let error = error {
-                Logger.error("Apple Pay 支付失败: \(error.localizedDescription)", category: .api)
-                errorMessage = formatPaymentError(error)
+                let errorDescription = error.localizedDescription
+                let errorDetails = "Apple Pay 支付失败 - 设备类型: \(deviceType), 错误: \(errorDescription)"
+                Logger.error(errorDetails, category: .api)
+                
+                // 记录错误的详细信息
+                if let nsError = error as NSError? {
+                    Logger.error("错误详情 - 域: \(nsError.domain), 代码: \(nsError.code), 用户信息: \(nsError.userInfo)", category: .api)
+                }
+                
+                // 提供更友好的错误消息
+                if errorDescription.contains("cancelled") || errorDescription.contains("canceled") {
+                    // 用户取消，不显示错误
+                    Logger.debug("用户取消了 Apple Pay 支付", category: .api)
+                } else {
+                    errorMessage = formatPaymentError(error)
+                }
             } else {
-                errorMessage = "支付失败"
+                let errorMsg = "Apple Pay 支付失败（未知错误） - 设备类型: \(deviceType)"
+                Logger.error(errorMsg, category: .api)
+                errorMessage = "支付失败，请重试或使用其他支付方式"
             }
         case .userCancellation:
-            Logger.debug("用户取消 Apple Pay 支付", category: .api)
+            Logger.debug("用户取消 Apple Pay 支付 - 设备类型: \(deviceType)", category: .api)
+            // 用户取消，不显示错误消息
             break
         @unknown default:
-            errorMessage = "未知错误"
+            let errorMsg = "Apple Pay 支付未知状态 - 设备类型: \(deviceType)"
+            Logger.warning(errorMsg, category: .api)
+            errorMessage = "支付过程中出现未知错误，请重试"
         }
     }
     

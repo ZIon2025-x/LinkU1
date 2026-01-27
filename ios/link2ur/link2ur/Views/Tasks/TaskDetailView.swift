@@ -162,6 +162,7 @@ struct TaskDetailView: View {
                     showConfirmCompletionSheet: $showConfirmCompletionSheet,
                     showRefundRequestSheet: $showRefundRequestSheet,
                     showRefundHistorySheet: $showRefundHistorySheet,
+                    showRefundRebuttalSheet: $showRefundRebuttalSheet,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -188,29 +189,14 @@ struct TaskDetailView: View {
     }
     
     var body: some View {
-        contentView
-            .navigationTitle(LocalizationKey.taskDetailTaskDetail.localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(AppColors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                toolbarContent
-            }
-            .enableSwipeBack()
-            .onAppear {
-                // 加载任务详情
-                viewModel.loadTask(taskId: taskId)
-                // 如果是发布者且任务状态为pending_confirmation，加载退款状态
-                if isPoster, let task = viewModel.task, task.status == .pendingConfirmation {
-                    viewModel.loadRefundStatus(taskId: taskId)
-                }
-            }
-            .onChange(of: viewModel.task?.status) { newStatus in
-                // 当任务状态变化时，如果是发布者且状态为pending_confirmation，加载退款状态
-                if isPoster, newStatus == .pendingConfirmation {
-                    viewModel.loadRefundStatus(taskId: taskId)
-                }
-            }
+        contentViewWithModifiers
+    }
+    
+    // MARK: - View Composition
+    
+    // 将修饰符分成两部分以减少类型检查复杂度
+    private var contentViewWithModifiers: some View {
+        contentViewWithNavigation
             .fullScreenCover(isPresented: $showFullScreenImage) {
                 fullScreenImageView
             }
@@ -244,6 +230,9 @@ struct TaskDetailView: View {
             .sheet(isPresented: $showDisputeTimeline) {
                 disputeTimelineView
             }
+            .sheet(isPresented: $showLogin) {
+                LoginView()
+            }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
             } message: {
@@ -261,15 +250,13 @@ struct TaskDetailView: View {
             } message: {
                 Text(LocalizationKey.taskDetailConfirmCompletionSuccessMessage.localized)
             }
-            .sheet(isPresented: $showLogin) {
-                LoginView()
-            }
             .onAppear {
-                // 优化：只在首次加载或任务ID变化时加载
-                if viewModel.task?.id != taskId {
-                    viewModel.loadTask(taskId: taskId)
+                // 加载任务详情
+                viewModel.loadTask(taskId: taskId)
+                // 如果是发布者且任务状态为pending_confirmation，加载退款状态
+                if isPoster, let task = viewModel.task, task.status == .pendingConfirmation {
+                    viewModel.loadRefundStatus(taskId: taskId)
                 }
-                
                 // 增强：记录任务查看开始时间（用于计算浏览时长）
                 viewStartTime = Date()
             }
@@ -286,14 +273,11 @@ struct TaskDetailView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.task?.id) { newTaskId in
-                // 优化：只在任务ID确实变化且不为nil时处理
-                guard let newTaskId = newTaskId, newTaskId == taskId else { return }
-                handleTaskChange()
-                // 优化：不在任务加载时立即加载分享图片，延迟到用户点击分享时再加载
-                // loadShareImage() // 延迟加载
-            }
             .onChange(of: viewModel.task?.status) { newStatus in
+                // 当任务状态变化时，如果是发布者且状态为pending_confirmation，加载退款状态
+                if isPoster, newStatus == .pendingConfirmation {
+                    viewModel.loadRefundStatus(taskId: taskId)
+                }
                 // 优化：只在状态确实变化时处理
                 guard newStatus != nil else { return }
                 // 只在特定状态变化时重新加载申请列表
@@ -301,7 +285,26 @@ struct TaskDetailView: View {
                     handleTaskChange()
                 }
             }
+            .onChange(of: viewModel.task?.id) { newTaskId in
+                // 优化：只在任务ID确实变化且不为nil时处理
+                guard let newTaskId = newTaskId, newTaskId == taskId else { return }
+                handleTaskChange()
+            }
     }
+    
+    private var contentViewWithNavigation: some View {
+        contentView
+            .navigationTitle(LocalizationKey.taskDetailTaskDetail.localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(AppColors.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                toolbarContent
+            }
+            .enableSwipeBack()
+    }
+    
+    // MARK: - View Modifiers
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
@@ -1121,6 +1124,7 @@ struct TaskDetailContentView: View {
     @Binding var showConfirmCompletionSheet: Bool
     @Binding var showRefundRequestSheet: Bool
     @Binding var showRefundHistorySheet: Bool
+    @Binding var showRefundRebuttalSheet: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1249,6 +1253,7 @@ struct TaskDetailContentView: View {
                         showConfirmCompletionSheet: $showConfirmCompletionSheet,
                         showRefundRequestSheet: $showRefundRequestSheet,
                         showRefundHistorySheet: $showRefundHistorySheet,
+                        showRefundRebuttalSheet: $showRefundRebuttalSheet,
                         showNegotiatePrice: $showNegotiatePrice,
                         negotiatedPrice: $negotiatedPrice,
                         taskId: taskId,
@@ -1731,6 +1736,7 @@ struct TaskActionButtonsView: View {
     @Binding var showConfirmCompletionSheet: Bool
     @Binding var showRefundRequestSheet: Bool
     @Binding var showRefundHistorySheet: Bool
+    @Binding var showRefundRebuttalSheet: Bool
     @Binding var showNegotiatePrice: Bool
     @Binding var negotiatedPrice: Double?
     let taskId: Int
@@ -3694,8 +3700,7 @@ struct CompleteTaskSheet: View {
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "取消", style: .cancel))
-            alert.addAction(UIAlertAction(title: "确认", style: .default) { [weak self] _ in
-                guard let self = self else { return }
+            alert.addAction(UIAlertAction(title: "确认", style: .default) { _ in
                 self.onComplete([], nil)
                 self.dismiss()
             })
@@ -3930,6 +3935,19 @@ extension TaskDetailView {
                 // 关闭 sheet
                 showRefundRequestSheet = false
             }
+                )
+            } else {
+                EmptyView()
+            }
+        }
+    }
+    
+    private var disputeTimelineView: some View {
+        Group {
+            if let task = viewModel.task {
+                DisputeTimelineView(
+                    taskId: taskId,
+                    task: task
                 )
             } else {
                 EmptyView()
@@ -5127,19 +5145,6 @@ struct RefundRequestSheet: View {
         }
         return error.localizedDescription
     }
-    
-    private var disputeTimelineView: some View {
-        Group {
-            if let task = viewModel.task {
-                DisputeTimelineView(
-                    taskId: taskId,
-                    task: task
-                )
-            } else {
-                EmptyView()
-            }
-        }
-    }
 }
 
 // MARK: - DisputeTimelineView
@@ -5737,7 +5742,7 @@ struct RefundRebuttalSheet: View {
         // 过滤有效的图片（确保不超过5张）
         let validImages = Array(selectedImages.prefix(5))
         
-        for (image, imageIndex) in validImages.enumerated() {
+        for (imageIndex, image) in validImages.enumerated() {
             uploadGroup.enter()
             // 先压缩图片
             guard let imageData = image.jpegData(compressionQuality: 0.7) else {

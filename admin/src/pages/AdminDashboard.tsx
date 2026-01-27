@@ -9518,7 +9518,7 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab, reportSubTab, forumReportsPage, forumReportsStatusFilter, fleaMarketReportsPage, fleaMarketReportsStatusFilter, loadForumReports, loadFleaMarketReports]);
 
-  const renderReports = useMemo(() => (
+  const renderReports = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>举报管理</h2>

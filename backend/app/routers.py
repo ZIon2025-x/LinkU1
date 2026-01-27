@@ -6344,6 +6344,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     
     # 确保 crud 模块已导入（避免 UnboundLocalError）
     from app import crud
+    # 确保 SQLAlchemy 函数已导入（避免 UnboundLocalError）
+    from sqlalchemy import and_, func, select
     
     # 获取请求信息
     payload = await request.body()
