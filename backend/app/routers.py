@@ -2054,6 +2054,13 @@ def complete_task(
     if False:  # 普通用户不再有客服权限
         raise HTTPException(status_code=403, detail="客服账号不能完成任务")
 
+    # 验证文字证据长度
+    if evidence_text and len(evidence_text.strip()) > 500:
+        raise HTTPException(
+            status_code=400,
+            detail="文字证据说明不能超过500字符"
+        )
+
     db_task = crud.get_task(db, task_id)
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -3006,7 +3013,7 @@ def get_task_dispute_timeline(
     ).order_by(models.Message.created_at.asc()).first()
     
     if completion_message:
-        # 获取完成证据（附件）
+        # 获取完成证据（附件和文字）
         completion_evidence = []
         if completion_message.id:
             attachments = db.query(models.MessageAttachment).filter(
@@ -3018,6 +3025,18 @@ def get_task_dispute_timeline(
                     "url": att.url,
                     "file_id": att.blob_id
                 })
+        
+        # 从meta字段中提取文字证据
+        if completion_message.meta:
+            try:
+                meta_data = json.loads(completion_message.meta)
+                if "evidence_text" in meta_data and meta_data["evidence_text"]:
+                    completion_evidence.append({
+                        "type": "text",
+                        "content": meta_data["evidence_text"]
+                    })
+            except (json.JSONDecodeError, KeyError):
+                pass  # 如果meta解析失败，忽略
         
         timeline_items.append({
             "type": "task_completed",

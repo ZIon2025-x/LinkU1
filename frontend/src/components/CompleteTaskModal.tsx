@@ -271,11 +271,35 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
       return;
     }
 
+    // 如果只有文字证据，没有图片，直接提交
+    const hasEvidenceText = evidenceText && evidenceText.trim();
+    if (validFiles.length === 0 && hasEvidenceText) {
+      try {
+        setUploading(true);
+        const finalEvidenceText = evidenceText.trim();
+        await completeTask(taskId, [], finalEvidenceText);
+        message.success(
+          language === 'zh'
+            ? '任务已标记为完成'
+            : 'Task marked as complete'
+        );
+        onSuccess();
+        handleCancel();
+      } catch (error: any) {
+        const errorMsg = getErrorMessage(error);
+        message.error(errorMsg);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    // 如果没有图片也没有文字，显示错误
     if (validFiles.length === 0) {
       message.error(
         language === 'zh'
-          ? '没有可上传的图片'
-          : 'No valid images to upload'
+          ? '请至少上传一张图片或填写文字说明'
+          : 'Please upload at least one image or provide text description'
       );
       return;
     }

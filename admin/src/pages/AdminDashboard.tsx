@@ -9518,7 +9518,7 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab, reportSubTab, forumReportsPage, forumReportsStatusFilter, fleaMarketReportsPage, fleaMarketReportsStatusFilter, loadForumReports, loadFleaMarketReports]);
 
-  const renderReports = () => (
+  const renderReports = useMemo(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>举报管理</h2>
@@ -10195,7 +10195,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  ), [refundRequests, refundRequestsLoading, refundRequestsPage, refundRequestsTotal, refundRequestsStatusFilter, refundRequestsSearchKeyword, selectedRefundRequest, showRefundRequestDetailModal, showRefundRequestActionModal, refundRequestAction, refundRequestAdminComment, refundRequestRefundAmount, processingRefundRequest, handleViewRefundRequestDetail, handleOpenRefundRequestAction, handleRefundRequestAction, loadRefundRequests]);
+  ), [reportSubTab, forumReports, forumReportsPage, forumReportsTotal, forumReportsLoading, forumReportsStatusFilter, fleaMarketReports, fleaMarketReportsPage, fleaMarketReportsTotal, fleaMarketReportsLoading, fleaMarketReportsStatusFilter, showReportProcessModal, currentReport, targetInfo, loadingTargetInfo, reportProcessForm, handleProcessReport, handleQuickAction, loadTargetInfo, loadForumReports, loadFleaMarketReports]);
 
   // 渲染商品列表
   const renderFleaMarketItems = () => {

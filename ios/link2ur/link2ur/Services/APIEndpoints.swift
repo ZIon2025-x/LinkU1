@@ -90,6 +90,9 @@ enum APIEndpoints {
         static func cancel(_ id: Int) -> String {
             "/api/tasks/\(id)/cancel"
         }
+        static func taskComplete(_ id: Int) -> String {
+            "/api/tasks/\(id)/complete"
+        }
         static func delete(_ id: Int) -> String {
             "/api/tasks/\(id)/delete"
         }

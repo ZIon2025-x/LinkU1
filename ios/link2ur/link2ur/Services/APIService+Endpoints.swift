@@ -332,7 +332,7 @@ extension APIService {
         if let evidenceText = evidenceText, !evidenceText.trimmingCharacters(in: .whitespaces).isEmpty {
             body["evidence_text"] = evidenceText.trimmingCharacters(in: .whitespaces)
         }
-        return request(EmptyResponse.self, APIEndpoints.Users.taskComplete(taskId), method: "POST", body: body.isEmpty ? nil : body)
+        return request(EmptyResponse.self, APIEndpoints.Tasks.taskComplete(taskId), method: "POST", body: body.isEmpty ? nil : body)
     }
     
     /// 确认任务完成 (发布者)
