@@ -2,8 +2,12 @@
 定期清理任务模块
 用于清理过期的会话、缓存等数据
 
-注意：当前所有文件/图片清理均针对本地磁盘（Path）。若 STORAGE_BACKEND 为 s3 或 r2，
-云存储上的对象不会由本模块清理，需后续通过 storage_backend 的 delete/delete_directory 扩展。
+存储后端支持：
+- 本地存储（Path）：完全支持所有清理功能
+- 云存储（S3/R2）：支持临时图片清理、孤儿实体目录清理
+  - 临时图片清理：检查文件年龄，按需删除
+  - 孤儿实体目录清理：对比数据库实体ID，删除不存在的目录
+  - 注意：孤立文件清理、旧格式图片清理目前仅支持本地存储
 
 小容量挂载卷优化：可通过环境变量调高清理频率、缩短保留期，并开启低磁盘紧急模式。
   CLEANUP_INTERVAL=1800           # 清理周期(秒)，默认 3600，小卷可 1800
@@ -291,7 +295,7 @@ class CleanupTasks:
         try:
             from pathlib import Path
             import os
-            from datetime import timedelta
+            from datetime import timedelta, timezone
             from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
             # 检查是否使用云存储
@@ -299,13 +303,14 @@ class CleanupTasks:
             is_cloud_storage = backend_type in ('s3', 'r2')
             
             cleaned_count = 0
+            cloud_cleaned_count = 0
+            cloud_bytes_freed = 0
             
             # 如果使用云存储，使用 storage backend 清理临时图片
             if is_cloud_storage:
                 try:
                     from app.services.storage_backend import get_default_storage
                     from app.services.image_upload_service import ImageCategory, get_image_upload_service
-                    from datetime import timedelta
                     
                     storage = get_default_storage()
                     service = get_image_upload_service()
@@ -316,33 +321,86 @@ class CleanupTasks:
                     max_files_per_run = _env_int("CLEANUP_MAX_FILES_TEMP", 1000) * (2 if is_low else 1)
                     cutoff_time = get_utc_time() - timedelta(hours=temp_hours)
                     
-                    # 清理任务临时图片：列出所有临时目录
+                    # 清理任务临时图片：列出所有临时文件及其元数据
                     try:
-                        all_files = storage.list_files(ImageCategory.TASK.value)
-                        temp_user_ids = set()
-                        temp_files_by_user = {}  # {user_id: [file_keys]}
+                        all_files_metadata = storage.list_files_with_metadata(ImageCategory.TASK.value)
+                        temp_files_to_delete = []  # [(last_modified, file_key)]
                         
-                        for file_key in all_files:
+                        for file_meta in all_files_metadata:
+                            file_key = file_meta['key']
                             if '/temp_' in file_key:
-                                # 提取user_id: public/images/public/temp_14786828/xxx.jpg
-                                parts = file_key.split('/temp_')
-                                if len(parts) > 1:
-                                    user_id = parts[1].split('/')[0]
-                                    temp_user_ids.add(user_id)
-                                    if user_id not in temp_files_by_user:
-                                        temp_files_by_user[user_id] = []
-                                    temp_files_by_user[user_id].append(file_key)
+                                # 检查文件年龄
+                                last_modified = file_meta['last_modified']
+                                # boto3 返回的是 datetime 对象（可能是 timezone-aware）
+                                # 需要转换为 UTC 时间进行比较
+                                if hasattr(last_modified, 'replace'):
+                                    # datetime 对象，确保是 UTC
+                                    if last_modified.tzinfo is None:
+                                        # 如果没有时区信息，假设是 UTC
+                                        from datetime import timezone
+                                        last_modified = last_modified.replace(tzinfo=timezone.utc)
+                                    else:
+                                        # 转换为 UTC
+                                        last_modified = last_modified.astimezone(timezone.utc)
+                                elif isinstance(last_modified, str):
+                                    from app.utils.time_utils import parse_iso_utc
+                                    try:
+                                        last_modified = parse_iso_utc(last_modified)
+                                    except:
+                                        continue
+                                
+                                if last_modified < cutoff_time:
+                                    temp_files_to_delete.append((last_modified, file_key))
                         
-                        # 清理每个用户的临时目录（对于云存储，直接删除整个临时目录更简单）
-                        for user_id in temp_user_ids:
-                            if cleaned_count >= max_files_per_run:
-                                break
+                        # 按时间排序，优先删除最旧的
+                        temp_files_to_delete.sort(key=lambda x: x[0])
+                        
+                        # 限制本次处理的文件数量
+                        temp_files_to_delete = temp_files_to_delete[:max_files_per_run]
+                        
+                        # 删除文件
+                        for _, file_key in temp_files_to_delete:
+                            try:
+                                # 获取文件大小（用于统计）
+                                file_size = storage.get_file_size(file_key) or 0
+                                if storage.delete(file_key):
+                                    cleaned_count += 1
+                                    cloud_cleaned_count += 1
+                                    cloud_bytes_freed += file_size
+                                    if cleaned_count % 100 == 0:
+                                        logger.debug(f"已清理 {cleaned_count} 个临时图片（云存储）...")
+                            except Exception as e:
+                                logger.warning(f"删除临时图片失败（云存储）{file_key}: {e}")
+                        
+                        # 清理空的临时目录（通过检查是否还有文件）
+                        if cleaned_count > 0:
+                            # 重新列出文件，检查哪些临时目录已为空
+                            remaining_files = storage.list_files(ImageCategory.TASK.value)
+                            temp_user_ids = set()
+                            for file_key in remaining_files:
+                                if '/temp_' in file_key:
+                                    parts = file_key.split('/temp_')
+                                    if len(parts) > 1:
+                                        user_id = parts[1].split('/')[0]
+                                        temp_user_ids.add(user_id)
                             
-                            # 使用delete_temp删除整个临时目录
-                            if service.delete_temp(category=ImageCategory.TASK, user_id=user_id):
-                                file_count = len(temp_files_by_user.get(user_id, []))
-                                cleaned_count += file_count
-                                logger.debug(f"清理用户 {user_id} 的任务临时图片（云存储），共 {file_count} 个文件")
+                            # 找出已清空的临时目录并删除
+                            all_temp_user_ids = set()
+                            for file_meta in all_files_metadata:
+                                file_key = file_meta['key']
+                                if '/temp_' in file_key:
+                                    parts = file_key.split('/temp_')
+                                    if len(parts) > 1:
+                                        user_id = parts[1].split('/')[0]
+                                        all_temp_user_ids.add(user_id)
+                            
+                            # 删除已清空的临时目录
+                            for user_id in all_temp_user_ids:
+                                if user_id not in temp_user_ids:
+                                    # 临时目录已为空，删除它
+                                    temp_dir = f"{ImageCategory.TASK.value}/temp_{user_id}"
+                                    storage.delete_directory(temp_dir)
+                                    logger.debug(f"删除空的临时目录（云存储）: {temp_dir}")
                     except Exception as e:
                         logger.warning(f"清理云存储临时图片失败: {e}")
                     
@@ -412,7 +470,15 @@ class CleanupTasks:
                             continue
             
             if cleaned_count > 0:
-                logger.info(f"清理了 {cleaned_count} 个未使用的临时图片")
+                if is_cloud_storage and cloud_cleaned_count > 0:
+                    mb_freed = cloud_bytes_freed / (1024 * 1024)
+                    logger.info(
+                        f"清理了 {cleaned_count} 个未使用的临时图片 "
+                        f"（云存储: {cloud_cleaned_count} 个文件，释放约 {mb_freed:.2f} MB；"
+                        f"本地: {cleaned_count - cloud_cleaned_count} 个文件）"
+                    )
+                else:
+                    logger.info(f"清理了 {cleaned_count} 个未使用的临时图片")
             
             # 清理跳蚤市场临时图片
             await self._cleanup_flea_market_temp_images()
@@ -912,8 +978,13 @@ class CleanupTasks:
             else:
                 base_upload_dir = Path("uploads")
 
+            # 检查是否使用云存储
+            backend_type = os.getenv('STORAGE_BACKEND', 'local').lower()
+            is_cloud_storage = backend_type in ('s3', 'r2')
+
             is_low = _is_low_disk(base_upload_dir)
             cleaned_count = 0
+            cloud_cleaned_count = 0
             max_dirs_per_run = _env_int("CLEANUP_MAX_DIRS_ORPHAN_ENTITY", 100) * (2 if is_low else 1)
 
             # 获取数据库会话
@@ -924,6 +995,21 @@ class CleanupTasks:
                 _existing_task_ids = {r[0] for r in db.execute(select(models.Task.id)).all()}
                 _existing_chat_ids = {r[0] for r in db.execute(select(models.CustomerServiceChat.chat_id)).all()}
                 _existing_leaderboard_ids = {r[0] for r in db.execute(select(models.CustomLeaderboard.id)).all()}
+                
+                # 如果使用云存储，先清理云存储中的孤儿目录
+                if is_cloud_storage:
+                    try:
+                        from app.services.storage_backend import get_default_storage
+                        storage = get_default_storage()
+                        
+                        # 清理云存储中的孤儿目录
+                        cloud_cleaned_count = await self._cleanup_orphan_entity_images_cloud(
+                            storage, db, _existing_task_ids, _existing_chat_ids, 
+                            _existing_leaderboard_ids, max_dirs_per_run
+                        )
+                        cleaned_count += cloud_cleaned_count
+                    except Exception as e:
+                        logger.warning(f"清理云存储孤儿实体目录失败: {e}")
 
                 # 1. 清理不存在竞品的图片文件夹
                 leaderboard_items_dir = base_upload_dir / "public" / "images" / "leaderboard_items"
@@ -1162,7 +1248,10 @@ class CleanupTasks:
                 db.close()
             
             if cleaned_count > 0:
-                logger.info(f"清理了 {cleaned_count} 个不存在实体的图片文件夹")
+                if is_cloud_storage and cloud_cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 个不存在实体的图片文件夹（云存储: {cloud_cleaned_count}, 本地: {cleaned_count - cloud_cleaned_count}）")
+                else:
+                    logger.info(f"清理了 {cleaned_count} 个不存在实体的图片文件夹")
             else:
                 logger.debug("未发现需要清理的不存在实体的图片文件夹")
             self.last_orphan_entity_cleanup_date = today
@@ -1171,6 +1260,191 @@ class CleanupTasks:
             logger.error(f"清理不存在实体的图片文件夹失败: {e}", exc_info=True)
         finally:
             release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_orphan_entity_images_cloud(
+        self, storage, db, existing_task_ids, existing_chat_ids, 
+        existing_leaderboard_ids, max_dirs_per_run
+    ):
+        """清理云存储中不存在实体的图片文件夹"""
+        from app import models
+        from sqlalchemy import select
+        
+        cleaned_count = 0
+        
+        try:
+            # 1. 清理不存在竞品的图片文件夹
+            leaderboard_items_prefix = "public/images/leaderboard_items/"
+            if cleaned_count < max_dirs_per_run:
+                items_result = db.execute(select(models.LeaderboardItem.id))
+                existing_item_ids = {item_id for item_id, in items_result.all()}
+                
+                all_files = storage.list_files(leaderboard_items_prefix)
+                item_dirs = set()
+                for file_key in all_files:
+                    # 提取目录名: public/images/leaderboard_items/{item_id}/file.jpg
+                    parts = file_key.replace(leaderboard_items_prefix, '').split('/')
+                    if parts and parts[0] and not parts[0].startswith('temp_'):
+                        item_dirs.add(parts[0])
+                
+                for item_dir_name in item_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    try:
+                        item_id = int(item_dir_name)
+                        if item_id not in existing_item_ids:
+                            dir_path = f"{leaderboard_items_prefix}{item_id}"
+                            if storage.delete_directory(dir_path):
+                                cleaned_count += 1
+                                logger.info(f"删除不存在竞品 {item_id} 的图片文件夹（云存储）: {dir_path}")
+                    except (ValueError, Exception) as e:
+                        logger.debug(f"跳过无效的竞品目录: {item_dir_name}: {e}")
+            
+            # 2. 清理不存在商品的图片文件夹
+            flea_market_prefix = "flea_market/"
+            if cleaned_count < max_dirs_per_run:
+                items_result = db.execute(select(models.FleaMarketItem.id))
+                existing_flea_item_ids = {item_id for item_id, in items_result.all()}
+                
+                all_files = storage.list_files(flea_market_prefix)
+                item_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(flea_market_prefix, '').split('/')
+                    if parts and parts[0] and not parts[0].startswith('temp_'):
+                        item_dirs.add(parts[0])
+                
+                for item_dir_name in item_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    try:
+                        item_id = int(item_dir_name)
+                        if item_id not in existing_flea_item_ids:
+                            dir_path = f"{flea_market_prefix}{item_id}"
+                            if storage.delete_directory(dir_path):
+                                cleaned_count += 1
+                                logger.info(f"删除不存在商品 {item_id} 的图片文件夹（云存储）: {dir_path}")
+                    except (ValueError, Exception) as e:
+                        logger.debug(f"跳过无效的商品目录: {item_dir_name}: {e}")
+            
+            # 3. 清理不存在任务的图片文件夹
+            tasks_public_prefix = "public/images/public/"
+            if cleaned_count < max_dirs_per_run:
+                all_files = storage.list_files(tasks_public_prefix)
+                task_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(tasks_public_prefix, '').split('/')
+                    if parts and parts[0] and not parts[0].startswith('temp_'):
+                        task_dirs.add(parts[0])
+                
+                for task_dir_name in task_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    try:
+                        task_id = int(task_dir_name)
+                        if task_id not in existing_task_ids:
+                            dir_path = f"{tasks_public_prefix}{task_id}"
+                            if storage.delete_directory(dir_path):
+                                cleaned_count += 1
+                                logger.info(f"删除不存在任务 {task_id} 的图片文件夹（云存储）: {dir_path}")
+                    except (ValueError, Exception) as e:
+                        logger.debug(f"跳过无效的任务目录: {task_dir_name}: {e}")
+            
+            # 4. 清理不存在用户的头像文件夹
+            expert_avatars_prefix = "public/images/expert_avatars/"
+            if cleaned_count < max_dirs_per_run:
+                users_result = db.execute(select(models.User.id))
+                existing_user_ids = {str(user_id) for user_id, in users_result.all()}
+                
+                all_files = storage.list_files(expert_avatars_prefix)
+                user_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(expert_avatars_prefix, '').split('/')
+                    if parts and parts[0]:
+                        user_dirs.add(parts[0])
+                
+                for user_dir_name in user_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    if user_dir_name not in existing_user_ids:
+                        dir_path = f"{expert_avatars_prefix}{user_dir_name}"
+                        if storage.delete_directory(dir_path):
+                            cleaned_count += 1
+                            logger.info(f"删除不存在用户 {user_dir_name} 的头像文件夹（云存储）: {dir_path}")
+            
+            # 5. 清理不存在任务达人的服务图片文件夹
+            service_images_prefix = "public/images/service_images/"
+            if cleaned_count < max_dirs_per_run:
+                experts_result = db.execute(select(models.TaskExpert.id))
+                existing_expert_ids = {str(expert_id) for expert_id, in experts_result.all()}
+                
+                all_files = storage.list_files(service_images_prefix)
+                expert_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(service_images_prefix, '').split('/')
+                    if parts and parts[0]:
+                        expert_dirs.add(parts[0])
+                
+                for expert_dir_name in expert_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    if expert_dir_name not in existing_expert_ids:
+                        dir_path = f"{service_images_prefix}{expert_dir_name}"
+                        if storage.delete_directory(dir_path):
+                            cleaned_count += 1
+                            logger.info(f"删除不存在任务达人 {expert_dir_name} 的服务图片文件夹（云存储）: {dir_path}")
+            
+            # 6. 清理不存在Banner的图片文件夹
+            banner_prefix = "public/images/banner/"
+            if cleaned_count < max_dirs_per_run:
+                banners_result = db.execute(select(models.Banner.id))
+                existing_banner_ids = {banner_id for banner_id, in banners_result.all()}
+                
+                all_files = storage.list_files(banner_prefix)
+                banner_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(banner_prefix, '').split('/')
+                    if parts and parts[0]:
+                        banner_dirs.add(parts[0])
+                
+                for banner_dir_name in banner_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    try:
+                        banner_id = int(banner_dir_name)
+                        if banner_id not in existing_banner_ids:
+                            dir_path = f"{banner_prefix}{banner_id}"
+                            if storage.delete_directory(dir_path):
+                                cleaned_count += 1
+                                logger.info(f"删除不存在Banner {banner_id} 的图片文件夹（云存储）: {dir_path}")
+                    except (ValueError, Exception) as e:
+                        logger.debug(f"跳过无效的Banner目录: {banner_dir_name}: {e}")
+            
+            # 7. 清理不存在榜单的封面文件夹
+            leaderboard_covers_prefix = "public/images/leaderboard_covers/"
+            if cleaned_count < max_dirs_per_run:
+                all_files = storage.list_files(leaderboard_covers_prefix)
+                lb_dirs = set()
+                for file_key in all_files:
+                    parts = file_key.replace(leaderboard_covers_prefix, '').split('/')
+                    if parts and parts[0] and not parts[0].startswith('temp_'):
+                        lb_dirs.add(parts[0])
+                
+                for lb_dir_name in lb_dirs:
+                    if cleaned_count >= max_dirs_per_run:
+                        break
+                    try:
+                        lb_id = int(lb_dir_name)
+                        if lb_id not in existing_leaderboard_ids:
+                            dir_path = f"{leaderboard_covers_prefix}{lb_id}"
+                            if storage.delete_directory(dir_path):
+                                cleaned_count += 1
+                                logger.info(f"删除不存在榜单 {lb_id} 的封面文件夹（云存储）: {dir_path}")
+                    except (ValueError, Exception) as e:
+                        logger.debug(f"跳过无效的榜单封面目录: {lb_dir_name}: {e}")
+        
+        except Exception as e:
+            logger.error(f"清理云存储孤儿实体目录失败: {e}", exc_info=True)
+        
+        return cleaned_count
 
     async def _cleanup_empty_dirs(self):
         """清理 uploads 下的空目录，释放 inode，减轻小卷压力。每轮执行。"""

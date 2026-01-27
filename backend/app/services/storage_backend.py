@@ -283,6 +283,42 @@ class LocalStorageBackend(StorageBackend):
             logger.error(f"列出目录失败: {directory}, 错误: {e}")
             return []
     
+    def list_files_with_metadata(self, directory: str) -> List[dict]:
+        """
+        列出本地目录中的文件及其元数据
+        
+        Returns:
+            List of dicts with keys: 'key', 'last_modified', 'size'
+        """
+        try:
+            from datetime import datetime
+            from app.utils.time_utils import file_timestamp_to_utc
+            
+            full_path = self._get_full_path(directory)
+            
+            if not full_path.exists() or not full_path.is_dir():
+                return []
+            
+            files = []
+            for item in full_path.iterdir():
+                if item.is_file():
+                    # 返回相对于 base_dir 的路径
+                    rel_path = str(item.relative_to(self.base_dir))
+                    stat = item.stat()
+                    # 将文件系统时间戳转换为 UTC datetime
+                    last_modified = file_timestamp_to_utc(stat.st_mtime)
+                    files.append({
+                        'key': rel_path,
+                        'last_modified': last_modified,
+                        'size': stat.st_size
+                    })
+            
+            return files
+            
+        except Exception as e:
+            logger.error(f"列出目录（含元数据）失败: {directory}, 错误: {e}")
+            return []
+    
     def move(self, src_path: str, dst_path: str) -> bool:
         """移动本地文件"""
         try:
@@ -508,6 +544,34 @@ class S3StorageBackend(StorageBackend):
             
         except Exception as e:
             logger.error(f"S3 列出目录失败: {directory}, 错误: {e}")
+            return []
+    
+    def list_files_with_metadata(self, directory: str) -> List[dict]:
+        """
+        列出 S3 目录中的文件及其元数据
+        
+        Returns:
+            List of dicts with keys: 'key', 'last_modified', 'size'
+        """
+        try:
+            directory = directory.lstrip('/').rstrip('/') + '/'
+            
+            files = []
+            paginator = self.client.get_paginator('list_objects_v2')
+            
+            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=directory):
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        files.append({
+                            'key': obj['Key'],
+                            'last_modified': obj['LastModified'],
+                            'size': obj.get('Size', 0)
+                        })
+            
+            return files
+            
+        except Exception as e:
+            logger.error(f"S3 列出目录（含元数据）失败: {directory}, 错误: {e}")
             return []
     
     def move(self, src_path: str, dst_path: str) -> bool:

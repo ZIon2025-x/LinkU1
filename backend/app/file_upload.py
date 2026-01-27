@@ -1,6 +1,14 @@
 """
 安全文件上传模块
 提供文件类型验证、大小限制、病毒扫描等功能
+
+注意：此模块中的 SecureFileUploader 类目前未被使用。
+项目已迁移到新的上传系统：
+- 公开图片：使用 ImageUploadService (backend/app/services/image_upload_service.py)
+- 私密图片：使用 PrivateImageSystem (backend/app/image_system.py)
+- 私密文件：使用 PrivateFileSystem (backend/app/file_system.py)
+
+如需使用此模块，请先确认其与当前存储后端（R2/本地）的兼容性。
 """
 
 import os
