@@ -39,19 +39,19 @@
 
 /* 任务图片区域 */
 .imageContainer {
-  aspect-ratio: 16 / 9;
   width: 100%;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 200px;
+  /* 使用固定高度而不是 aspect-ratio，避免高度计算问题 */
+  height: 200px;  /* 桌面端 */
 }
 
 .imageContainerMobile {
-  aspect-ratio: 9 / 16;
-  max-height: 250px;
+  /* 移动端使用固定高度 */
+  height: 250px;  /* 移动端 */
 }
 
 /* 任务等级标签 */

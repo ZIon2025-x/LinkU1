@@ -120,10 +120,26 @@ extension String {
     /// 将相对路径转换为完整的图片 URL
     /// 静态资源（如头像、logo）应该通过前端服务器访问，而不是 API 服务器
     /// 注意：本地头像路径（如 /static/avatar*.png）应该使用 AvatarView 而不是此方法
+    /// 
+    /// 支持以下格式：
+    /// - 完整 URL（http:// 或 https://）：直接返回
+    /// - R2 存储相对路径（public/...、flea_market/...）：转换为前端服务器 URL（Vercel 会代理到 R2）
+    /// - 旧格式路径（images/...）：转换为 /uploads/public/images/...
+    /// - 其他相对路径：使用前端服务器 URL
     func toImageURL() -> URL? {
+        guard !self.isEmpty else {
+            Logger.warning("图片 URL 为空", category: .network)
+            return nil
+        }
+        
         // 如果已经是完整 URL，直接返回
         if self.hasPrefix("http://") || self.hasPrefix("https://") {
-            return URL(string: self)
+            if let url = URL(string: self) {
+                return url
+            } else {
+                Logger.warning("无效的完整 URL: \(self)", category: .network)
+                return nil
+            }
         }
         
         // 检查是否是本地头像路径（/static/avatar*.png），这些应该使用本地资源
@@ -144,15 +160,29 @@ extension String {
         
         // 如果是后端存储相对路径（无前导 /），需补上 /uploads/ 前缀
         // 格式：public/images/...、flea_market/...
+        // 注意：这些路径会通过前端服务器（Vercel）代理到后端/R2
         if self.hasPrefix("public/") || self.hasPrefix("flea_market/") {
             let fullURL = "\(Constants.Frontend.baseURL)/uploads/\(self)"
-            return URL(string: fullURL)
+            if let url = URL(string: fullURL) {
+                Logger.debug("转换相对路径为完整 URL: \(self) -> \(fullURL)", category: .network)
+                return url
+            } else {
+                Logger.warning("无法构建 URL: \(fullURL)", category: .network)
+                return nil
+            }
         }
+        
         // 旧格式 images/...（如 images/service_images/、images/leaderboard_covers/）
         // 实际文件在 public/images/ 下，需补为 /uploads/public/images/...
         if self.hasPrefix("images/") {
             let fullURL = "\(Constants.Frontend.baseURL)/uploads/public/\(self)"
-            return URL(string: fullURL)
+            if let url = URL(string: fullURL) {
+                Logger.debug("转换旧格式路径为完整 URL: \(self) -> \(fullURL)", category: .network)
+                return url
+            } else {
+                Logger.warning("无法构建 URL: \(fullURL)", category: .network)
+                return nil
+            }
         }
         
         // 如果是相对路径，使用前端服务器 URL（静态资源在前端 public/static 文件夹中）
@@ -160,7 +190,13 @@ extension String {
         let imagePath = self.hasPrefix("/") ? self : "/\(self)"
         let fullURL = "\(baseURL)\(imagePath)"
         
-        return URL(string: fullURL)
+        if let url = URL(string: fullURL) {
+            Logger.debug("转换相对路径为完整 URL: \(self) -> \(fullURL)", category: .network)
+            return url
+        } else {
+            Logger.warning("无法构建 URL: \(fullURL)", category: .network)
+            return nil
+        }
     }
     
     /// 检查是否是有效的图片 URL

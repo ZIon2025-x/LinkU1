@@ -493,6 +493,44 @@ class TaskOut(TaskBase):
                     except (json.JSONDecodeError, TypeError):
                         pass
         
+        # 转换图片 URL：将相对路径转换为完整的 URL（支持 R2 存储）
+        # 如果图片 URL 是相对路径（如 public/images/...），使用存储后端转换为完整 URL
+        if images_list and isinstance(images_list, list):
+            try:
+                from app.services.storage_backend import get_default_storage
+                storage = get_default_storage()
+                
+                converted_images = []
+                for img_url in images_list:
+                    if not img_url:
+                        continue
+                    img_url_str = str(img_url).strip()
+                    
+                    # 如果已经是完整 URL（http:// 或 https://），直接使用
+                    if img_url_str.startswith(('http://', 'https://')):
+                        converted_images.append(img_url_str)
+                    # 如果是相对路径（public/... 或 flea_market/...），转换为完整 URL
+                    elif img_url_str.startswith(('public/', 'flea_market/')):
+                        try:
+                            full_url = storage.get_url(img_url_str)
+                            converted_images.append(full_url)
+                        except Exception as e:
+                            # 如果转换失败，记录日志但保留原 URL（让前端处理）
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"无法转换图片 URL {img_url_str} 为完整 URL: {e}")
+                            converted_images.append(img_url_str)
+                    else:
+                        # 其他格式（如 /uploads/...），保留原样
+                        converted_images.append(img_url_str)
+                
+                images_list = converted_images
+            except Exception as e:
+                # 如果存储后端不可用，记录日志但继续使用原 URL
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"无法获取存储后端以转换图片 URL: {e}")
+        
         data = {
             "id": obj.id,
             "poster_id": obj.poster_id,

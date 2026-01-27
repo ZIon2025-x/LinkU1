@@ -198,6 +198,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     width: containerWidth,
     height: containerHeight,
     overflow: 'hidden',
+    // 关键修复：确保容器不会超出父容器
+    maxWidth: '100%',
+    maxHeight: '100%',
     // 如果 style 中有 borderRadius，应用到容器以保持圆形
     borderRadius: style?.borderRadius || undefined,
   };
