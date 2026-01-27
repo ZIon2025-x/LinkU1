@@ -155,8 +155,36 @@ def process_refund(
         # 3. 更新任务状态和托管金额
         # ✅ 修复金额精度：使用Decimal进行金额比较
         # ✅ 支持部分退款：更新托管金额
+        # ✅ 安全修复：考虑已转账的情况
         task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
         refund_amount_decimal = Decimal(str(refund_amount))
+        
+        # ✅ 计算已转账的总金额
+        from sqlalchemy import func, and_
+        total_transferred = db.query(
+            func.sum(models.PaymentTransfer.amount).label('total_transferred')
+        ).filter(
+            and_(
+                models.PaymentTransfer.task_id == task.id,
+                models.PaymentTransfer.status == "succeeded"
+            )
+        ).scalar() or Decimal('0')
+        total_transferred = Decimal(str(total_transferred)) if total_transferred else Decimal('0')
+        
+        # ✅ 计算当前可用的escrow金额
+        current_escrow = Decimal(str(task.escrow_amount)) if task.escrow_amount else Decimal('0')
+        
+        # ✅ 验证退款金额不超过可用金额（考虑已转账）
+        if total_transferred > 0:
+            # 如果已经转账，可用退款金额 = 任务金额 - 已转账金额
+            max_refundable = task_amount - total_transferred
+            if refund_amount_decimal > max_refundable:
+                logger.error(f"退款金额（£{refund_amount_decimal}）超过可退款金额（£{max_refundable}），已转账：£{total_transferred}")
+                return False, None, None, f"退款金额超过可退款金额。可退款金额：£{max_refundable:.2f}，已转账：£{total_transferred:.2f}"
+        elif refund_amount_decimal > current_escrow:
+            # 如果没有转账，验证不超过当前escrow
+            logger.error(f"退款金额（£{refund_amount_decimal}）超过可用escrow（£{current_escrow}）")
+            return False, None, None, f"退款金额超过可用金额。可用金额：£{current_escrow:.2f}"
         
         if refund_amount_decimal >= task_amount:
             # 全额退款
@@ -166,15 +194,36 @@ def process_refund(
             logger.info(f"✅ 全额退款，已更新任务支付状态")
         else:
             # 部分退款：更新托管金额
-            # 计算退款后的剩余金额
+            # ✅ 计算退款后的剩余金额（最终成交金额）
             remaining_amount = task_amount - refund_amount_decimal
+            
+            # ✅ 基于剩余金额重新计算平台服务费
+            # 例如：原任务£100，退款£50，剩余£50
+            # 服务费基于£50重新计算：£50 >= £10，所以是10% = £5
+            # 接单人应得：£50 - £5 = £45
             from app.utils.fee_calculator import calculate_application_fee
             application_fee = calculate_application_fee(float(remaining_amount))
             new_escrow_amount = remaining_amount - Decimal(str(application_fee))
             
-            # 更新托管金额（任务金额 - 退款金额 - 平台服务费）
+            # ✅ 如果已经进行了部分转账，需要从剩余金额中扣除已转账部分
+            if total_transferred > 0:
+                # 已转账的情况下，新的escrow应该是：剩余金额 - 已转账金额 - 服务费
+                # 但服务费是基于剩余金额计算的，所以：
+                # 新的escrow = 剩余金额 - 服务费 - 已转账金额
+                # 但已转账金额已经转出去了，所以新的escrow应该是：剩余金额 - 服务费
+                # 不过需要考虑：如果已经转账了部分，那么剩余可转账金额应该是：剩余金额 - 服务费 - 已转账金额
+                remaining_after_transfer = remaining_amount - total_transferred
+                if remaining_after_transfer > 0:
+                    # 重新计算服务费（基于剩余金额）
+                    remaining_application_fee = calculate_application_fee(float(remaining_amount))
+                    new_escrow_amount = remaining_amount - Decimal(str(remaining_application_fee)) - total_transferred
+                else:
+                    # 如果剩余金额已经全部转账，escrow为0
+                    new_escrow_amount = Decimal('0')
+            
+            # 更新托管金额（确保不为负数）
             task.escrow_amount = float(max(Decimal('0'), new_escrow_amount))
-            logger.info(f"✅ 部分退款：退款金额 £{refund_amount:.2f}，剩余任务金额 £{remaining_amount:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
+            logger.info(f"✅ 部分退款：退款金额 £{refund_amount:.2f}，剩余任务金额 £{remaining_amount:.2f}，已转账 £{total_transferred:.2f}，服务费 £{application_fee:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
         
         # 4. 退还优惠券（如果需要）
         # 注意：积分支付已禁用，不需要退还积分

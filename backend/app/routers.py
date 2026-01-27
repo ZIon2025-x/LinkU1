@@ -3265,21 +3265,86 @@ def approve_refund_request(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    # ✅ 安全修复：验证任务仍然已支付
+    if not task.is_paid:
+        raise HTTPException(
+            status_code=400,
+            detail="任务已不再支付，无法处理退款。可能已被取消或退款。"
+        )
+    
+    # ✅ 安全修复：验证任务状态仍然允许退款
+    if task.status not in ["pending_confirmation", "in_progress", "completed"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"任务状态已改变（当前状态: {task.status}），无法处理退款。"
+        )
+    
     # 更新退款申请状态
     refund_request.status = "approved"
     refund_request.reviewed_by = current_user.id
     refund_request.reviewed_at = get_utc_time()
     refund_request.admin_comment = approve_data.admin_comment
     
-    # 如果管理员指定了不同的退款金额，使用管理员指定的金额
-    if approve_data.refund_amount is not None:
-        refund_request.refund_amount = approve_data.refund_amount
-    
     # ✅ 修复金额精度：使用Decimal进行金额计算
+    task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+    
+    # ✅ 安全修复：如果管理员指定了不同的退款金额，验证金额合理性
+    if approve_data.refund_amount is not None:
+        admin_refund_amount = Decimal(str(approve_data.refund_amount))
+        
+        # ✅ 验证管理员指定的金额大于0
+        if admin_refund_amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="退款金额必须大于0"
+            )
+        
+        # ✅ 验证管理员指定的金额不超过任务金额
+        if admin_refund_amount > task_amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"管理员指定的退款金额（£{admin_refund_amount:.2f}）超过任务金额（£{task_amount:.2f}）"
+            )
+        
+        # ✅ 计算已转账的总金额
+        from sqlalchemy import func, and_
+        total_transferred = db.query(
+            func.sum(models.PaymentTransfer.amount).label('total_transferred')
+        ).filter(
+            and_(
+                models.PaymentTransfer.task_id == task.id,
+                models.PaymentTransfer.status == "succeeded"
+            )
+        ).scalar() or Decimal('0')
+        total_transferred = Decimal(str(total_transferred)) if total_transferred else Decimal('0')
+        
+        # ✅ 计算当前可用的escrow金额
+        current_escrow = Decimal(str(task.escrow_amount)) if task.escrow_amount else Decimal('0')
+        
+        # ✅ 验证退款金额不超过可用escrow（考虑已转账）
+        # 可用金额 = 当前escrow + 已转账金额（如果退款，需要从Stripe退款，但已转账的部分需要反向转账）
+        # 实际上，退款金额应该不超过任务金额，且需要考虑已转账的情况
+        # 如果已经转账，退款金额不能超过（任务金额 - 已转账金额）
+        if total_transferred > 0:
+            max_refundable = task_amount - total_transferred
+            if admin_refund_amount > max_refundable:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"退款金额（£{admin_refund_amount:.2f}）超过可退款金额（£{max_refundable:.2f}）。已转账：£{total_transferred:.2f}，任务金额：£{task_amount:.2f}"
+                )
+        elif admin_refund_amount > current_escrow:
+            # 如果没有转账，验证不超过当前escrow
+            raise HTTPException(
+                status_code=400,
+                detail=f"退款金额（£{admin_refund_amount:.2f}）超过可用金额（£{current_escrow:.2f}）"
+            )
+        
+        refund_request.refund_amount = admin_refund_amount
+    
+    # 计算最终退款金额
     refund_amount = Decimal(str(refund_request.refund_amount)) if refund_request.refund_amount else None
     if refund_amount is None:
         # 全额退款：使用任务金额
-        task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
         refund_amount = task_amount
     
     # 转换为float用于Stripe API（Stripe API需要整数便士）
@@ -3288,6 +3353,7 @@ def approve_refund_request(
     # 开始处理退款
     refund_request.status = "processing"
     refund_request.processed_at = get_utc_time()
+    db.flush()  # 先保存状态，但不提交
     
     try:
         # 执行退款逻辑（传入float金额，内部会转换为便士）
@@ -3346,9 +3412,19 @@ def approve_refund_request(
                 )
             except Exception as e:
                 logger.error(f"Failed to send notification: {e}")
+            
+            # ✅ 只有成功时才提交
+            db.commit()
         else:
-            # 退款处理失败，保持 processing 状态，记录错误
+            # ✅ 退款处理失败，回滚任务状态
+            db.rollback()  # 回滚所有更改
+            # 重新获取任务和退款申请（回滚后的状态）
+            db.refresh(task)
+            db.refresh(refund_request)
+            # 保持pending状态，等待重试
+            refund_request.status = "pending"
             refund_request.admin_comment = f"{refund_request.admin_comment or ''}\n退款处理失败: {error_message}"
+            db.commit()
             logger.error(f"退款处理失败: {error_message}")
             raise HTTPException(
                 status_code=500,
@@ -3356,17 +3432,21 @@ def approve_refund_request(
             )
     
     except HTTPException:
+        db.rollback()  # 回滚所有更改
         raise
     except Exception as e:
         logger.error(f"处理退款时发生错误: {e}", exc_info=True)
-        refund_request.status = "processing"  # 保持 processing 状态，等待重试
+        db.rollback()  # 回滚所有更改
+        # 重新获取退款申请（回滚后的状态）
+        db.refresh(refund_request)
+        # 保持pending状态，等待重试
+        refund_request.status = "pending"
         db.commit()
         raise HTTPException(
             status_code=500,
             detail=f"处理退款时发生错误: {str(e)}"
         )
     
-    db.commit()
     db.refresh(refund_request)
     
     return refund_request
@@ -6282,6 +6362,23 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if task_id:
             task = crud.get_task(db, task_id)
             if task:
+                # ✅ 安全修复：验证任务仍然已支付
+                if not task.is_paid:
+                    logger.warning(f"任务 {task_id} 已不再支付，跳过webhook退款处理")
+                    return {"status": "skipped", "reason": "task_not_paid"}
+                
+                # ✅ 安全修复：验证退款申请状态（如果有关联的退款申请）
+                if refund_request_id:
+                    try:
+                        refund_request_check = db.query(models.RefundRequest).filter(
+                            models.RefundRequest.id == int(refund_request_id)
+                        ).first()
+                        if refund_request_check and refund_request_check.status != "processing":
+                            logger.warning(f"退款申请 {refund_request_id} 状态为 {refund_request_check.status}，不是processing，跳过webhook处理")
+                            return {"status": "skipped", "reason": "refund_request_not_processing"}
+                    except Exception as e:
+                        logger.warning(f"检查退款申请状态时发生错误: {e}")
+                
                 # ✅ 修复金额精度：使用Decimal计算退款金额
                 from decimal import Decimal
                 refund_amount = Decimal(str(charge.get("amount_refunded", 0))) / Decimal('100')
@@ -6351,15 +6448,43 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     logger.info(f"✅ 全额退款，已更新任务支付状态")
                 else:
                     # 部分退款：更新托管金额
-                    # 计算退款后的剩余金额
+                    # ✅ 计算退款后的剩余金额（最终成交金额）
                     remaining_amount = task_amount - refund_amount
+                    
+                    # ✅ 计算已转账的总金额
+                    from sqlalchemy import func, and_
+                    total_transferred = db.query(
+                        func.sum(models.PaymentTransfer.amount).label('total_transferred')
+                    ).filter(
+                        and_(
+                            models.PaymentTransfer.task_id == task.id,
+                            models.PaymentTransfer.status == "succeeded"
+                        )
+                    ).scalar() or Decimal('0')
+                    total_transferred = Decimal(str(total_transferred)) if total_transferred else Decimal('0')
+                    
+                    # ✅ 基于剩余金额重新计算平台服务费
+                    # 例如：原任务£100，退款£50，剩余£50
+                    # 服务费基于£50重新计算：£50 >= £10，所以是10% = £5
+                    # 接单人应得：£50 - £5 = £45
                     from app.utils.fee_calculator import calculate_application_fee
                     application_fee = calculate_application_fee(float(remaining_amount))
-                    new_escrow_amount = Decimal(str(remaining_amount)) - Decimal(str(application_fee))
+                    new_escrow_amount = remaining_amount - Decimal(str(application_fee))
                     
-                    # 更新托管金额（任务金额 - 退款金额 - 平台服务费）
+                    # ✅ 如果已经进行了部分转账，需要从剩余金额中扣除已转账部分
+                    if total_transferred > 0:
+                        remaining_after_transfer = remaining_amount - total_transferred
+                        if remaining_after_transfer > 0:
+                            # 重新计算服务费（基于剩余金额）
+                            remaining_application_fee = calculate_application_fee(float(remaining_amount))
+                            new_escrow_amount = remaining_amount - Decimal(str(remaining_application_fee)) - total_transferred
+                        else:
+                            # 如果剩余金额已经全部转账，escrow为0
+                            new_escrow_amount = Decimal('0')
+                    
+                    # 更新托管金额（确保不为负数）
                     task.escrow_amount = float(max(Decimal('0'), new_escrow_amount))
-                    logger.info(f"✅ 部分退款：退款金额 £{refund_amount_float:.2f}，剩余任务金额 £{remaining_amount:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
+                    logger.info(f"✅ 部分退款：退款金额 £{refund_amount_float:.2f}，剩余任务金额 £{remaining_amount:.2f}，已转账 £{total_transferred:.2f}，服务费 £{application_fee:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
                 
                 db.commit()
                 logger.info(f"Task {task_id} refunded: £{refund_amount_float:.2f}")

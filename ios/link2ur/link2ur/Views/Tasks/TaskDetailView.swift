@@ -159,6 +159,7 @@ struct TaskDetailView: View {
                     showCompleteTaskSheet: $showCompleteTaskSheet,
                     showConfirmCompletionSheet: $showConfirmCompletionSheet,
                     showRefundRequestSheet: $showRefundRequestSheet,
+                    showRefundHistorySheet: $showRefundHistorySheet,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -1079,6 +1080,8 @@ struct TaskDetailContentView: View {
     @Binding var showConfirmCompletionSuccess: Bool
     @Binding var showCompleteTaskSheet: Bool
     @Binding var showConfirmCompletionSheet: Bool
+    @Binding var showRefundRequestSheet: Bool
+    @Binding var showRefundHistorySheet: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1205,6 +1208,8 @@ struct TaskDetailContentView: View {
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                         showCompleteTaskSheet: $showCompleteTaskSheet,
                         showConfirmCompletionSheet: $showConfirmCompletionSheet,
+                        showRefundRequestSheet: $showRefundRequestSheet,
+                        showRefundHistorySheet: $showRefundHistorySheet,
                         showNegotiatePrice: $showNegotiatePrice,
                         negotiatedPrice: $negotiatedPrice,
                         taskId: taskId,
@@ -1686,6 +1691,7 @@ struct TaskActionButtonsView: View {
     @Binding var showCompleteTaskSheet: Bool
     @Binding var showConfirmCompletionSheet: Bool
     @Binding var showRefundRequestSheet: Bool
+    @Binding var showRefundHistorySheet: Bool
     @Binding var showNegotiatePrice: Bool
     @Binding var negotiatedPrice: Double?
     let taskId: Int
@@ -2379,7 +2385,7 @@ struct RefundHistoryItemCard: View {
                 
                 if let amount = refund.refundAmount {
                     Text(String(format: "£%.2f", amount))
-                        .font(AppTypography.headline)
+                        .font(AppTypography.title3)
                         .foregroundColor(statusColor)
                     if let percentage = refund.refundPercentage {
                         Text(String(format: "(%.1f%%)", percentage))
@@ -3713,10 +3719,12 @@ struct CompleteTaskSheet: View {
 // MARK: - 确认完成 Sheet
 extension TaskDetailView {
     private var confirmCompletionSheet: some View {
-        ConfirmCompletionSheet(
-            taskId: taskId,
-            task: task,
-            onComplete: { fileIds in
+        Group {
+            if let task = viewModel.task {
+                ConfirmCompletionSheet(
+                    taskId: taskId,
+                    task: task,
+                    onComplete: { fileIds in
                 // 确认完成，传入文件ID列表
                 viewModel.confirmTaskCompletion(taskId: taskId, evidenceFiles: fileIds.isEmpty ? nil : fileIds) { success in
                     DispatchQueue.main.async {
@@ -3736,7 +3744,11 @@ extension TaskDetailView {
                     }
                 }
             }
-        )
+                )
+            } else {
+                EmptyView()
+            }
+        }
     }
     
     private var refundHistorySheet: some View {
@@ -3752,10 +3764,12 @@ extension TaskDetailView {
     }
     
     private var refundRequestSheet: some View {
-        RefundRequestSheet(
-            taskId: taskId,
-            task: task,
-            onSuccess: {
+        Group {
+            if let task = viewModel.task {
+                RefundRequestSheet(
+                    taskId: taskId,
+                    task: task,
+                    onSuccess: {
                 // 退款申请提交成功
                 HapticFeedback.success()
                 // 立即强制刷新任务详情和退款状态以获取最新状态
@@ -3764,7 +3778,11 @@ extension TaskDetailView {
                 // 关闭 sheet
                 showRefundRequestSheet = false
             }
-        )
+                )
+            } else {
+                EmptyView()
+            }
+        }
     }
 }
 
@@ -4711,7 +4729,7 @@ struct RefundRequestSheet: View {
         guard !isSubmitting && !isUploading else { return }
         
         // 验证退款原因类型
-        guard let reasonType = refundReasonType else {
+        guard refundReasonType != nil else {
             errorMessage = "请选择退款原因类型"
             return
         }
