@@ -269,29 +269,144 @@ private struct BottomAnchorMaxYPreferenceKey: PreferenceKey {
 /// 系统消息气泡组件 - 居中显示，样式与普通消息区分
 struct TaskChatSystemMessageBubble: View {
     let message: Message
+    @State private var selectedImageItem: IdentifiableImageUrl?
+    @State private var selectedImageIndex: Int = 0
+    
+    // 检查是否是退款申请系统消息
+    private var isRefundMessage: Bool {
+        guard let content = message.content else { return false }
+        return content.contains("申请退款") || content.contains("退款") || content.contains("refund")
+    }
+    
+    private var isRefundCompleted: Bool {
+        guard let content = message.content else { return false }
+        return content.contains("退款已完成") || content.contains("退款完成") || content.contains("refund completed")
+    }
     
     var body: some View {
         HStack {
             Spacer()
             
-            VStack(spacing: 4) {
-                // 系统消息内容
-                HStack(spacing: 6) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(AppColors.textTertiary)
-                    
-                    Text(message.displayContent ?? LocalizationKey.notificationSystemMessage.localized)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
+            VStack(spacing: AppSpacing.sm) {
+                // 如果是退款申请消息，使用卡片式布局
+                if isRefundMessage {
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        // 标题和图标
+                        HStack(spacing: 8) {
+                            Image(systemName: isRefundCompleted ? "checkmark.circle.fill" : "dollarsign.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(isRefundCompleted ? AppColors.success : AppColors.warning)
+                            
+                            Text(isRefundCompleted ? "退款已完成" : "退款申请")
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(isRefundCompleted ? AppColors.success : AppColors.warning)
+                        }
+                        
+                        // 消息内容
+                        Text(message.displayContent ?? LocalizationKey.notificationSystemMessage.localized)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(AppSpacing.md)
+                    .frame(maxWidth: 300)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .fill(isRefundCompleted ? AppColors.success.opacity(0.1) : AppColors.warning.opacity(0.1))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .stroke(isRefundCompleted ? AppColors.success.opacity(0.3) : AppColors.warning.opacity(0.3), lineWidth: 1)
+                    )
+                } else {
+                    // 普通系统消息
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(AppColors.textTertiary)
+                        
+                        Text(message.displayContent ?? LocalizationKey.notificationSystemMessage.localized)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                            .fill(AppColors.cardBackground.opacity(0.6))
+                    )
                 }
-                .padding(.horizontal, AppSpacing.md)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                        .fill(AppColors.cardBackground.opacity(0.6))
-                )
+                
+                // 附件显示（证据图片/文件）
+                if let attachments = message.attachments, !attachments.isEmpty {
+                    VStack(spacing: AppSpacing.xs) {
+                        ForEach(attachments) { attachment in
+                            if attachment.attachmentType == "image", let imageUrl = attachment.url {
+                                Button(action: {
+                                    // 收集所有图片URL用于全屏查看
+                                    let allImageUrls = attachments
+                                        .filter { $0.attachmentType == "image" }
+                                        .compactMap { $0.url }
+                                    if let index = allImageUrls.firstIndex(of: imageUrl) {
+                                        selectedImageIndex = index
+                                        selectedImageItem = IdentifiableImageUrl(url: imageUrl)
+                                    }
+                                }) {
+                                    AsyncImageView(
+                                        urlString: imageUrl,
+                                        placeholder: Image(systemName: "photo"),
+                                        width: 200,
+                                        height: 150,
+                                        contentMode: .fill,
+                                        cornerRadius: AppCornerRadius.medium
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                            } else if attachment.attachmentType == "file", let fileUrl = attachment.url {
+                                // 文件附件
+                                if let url = URL(string: fileUrl) {
+                                    Link(destination: url) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "doc.fill")
+                                                .font(.system(size: 16))
+                                                .foregroundColor(AppColors.primary)
+                                            Text("证据文件")
+                                                .font(AppTypography.caption)
+                                                .foregroundColor(AppColors.primary)
+                                            Image(systemName: "arrow.down.circle")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(AppColors.primary)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(AppColors.primary.opacity(0.1))
+                                        .cornerRadius(AppCornerRadius.medium)
+                                    }
+                                } else {
+                                    // 如果URL无效，显示文件图标
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "doc.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(AppColors.textSecondary)
+                                        Text("证据文件")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(AppColors.cardBackground)
+                                    .cornerRadius(AppCornerRadius.medium)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
                 
                 // 时间戳（可选）
                 if let createdAt = message.createdAt {
@@ -305,9 +420,26 @@ struct TaskChatSystemMessageBubble: View {
         }
         .padding(.horizontal, AppSpacing.sm)
         .padding(.vertical, AppSpacing.xs)
+        .fullScreenCover(item: $selectedImageItem) { item in
+            // 收集所有图片URL用于全屏查看
+            let allImageUrls = (message.attachments ?? [])
+                .filter { $0.attachmentType == "image" }
+                .compactMap { $0.url }
+            FullScreenImageView(
+                images: allImageUrls.isEmpty ? [item.url] : allImageUrls,
+                selectedIndex: $selectedImageIndex,
+                isPresented: Binding(get: { true }, set: { if !$0 { selectedImageItem = nil } })
+            )
+        }
     }
     
     private func formatTime(_ timeString: String) -> String {
         return DateFormatterHelper.shared.formatTime(timeString)
     }
+}
+
+/// 用于 fullScreenCover(item:) 的图片 URL 包装
+private struct IdentifiableImageUrl: Identifiable {
+    let id = UUID()
+    let url: String
 }

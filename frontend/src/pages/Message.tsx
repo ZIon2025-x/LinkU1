@@ -4522,6 +4522,182 @@ const MessagePage: React.FC = () => {
                   
                   // 系统消息居中显示
                   if (isSystemMessage) {
+                    // 检查是否是退款申请系统消息
+                    let refundMeta = null;
+                    try {
+                      if (msg.meta) {
+                        const meta = typeof msg.meta === 'string' ? JSON.parse(msg.meta) : msg.meta;
+                        if (meta.system_action === 'refund_request_created' || meta.system_action === 'refund_completed') {
+                          refundMeta = meta;
+                        }
+                      }
+                    } catch (e) {
+                      // 忽略解析错误
+                    }
+                    
+                    // 如果是退款申请消息，使用卡片式布局
+                    if (refundMeta) {
+                      return (
+                        <div
+                          key={msg.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            marginBottom: '16px',
+                            padding: '0 16px'
+                          }}
+                        >
+                          <div style={{
+                            maxWidth: '85%',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            backgroundColor: refundMeta.system_action === 'refund_completed' ? '#d4edda' : '#fff3cd',
+                            border: `1px solid ${refundMeta.system_action === 'refund_completed' ? '#28a745' : '#ffc107'}`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              marginBottom: '8px',
+                              gap: '8px'
+                            }}>
+                              <span style={{
+                                fontSize: '18px'
+                              }}>
+                                {refundMeta.system_action === 'refund_completed' ? '✅' : '💰'}
+                              </span>
+                              <strong style={{
+                                fontSize: '14px',
+                                color: refundMeta.system_action === 'refund_completed' ? '#155724' : '#856404'
+                              }}>
+                                {refundMeta.system_action === 'refund_completed' 
+                                  ? (language === 'zh' ? '退款已完成' : 'Refund Completed')
+                                  : (language === 'zh' ? '退款申请' : 'Refund Request')}
+                              </strong>
+                            </div>
+                            <div style={{
+                              fontSize: '13px',
+                              color: '#666',
+                              lineHeight: '1.5',
+                              marginBottom: '8px'
+                            }}>
+                              {msg.content}
+                            </div>
+                            {/* 显示证据文件 */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div style={{
+                                marginTop: '12px',
+                                paddingTop: '12px',
+                                borderTop: '1px solid rgba(0,0,0,0.1)'
+                              }}>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: '#666',
+                                  marginBottom: '8px',
+                                  fontWeight: '500'
+                                }}>
+                                  {language === 'zh' ? '证据文件：' : 'Evidence Files: '}
+                                </div>
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px'
+                                }}>
+                                  {msg.attachments.map((attachment: any, idx: number) => {
+                                    // 检查是否是图片
+                                    const isImage = attachment.attachment_type === 'image' || 
+                                                   (attachment.url && /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.url)) ||
+                                                   attachment.blob_id;
+                                    
+                                    // 检查是否是文件
+                                    const isFile = attachment.attachment_type === 'file' || 
+                                                  (attachment.url && !isImage);
+                                    
+                                    const fileUrl = attachment.url || 
+                                                   (attachment.blob_id ? `/api/private-file?file=${attachment.blob_id}` : null);
+                                    
+                                    return (
+                                      <div key={idx}>
+                                        {isImage && attachment.blob_id ? (
+                                          // 图片证据：使用PrivateImageDisplay显示预览
+                                          <div style={{
+                                            maxWidth: '200px',
+                                            borderRadius: '8px',
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(0,0,0,0.1)'
+                                          }}>
+                                            <PrivateImageDisplay
+                                              imageId={attachment.blob_id}
+                                              currentUserId={user?.id || ''}
+                                              style={{
+                                                width: '100%',
+                                                height: 'auto',
+                                                maxHeight: '150px',
+                                                objectFit: 'contain',
+                                                cursor: 'pointer'
+                                              }}
+                                              alt={language === 'zh' ? `证据图片 ${idx + 1}` : `Evidence Image ${idx + 1}`}
+                                            />
+                                          </div>
+                                        ) : isFile && fileUrl ? (
+                                          // 文件证据：显示可点击的下载链接
+                                          <a
+                                            href={fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '8px',
+                                              padding: '8px 12px',
+                                              backgroundColor: '#f8f9fa',
+                                              borderRadius: '6px',
+                                              textDecoration: 'none',
+                                              color: '#3b82f6',
+                                              fontSize: '12px',
+                                              transition: 'background-color 0.2s',
+                                              border: '1px solid #e5e7eb'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#e5e7eb';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#f8f9fa';
+                                            }}
+                                          >
+                                            <span style={{ fontSize: '16px' }}>📎</span>
+                                            <span style={{ fontWeight: '500' }}>
+                                              {attachment.meta?.filename || 
+                                               (attachment.meta ? (typeof attachment.meta === 'string' ? JSON.parse(attachment.meta).filename : null) : null) ||
+                                               (language === 'zh' ? `证据文件 ${idx + 1}` : `Evidence File ${idx + 1}`)}
+                                            </span>
+                                            <span style={{ fontSize: '10px', opacity: 0.7 }}>⬇</span>
+                                          </a>
+                                        ) : (
+                                          // 未知类型：显示基本信息
+                                          <div style={{
+                                            padding: '8px 12px',
+                                            backgroundColor: '#f8f9fa',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            color: '#495057'
+                                          }}>
+                                            {language === 'zh' ? `文件 ${idx + 1}` : `File ${idx + 1}`}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // 普通系统消息
                     return (
                       <div
                         key={msg.id}
@@ -4739,15 +4915,47 @@ const MessagePage: React.FC = () => {
                               {msg.attachments.map((att: any) => (
                                 <div key={att.id} style={{ marginTop: '4px' }}>
                                   {att.attachment_type === 'image' && (att.url || att.blob_id) && (
-                                    <LazyImage
-                                      src={att.url || `/api/blobs/${att.blob_id}`}
-                                      alt="图片附件"
-                                      style={{ maxWidth: '200px', borderRadius: '6px', cursor: 'pointer' }}
-                                      onClick={() => {
-                                        setPreviewImageUrl(att.url || `/api/blobs/${att.blob_id}`);
-                                        setShowImagePreview(true);
-                                      }}
-                                    />
+                                    <div>
+                                      {/* 如果有blob_id（image_id），使用 PrivateImageDisplay 处理私有图片 */}
+                                      {att.blob_id ? (
+                                        <PrivateImageDisplay
+                                          imageId={att.blob_id}
+                                          currentUserId={user?.id || ''}
+                                          style={{ 
+                                            maxWidth: '200px', 
+                                            maxHeight: '200px',
+                                            borderRadius: '6px', 
+                                            cursor: 'pointer',
+                                            objectFit: 'cover'
+                                          }}
+                                          onClick={() => {
+                                            // 对于私有图片，需要先获取URL再预览
+                                            api.post('/api/messages/generate-image-url', {
+                                              image_id: att.blob_id
+                                            }).then((response: any) => {
+                                              if (response.data.success) {
+                                                setPreviewImageUrl(response.data.image_url);
+                                                setShowImagePreview(true);
+                                              }
+                                            }).catch(() => {
+                                              alert('无法加载图片');
+                                            });
+                                          }}
+                                          alt="完成证据图片"
+                                        />
+                                      ) : att.url ? (
+                                        /* 如果有完整URL，直接使用 LazyImage */
+                                        <LazyImage
+                                          src={att.url}
+                                          alt="证据图片"
+                                          style={{ maxWidth: '200px', borderRadius: '6px', cursor: 'pointer' }}
+                                          onClick={() => {
+                                            setPreviewImageUrl(att.url);
+                                            setShowImagePreview(true);
+                                          }}
+                                        />
+                                      ) : null}
+                                    </div>
                                   )}
                                   {att.attachment_type === 'file' && (att.url || att.blob_id) && (
                                     <div style={{
@@ -4760,7 +4968,9 @@ const MessagePage: React.FC = () => {
                                     }}>
                                       <span style={{ fontSize: '20px' }}>📎</span>
                                       <a
-                                        href={att.url || `/api/blobs/${att.blob_id}`}
+                                        href={att.url || (att.blob_id ? `/api/private-file?file=${att.blob_id}` : '#')}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         download
                                         style={{
                                           color: '#3b82f6',
@@ -4774,7 +4984,7 @@ const MessagePage: React.FC = () => {
                                           e.currentTarget.style.textDecoration = 'none';
                                         }}
                                       >
-                                        {att.meta?.filename || '下载文件'}
+                                        {att.meta?.filename || (att.meta ? JSON.parse(att.meta).filename : null) || '下载证据文件'}
                                       </a>
                                     </div>
                                   )}

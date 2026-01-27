@@ -11,6 +11,11 @@ class TaskDetailViewModel: ObservableObject {
     @Published var userApplication: TaskApplication?
     @Published var reviews: [Review] = []
     @Published var isLoadingReviews = false
+    @Published var refundRequest: RefundRequest?
+    @Published var isLoadingRefundStatus = false
+    @Published var refundHistory: [RefundRequest] = []
+    @Published var isLoadingRefundHistory = false
+    @Published var isCancellingRefund = false
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -214,8 +219,8 @@ class TaskDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func confirmTaskCompletion(taskId: Int, completion: @escaping (Bool) -> Void) {
-        apiService.confirmTaskCompletion(taskId: taskId)
+    func confirmTaskCompletion(taskId: Int, evidenceFiles: [String]? = nil, completion: @escaping (Bool) -> Void) {
+        apiService.confirmTaskCompletion(taskId: taskId, evidenceFiles: evidenceFiles)
             .sink(receiveCompletion: { [weak self] result in
                 if case .failure(let error) = result {
                     // 使用 ErrorHandler 统一处理错误，显示友好的错误信息
@@ -269,6 +274,68 @@ class TaskDetailViewModel: ObservableObject {
                 }
             }, receiveValue: { _ in
                 completion(true)
+            })
+            .store(in: &cancellables)
+    }
+    
+    func loadRefundStatus(taskId: Int) {
+        isLoadingRefundStatus = true
+        apiService.getRefundStatus(taskId: taskId)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingRefundStatus = false
+                if case .failure(let error) = result {
+                    // 404错误表示没有退款申请，这是正常的，不需要处理
+                    if case .httpError(let code) = error, code == 404 {
+                        DispatchQueue.main.async {
+                            self?.refundRequest = nil
+                        }
+                    } else {
+                        Logger.warning("加载退款状态失败: \(error.localizedDescription)", category: .api)
+                    }
+                }
+            }, receiveValue: { [weak self] refundRequest in
+                DispatchQueue.main.async {
+                    self?.refundRequest = refundRequest
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    func loadRefundHistory(taskId: Int) {
+        isLoadingRefundHistory = true
+        apiService.getRefundHistory(taskId: taskId)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingRefundHistory = false
+                if case .failure(let error) = result {
+                    Logger.warning("加载退款历史失败: \(error.localizedDescription)", category: .api)
+                    DispatchQueue.main.async {
+                        self?.refundHistory = []
+                    }
+                }
+            }, receiveValue: { [weak self] history in
+                DispatchQueue.main.async {
+                    self?.refundHistory = history
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    func cancelRefundRequest(taskId: Int, refundId: Int) {
+        isCancellingRefund = true
+        apiService.cancelRefundRequest(taskId: taskId, refundId: refundId)
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isCancellingRefund = false
+                if case .failure(let error) = result {
+                    Logger.error("撤销退款申请失败: \(error.localizedDescription)", category: .api)
+                } else {
+                    // 撤销成功，重新加载退款状态和任务详情
+                    self?.loadRefundStatus(taskId: taskId)
+                    self?.loadTask(taskId: taskId, force: true)
+                }
+            }, receiveValue: { [weak self] refundRequest in
+                DispatchQueue.main.async {
+                    self?.refundRequest = refundRequest
+                }
             })
             .store(in: &cancellables)
     }

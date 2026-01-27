@@ -343,6 +343,40 @@ class TaskDispute(Base):
     )
 
 
+class RefundRequest(Base):
+    """退款申请记录表"""
+    __tablename__ = "refund_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    poster_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 发布者ID
+    reason = Column(Text, nullable=False)  # 退款原因说明
+    evidence_files = Column(Text, nullable=True)  # JSON数组存储证据文件ID列表
+    refund_amount = Column(DECIMAL(12, 2), nullable=True)  # 申请退款金额（NULL表示全额退款）
+    status = Column(String(20), default="pending")  # pending, approved, rejected, processing, completed, cancelled
+    admin_comment = Column(Text, nullable=True)  # 管理员审核备注
+    reviewed_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 审核的管理员ID
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    refund_intent_id = Column(String(255), nullable=True)  # Stripe Refund ID
+    refund_transfer_id = Column(String(255), nullable=True)  # 反向转账ID（如果已转账需要撤销）
+    processed_at = Column(DateTime(timezone=True), nullable=True)  # 退款处理时间
+    completed_at = Column(DateTime(timezone=True), nullable=True)  # 退款完成时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    task = relationship("Task", backref="refund_requests")
+    poster = relationship("User", foreign_keys=[poster_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+    
+    __table_args__ = (
+        Index("ix_refund_requests_task_id", task_id),
+        Index("ix_refund_requests_poster_id", poster_id),
+        Index("ix_refund_requests_status", status),
+        Index("ix_refund_requests_created_at", created_at),
+        Index("ix_refund_requests_reviewed_at", reviewed_at),
+    )
+
+
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)

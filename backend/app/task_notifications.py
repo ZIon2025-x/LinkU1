@@ -27,6 +27,69 @@ from app.utils.time_utils import get_utc_time
 logger = logging.getLogger(__name__)
 
 
+def send_refund_request_notification_to_admin(
+    db: Session,
+    background_tasks: BackgroundTasks,
+    task: models.Task,
+    refund_request: models.RefundRequest,
+    poster: models.User
+):
+    """发送退款申请通知给管理员（后台任务）"""
+    def _send_notifications():
+        """实际发送通知的函数（在后台任务中执行）"""
+        try:
+            # 创建新的数据库会话（后台任务需要独立的会话）
+            from app.database import SessionLocal
+            db_session = SessionLocal()
+            try:
+                # 获取所有管理员用户（通过 admin_users 表）
+                from app.models import AdminUser
+                admins = db_session.query(AdminUser).filter(AdminUser.is_active == True).all()
+                
+                if not admins:
+                    logger.warning("没有找到活跃的管理员用户")
+                    return
+                
+                # 构建通知内容
+                refund_amount_str = f"£{float(refund_request.refund_amount):.2f}" if refund_request.refund_amount else "全额退款"
+                notification_content = (
+                    f"任务「{task.title}」（ID: {task.id}）的发布者 {poster.name or f'用户{poster.id}'} "
+                    f"申请退款。\n"
+                    f"退款金额: {refund_amount_str}\n"
+                    f"退款原因: {refund_request.reason[:200]}"
+                )
+                
+                # 为每个管理员创建通知
+                for admin in admins:
+                    try:
+                        crud.create_notification(
+                            db=db_session,
+                            user_id=admin.id,
+                            type="refund_request",
+                            title="新的退款申请",
+                            content=notification_content,
+                            related_id=str(refund_request.id),
+                            auto_commit=False
+                        )
+                    except Exception as e:
+                        logger.error(f"为管理员 {admin.id} 创建退款申请通知失败: {e}")
+                
+                db_session.commit()
+                logger.info(f"✅ 已为所有管理员发送退款申请通知（refund_request_id={refund_request.id}）")
+                
+            except Exception as e:
+                logger.error(f"发送退款申请通知时发生错误: {e}", exc_info=True)
+                db_session.rollback()
+            finally:
+                db_session.close()
+        
+        except Exception as e:
+            logger.error(f"退款申请通知后台任务执行失败: {e}", exc_info=True)
+    
+    # 添加到后台任务
+    background_tasks.add_task(_send_notifications)
+
+
 def send_dispute_notification_to_admin(
     db: Session,
     background_tasks: BackgroundTasks,

@@ -333,8 +333,65 @@ extension APIService {
     }
     
     /// 确认任务完成 (发布者)
-    func confirmTaskCompletion(taskId: Int) -> AnyPublisher<EmptyResponse, APIError> {
-        return request(EmptyResponse.self, APIEndpoints.Tasks.confirmCompletion(taskId), method: "POST")
+    func confirmTaskCompletion(taskId: Int, evidenceFiles: [String]? = nil) -> AnyPublisher<EmptyResponse, APIError> {
+        var body: [String: Any]? = nil
+        if let evidenceFiles = evidenceFiles, !evidenceFiles.isEmpty {
+            body = ["evidence_files": evidenceFiles]
+        }
+        return request(EmptyResponse.self, APIEndpoints.Tasks.confirmCompletion(taskId), method: "POST", body: body)
+    }
+    
+    /// 创建退款申请
+    func createRefundRequest(
+        taskId: Int,
+        reasonType: String,
+        reason: String,
+        refundType: String,
+        evidenceFiles: [String]? = nil,
+        refundAmount: Double? = nil,
+        refundPercentage: Double? = nil
+    ) -> AnyPublisher<RefundRequest, APIError> {
+        let body = RefundRequestCreate(
+            reasonType: reasonType,
+            reason: reason,
+            refundType: refundType,
+            evidenceFiles: evidenceFiles,
+            refundAmount: refundAmount,
+            refundPercentage: refundPercentage
+        )
+        guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
+            return Fail(error: APIError.unknown).eraseToAnyPublisher()
+        }
+        return request(RefundRequest.self, APIEndpoints.Tasks.refundRequest(taskId), method: "POST", body: bodyDict)
+    }
+    
+    /// 查询退款申请状态
+    func getRefundStatus(taskId: Int) -> AnyPublisher<RefundRequest?, APIError> {
+        // 使用 OptionalResponse 包装器来处理可选响应
+        struct OptionalRefundRequestResponse: Codable {
+            let value: RefundRequest?
+        }
+        
+        return request(RefundRequest.self, APIEndpoints.Tasks.refundStatus(taskId))
+            .map { Optional.some($0) }
+            .catch { error -> AnyPublisher<RefundRequest?, APIError> in
+                // 如果返回404，说明没有退款申请，返回nil
+                if case .httpError(let code) = error, code == 404 {
+                    return Just(nil).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                }
+                return Fail(error: error).eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    /// 获取退款申请历史记录
+    func getRefundHistory(taskId: Int) -> AnyPublisher<[RefundRequest], APIError> {
+        return request([RefundRequest].self, APIEndpoints.Tasks.refundHistory(taskId))
+    }
+    
+    /// 撤销退款申请
+    func cancelRefundRequest(taskId: Int, refundId: Int) -> AnyPublisher<RefundRequest, APIError> {
+        return request(RefundRequest.self, APIEndpoints.Tasks.cancelRefundRequest(taskId, refundId), method: "POST")
     }
     
     /// 取消任务

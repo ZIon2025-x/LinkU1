@@ -35,6 +35,10 @@ struct TaskDetailView: View {
     @State private var isShareImageLoading = false // 分享图片加载状态
     @State private var showConfirmCompletionSuccess = false // 确认完成成功提示
     @State private var showCompleteTaskSheet = false // 显示完成任务页面
+    @State private var showConfirmCompletionSheet = false // 显示确认完成页面
+    @State private var showRefundRequestSheet = false // 显示退款申请页面
+    @State private var showRefundHistorySheet = false // 显示退款历史记录页面
+    @State private var showCancelRefundConfirm = false // 显示撤销退款确认对话框
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
@@ -153,6 +157,8 @@ struct TaskDetailView: View {
                     approvedApplicantName: $approvedApplicantName,
                     showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                     showCompleteTaskSheet: $showCompleteTaskSheet,
+                    showConfirmCompletionSheet: $showConfirmCompletionSheet,
+                    showRefundRequestSheet: $showRefundRequestSheet,
                     isPoster: isPoster,
                     isTaker: isTaker,
                     hasApplied: hasApplied,
@@ -188,6 +194,20 @@ struct TaskDetailView: View {
                 toolbarContent
             }
             .enableSwipeBack()
+            .onAppear {
+                // 加载任务详情
+                viewModel.loadTask(taskId: taskId)
+                // 如果是发布者且任务状态为pending_confirmation，加载退款状态
+                if isPoster, let task = viewModel.task, task.status == .pendingConfirmation {
+                    viewModel.loadRefundStatus(taskId: taskId)
+                }
+            }
+            .onChange(of: viewModel.task?.status) { newStatus in
+                // 当任务状态变化时，如果是发布者且状态为pending_confirmation，加载退款状态
+                if isPoster, newStatus == .pendingConfirmation {
+                    viewModel.loadRefundStatus(taskId: taskId)
+                }
+            }
             .fullScreenCover(isPresented: $showFullScreenImage) {
                 fullScreenImageView
             }
@@ -205,6 +225,15 @@ struct TaskDetailView: View {
             }
             .sheet(isPresented: $showCompleteTaskSheet) {
                 completeTaskSheet
+            }
+            .sheet(isPresented: $showConfirmCompletionSheet) {
+                confirmCompletionSheet
+            }
+            .sheet(isPresented: $showRefundRequestSheet) {
+                refundRequestSheet
+            }
+            .sheet(isPresented: $showRefundHistorySheet) {
+                refundHistorySheet
             }
             .alert(LocalizationKey.taskDetailCancelTask.localized, isPresented: $showCancelConfirm) {
                 cancelTaskAlert
@@ -1049,6 +1078,7 @@ struct TaskDetailContentView: View {
     @Binding var approvedApplicantName: String?
     @Binding var showConfirmCompletionSuccess: Bool
     @Binding var showCompleteTaskSheet: Bool
+    @Binding var showConfirmCompletionSheet: Bool
     let isPoster: Bool
     let isTaker: Bool
     let hasApplied: Bool
@@ -1174,6 +1204,7 @@ struct TaskDetailContentView: View {
                         paymentEphemeralKeySecret: $paymentEphemeralKeySecret,
                         showConfirmCompletionSuccess: $showConfirmCompletionSuccess,
                         showCompleteTaskSheet: $showCompleteTaskSheet,
+                        showConfirmCompletionSheet: $showConfirmCompletionSheet,
                         showNegotiatePrice: $showNegotiatePrice,
                         negotiatedPrice: $negotiatedPrice,
                         taskId: taskId,
@@ -1653,11 +1684,22 @@ struct TaskActionButtonsView: View {
     @Binding var paymentEphemeralKeySecret: String?
     @Binding var showConfirmCompletionSuccess: Bool
     @Binding var showCompleteTaskSheet: Bool
+    @Binding var showConfirmCompletionSheet: Bool
+    @Binding var showRefundRequestSheet: Bool
     @Binding var showNegotiatePrice: Bool
     @Binding var negotiatedPrice: Double?
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
+    
+    // 获取退款申请状态
+    private var refundRequest: RefundRequest? {
+        viewModel.refundRequest
+    }
+    
+    private var isLoadingRefundStatus: Bool {
+        viewModel.isLoadingRefundStatus
+    }
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
@@ -1742,24 +1784,10 @@ struct TaskActionButtonsView: View {
             }
             
             if task.status == .pendingConfirmation && isPoster {
+                // 确认完成按钮
                 Button(action: {
-                    actionLoading = true
-                    
-                    viewModel.confirmTaskCompletion(taskId: taskId) { success in
-                        DispatchQueue.main.async {
-                            actionLoading = false
-                            if success {
-                                // 触觉反馈：成功
-                                HapticFeedback.success()
-                                
-                                // 显示成功提示
-                                showConfirmCompletionSuccess = true
-                                
-                                // 立即强制刷新任务详情以获取最新状态
-                                viewModel.loadTask(taskId: taskId, force: true)
-                            }
-                        }
-                    }
+                    // 打开确认完成页面（支持上传证据）
+                    showConfirmCompletionSheet = true
                 }) {
                     HStack(spacing: AppSpacing.sm) {
                         if actionLoading {
@@ -1774,6 +1802,106 @@ struct TaskActionButtonsView: View {
                 .buttonStyle(PrimaryButtonStyle(useGradient: false))
                 .tint(AppColors.success)
                 .disabled(actionLoading)
+                
+                // 退款申请状态或按钮
+                if let refundRequest = viewModel.refundRequest {
+                    // 如果已有退款申请，显示状态卡片
+                    VStack(spacing: AppSpacing.sm) {
+                        RefundRequestStatusCard(refundRequest: refundRequest)
+                        
+                        // 撤销按钮（仅在pending状态时显示）
+                        if refundRequest.status == "pending" {
+                            HStack(spacing: AppSpacing.sm) {
+                                Button(action: {
+                                    // 显示确认对话框
+                                    let alert = UIAlertController(
+                                        title: "撤销退款申请",
+                                        message: "确定要撤销此退款申请吗？撤销后将无法恢复。",
+                                        preferredStyle: .alert
+                                    )
+                                    alert.addAction(UIAlertAction(title: "取消", style: .cancel))
+                                    alert.addAction(UIAlertAction(title: "确定", style: .destructive) { _ in
+                                        viewModel.cancelRefundRequest(taskId: taskId, refundId: refundRequest.id)
+                                    })
+                                    
+                                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                       let rootViewController = windowScene.windows.first?.rootViewController {
+                                        var topController = rootViewController
+                                        while let presented = topController.presentedViewController {
+                                            topController = presented
+                                        }
+                                        topController.present(alert, animated: true)
+                                    }
+                                }) {
+                                    HStack(spacing: 6) {
+                                        if viewModel.isCancellingRefund {
+                                            ProgressView()
+                                                .scaleEffect(0.8)
+                                        }
+                                        Text(viewModel.isCancellingRefund ? "撤销中..." : "撤销申请")
+                                            .font(AppTypography.body)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                                }
+                                .buttonStyle(SecondaryButtonStyle())
+                                .disabled(viewModel.isCancellingRefund)
+                                
+                                Button(action: {
+                                    viewModel.loadRefundHistory(taskId: taskId)
+                                    showRefundHistorySheet = true
+                                }) {
+                                    Text("查看历史")
+                                        .font(AppTypography.body)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 40)
+                                }
+                                .buttonStyle(SecondaryButtonStyle())
+                            }
+                        } else {
+                            // 非pending状态时也显示历史按钮
+                            Button(action: {
+                                viewModel.loadRefundHistory(taskId: taskId)
+                                showRefundHistorySheet = true
+                            }) {
+                                Text("查看历史记录")
+                                    .font(AppTypography.body)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                        }
+                    }
+                } else if !viewModel.isLoadingRefundStatus {
+                    // 如果没有退款申请且不在加载中，显示申请按钮
+                    VStack(spacing: AppSpacing.sm) {
+                        Button(action: {
+                            // 打开退款申请页面
+                            showRefundRequestSheet = true
+                        }) {
+                            HStack(spacing: AppSpacing.sm) {
+                                IconStyle.icon("arrow.uturn.backward.circle.fill", size: 20)
+                                Text("任务未完成（申请退款）")
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle(useGradient: false))
+                        .tint(AppColors.error)
+                        
+                        // 如果有历史记录，显示查看历史按钮
+                        if !viewModel.refundHistory.isEmpty {
+                            Button(action: {
+                                viewModel.loadRefundHistory(taskId: taskId)
+                                showRefundHistorySheet = true
+                            }) {
+                                Text("📋 退款历史")
+                                    .font(AppTypography.body)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                            }
+                            .buttonStyle(SecondaryButtonStyle())
+                        }
+                    }
+                }
             }
             
             // 沟通按钮
@@ -2009,6 +2137,329 @@ struct ApplyTaskSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - 退款申请状态卡片
+struct RefundRequestStatusCard: View {
+    let refundRequest: RefundRequest
+    
+    private var statusColor: Color {
+        switch refundRequest.status {
+        case "pending":
+            return AppColors.warning
+        case "processing":
+            return AppColors.primary
+        case "approved":
+            return AppColors.success
+        case "rejected":
+            return AppColors.error
+        case "completed":
+            return AppColors.success
+        case "cancelled":
+            return AppColors.textSecondary
+        default:
+            return AppColors.textSecondary
+        }
+    }
+    
+    private var statusText: String {
+        switch refundRequest.status {
+        case "pending":
+            return "退款申请待审核"
+        case "processing":
+            return "退款处理中"
+        case "approved":
+            return "退款申请已批准"
+        case "rejected":
+            return "退款申请已拒绝"
+        case "completed":
+            return "退款已完成"
+        case "cancelled":
+            return "退款申请已取消"
+        default:
+            return "未知状态"
+        }
+    }
+    
+    private var statusDescription: String {
+        switch refundRequest.status {
+        case "pending":
+            return "您的退款申请已提交，管理员将在3-5个工作日内审核"
+        case "processing":
+            return "退款正在处理中，请耐心等待"
+        case "approved":
+            if let amount = refundRequest.refundAmount {
+                let percentageText = refundRequest.refundPercentage != nil 
+                    ? String(format: " (%.1f%%)", refundRequest.refundPercentage!)
+                    : ""
+                return String(format: "退款金额：£%.2f%@，退款将在5-10个工作日内退回", amount, percentageText)
+            } else {
+                return "退款将在5-10个工作日内退回您的原支付方式"
+            }
+        case "rejected":
+            if let comment = refundRequest.adminComment, !comment.isEmpty {
+                return "拒绝理由：\(comment)"
+            } else {
+                return "退款申请已被拒绝"
+            }
+        case "completed":
+            if let amount = refundRequest.refundAmount {
+                let percentageText = refundRequest.refundPercentage != nil 
+                    ? String(format: " (%.1f%%)", refundRequest.refundPercentage!)
+                    : ""
+                return String(format: "退款金额：£%.2f%@，已退回您的原支付方式", amount, percentageText)
+            } else {
+                return "退款已退回您的原支付方式"
+            }
+        case "cancelled":
+            return "退款申请已取消"
+        default:
+            return ""
+        }
+    }
+    
+    private var statusIcon: String {
+        switch refundRequest.status {
+        case "pending":
+            return "clock.fill"
+        case "processing":
+            return "arrow.triangle.2.circlepath"
+        case "approved":
+            return "checkmark.circle.fill"
+        case "rejected":
+            return "xmark.circle.fill"
+        case "completed":
+            return "checkmark.seal.fill"
+        case "cancelled":
+            return "xmark.circle"
+        default:
+            return "questionmark.circle.fill"
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            ZStack {
+                Circle()
+                    .fill(statusColor.opacity(0.15))
+                    .frame(width: 48, height: 48)
+                
+                IconStyle.icon(statusIcon, size: 24)
+                    .foregroundColor(statusColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(statusText)
+                    .font(AppTypography.title3)
+                    .foregroundColor(statusColor)
+                
+                // 显示退款原因类型
+                if let reasonType = refundRequest.reasonType, let reasonTypeEnum = RefundReasonType(rawValue: reasonType) {
+                    Text("退款原因：\(reasonTypeEnum.displayName)")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                
+                // 显示退款类型
+                if let refundType = refundRequest.refundType {
+                    Text("退款类型：\(refundType == "full" ? "全额退款" : "部分退款")")
+                        .font(.system(size: 12))
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                
+                Text(statusDescription)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                if let comment = refundRequest.adminComment, !comment.isEmpty, refundRequest.status != "rejected" {
+                    Text("管理员备注：\(comment)")
+                        .font(.system(size: 11))
+                        .foregroundColor(AppColors.textTertiary)
+                        .padding(.top, 2)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(AppSpacing.md)
+        .background(statusColor.opacity(0.05))
+        .cornerRadius(AppCornerRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                .stroke(statusColor.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - 退款历史记录Sheet
+struct RefundHistorySheet: View {
+    let refundHistory: [RefundRequest]
+    let isLoading: Bool
+    let onClose: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                if isLoading {
+                    ProgressView()
+                } else if refundHistory.isEmpty {
+                    VStack(spacing: AppSpacing.md) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppColors.textTertiary)
+                        Text("暂无退款申请历史记录")
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(spacing: AppSpacing.md) {
+                            ForEach(refundHistory) { refund in
+                                RefundHistoryItemCard(refund: refund)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                    }
+                }
+            }
+            .navigationTitle("退款申请历史记录")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") {
+                        onClose()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 退款历史记录项卡片
+struct RefundHistoryItemCard: View {
+    let refund: RefundRequest
+    
+    private var statusColor: Color {
+        switch refund.status {
+        case "pending": return AppColors.warning
+        case "processing": return AppColors.primary
+        case "approved": return AppColors.success
+        case "rejected": return AppColors.error
+        case "completed": return AppColors.success
+        case "cancelled": return AppColors.textSecondary
+        default: return AppColors.textSecondary
+        }
+    }
+    
+    private var statusText: String {
+        switch refund.status {
+        case "pending": return "待审核"
+        case "processing": return "处理中"
+        case "approved": return "已批准"
+        case "rejected": return "已拒绝"
+        case "completed": return "已完成"
+        case "cancelled": return "已撤销"
+        default: return "未知状态"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Text(statusText)
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(statusColor)
+                
+                Spacer()
+                
+                if let amount = refund.refundAmount {
+                    Text(String(format: "£%.2f", amount))
+                        .font(AppTypography.headline)
+                        .foregroundColor(statusColor)
+                    if let percentage = refund.refundPercentage {
+                        Text(String(format: "(%.1f%%)", percentage))
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                }
+            }
+            
+            if let reasonType = refund.reasonType, let reasonTypeEnum = RefundReasonType(rawValue: reasonType) {
+                HStack {
+                    Text("原因类型：")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(reasonTypeEnum.displayName)
+                        .font(AppTypography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppColors.textPrimary)
+                }
+            }
+            
+            if let refundType = refund.refundType {
+                HStack {
+                    Text("退款类型：")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(refundType == "full" ? "全额退款" : "部分退款")
+                        .font(AppTypography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppColors.textPrimary)
+                }
+            }
+            
+            Text(refund.reason)
+                .font(AppTypography.body)
+                .foregroundColor(AppColors.textPrimary)
+                .lineLimit(3)
+            
+            if let comment = refund.adminComment, !comment.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("管理员备注：")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(comment)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                .padding(.top, 4)
+            }
+            
+            if let reviewedAt = refund.reviewedAt {
+                Text("审核时间：\(formatDate(reviewedAt))")
+                    .font(.system(size: 11))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            Text("申请时间：\(formatDate(refund.createdAt))")
+                .font(.system(size: 11))
+                .foregroundColor(AppColors.textTertiary)
+        }
+        .padding(AppSpacing.md)
+        .background(statusColor.opacity(0.1))
+        .cornerRadius(AppCornerRadius.medium)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                .stroke(statusColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            displayFormatter.locale = Locale(identifier: "zh_CN")
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
 }
 
@@ -3243,6 +3694,1232 @@ struct CompleteTaskSheet: View {
                 default:
                     return "服务器错误（\(statusCode)）：\(message)"
                 }
+            case .decodingError(let error):
+                return "解析响应失败：\(error.localizedDescription)"
+            case .invalidURL:
+                return "无效的URL"
+            case .invalidResponse:
+                return "服务器响应格式错误"
+            case .unauthorized:
+                return "未授权，请重新登录"
+            case .unknown:
+                return "未知错误，请重试"
+            }
+        }
+        return error.localizedDescription
+    }
+}
+
+// MARK: - 确认完成 Sheet
+extension TaskDetailView {
+    private var confirmCompletionSheet: some View {
+        ConfirmCompletionSheet(
+            taskId: taskId,
+            task: task,
+            onComplete: { fileIds in
+                // 确认完成，传入文件ID列表
+                viewModel.confirmTaskCompletion(taskId: taskId, evidenceFiles: fileIds.isEmpty ? nil : fileIds) { success in
+                    DispatchQueue.main.async {
+                        if success {
+                            // 触觉反馈：成功
+                            HapticFeedback.success()
+                            
+                            // 显示成功提示
+                            showConfirmCompletionSuccess = true
+                            
+                            // 立即强制刷新任务详情以获取最新状态
+                            viewModel.loadTask(taskId: taskId, force: true)
+                            
+                            // 关闭 sheet
+                            showConfirmCompletionSheet = false
+                        }
+                    }
+                }
+            }
+        )
+    }
+    
+    private var refundHistorySheet: some View {
+        NavigationView {
+            RefundHistorySheet(
+                refundHistory: viewModel.refundHistory,
+                isLoading: viewModel.isLoadingRefundHistory,
+                onClose: {
+                    showRefundHistorySheet = false
+                }
+            )
+        }
+    }
+    
+    private var refundRequestSheet: some View {
+        RefundRequestSheet(
+            taskId: taskId,
+            task: task,
+            onSuccess: {
+                // 退款申请提交成功
+                HapticFeedback.success()
+                // 立即强制刷新任务详情和退款状态以获取最新状态
+                viewModel.loadTask(taskId: taskId, force: true)
+                viewModel.loadRefundStatus(taskId: taskId)
+                // 关闭 sheet
+                showRefundRequestSheet = false
+            }
+        )
+    }
+}
+
+// MARK: - ConfirmCompletionSheet
+struct ConfirmCompletionSheet: View {
+    let taskId: Int
+    let task: Task
+    let onComplete: ([String]) -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var selectedImages: [UIImage] = []
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isUploading = false
+    @State private var uploadedFileIds: [String] = []
+    @State private var errorMessage: String?
+    @State private var uploadProgress: (current: Int, total: Int) = (0, 0)
+    @State private var imageSizeErrors: [String] = []
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 说明文字
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack(spacing: AppSpacing.sm) {
+                                IconStyle.icon("checkmark.circle.fill", size: 24)
+                                    .foregroundColor(AppColors.success)
+                                Text("确认任务完成")
+                                    .font(AppTypography.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                            
+                            Text("您已确认此任务完成。可以上传相关证据图片（可选），如完成截图、验收记录等。")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 证据图片上传
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack {
+                                SectionHeader(title: "证据图片（可选）", icon: "photo.on.rectangle")
+                                Spacer()
+                                Text("\(selectedImages.count)/5")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            
+                            // 图片大小限制提示
+                            HStack(spacing: 4) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.textTertiary)
+                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            .padding(.horizontal, 4)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: AppSpacing.md) {
+                                    // 添加按钮
+                                    if selectedImages.count < 5 {
+                                        PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - selectedImages.count, matching: .images) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "plus.viewfinder")
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(AppColors.primary)
+                                                Text("添加图片")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(AppColors.textSecondary)
+                                            }
+                                            .frame(width: 90, height: 90)
+                                            .background(AppColors.background)
+                                            .cornerRadius(AppCornerRadius.medium)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                    .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                                            )
+                                        }
+                                        .onChange(of: selectedItems) { _ in
+                                            handleImageSelection()
+                                        }
+                                    }
+                                    
+                                    // 图片预览
+                                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 90, height: 90)
+                                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                            
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedImages.remove(at: index)
+                                                    selectedItems = []
+                                                    HapticFeedback.light()
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.white)
+                                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                            }
+                                            .padding(4)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 图片大小错误提示
+                        if !imageSizeErrors.isEmpty {
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                ForEach(imageSizeErrors, id: \.self) { error in
+                                    HStack(spacing: 8) {
+                                        IconStyle.icon("exclamationmark.triangle.fill", size: 16)
+                                        Text(error)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(AppColors.warning)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.warning.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传错误提示
+                        if let errorMessage = errorMessage {
+                            HStack(spacing: 8) {
+                                IconStyle.icon("exclamationmark.octagon.fill", size: 16)
+                                Text(errorMessage)
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(AppColors.error)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.error.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传进度
+                        if isUploading && uploadProgress.total > 0 {
+                            VStack(spacing: AppSpacing.xs) {
+                                HStack {
+                                    Text("上传进度")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    Spacer()
+                                    Text("\(uploadProgress.current)/\(uploadProgress.total)")
+                                        .font(AppTypography.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(AppColors.primary)
+                                }
+                                
+                                ProgressView(value: Double(uploadProgress.current), total: Double(uploadProgress.total))
+                                    .tint(AppColors.primary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 提交按钮
+                        Button(action: {
+                            submitCompletion()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isUploading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    IconStyle.icon("checkmark.circle.fill", size: 18)
+                                }
+                                if isUploading {
+                                    Text("上传中 \(uploadProgress.current)/\(uploadProgress.total)...")
+                                        .font(AppTypography.bodyBold)
+                                } else {
+                                    Text("确认完成")
+                                        .font(AppTypography.bodyBold)
+                                }
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isUploading)
+                        .padding(.top, AppSpacing.lg)
+                    }
+                    .padding(AppSpacing.md)
+                }
+            }
+            .navigationTitle("确认任务完成")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                    .disabled(isUploading)
+                }
+            }
+        }
+    }
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            var newSizeErrors: [String] = []
+            let maxImageSize = 5 * 1024 * 1024 // 5MB
+            
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    // 检查图片大小（压缩前）
+                    if data.count > maxImageSize {
+                        let sizeInMB = Double(data.count) / (1024 * 1024)
+                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        continue
+                    }
+                    
+                    if let image = UIImage(data: data) {
+                        // 在主线程更新UI
+                        DispatchQueue.main.async {
+                            if selectedImages.count < 5 {
+                                selectedImages.append(image)
+                            } else {
+                                newSizeErrors.append("最多只能上传 5 张图片")
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 在主线程更新UI
+            DispatchQueue.main.async {
+                imageSizeErrors = newSizeErrors
+                selectedItems = [] // 清空以备下次选择
+            }
+        }
+    }
+    
+    private func submitCompletion() {
+        guard !isUploading else { return }
+        
+        errorMessage = nil
+        imageSizeErrors = []
+        
+        if selectedImages.isEmpty {
+            // 没有图片，直接提交（传入空数组）
+            onComplete([])
+            dismiss()
+            return
+        }
+        
+        // 检查图片大小（压缩后）
+        let maxImageSize = 5 * 1024 * 1024 // 5MB
+        var sizeErrors: [String] = []
+        var validImages: [(UIImage, Int)] = []
+        
+        for (index, image) in selectedImages.enumerated() {
+            if let imageData = image.jpegData(compressionQuality: 0.7) {
+                if imageData.count > maxImageSize {
+                    let sizeInMB = Double(imageData.count) / (1024 * 1024)
+                    sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                } else {
+                    validImages.append((image, index + 1))
+                }
+            } else {
+                sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+            }
+        }
+        
+        if !sizeErrors.isEmpty {
+            imageSizeErrors = sizeErrors
+            return
+        }
+        
+        if validImages.isEmpty {
+            errorMessage = "没有可上传的图片"
+            return
+        }
+        
+        // 上传图片并获取文件ID
+        isUploading = true
+        uploadedFileIds = []
+        uploadProgress = (0, validImages.count)
+        
+        let uploadGroup = DispatchGroup()
+        var uploadErrors: [(Error, Int)] = []
+        
+        for (image, imageIndex) in validImages {
+            uploadGroup.enter()
+            // 先压缩图片
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+                uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                uploadGroup.leave()
+                continue
+            }
+            
+            // 使用文件上传API，获取文件ID
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000) // 使用毫秒时间戳确保唯一性
+            let filename = "evidence_\(timestamp)_\(imageIndex).jpg"
+            APIService.shared.uploadFile(data: imageData, filename: filename, taskId: taskId) { result in
+                switch result {
+                case .success(let fileId):
+                    DispatchQueue.main.async {
+                        uploadedFileIds.append(fileId)
+                        uploadProgress.current += 1
+                    }
+                case .failure(let error):
+                    uploadErrors.append((error, imageIndex))
+                }
+                uploadGroup.leave()
+            }
+        }
+        
+        uploadGroup.notify(queue: .main) {
+            isUploading = false
+            
+            if uploadErrors.isEmpty {
+                // 所有图片上传成功，提交确认完成
+                onComplete(uploadedFileIds)
+                dismiss()
+            } else {
+                // 生成详细的错误信息
+                var errorDetails: [String] = []
+                for (error, index) in uploadErrors {
+                    let errorDescription = getDetailedErrorMessage(error)
+                    errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                }
+                
+                if errorDetails.count == validImages.count {
+                    // 所有图片都上传失败
+                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                } else {
+                    // 部分图片上传失败
+                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                }
+            }
+        }
+    }
+    
+    /// 获取详细的错误信息
+    private func getDetailedErrorMessage(_ error: Error) -> String {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .requestFailed(let underlyingError):
+                if let urlError = underlyingError as? URLError {
+                    switch urlError.code {
+                    case .notConnectedToInternet, .networkConnectionLost:
+                        return "网络连接失败，请检查网络设置"
+                    case .timedOut:
+                        return "上传超时，请重试"
+                    case .cannotFindHost, .cannotConnectToHost:
+                        return "无法连接到服务器，请稍后重试"
+                    default:
+                        return "网络错误：\(urlError.localizedDescription)"
+                    }
+                }
+                return "网络请求失败：\(underlyingError.localizedDescription)"
+            case .httpError(let statusCode):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误，请检查图片格式"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传文件"
+                case 413:
+                    return "文件过大，请选择较小的文件"
+                case 500...599:
+                    return "服务器错误（\(statusCode)），请稍后重试"
+                default:
+                    return "服务器错误（\(statusCode)）"
+                }
+            case .serverError(let statusCode, let message):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误：\(message)"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限上传文件"
+                case 413:
+                    return "文件过大：\(message)"
+                case 500...599:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                default:
+                    return "服务器错误（\(statusCode)）：\(message)"
+                }
+            case .decodingError(let error):
+                return "解析响应失败：\(error.localizedDescription)"
+            case .invalidURL:
+                return "无效的URL"
+            case .invalidResponse:
+                return "服务器响应格式错误"
+            case .unauthorized:
+                return "未授权，请重新登录"
+            case .unknown:
+                return "未知错误，请重试"
+            }
+        }
+        return error.localizedDescription
+    }
+}
+
+// MARK: - RefundRequestSheet
+struct RefundRequestSheet: View {
+    let taskId: Int
+    let task: Task
+    let onSuccess: () -> Void
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var refundReasonType: RefundReasonType? = nil
+    @State private var refundReason: String = ""
+    @State private var refundType: RefundType = .full
+    @State private var refundAmount: String = ""
+    @State private var refundPercentage: String = ""
+    @State private var selectedImages: [UIImage] = []
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isUploading = false
+    @State private var uploadedFileIds: [String] = []
+    @State private var errorMessage: String?
+    @State private var uploadProgress: (current: Int, total: Int) = (0, 0)
+    @State private var imageSizeErrors: [String] = []
+    @State private var isSubmitting = false
+    @State private var cancellables = Set<AnyCancellable>()
+    
+    enum RefundType: String {
+        case full = "full"
+        case partial = "partial"
+        
+        var displayName: String {
+            switch self {
+            case .full:
+                return "全额退款"
+            case .partial:
+                return "部分退款"
+            }
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+                
+                KeyboardAvoidingScrollView(extraPadding: 20) {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 1. 说明文字
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack(spacing: AppSpacing.sm) {
+                                IconStyle.icon("arrow.uturn.backward.circle.fill", size: 24)
+                                    .foregroundColor(AppColors.error)
+                                Text("申请退款")
+                                    .font(AppTypography.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                            
+                            Text("请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。")
+                                .font(AppTypography.body)
+                                .foregroundColor(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 2. 退款原因类型选择
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("退款原因类型 *")
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            Menu {
+                                ForEach(RefundReasonType.allCases, id: \.self) { reasonType in
+                                    Button(action: {
+                                        refundReasonType = reasonType
+                                    }) {
+                                        HStack {
+                                            Text(reasonType.displayName)
+                                            if refundReasonType == reasonType {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(refundReasonType?.displayName ?? "请选择退款原因类型")
+                                        .foregroundColor(refundReasonType == nil ? AppColors.textTertiary : AppColors.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppColors.textTertiary)
+                                }
+                                .padding(12)
+                                .background(AppColors.background)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(refundReasonType == nil ? AppColors.textTertiary.opacity(0.3) : AppColors.primary.opacity(0.3), lineWidth: 1)
+                                )
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 3. 退款原因详细说明
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            HStack {
+                                Text("退款原因详细说明 *")
+                                    .font(AppTypography.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                                Spacer()
+                                Text("\(refundReason.count)/2000")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            
+                            TextEditor(text: $refundReason)
+                                .frame(minHeight: 120)
+                                .padding(8)
+                                .background(AppColors.background)
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(refundReason.isEmpty ? AppColors.textTertiary.opacity(0.3) : AppColors.primary.opacity(0.3), lineWidth: 1)
+                                )
+                            
+                            if refundReason.count > 0 && refundReason.count < 10 {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppColors.warning)
+                                    Text("退款原因至少需要10个字符")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.warning)
+                                }
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 4. 退款类型选择
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("退款类型 *")
+                                .font(AppTypography.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            HStack(spacing: AppSpacing.md) {
+                                Button(action: {
+                                    refundType = .full
+                                    refundAmount = ""
+                                    refundPercentage = ""
+                                }) {
+                                    HStack {
+                                        Image(systemName: refundType == .full ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(refundType == .full ? AppColors.primary : AppColors.textTertiary)
+                                        Text("全额退款")
+                                            .font(AppTypography.body)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(12)
+                                    .background(refundType == .full ? AppColors.primary.opacity(0.1) : AppColors.background)
+                                    .cornerRadius(AppCornerRadius.medium)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                            .stroke(refundType == .full ? AppColors.primary : AppColors.textTertiary.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                
+                                Button(action: {
+                                    refundType = .partial
+                                }) {
+                                    HStack {
+                                        Image(systemName: refundType == .partial ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(refundType == .partial ? AppColors.primary : AppColors.textTertiary)
+                                        Text("部分退款")
+                                            .font(AppTypography.body)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(12)
+                                    .background(refundType == .partial ? AppColors.primary.opacity(0.1) : AppColors.background)
+                                    .cornerRadius(AppCornerRadius.medium)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                            .stroke(refundType == .partial ? AppColors.primary : AppColors.textTertiary.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 5. 部分退款金额/比例输入
+                        if refundType == .partial {
+                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                Text("退款金额或比例 *")
+                                    .font(AppTypography.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                HStack(spacing: AppSpacing.md) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("退款金额（£）")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                        
+                                        HStack(spacing: AppSpacing.xs) {
+                                            Text("£")
+                                                .font(AppTypography.body)
+                                                .foregroundColor(AppColors.textSecondary)
+                                            
+                                            TextField("0.00", text: $refundAmount)
+                                                .keyboardType(.decimalPad)
+                                                .textFieldStyle(.plain)
+                                                .padding(12)
+                                                .background(AppColors.background)
+                                                .cornerRadius(AppCornerRadius.medium)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                        .stroke(AppColors.textTertiary.opacity(0.3), lineWidth: 1)
+                                                )
+                                                .onChange(of: refundAmount) { newValue in
+                                                    if let amount = Double(newValue), let taskAmount = task.agreedReward ?? task.baseReward, amount > 0 {
+                                                        let percentage = (amount / taskAmount) * 100
+                                                        refundPercentage = String(format: "%.1f", min(percentage, 100))
+                                                    } else {
+                                                        refundPercentage = ""
+                                                    }
+                                                }
+                                        }
+                                    }
+                                    
+                                    Text("或")
+                                        .font(AppTypography.body)
+                                        .foregroundColor(AppColors.textTertiary)
+                                        .padding(.top, 20)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("退款比例（%）")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                        
+                                        HStack(spacing: AppSpacing.xs) {
+                                            TextField("0", text: $refundPercentage)
+                                                .keyboardType(.decimalPad)
+                                                .textFieldStyle(.plain)
+                                                .padding(12)
+                                                .background(AppColors.background)
+                                                .cornerRadius(AppCornerRadius.medium)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                        .stroke(AppColors.textTertiary.opacity(0.3), lineWidth: 1)
+                                                )
+                                                .onChange(of: refundPercentage) { newValue in
+                                                    if let percentage = Double(newValue), let taskAmount = task.agreedReward ?? task.baseReward, percentage > 0 {
+                                                        let amount = (percentage / 100) * taskAmount
+                                                        refundAmount = String(format: "%.2f", amount)
+                                                    } else {
+                                                        refundAmount = ""
+                                                    }
+                                                }
+                                            
+                                            Text("%")
+                                                .font(AppTypography.body)
+                                                .foregroundColor(AppColors.textSecondary)
+                                        }
+                                    }
+                                }
+                                
+                                if let taskAmount = task.agreedReward ?? task.baseReward {
+                                    HStack {
+                                        Text("任务金额: £\(String(format: "%.2f", taskAmount))")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textTertiary)
+                                        
+                                        if let amount = Double(refundAmount), amount > 0 {
+                                            Spacer()
+                                            Text("退款金额: £\(String(format: "%.2f", amount))")
+                                                .font(AppTypography.caption)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(AppColors.error)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(AppSpacing.md)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.large)
+                            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        }
+                        
+                        // 6. 证据文件上传
+                        VStack(alignment: .leading, spacing: AppSpacing.md) {
+                            HStack {
+                                SectionHeader(title: "证据文件（可选）", icon: "doc.on.doc")
+                                Spacer()
+                                Text("\(selectedImages.count)/5")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            
+                            // 文件大小限制提示
+                            HStack(spacing: 4) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.textTertiary)
+                                Text("单张图片不超过 5MB，最多上传 5 张")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            .padding(.horizontal, 4)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: AppSpacing.md) {
+                                    // 添加按钮
+                                    if selectedImages.count < 5 {
+                                        PhotosPicker(selection: $selectedItems, maxSelectionCount: 5 - selectedImages.count, matching: .images) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "plus.viewfinder")
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(AppColors.primary)
+                                                Text("添加图片")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(AppColors.textSecondary)
+                                            }
+                                            .frame(width: 90, height: 90)
+                                            .background(AppColors.background)
+                                            .cornerRadius(AppCornerRadius.medium)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                                    .stroke(AppColors.primary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                                            )
+                                        }
+                                        .onChange(of: selectedItems) { _ in
+                                            handleImageSelection()
+                                        }
+                                    }
+                                    
+                                    // 图片预览
+                                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 90, height: 90)
+                                                .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                            
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedImages.remove(at: index)
+                                                    selectedItems = []
+                                                    HapticFeedback.light()
+                                                }
+                                            }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.white)
+                                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                            }
+                                            .padding(4)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .padding(AppSpacing.md)
+                        .background(AppColors.cardBackground)
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 4)
+                        
+                        // 图片大小错误提示
+                        if !imageSizeErrors.isEmpty {
+                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                ForEach(imageSizeErrors, id: \.self) { error in
+                                    HStack(spacing: 8) {
+                                        IconStyle.icon("exclamationmark.triangle.fill", size: 16)
+                                        Text(error)
+                                            .font(AppTypography.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(AppColors.warning)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.warning.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传错误提示
+                        if let errorMessage = errorMessage {
+                            HStack(spacing: 8) {
+                                IconStyle.icon("exclamationmark.octagon.fill", size: 16)
+                                Text(errorMessage)
+                                    .font(AppTypography.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(AppColors.error)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppColors.error.opacity(0.08))
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 上传进度
+                        if isUploading && uploadProgress.total > 0 {
+                            VStack(spacing: AppSpacing.xs) {
+                                HStack {
+                                    Text("上传进度")
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(AppColors.textSecondary)
+                                    Spacer()
+                                    Text("\(uploadProgress.current)/\(uploadProgress.total)")
+                                        .font(AppTypography.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(AppColors.primary)
+                                }
+                                
+                                ProgressView(value: Double(uploadProgress.current), total: Double(uploadProgress.total))
+                                    .tint(AppColors.primary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(AppColors.cardBackground)
+                            .cornerRadius(AppCornerRadius.medium)
+                        }
+                        
+                        // 提交按钮
+                        Button(action: {
+                            submitRefundRequest()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isSubmitting || isUploading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    IconStyle.icon("paperplane.fill", size: 18)
+                                }
+                                if isSubmitting || isUploading {
+                                    Text(isUploading ? "上传中 \(uploadProgress.current)/\(uploadProgress.total)..." : "提交中...")
+                                        .font(AppTypography.bodyBold)
+                                } else {
+                                    Text("提交退款申请")
+                                        .font(AppTypography.bodyBold)
+                                }
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isSubmitting || isUploading || refundReasonType == nil || refundReason.trimmingCharacters(in: .whitespaces).count < 10 || (refundType == .partial && refundAmount.isEmpty && refundPercentage.isEmpty))
+                        .padding(.top, AppSpacing.lg)
+                    }
+                    .padding(AppSpacing.md)
+                }
+            }
+            .navigationTitle("申请退款")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                    .disabled(isSubmitting || isUploading)
+                }
+            }
+        }
+    }
+    
+    private func handleImageSelection() {
+        _Concurrency.Task {
+            var newSizeErrors: [String] = []
+            let maxImageSize = 5 * 1024 * 1024 // 5MB
+            
+            for item in selectedItems {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    // 检查图片大小（压缩前）
+                    if data.count > maxImageSize {
+                        let sizeInMB = Double(data.count) / (1024 * 1024)
+                        newSizeErrors.append(String(format: "图片过大 (%.1fMB)，请选择较小的图片", sizeInMB))
+                        continue
+                    }
+                    
+                    if let image = UIImage(data: data) {
+                        // 在主线程更新UI
+                        DispatchQueue.main.async {
+                            if selectedImages.count < 5 {
+                                selectedImages.append(image)
+                            } else {
+                                newSizeErrors.append("最多只能上传 5 张图片")
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 在主线程更新UI
+            DispatchQueue.main.async {
+                imageSizeErrors = newSizeErrors
+                selectedItems = [] // 清空以备下次选择
+            }
+        }
+    }
+    
+    private func submitRefundRequest() {
+        guard !isSubmitting && !isUploading else { return }
+        
+        // 验证退款原因类型
+        guard let reasonType = refundReasonType else {
+            errorMessage = "请选择退款原因类型"
+            return
+        }
+        
+        // 验证退款原因详细说明
+        let trimmedReason = refundReason.trimmingCharacters(in: .whitespaces)
+        if trimmedReason.count < 10 {
+            errorMessage = "退款原因详细说明至少需要10个字符"
+            return
+        }
+        
+        // 验证部分退款金额或比例
+        var refundAmountValue: Double? = nil
+        var refundPercentageValue: Double? = nil
+        
+        if refundType == .partial {
+            if refundAmount.isEmpty && refundPercentage.isEmpty {
+                errorMessage = "部分退款必须提供退款金额或退款比例"
+                return
+            }
+            
+            if !refundAmount.isEmpty {
+                if let amount = Double(refundAmount), amount > 0 {
+                    // 检查是否超过任务金额
+                    if let taskAmount = task.agreedReward ?? task.baseReward {
+                        if amount >= taskAmount {
+                            errorMessage = "部分退款金额不能大于或等于任务金额，请选择全额退款"
+                            return
+                        }
+                        if amount > taskAmount {
+                            errorMessage = String(format: "退款金额不能超过任务金额（£%.2f）", taskAmount)
+                            return
+                        }
+                    }
+                    refundAmountValue = amount
+                } else {
+                    errorMessage = "退款金额必须是大于0的数字"
+                    return
+                }
+            }
+            
+            if !refundPercentage.isEmpty {
+                if let percentage = Double(refundPercentage), percentage > 0 && percentage < 100 {
+                    refundPercentageValue = percentage
+                    // 如果同时提供了金额，使用金额；否则根据比例计算
+                    if refundAmountValue == nil, let taskAmount = task.agreedReward ?? task.baseReward {
+                        refundAmountValue = (percentage / 100) * taskAmount
+                    }
+                } else {
+                    errorMessage = "退款比例必须在0-100之间"
+                    return
+                }
+            }
+        } else {
+            // 全额退款：使用任务金额
+            if let taskAmount = task.agreedReward ?? task.baseReward {
+                refundAmountValue = taskAmount
+            }
+        }
+        
+        errorMessage = nil
+        imageSizeErrors = []
+        
+        // 如果有图片，先上传图片
+        if !selectedImages.isEmpty {
+            // 检查图片大小（压缩后）
+            let maxImageSize = 5 * 1024 * 1024 // 5MB
+            var sizeErrors: [String] = []
+            var validImages: [(UIImage, Int)] = []
+            
+            for (index, image) in selectedImages.enumerated() {
+                if let imageData = image.jpegData(compressionQuality: 0.7) {
+                    if imageData.count > maxImageSize {
+                        let sizeInMB = Double(imageData.count) / (1024 * 1024)
+                        sizeErrors.append(String(format: "第 %d 张图片压缩后仍过大 (%.1fMB)，请选择较小的图片", index + 1, sizeInMB))
+                    } else {
+                        validImages.append((image, index + 1))
+                    }
+                } else {
+                    sizeErrors.append("第 \(index + 1) 张图片无法处理，请重新选择")
+                }
+            }
+            
+            if !sizeErrors.isEmpty {
+                imageSizeErrors = sizeErrors
+                return
+            }
+            
+            // 上传图片
+            isUploading = true
+            uploadedFileIds = []
+            uploadProgress = (0, validImages.count)
+            
+            let uploadGroup = DispatchGroup()
+            var uploadErrors: [(Error, Int)] = []
+            
+            for (image, imageIndex) in validImages {
+                uploadGroup.enter()
+                guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+                    uploadErrors.append((NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法转换图片数据"]), imageIndex))
+                    uploadGroup.leave()
+                    continue
+                }
+                
+                let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+                let filename = "refund_evidence_\(timestamp)_\(imageIndex).jpg"
+                APIService.shared.uploadFile(data: imageData, filename: filename, taskId: taskId) { result in
+                    switch result {
+                    case .success(let fileId):
+                        DispatchQueue.main.async {
+                            uploadedFileIds.append(fileId)
+                            uploadProgress.current += 1
+                        }
+                    case .failure(let error):
+                        uploadErrors.append((error, imageIndex))
+                    }
+                    uploadGroup.leave()
+                }
+            }
+            
+            uploadGroup.notify(queue: .main) {
+                isUploading = false
+                
+                if !uploadErrors.isEmpty {
+                    // 生成详细的错误信息
+                    var errorDetails: [String] = []
+                    for (error, index) in uploadErrors {
+                        let errorDescription = getDetailedErrorMessage(error)
+                        errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                    }
+                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    return
+                }
+                
+                // 所有图片上传成功，提交退款申请
+                submitRefundRequestWithFiles(fileIds: uploadedFileIds, refundAmount: refundAmountValue, refundPercentage: refundPercentageValue)
+            }
+        } else {
+            // 没有图片，直接提交退款申请
+            submitRefundRequestWithFiles(fileIds: [], refundAmount: refundAmountValue, refundPercentage: refundPercentageValue)
+        }
+    }
+    
+    private func submitRefundRequestWithFiles(fileIds: [String], refundAmount: Double?, refundPercentage: Double?) {
+        isSubmitting = true
+        errorMessage = nil
+        
+        APIService.shared.createRefundRequest(
+            taskId: taskId,
+            reasonType: refundReasonType!.rawValue,
+            reason: refundReason.trimmingCharacters(in: .whitespaces),
+            refundType: refundType.rawValue,
+            evidenceFiles: fileIds.isEmpty ? nil : fileIds,
+            refundAmount: refundAmount,
+            refundPercentage: refundPercentage
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [self] result in
+                isSubmitting = false
+                if case .failure(let error) = result {
+                    errorMessage = getDetailedErrorMessage(error)
+                }
+            },
+            receiveValue: { [self] _ in
+                // 退款申请提交成功
+                HapticFeedback.success()
+                onSuccess()
+            }
+        )
+        .store(in: &cancellables)
+    }
+    
+    /// 获取详细的错误信息
+    private func getDetailedErrorMessage(_ error: Error) -> String {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .requestFailed(let underlyingError):
+                if let urlError = underlyingError as? URLError {
+                    switch urlError.code {
+                    case .notConnectedToInternet, .networkConnectionLost:
+                        return "网络连接失败，请检查网络设置"
+                    case .timedOut:
+                        return "请求超时，请重试"
+                    case .cannotFindHost, .cannotConnectToHost:
+                        return "无法连接到服务器，请稍后重试"
+                    default:
+                        return "网络错误：\(urlError.localizedDescription)"
+                    }
+                }
+                return "网络请求失败：\(underlyingError.localizedDescription)"
+            case .httpError(let statusCode):
+                switch statusCode {
+                case 400:
+                    return "请求格式错误，请检查输入"
+                case 401:
+                    return "未授权，请重新登录"
+                case 403:
+                    return "无权限提交退款申请"
+                case 404:
+                    return "任务不存在或无权访问"
+                case 500...599:
+                    return "服务器错误（\(statusCode)），请稍后重试"
+                default:
+                    return "服务器错误（\(statusCode)）"
+                }
+            case .serverError(let statusCode, let message):
+                return "服务器错误（\(statusCode)）：\(message)"
             case .decodingError(let error):
                 return "解析响应失败：\(error.localizedDescription)"
             case .invalidURL:

@@ -704,6 +704,59 @@ class TaskDisputeDismiss(BaseModel):
     resolution_note: str = Field(..., min_length=1, max_length=2000, description="驳回理由")
 
 
+class RefundRequestCreate(BaseModel):
+    """创建退款申请"""
+    reason_type: str = Field(..., description="退款原因类型：completion_time_unsatisfactory（完成时间不满意）、not_completed（接单者完全未完成）、quality_issue（质量问题）、other（其他）")
+    reason: str = Field(..., min_length=10, max_length=2000, description="退款原因详细说明（至少10个字符）")
+    evidence_files: Optional[List[str]] = Field(None, description="证据文件ID列表")
+    refund_type: str = Field(..., description="退款类型：full（全额退款）、partial（部分退款）")
+    refund_amount: Optional[Decimal] = Field(None, ge=0, description="申请退款金额（部分退款时必填，全额退款时可为空）")
+    refund_percentage: Optional[float] = Field(None, ge=0, le=100, description="退款比例（0-100，部分退款时可选，与refund_amount二选一）")
+
+
+class RefundRequestOut(BaseModel):
+    """退款申请输出"""
+    id: int
+    task_id: int
+    poster_id: str
+    reason_type: Optional[str] = None  # 退款原因类型
+    refund_type: Optional[str] = None  # 退款类型（full/partial）
+    reason: str  # 退款原因详细说明
+    evidence_files: Optional[List[str]] = None
+    refund_amount: Optional[Decimal] = None
+    refund_percentage: Optional[float] = None  # 退款比例（如果使用比例）
+    status: str
+    admin_comment: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    refund_intent_id: Optional[str] = None
+    refund_transfer_id: Optional[str] = None
+    processed_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class RefundRequestApprove(BaseModel):
+    """批准退款申请"""
+    admin_comment: Optional[str] = Field(None, max_length=2000, description="审核备注")
+    refund_amount: Optional[Decimal] = Field(None, ge=0, description="实际退款金额（如果与申请金额不同）")
+
+
+class RefundRequestReject(BaseModel):
+    """拒绝退款申请"""
+    admin_comment: str = Field(..., min_length=1, max_length=2000, description="拒绝理由")
+
+
+class PartialTransferRequest(BaseModel):
+    """部分转账请求"""
+    transfer_amount: Optional[Decimal] = Field(None, gt=0, description="转账金额（如果为空，则转账全部剩余托管金额）")
+    reason: Optional[str] = Field(None, max_length=500, description="部分转账原因说明（可选）")
+
+
 class ReviewWithReviewerInfo(ReviewBase):
     id: int
     task_id: int

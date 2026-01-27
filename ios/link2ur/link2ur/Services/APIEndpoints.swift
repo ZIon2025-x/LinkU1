@@ -102,6 +102,18 @@ enum APIEndpoints {
         static func reviews(_ id: Int) -> String {
             "/api/tasks/\(id)/reviews"
         }
+        static func refundRequest(_ id: Int) -> String {
+            "/api/tasks/\(id)/refund-request"
+        }
+        static func refundStatus(_ id: Int) -> String {
+            "/api/tasks/\(id)/refund-status"
+        }
+        static func refundHistory(_ id: Int) -> String {
+            "/api/tasks/\(id)/refund-history"
+        }
+        static func cancelRefundRequest(_ taskId: Int, _ refundId: Int) -> String {
+            "/api/tasks/\(taskId)/refund-request/\(refundId)/cancel"
+        }
         static func participants(_ id: String) -> String {
             "/api/tasks/\(id)/participants"
         }
@@ -318,6 +330,7 @@ enum APIEndpoints {
     enum Common {
         static let uploadImage = "/api/upload/image"  // 私密图片（任务聊天、客服聊天）
         static let uploadPublicImage = "/api/upload/public-image"  // 公开图片（任务图片、头像等）
+        static let uploadFile = "/api/upload/file"  // 私密文件（任务证据文件等）
         static let banners = "/api/banners"
     }
     

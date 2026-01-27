@@ -868,6 +868,106 @@ public class APIService {
             })
             .store(in: &cancellables)
     }
+    
+    // MARK: - 文件上传（用于任务证据等）
+    func uploadFile(data: Data, filename: String, taskId: Int? = nil, completion: @escaping (Result<String, APIError>) -> Void) {
+        // 如果有 taskId，添加到 URL 查询参数
+        var uploadURL = "\(baseURL)\(APIEndpoints.Common.uploadFile)"
+        if let taskId = taskId {
+            uploadURL += "?task_id=\(taskId)"
+        }
+        
+        guard let url = URL(string: uploadURL) else {
+            completion(.failure(APIError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        // 设置multipart/form-data
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        // 确保 iOS 应用识别所需的 headers 被设置（用于长期会话）
+        request.setValue("iOS", forHTTPHeaderField: "X-Platform")
+        request.setValue("Link2Ur-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        
+        // 注入 Session ID（后端使用 session-based 认证，移动端使用 X-Session-ID header）
+        if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+            request.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
+            // 添加应用签名
+            AppSignature.signRequest(&request, sessionId: sessionId)
+        }
+        
+        // 检测文件类型
+        let contentType: String
+        if filename.lowercased().hasSuffix(".jpg") || filename.lowercased().hasSuffix(".jpeg") {
+            contentType = "image/jpeg"
+        } else if filename.lowercased().hasSuffix(".png") {
+            contentType = "image/png"
+        } else if filename.lowercased().hasSuffix(".pdf") {
+            contentType = "application/pdf"
+        } else if filename.lowercased().hasSuffix(".doc") {
+            contentType = "application/msword"
+        } else if filename.lowercased().hasSuffix(".docx") {
+            contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        } else if filename.lowercased().hasSuffix(".txt") {
+            contentType = "text/plain"
+        } else {
+            contentType = "application/octet-stream"
+        }
+        
+        // 构建multipart body
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(contentType)\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        session.dataTaskPublisher(for: request)
+            .mapError { APIError.requestFailed($0) }
+            .flatMap { data, response -> AnyPublisher<String, APIError> in
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    return Fail(error: APIError.invalidResponse).eraseToAnyPublisher()
+                }
+                
+                if (200...299).contains(httpResponse.statusCode) {
+                    // 解析响应
+                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        // 优先从 JSON 中获取 file_id
+                        if let fileId = json["file_id"] as? String, !fileId.isEmpty {
+                            return Just(fileId).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                        } else if let success = json["success"] as? Bool, success, let fileId = json["file_id"] as? String {
+                            return Just(fileId).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                        } else {
+                            return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "文件上传成功但无法获取文件ID"]))).eraseToAnyPublisher()
+                        }
+                    }
+                    return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应"]))).eraseToAnyPublisher()
+                } else if httpResponse.statusCode == 401 {
+                    return Fail(error: APIError.unauthorized).eraseToAnyPublisher()
+                } else {
+                    let errorMessage = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String ?? "上传失败"
+                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage)).eraseToAnyPublisher()
+                }
+            }
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { result in
+                    if case .failure(let error) = result {
+                        completion(.failure(error))
+                    }
+                },
+                receiveValue: { fileId in
+                    completion(.success(fileId))
+                }
+            )
+            .store(in: &cancellables)
+    }
 }
 
 // MARK: - Async/Await 版本

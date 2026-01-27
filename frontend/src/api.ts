@@ -1020,12 +1020,49 @@ export async function deleteTask(taskId: number) {
 }
 
 // 确认任务完成
-export async function confirmTaskCompletion(taskId: number) {
-  const res = await api.post(`/api/tasks/${taskId}/confirm_completion`);
+export async function confirmTaskCompletion(taskId: number, evidenceFiles?: string[]) {
+  const res = await api.post(`/api/tasks/${taskId}/confirm_completion`, {
+    evidence_files: evidenceFiles || undefined
+  });
   return res.data;
 }
 
 // 提交任务争议（未正确完成）
+export async function createRefundRequest(
+  taskId: number, 
+  reasonType: string,
+  reason: string, 
+  refundType: string,
+  evidenceFiles?: string[], 
+  refundAmount?: number,
+  refundPercentage?: number
+) {
+  const response = await api.post(`/api/tasks/${taskId}/refund-request`, {
+    reason_type: reasonType,
+    reason,
+    refund_type: refundType,
+    evidence_files: evidenceFiles,
+    refund_amount: refundAmount,
+    refund_percentage: refundPercentage
+  });
+  return response.data;
+}
+
+export async function getRefundStatus(taskId: number) {
+  const response = await api.get(`/api/tasks/${taskId}/refund-status`);
+  return response.data;
+}
+
+export async function getRefundHistory(taskId: number) {
+  const response = await api.get(`/api/tasks/${taskId}/refund-history`);
+  return response.data;
+}
+
+export async function cancelRefundRequest(taskId: number, refundId: number) {
+  const response = await api.post(`/api/tasks/${taskId}/refund-request/${refundId}/cancel`);
+  return response.data;
+}
+
 export async function createTaskDispute(taskId: number, reason: string) {
   const res = await api.post(`/api/tasks/${taskId}/dispute`, { reason });
   return res.data;

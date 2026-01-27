@@ -87,6 +87,9 @@ import api, {
   getAdminTaskDisputeDetail,
   resolveTaskDispute,
   dismissTaskDispute,
+  getAdminRefundRequests,
+  approveRefundRequest,
+  rejectRefundRequest,
   getCoupons,
   createCoupon,
   updateCoupon,
@@ -249,6 +252,21 @@ const AdminDashboard: React.FC = () => {
   const [taskDisputes, setTaskDisputes] = useState<any[]>([]);
   const [disputesLoading, setDisputesLoading] = useState(false);
   const [disputesPage, setDisputesPage] = useState(1);
+  
+  // 退款申请相关状态
+  const [refundRequests, setRefundRequests] = useState<any[]>([]);
+  const [refundRequestsLoading, setRefundRequestsLoading] = useState(false);
+  const [refundRequestsPage, setRefundRequestsPage] = useState(1);
+  const [refundRequestsTotal, setRefundRequestsTotal] = useState(0);
+  const [refundRequestsStatusFilter, setRefundRequestsStatusFilter] = useState<string>('');
+  const [refundRequestsSearchKeyword, setRefundRequestsSearchKeyword] = useState('');
+  const [selectedRefundRequest, setSelectedRefundRequest] = useState<any>(null);
+  const [showRefundRequestDetailModal, setShowRefundRequestDetailModal] = useState(false);
+  const [showRefundRequestActionModal, setShowRefundRequestActionModal] = useState(false);
+  const [refundRequestAction, setRefundRequestAction] = useState<'approve' | 'reject'>('approve');
+  const [refundRequestAdminComment, setRefundRequestAdminComment] = useState('');
+  const [refundRequestRefundAmount, setRefundRequestRefundAmount] = useState<number | undefined>();
+  const [processingRefundRequest, setProcessingRefundRequest] = useState(false);
   const [disputesTotal, setDisputesTotal] = useState(0);
   const [disputesStatusFilter, setDisputesStatusFilter] = useState<string>('');
   const [disputesSearchKeyword, setDisputesSearchKeyword] = useState<string>('');
@@ -3971,6 +3989,93 @@ const AdminDashboard: React.FC = () => {
     }
   }, []);
 
+  // ==================== 退款申请管理 ====================
+  
+  const loadRefundRequests = useCallback(async () => {
+    try {
+      setRefundRequestsLoading(true);
+      const response = await getAdminRefundRequests({
+        skip: (refundRequestsPage - 1) * 20,
+        limit: 20,
+        status: refundRequestsStatusFilter || undefined,
+        keyword: refundRequestsSearchKeyword.trim() || undefined
+      });
+      setRefundRequests(response.items || []);
+      setRefundRequestsTotal(response.total || 0);
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setRefundRequestsLoading(false);
+    }
+  }, [refundRequestsPage, refundRequestsStatusFilter, refundRequestsSearchKeyword]);
+
+  useEffect(() => {
+    if (activeTab === 'refund-requests') {
+      loadRefundRequests();
+    }
+  }, [activeTab, refundRequestsPage, refundRequestsStatusFilter, refundRequestsSearchKeyword, loadRefundRequests]);
+
+  // 实时刷新待处理退款申请列表（每30秒刷新一次）
+  useEffect(() => {
+    if (activeTab === 'refund-requests') {
+      const refreshInterval = setInterval(() => {
+        if (!refundRequestsLoading && (!refundRequestsStatusFilter || refundRequestsStatusFilter === 'pending')) {
+          loadRefundRequests();
+        }
+      }, 30000); // 30秒刷新一次
+
+      return () => clearInterval(refreshInterval);
+    }
+  }, [activeTab, refundRequestsStatusFilter, refundRequestsLoading, loadRefundRequests]);
+
+  // 处理退款申请（批准或拒绝）
+  const handleRefundRequestAction = useCallback(async () => {
+    if (!selectedRefundRequest || !refundRequestAdminComment.trim()) {
+      if (refundRequestAction === 'reject') {
+        message.error('请输入拒绝理由');
+        return;
+      }
+    }
+
+    try {
+      setProcessingRefundRequest(true);
+      if (refundRequestAction === 'approve') {
+        await approveRefundRequest(selectedRefundRequest.id, {
+          admin_comment: refundRequestAdminComment.trim() || undefined,
+          refund_amount: refundRequestRefundAmount
+        });
+        message.success('退款申请已批准，正在处理退款...');
+      } else {
+        await rejectRefundRequest(selectedRefundRequest.id, refundRequestAdminComment.trim());
+        message.success('退款申请已拒绝');
+      }
+      setShowRefundRequestActionModal(false);
+      setRefundRequestAdminComment('');
+      setRefundRequestRefundAmount(undefined);
+      setSelectedRefundRequest(null);
+      await loadRefundRequests();
+    } catch (error: any) {
+      message.error(getErrorMessage(error));
+    } finally {
+      setProcessingRefundRequest(false);
+    }
+  }, [selectedRefundRequest, refundRequestAction, refundRequestAdminComment, refundRequestRefundAmount, loadRefundRequests]);
+
+  // 查看退款申请详情
+  const handleViewRefundRequestDetail = useCallback((refundRequest: any) => {
+    setSelectedRefundRequest(refundRequest);
+    setShowRefundRequestDetailModal(true);
+  }, []);
+
+  // 打开处理退款申请弹窗
+  const handleOpenRefundRequestAction = useCallback((refundRequest: any, action: 'approve' | 'reject') => {
+    setSelectedRefundRequest(refundRequest);
+    setRefundRequestAction(action);
+    setRefundRequestAdminComment('');
+    setRefundRequestRefundAmount(undefined);
+    setShowRefundRequestActionModal(true);
+  }, []);
+
   // 打开处理争议弹窗
   const handleOpenDisputeAction = useCallback((dispute: any, action: 'resolve' | 'dismiss') => {
     setSelectedDispute(dispute);
@@ -4472,6 +4577,547 @@ const AdminDashboard: React.FC = () => {
       )}
     </div>
   ), [taskDisputes, disputesLoading, disputesPage, disputesTotal, disputesStatusFilter, disputesSearchKeyword, selectedDispute, showDisputeDetailModal, showDisputeActionModal, disputeAction, disputeResolutionNote, processingDispute, loadTaskDisputes, handleViewDisputeDetail, handleOpenDisputeAction, handleDisputeAction]);
+
+  const renderRefundRequests = useCallback(() => (
+    <div>
+      <h2>退款申请管理</h2>
+      
+      {/* 筛选和搜索 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="搜索任务标题、发布者姓名或退款原因..."
+          value={refundRequestsSearchKeyword}
+          onChange={(e) => setRefundRequestsSearchKeyword(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              setRefundRequestsPage(1);
+              loadRefundRequests();
+            }
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px',
+            flex: '1',
+            minWidth: '250px'
+          }}
+        />
+        <select
+          value={refundRequestsStatusFilter}
+          onChange={(e) => {
+            setRefundRequestsStatusFilter(e.target.value);
+            setRefundRequestsPage(1);
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}
+        >
+          <option value="">全部状态</option>
+          <option value="pending">待处理</option>
+          <option value="approved">已批准</option>
+          <option value="rejected">已拒绝</option>
+          <option value="processing">处理中</option>
+          <option value="completed">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <button
+          onClick={() => {
+            setRefundRequestsPage(1);
+            loadRefundRequests();
+          }}
+          style={{
+            padding: '8px 16px',
+            border: 'none',
+            background: '#007bff',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          搜索
+        </button>
+        {refundRequestsSearchKeyword && (
+          <button
+            onClick={() => {
+              setRefundRequestsSearchKeyword('');
+              setRefundRequestsPage(1);
+            }}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: 'white',
+              color: '#333',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            清除
+          </button>
+        )}
+      </div>
+
+      {/* 退款申请列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {refundRequestsLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : refundRequests.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+            {refundRequestsSearchKeyword ? '未找到匹配的退款申请记录' : '暂无退款申请记录'}
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>任务</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>发布者</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>退款原因类型</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>退款类型</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>退款金额</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>创建时间</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {refundRequests.map((refund: any) => (
+                <tr key={refund.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{refund.id}</td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {refund.task?.title || `任务 #${refund.task_id}`}
+                  </td>
+                  <td style={{ padding: '12px' }}>{refund.poster?.name || refund.poster_id}</td>
+                  <td style={{ padding: '12px' }}>
+                    {refund.reason_type_display || refund.reason_type || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      background: refund.refund_type === 'full' ? '#d4edda' : '#fff3cd',
+                      color: refund.refund_type === 'full' ? '#155724' : '#856404'
+                    }}>
+                      {refund.refund_type_display || (refund.refund_type === 'full' ? '全额退款' : refund.refund_type === 'partial' ? '部分退款' : '-')}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {refund.refund_amount !== null && refund.refund_amount !== undefined
+                      ? `£${Number(refund.refund_amount).toFixed(2)}${refund.refund_percentage ? ` (${refund.refund_percentage.toFixed(1)}%)` : ''}`
+                      : '全额退款'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      background: refund.status === 'pending' ? '#fff3cd' : 
+                                  refund.status === 'approved' ? '#d1ecf1' :
+                                  refund.status === 'processing' ? '#d1ecf1' :
+                                  refund.status === 'completed' ? '#d4edda' :
+                                  refund.status === 'rejected' ? '#f8d7da' : '#f5f5f5',
+                      color: refund.status === 'pending' ? '#856404' : 
+                             refund.status === 'approved' ? '#0c5460' :
+                             refund.status === 'processing' ? '#0c5460' :
+                             refund.status === 'completed' ? '#155724' :
+                             refund.status === 'rejected' ? '#721c24' : '#666'
+                    }}>
+                      {refund.status === 'pending' ? '待处理' : 
+                       refund.status === 'approved' ? '已批准' :
+                       refund.status === 'processing' ? '处理中' :
+                       refund.status === 'completed' ? '已完成' :
+                       refund.status === 'rejected' ? '已拒绝' :
+                       refund.status === 'cancelled' ? '已取消' : refund.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {new Date(refund.created_at).toLocaleString('zh-CN')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleViewRefundRequestDetail(refund)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        查看
+                      </button>
+                      {refund.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleOpenRefundRequestAction(refund, 'approve')}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#28a745',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            批准
+                          </button>
+                          <button
+                            onClick={() => handleOpenRefundRequestAction(refund, 'reject')}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#dc3545',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            拒绝
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {refundRequestsTotal > 20 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setRefundRequestsPage(prev => Math.max(1, prev - 1))}
+            disabled={refundRequestsPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: refundRequestsPage === 1 ? '#f5f5f5' : 'white',
+              color: refundRequestsPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: refundRequestsPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', lineHeight: '32px' }}>
+            第 {refundRequestsPage} 页，共 {Math.ceil(refundRequestsTotal / 20)} 页
+          </span>
+          <button
+            onClick={() => setRefundRequestsPage(prev => prev + 1)}
+            disabled={refundRequestsPage >= Math.ceil(refundRequestsTotal / 20)}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: refundRequestsPage >= Math.ceil(refundRequestsTotal / 20) ? '#f5f5f5' : 'white',
+              color: refundRequestsPage >= Math.ceil(refundRequestsTotal / 20) ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: refundRequestsPage >= Math.ceil(refundRequestsTotal / 20) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+
+      {/* 退款申请详情弹窗 */}
+      {showRefundRequestDetailModal && selectedRefundRequest && (
+        <Modal
+          title={`退款申请详情 #${selectedRefundRequest.id}`}
+          open={showRefundRequestDetailModal}
+          onCancel={() => {
+            setShowRefundRequestDetailModal(false);
+            setSelectedRefundRequest(null);
+          }}
+          footer={null}
+          width={800}
+        >
+          <div style={{ padding: '20px' }}>
+            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>任务信息</h3>
+            {selectedRefundRequest.task && (
+              <>
+                <div style={{ marginBottom: '20px' }}>
+                  <strong>任务标题：</strong>
+                  {selectedRefundRequest.task.title || `任务 #${selectedRefundRequest.task_id}`}
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <strong>任务金额：</strong>
+                  £{selectedRefundRequest.task.agreed_reward || selectedRefundRequest.task.base_reward || 0}
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <strong>支付状态：</strong>
+                  <span style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    background: selectedRefundRequest.task.is_paid ? '#d4edda' : '#f8d7da',
+                    color: selectedRefundRequest.task.is_paid ? '#155724' : '#721c24',
+                    marginLeft: '8px'
+                  }}>
+                    {selectedRefundRequest.task.is_paid ? '✅ 已支付' : '⏳ 未支付'}
+                  </span>
+                </div>
+              </>
+            )}
+
+            <h3 style={{ marginBottom: '20px', marginTop: '30px', fontSize: '18px', fontWeight: 'bold', borderBottom: '2px solid #e0e0e0', paddingBottom: '10px' }}>退款申请信息</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款原因类型：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: '#e3f2fd',
+                color: '#1976d2',
+                marginLeft: '8px'
+              }}>
+                {selectedRefundRequest.reason_type_display || selectedRefundRequest.reason_type || '未知'}
+              </span>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款类型：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedRefundRequest.refund_type === 'full' ? '#d4edda' : '#fff3cd',
+                color: selectedRefundRequest.refund_type === 'full' ? '#155724' : '#856404',
+                marginLeft: '8px'
+              }}>
+                {selectedRefundRequest.refund_type_display || (selectedRefundRequest.refund_type === 'full' ? '全额退款' : selectedRefundRequest.refund_type === 'partial' ? '部分退款' : '未知')}
+              </span>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款原因详细说明：</strong>
+              <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                {selectedRefundRequest.reason}
+              </div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>申请退款金额：</strong>
+              {selectedRefundRequest.refund_amount !== null && selectedRefundRequest.refund_amount !== undefined
+                ? `£${Number(selectedRefundRequest.refund_amount).toFixed(2)}${selectedRefundRequest.refund_percentage ? ` (${selectedRefundRequest.refund_percentage.toFixed(1)}%)` : ''}`
+                : '全额退款'}
+              {selectedRefundRequest.task && (
+                <span style={{ marginLeft: '12px', color: '#666', fontSize: '12px' }}>
+                  (任务金额: £{Number(selectedRefundRequest.task.agreed_reward || selectedRefundRequest.task.base_reward || 0).toFixed(2)})
+                </span>
+              )}
+            </div>
+            {selectedRefundRequest.evidence_files && selectedRefundRequest.evidence_files.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>证据文件：</strong>
+                <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {selectedRefundRequest.evidence_files.map((fileId: string, index: number) => (
+                    <a
+                      key={index}
+                      href={`/api/private-file?file=${fileId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f0f0f0',
+                        borderRadius: '4px',
+                        textDecoration: 'none',
+                        color: '#007bff',
+                        fontSize: '12px'
+                      }}
+                    >
+                      文件 {index + 1}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <strong>状态：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedRefundRequest.status === 'pending' ? '#fff3cd' : 
+                            selectedRefundRequest.status === 'approved' ? '#d1ecf1' :
+                            selectedRefundRequest.status === 'processing' ? '#d1ecf1' :
+                            selectedRefundRequest.status === 'completed' ? '#d4edda' :
+                            selectedRefundRequest.status === 'rejected' ? '#f8d7da' : '#f5f5f5',
+                color: selectedRefundRequest.status === 'pending' ? '#856404' : 
+                       selectedRefundRequest.status === 'approved' ? '#0c5460' :
+                       selectedRefundRequest.status === 'processing' ? '#0c5460' :
+                       selectedRefundRequest.status === 'completed' ? '#155724' :
+                       selectedRefundRequest.status === 'rejected' ? '#721c24' : '#666',
+                marginLeft: '8px'
+              }}>
+                {selectedRefundRequest.status === 'pending' ? '待处理' : 
+                 selectedRefundRequest.status === 'approved' ? '已批准' :
+                 selectedRefundRequest.status === 'processing' ? '处理中' :
+                 selectedRefundRequest.status === 'completed' ? '已完成' :
+                 selectedRefundRequest.status === 'rejected' ? '已拒绝' :
+                 selectedRefundRequest.status === 'cancelled' ? '已取消' : selectedRefundRequest.status}
+              </span>
+            </div>
+            {selectedRefundRequest.admin_comment && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>管理员备注：</strong>
+                <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                  {selectedRefundRequest.admin_comment}
+                </div>
+              </div>
+            )}
+            {selectedRefundRequest.reviewed_at && (
+              <div style={{ marginBottom: '20px' }}>
+                <strong>审核时间：</strong>
+                {new Date(selectedRefundRequest.reviewed_at).toLocaleString('zh-CN')}
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <strong>创建时间：</strong>
+              {new Date(selectedRefundRequest.created_at).toLocaleString('zh-CN')}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 处理退款申请弹窗 */}
+      {showRefundRequestActionModal && selectedRefundRequest && (
+        <Modal
+          title={refundRequestAction === 'approve' ? '批准退款申请' : '拒绝退款申请'}
+          open={showRefundRequestActionModal}
+          onCancel={() => {
+            setShowRefundRequestActionModal(false);
+            setRefundRequestAdminComment('');
+            setRefundRequestRefundAmount(undefined);
+            setSelectedRefundRequest(null);
+          }}
+          onOk={handleRefundRequestAction}
+          confirmLoading={processingRefundRequest}
+          okText={refundRequestAction === 'approve' ? '批准' : '拒绝'}
+          cancelText="取消"
+          width={600}
+        >
+          <div style={{ padding: '20px 0' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>任务：</strong>
+              {selectedRefundRequest.task?.title || `任务 #${selectedRefundRequest.task_id}`}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款原因类型：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: '#e3f2fd',
+                color: '#1976d2',
+                marginLeft: '8px'
+              }}>
+                {selectedRefundRequest.reason_type_display || selectedRefundRequest.reason_type || '未知'}
+              </span>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款类型：</strong>
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: '500',
+                background: selectedRefundRequest.refund_type === 'full' ? '#d4edda' : '#fff3cd',
+                color: selectedRefundRequest.refund_type === 'full' ? '#155724' : '#856404',
+                marginLeft: '8px'
+              }}>
+                {selectedRefundRequest.refund_type_display || (selectedRefundRequest.refund_type === 'full' ? '全额退款' : selectedRefundRequest.refund_type === 'partial' ? '部分退款' : '未知')}
+              </span>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>申请退款金额：</strong>
+              {selectedRefundRequest.refund_amount !== null && selectedRefundRequest.refund_amount !== undefined
+                ? `£${Number(selectedRefundRequest.refund_amount).toFixed(2)}${selectedRefundRequest.refund_percentage ? ` (${selectedRefundRequest.refund_percentage.toFixed(1)}%)` : ''}`
+                : '全额退款'}
+              {selectedRefundRequest.task && (
+                <span style={{ marginLeft: '12px', color: '#666', fontSize: '12px' }}>
+                  (任务金额: £{Number(selectedRefundRequest.task.agreed_reward || selectedRefundRequest.task.base_reward || 0).toFixed(2)})
+                </span>
+              )}
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <strong>退款原因详细说明：</strong>
+              <div style={{ marginTop: '8px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                {selectedRefundRequest.reason}
+              </div>
+            </div>
+            {refundRequestAction === 'approve' && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                  实际退款金额（可选，留空使用申请金额）：
+                </label>
+                <input
+                  type="number"
+                  value={refundRequestRefundAmount || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setRefundRequestRefundAmount(value ? parseFloat(value) : undefined);
+                  }}
+                  placeholder="留空使用申请金额"
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                {refundRequestAction === 'approve' ? '审核备注（可选）' : '拒绝理由 *'}：
+              </label>
+              <textarea
+                value={refundRequestAdminComment}
+                onChange={(e) => setRefundRequestAdminComment(e.target.value)}
+                placeholder={refundRequestAction === 'approve' ? '请输入审核备注...' : '请输入拒绝理由...'}
+                rows={6}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  ), [refundRequests, refundRequestsLoading, refundRequestsPage, refundRequestsTotal, refundRequestsStatusFilter, refundRequestsSearchKeyword, selectedRefundRequest, showRefundRequestDetailModal, showRefundRequestActionModal, refundRequestAction, refundRequestAdminComment, refundRequestRefundAmount, processingRefundRequest, handleViewRefundRequestDetail, handleOpenRefundRequestAction, handleRefundRequestAction, loadRefundRequests]);
 
   const renderNotifications = useCallback(() => (
     <div>
@@ -9298,7 +9944,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [refundRequests, refundRequestsLoading, refundRequestsPage, refundRequestsTotal, refundRequestsStatusFilter, refundRequestsSearchKeyword, selectedRefundRequest, showRefundRequestDetailModal, showRefundRequestActionModal, refundRequestAction, refundRequestAdminComment, refundRequestRefundAmount, processingRefundRequest, handleViewRefundRequestDetail, handleOpenRefundRequestAction, handleRefundRequestAction, loadRefundRequests]);
 
   // 渲染商品列表
   const renderFleaMarketItems = () => {
@@ -10943,6 +11589,36 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'refund-requests')}
+              onClick={() => handleTabChange('refund-requests')}
+              style={{ position: 'relative' }}
+            >
+              💰 退款申请
+              {/* 待处理退款申请数量提示 */}
+              {refundRequests.filter((r: any) => r.status === 'pending').length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 5,
+                  right: 8,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#ff4d4f',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  {refundRequests.filter((r: any) => r.status === 'pending').length}
+                </div>
+              )}
+            </button>
           </div>
         </div>
 
@@ -11061,6 +11737,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'forum-posts' && renderForumPosts()}
             {activeTab === 'reports' && renderReports()}
             {activeTab === 'task-disputes' && renderTaskDisputes()}
+            {activeTab === 'refund-requests' && renderRefundRequests()}
             {activeTab === 'flea-market-items' && renderFleaMarketItems()}
             {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
             {activeTab === 'leaderboard-review' && renderLeaderboardReview()}

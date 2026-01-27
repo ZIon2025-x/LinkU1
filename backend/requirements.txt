@@ -64,6 +64,9 @@ compat-fork-apns2>=0.7.0
 # 图片处理
 Pillow>=10.0.0,<11.0.0
 
+# 云存储 (S3/R2)
+boto3>=1.28.0,<2.0.0
+
 # 双因素认证 (2FA/TOTP)
 pyotp>=2.9.0,<3.0.0  # TOTP 生成和验证
 qrcode[pil]>=7.4.2,<8.0.0  # QR 码生成（用于 Authenticator 设置）

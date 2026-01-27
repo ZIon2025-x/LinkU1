@@ -1091,6 +1091,33 @@ export async function dismissTaskDispute(disputeId: number, resolutionNote: stri
   return res.data;
 }
 
+// ==================== 退款申请管理 API ====================
+
+export async function getAdminRefundRequests(params?: {
+  skip?: number;
+  limit?: number;
+  status?: string;
+  keyword?: string;
+}) {
+  const res = await api.get('/api/admin/refund-requests', { params });
+  return res.data;
+}
+
+export async function approveRefundRequest(refundId: number, data?: {
+  admin_comment?: string;
+  refund_amount?: number;
+}) {
+  const res = await api.post(`/api/admin/refund-requests/${refundId}/approve`, data || {});
+  return res.data;
+}
+
+export async function rejectRefundRequest(refundId: number, adminComment: string) {
+  const res = await api.post(`/api/admin/refund-requests/${refundId}/reject`, {
+    admin_comment: adminComment
+  });
+  return res.data;
+}
+
 // ==================== 多人任务管理 API ====================
 
 export const createOfficialMultiParticipantTask = async (taskData: {

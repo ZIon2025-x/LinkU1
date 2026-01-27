@@ -2,6 +2,7 @@
 优惠券和积分系统 CRUD 操作
 """
 import json
+import logging
 from datetime import datetime, date, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
@@ -12,6 +13,8 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app import models, schemas
 from app.utils.time_utils import get_utc_time
+
+logger = logging.getLogger(__name__)
 
 
 # ==================== 积分相关 CRUD ====================
@@ -453,6 +456,65 @@ def use_coupon(
     db.refresh(usage_log)
     
     return usage_log, None
+
+
+def get_coupon_usage_log(db: Session, usage_log_id: int) -> Optional[models.CouponUsageLog]:
+    """获取优惠券使用记录"""
+    return db.query(models.CouponUsageLog).filter(
+        models.CouponUsageLog.id == usage_log_id
+    ).first()
+
+
+def restore_coupon(db: Session, coupon_id: int, user_id: str) -> bool:
+    """
+    恢复优惠券（退款时使用）
+    将已使用的优惠券恢复为未使用状态
+    """
+    try:
+        # 查找用户优惠券（通过 coupon_id 和 user_id）
+        # 需要找到最近使用的、状态为 used 的优惠券
+        user_coupon = db.query(models.UserCoupon).filter(
+            models.UserCoupon.coupon_id == coupon_id,
+            models.UserCoupon.user_id == user_id,
+            models.UserCoupon.status == "used"
+        ).order_by(models.UserCoupon.used_at.desc()).first()
+        
+        if not user_coupon:
+            logger.warning(f"未找到可恢复的优惠券：coupon_id={coupon_id}, user_id={user_id}")
+            return False
+        
+        # 使用 SELECT FOR UPDATE 锁定行
+        user_coupon = db.query(models.UserCoupon).filter(
+            models.UserCoupon.id == user_coupon.id
+        ).with_for_update().first()
+        
+        if user_coupon.status != "used":
+            logger.warning(f"优惠券状态不正确，无法恢复：status={user_coupon.status}")
+            return False
+        
+        # 恢复优惠券状态
+        user_coupon.status = "unused"
+        user_coupon.used_at = None
+        user_coupon.used_in_task_id = None
+        
+        # 更新优惠券使用记录的退款状态
+        usage_log = db.query(models.CouponUsageLog).filter(
+            models.CouponUsageLog.user_coupon_id == user_coupon.id,
+            models.CouponUsageLog.refund_status == "none"
+        ).order_by(models.CouponUsageLog.created_at.desc()).first()
+        
+        if usage_log:
+            usage_log.refund_status = "full"
+            usage_log.refunded_at = get_utc_time()
+        
+        db.commit()
+        logger.info(f"✅ 已恢复优惠券：user_coupon_id={user_coupon.id}, coupon_id={coupon_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"恢复优惠券失败: {e}", exc_info=True)
+        db.rollback()
+        return False
 
 
 # ==================== 签到相关 CRUD ====================

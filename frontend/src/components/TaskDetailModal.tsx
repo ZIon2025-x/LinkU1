@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
 import { message } from 'antd';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute, createRefundRequest, getRefundStatus, getRefundHistory, cancelRefundRequest } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -8,6 +8,7 @@ import { TimeHandlerV2 } from '../utils/timeUtils';
 import { obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from './LoginModal';
 import CompleteTaskModal from './CompleteTaskModal';
+import ConfirmCompletionModal from './ConfirmCompletionModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
@@ -76,6 +77,28 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   // 争议相关状态
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
+  // 退款申请相关状态
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundReasonType, setRefundReasonType] = useState<string>('');
+  const [refundReason, setRefundReason] = useState('');
+  const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
+  const [refundEvidenceFiles, setRefundEvidenceFiles] = useState<string[]>([]);
+  const [refundAmount, setRefundAmount] = useState<number | undefined>();
+  const [refundPercentage, setRefundPercentage] = useState<number | undefined>();
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [refundRequest, setRefundRequest] = useState<any>(null);
+  const [loadingRefundStatus, setLoadingRefundStatus] = useState(false);
+  const [refundHistory, setRefundHistory] = useState<any[]>([]);
+  const [showRefundHistory, setShowRefundHistory] = useState(false);
+  const [cancellingRefund, setCancellingRefund] = useState(false);
+  
+  // 退款原因类型选项
+  const refundReasonTypes = [
+    { value: 'completion_time_unsatisfactory', label: { zh: '对完成时间不满意', en: 'Unsatisfactory completion time' } },
+    { value: 'not_completed', label: { zh: '接单者完全未完成', en: 'Task not completed at all' } },
+    { value: 'quality_issue', label: { zh: '质量问题', en: 'Quality issue' } },
+    { value: 'other', label: { zh: '其他', en: 'Other' } }
+  ];
   // 多人任务相关状态
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
@@ -162,6 +185,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         fetchCurrentUser().catch(() => null) // 用户信息加载失败不影响任务显示
       ]);
       
+      // 如果是发布者且任务状态为pending_confirmation，加载退款状态
+      if (taskRes.status === 'fulfilled' && taskRes.value.data) {
+        const taskData = taskRes.value.data;
+        if (userRes.status === 'fulfilled' && userRes.value && 
+            taskData.poster_id === userRes.value.id && 
+            taskData.status === 'pending_confirmation') {
+          // 异步加载退款状态，不阻塞主流程
+          loadRefundStatus(taskId).catch(() => {});
+        }
+      }
+      
       // 检查是否已取消
       if (abortController.signal.aborted) {
         return;
@@ -174,6 +208,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         // 如果任务已完成，异步加载评价（非关键数据）
         if (taskRes.value.data.status === 'completed') {
           loadTaskReviews().catch(() => {});
+        }
+        
+        // 如果是发布者且任务状态为pending_confirmation，异步加载退款状态
+        if (userRes.status === 'fulfilled' && userRes.value && 
+            taskRes.value.data.poster_id === userRes.value.id && 
+            taskRes.value.data.status === 'pending_confirmation') {
+          loadRefundStatus(taskId).catch(() => {});
         }
       } else {
         const error = taskRes.reason;
@@ -200,6 +241,64 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       }
     }
   }, [taskId, t, loadTaskReviews]);
+  
+  // 加载退款状态
+  const loadRefundStatus = useCallback(async (taskId: number) => {
+    setLoadingRefundStatus(true);
+    try {
+      const refundStatus = await getRefundStatus(taskId);
+      setRefundRequest(refundStatus);
+    } catch (error: any) {
+      // 404错误表示没有退款申请，这是正常的
+      if (error.response?.status !== 404) {
+        console.error('加载退款状态失败:', error);
+      } else {
+        setRefundRequest(null);
+      }
+    } finally {
+      setLoadingRefundStatus(false);
+    }
+  }, []);
+
+  // 加载退款历史
+  const loadRefundHistory = useCallback(async (taskId: number) => {
+    try {
+      const history = await getRefundHistory(taskId);
+      setRefundHistory(history || []);
+    } catch (error: any) {
+      console.error('加载退款历史失败:', error);
+      setRefundHistory([]);
+    }
+  }, []);
+
+  // 撤销退款申请
+  const handleCancelRefund = useCallback(async (refundId: number) => {
+    if (!taskId) return;
+    
+    if (!window.confirm(language === 'zh' 
+      ? '确定要撤销此退款申请吗？撤销后将无法恢复。' 
+      : 'Are you sure you want to cancel this refund request? This action cannot be undone.')) {
+      return;
+    }
+    
+    setCancellingRefund(true);
+    try {
+      await cancelRefundRequest(taskId, refundId);
+      message.success(language === 'zh' ? '退款申请已撤销' : 'Refund request cancelled');
+      // 重新加载退款状态
+      await loadRefundStatus(taskId);
+      // 重新加载任务详情
+      if (taskId) {
+        const taskData = await api.get(`/api/tasks/${taskId}`);
+        setTask(taskData.data);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || (language === 'zh' ? '撤销失败' : 'Failed to cancel');
+      message.error(errorMsg);
+    } finally {
+      setCancellingRefund(false);
+    }
+  }, [taskId, language, loadRefundStatus]);
 
   // 组件卸载或弹窗关闭时取消请求
   useEffect(() => {
@@ -699,6 +798,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   // 完成任务（打开模态框）
   const [showCompleteTaskModal, setShowCompleteTaskModal] = useState(false);
+  const [showConfirmCompletionModal, setShowConfirmCompletionModal] = useState(false);
   
   const handleCompleteTask = useCallback(() => {
     if (!user) {
@@ -714,17 +814,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setTask(res.data);
   }, [taskId]);
 
-  const handleConfirmCompletion = useCallback(async () => {
+  const handleConfirmCompletion = useCallback(() => {
     if (!user) {
       setShowLoginModal(true);
       return;
     }
-    setActionLoading(true);
+    // 打开确认完成模态框
+    setShowConfirmCompletionModal(true);
+  }, [user]);
+
+  const handleConfirmCompletionSuccess = useCallback(async () => {
+    // 重新获取任务信息
     try {
-      const response = await confirmTaskCompletion(taskId!);
-      const taskData = response.data || response;
+      const res = await api.get(`/api/tasks/${taskId}`);
+      setTask(res.data);
       
       // 检查是否有转账状态信息
+      const taskData = res.data;
       if (taskData.transfer_status && taskData.transfer_status !== 'succeeded') {
         let message = t('taskDetail.taskConfirmedComplete');
         if (taskData.transfer_status === 'retrying') {
@@ -757,15 +863,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       } else {
         alert(t('taskDetail.taskConfirmedComplete'));
       }
-      
-      const res = await api.get(`/api/tasks/${taskId}`);
-      setTask(res.data);
     } catch (error: any) {
-      alert(getErrorMessage(error));
-    } finally {
-      setActionLoading(false);
+      console.error('Failed to refresh task:', error);
     }
-  }, [user, taskId, t, language]);
+  }, [taskId, t, language]);
 
   const handleApproveTaker = useCallback(async () => {
     if (!user) {
@@ -2946,26 +3047,222 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             >
               {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmCompleteButton')}
             </button>
-            <button
-              onClick={() => {
-                setDisputeReason('');
-                setShowDisputeModal(true);
-              }}
-              disabled={actionLoading}
-              style={{
-                background: '#dc3545',
-                color: '#fff',
-                border: 'none',
+            {refundRequest ? (
+              // 如果已有退款申请，显示状态卡片
+              <div style={{
+                background: refundRequest.status === 'pending' ? '#fff3cd' : 
+                           refundRequest.status === 'processing' ? '#d1ecf1' :
+                           refundRequest.status === 'approved' || refundRequest.status === 'completed' ? '#d4edda' :
+                           refundRequest.status === 'rejected' ? '#f8d7da' : '#f3f4f6',
+                border: `1px solid ${refundRequest.status === 'pending' ? '#ffc107' : 
+                                        refundRequest.status === 'processing' ? '#17a2b8' :
+                                        refundRequest.status === 'approved' || refundRequest.status === 'completed' ? '#28a745' :
+                                        refundRequest.status === 'rejected' ? '#dc3545' : '#6c757d'}`,
                 borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading ? 0.6 : 1
-              }}
-            >
-              {t('taskDetail.notCompletedCorrectlyButton')}
-            </button>
+                padding: '16px',
+                marginBottom: '16px',
+                marginRight: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ 
+                    fontSize: '20px', 
+                    marginRight: '8px',
+                    color: refundRequest.status === 'pending' ? '#856404' : 
+                           refundRequest.status === 'processing' ? '#0c5460' :
+                           refundRequest.status === 'approved' || refundRequest.status === 'completed' ? '#155724' :
+                           refundRequest.status === 'rejected' ? '#721c24' : '#383d41'
+                  }}>
+                    {refundRequest.status === 'pending' ? '⏳' : 
+                     refundRequest.status === 'processing' ? '🔄' :
+                     refundRequest.status === 'approved' ? '✅' :
+                     refundRequest.status === 'rejected' ? '❌' :
+                     refundRequest.status === 'completed' ? '✓' : '❓'}
+                  </span>
+                  <strong style={{
+                    color: refundRequest.status === 'pending' ? '#856404' : 
+                           refundRequest.status === 'processing' ? '#0c5460' :
+                           refundRequest.status === 'approved' || refundRequest.status === 'completed' ? '#155724' :
+                           refundRequest.status === 'rejected' ? '#721c24' : '#383d41',
+                    fontSize: '16px'
+                  }}>
+                    {refundRequest.status === 'pending' ? (language === 'zh' ? '退款申请待审核' : 'Refund Request Pending') :
+                     refundRequest.status === 'processing' ? (language === 'zh' ? '退款处理中' : 'Refund Processing') :
+                     refundRequest.status === 'approved' ? (language === 'zh' ? '退款申请已批准' : 'Refund Approved') :
+                     refundRequest.status === 'rejected' ? (language === 'zh' ? '退款申请已拒绝' : 'Refund Rejected') :
+                     refundRequest.status === 'completed' ? (language === 'zh' ? '退款已完成' : 'Refund Completed') :
+                     (language === 'zh' ? '未知状态' : 'Unknown Status')}
+                  </strong>
+                </div>
+                <div style={{
+                  color: '#666',
+                  fontSize: '14px',
+                  lineHeight: '1.5'
+                }}>
+                  {/* 显示退款原因类型 */}
+                  {refundRequest.reason_type && (
+                    <div style={{ marginBottom: '6px', fontSize: '12px', color: '#666' }}>
+                      {language === 'zh' ? '退款原因类型：' : 'Reason Type: '}
+                      <span style={{ fontWeight: '500' }}>
+                        {refundReasonTypes.find(t => t.value === refundRequest.reason_type)?.label[language] || refundRequest.reason_type}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* 显示退款类型 */}
+                  {refundRequest.refund_type && (
+                    <div style={{ marginBottom: '6px', fontSize: '12px', color: '#666' }}>
+                      {language === 'zh' ? '退款类型：' : 'Refund Type: '}
+                      <span style={{ fontWeight: '500' }}>
+                        {refundRequest.refund_type === 'full' 
+                          ? (language === 'zh' ? '全额退款' : 'Full Refund')
+                          : (language === 'zh' ? '部分退款' : 'Partial Refund')}
+                        {refundRequest.refund_percentage && ` (${refundRequest.refund_percentage.toFixed(1)}%)`}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div style={{ marginTop: '8px' }}>
+                    {refundRequest.status === 'pending' ? 
+                      (language === 'zh' ? '您的退款申请已提交，管理员将在3-5个工作日内审核' : 'Your refund request has been submitted. Admin will review within 3-5 business days') :
+                     refundRequest.status === 'processing' ?
+                      (language === 'zh' ? '退款正在处理中，请耐心等待' : 'Refund is being processed, please wait') :
+                     refundRequest.status === 'approved' ?
+                      (refundRequest.refund_amount ? 
+                        (language === 'zh' 
+                          ? `退款金额：£${refundRequest.refund_amount.toFixed(2)}${refundRequest.refund_percentage ? ` (${refundRequest.refund_percentage.toFixed(1)}%)` : ''}，退款将在5-10个工作日内退回` 
+                          : `Refund amount: £${refundRequest.refund_amount.toFixed(2)}${refundRequest.refund_percentage ? ` (${refundRequest.refund_percentage.toFixed(1)}%)` : ''}, will be returned within 5-10 business days`) :
+                        (language === 'zh' ? '退款将在5-10个工作日内退回您的原支付方式' : 'Refund will be returned to your original payment method within 5-10 business days')) :
+                     refundRequest.status === 'rejected' ?
+                      (refundRequest.admin_comment ? 
+                        (language === 'zh' ? `拒绝理由：${refundRequest.admin_comment}` : `Rejection reason: ${refundRequest.admin_comment}`) :
+                        (language === 'zh' ? '退款申请已被拒绝' : 'Refund request has been rejected')) :
+                     refundRequest.status === 'completed' ?
+                      (refundRequest.refund_amount ? 
+                        (language === 'zh' 
+                          ? `退款金额：£${refundRequest.refund_amount.toFixed(2)}${refundRequest.refund_percentage ? ` (${refundRequest.refund_percentage.toFixed(1)}%)` : ''}，已退回您的原支付方式` 
+                          : `Refund amount: £${refundRequest.refund_amount.toFixed(2)}${refundRequest.refund_percentage ? ` (${refundRequest.refund_percentage.toFixed(1)}%)` : ''}, has been returned to your original payment method`) :
+                        (language === 'zh' ? '退款已退回您的原支付方式' : 'Refund has been returned to your original payment method')) :
+                     ''}
+                  </div>
+                  {refundRequest.admin_comment && refundRequest.status !== 'rejected' && (
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+                      {language === 'zh' ? `管理员备注：${refundRequest.admin_comment}` : `Admin comment: ${refundRequest.admin_comment}`}
+                    </div>
+                  )}
+                  
+                  {/* 撤销按钮（仅在pending状态时显示） */}
+                  {refundRequest.status === 'pending' && (
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleCancelRefund(refundRequest.id)}
+                        disabled={cancellingRefund || actionLoading}
+                        style={{
+                          padding: '6px 16px',
+                          background: '#6c757d',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          cursor: cancellingRefund || actionLoading ? 'not-allowed' : 'pointer',
+                          opacity: cancellingRefund || actionLoading ? 0.6 : 1
+                        }}
+                      >
+                        {cancellingRefund 
+                          ? (language === 'zh' ? '撤销中...' : 'Cancelling...')
+                          : (language === 'zh' ? '撤销申请' : 'Cancel Request')}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await loadRefundHistory(taskId!);
+                          setShowRefundHistory(true);
+                        }}
+                        style={{
+                          padding: '6px 16px',
+                          background: 'transparent',
+                          color: '#666',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {language === 'zh' ? '查看历史' : 'View History'}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* 非pending状态时也显示历史按钮 */}
+                  {refundRequest.status !== 'pending' && (
+                    <div style={{ marginTop: '12px' }}>
+                      <button
+                        onClick={async () => {
+                          await loadRefundHistory(taskId!);
+                          setShowRefundHistory(true);
+                        }}
+                        style={{
+                          padding: '6px 16px',
+                          background: 'transparent',
+                          color: '#666',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {language === 'zh' ? '查看历史记录' : 'View History'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : !loadingRefundStatus ? (
+              // 如果没有退款申请且不在加载中，显示申请按钮
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    setRefundReason('');
+                    setRefundEvidenceFiles([]);
+                    setRefundAmount(undefined);
+                    setShowRefundModal(true);
+                  }}
+                  disabled={actionLoading}
+                  style={{
+                    background: '#dc3545',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '10px 32px',
+                    fontWeight: 700,
+                    fontSize: 18,
+                    cursor: actionLoading ? 'not-allowed' : 'pointer',
+                    opacity: actionLoading ? 0.6 : 1,
+                    marginRight: '16px'
+                  }}
+                >
+                  {language === 'zh' ? '❌ 任务未完成（申请退款）' : '❌ Task Not Completed (Request Refund)'}
+                </button>
+                {/* 如果有历史记录，显示查看历史按钮 */}
+                {refundHistory.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      await loadRefundHistory(taskId!);
+                      setShowRefundHistory(true);
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: 'transparent',
+                      color: '#666',
+                      border: '1px solid #ddd',
+                      borderRadius: 8,
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {language === 'zh' ? '📋 退款历史' : '📋 Refund History'}
+                  </button>
+                )}
+              </div>
+            ) : null}
             </>
           )}
 
@@ -3949,6 +4246,508 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         </div>
       )}
 
+      {/* 退款申请模态框 */}
+      {showRefundModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{
+              fontSize: '24px',
+              fontWeight: 'bold',
+              marginBottom: '20px',
+              color: '#333'
+            }}>
+              {language === 'zh' ? '申请退款' : 'Request Refund'}
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#666',
+              marginBottom: '20px'
+            }}>
+              {language === 'zh' 
+                ? '请详细说明退款原因，并上传相关证据（如截图、聊天记录等）。管理员将在3-5个工作日内审核。'
+                : 'Please provide a detailed reason for the refund and upload relevant evidence (screenshots, chat records, etc.). Admin will review within 3-5 business days.'}
+            </p>
+            
+            {/* 退款原因类型选择 */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 600,
+                color: '#333'
+              }}>
+                {language === 'zh' ? '退款原因类型 *' : 'Refund Reason Type *'}
+              </label>
+              <select
+                value={refundReasonType}
+                onChange={(e) => setRefundReasonType(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  backgroundColor: '#fff'
+                }}
+                required
+              >
+                <option value="">{language === 'zh' ? '请选择退款原因类型' : 'Please select refund reason type'}</option>
+                {refundReasonTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {language === 'zh' ? type.label.zh : type.label.en}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 退款原因详细说明 */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 600,
+                color: '#333'
+              }}>
+                {language === 'zh' ? '退款原因详细说明 *' : 'Refund Reason Details *'}
+              </label>
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder={language === 'zh' 
+                  ? '请详细说明为什么需要退款（至少10个字符）'
+                  : 'Please explain why you need a refund (at least 10 characters)'}
+                style={{
+                  width: '100%',
+                  minHeight: '150px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  boxSizing: 'border-box'
+                }}
+                maxLength={2000}
+              />
+              <div style={{
+                fontSize: '12px',
+                color: '#999',
+                marginTop: '8px',
+                textAlign: 'right'
+              }}>
+                {refundReason.length}/2000
+              </div>
+            </div>
+
+            {/* 退款类型选择 */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 600,
+                color: '#333'
+              }}>
+                {language === 'zh' ? '退款类型 *' : 'Refund Type *'}
+              </label>
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                marginBottom: '12px'
+              }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `2px solid ${refundType === 'full' ? '#dc3545' : '#e2e8f0'}`,
+                  backgroundColor: refundType === 'full' ? '#fff5f5' : '#fff',
+                  flex: 1
+                }}>
+                  <input
+                    type="radio"
+                    value="full"
+                    checked={refundType === 'full'}
+                    onChange={(e) => {
+                      setRefundType('full');
+                      setRefundAmount(undefined);
+                      setRefundPercentage(undefined);
+                    }}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>{language === 'zh' ? '全额退款' : 'Full Refund'}</span>
+                </label>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `2px solid ${refundType === 'partial' ? '#dc3545' : '#e2e8f0'}`,
+                  backgroundColor: refundType === 'partial' ? '#fff5f5' : '#fff',
+                  flex: 1
+                }}>
+                  <input
+                    type="radio"
+                    value="partial"
+                    checked={refundType === 'partial'}
+                    onChange={(e) => setRefundType('partial')}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>{language === 'zh' ? '部分退款' : 'Partial Refund'}</span>
+                </label>
+              </div>
+            </div>
+
+            {/* 部分退款金额/比例输入 */}
+            {refundType === 'partial' && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 600,
+                  color: '#333'
+                }}>
+                  {language === 'zh' ? '退款金额或比例 *' : 'Refund Amount or Percentage *'}
+                </label>
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      color: '#666',
+                      marginBottom: '4px'
+                    }}>
+                      {language === 'zh' ? '退款金额（£）' : 'Refund Amount (£)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={refundAmount || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRefundAmount(value ? parseFloat(value) : undefined);
+                        if (value && task) {
+                          const taskAmount = task.agreed_reward || task.base_reward || 0;
+                          const percentage = (parseFloat(value) / taskAmount) * 100;
+                          setRefundPercentage(percentage);
+                        } else {
+                          setRefundPercentage(undefined);
+                        }
+                      }}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '2px solid #e2e8f0',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingTop: '24px',
+                    fontSize: '18px',
+                    color: '#999'
+                  }}>
+                    {language === 'zh' ? '或' : 'OR'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      color: '#666',
+                      marginBottom: '4px'
+                    }}>
+                      {language === 'zh' ? '退款比例（%）' : 'Refund Percentage (%)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={refundPercentage || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRefundPercentage(value ? parseFloat(value) : undefined);
+                        if (value && task) {
+                          const taskAmount = task.agreed_reward || task.base_reward || 0;
+                          const amount = (parseFloat(value) / 100) * taskAmount;
+                          setRefundAmount(amount);
+                        } else {
+                          setRefundAmount(undefined);
+                        }
+                      }}
+                      placeholder="0"
+                      min="0"
+                      max="100"
+                      step="1"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '2px solid #e2e8f0',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+                {task && (
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginTop: '8px'
+                  }}>
+                    {language === 'zh' 
+                      ? `任务金额: £${(task.agreed_reward || task.base_reward || 0).toFixed(2)}`
+                      : `Task Amount: £${(task.agreed_reward || task.base_reward || 0).toFixed(2)}`}
+                    {refundAmount && (
+                      <span style={{ marginLeft: '12px', color: '#dc3545', fontWeight: 600 }}>
+                        {language === 'zh' 
+                          ? `退款金额: £${refundAmount.toFixed(2)}`
+                          : `Refund Amount: £${refundAmount.toFixed(2)}`}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 证据文件上传 */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 600,
+                color: '#333'
+              }}>
+                {language === 'zh' ? '证据文件（可选）' : 'Evidence Files (Optional)'}
+              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length === 0) return;
+                  
+                  setUploadingFile(true);
+                  try {
+                    const uploadedFiles: string[] = [];
+                    for (const file of files) {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const response = await api.post(`/api/upload/file?task_id=${taskId}`, formData, {
+                        headers: {
+                          'Content-Type': 'multipart/form-data',
+                        },
+                      });
+                      if (response.data.file_id) {
+                        uploadedFiles.push(response.data.file_id);
+                      }
+                    }
+                    setRefundEvidenceFiles([...refundEvidenceFiles, ...uploadedFiles]);
+                    message.success(language === 'zh' ? '文件上传成功' : 'Files uploaded successfully');
+                  } catch (error: any) {
+                    message.error(getErrorMessage(error));
+                  } finally {
+                    setUploadingFile(false);
+                  }
+                }}
+                disabled={uploadingFile}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {refundEvidenceFiles.length > 0 && (
+                <div style={{
+                  marginTop: '12px',
+                  fontSize: '14px',
+                  color: '#666'
+                }}>
+                  {language === 'zh' ? '已上传文件: ' : 'Uploaded files: '}
+                  {refundEvidenceFiles.length}
+                  <button
+                    onClick={() => setRefundEvidenceFiles([])}
+                    style={{
+                      marginLeft: '12px',
+                      padding: '4px 12px',
+                      background: '#f3f4f6',
+                      color: '#333',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {language === 'zh' ? '清除' : 'Clear'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowRefundModal(false);
+                  setRefundReasonType('');
+                  setRefundReason('');
+                  setRefundType('full');
+                  setRefundEvidenceFiles([]);
+                  setRefundAmount(undefined);
+                  setRefundPercentage(undefined);
+                }}
+                style={{
+                  padding: '10px 24px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  // 验证退款原因类型
+                  if (!refundReasonType) {
+                    message.error(language === 'zh' ? '请选择退款原因类型' : 'Please select refund reason type');
+                    return;
+                  }
+                  
+                  // 验证退款原因详细说明
+                  if (!refundReason.trim()) {
+                    message.error(language === 'zh' ? '请输入退款原因详细说明' : 'Please enter refund reason details');
+                    return;
+                  }
+                  if (refundReason.trim().length < 10) {
+                    message.error(language === 'zh' ? '退款原因详细说明至少需要10个字符' : 'Refund reason details must be at least 10 characters');
+                    return;
+                  }
+                  
+                  // 验证部分退款金额或比例
+                  if (refundType === 'partial') {
+                    if (refundAmount === undefined && refundPercentage === undefined) {
+                      message.error(language === 'zh' ? '部分退款必须提供退款金额或退款比例' : 'Partial refund must provide refund amount or percentage');
+                      return;
+                    }
+                    
+                    if (refundAmount !== undefined && task) {
+                      const taskAmount = task.agreed_reward || task.base_reward || 0;
+                      if (refundAmount > taskAmount) {
+                        message.error(language === 'zh' 
+                          ? `退款金额不能超过任务金额（£${taskAmount.toFixed(2)}）`
+                          : `Refund amount cannot exceed task amount (£${taskAmount.toFixed(2)})`);
+                        return;
+                      }
+                      if (refundAmount <= 0) {
+                        message.error(language === 'zh' ? '退款金额必须大于0' : 'Refund amount must be greater than 0');
+                        return;
+                      }
+                      if (refundAmount >= taskAmount) {
+                        message.error(language === 'zh' 
+                          ? `部分退款金额不能大于或等于任务金额，请选择全额退款`
+                          : `Partial refund amount cannot be greater than or equal to task amount, please select full refund`);
+                        return;
+                      }
+                    }
+                    
+                    if (refundPercentage !== undefined) {
+                      if (refundPercentage <= 0 || refundPercentage >= 100) {
+                        message.error(language === 'zh' ? '退款比例必须在0-100之间' : 'Refund percentage must be between 0 and 100');
+                        return;
+                      }
+                    }
+                  }
+                  
+                  setActionLoading(true);
+                  try {
+                    const refundResult = await createRefundRequest(
+                      taskId!,
+                      refundReasonType,
+                      refundReason.trim(),
+                      refundType,
+                      refundEvidenceFiles.length > 0 ? refundEvidenceFiles : undefined,
+                      refundAmount,
+                      refundPercentage
+                    );
+                    message.success(language === 'zh' ? '退款申请已提交，请等待管理员审核' : 'Refund request submitted, waiting for admin review');
+                    setShowRefundModal(false);
+                    setRefundReasonType('');
+                    setRefundReason('');
+                    setRefundType('full');
+                    setRefundEvidenceFiles([]);
+                    setRefundAmount(undefined);
+                    setRefundPercentage(undefined);
+                    // 重新加载任务数据
+                    await loadTaskData();
+                    // 重新加载退款状态
+                    await loadRefundStatus(taskId!);
+                  } catch (error: any) {
+                    message.error(getErrorMessage(error));
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading || !refundReasonType || !refundReason.trim() || (refundType === 'partial' && !refundAmount && !refundPercentage) || uploadingFile}
+                style={{
+                  padding: '10px 24px',
+                  background: actionLoading || !refundReason.trim() || uploadingFile ? '#ccc' : '#dc3545',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: actionLoading || !refundReason.trim() || uploadingFile ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {actionLoading 
+                  ? (language === 'zh' ? '提交中...' : 'Submitting...')
+                  : (language === 'zh' ? '提交退款申请' : 'Submit Refund Request')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 完成任务弹窗 */}
       {taskId && (
         <CompleteTaskModal
@@ -3957,6 +4756,223 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           onCancel={() => setShowCompleteTaskModal(false)}
           onSuccess={handleCompleteTaskSuccess}
         />
+      )}
+
+      {/* 确认完成弹窗 */}
+      {taskId && (
+        <ConfirmCompletionModal
+          visible={showConfirmCompletionModal}
+          taskId={taskId}
+          onCancel={() => setShowConfirmCompletionModal(false)}
+          onSuccess={handleConfirmCompletionSuccess}
+        />
+      )}
+
+      {/* 退款历史记录弹窗 */}
+      {showRefundHistory && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '12px'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#333',
+                margin: 0
+              }}>
+                {language === 'zh' ? '退款申请历史记录' : 'Refund Request History'}
+              </h3>
+              <button
+                onClick={() => setShowRefundHistory(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            {refundHistory.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#999'
+              }}>
+                {language === 'zh' ? '暂无退款申请历史记录' : 'No refund request history'}
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}>
+                {refundHistory.map((refund: any, index: number) => {
+                  const statusColors: { [key: string]: { bg: string; border: string; text: string } } = {
+                    pending: { bg: '#fff3cd', border: '#ffc107', text: '#856404' },
+                    processing: { bg: '#d1ecf1', border: '#17a2b8', text: '#0c5460' },
+                    approved: { bg: '#d4edda', border: '#28a745', text: '#155724' },
+                    rejected: { bg: '#f8d7da', border: '#dc3545', text: '#721c24' },
+                    completed: { bg: '#d4edda', border: '#28a745', text: '#155724' },
+                    cancelled: { bg: '#e2e3e5', border: '#6c757d', text: '#383d41' }
+                  };
+                  
+                  const statusInfo = statusColors[refund.status] || statusColors.pending;
+                  const statusText: { [key: string]: { zh: string; en: string } } = {
+                    pending: { zh: '待审核', en: 'Pending' },
+                    processing: { zh: '处理中', en: 'Processing' },
+                    approved: { zh: '已批准', en: 'Approved' },
+                    rejected: { zh: '已拒绝', en: 'Rejected' },
+                    completed: { zh: '已完成', en: 'Completed' },
+                    cancelled: { zh: '已撤销', en: 'Cancelled' }
+                  };
+                  
+                  return (
+                    <div
+                      key={refund.id}
+                      style={{
+                        padding: '16px',
+                        background: statusInfo.bg,
+                        border: `1px solid ${statusInfo.border}`,
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '12px'
+                      }}>
+                        <div>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: statusInfo.text,
+                            marginBottom: '4px'
+                          }}>
+                            {statusText[refund.status]?.[language] || refund.status}
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#666'
+                          }}>
+                            {new Date(refund.created_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
+                          </div>
+                        </div>
+                        {refund.refund_amount && (
+                          <div style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: statusInfo.text
+                          }}>
+                            £{refund.refund_amount.toFixed(2)}
+                            {refund.refund_percentage && ` (${refund.refund_percentage.toFixed(1)}%)`}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {refund.reason_type && (
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginBottom: '4px'
+                        }}>
+                          {language === 'zh' ? '原因类型：' : 'Reason Type: '}
+                          <span style={{ fontWeight: '500' }}>
+                            {refundReasonTypes.find(t => t.value === refund.reason_type)?.label[language] || refund.reason_type}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {refund.refund_type && (
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#666',
+                          marginBottom: '8px'
+                        }}>
+                          {language === 'zh' ? '退款类型：' : 'Refund Type: '}
+                          <span style={{ fontWeight: '500' }}>
+                            {refund.refund_type === 'full' 
+                              ? (language === 'zh' ? '全额退款' : 'Full Refund')
+                              : (language === 'zh' ? '部分退款' : 'Partial Refund')}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div style={{
+                        fontSize: '13px',
+                        color: '#666',
+                        marginBottom: '8px',
+                        lineHeight: '1.5'
+                      }}>
+                        {refund.reason}
+                      </div>
+                      
+                      {refund.admin_comment && (
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#999',
+                          marginTop: '8px',
+                          paddingTop: '8px',
+                          borderTop: '1px solid rgba(0,0,0,0.1)'
+                        }}>
+                          {language === 'zh' ? '管理员备注：' : 'Admin Comment: '}
+                          {refund.admin_comment}
+                        </div>
+                      )}
+                      
+                      {refund.reviewed_at && (
+                        <div style={{
+                          fontSize: '11px',
+                          color: '#999',
+                          marginTop: '4px'
+                        }}>
+                          {language === 'zh' ? '审核时间：' : 'Reviewed At: '}
+                          {new Date(refund.reviewed_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

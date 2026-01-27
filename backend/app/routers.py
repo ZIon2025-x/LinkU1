@@ -2143,11 +2143,27 @@ def complete_task(
         # 如果有证据图片，创建附件
         if evidence_images:
             for image_url in evidence_images:
+                # 从URL中提取image_id（如果URL格式为 {base_url}/api/private-image/{image_id}?user=...&token=...）
+                image_id = None
+                if image_url and '/api/private-image/' in image_url:
+                    # 提取image_id：/api/private-image/{image_id}?...
+                    try:
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(image_url)
+                        if '/api/private-image/' in parsed_url.path:
+                            # 提取路径中的image_id部分
+                            path_parts = parsed_url.path.split('/api/private-image/')
+                            if len(path_parts) > 1:
+                                image_id = path_parts[1].split('?')[0]  # 去掉查询参数
+                                logger.debug(f"Extracted image_id {image_id} from URL {image_url}")
+                    except Exception as e:
+                        logger.warning(f"Failed to extract image_id from URL {image_url}: {e}")
+                
                 attachment = MessageAttachment(
                     message_id=system_message.id,
                     attachment_type="image",
                     url=image_url,
-                    blob_id=None,
+                    blob_id=image_id,  # 存储image_id以便后续处理（如果提取成功）
                     meta=None,
                     created_at=get_utc_time()
                 )
@@ -2526,14 +2542,730 @@ def dismiss_task_dispute(
     return dispute
 
 
-@router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
-def confirm_task_completion(
+# ==================== 退款申请API ====================
+
+@router.post("/tasks/{task_id}/refund-request", response_model=schemas.RefundRequestOut)
+def create_refund_request(
     task_id: int,
+    refund_data: schemas.RefundRequestCreate,
     background_tasks: BackgroundTasks = None,
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
 ):
-    """任务发布者确认任务完成"""
+    """
+    任务发布者申请退款（任务未完成）
+    只有在任务状态为 pending_confirmation 时才能申请退款
+    """
+    from sqlalchemy import select
+    from decimal import Decimal
+    
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定任务记录
+    task_query = select(models.Task).where(models.Task.id == task_id).with_for_update()
+    task_result = db.execute(task_query)
+    task = task_result.scalar_one_or_none()
+    
+    if not task or task.poster_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    
+    # 检查任务状态：必须是 pending_confirmation
+    if task.status != "pending_confirmation":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"任务状态不正确，无法申请退款。当前状态: {task.status}。只有在任务待确认状态时才能申请退款。"
+        )
+    
+    # 检查任务是否已支付
+    if not task.is_paid:
+        raise HTTPException(
+            status_code=400,
+            detail="任务尚未支付，无需退款。"
+        )
+    
+    # 🔒 并发安全：检查是否已经提交过退款申请（pending 或 processing 状态）
+    existing_refund = db.query(models.RefundRequest).filter(
+        models.RefundRequest.task_id == task_id,
+        models.RefundRequest.poster_id == current_user.id,
+        models.RefundRequest.status.in_(["pending", "processing"])
+    ).first()
+    
+    if existing_refund:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"您已经提交过退款申请（状态: {existing_refund.status}），请等待管理员处理"
+        )
+    
+    # ✅ 验证退款类型和金额
+    if refund_data.refund_type not in ["full", "partial"]:
+        raise HTTPException(
+            status_code=400,
+            detail="退款类型必须是 'full'（全额退款）或 'partial'（部分退款）"
+        )
+    
+    # 验证退款原因类型
+    valid_reason_types = ["completion_time_unsatisfactory", "not_completed", "quality_issue", "other"]
+    if refund_data.reason_type not in valid_reason_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"退款原因类型无效，必须是以下之一：{', '.join(valid_reason_types)}"
+        )
+    
+    # ✅ 修复金额精度：使用Decimal进行金额计算
+    task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+    
+    if refund_data.refund_type == "partial":
+        # 部分退款：必须提供退款金额或退款比例
+        if refund_data.refund_amount is None and refund_data.refund_percentage is None:
+            raise HTTPException(
+                status_code=400,
+                detail="部分退款必须提供退款金额（refund_amount）或退款比例（refund_percentage）"
+            )
+        
+        # 计算退款金额
+        if refund_data.refund_percentage is not None:
+            # 使用退款比例计算
+            refund_percentage = Decimal(str(refund_data.refund_percentage))
+            if refund_percentage <= 0 or refund_percentage > 100:
+                raise HTTPException(
+                    status_code=400,
+                    detail="退款比例必须在0-100之间"
+                )
+            calculated_amount = task_amount * refund_percentage / Decimal('100')
+            # 如果同时提供了金额，使用金额；否则使用计算出的金额
+            if refund_data.refund_amount is not None:
+                if refund_data.refund_amount != calculated_amount:
+                    logger.warning(f"退款金额（£{refund_data.refund_amount}）与退款比例计算出的金额（£{calculated_amount}）不一致，使用提供的金额")
+                final_refund_amount = Decimal(str(refund_data.refund_amount))
+            else:
+                final_refund_amount = calculated_amount
+        else:
+            # 只提供了金额
+            final_refund_amount = Decimal(str(refund_data.refund_amount))
+        
+        if final_refund_amount <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="退款金额必须大于0"
+            )
+        
+        if final_refund_amount >= task_amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"部分退款金额（£{final_refund_amount:.2f}）不能大于或等于任务金额（£{task_amount:.2f}），请选择全额退款"
+            )
+        
+        # 更新refund_data中的金额
+        refund_data.refund_amount = final_refund_amount
+    else:
+        # 全额退款：refund_amount应该为空或等于任务金额
+        if refund_data.refund_amount is not None:
+            refund_amount_decimal = Decimal(str(refund_data.refund_amount))
+            if refund_amount_decimal != task_amount:
+                logger.warning(f"全额退款时提供的金额（£{refund_amount_decimal}）与任务金额（£{task_amount}）不一致，使用任务金额")
+        refund_data.refund_amount = task_amount
+    
+    # ✅ 修复文件ID验证：验证证据文件ID是否属于当前用户或任务
+    validated_evidence_files = []
+    if refund_data.evidence_files:
+        from app.models import MessageAttachment
+        from app.file_system import PrivateFileSystem
+        
+        file_system = PrivateFileSystem()
+        for file_id in refund_data.evidence_files:
+            try:
+                # 检查文件是否存在于MessageAttachment中，且与当前任务相关
+                attachment = db.query(MessageAttachment).filter(
+                    MessageAttachment.blob_id == file_id
+                ).first()
+                
+                if attachment:
+                    # 通过附件找到消息，验证是否属于当前任务
+                    from app.models import Message
+                    task_message = db.query(Message).filter(
+                        Message.id == attachment.message_id,
+                        Message.task_id == task_id
+                    ).first()
+                    
+                    if task_message:
+                        # 文件属于当前任务，验证通过
+                        validated_evidence_files.append(file_id)
+                    else:
+                        logger.warning(f"文件 {file_id} 不属于任务 {task_id}，跳过")
+                else:
+                    # 文件不在MessageAttachment中，可能是新上传的文件
+                    # 检查文件是否存在于任务文件夹中（通过文件系统验证）
+                    task_dir = file_system.base_dir / "tasks" / str(task_id)
+                    file_exists = False
+                    if task_dir.exists():
+                        for ext_file in task_dir.glob(f"{file_id}.*"):
+                            if ext_file.is_file():
+                                file_exists = True
+                                break
+                    
+                    if file_exists:
+                        validated_evidence_files.append(file_id)
+                    else:
+                        logger.warning(f"文件 {file_id} 不存在或不属于任务 {task_id}，跳过")
+            except Exception as file_error:
+                logger.warning(f"验证文件 {file_id} 时发生错误: {file_error}，跳过")
+        
+        if not validated_evidence_files and refund_data.evidence_files:
+            logger.warning(f"所有证据文件验证失败，但继续处理退款申请")
+    
+    # 处理证据文件（JSON数组）
+    evidence_files_json = None
+    if validated_evidence_files:
+        import json
+        evidence_files_json = json.dumps(validated_evidence_files)
+    
+    # 创建退款申请记录
+    # 将退款原因类型和退款类型存储到reason字段（格式：reason_type|refund_type|reason）
+    # 或者可以扩展RefundRequest模型添加新字段，这里先使用reason字段存储
+    reason_with_metadata = f"{refund_data.reason_type}|{refund_data.refund_type}|{refund_data.reason}"
+    
+    refund_request = models.RefundRequest(
+        task_id=task_id,
+        poster_id=current_user.id,
+        reason=reason_with_metadata,  # 包含原因类型和退款类型
+        evidence_files=evidence_files_json,
+        refund_amount=refund_data.refund_amount,
+        status="pending",
+        created_at=get_utc_time()
+    )
+    db.add(refund_request)
+    db.flush()
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        poster_name = current_user.name or f"用户{current_user.id}"
+        # 退款原因类型的中文显示
+        reason_type_names = {
+            "completion_time_unsatisfactory": "对完成时间不满意",
+            "not_completed": "接单者完全未完成",
+            "quality_issue": "质量问题",
+            "other": "其他"
+        }
+        reason_type_display = reason_type_names.get(refund_data.reason_type, refund_data.reason_type)
+        refund_type_display = "全额退款" if refund_data.refund_type == "full" else f"部分退款（£{refund_data.refund_amount:.2f}）"
+        
+        content_zh = f"{poster_name} 申请退款（{reason_type_display}，{refund_type_display}）：{refund_data.reason[:100]}"
+        content_en = f"{poster_name} has requested a refund ({refund_data.refund_type}): {refund_data.reason[:100]}"
+        
+        system_message = Message(
+            sender_id=None,  # 系统消息
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "refund_request_created", 
+                "refund_request_id": refund_request.id, 
+                "content_en": content_en
+            }),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+        db.flush()  # 获取消息ID
+        
+        # 如果有证据文件，创建附件（使用验证后的文件列表）
+        if validated_evidence_files:
+            from app.models import MessageAttachment
+            from app.file_system import PrivateFileSystem
+            
+            file_system = PrivateFileSystem()
+            for file_id in validated_evidence_files:
+                try:
+                    # 生成文件访问URL（需要用户ID和任务参与者）
+                    participants = [task.poster_id]
+                    if task.taker_id:
+                        participants.append(task.taker_id)
+                    access_token = file_system.generate_access_token(
+                        file_id=file_id,
+                        user_id=current_user.id,
+                        chat_participants=participants
+                    )
+                    file_url = f"/api/private-file?file={file_id}&token={access_token}"
+                    
+                    attachment = MessageAttachment(
+                        message_id=system_message.id,
+                        attachment_type="file",  # 可能是文件，不只是图片
+                        url=file_url,
+                        blob_id=file_id,  # 存储文件ID
+                        meta=json.dumps({"file_id": file_id}),
+                        created_at=get_utc_time()
+                    )
+                    db.add(attachment)
+                except Exception as file_error:
+                    logger.warning(f"Failed to create attachment for file {file_id}: {file_error}")
+                    # 即使文件处理失败，也继续处理其他文件
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    # 通知管理员（后台任务）
+    if background_tasks:
+        try:
+            from app.task_notifications import send_refund_request_notification_to_admin
+            send_refund_request_notification_to_admin(
+                db=db,
+                background_tasks=background_tasks,
+                task=task,
+                refund_request=refund_request,
+                poster=current_user
+            )
+        except Exception as e:
+            logger.error(f"Failed to send refund request notification to admin: {e}")
+    
+    db.commit()
+    db.refresh(refund_request)
+    
+    return refund_request
+
+
+@router.get("/tasks/{task_id}/refund-status", response_model=Optional[schemas.RefundRequestOut])
+def get_refund_status(
+    task_id: int,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """查询任务的退款申请状态（返回最新的退款申请）"""
+    task = crud.get_task(db, task_id)
+    if not task or task.poster_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    
+    refund_request = db.query(models.RefundRequest).filter(
+        models.RefundRequest.task_id == task_id,
+        models.RefundRequest.poster_id == current_user.id
+    ).order_by(models.RefundRequest.created_at.desc()).first()
+    
+    if not refund_request:
+        return None
+    
+    # 获取任务信息（用于计算退款比例）
+    task = crud.get_task(db, task_id)
+    
+    # 处理证据文件（JSON数组转List）
+    evidence_files = None
+    if refund_request.evidence_files:
+        import json
+        try:
+            evidence_files = json.loads(refund_request.evidence_files)
+        except:
+            evidence_files = []
+    
+    # 解析退款原因字段（格式：reason_type|refund_type|reason）
+    reason_type = None
+    refund_type = None
+    reason_text = refund_request.reason
+    refund_percentage = None
+    
+    if "|" in refund_request.reason:
+        parts = refund_request.reason.split("|", 2)
+        if len(parts) >= 3:
+            reason_type = parts[0]
+            refund_type = parts[1]
+            reason_text = parts[2]
+        elif len(parts) == 2:
+            # 兼容旧格式
+            reason_text = refund_request.reason
+    
+    # 计算退款比例（如果有任务金额和退款金额）
+    if refund_request.refund_amount and task:
+        task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+        if task_amount > 0:
+            refund_percentage = float((refund_request.refund_amount / task_amount) * 100)
+    
+    # 创建输出对象
+    from app.schemas import RefundRequestOut
+    return RefundRequestOut(
+        id=refund_request.id,
+        task_id=refund_request.task_id,
+        poster_id=refund_request.poster_id,
+        reason_type=reason_type,
+        refund_type=refund_type,
+        reason=reason_text,
+        evidence_files=evidence_files,
+        refund_amount=refund_request.refund_amount,
+        refund_percentage=refund_percentage,
+        status=refund_request.status,
+        admin_comment=refund_request.admin_comment,
+        reviewed_by=refund_request.reviewed_by,
+        reviewed_at=refund_request.reviewed_at,
+        refund_intent_id=refund_request.refund_intent_id,
+        refund_transfer_id=refund_request.refund_transfer_id,
+        processed_at=refund_request.processed_at,
+        completed_at=refund_request.completed_at,
+        created_at=refund_request.created_at,
+        updated_at=refund_request.updated_at,
+    )
+
+
+# ==================== 管理员退款申请管理API ====================
+
+@router.get("/admin/refund-requests", response_model=dict)
+def get_admin_refund_requests(
+    skip: int = 0,
+    limit: int = 20,
+    status: Optional[str] = None,
+    keyword: Optional[str] = None,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员获取退款申请列表"""
+    query = db.query(models.RefundRequest)
+    
+    # 状态筛选
+    if status:
+        query = query.filter(models.RefundRequest.status == status)
+    
+    # 关键词搜索（任务标题、发布者姓名、退款原因）
+    has_keyword_search = keyword and keyword.strip()
+    if has_keyword_search:
+        from sqlalchemy import or_
+        query = query.join(models.Task, models.RefundRequest.task_id == models.Task.id).join(
+            models.User, models.RefundRequest.poster_id == models.User.id
+        ).filter(
+            or_(
+                models.Task.title.ilike(f'%{keyword}%'),
+                models.User.name.ilike(f'%{keyword}%'),
+                models.RefundRequest.reason.ilike(f'%{keyword}%')
+            )
+        )
+    
+    # 排序：按创建时间倒序
+    query = query.order_by(models.RefundRequest.created_at.desc())
+    
+    # 总数
+    total = query.count()
+    
+    # 分页
+    refund_requests = query.offset(skip).limit(limit).all()
+    
+    # 处理证据文件（JSON数组转List）和解析退款信息
+    result_list = []
+    reason_type_names = {
+        "completion_time_unsatisfactory": "对完成时间不满意",
+        "not_completed": "接单者完全未完成",
+        "quality_issue": "质量问题",
+        "other": "其他"
+    }
+    
+    for refund_request in refund_requests:
+        evidence_files = None
+        if refund_request.evidence_files:
+            import json
+            try:
+                evidence_files = json.loads(refund_request.evidence_files)
+            except:
+                evidence_files = []
+        
+        # 解析退款原因字段（格式：reason_type|refund_type|reason）
+        reason_type = None
+        refund_type = None
+        reason_text = refund_request.reason
+        refund_percentage = None
+        
+        if "|" in refund_request.reason:
+            parts = refund_request.reason.split("|", 2)
+            if len(parts) >= 3:
+                reason_type = parts[0]
+                refund_type = parts[1]
+                reason_text = parts[2]
+        
+        # 计算退款比例（如果有任务金额和退款金额）
+        if refund_request.refund_amount and refund_request.task:
+            task_amount = float(refund_request.task.agreed_reward) if refund_request.task.agreed_reward else float(refund_request.task.base_reward) if refund_request.task.base_reward else 0.0
+            if task_amount > 0:
+                refund_percentage = (float(refund_request.refund_amount) / task_amount) * 100
+        
+        result_list.append({
+            "id": refund_request.id,
+            "task_id": refund_request.task_id,
+            "poster_id": refund_request.poster_id,
+            "reason_type": reason_type,
+            "reason_type_display": reason_type_names.get(reason_type, reason_type) if reason_type else None,
+            "refund_type": refund_type,
+            "refund_type_display": "全额退款" if refund_type == "full" else "部分退款" if refund_type == "partial" else None,
+            "reason": reason_text,
+            "evidence_files": evidence_files,
+            "refund_amount": float(refund_request.refund_amount) if refund_request.refund_amount else None,
+            "refund_percentage": refund_percentage,
+            "status": refund_request.status,
+            "admin_comment": refund_request.admin_comment,
+            "reviewed_by": refund_request.reviewed_by,
+            "reviewed_at": refund_request.reviewed_at,
+            "refund_intent_id": refund_request.refund_intent_id,
+            "refund_transfer_id": refund_request.refund_transfer_id,
+            "processed_at": refund_request.processed_at,
+            "completed_at": refund_request.completed_at,
+            "created_at": refund_request.created_at,
+            "updated_at": refund_request.updated_at,
+            "task": {
+                "id": refund_request.task.id,
+                "title": refund_request.task.title,
+                "base_reward": float(refund_request.task.base_reward),
+                "agreed_reward": float(refund_request.task.agreed_reward) if refund_request.task.agreed_reward else None,
+                "is_paid": refund_request.task.is_paid,
+                "is_confirmed": refund_request.task.is_confirmed,
+                "status": refund_request.task.status,
+            } if refund_request.task else None,
+            "poster": {
+                "id": refund_request.poster.id,
+                "name": refund_request.poster.name,
+                "email": refund_request.poster.email,
+            } if refund_request.poster else None,
+        })
+    
+    return {
+        "total": total,
+        "items": result_list,
+        "skip": skip,
+        "limit": limit
+    }
+
+
+@router.post("/admin/refund-requests/{refund_id}/approve", response_model=schemas.RefundRequestOut)
+def approve_refund_request(
+    refund_id: int,
+    approve_data: schemas.RefundRequestApprove,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员批准退款申请"""
+    from sqlalchemy import select
+    from decimal import Decimal
+    
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定退款申请记录
+    refund_query = select(models.RefundRequest).where(
+        models.RefundRequest.id == refund_id,
+        models.RefundRequest.status == "pending"  # 只锁定pending状态的记录
+    ).with_for_update()
+    refund_result = db.execute(refund_query)
+    refund_request = refund_result.scalar_one_or_none()
+    
+    if not refund_request:
+        # 检查是否存在但状态不是pending
+        existing = db.query(models.RefundRequest).filter(
+            models.RefundRequest.id == refund_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"退款申请状态不正确，无法批准。当前状态: {existing.status}"
+            )
+        raise HTTPException(status_code=404, detail="Refund request not found")
+    
+    # 获取任务信息
+    task = crud.get_task(db, refund_request.task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # 更新退款申请状态
+    refund_request.status = "approved"
+    refund_request.reviewed_by = current_user.id
+    refund_request.reviewed_at = get_utc_time()
+    refund_request.admin_comment = approve_data.admin_comment
+    
+    # 如果管理员指定了不同的退款金额，使用管理员指定的金额
+    if approve_data.refund_amount is not None:
+        refund_request.refund_amount = approve_data.refund_amount
+    
+    # ✅ 修复金额精度：使用Decimal进行金额计算
+    refund_amount = Decimal(str(refund_request.refund_amount)) if refund_request.refund_amount else None
+    if refund_amount is None:
+        # 全额退款：使用任务金额
+        task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+        refund_amount = task_amount
+    
+    # 转换为float用于Stripe API（Stripe API需要整数便士）
+    refund_amount_float = float(refund_amount)
+    
+    # 开始处理退款
+    refund_request.status = "processing"
+    refund_request.processed_at = get_utc_time()
+    
+    try:
+        # 执行退款逻辑（传入float金额，内部会转换为便士）
+        from app.refund_service import process_refund
+        success, refund_intent_id, refund_transfer_id, error_message = process_refund(
+            db=db,
+            refund_request=refund_request,
+            task=task,
+            refund_amount=refund_amount_float
+        )
+        
+        if success:
+            refund_request.refund_intent_id = refund_intent_id
+            refund_request.refund_transfer_id = refund_transfer_id
+            refund_request.status = "completed"
+            refund_request.completed_at = get_utc_time()
+            
+            # 发送系统消息
+            try:
+                from app.models import Message
+                import json
+                
+                admin_name = current_user.name or f"管理员{current_user.id}"
+                content_zh = f"管理员 {admin_name} 已批准您的退款申请，退款金额：£{refund_amount_float:.2f}。"
+                content_en = f"Admin {admin_name} has approved your refund request. Refund amount: £{refund_amount_float:.2f}."
+                
+                system_message = Message(
+                    sender_id=None,
+                    receiver_id=None,
+                    content=content_zh,
+                    task_id=task.id,
+                    message_type="system",
+                    conversation_type="task",
+                    meta=json.dumps({
+                        "system_action": "refund_approved",
+                        "refund_request_id": refund_request.id,
+                        "refund_amount": float(refund_amount),
+                        "content_en": content_en
+                    }),
+                    created_at=get_utc_time()
+                )
+                db.add(system_message)
+            except Exception as e:
+                logger.error(f"Failed to send system message: {e}")
+            
+            # 发送通知给发布者
+            try:
+                crud.create_notification(
+                    db=db,
+                    user_id=refund_request.poster_id,
+                    type="refund_approved",
+                    title="退款申请已批准",
+                    content=f"您的任务「{task.title}」的退款申请已批准，退款金额：£{refund_amount_float:.2f}",
+                    related_id=str(task.id),
+                    auto_commit=False
+                )
+            except Exception as e:
+                logger.error(f"Failed to send notification: {e}")
+        else:
+            # 退款处理失败，保持 processing 状态，记录错误
+            refund_request.admin_comment = f"{refund_request.admin_comment or ''}\n退款处理失败: {error_message}"
+            logger.error(f"退款处理失败: {error_message}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"退款处理失败: {error_message}"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"处理退款时发生错误: {e}", exc_info=True)
+        refund_request.status = "processing"  # 保持 processing 状态，等待重试
+        db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"处理退款时发生错误: {str(e)}"
+        )
+    
+    db.commit()
+    db.refresh(refund_request)
+    
+    return refund_request
+
+
+@router.post("/admin/refund-requests/{refund_id}/reject", response_model=schemas.RefundRequestOut)
+def reject_refund_request(
+    refund_id: int,
+    reject_data: schemas.RefundRequestReject,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员拒绝退款申请"""
+    from sqlalchemy import select
+    
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定退款申请记录
+    refund_query = select(models.RefundRequest).where(
+        models.RefundRequest.id == refund_id,
+        models.RefundRequest.status == "pending"  # 只锁定pending状态的记录
+    ).with_for_update()
+    refund_result = db.execute(refund_query)
+    refund_request = refund_result.scalar_one_or_none()
+    
+    if not refund_request:
+        # 检查是否存在但状态不是pending
+        existing = db.query(models.RefundRequest).filter(
+            models.RefundRequest.id == refund_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"退款申请状态不正确，无法拒绝。当前状态: {existing.status}"
+            )
+        raise HTTPException(status_code=404, detail="Refund request not found")
+    
+    # 更新退款申请状态
+    refund_request.status = "rejected"
+    refund_request.reviewed_by = current_user.id
+    refund_request.reviewed_at = get_utc_time()
+    refund_request.admin_comment = reject_data.admin_comment
+    
+    # 获取任务信息
+    task = crud.get_task(db, refund_request.task_id)
+    
+    # 发送系统消息
+    try:
+        from app.models import Message
+        import json
+        
+        admin_name = current_user.name or f"管理员{current_user.id}"
+        content_zh = f"管理员 {admin_name} 已拒绝您的退款申请。理由：{reject_data.admin_comment}"
+        content_en = f"Admin {admin_name} has rejected your refund request. Reason: {reject_data.admin_comment}"
+        
+        system_message = Message(
+            sender_id=None,
+            receiver_id=None,
+            content=content_zh,
+            task_id=task.id if task else None,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "refund_rejected",
+                "refund_request_id": refund_request.id,
+                "content_en": content_en
+            }),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    # 发送通知给发布者
+    if task:
+        try:
+            crud.create_notification(
+                db=db,
+                user_id=refund_request.poster_id,
+                type="refund_rejected",
+                title="退款申请已拒绝",
+                content=f"您的任务「{task.title}」的退款申请已拒绝。理由：{reject_data.admin_comment}",
+                related_id=str(task.id),
+                auto_commit=False
+            )
+        except Exception as e:
+            logger.error(f"Failed to send notification: {e}")
+    
+    db.commit()
+    db.refresh(refund_request)
+    
+    return refund_request
+
+
+@router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
+def confirm_task_completion(
+    task_id: int,
+    evidence_files: Optional[List[str]] = Body(None, description="完成证据文件ID列表（可选）"),
+    partial_transfer: Optional[schemas.PartialTransferRequest] = Body(None, description="部分转账请求（可选，用于部分完成的任务）"),
+    background_tasks: BackgroundTasks = None,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """任务发布者确认任务完成，可上传完成证据文件"""
     task = crud.get_task(db, task_id)
     if not task or task.poster_id != current_user.id:
         raise HTTPException(status_code=404, detail="Task not found or no permission")
@@ -2608,6 +3340,40 @@ def confirm_task_completion(
             created_at=get_utc_time()
         )
         db.add(system_message)
+        db.flush()  # 获取消息ID
+        
+        # 如果有完成证据文件，创建附件
+        if evidence_files:
+            from app.models import MessageAttachment
+            for file_id in evidence_files:
+                # 生成文件访问URL（使用私有文件系统）
+                from app.file_system import PrivateFileSystem
+                file_system = PrivateFileSystem()
+                try:
+                    # 生成访问URL（需要用户ID和任务参与者）
+                    participants = [task.poster_id]
+                    if task.taker_id:
+                        participants.append(task.taker_id)
+                    access_token = file_system.generate_access_token(
+                        file_id=file_id,
+                        user_id=current_user.id,
+                        chat_participants=participants
+                    )
+                    file_url = f"/api/private-file?file={file_id}&token={access_token}"
+                    
+                    attachment = MessageAttachment(
+                        message_id=system_message.id,
+                        attachment_type="file",  # 可能是文件，不只是图片
+                        url=file_url,
+                        blob_id=file_id,  # 存储文件ID
+                        meta=json.dumps({"file_id": file_id}),
+                        created_at=get_utc_time()
+                    )
+                    db.add(attachment)
+                except Exception as file_error:
+                    logger.warning(f"Failed to create attachment for file {file_id}: {file_error}")
+                    # 即使文件处理失败，也继续处理其他文件
+        
         db.commit()
     except Exception as e:
         logger.warning(f"Failed to send system message: {e}")
@@ -2877,39 +3643,79 @@ def confirm_task_completion(
             logger.error(f"发放活动奖励失败: {e}", exc_info=True)
             # 奖励发放失败不影响任务完成流程
     
-    # 如果任务已支付且未确认，执行转账给任务接受人
-    if task.is_paid == 1 and task.is_confirmed == 0 and task.taker_id and task.escrow_amount > 0:
+    # 如果任务已支付且未确认，执行转账给任务接受人（支持部分转账）
+    if task.is_paid == 1 and task.taker_id and task.escrow_amount > 0:
         try:
             from app.payment_transfer_service import create_transfer_record, execute_transfer
             from decimal import Decimal
-            from sqlalchemy import and_
+            from sqlalchemy import and_, func
             
-            # ⚠️ 安全修复：防止重复转账 - 检查是否已有成功的转账记录
-            existing_success_transfer = db.query(models.PaymentTransfer).filter(
+            # ✅ 支持部分转账：计算实际转账金额
+            remaining_escrow = Decimal(str(task.escrow_amount))
+            
+            # 如果指定了部分转账金额
+            if partial_transfer and partial_transfer.transfer_amount is not None:
+                transfer_amount = Decimal(str(partial_transfer.transfer_amount))
+                
+                # 验证部分转账金额
+                if transfer_amount <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="转账金额必须大于0"
+                    )
+                
+                if transfer_amount > remaining_escrow:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"转账金额（£{transfer_amount:.2f}）不能超过剩余托管金额（£{remaining_escrow:.2f}）"
+                    )
+                
+                logger.info(f"💰 部分转账：任务 {task_id}，转账金额 £{transfer_amount:.2f}，剩余托管金额 £{remaining_escrow:.2f}")
+            else:
+                # 全额转账
+                transfer_amount = remaining_escrow
+                logger.info(f"💰 全额转账：任务 {task_id}，转账金额 £{transfer_amount:.2f}")
+            
+            # ⚠️ 安全修复：防止重复转账 - 检查是否已有成功的转账记录（累计金额）
+            existing_success_transfers = db.query(
+                func.sum(models.PaymentTransfer.amount).label('total_transferred')
+            ).filter(
                 and_(
                     models.PaymentTransfer.task_id == task_id,
                     models.PaymentTransfer.status == "succeeded"
                 )
-            ).first()
+            ).scalar() or Decimal('0')
             
-            if existing_success_transfer:
-                logger.warning(f"⚠️ 任务 {task_id} 已有成功的转账记录 (transfer_record_id={existing_success_transfer.id}, transfer_id={existing_success_transfer.transfer_id})，跳过重复转账")
-                # 如果任务状态未更新，更新任务状态（可能是 webhook 延迟）
+            # 计算已转账总额
+            total_transferred = Decimal(str(existing_success_transfers))
+            remaining_after_transfer = remaining_escrow - total_transferred
+            
+            # 如果已全额转账，更新任务状态
+            if total_transferred >= remaining_escrow:
+                logger.warning(f"⚠️ 任务 {task_id} 已全额转账（累计 £{total_transferred:.2f}），跳过重复转账")
                 if task.is_confirmed == 0:
                     task.is_confirmed = 1
-                    task.paid_to_user_id = existing_success_transfer.taker_id
+                    task.paid_to_user_id = task.taker_id
                     task.escrow_amount = Decimal('0.0')
                     db.commit()
                     logger.info(f"✅ 已更新任务状态为已确认（基于已有成功转账记录）")
             else:
+                # 验证本次转账后不会超过剩余金额
+                if transfer_amount > remaining_after_transfer:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"转账金额（£{transfer_amount:.2f}）超过剩余可转账金额（£{remaining_after_transfer:.2f}）。已转账：£{total_transferred:.2f}，总托管金额：£{remaining_escrow:.2f}"
+                    )
+                
                 # 确保 escrow_amount 正确（任务金额 - 平台服务费）
-                if task.escrow_amount <= 0:
+                if remaining_escrow <= 0:
                     # 重新计算 escrow_amount
                     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
                     from app.utils.fee_calculator import calculate_application_fee
                     application_fee = calculate_application_fee(task_amount)
-                    task.escrow_amount = max(0.0, task_amount - application_fee)
-                    logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={task.escrow_amount}")
+                    remaining_escrow = Decimal(str(max(0.0, task_amount - application_fee)))
+                    task.escrow_amount = float(remaining_escrow)
+                    logger.info(f"重新计算 escrow_amount: 任务金额={task_amount}, 服务费={application_fee}, escrow={remaining_escrow}")
                 
                 # 获取任务接受人信息
                 taker = crud.get_user_by_id(db, task.taker_id)
@@ -2934,14 +3740,16 @@ def confirm_task_completion(
                             task_id=task_id,
                             taker_id=task.taker_id,
                             poster_id=current_user.id,
-                            amount=Decimal(str(task.escrow_amount)),
+                            amount=transfer_amount,  # 使用计算出的转账金额
                             currency="GBP",
                             metadata={
                                 "task_title": task.title,
-                                "reason": "taker_stripe_account_not_setup"
+                                "reason": "taker_stripe_account_not_setup",
+                                "partial_transfer": str(partial_transfer is not None),
+                                "transfer_reason": partial_transfer.reason if partial_transfer and partial_transfer.reason else None
                             }
                         )
-                        logger.info(f"✅ 已创建转账记录，等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
+                        logger.info(f"✅ 已创建转账记录（金额：£{transfer_amount:.2f}），等待任务接受人设置 Stripe Connect 账户后由定时任务处理")
                 else:
                     # ⚠️ 安全修复：检查是否已有待处理的转账记录（防止重复创建）
                     existing_pending_transfer = db.query(models.PaymentTransfer).filter(
@@ -2954,6 +3762,10 @@ def confirm_task_completion(
                     if existing_pending_transfer:
                         logger.info(f"ℹ️ 任务 {task_id} 已有待处理的转账记录 (transfer_record_id={existing_pending_transfer.id})，使用现有记录执行转账")
                         transfer_record = existing_pending_transfer
+                        # 更新转账金额（如果不同）
+                        if transfer_record.amount != transfer_amount:
+                            transfer_record.amount = transfer_amount
+                            db.commit()
                     else:
                         # 创建转账记录（用于审计）
                         transfer_record = create_transfer_record(
@@ -2961,19 +3773,38 @@ def confirm_task_completion(
                             task_id=task_id,
                             taker_id=task.taker_id,
                             poster_id=current_user.id,
-                            amount=Decimal(str(task.escrow_amount)),
+                            amount=transfer_amount,  # 使用计算出的转账金额（支持部分转账）
                             currency="GBP",
                             metadata={
                                 "task_title": task.title,
-                                "transfer_source": "confirm_completion"
+                                "transfer_source": "confirm_completion",
+                                "partial_transfer": str(partial_transfer is not None),
+                                "transfer_reason": partial_transfer.reason if partial_transfer and partial_transfer.reason else None,
+                                "remaining_escrow_before": str(remaining_escrow)
                             }
                         )
                     
                     # 尝试立即执行转账
                     success, transfer_id, error_msg = execute_transfer(db, transfer_record, taker.stripe_account_id)
+                    
+                    if success:
+                        # ✅ 部分转账：更新剩余托管金额
+                        new_escrow_amount = remaining_escrow - transfer_amount
+                        task.escrow_amount = float(new_escrow_amount)
+                        
+                        # 如果已全额转账，更新任务状态
+                        if new_escrow_amount <= Decimal('0.01'):  # 允许小的浮点误差
+                            task.is_confirmed = 1
+                            task.paid_to_user_id = task.taker_id
+                            task.escrow_amount = 0.0
+                            logger.info(f"✅ 任务 {task_id} 已全额转账，更新任务状态为已确认")
+                        else:
+                            logger.info(f"✅ 任务 {task_id} 部分转账完成，剩余托管金额：£{new_escrow_amount:.2f}")
+                        
+                        db.commit()
                 
                 if success:
-                    logger.info(f"✅ 任务 {task_id} 转账完成，金额已转给接受人 {task.taker_id}")
+                    logger.info(f"✅ 任务 {task_id} 转账完成（金额：£{transfer_amount:.2f}），已转给接受人 {task.taker_id}")
                 else:
                     # 转账失败，但已创建转账记录，定时任务会自动重试
                     logger.warning(f"⚠️ 任务 {task_id} 转账失败: {error_msg}，已创建转账记录，定时任务将自动重试")
@@ -5243,14 +6074,92 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "charge.refunded":
         charge = event_data
         task_id = int(charge.get("metadata", {}).get("task_id", 0))
+        refund_request_id = charge.get("metadata", {}).get("refund_request_id")
+        
         if task_id:
             task = crud.get_task(db, task_id)
-            if task:
-                # 更新任务状态，退还积分等
-                task.is_paid = 0  # 或设置退款状态
-                refund_amount = charge.get("amount_refunded", 0) / 100.0
+                if task:
+                    # ✅ 修复金额精度：使用Decimal计算退款金额
+                    from decimal import Decimal
+                    refund_amount = Decimal(str(charge.get("amount_refunded", 0))) / Decimal('100')
+                    refund_amount_float = float(refund_amount)  # 用于显示和日志
+                
+                # 如果有关联的退款申请，更新退款申请状态
+                if refund_request_id:
+                    try:
+                        refund_request = db.query(models.RefundRequest).filter(
+                            models.RefundRequest.id == int(refund_request_id)
+                        ).first()
+                        
+                        if refund_request and refund_request.status == "processing":
+                            # 更新退款申请状态为已完成
+                            refund_request.status = "completed"
+                            refund_request.completed_at = get_utc_time()
+                            
+                            # 发送系统消息通知用户
+                            try:
+                                from app.models import Message
+                                import json
+                                
+                                content_zh = f"您的退款申请已处理完成，退款金额：£{refund_amount_float:.2f}。退款将在5-10个工作日内退回您的原支付方式。"
+                                content_en = f"Your refund request has been processed. Refund amount: £{refund_amount_float:.2f}. The refund will be returned to your original payment method within 5-10 business days."
+                                
+                                system_message = Message(
+                                    sender_id=None,
+                                    receiver_id=None,
+                                    content=content_zh,
+                                    task_id=task.id,
+                                    message_type="system",
+                                    conversation_type="task",
+                                    meta=json.dumps({
+                                        "system_action": "refund_completed",
+                                        "refund_request_id": refund_request.id,
+                                        "refund_amount": float(refund_amount),
+                                        "content_en": content_en
+                                    }),
+                                    created_at=get_utc_time()
+                                )
+                                db.add(system_message)
+                                
+                                # 发送通知给发布者
+                                crud.create_notification(
+                                    db=db,
+                                    user_id=refund_request.poster_id,
+                                    type="refund_completed",
+                                    title="退款已完成",
+                                    content=f"您的任务「{task.title}」的退款申请已处理完成，退款金额：£{refund_amount_float:.2f}",
+                                    related_id=str(task.id),
+                                    auto_commit=False
+                                )
+                            except Exception as e:
+                                logger.error(f"Failed to send refund completion notification: {e}")
+                    except Exception as e:
+                        logger.error(f"Failed to update refund request status: {e}")
+                
+                # ✅ 修复金额精度：使用Decimal进行金额比较
+                # ✅ 支持部分退款：更新任务状态和托管金额
+                task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+                
+                if refund_amount >= task_amount:
+                    # 全额退款
+                    task.is_paid = 0
+                    task.payment_intent_id = None
+                    task.escrow_amount = 0.0
+                    logger.info(f"✅ 全额退款，已更新任务支付状态")
+                else:
+                    # 部分退款：更新托管金额
+                    # 计算退款后的剩余金额
+                    remaining_amount = task_amount - refund_amount
+                    from app.utils.fee_calculator import calculate_application_fee
+                    application_fee = calculate_application_fee(float(remaining_amount))
+                    new_escrow_amount = Decimal(str(remaining_amount)) - Decimal(str(application_fee))
+                    
+                    # 更新托管金额（任务金额 - 退款金额 - 平台服务费）
+                    task.escrow_amount = float(max(Decimal('0'), new_escrow_amount))
+                    logger.info(f"✅ 部分退款：退款金额 £{refund_amount_float:.2f}，剩余任务金额 £{remaining_amount:.2f}，更新后托管金额 £{task.escrow_amount:.2f}")
+                
                 db.commit()
-                logger.info(f"Task {task_id} refunded: £{refund_amount:.2f}")
+                logger.info(f"Task {task_id} refunded: £{refund_amount_float:.2f}")
     
     # 处理争议事件
     elif event_type == "charge.dispute.created":

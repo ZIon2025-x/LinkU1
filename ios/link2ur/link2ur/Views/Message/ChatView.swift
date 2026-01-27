@@ -420,26 +420,58 @@ struct MessageBubble: View {
                         }
                 }
                 
-                // 图片附件（如果有）
-                if message.hasImageAttachment, let imageUrl = message.firstImageUrl {
-                    Button(action: {
-                        selectedImageItem = IdentifiableImageUrl(url: imageUrl)
-                    }) {
-                        AsyncImageView(
-                            urlString: imageUrl,
-                            placeholder: Image(systemName: "photo"),
-                            width: 200,
-                            height: 150,
-                            contentMode: .fill,
-                            cornerRadius: AppCornerRadius.medium
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
-                        .shadow(color: isFromCurrentUser ? AppColors.primary.opacity(0.2) : AppShadow.small.color,
-                               radius: isFromCurrentUser ? 8 : AppShadow.small.radius,
-                               x: 0,
-                               y: isFromCurrentUser ? 4 : AppShadow.small.y)
+                // 附件显示（所有图片和文件）
+                if let attachments = message.attachments, !attachments.isEmpty {
+                    VStack(spacing: AppSpacing.xs) {
+                        ForEach(attachments) { attachment in
+                            if attachment.attachmentType == "image", let imageUrl = attachment.url {
+                                Button(action: {
+                                    // 收集所有图片URL用于全屏查看
+                                    let allImageUrls = attachments
+                                        .filter { $0.attachmentType == "image" }
+                                        .compactMap { $0.url }
+                                    if let index = allImageUrls.firstIndex(of: imageUrl) {
+                                        selectedImageIndex = index
+                                        selectedImageItem = IdentifiableImageUrl(url: imageUrl)
+                                    }
+                                }) {
+                                    AsyncImageView(
+                                        urlString: imageUrl,
+                                        placeholder: Image(systemName: "photo"),
+                                        width: 200,
+                                        height: 150,
+                                        contentMode: .fill,
+                                        cornerRadius: AppCornerRadius.medium
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: AppCornerRadius.medium))
+                                    .shadow(color: isFromCurrentUser ? AppColors.primary.opacity(0.2) : AppShadow.small.color,
+                                           radius: isFromCurrentUser ? 8 : AppShadow.small.radius,
+                                           x: 0,
+                                           y: isFromCurrentUser ? 4 : AppShadow.small.y)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                            } else if attachment.attachmentType == "file", let fileUrl = attachment.url {
+                                // 文件附件
+                                Link(destination: URL(string: fileUrl) ?? URL(string: "https://www.link2ur.com")!) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "doc.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(isFromCurrentUser ? .white : AppColors.primary)
+                                        Text("证据文件")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(isFromCurrentUser ? .white : AppColors.primary)
+                                        Image(systemName: "arrow.down.circle")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(isFromCurrentUser ? .white : AppColors.primary)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(isFromCurrentUser ? AppColors.primary.opacity(0.3) : AppColors.primary.opacity(0.1))
+                                    .cornerRadius(AppCornerRadius.medium)
+                                }
+                            }
+                        }
                     }
-                    .buttonStyle(ScaleButtonStyle())
                 }
                 
                 // 消息内容（如果不是纯图片消息）
@@ -559,8 +591,12 @@ struct MessageBubble: View {
             }
         }
         .fullScreenCover(item: $selectedImageItem) { item in
+            // 收集所有图片URL用于全屏查看
+            let allImageUrls = (message.attachments ?? [])
+                .filter { $0.attachmentType == "image" }
+                .compactMap { $0.url }
             FullScreenImageView(
-                images: [item.url],
+                images: allImageUrls.isEmpty ? [item.url] : allImageUrls,
                 selectedIndex: $selectedImageIndex,
                 isPresented: Binding(get: { true }, set: { if !$0 { selectedImageItem = nil } })
             )
