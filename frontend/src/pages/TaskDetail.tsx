@@ -22,6 +22,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import styles from './TaskDetail.module.css';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
 
@@ -767,14 +768,13 @@ const TaskDetail: React.FC = () => {
       // 如果有任务图片，使用第一张任务图片；否则使用默认logo图片
       let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
       if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
-        // 确保图片URL是绝对路径
-        const taskImageUrl = task.images[0];
+        const taskImageUrl = ensureAbsoluteImageUrl(task.images[0]);
         if (taskImageUrl.startsWith('http://') || taskImageUrl.startsWith('https://')) {
           shareImageUrl = taskImageUrl;
         } else if (taskImageUrl.startsWith('/')) {
           shareImageUrl = `${window.location.origin}${taskImageUrl}`;
         } else {
-          shareImageUrl = `${window.location.origin}/${taskImageUrl}`;
+          shareImageUrl = taskImageUrl;
         }
       }
       // 强制更新og:image（通过先移除再添加的方式）
@@ -1074,14 +1074,13 @@ const TaskDetail: React.FC = () => {
           
           // 如果有任务图片，尝试获取图片并添加到分享数据中
           if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
-            const imageUrl = task.images[0];
-            // 确保图片URL是绝对路径
+            const imageUrl = ensureAbsoluteImageUrl(task.images[0]);
             let fullImageUrl = imageUrl;
             if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
               if (imageUrl.startsWith('/')) {
                 fullImageUrl = `${window.location.origin}${imageUrl}`;
               } else {
-                fullImageUrl = `${window.location.origin}/${imageUrl}`;
+                fullImageUrl = imageUrl;
               }
             }
             
@@ -2077,11 +2076,11 @@ const TaskDetail: React.FC = () => {
             canonicalUrl={canonicalUrl}
             ogTitle={task.title}
             ogDescription={seoDescription}
-            ogImage={task.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+            ogImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/og-default.jpg`}
             ogUrl={canonicalUrl}
             twitterTitle={task.title}
             twitterDescription={seoDescription}
-            twitterImage={task.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+            twitterImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/og-default.jpg`}
           />
           <TaskStructuredData task={task} language={language} />
           <HreflangManager type="task" id={task.id} />

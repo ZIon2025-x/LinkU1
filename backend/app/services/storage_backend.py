@@ -564,7 +564,11 @@ class S3StorageBackend(StorageBackend):
         
         if self.public_url:
             # 使用公开 URL（永久有效）
-            return f"{self.public_url}/{path}"
+            base = self.public_url.rstrip('/')
+            # 确保返回绝对 URL，否则前端 img src 会按相对路径解析导致任务大厅等处图片不显示
+            if not (base.startswith('http://') or base.startswith('https://')):
+                base = f"https://{base}"
+            return f"{base}/{path}"
         else:
             # ⚠️ 警告：没有配置 public_url，使用预签名 URL（1小时有效期）
             # 这会导致图片 URL 在 1 小时后失效！

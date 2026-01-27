@@ -23,6 +23,22 @@ export function formatImageUrl(imagePath: string | null | undefined): string {
 }
 
 /**
+ * 确保任务/活动等图片 URL 为可用的绝对地址。
+ * 若为 CDN 域名型无协议 URL（如 cdn.link2ur.com/...），补上 https://，
+ * 否则 img src 会被当作相对路径导致任务大厅等不显示图片。
+ */
+export function ensureAbsoluteImageUrl(url: string | null | undefined): string {
+  if (url == null || url === '') return '';
+  const s = String(url).trim();
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/')) return s;
+  if (!s.includes('://') && s.includes('.') && !s.startsWith('.')) {
+    const first = s.split('/')[0] || '';
+    if (/^[a-zA-Z0-9][-a-zA-Z0-9.]*$/.test(first)) return `https://${s}`;
+  }
+  return s;
+}
+
+/**
  * 检测浏览器是否支持 WebP 格式
  */
 export function supportsWebP(): boolean {

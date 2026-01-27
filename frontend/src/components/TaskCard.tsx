@@ -5,6 +5,7 @@ import { Language } from '../contexts/LanguageContext';
 import LazyImage from './LazyImage';
 import styles from './TaskCard.module.css';
 import { obfuscateLocation } from '../utils/formatUtils';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 
 interface TaskCardProps {
   task: any;
@@ -161,7 +162,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
         {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
           <LazyImage
             key={`task-img-${task.id}-${String(task.images[0])}`}
-            src={String(task.images[0])}
+            src={ensureAbsoluteImageUrl(String(task.images[0]))}
             alt={task.title}
             style={{
               position: 'absolute',

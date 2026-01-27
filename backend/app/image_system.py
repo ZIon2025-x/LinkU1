@@ -234,10 +234,23 @@ class PrivateImageSystem:
                 if is_valid:
                     logger.info(f"使用旧逻辑验证成功（向后兼容）: image_id={image_id}")
                 else:
-                    logger.error(f"签名验证失败（新旧逻辑都失败）: expected_new={expected_signature}, expected_old={expected_signature_old}, actual={signature}")
-                    logger.error(f"新逻辑数据字符串: {data_string}")
-                    logger.error(f"旧逻辑数据字符串: {data_string_old}")
-                    logger.error(f"participants原始: {participants}, 清理后: {participants_clean}")
+                    logger.error(
+                        "签名验证失败（新旧逻辑都失败）: expected_new=%s, expected_old=%s, actual=%s",
+                        expected_signature,
+                        expected_signature_old,
+                        signature,
+                    )
+                    logger.error("新逻辑数据字符串: %s", data_string)
+                    logger.error("旧逻辑数据字符串: %s", data_string_old)
+                    logger.error(
+                        "participants原始: %s, 清理后: %s",
+                        participants,
+                        participants_clean,
+                    )
+                    logger.error(
+                        "提示: 若 IMAGE_ACCESS_SECRET 在生成 token 后被修改或不同实例不一致，会导致验证失败。"
+                        "请保持密钥稳定；任务聊天接口已在返回消息时按当前密钥重新生成图片 URL 以兼容旧 token。"
+                    )
             
             return is_valid
             

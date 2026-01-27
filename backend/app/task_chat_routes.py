@@ -559,6 +559,37 @@ async def get_task_messages(
         read_result = await db.execute(read_query)
         read_message_ids = {read.message_id for read in read_result.scalars().all()}
         
+        # 构建聊天参与者列表，用于私密图片 URL 重新生成（避免 IMAGE_ACCESS_SECRET 变更后旧 token 403）
+        participants: List[str] = []
+        if task.poster_id:
+            participants.append(str(task.poster_id))
+        if task.taker_id:
+            tid = str(task.taker_id)
+            if tid not in participants:
+                participants.append(tid)
+        if getattr(task, "is_multi_participant", False):
+            if getattr(task, "expert_creator_id", None):
+                eid = str(task.expert_creator_id)
+                if eid not in participants:
+                    participants.append(eid)
+            tp_query = select(models.TaskParticipant).where(
+                and_(
+                    models.TaskParticipant.task_id == task_id,
+                    models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                )
+            )
+            tp_result = await db.execute(tp_query)
+            for p in tp_result.scalars().all():
+                if p.user_id:
+                    uid = str(p.user_id)
+                    if uid not in participants:
+                        participants.append(uid)
+        cuid = str(current_user.id)
+        if cuid not in participants:
+            participants.append(cuid)
+        if not participants:
+            participants = [cuid]
+
         # 批量查询附件
         attachments_query = select(models.MessageAttachment).where(
             models.MessageAttachment.message_id.in_(message_ids)
@@ -580,10 +611,31 @@ async def get_task_messages(
             if attachment.meta:
                 try:
                     attachment_data["meta"] = json.loads(attachment.meta)
-                except:
+                except Exception:
                     attachment_data["meta"] = {}
             else:
                 attachment_data["meta"] = {}
+
+            # 私密图片：按当前密钥重新生成 URL，避免 IMAGE_ACCESS_SECRET 变更后旧 token 导致 403
+            if (
+                attachment.attachment_type == "image"
+                and attachment.blob_id
+                and participants
+            ):
+                try:
+                    from app.image_system import private_image_system
+                    new_url = private_image_system.generate_image_url(
+                        attachment.blob_id,
+                        cuid,
+                        participants,
+                    )
+                    attachment_data["url"] = new_url
+                except Exception as e:
+                    logger.warning(
+                        "Failed to regenerate private-image URL for blob_id=%s: %s",
+                        attachment.blob_id,
+                        e,
+                    )
             
             attachments_by_message[attachment.message_id].append(attachment_data)
         

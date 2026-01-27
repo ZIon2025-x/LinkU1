@@ -294,67 +294,122 @@ class CleanupTasks:
             from datetime import timedelta
             from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
-            # 检测部署环境
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-            if RAILWAY_ENVIRONMENT:
-                base_public_dir = Path("/data/uploads/public/images")
-            else:
-                base_public_dir = Path("uploads/public/images")
+            # 检查是否使用云存储
+            backend_type = os.getenv('STORAGE_BACKEND', 'local').lower()
+            is_cloud_storage = backend_type in ('s3', 'r2')
             
-            temp_base_dir = base_public_dir / "public"
-            if not temp_base_dir.exists():
-                return
-
-            base_upload = _get_base_upload_dir()
-            is_low = _is_low_disk(base_upload)
-            temp_hours = 6 if is_low else _env_int("CLEANUP_TEMP_IMAGE_HOURS", 24)
-            max_files_per_run = _env_int("CLEANUP_MAX_FILES_TEMP", 1000) * (2 if is_low else 1)
-            cutoff_time = get_utc_time() - timedelta(hours=temp_hours)
             cleaned_count = 0
-
-            # 遍历所有临时文件夹（temp_*）
-            for temp_dir in temp_base_dir.iterdir():
-                if cleaned_count >= max_files_per_run:
-                    logger.info(f"已达到单次处理上限（{max_files_per_run}），停止处理")
-                    break
+            
+            # 如果使用云存储，使用 storage backend 清理临时图片
+            if is_cloud_storage:
+                try:
+                    from app.services.storage_backend import get_default_storage
+                    from app.services.image_upload_service import ImageCategory, get_image_upload_service
+                    from datetime import timedelta
                     
-                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                    storage = get_default_storage()
+                    service = get_image_upload_service()
+                    
+                    base_upload = _get_base_upload_dir()
+                    is_low = _is_low_disk(base_upload)
+                    temp_hours = 6 if is_low else _env_int("CLEANUP_TEMP_IMAGE_HOURS", 24)
+                    max_files_per_run = _env_int("CLEANUP_MAX_FILES_TEMP", 1000) * (2 if is_low else 1)
+                    cutoff_time = get_utc_time() - timedelta(hours=temp_hours)
+                    
+                    # 清理任务临时图片：列出所有临时目录
                     try:
-                        # 收集需要删除的文件（按修改时间排序，优先删除最旧的）
-                        files_to_delete = []
-                        for file_path in temp_dir.iterdir():
-                            if file_path.is_file():
-                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
-                                if file_mtime < cutoff_time:
-                                    files_to_delete.append((file_mtime, file_path))
+                        all_files = storage.list_files(ImageCategory.TASK.value)
+                        temp_user_ids = set()
+                        temp_files_by_user = {}  # {user_id: [file_keys]}
                         
-                        # 按时间排序，优先删除最旧的
-                        files_to_delete.sort(key=lambda x: x[0])
+                        for file_key in all_files:
+                            if '/temp_' in file_key:
+                                # 提取user_id: public/images/public/temp_14786828/xxx.jpg
+                                parts = file_key.split('/temp_')
+                                if len(parts) > 1:
+                                    user_id = parts[1].split('/')[0]
+                                    temp_user_ids.add(user_id)
+                                    if user_id not in temp_files_by_user:
+                                        temp_files_by_user[user_id] = []
+                                    temp_files_by_user[user_id].append(file_key)
                         
-                        # 限制本次处理的文件数量
-                        files_to_delete = files_to_delete[:max_files_per_run - cleaned_count]
-                        
-                        # 删除文件
-                        for _, file_path in files_to_delete:
-                            try:
-                                file_path.unlink()
-                                cleaned_count += 1
-                                if cleaned_count % 100 == 0:
-                                    logger.debug(f"已清理 {cleaned_count} 个临时图片...")
-                            except Exception as e:
-                                logger.warning(f"删除临时图片失败 {file_path}: {e}")
-                        
-                        # 如果文件夹为空，尝试删除它
-                        try:
-                            if not any(temp_dir.iterdir()):
-                                temp_dir.rmdir()
-                                logger.debug(f"删除空的临时文件夹: {temp_dir}")
-                        except Exception as e:
-                            logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                        # 清理每个用户的临时目录（对于云存储，直接删除整个临时目录更简单）
+                        for user_id in temp_user_ids:
+                            if cleaned_count >= max_files_per_run:
+                                break
                             
+                            # 使用delete_temp删除整个临时目录
+                            if service.delete_temp(category=ImageCategory.TASK, user_id=user_id):
+                                file_count = len(temp_files_by_user.get(user_id, []))
+                                cleaned_count += file_count
+                                logger.debug(f"清理用户 {user_id} 的任务临时图片（云存储），共 {file_count} 个文件")
                     except Exception as e:
-                        logger.warning(f"处理临时文件夹失败 {temp_dir}: {e}")
-                        continue
+                        logger.warning(f"清理云存储临时图片失败: {e}")
+                    
+                except Exception as e:
+                    logger.warning(f"使用云存储清理临时图片失败: {e}")
+            
+            # 本地存储：使用文件系统
+            if not is_cloud_storage or cleaned_count == 0:
+                RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+                if RAILWAY_ENVIRONMENT:
+                    base_public_dir = Path("/data/uploads/public/images")
+                else:
+                    base_public_dir = Path("uploads/public/images")
+                
+                temp_base_dir = base_public_dir / "public"
+                if not temp_base_dir.exists():
+                    return
+
+                base_upload = _get_base_upload_dir()
+                is_low = _is_low_disk(base_upload)
+                temp_hours = 6 if is_low else _env_int("CLEANUP_TEMP_IMAGE_HOURS", 24)
+                max_files_per_run = _env_int("CLEANUP_MAX_FILES_TEMP", 1000) * (2 if is_low else 1)
+                cutoff_time = get_utc_time() - timedelta(hours=temp_hours)
+
+                # 遍历所有临时文件夹（temp_*）
+                for temp_dir in temp_base_dir.iterdir():
+                    if cleaned_count >= max_files_per_run:
+                        logger.info(f"已达到单次处理上限（{max_files_per_run}），停止处理")
+                        break
+                        
+                    if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                        try:
+                            # 收集需要删除的文件（按修改时间排序，优先删除最旧的）
+                            files_to_delete = []
+                            for file_path in temp_dir.iterdir():
+                                if file_path.is_file():
+                                    file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+                                    if file_mtime < cutoff_time:
+                                        files_to_delete.append((file_mtime, file_path))
+                            
+                            # 按时间排序，优先删除最旧的
+                            files_to_delete.sort(key=lambda x: x[0])
+                            
+                            # 限制本次处理的文件数量
+                            files_to_delete = files_to_delete[:max_files_per_run - cleaned_count]
+                            
+                            # 删除文件
+                            for _, file_path in files_to_delete:
+                                try:
+                                    file_path.unlink()
+                                    cleaned_count += 1
+                                    if cleaned_count % 100 == 0:
+                                        logger.debug(f"已清理 {cleaned_count} 个临时图片...")
+                                except Exception as e:
+                                    logger.warning(f"删除临时图片失败 {file_path}: {e}")
+                            
+                            # 如果文件夹为空，尝试删除它
+                            try:
+                                if not any(temp_dir.iterdir()):
+                                    temp_dir.rmdir()
+                                    logger.debug(f"删除空的临时文件夹: {temp_dir}")
+                            except Exception as e:
+                                logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                                
+                        except Exception as e:
+                            logger.warning(f"处理临时文件夹失败 {temp_dir}: {e}")
+                            continue
             
             if cleaned_count > 0:
                 logger.info(f"清理了 {cleaned_count} 个未使用的临时图片")
@@ -383,55 +438,97 @@ class CleanupTasks:
             from datetime import timedelta
             from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
-            # 检测部署环境
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-            if RAILWAY_ENVIRONMENT:
-                base_dir = Path("/data/uploads")
-            else:
-                base_dir = Path("uploads")
+            # 检查是否使用云存储
+            backend_type = os.getenv('STORAGE_BACKEND', 'local').lower()
+            is_cloud_storage = backend_type in ('s3', 'r2')
             
-            temp_base_dir = base_dir / "flea_market"
-            
-            # 如果临时文件夹不存在，直接返回
-            if not temp_base_dir.exists():
-                return
-            
-            # 计算24小时前的时间
-            cutoff_time = get_utc_time() - timedelta(hours=24)
             cleaned_count = 0
             
-            # 遍历所有临时文件夹（temp_*）
-            for temp_dir in temp_base_dir.iterdir():
-                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+            # 如果使用云存储，使用 storage backend
+            if is_cloud_storage:
+                try:
+                    from app.services.storage_backend import get_default_storage
+                    from app.services.image_upload_service import ImageCategory, get_image_upload_service
+                    
+                    storage = get_default_storage()
+                    service = get_image_upload_service()
+                    
+                    # 列出所有临时目录
                     try:
-                        # 检查文件夹中的文件
-                        files_deleted = False
-                        for file_path in temp_dir.iterdir():
-                            if file_path.is_file():
-                                # 获取文件的修改时间（使用统一时间工具函数）
-                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
-                                
-                                # 如果文件超过24小时未修改，删除它
-                                if file_mtime < cutoff_time:
-                                    try:
-                                        file_path.unlink()
-                                        cleaned_count += 1
-                                        files_deleted = True
-                                        logger.info(f"删除未使用的跳蚤市场临时图片: {file_path}")
-                                    except Exception as e:
-                                        logger.warning(f"删除跳蚤市场临时图片失败 {file_path}: {e}")
+                        all_files = storage.list_files(ImageCategory.FLEA_MARKET.value)
+                        temp_user_ids = set()
+                        temp_files_by_user = {}
                         
-                        # 如果文件夹为空，尝试删除它
-                        try:
-                            if not any(temp_dir.iterdir()):
-                                temp_dir.rmdir()
-                                logger.info(f"删除空的跳蚤市场临时文件夹: {temp_dir}")
-                        except Exception as e:
-                            logger.debug(f"删除跳蚤市场临时文件夹失败（可能不为空）: {temp_dir}: {e}")
-                            
+                        for file_key in all_files:
+                            if '/temp_' in file_key:
+                                parts = file_key.split('/temp_')
+                                if len(parts) > 1:
+                                    user_id = parts[1].split('/')[0]
+                                    temp_user_ids.add(user_id)
+                                    if user_id not in temp_files_by_user:
+                                        temp_files_by_user[user_id] = []
+                                    temp_files_by_user[user_id].append(file_key)
+                        
+                        # 清理每个用户的临时目录
+                        for user_id in temp_user_ids:
+                            if service.delete_temp(category=ImageCategory.FLEA_MARKET, user_id=user_id):
+                                file_count = len(temp_files_by_user.get(user_id, []))
+                                cleaned_count += file_count
+                                logger.debug(f"清理用户 {user_id} 的跳蚤市场临时图片（云存储），共 {file_count} 个文件")
                     except Exception as e:
-                        logger.warning(f"处理跳蚤市场临时文件夹失败 {temp_dir}: {e}")
-                        continue
+                        logger.warning(f"清理云存储跳蚤市场临时图片失败: {e}")
+                except Exception as e:
+                    logger.warning(f"使用云存储清理跳蚤市场临时图片失败: {e}")
+            
+            # 本地存储：使用文件系统
+            if not is_cloud_storage or cleaned_count == 0:
+                RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+                if RAILWAY_ENVIRONMENT:
+                    base_dir = Path("/data/uploads")
+                else:
+                    base_dir = Path("uploads")
+                
+                temp_base_dir = base_dir / "flea_market"
+                
+                # 如果临时文件夹不存在，直接返回
+                if not temp_base_dir.exists():
+                    return
+                
+                # 计算24小时前的时间
+                cutoff_time = get_utc_time() - timedelta(hours=24)
+                
+                # 遍历所有临时文件夹（temp_*）
+                for temp_dir in temp_base_dir.iterdir():
+                    if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                        try:
+                            # 检查文件夹中的文件
+                            files_deleted = False
+                            for file_path in temp_dir.iterdir():
+                                if file_path.is_file():
+                                    # 获取文件的修改时间（使用统一时间工具函数）
+                                    file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+                                    
+                                    # 如果文件超过24小时未修改，删除它
+                                    if file_mtime < cutoff_time:
+                                        try:
+                                            file_path.unlink()
+                                            cleaned_count += 1
+                                            files_deleted = True
+                                            logger.info(f"删除未使用的跳蚤市场临时图片: {file_path}")
+                                        except Exception as e:
+                                            logger.warning(f"删除跳蚤市场临时图片失败 {file_path}: {e}")
+                            
+                            # 如果文件夹为空，尝试删除它
+                            try:
+                                if not any(temp_dir.iterdir()):
+                                    temp_dir.rmdir()
+                                    logger.info(f"删除空的跳蚤市场临时文件夹: {temp_dir}")
+                            except Exception as e:
+                                logger.debug(f"删除跳蚤市场临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                                
+                        except Exception as e:
+                            logger.warning(f"处理跳蚤市场临时文件夹失败 {temp_dir}: {e}")
+                            continue
             
             if cleaned_count > 0:
                 logger.info(f"清理了 {cleaned_count} 个未使用的跳蚤市场临时图片")
@@ -448,55 +545,97 @@ class CleanupTasks:
             from datetime import timedelta
             from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
-            # 检测部署环境
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-            if RAILWAY_ENVIRONMENT:
-                base_dir = Path("/data/uploads/public/images")
-            else:
-                base_dir = Path("uploads/public/images")
+            # 检查是否使用云存储
+            backend_type = os.getenv('STORAGE_BACKEND', 'local').lower()
+            is_cloud_storage = backend_type in ('s3', 'r2')
             
-            temp_base_dir = base_dir / "leaderboard_covers"
-            
-            # 如果临时文件夹不存在，直接返回
-            if not temp_base_dir.exists():
-                return
-            
-            # 计算24小时前的时间
-            cutoff_time = get_utc_time() - timedelta(hours=24)
             cleaned_count = 0
             
-            # 遍历所有临时文件夹（temp_*）
-            for temp_dir in temp_base_dir.iterdir():
-                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+            # 如果使用云存储，使用 storage backend
+            if is_cloud_storage:
+                try:
+                    from app.services.storage_backend import get_default_storage
+                    from app.services.image_upload_service import ImageCategory, get_image_upload_service
+                    
+                    storage = get_default_storage()
+                    service = get_image_upload_service()
+                    
+                    # 列出所有临时目录
                     try:
-                        # 检查文件夹中的文件
-                        files_deleted = False
-                        for file_path in temp_dir.iterdir():
-                            if file_path.is_file():
-                                # 获取文件的修改时间（使用统一时间工具函数）
-                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
-                                
-                                # 如果文件超过24小时未修改，删除它
-                                if file_mtime < cutoff_time:
-                                    try:
-                                        file_path.unlink()
-                                        cleaned_count += 1
-                                        files_deleted = True
-                                        logger.info(f"删除未使用的榜单封面临时图片: {file_path}")
-                                    except Exception as e:
-                                        logger.warning(f"删除榜单封面临时图片失败 {file_path}: {e}")
+                        all_files = storage.list_files(ImageCategory.LEADERBOARD_COVER.value)
+                        temp_user_ids = set()
+                        temp_files_by_user = {}
                         
-                        # 如果文件夹为空，尝试删除它
-                        try:
-                            if not any(temp_dir.iterdir()):
-                                temp_dir.rmdir()
-                                logger.info(f"删除空的榜单封面临时文件夹: {temp_dir}")
-                        except Exception as e:
-                            logger.debug(f"删除榜单封面临时文件夹失败（可能不为空）: {temp_dir}: {e}")
-                            
+                        for file_key in all_files:
+                            if '/temp_' in file_key:
+                                parts = file_key.split('/temp_')
+                                if len(parts) > 1:
+                                    user_id = parts[1].split('/')[0]
+                                    temp_user_ids.add(user_id)
+                                    if user_id not in temp_files_by_user:
+                                        temp_files_by_user[user_id] = []
+                                    temp_files_by_user[user_id].append(file_key)
+                        
+                        # 清理每个用户的临时目录
+                        for user_id in temp_user_ids:
+                            if service.delete_temp(category=ImageCategory.LEADERBOARD_COVER, user_id=user_id):
+                                file_count = len(temp_files_by_user.get(user_id, []))
+                                cleaned_count += file_count
+                                logger.debug(f"清理用户 {user_id} 的榜单封面临时图片（云存储），共 {file_count} 个文件")
                     except Exception as e:
-                        logger.warning(f"处理榜单封面临时文件夹失败 {temp_dir}: {e}")
-                        continue
+                        logger.warning(f"清理云存储榜单封面临时图片失败: {e}")
+                except Exception as e:
+                    logger.warning(f"使用云存储清理榜单封面临时图片失败: {e}")
+            
+            # 本地存储：使用文件系统
+            if not is_cloud_storage or cleaned_count == 0:
+                RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+                if RAILWAY_ENVIRONMENT:
+                    base_dir = Path("/data/uploads/public/images")
+                else:
+                    base_dir = Path("uploads/public/images")
+                
+                temp_base_dir = base_dir / "leaderboard_covers"
+                
+                # 如果临时文件夹不存在，直接返回
+                if not temp_base_dir.exists():
+                    return
+                
+                # 计算24小时前的时间
+                cutoff_time = get_utc_time() - timedelta(hours=24)
+                
+                # 遍历所有临时文件夹（temp_*）
+                for temp_dir in temp_base_dir.iterdir():
+                    if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                        try:
+                            # 检查文件夹中的文件
+                            files_deleted = False
+                            for file_path in temp_dir.iterdir():
+                                if file_path.is_file():
+                                    # 获取文件的修改时间（使用统一时间工具函数）
+                                    file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+                                    
+                                    # 如果文件超过24小时未修改，删除它
+                                    if file_mtime < cutoff_time:
+                                        try:
+                                            file_path.unlink()
+                                            cleaned_count += 1
+                                            files_deleted = True
+                                            logger.info(f"删除未使用的榜单封面临时图片: {file_path}")
+                                        except Exception as e:
+                                            logger.warning(f"删除榜单封面临时图片失败 {file_path}: {e}")
+                            
+                            # 如果文件夹为空，尝试删除它
+                            try:
+                                if not any(temp_dir.iterdir()):
+                                    temp_dir.rmdir()
+                                    logger.info(f"删除空的榜单封面临时文件夹: {temp_dir}")
+                            except Exception as e:
+                                logger.debug(f"删除榜单封面临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                                
+                        except Exception as e:
+                            logger.warning(f"处理榜单封面临时文件夹失败 {temp_dir}: {e}")
+                            continue
             
             if cleaned_count > 0:
                 logger.info(f"清理了 {cleaned_count} 个未使用的榜单封面临时图片")
@@ -513,53 +652,95 @@ class CleanupTasks:
             from datetime import timedelta
             from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
-            # 检测部署环境
-            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-            if RAILWAY_ENVIRONMENT:
-                base_dir = Path("/data/uploads/public/images")
-            else:
-                base_dir = Path("uploads/public/images")
+            # 检查是否使用云存储
+            backend_type = os.getenv('STORAGE_BACKEND', 'local').lower()
+            is_cloud_storage = backend_type in ('s3', 'r2')
             
-            temp_base_dir = base_dir / "banner"
-            
-            # 如果 banner 目录不存在，直接返回
-            if not temp_base_dir.exists():
-                return
-            
-            # 计算24小时前的时间
-            cutoff_time = get_utc_time() - timedelta(hours=24)
             cleaned_count = 0
             
-            # 遍历所有临时文件夹（temp_*）
-            for temp_dir in temp_base_dir.iterdir():
-                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+            # 如果使用云存储，使用 storage backend
+            if is_cloud_storage:
+                try:
+                    from app.services.storage_backend import get_default_storage
+                    from app.services.image_upload_service import ImageCategory, get_image_upload_service
+                    
+                    storage = get_default_storage()
+                    service = get_image_upload_service()
+                    
+                    # 列出所有临时目录
                     try:
-                        # 检查文件夹中的文件
-                        for file_path in temp_dir.iterdir():
-                            if file_path.is_file():
-                                # 获取文件的修改时间（使用统一时间工具函数）
-                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
-                                
-                                # 如果文件超过24小时未修改，删除它
-                                if file_mtime < cutoff_time:
-                                    try:
-                                        file_path.unlink()
-                                        cleaned_count += 1
-                                        logger.info(f"删除未使用的 Banner 临时图片: {file_path}")
-                                    except Exception as e:
-                                        logger.warning(f"删除 Banner 临时图片失败 {file_path}: {e}")
+                        all_files = storage.list_files(ImageCategory.BANNER.value)
+                        temp_user_ids = set()
+                        temp_files_by_user = {}
                         
-                        # 如果文件夹为空，尝试删除它
-                        try:
-                            if not any(temp_dir.iterdir()):
-                                temp_dir.rmdir()
-                                logger.info(f"删除空的 Banner 临时文件夹: {temp_dir}")
-                        except Exception as e:
-                            logger.debug(f"删除 Banner 临时文件夹失败（可能不为空）: {temp_dir}: {e}")
-                            
+                        for file_key in all_files:
+                            if '/temp_' in file_key:
+                                parts = file_key.split('/temp_')
+                                if len(parts) > 1:
+                                    user_id = parts[1].split('/')[0]
+                                    temp_user_ids.add(user_id)
+                                    if user_id not in temp_files_by_user:
+                                        temp_files_by_user[user_id] = []
+                                    temp_files_by_user[user_id].append(file_key)
+                        
+                        # 清理每个用户的临时目录
+                        for user_id in temp_user_ids:
+                            if service.delete_temp(category=ImageCategory.BANNER, user_id=user_id):
+                                file_count = len(temp_files_by_user.get(user_id, []))
+                                cleaned_count += file_count
+                                logger.debug(f"清理用户 {user_id} 的 Banner 临时图片（云存储），共 {file_count} 个文件")
                     except Exception as e:
-                        logger.warning(f"处理 Banner 临时文件夹失败 {temp_dir}: {e}")
-                        continue
+                        logger.warning(f"清理云存储 Banner 临时图片失败: {e}")
+                except Exception as e:
+                    logger.warning(f"使用云存储清理 Banner 临时图片失败: {e}")
+            
+            # 本地存储：使用文件系统
+            if not is_cloud_storage or cleaned_count == 0:
+                RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+                if RAILWAY_ENVIRONMENT:
+                    base_dir = Path("/data/uploads/public/images")
+                else:
+                    base_dir = Path("uploads/public/images")
+                
+                temp_base_dir = base_dir / "banner"
+                
+                # 如果 banner 目录不存在，直接返回
+                if not temp_base_dir.exists():
+                    return
+                
+                # 计算24小时前的时间
+                cutoff_time = get_utc_time() - timedelta(hours=24)
+                
+                # 遍历所有临时文件夹（temp_*）
+                for temp_dir in temp_base_dir.iterdir():
+                    if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                        try:
+                            # 检查文件夹中的文件
+                            for file_path in temp_dir.iterdir():
+                                if file_path.is_file():
+                                    # 获取文件的修改时间（使用统一时间工具函数）
+                                    file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+                                    
+                                    # 如果文件超过24小时未修改，删除它
+                                    if file_mtime < cutoff_time:
+                                        try:
+                                            file_path.unlink()
+                                            cleaned_count += 1
+                                            logger.info(f"删除未使用的 Banner 临时图片: {file_path}")
+                                        except Exception as e:
+                                            logger.warning(f"删除 Banner 临时图片失败 {file_path}: {e}")
+                            
+                            # 如果文件夹为空，尝试删除它
+                            try:
+                                if not any(temp_dir.iterdir()):
+                                    temp_dir.rmdir()
+                                    logger.info(f"删除空的 Banner 临时文件夹: {temp_dir}")
+                            except Exception as e:
+                                logger.debug(f"删除 Banner 临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                                
+                        except Exception as e:
+                            logger.warning(f"处理 Banner 临时文件夹失败 {temp_dir}: {e}")
+                            continue
             
             if cleaned_count > 0:
                 logger.info(f"清理了 {cleaned_count} 个未使用的 Banner 临时图片")

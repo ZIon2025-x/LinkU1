@@ -33,6 +33,7 @@ import LazyImage from '../components/LazyImage';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { getErrorMessage } from '../utils/errorHandler';
 import { performanceMonitor } from '../utils/performanceMonitor';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import { injectTasksStyles } from '../styles/Tasks.styles';
 import { TaskType } from '../constants/taskTypes';
 import styles from './Tasks.module.css';
@@ -1789,8 +1790,8 @@ const Tasks: React.FC = () => {
       return `${API_BASE_URL}${imageStr}`;
     }
     
-    // 其他情况直接返回
-    return imageStr;
+    // 其他情况（含 CDN 无协议 URL）标准化后返回
+    return ensureAbsoluteImageUrl(imageStr);
   }, []);
 
   // 渲染活动卡片（达人发布的多人活动）

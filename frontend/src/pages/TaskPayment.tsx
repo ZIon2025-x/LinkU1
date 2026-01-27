@@ -9,6 +9,7 @@ import LoginModal from '../components/LoginModal';
 import LazyImage from '../components/LazyImage';
 import { obfuscateLocation } from '../utils/formatUtils';
 import { logger } from '../utils/logger';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 
 const { Option } = Select;
 
@@ -423,7 +424,7 @@ const TaskPayment: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}>
                   <LazyImage
-                    src={taskInfo.images[0]}
+                    src={ensureAbsoluteImageUrl(taskInfo.images[0])}
                     alt={taskInfo.title}
                     style={{
                       width: '100%',

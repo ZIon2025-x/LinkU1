@@ -32,6 +32,7 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import { obfuscateLocation } from '../utils/formatUtils';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -260,8 +261,8 @@ const getTaskImageUrl = (imageValue: string | null | undefined, baseUrl?: string
     return baseUrl ? `${baseUrl}${imageStr}` : imageStr;
   }
   
-  // 其他情况直接返回
-  return imageStr;
+  // 其他情况（含 CDN 无协议 URL）标准化后返回
+  return ensureAbsoluteImageUrl(imageStr);
 };
 
 // 优化的任务列表项组件

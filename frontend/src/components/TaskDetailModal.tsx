@@ -17,6 +17,7 @@ import { useThrottle } from '../hooks/useThrottle';
 import LazyImage from './LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
+import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import {
   MODAL_OVERLAY_STYLE,
   LOADING_CONTAINER_STYLE,
@@ -1417,14 +1418,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     
                     // 如果有任务图片，尝试获取图片并添加到分享数据中
                     if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
-                      const imageUrl = task.images[0];
-                      // 确保图片URL是绝对路径
+                      const imageUrl = ensureAbsoluteImageUrl(task.images[0]);
                       let fullImageUrl = imageUrl;
                       if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
                         if (imageUrl.startsWith('/')) {
                           fullImageUrl = `${window.location.origin}${imageUrl}`;
                         } else {
-                          fullImageUrl = `${window.location.origin}/${imageUrl}`;
+                          fullImageUrl = imageUrl;
                         }
                       }
                       
@@ -2084,7 +2084,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   }}
                 >
                   <LazyImage
-                    src={imageUrl}
+                    src={ensureAbsoluteImageUrl(imageUrl)}
                     alt={`任务图片 ${index + 1}`}
                     style={{
                       width: '100%',
@@ -4126,7 +4126,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
             {/* 放大的图片 */}
             <img
-              src={enlargedImage}
+              src={ensureAbsoluteImageUrl(enlargedImage)}
               alt="放大图片"
               onClick={(e) => e.stopPropagation()}
               style={{
