@@ -2902,6 +2902,209 @@ def get_refund_status(
     )
 
 
+@router.get("/tasks/{task_id}/refund-history", response_model=List[schemas.RefundRequestOut])
+def get_refund_history(
+    task_id: int,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """获取任务的退款申请历史记录（所有退款申请）"""
+    task = crud.get_task(db, task_id)
+    if not task or task.poster_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Task not found or no permission")
+    
+    refund_requests = db.query(models.RefundRequest).filter(
+        models.RefundRequest.task_id == task_id,
+        models.RefundRequest.poster_id == current_user.id
+    ).order_by(models.RefundRequest.created_at.desc()).all()
+    
+    if not refund_requests:
+        return []
+    
+    # 获取任务信息（用于计算退款比例）
+    task = crud.get_task(db, task_id)
+    
+    result_list = []
+    for refund_request in refund_requests:
+        # 处理证据文件（JSON数组转List）
+        evidence_files = None
+        if refund_request.evidence_files:
+            import json
+            try:
+                evidence_files = json.loads(refund_request.evidence_files)
+            except:
+                evidence_files = []
+        
+        # 解析退款原因字段（格式：reason_type|refund_type|reason）
+        reason_type = None
+        refund_type = None
+        reason_text = refund_request.reason
+        refund_percentage = None
+        
+        if "|" in refund_request.reason:
+            parts = refund_request.reason.split("|", 2)
+            if len(parts) >= 3:
+                reason_type = parts[0]
+                refund_type = parts[1]
+                reason_text = parts[2]
+        
+        # 计算退款比例（如果有任务金额和退款金额）
+        if refund_request.refund_amount and task:
+            task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+            if task_amount > 0:
+                refund_percentage = float((refund_request.refund_amount / task_amount) * 100)
+        
+        # 创建输出对象
+        from app.schemas import RefundRequestOut
+        result_list.append(RefundRequestOut(
+            id=refund_request.id,
+            task_id=refund_request.task_id,
+            poster_id=refund_request.poster_id,
+            reason_type=reason_type,
+            refund_type=refund_type,
+            reason=reason_text,
+            evidence_files=evidence_files,
+            refund_amount=refund_request.refund_amount,
+            refund_percentage=refund_percentage,
+            status=refund_request.status,
+            admin_comment=refund_request.admin_comment,
+            reviewed_by=refund_request.reviewed_by,
+            reviewed_at=refund_request.reviewed_at,
+            refund_intent_id=refund_request.refund_intent_id,
+            refund_transfer_id=refund_request.refund_transfer_id,
+            processed_at=refund_request.processed_at,
+            completed_at=refund_request.completed_at,
+            created_at=refund_request.created_at,
+            updated_at=refund_request.updated_at,
+        ))
+    
+    return result_list
+
+
+@router.post("/tasks/{task_id}/refund-request/{refund_id}/cancel", response_model=schemas.RefundRequestOut)
+def cancel_refund_request(
+    task_id: int,
+    refund_id: int,
+    current_user=Depends(check_user_status),
+    db: Session = Depends(get_db),
+):
+    """撤销退款申请（只能在pending状态时撤销）"""
+    from sqlalchemy import select
+    from decimal import Decimal
+    
+    # 🔒 并发安全：使用 SELECT FOR UPDATE 锁定退款申请记录
+    refund_query = select(models.RefundRequest).where(
+        models.RefundRequest.id == refund_id,
+        models.RefundRequest.task_id == task_id,
+        models.RefundRequest.poster_id == current_user.id,
+        models.RefundRequest.status == "pending"  # 只能撤销pending状态的申请
+    ).with_for_update()
+    refund_result = db.execute(refund_query)
+    refund_request = refund_result.scalar_one_or_none()
+    
+    if not refund_request:
+        # 检查是否存在但状态不是pending
+        existing = db.query(models.RefundRequest).filter(
+            models.RefundRequest.id == refund_id,
+            models.RefundRequest.task_id == task_id,
+            models.RefundRequest.poster_id == current_user.id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"退款申请状态不正确，无法撤销。当前状态: {existing.status}。只有待审核（pending）状态的退款申请可以撤销。"
+            )
+        raise HTTPException(status_code=404, detail="Refund request not found")
+    
+    # 更新退款申请状态为cancelled
+    refund_request.status = "cancelled"
+    refund_request.updated_at = get_utc_time()
+    
+    # 获取任务信息
+    task = crud.get_task(db, task_id)
+    
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message
+        import json
+        
+        poster_name = current_user.name or f"用户{current_user.id}"
+        content_zh = f"{poster_name} 已撤销退款申请"
+        content_en = f"{poster_name} has cancelled the refund request"
+        
+        system_message = Message(
+            sender_id=None,  # 系统消息
+            receiver_id=None,
+            content=content_zh,
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({
+                "system_action": "refund_request_cancelled", 
+                "refund_request_id": refund_request.id, 
+                "content_en": content_en
+            }),
+            created_at=get_utc_time()
+        )
+        db.add(system_message)
+    except Exception as e:
+        logger.error(f"Failed to send system message: {e}")
+    
+    db.commit()
+    db.refresh(refund_request)
+    
+    # 处理输出格式（解析reason字段等）
+    evidence_files = None
+    if refund_request.evidence_files:
+        import json
+        try:
+            evidence_files = json.loads(refund_request.evidence_files)
+        except:
+            evidence_files = []
+    
+    # 解析退款原因字段
+    reason_type = None
+    refund_type = None
+    reason_text = refund_request.reason
+    refund_percentage = None
+    
+    if "|" in refund_request.reason:
+        parts = refund_request.reason.split("|", 2)
+        if len(parts) >= 3:
+            reason_type = parts[0]
+            refund_type = parts[1]
+            reason_text = parts[2]
+    
+    # 计算退款比例
+    if refund_request.refund_amount and task:
+        task_amount = Decimal(str(task.agreed_reward)) if task.agreed_reward is not None else Decimal(str(task.base_reward)) if task.base_reward is not None else Decimal('0')
+        if task_amount > 0:
+            refund_percentage = float((refund_request.refund_amount / task_amount) * 100)
+    
+    from app.schemas import RefundRequestOut
+    return RefundRequestOut(
+        id=refund_request.id,
+        task_id=refund_request.task_id,
+        poster_id=refund_request.poster_id,
+        reason_type=reason_type,
+        refund_type=refund_type,
+        reason=reason_text,
+        evidence_files=evidence_files,
+        refund_amount=refund_request.refund_amount,
+        refund_percentage=refund_percentage,
+        status=refund_request.status,
+        admin_comment=refund_request.admin_comment,
+        reviewed_by=refund_request.reviewed_by,
+        reviewed_at=refund_request.reviewed_at,
+        refund_intent_id=refund_request.refund_intent_id,
+        refund_transfer_id=refund_request.refund_transfer_id,
+        processed_at=refund_request.processed_at,
+        completed_at=refund_request.completed_at,
+        created_at=refund_request.created_at,
+        updated_at=refund_request.updated_at,
+    )
+
+
 # ==================== 管理员退款申请管理API ====================
 
 @router.get("/admin/refund-requests", response_model=dict)
@@ -6078,11 +6281,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         
         if task_id:
             task = crud.get_task(db, task_id)
-                if task:
-                    # ✅ 修复金额精度：使用Decimal计算退款金额
-                    from decimal import Decimal
-                    refund_amount = Decimal(str(charge.get("amount_refunded", 0))) / Decimal('100')
-                    refund_amount_float = float(refund_amount)  # 用于显示和日志
+            if task:
+                # ✅ 修复金额精度：使用Decimal计算退款金额
+                from decimal import Decimal
+                refund_amount = Decimal(str(charge.get("amount_refunded", 0))) / Decimal('100')
+                refund_amount_float = float(refund_amount)  # 用于显示和日志
                 
                 # 如果有关联的退款申请，更新退款申请状态
                 if refund_request_id:
