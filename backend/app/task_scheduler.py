@@ -170,7 +170,8 @@ def init_scheduler():
         check_expired_points,
         check_and_end_activities_sync,
         auto_complete_expired_time_slot_tasks,
-        process_expired_verifications
+        process_expired_verifications,
+        check_expired_payment_tasks
     )
     from app.customer_service_tasks import (
         process_customer_service_queue,
@@ -209,6 +210,14 @@ def init_scheduler():
         with_db(auto_complete_expired_time_slot_tasks),
         interval_seconds=60,
         description="自动完成已过期时间段的任务"
+    )
+    
+    # 检查支付过期的任务 - 每5分钟执行一次
+    scheduler.register_task(
+        'check_expired_payment_tasks',
+        with_db(check_expired_payment_tasks),
+        interval_seconds=300,  # 5分钟
+        description="检查并取消支付过期的任务"
     )
     
     # 中频任务（优化频率，减少DB压力）

@@ -131,6 +131,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 3600.0,  # 1小时
     },
     
+    # 检查并取消支付过期的任务 - 每5分钟执行一次
+    'check-expired-payment-tasks': {
+        'task': 'app.celery_tasks.check_expired_payment_tasks_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
     # ========== 中频任务（每5分钟）==========
     
     # 检查过期优惠券 - 每15分钟执行一次（降低频率，减少DB压力）

@@ -3862,15 +3862,17 @@ const TaskDetail: React.FC = () => {
             )}
             <button
               onClick={() => navigate(`/${language}/tasks/${id}/payment`)}
+              disabled={paymentCountdownExpired}
               style={{
-                background: '#10b981',
+                background: paymentCountdownExpired ? '#9ca3af' : '#10b981',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 8,
                 padding: '10px 32px',
                 fontWeight: 700,
                 fontSize: 18,
-                cursor: 'pointer',
+                cursor: paymentCountdownExpired ? 'not-allowed' : 'pointer',
+                opacity: paymentCountdownExpired ? 0.6 : 1,
               }}
             >
               💳 {language === 'zh' ? '立即支付' : 'Pay Now'}

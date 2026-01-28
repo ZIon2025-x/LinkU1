@@ -17,7 +17,7 @@ struct VIPPurchaseView: View {
                 // 标题
                 VStack(spacing: AppSpacing.sm) {
                     Text("升级VIP会员")
-                        .font(AppTypography.title1)
+                        .font(AppTypography.title)
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -166,7 +166,7 @@ struct VIPPurchaseView: View {
         isPurchasing = true
         errorMessage = nil
         
-        Task {
+        _Concurrency.Task {
             do {
                 _ = try await iapService.purchase(product)
                 
@@ -192,7 +192,7 @@ struct VIPPurchaseView: View {
     }
     
     private func restorePurchases() {
-        Task {
+        _Concurrency.Task {
             do {
                 try await iapService.restorePurchases()
                 await MainActor.run {
@@ -241,8 +241,8 @@ struct VIPProductRow: View {
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    if let description = product.description, !description.isEmpty {
-                        Text(description)
+                    if !product.description.isEmpty {
+                        Text(product.description)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                             .lineLimit(2)

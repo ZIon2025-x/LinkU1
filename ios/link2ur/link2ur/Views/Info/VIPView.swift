@@ -3,6 +3,10 @@ import SwiftUI
 struct VIPView: View {
     @EnvironmentObject var appState: AppState
     
+    var isVIP: Bool {
+        appState.currentUser?.userLevel == "vip" || appState.currentUser?.userLevel == "super"
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: AppSpacing.lg) {
@@ -107,7 +111,7 @@ struct VIPView: View {
                     
                     FAQRow(
                         question: LocalizationKey.vipFaqHowToUpgrade.localized,
-                        answer: "您可以在VIP会员页面点击"升级VIP会员"按钮，选择适合的套餐进行购买。"
+                        answer: "您可以在VIP会员页面点击\"升级VIP会员\"按钮，选择适合的套餐进行购买。"
                     )
                     
                     FAQRow(

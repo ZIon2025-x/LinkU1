@@ -89,7 +89,8 @@ if CELERY_AVAILABLE:
         check_expired_points,
         check_and_end_activities_sync,
         auto_complete_expired_time_slot_tasks,
-        process_expired_verifications
+        process_expired_verifications,
+        check_expired_payment_tasks
     )
     from app.crud import (
         cancel_expired_tasks,
@@ -224,6 +225,38 @@ if CELERY_AVAILABLE:
                 db.rollback()
             except Exception:
                 pass  # 如果已经 commit 或连接已关闭，忽略 rollback 错误
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+    
+    @celery_app.task(
+        name='app.celery_tasks.check_expired_payment_tasks_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def check_expired_payment_tasks_task(self):
+        """检查并取消支付过期的任务 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'check_expired_payment_tasks_task'
+        db = SessionLocal()
+        try:
+            cancelled_count = check_expired_payment_tasks(db)
+            duration = time.time() - start_time
+            logger.info(f"检查支付过期任务完成，取消了 {cancelled_count} 个任务 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "cancelled_count": cancelled_count}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"检查支付过期任务失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
             if self.request.retries < self.max_retries:
                 logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
                 raise self.retry(exc=e)

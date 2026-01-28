@@ -804,6 +804,19 @@ def create_task_payment(
     
     logger.info(f"任务支付检查通过: task_id={task_id}, status={task.status}, taker_id={task.taker_id}")
     
+    # ⚠️ 安全检查：检查支付是否已过期
+    if task.payment_expires_at:
+        current_time = get_utc_time()
+        if task.payment_expires_at < current_time:
+            logger.warning(
+                f"⚠️ 支付已过期: task_id={task_id}, "
+                f"payment_expires_at={task.payment_expires_at}, current_time={current_time}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="支付已过期，无法继续支付。任务将自动取消。"
+            )
+    
     # 获取任务金额（使用最终成交价或原始标价）
     task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
     

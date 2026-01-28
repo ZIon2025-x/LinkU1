@@ -74,6 +74,29 @@ struct TaskDetailView: View {
         viewModel.userApplication != nil
     }
     
+    // 判断支付是否已过期
+    private var isPaymentExpired: Bool {
+        guard let task = viewModel.task,
+              let paymentExpiresAt = task.paymentExpiresAt,
+              !paymentExpiresAt.isEmpty else {
+            return false
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        guard let expiryDate = formatter.date(from: paymentExpiresAt) else {
+            // 尝试不带毫秒的格式
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let expiryDateFallback = formatter.date(from: paymentExpiresAt) else {
+                return false
+            }
+            return Date() >= expiryDateFallback
+        }
+        
+        return Date() >= expiryDate
+    }
+    
     // 判断是否可以评价
     private var canReview: Bool {
         guard let task = viewModel.task,
@@ -1886,6 +1909,8 @@ struct TaskActionButtonsView: View {
                         .frame(height: 50)
                     }
                     .buttonStyle(PrimaryButtonStyle())
+                    .disabled(isPaymentExpired)
+                    .opacity(isPaymentExpired ? 0.6 : 1.0)
                 }
             }
             
@@ -1907,6 +1932,8 @@ struct TaskActionButtonsView: View {
                             Label(LocalizationKey.activityContinuePayment.localized, systemImage: "creditcard.fill")
                         }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isPaymentExpired)
+                        .opacity(isPaymentExpired ? 0.6 : 1.0)
                     }
                 }
                 // 如果用户已申请，无论任务状态如何，都显示申请状态卡片

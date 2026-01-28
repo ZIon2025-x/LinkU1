@@ -2,6 +2,29 @@ import Foundation
 import StoreKit
 import Combine
 
+// Wrapper class to create detached task, avoiding conflict with custom Task struct
+fileprivate class TaskWrapper: Cancellable {
+    private var task: _Concurrency.Task<Void, Never>?
+    
+    init(operation: @escaping @Sendable () async -> Void) {
+        // Create Swift's concurrency Task using detached
+        // Use a closure that captures the operation to avoid signature mismatch
+        let op: @Sendable () async -> Void = operation
+        self.task = _Concurrency.Task.detached {
+            await op()
+        }
+    }
+    
+    func cancel() {
+        task?.cancel()
+        task = nil
+    }
+}
+
+fileprivate func createDetachedTask(operation: @escaping @Sendable () async -> Void) -> Cancellable {
+    return TaskWrapper(operation: operation)
+}
+
 /// IAP错误类型
 enum IAPError: Error, LocalizedError {
     case userCancelled
@@ -43,16 +66,17 @@ class IAPService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private var updateListenerTask: Task<Void, Error>?
+    // Store as Cancellable to avoid Task name conflict
+    private var updateListenerTask: Cancellable?
     
     private init() {
         // 监听交易更新
         updateListenerTask = listenForTransactions()
         
-        // 加载产品
-        Task {
-            await loadProducts()
-            await updatePurchasedProducts()
+        // 加载产品 - use helper function to avoid conflict with custom Task struct
+        _ = createDetachedTask { [weak self] in
+            await self?.loadProducts()
+            await self?.updatePurchasedProducts()
         }
     }
     
@@ -90,8 +114,13 @@ class IAPService: ObservableObject {
         case .success(let verification):
             let transaction = try checkVerified(verification)
             
+            // 注意：StoreKit 2的Transaction不直接提供JWS表示
+            // 对于生产环境，后端应该使用App Store Server API通过transaction ID进行验证
+            // 这里我们使用transaction ID作为占位符，后端需要实现App Store Server API验证
+            let transactionJWS = String(transaction.id)
+            
             // 通知后端更新用户VIP状态
-            await updateVIPStatus(productID: product.id, transaction: transaction)
+            await updateVIPStatus(productID: product.id, transaction: transaction, transactionJWS: transactionJWS)
             
             // 完成交易
             await transaction.finish()
@@ -124,17 +153,20 @@ class IAPService: ObservableObject {
     // MARK: - 监听交易更新
     
     /// 监听交易更新（用于处理后台购买、续费等）
-    private func listenForTransactions() -> Task<Void, Error> {
-        return Task.detached { [weak self] in
+    private func listenForTransactions() -> Cancellable {
+        // Use helper function to avoid conflict with custom Task struct
+        return createDetachedTask { [weak self] in
             for await result in Transaction.updates {
                 do {
                     let transaction = try await self?.checkVerified(result)
                     
                     // 通知后端更新VIP状态
                     if let transaction = transaction {
+                        // 对于后台交易，使用transaction ID作为JWS（实际生产环境应使用App Store Server API）
                         await self?.updateVIPStatus(
                             productID: transaction.productID,
-                            transaction: transaction
+                            transaction: transaction,
+                            transactionJWS: String(transaction.id)
                         )
                         await transaction.finish()
                     }
@@ -170,11 +202,8 @@ class IAPService: ObservableObject {
     // MARK: - 后端同步
     
     /// 验证收据并更新VIP状态
-    private func updateVIPStatus(productID: String, transaction: Transaction) async {
+    private func updateVIPStatus(productID: String, transaction: Transaction, transactionJWS: String) async {
         do {
-            // 获取交易JWS表示（用于后端验证）
-            let transactionJWS = transaction.jwsRepresentation
-            
             // 调用后端API激活VIP
             try await APIService.shared.activateVIP(
                 productID: productID,
