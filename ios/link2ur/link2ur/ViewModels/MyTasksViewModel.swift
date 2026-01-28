@@ -259,7 +259,10 @@ class MyTasksViewModel: ObservableObject {
         let posted: Int
         let taken: Int
         let completed = tasks.filter { $0.status == .completed }.count
-        let inProgress = tasks.filter { $0.status == .inProgress }.count
+        // 进行中任务数量应该包含 inProgress 和 pendingPayment 状态的任务
+        let inProgress = tasks.filter { task in
+            task.status == .inProgress || task.status == .pendingPayment
+        }.count
         let pending = applications.filter { app in
             app.status == "pending" && app.taskStatus != "cancelled"
         }.count
@@ -332,7 +335,11 @@ class MyTasksViewModel: ObservableObject {
                 return false
             }
         case .inProgress:
-            filtered = tasks.filter { $0.status == .inProgress }
+            // 进行中标签页应该包含 inProgress 和 pendingPayment 状态的任务
+            // 因为 pendingPayment 状态的任务需要用户关注（等待支付）
+            filtered = tasks.filter { task in
+                task.status == .inProgress || task.status == .pendingPayment
+            }
         case .pending:
             filtered = [] // 待处理申请显示在单独的列表中
         case .completed:
@@ -384,7 +391,10 @@ class MyTasksViewModel: ObservableObject {
         if currentTab == .completed {
             endpoint += "&status=completed"
         } else if currentTab == .inProgress {
-            endpoint += "&status=in_progress"
+            // 进行中标签页需要包含 in_progress 和 pending_payment 状态的任务
+            // 由于后端 API 可能不支持多个状态值，我们不在 API 请求中过滤状态
+            // 而是在客户端过滤，这样可以确保包含所有需要显示的任务
+            // endpoint += "&status=in_progress"  // 注释掉，改为客户端过滤
         } else if let statusValue = statusFilter.apiValue {
             endpoint += "&status=\(statusValue)"
         }

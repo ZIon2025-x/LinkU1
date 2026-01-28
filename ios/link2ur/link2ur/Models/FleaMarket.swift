@@ -119,6 +119,7 @@ struct FleaMarketItem: Codable, Identifiable {
         pendingPaymentCurrency = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCurrency)
         pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
         pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
+        pendingPaymentExpiresAt = try container.decodeIfPresent(String.self, forKey: .pendingPaymentExpiresAt)
     }
     
     // 自定义编码
