@@ -189,6 +189,15 @@ const TaskPayment: React.FC = () => {
       return;
     }
 
+    // ⚠️ 检查支付是否已过期
+    if (isExpired) {
+      message.error(language === 'zh' ? '支付已过期，无法继续支付。任务将自动取消。' : 'Payment has expired. The task will be automatically cancelled.');
+      setTimeout(() => {
+        localizedNavigate(`/tasks/${taskId}`);
+      }, 2000);
+      return;
+    }
+
     setLoading(true);
     try {
       const requestData: any = {

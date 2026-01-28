@@ -1157,6 +1157,28 @@ struct TaskDetailContentView: View {
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
     
+    // 判断支付是否已过期
+    private var isPaymentExpired: Bool {
+        guard let paymentExpiresAt = task.paymentExpiresAt,
+              !paymentExpiresAt.isEmpty else {
+            return false
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        guard let expiryDate = formatter.date(from: paymentExpiresAt) else {
+            // 尝试不带毫秒的格式
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let expiryDateFallback = formatter.date(from: paymentExpiresAt) else {
+                return false
+            }
+            return Date() >= expiryDateFallback
+        }
+        
+        return Date() >= expiryDate
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -1868,6 +1890,28 @@ struct TaskActionButtonsView: View {
     
     private var isLoadingRefundStatus: Bool {
         viewModel.isLoadingRefundStatus
+    }
+    
+    // 判断支付是否已过期
+    private var isPaymentExpired: Bool {
+        guard let paymentExpiresAt = task.paymentExpiresAt,
+              !paymentExpiresAt.isEmpty else {
+            return false
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        guard let expiryDate = formatter.date(from: paymentExpiresAt) else {
+            // 尝试不带毫秒的格式
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let expiryDateFallback = formatter.date(from: paymentExpiresAt) else {
+                return false
+            }
+            return Date() >= expiryDateFallback
+        }
+        
+        return Date() >= expiryDate
     }
     
     var body: some View {

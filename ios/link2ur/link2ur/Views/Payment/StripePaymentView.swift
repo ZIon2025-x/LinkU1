@@ -81,6 +81,26 @@ struct StripePaymentView: View {
                 }
             }
             .onAppear {
+                // ⚠️ 检查支付是否已过期
+                if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    
+                    var expiryDate: Date?
+                    if let date = formatter.date(from: paymentExpiresAt) {
+                        expiryDate = date
+                    } else {
+                        formatter.formatOptions = [.withInternetDateTime]
+                        expiryDate = formatter.date(from: paymentExpiresAt)
+                    }
+                    
+                    if let expiryDate = expiryDate, Date() >= expiryDate {
+                        // 支付已过期，显示错误信息
+                        viewModel.errorMessage = LocalizationKey.paymentCountdownExpired.localized
+                        return
+                    }
+                }
+                
                 // 如果没有提供 client_secret，才调用 API 创建支付意图
                 if clientSecret == nil {
                     viewModel.createPaymentIntent()
