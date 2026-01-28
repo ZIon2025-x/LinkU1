@@ -83,7 +83,7 @@ struct SettingsView: View {
                     
                     NavigationLink(destination: CookiePolicyView()) {
                         HStack {
-                            Image(systemName: "cookie")
+                            Image(systemName: "checkmark.shield.fill")
                                 .foregroundColor(AppColors.primary)
                             Text("Cookie Policy")
                         }

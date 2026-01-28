@@ -222,6 +222,7 @@ struct StudentVerificationView: View {
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle()) // 强制使用堆栈样式，避免iPad上的split view
         .sheet(isPresented: $showLogin) {
             LoginView()
         }

@@ -4095,6 +4095,123 @@ def check_and_upgrade_vip_to_super(db: Session, user_id: str):
     return False
 
 
+def get_vip_subscription_by_transaction_id(db: Session, transaction_id: str):
+    """根据交易ID获取VIP订阅记录"""
+    return db.query(models.VIPSubscription).filter(
+        models.VIPSubscription.transaction_id == transaction_id
+    ).first()
+
+
+def get_active_vip_subscription(db: Session, user_id: str):
+    """获取用户的有效VIP订阅"""
+    return db.query(models.VIPSubscription).filter(
+        models.VIPSubscription.user_id == user_id,
+        models.VIPSubscription.status == "active"
+    ).order_by(models.VIPSubscription.expires_date.desc().nullsfirst()).first()
+
+
+def create_vip_subscription(
+    db: Session,
+    user_id: str,
+    product_id: str,
+    transaction_id: str,
+    original_transaction_id: Optional[str],
+    transaction_jws: str,
+    purchase_date: datetime,
+    expires_date: Optional[datetime],
+    is_trial_period: bool,
+    is_in_intro_offer_period: bool,
+    environment: str,
+    status: str = "active"
+) -> models.VIPSubscription:
+    """创建VIP订阅记录"""
+    subscription = models.VIPSubscription(
+        user_id=user_id,
+        product_id=product_id,
+        transaction_id=transaction_id,
+        original_transaction_id=original_transaction_id,
+        transaction_jws=transaction_jws,
+        purchase_date=purchase_date,
+        expires_date=expires_date,
+        is_trial_period=is_trial_period,
+        is_in_intro_offer_period=is_in_intro_offer_period,
+        environment=environment,
+        status=status
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+    return subscription
+
+
+def update_vip_subscription_status(
+    db: Session,
+    subscription_id: int,
+    status: str,
+    cancellation_reason: Optional[str] = None,
+    refunded_at: Optional[datetime] = None
+):
+    """更新VIP订阅状态"""
+    subscription = db.query(models.VIPSubscription).filter(
+        models.VIPSubscription.id == subscription_id
+    ).first()
+    
+    if subscription:
+        subscription.status = status
+        if cancellation_reason:
+            subscription.cancellation_reason = cancellation_reason
+        if refunded_at:
+            subscription.refunded_at = refunded_at
+        subscription.updated_at = get_utc_time()
+        db.commit()
+        db.refresh(subscription)
+        return subscription
+    return None
+
+
+def update_user_vip_status(db: Session, user_id: str, user_level: str):
+    """更新用户VIP状态"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user:
+        user.user_level = user_level
+        db.commit()
+        db.refresh(user)
+        return user
+    return None
+
+
+def check_and_update_expired_subscriptions(db: Session):
+    """检查并更新过期的订阅"""
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc)
+    
+    # 查找已过期但仍标记为active的订阅
+    expired_subscriptions = db.query(models.VIPSubscription).filter(
+        models.VIPSubscription.status == "active",
+        models.VIPSubscription.expires_date.isnot(None),
+        models.VIPSubscription.expires_date < now
+    ).all()
+    
+    updated_count = 0
+    for subscription in expired_subscriptions:
+        subscription.status = "expired"
+        subscription.updated_at = get_utc_time()
+        
+        # 更新用户VIP状态
+        active_subscription = get_active_vip_subscription(db, subscription.user_id)
+        if not active_subscription:
+            update_user_vip_status(db, subscription.user_id, "normal")
+        
+        updated_count += 1
+    
+    if updated_count > 0:
+        db.commit()
+        logger.info(f"更新了 {updated_count} 个过期订阅")
+    
+    return updated_count
+
+
 def get_user_task_statistics(db: Session, user_id: str):
     """获取用户的任务统计信息"""
     from app.models import Task

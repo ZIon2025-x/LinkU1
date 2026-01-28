@@ -20,6 +20,7 @@ enum LogCategory: String {
     case cache = "Cache"
     case websocket = "WebSocket"
     case auth = "Auth"
+    case iap = "IAP"
     case general = "General"
 }
 

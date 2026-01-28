@@ -89,7 +89,7 @@ struct CustomerServiceView: View {
                                             }
                                         }
                                         .frame(maxWidth: DeviceInfo.isPad ? 600 : .infinity) // iPad上限制最大宽度
-                                        .frame(maxWidth: .infinity) // 确保在iPad上居中
+                                        .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
                                         .padding(.top, DeviceInfo.isPad ? 150 : 100)
                                     } else {
                                         LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
@@ -109,7 +109,7 @@ struct CustomerServiceView: View {
                                         .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                                         .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
                                         .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
-                                        .frame(maxWidth: .infinity) // 确保在iPad上居中
+                                        .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
                                     }
                                 }
                                 .padding(.bottom, keyboardPadding)
@@ -172,7 +172,7 @@ struct CustomerServiceView: View {
                         .padding(.vertical, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                         .background(AppColors.cardBackground)
                         .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
-                        .frame(maxWidth: .infinity) // 确保在iPad上居中
+                        .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
                     } else {
                         // 正常输入区域
                         HStack(spacing: DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm) {
@@ -222,7 +222,7 @@ struct CustomerServiceView: View {
                         }
                         .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                         .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
-                        .frame(maxWidth: .infinity) // 确保在iPad上居中
+                        .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
                         .padding(.vertical, AppSpacing.sm)
                         .background(AppColors.cardBackground)
                     }
@@ -303,6 +303,7 @@ struct CustomerServiceView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        .navigationViewStyle(StackNavigationViewStyle()) // 强制使用堆栈样式，避免iPad上的split view
         .onAppear {
             // 检查用户是否已登录（需要验证用户会话）
             let hasSessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) != nil

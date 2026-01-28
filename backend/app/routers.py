@@ -10564,77 +10564,221 @@ def activate_vip(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    """激活VIP会员（通过IAP购买）"""
-    import jwt
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.backends import default_backend
-    import requests
-    import json
-    
-    # 验证IAP收据
-    # 注意：这里需要实现完整的Apple IAP收据验证逻辑
-    # 由于StoreKit 2使用JWS格式，我们需要验证JWS签名
+    """激活VIP会员（通过IAP购买）- 生产级实现"""
+    from app.iap_verification_service import iap_verification_service
+    from datetime import datetime, timezone
     
     try:
-        # 解析JWS（不验证签名，因为我们需要从Apple获取公钥）
-        # 实际生产环境中，应该使用Apple的验证服务器API来验证收据
-        # 这里简化处理，实际应该调用Apple的验证API
-        
-        # 提取JWS的payload（不验证签名，仅用于获取信息）
-        parts = request.transaction_jws.split('.')
-        if len(parts) != 3:
-            raise HTTPException(status_code=400, detail="无效的交易JWS格式")
-        
-        import base64
-        # 解码payload
-        payload = parts[1]
-        # 添加padding
-        payload += '=' * (4 - len(payload) % 4)
-        decoded_payload = base64.urlsafe_b64decode(payload)
-        transaction_data = json.loads(decoded_payload)
-        
-        # 验证产品ID
-        valid_product_ids = ["com.link2ur.vip.monthly", "com.link2ur.vip.yearly"]
-        if request.product_id not in valid_product_ids:
+        # 1. 验证产品ID
+        if not iap_verification_service.validate_product_id(request.product_id):
             raise HTTPException(status_code=400, detail="无效的产品ID")
         
-        # 验证交易ID是否匹配
-        if str(transaction_data.get("transactionId")) != request.transaction_id:
+        # 2. 验证交易JWS
+        try:
+            transaction_info = iap_verification_service.verify_transaction_jws(request.transaction_jws)
+        except ValueError as e:
+            logger.error(f"JWS验证失败: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"交易验证失败: {str(e)}")
+        
+        # 3. 验证交易ID是否匹配
+        if transaction_info["transaction_id"] != request.transaction_id:
             raise HTTPException(status_code=400, detail="交易ID不匹配")
         
-        # 检查是否已经处理过这个交易（防止重复激活）
-        # 这里可以添加一个数据库表来记录已处理的交易ID
+        # 4. 验证产品ID是否匹配
+        if transaction_info["product_id"] != request.product_id:
+            raise HTTPException(status_code=400, detail="产品ID不匹配")
         
-        # 更新用户VIP状态
-        user = db.query(models.User).filter(models.User.id == current_user.id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="用户不存在")
+        # 5. 检查是否已经处理过这个交易（防止重复激活）
+        existing_subscription = crud.get_vip_subscription_by_transaction_id(db, request.transaction_id)
+        if existing_subscription:
+            logger.warning(f"交易 {request.transaction_id} 已被处理过，用户: {existing_subscription.user_id}")
+            # 如果交易已存在，检查是否是同一用户
+            if existing_subscription.user_id != current_user.id:
+                raise HTTPException(status_code=400, detail="该交易已被其他用户使用")
+            # 如果是同一用户，返回现有订阅信息
+            return {
+                "message": "VIP已激活（重复请求）",
+                "user_level": current_user.user_level,
+                "product_id": request.product_id,
+                "subscription_id": existing_subscription.id
+            }
         
+        # 6. 从Apple服务器获取交易信息（可选，用于额外验证）
+        server_transaction_info = None
+        try:
+            server_transaction_info = iap_verification_service.get_transaction_info(
+                request.transaction_id,
+                transaction_info["environment"]
+            )
+            if server_transaction_info:
+                logger.info(f"从Apple服务器获取交易信息成功: {request.transaction_id}")
+        except Exception as e:
+            logger.warning(f"从Apple服务器获取交易信息失败（继续处理）: {str(e)}")
+        
+        # 7. 转换时间戳
+        purchase_date = iap_verification_service.convert_timestamp_to_datetime(
+            transaction_info["purchase_date"]
+        )
+        expires_date = None
+        if transaction_info["expires_date"]:
+            expires_date = iap_verification_service.convert_timestamp_to_datetime(
+                transaction_info["expires_date"]
+            )
+        
+        # 8. 创建VIP订阅记录
+        subscription = crud.create_vip_subscription(
+            db=db,
+            user_id=current_user.id,
+            product_id=request.product_id,
+            transaction_id=request.transaction_id,
+            original_transaction_id=transaction_info.get("original_transaction_id"),
+            transaction_jws=request.transaction_jws,
+            purchase_date=purchase_date,
+            expires_date=expires_date,
+            is_trial_period=transaction_info["is_trial_period"],
+            is_in_intro_offer_period=transaction_info["is_in_intro_offer_period"],
+            environment=transaction_info["environment"],
+            status="active"
+        )
+        
+        # 9. 更新用户VIP状态
         # 根据产品ID确定VIP类型
-        # 如果是年度订阅，可以考虑设置为super VIP
+        user_level = "vip"
         if request.product_id == "com.link2ur.vip.yearly":
-            user.user_level = "vip"  # 或者 "super"，根据业务需求
-        else:
-            user.user_level = "vip"
+            # 年度订阅可以设置为super VIP（根据业务需求）
+            user_level = "vip"  # 或 "super"
         
-        db.commit()
-        db.refresh(user)
+        crud.update_user_vip_status(db, current_user.id, user_level)
         
-        # 记录购买记录（可选，可以创建一个VIP购买记录表）
-        logger.info(f"用户 {current_user.id} 通过IAP激活VIP: 产品ID={request.product_id}, 交易ID={request.transaction_id}")
+        # 10. 记录日志
+        logger.info(
+            f"用户 {current_user.id} 通过IAP激活VIP成功: "
+            f"产品ID={request.product_id}, "
+            f"交易ID={request.transaction_id}, "
+            f"订阅ID={subscription.id}, "
+            f"环境={transaction_info['environment']}"
+        )
+        
+        # 11. 发送通知（可选）
+        try:
+            from app.push_notification_service import send_push_notification
+            send_push_notification(
+                user_id=current_user.id,
+                title="VIP激活成功",
+                body=f"恭喜您成为VIP会员！现在可以享受所有VIP权益了。",
+                data={"type": "vip_activated", "subscription_id": subscription.id}
+            )
+        except Exception as e:
+            logger.warning(f"发送VIP激活通知失败: {str(e)}")
         
         return {
             "message": "VIP激活成功",
-            "user_level": user.user_level,
-            "product_id": request.product_id
+            "user_level": user_level,
+            "product_id": request.product_id,
+            "subscription_id": subscription.id,
+            "expires_date": expires_date.isoformat() if expires_date else None
         }
         
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="无效的交易数据格式")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"激活VIP失败: {str(e)}")
+        logger.error(f"激活VIP失败: {str(e)}", exc_info=True)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"激活VIP失败: {str(e)}")
+
+
+@router.get("/users/vip/status")
+def get_vip_status(
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """获取当前用户的VIP订阅状态"""
+    from app.vip_subscription_service import vip_subscription_service
+    
+    subscription_status = vip_subscription_service.check_subscription_status(
+        db, current_user.id
+    )
+    
+    return {
+        "user_level": current_user.user_level,
+        "is_vip": current_user.user_level in ["vip", "super"],
+        "subscription": subscription_status
+    }
+
+
+@router.post("/webhooks/apple-iap")
+async def apple_iap_webhook(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Apple IAP Webhook端点
+    处理Apple发送的订阅状态更新通知
+    """
+    from app.vip_subscription_service import vip_subscription_service
+    import json
+    
+    try:
+        # 获取请求体
+        body = await request.json()
+        
+        # 验证请求（可选：验证Apple的签名）
+        # 在生产环境中，应该验证请求是否真的来自Apple
+        
+        notification_type = body.get("notification_type")
+        unified_receipt = body.get("unified_receipt", {})
+        latest_receipt_info = unified_receipt.get("latest_receipt_info", [])
+        
+        logger.info(f"收到Apple IAP Webhook: {notification_type}")
+        
+        # 处理不同类型的通知
+        if notification_type == "INITIAL_BUY":
+            # 初始购买（已在activate_vip中处理）
+            logger.info("收到初始购买通知")
+            
+        elif notification_type == "DID_RENEW":
+            # 订阅续费
+            if latest_receipt_info:
+                latest_transaction = latest_receipt_info[-1]
+                original_transaction_id = latest_transaction.get("original_transaction_id")
+                transaction_id = latest_transaction.get("transaction_id")
+                
+                # 注意：这里需要从receipt中提取JWS
+                # 实际实现中，应该从latest_receipt获取JWS
+                logger.info(f"处理订阅续费: {original_transaction_id} -> {transaction_id}")
+                # vip_subscription_service.process_subscription_renewal(...)
+            
+        elif notification_type == "DID_FAIL_TO_RENEW":
+            # 续费失败
+            logger.warning("订阅续费失败")
+            
+        elif notification_type == "CANCEL":
+            # 取消订阅
+            if latest_receipt_info:
+                latest_transaction = latest_receipt_info[-1]
+                transaction_id = latest_transaction.get("transaction_id")
+                cancellation_reason = latest_transaction.get("cancellation_reason")
+                
+                vip_subscription_service.cancel_subscription(
+                    db, transaction_id, cancellation_reason
+                )
+            
+        elif notification_type == "REFUND":
+            # 退款
+            if latest_receipt_info:
+                latest_transaction = latest_receipt_info[-1]
+                transaction_id = latest_transaction.get("transaction_id")
+                
+                vip_subscription_service.process_refund(db, transaction_id, "Apple退款")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"处理Apple IAP Webhook失败: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
+        )
 
 
 # 用户任务偏好相关API

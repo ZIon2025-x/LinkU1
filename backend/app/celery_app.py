@@ -254,6 +254,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 600.0,  # 10分钟
     },
     
+    # 检查并更新过期的VIP订阅 - 每1小时执行一次
+    'check-expired-vip-subscriptions': {
+        'task': 'app.celery_tasks.check_expired_vip_subscriptions_task',
+        'schedule': 3600.0,  # 1小时
+    },
+    
     # ========== 每日任务（每天特定时间）==========
     
     # 清理长期无活动对话 - 每天凌晨2点执行

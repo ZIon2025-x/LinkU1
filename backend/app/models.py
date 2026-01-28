@@ -1287,6 +1287,37 @@ class AdminRewardDetail(Base):
     )
 
 
+class VIPSubscription(Base):
+    """VIP订阅记录表"""
+    __tablename__ = "vip_subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(String(100), nullable=False)
+    transaction_id = Column(String(255), unique=True, nullable=False, index=True)
+    original_transaction_id = Column(String(255), nullable=True, index=True)
+    transaction_jws = Column(Text, nullable=False)
+    purchase_date = Column(DateTime(timezone=True), nullable=False)
+    expires_date = Column(DateTime(timezone=True), nullable=True)
+    is_trial_period = Column(Boolean, default=False)
+    is_in_intro_offer_period = Column(Boolean, default=False)
+    environment = Column(String(20), default="Production")
+    status = Column(String(20), default="active", index=True)
+    auto_renew_status = Column(Boolean, default=True)
+    cancellation_reason = Column(String(50), nullable=True)
+    refunded_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    __table_args__ = (
+        Index("ix_vip_subscriptions_user_id", user_id),
+        Index("ix_vip_subscriptions_original_transaction_id", original_transaction_id),
+        Index("ix_vip_subscriptions_status", status),
+        Index("ix_vip_subscriptions_expires_date", expires_date),
+        Index("ix_vip_subscriptions_user_status", user_id, status),
+    )
+
+
 class DeviceFingerprint(Base):
     """设备指纹表"""
     __tablename__ = "device_fingerprints"

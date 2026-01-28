@@ -92,6 +92,7 @@ if CELERY_AVAILABLE:
         process_expired_verifications,
         check_expired_payment_tasks
     )
+    from app.crud import check_and_update_expired_subscriptions
     from app.crud import (
         cancel_expired_tasks,
         update_all_featured_task_experts_response_time,
@@ -820,4 +821,40 @@ if CELERY_AVAILABLE:
                 logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
                 raise self.retry(exc=e)
             raise
+
+    @celery_app.task(
+        name='app.celery_tasks.check_expired_vip_subscriptions_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=300  # 重试延迟5分钟
+    )
+    def check_expired_vip_subscriptions_task(self):
+        """检查并更新过期的VIP订阅 - Celery任务包装（每1小时执行）"""
+        start_time = time.time()
+        task_name = 'check_expired_vip_subscriptions_task'
+        db = SessionLocal()
+        try:
+            updated_count = check_and_update_expired_subscriptions(db)
+            duration = time.time() - start_time
+            logger.info(f"VIP订阅过期检查完成: 更新了 {updated_count} 个过期订阅 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {
+                "status": "success",
+                "message": f"Updated {updated_count} expired subscriptions",
+                "updated_count": updated_count
+            }
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"VIP订阅过期检查失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
 

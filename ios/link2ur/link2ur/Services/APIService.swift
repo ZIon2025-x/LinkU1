@@ -38,6 +38,14 @@ public class APIService {
     private init() {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = Constants.API.timeoutInterval
+        configuration.timeoutIntervalForResource = Constants.API.timeoutInterval * 2
+        
+        // 启用等待连接功能 - 当网络暂时不可用时，等待连接恢复而不是立即失败
+        // 这有助于处理网络切换、短暂断开等情况
+        configuration.waitsForConnectivity = true
+        
+        // 允许使用蜂窝网络
+        configuration.allowsCellularAccess = true
         
         // 设置默认的 HTTP headers（用于设备指纹生成）
         // 后端使用 user-agent, accept-language, accept-encoding 生成设备指纹
@@ -99,7 +107,29 @@ public class APIService {
         let startTime = Date()
         
         return session.dataTaskPublisher(for: request)
-            .mapError { APIError.requestFailed($0) }
+            .mapError { error -> APIError in
+                // 改进网络错误处理，特别是socket连接错误
+                let nsError = error as NSError
+                let errorDescription = error.localizedDescription
+                let endpoint = request.url?.path ?? "unknown"
+                
+                // 检查是否是socket连接错误
+                if errorDescription.contains("Socket is not connected") || 
+                   errorDescription.contains("nw_flow_add_write_request") ||
+                   errorDescription.contains("nw_write_request_report") {
+                    Logger.warning("网络连接错误 (\(endpoint)): \(errorDescription)", category: .network)
+                    Logger.debug("错误详情: domain=\(nsError.domain), code=\(nsError.code), userInfo=\(nsError.userInfo)", category: .network)
+                    
+                    // 检查网络连接状态
+                    if !Reachability.shared.isConnected {
+                        Logger.warning("设备当前无网络连接", category: .network)
+                    }
+                } else {
+                    Logger.error("请求失败 (\(endpoint)): \(errorDescription)", category: .api)
+                }
+                
+                return APIError.requestFailed(error)
+            }
             .flatMap { data, response -> AnyPublisher<T, APIError> in
                 guard let httpResponse = response as? HTTPURLResponse else {
                     return Fail(error: APIError.invalidResponse).eraseToAnyPublisher()
@@ -286,7 +316,29 @@ public class APIService {
     /// 执行请求的通用方法
     private func performRequest<T: Decodable>(request: URLRequest, type: T.Type, startTime: Date) -> AnyPublisher<T, APIError> {
         return session.dataTaskPublisher(for: request)
-            .mapError { APIError.requestFailed($0) }
+            .mapError { error -> APIError in
+                // 改进网络错误处理，特别是socket连接错误
+                let nsError = error as NSError
+                let errorDescription = error.localizedDescription
+                let endpoint = request.url?.path ?? "unknown"
+                
+                // 检查是否是socket连接错误
+                if errorDescription.contains("Socket is not connected") || 
+                   errorDescription.contains("nw_flow_add_write_request") ||
+                   errorDescription.contains("nw_write_request_report") {
+                    Logger.warning("网络连接错误 (\(endpoint)): \(errorDescription)", category: .network)
+                    Logger.debug("错误详情: domain=\(nsError.domain), code=\(nsError.code), userInfo=\(nsError.userInfo)", category: .network)
+                    
+                    // 检查网络连接状态
+                    if !Reachability.shared.isConnected {
+                        Logger.warning("设备当前无网络连接", category: .network)
+                    }
+                } else {
+                    Logger.error("请求失败 (\(endpoint)): \(errorDescription)", category: .api)
+                }
+                
+                return APIError.requestFailed(error)
+            }
             .flatMap { data, response -> AnyPublisher<T, APIError> in
                 guard let httpResponse = response as? HTTPURLResponse else {
                     // 记录性能指标（错误情况）
@@ -1029,32 +1081,58 @@ extension APIService {
         
         Logger.debug("Async 请求: \(method.rawValue) \(endpoint)", category: .api)
         
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            if httpResponse.statusCode == 401 {
-                throw APIError.unauthorized
-            }
-            throw APIError.httpError(httpResponse.statusCode)
-        }
-        
-        // 调试输出
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Logger.debug("Async 响应 (\(endpoint)): \(jsonString.prefix(300))", category: .api)
-        }
-        
         do {
-            // 注意：不使用 convertFromSnakeCase，因为模型的 CodingKeys 已经处理了 snake_case 转换
-            // 这样可以保持与 Combine 版本 request 方法的一致性
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+        
+            guard (200...299).contains(httpResponse.statusCode) else {
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+                throw APIError.httpError(httpResponse.statusCode)
+            }
+            
+            // 调试输出
+            if let jsonString = String(data: data, encoding: .utf8) {
+                Logger.debug("Async 响应 (\(endpoint)): \(jsonString.prefix(300))", category: .api)
+            }
+            
+            do {
+                // 注意：不使用 convertFromSnakeCase，因为模型的 CodingKeys 已经处理了 snake_case 转换
+                // 这样可以保持与 Combine 版本 request 方法的一致性
+                let decoder = JSONDecoder()
+                return try decoder.decode(T.self, from: data)
+            } catch {
+                Logger.error("Async 解码错误 (\(endpoint)): \(error)", category: .api)
+                throw APIError.decodingError(error)
+            }
+        } catch let error as APIError {
+            // 如果是已经转换的 APIError，直接抛出
+            throw error
         } catch {
-            Logger.error("Async 解码错误 (\(endpoint)): \(error)", category: .api)
-            throw APIError.decodingError(error)
+            // 处理网络错误，特别是socket连接错误
+            let nsError = error as NSError
+            let errorDescription = error.localizedDescription
+            
+            // 检查是否是socket连接错误
+            if errorDescription.contains("Socket is not connected") || 
+               errorDescription.contains("nw_flow_add_write_request") ||
+               errorDescription.contains("nw_write_request_report") {
+                Logger.warning("网络连接错误 (\(endpoint)): \(errorDescription)", category: .network)
+                Logger.debug("错误详情: domain=\(nsError.domain), code=\(nsError.code), userInfo=\(nsError.userInfo)", category: .network)
+                
+                // 检查网络连接状态
+                if !Reachability.shared.isConnected {
+                    Logger.warning("设备当前无网络连接", category: .network)
+                }
+            } else {
+                Logger.error("Async 请求失败 (\(endpoint)): \(errorDescription)", category: .api)
+            }
+            
+            throw APIError.requestFailed(error)
         }
     }
 }

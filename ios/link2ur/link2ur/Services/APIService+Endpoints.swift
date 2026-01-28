@@ -1152,6 +1152,44 @@ extension APIService {
 }
 
 // MARK: - VIP (VIP会员)
+
+// VIP订阅状态响应模型
+struct VIPSubscriptionStatus: Codable {
+    let subscriptionId: Int?
+    let productId: String?
+    let status: String?
+    let purchaseDate: String?
+    let expiresDate: String?
+    let isExpired: Bool?
+    let autoRenewStatus: Bool?
+    let isTrialPeriod: Bool?
+    let isInIntroOfferPeriod: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case subscriptionId = "subscription_id"
+        case productId = "product_id"
+        case status
+        case purchaseDate = "purchase_date"
+        case expiresDate = "expires_date"
+        case isExpired = "is_expired"
+        case autoRenewStatus = "auto_renew_status"
+        case isTrialPeriod = "is_trial_period"
+        case isInIntroOfferPeriod = "is_in_intro_offer_period"
+    }
+}
+
+struct VIPStatusResponse: Codable {
+    let userLevel: String
+    let isVIP: Bool
+    let subscription: VIPSubscriptionStatus?
+    
+    enum CodingKeys: String, CodingKey {
+        case userLevel = "user_level"
+        case isVIP = "is_vip"
+        case subscription
+    }
+}
+
 extension APIService {
     /// 激活VIP会员（通过IAP购买）
     func activateVIP(productID: String, transactionID: String, transactionJWS: String) async throws {
@@ -1173,6 +1211,26 @@ extension APIService {
                     },
                     receiveValue: { _ in
                         continuation.resume()
+                        cancellable?.cancel()
+                    }
+                )
+        }
+    }
+    
+    /// 获取VIP订阅状态
+    func getVIPStatus() async throws -> VIPStatusResponse {
+        return try await withCheckedThrowingContinuation { continuation in
+            var cancellable: AnyCancellable?
+            cancellable = request(VIPStatusResponse.self, APIEndpoints.Users.vipStatus, method: "GET")
+                .sink(
+                    receiveCompletion: { completion in
+                        if case .failure(let error) = completion {
+                            continuation.resume(throwing: error)
+                        }
+                        cancellable?.cancel()
+                    },
+                    receiveValue: { response in
+                        continuation.resume(returning: response)
                         cancellable?.cancel()
                     }
                 )

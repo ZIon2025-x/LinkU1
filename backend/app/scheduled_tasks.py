@@ -1357,6 +1357,15 @@ def run_scheduled_tasks():
         except Exception as e:
             logger.error(f"发送任务截止日期提醒失败: {e}", exc_info=True)
         
+        # 检查并更新过期的VIP订阅
+        try:
+            from app.crud import check_and_update_expired_subscriptions
+            updated_count = check_and_update_expired_subscriptions(db)
+            if updated_count > 0:
+                logger.info(f"VIP订阅过期检查: 更新了 {updated_count} 个过期订阅")
+        except Exception as e:
+            logger.error(f"VIP订阅过期检查失败: {e}", exc_info=True)
+        
         # 处理过期认证（每小时执行一次，这里作为兜底）
         try:
             process_expired_verifications(db)

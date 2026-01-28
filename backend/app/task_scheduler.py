@@ -220,6 +220,15 @@ def init_scheduler():
         description="检查并取消支付过期的任务"
     )
     
+    # 检查并更新过期的VIP订阅 - 每1小时执行一次
+    from app.crud import check_and_update_expired_subscriptions
+    scheduler.register_task(
+        'check_expired_vip_subscriptions',
+        with_db(check_and_update_expired_subscriptions),
+        interval_seconds=3600,  # 1小时
+        description="检查并更新过期的VIP订阅"
+    )
+    
     # 中频任务（优化频率，减少DB压力）
     scheduler.register_task(
         'check_expired_coupons',

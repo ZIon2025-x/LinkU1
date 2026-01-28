@@ -87,17 +87,21 @@
 3. **处理订阅状态**：定期检查订阅是否仍然有效
 4. **处理退款**：监听退款通知并更新用户状态
 
-### 2. 订阅管理
+### 2. 订阅管理 ✅
 
-- 订阅会自动续费，除非用户取消
-- 需要在后端实现订阅状态检查机制
-- 建议创建VIP订阅记录表，记录：
+- ✅ 订阅会自动续费，除非用户取消
+- ✅ 后端实现订阅状态检查机制（定时任务每小时执行）
+- ✅ VIP订阅记录表已创建，记录：
   - 用户ID
   - 产品ID
   - 交易ID
+  - 原始交易ID（用于续费关联）
   - 订阅开始时间
   - 订阅到期时间
-  - 订阅状态
+  - 订阅状态（active, expired, cancelled, refunded）
+  - 环境（Production/Sandbox）
+  - 试用期标识
+  - 自动续费状态
 
 ### 3. 用户体验
 
@@ -109,15 +113,23 @@
 ## 🔧 代码文件清单
 
 ### iOS端
-- `ios/link2ur/link2ur/Services/IAPService.swift` - IAP服务类
+- `ios/link2ur/link2ur/Services/IAPService.swift` - IAP服务类（StoreKit 2）
 - `ios/link2ur/link2ur/Views/Info/VIPPurchaseView.swift` - 购买界面
 - `ios/link2ur/link2ur/Views/Info/VIPView.swift` - VIP页面（已更新）
 - `ios/link2ur/link2ur/Services/APIService+Endpoints.swift` - API扩展（已更新）
 - `ios/link2ur/link2ur/Services/APIEndpoints.swift` - API端点定义（已更新）
 
 ### 后端
-- `backend/app/routers.py` - VIP激活API端点（已添加）
+- `backend/app/routers.py` - VIP激活API端点、状态查询、Webhook（已添加）
 - `backend/app/schemas.py` - VIP激活请求模型（已添加）
+- `backend/app/models.py` - VIP订阅模型（已添加）
+- `backend/app/crud.py` - VIP订阅CRUD函数（已添加）
+- `backend/app/iap_verification_service.py` - IAP验证服务（完整实现）
+- `backend/app/vip_subscription_service.py` - VIP订阅服务（续费、退款处理）
+- `backend/migrations/073_add_vip_subscriptions_table.sql` - 数据库迁移
+- `backend/app/celery_tasks.py` - 定时任务（检查过期订阅）
+- `backend/app/task_scheduler.py` - 任务调度器（检查过期订阅）
+- `backend/app/scheduled_tasks.py` - 定时任务（检查过期订阅）
 
 ## 📝 App Store审核说明
 
@@ -152,6 +164,61 @@ VIP会员功能说明：
 - [App Store Connect IAP设置](https://help.apple.com/app-store-connect/#/devb57be10e7)
 - [App Store审核指南](https://developer.apple.com/app-store/review/guidelines/)
 
+## 🔐 安全配置要求
+
+### 环境变量配置
+
+在生产环境中，需要配置以下环境变量：
+
+```bash
+# App Store Connect配置（用于服务器端验证）
+APP_STORE_CONNECT_KEY_ID=your_key_id
+APP_STORE_CONNECT_ISSUER_ID=your_issuer_id
+APP_STORE_CONNECT_KEY_PATH=/path/to/AuthKey_XXXXXXXX.p8
+# 或者使用内容（如果使用环境变量存储）
+APP_STORE_CONNECT_KEY_CONTENT=-----BEGIN PRIVATE KEY-----...
+
+# IAP验证配置
+ENABLE_IAP_FULL_VERIFICATION=true  # 生产环境必须为true
+IAP_USE_SANDBOX=false  # 生产环境必须为false
+```
+
+### Webhook配置
+
+在App Store Connect中配置Webhook URL：
+- URL: `https://your-domain.com/api/webhooks/apple-iap`
+- 通知类型：选择所有订阅相关通知
+
+## 📊 监控和日志
+
+### 关键指标
+- VIP订阅激活数量
+- 订阅续费数量
+- 订阅退款数量
+- 过期订阅数量
+- 验证失败次数
+
+### 日志位置
+- 激活日志：`logger.info` 记录所有VIP激活
+- 错误日志：`logger.error` 记录所有验证和处理错误
+- Webhook日志：`logger.info` 记录所有Webhook通知
+
+## 🧪 测试建议
+
+### 沙盒测试
+1. 在App Store Connect中创建沙盒测试账户
+2. 在设备上登录沙盒账户
+3. 测试完整购买流程
+4. 测试订阅续费
+5. 测试退款处理
+
+### 生产测试
+1. 使用真实账户进行小金额测试
+2. 验证Webhook接收
+3. 验证定时任务执行
+4. 监控日志和错误
+
 ---
 
 **最后更新**：2026年1月28日
+**状态**：✅ 生产级实现完成

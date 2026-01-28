@@ -2,6 +2,10 @@ import SwiftUI
 
 struct VIPView: View {
     @EnvironmentObject var appState: AppState
+    @StateObject private var iapService = IAPService.shared
+    @State private var subscriptionStatus: VIPSubscriptionStatus?
+    @State private var isLoadingStatus = false
+    @State private var localSubscriptionInfo: SubscriptionStatusInfo?
     
     var isVIP: Bool {
         appState.currentUser?.userLevel == "vip" || appState.currentUser?.userLevel == "super"
@@ -55,6 +59,40 @@ struct VIPView: View {
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
+                        
+                        // 显示订阅到期时间和自动续费状态
+                        if let subscription = subscriptionStatus, let expiresDate = subscription.expiresDate {
+                            VStack(spacing: AppSpacing.xs) {
+                                Text("到期时间：\(formatSubscriptionExpiry(expiresDate))")
+                                    .font(AppTypography.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                                
+                                if let localInfo = localSubscriptionInfo {
+                                    if localInfo.willAutoRenew {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "arrow.clockwise")
+                                                .font(.system(size: 10))
+                                            Text("将自动续费")
+                                                .font(AppTypography.caption)
+                                        }
+                                        .foregroundColor(.green)
+                                    } else {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "exclamationmark.circle")
+                                                .font(.system(size: 10))
+                                            Text("已取消自动续费")
+                                                .font(AppTypography.caption)
+                                        }
+                                        .foregroundColor(.orange)
+                                    }
+                                }
+                            }
+                            .padding(.top, AppSpacing.xs)
+                        } else if isLoadingStatus {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .padding(.top, AppSpacing.xs)
+                        }
                     }
                     .padding(AppSpacing.md)
                     .frame(maxWidth: .infinity)
@@ -163,6 +201,66 @@ struct VIPView: View {
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .task {
+            if isVIP {
+                await loadVIPStatus()
+                await loadLocalSubscriptionInfo()
+            }
+        }
+        .onChange(of: isVIP) { newValue in
+            if newValue {
+                _Concurrency.Task {
+                    await loadVIPStatus()
+                    await loadLocalSubscriptionInfo()
+                }
+            } else {
+                subscriptionStatus = nil
+                localSubscriptionInfo = nil
+            }
+        }
+    }
+    
+    private func loadVIPStatus() async {
+        isLoadingStatus = true
+        defer { isLoadingStatus = false }
+        
+        do {
+            let response = try await APIService.shared.getVIPStatus()
+            subscriptionStatus = response.subscription
+        } catch {
+            print("获取VIP状态失败: \(error)")
+        }
+    }
+    
+    private func loadLocalSubscriptionInfo() async {
+        // 从IAPService获取本地订阅状态信息
+        if let activeSubscription = await iapService.getCurrentActiveSubscription() {
+            localSubscriptionInfo = activeSubscription
+        } else {
+            // 尝试从subscriptionStatuses中获取
+            await iapService.updateSubscriptionStatuses()
+            for (_, info) in iapService.subscriptionStatuses {
+                if info.isActive {
+                    localSubscriptionInfo = info
+                    break
+                }
+            }
+        }
+    }
+    
+    private func parseISO8601Date(_ dateString: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: dateString) ?? ISO8601DateFormatter().date(from: dateString)
+    }
+
+    private func formatSubscriptionExpiry(_ dateString: String) -> String {
+        guard let date = parseISO8601Date(dateString) else { return dateString }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter.string(from: date)
     }
 }
 

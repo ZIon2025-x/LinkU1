@@ -229,7 +229,7 @@ struct CreateTaskView: View {
                     .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
                     .padding(.top, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity) // iPad上限制最大宽度
-                    .frame(maxWidth: .infinity) // 确保在iPad上居中
+                    .frame(maxWidth: .infinity, alignment: .center) // 确保在iPad上居中
                 }
             }
             .scrollDismissesKeyboard(.interactively)
