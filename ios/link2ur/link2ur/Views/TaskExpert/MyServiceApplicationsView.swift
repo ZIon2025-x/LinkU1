@@ -184,17 +184,20 @@ struct ActivityCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 图片区域
+            // 图片区域（使用 Color.clear + overlay 固定尺寸，避免宽图撑开布局）
             ZStack(alignment: .topTrailing) {
                 if let images = activity.images, let firstImage = images.first, !firstImage.isEmpty {
-                    AsyncImageView(
-                        urlString: firstImage,
-                        placeholder: Image(systemName: "photo.fill")
-                    )
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 160)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 160)
+                        .overlay(
+                            AsyncImageView(
+                                urlString: firstImage,
+                                placeholder: Image(systemName: "photo.fill"),
+                                contentMode: .fill
+                            )
+                        )
+                        .clipped()
                 } else {
                     placeholderBackground()
                 }

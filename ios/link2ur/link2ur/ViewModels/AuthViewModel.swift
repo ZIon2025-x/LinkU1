@@ -152,6 +152,12 @@ class AuthViewModel: ObservableObject {
                     Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
                 }
                 
+                // 保存 refresh_token（如果存在）
+                if let refreshToken = response.refreshToken, !refreshToken.isEmpty {
+                    KeychainHelper.shared.save(refreshToken, service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
+                    Logger.success("Refresh Token 已保存", category: .auth)
+                }
+                
                 // 将 LoginUser 转换为 User（登录响应只包含部分字段，需要获取完整用户信息）
                 let loginUser = response.user
                 let user = User(
@@ -440,6 +446,12 @@ class AuthViewModel: ObservableObject {
                     Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
                 }
                 
+                // 保存 refresh_token（如果存在）
+                if let refreshToken = response.refreshToken, !refreshToken.isEmpty {
+                    KeychainHelper.shared.save(refreshToken, service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
+                    Logger.success("Refresh Token 已保存", category: .auth)
+                }
+                
                 // 将 LoginUser 转换为 User
                 let loginUser = response.user
                 let user = User(
@@ -537,6 +549,12 @@ class AuthViewModel: ObservableObject {
                     Logger.success("Session ID 已保存: \(sessionId.prefix(20))...", category: .auth)
                 } else {
                     Logger.warning("警告: 登录响应中未找到 Session ID", category: .auth)
+                }
+                
+                // 保存 refresh_token（如果存在）
+                if let refreshToken = response.refreshToken, !refreshToken.isEmpty {
+                    KeychainHelper.shared.save(refreshToken, service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
+                    Logger.success("Refresh Token 已保存", category: .auth)
                 }
                 
                 // 将 LoginUser 转换为 User

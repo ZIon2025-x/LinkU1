@@ -1359,30 +1359,32 @@ struct TaskImageCarouselView: View {
     }
 }
 
-// MARK: - 单个图片视图
+// MARK: - 单个图片视图（使用 Color.clear + overlay 固定尺寸，避免宽图撑开布局）
 struct TaskImageView: View {
     let imageUrl: String
     let index: Int
     @Binding var selectedIndex: Int
     @Binding var showFullScreen: Bool
     
+    private var imageHeight: CGFloat { DeviceInfo.isPad ? 450 : 300 }
+    
     var body: some View {
-        AsyncImageView(
-            urlString: imageUrl,
-            placeholder: Image(systemName: "photo.fill"),
-            width: nil,
-            height: DeviceInfo.isPad ? 450 : 300,
-            contentMode: .fill,
-            cornerRadius: 0
-        )
-        .frame(height: DeviceInfo.isPad ? 450 : 300)
-        .frame(maxWidth: .infinity)
-        .clipped()
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectedIndex = index
-            showFullScreen = true
-        }
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: imageHeight)
+            .overlay(
+                AsyncImageView(
+                    urlString: imageUrl,
+                    placeholder: Image(systemName: "photo.fill"),
+                    contentMode: .fill
+                )
+            )
+            .clipped()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedIndex = index
+                showFullScreen = true
+            }
     }
 }
 

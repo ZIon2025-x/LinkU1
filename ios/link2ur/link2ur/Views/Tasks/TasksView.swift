@@ -6,6 +6,7 @@ struct TasksView: View {
     @StateObject private var viewModel = TasksViewModel()
     @StateObject private var recommendedViewModel = TasksViewModel()  // 推荐任务 ViewModel
     @EnvironmentObject var appState: AppState  // 增强：用于检查登录状态
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass  // 修复：使用Environment获取SizeClass，避免GeometryReader导致滚动问题
     @State private var searchText = ""
     @State private var showFilter = false
     @State private var selectedCategory: String?
@@ -135,101 +136,102 @@ struct TasksView: View {
                         )
                     } else {
                         ScrollView {
-                            // 优化：iPad适配 - 根据设备类型和SizeClass动态调整列数
-                            GeometryReader { geometry in
-                                let horizontalSizeClass = geometry.size.width > 600 ? UserInterfaceSizeClass.regular : UserInterfaceSizeClass.compact
-                                let columns = AdaptiveLayout.adaptiveGridColumns(
-                                    horizontalSizeClass: horizontalSizeClass,
-                                    itemType: .task,
-                                    spacing: AppSpacing.md
-                                )
-                                
-                                LazyVGrid(columns: columns, spacing: AppSpacing.md) {
-                                    // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
-                                    ForEach(allTasks, id: \.id) { task in
-                                        let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                            // 修复：移除GeometryReader，使用Environment获取SizeClass，避免滚动问题
+                            // iPad适配 - 根据设备类型和SizeClass动态调整列数
+                            let columns = AdaptiveLayout.adaptiveGridColumns(
+                                horizontalSizeClass: horizontalSizeClass,
+                                itemType: .task,
+                                spacing: AppSpacing.md
+                            )
+                            
+                            LazyVGrid(columns: columns, spacing: AppSpacing.md) {
+                                // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
+                                ForEach(allTasks, id: \.id) { task in
+                                    let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
+                                    
+                                    NavigationLink(destination: TaskDetailView(taskId: task.id)) {
+                                        TaskCard(
+                                            task: task,
+                                            isRecommended: task.isRecommended == true,
+                                            onNotInterested: nil, // contextMenu 移到外层
+                                            enableLongPress: false // contextMenu 移到外层
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
+                                    // 关键：把 clipShape/contentShape/contextMenu 都放在 NavigationLink 这层，确保长按高亮按圆角显示
+                                    .clipShape(cardShape)
+                                    .contentShape(cardShape)
+                                    // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
+                                    // 这解决了iPad和iPhone上长按手势"容器感"差异的问题
+                                    // InteractionContentShapeModifier 已添加iOS版本检查，确保向后兼容
+                                    // 虽然项目最低版本是iOS 16，但不同设备/系统版本可能有行为差异
+                                    .modifier(InteractionContentShapeModifier(shape: cardShape))
+                                    // 修复真机长按显示灰色容器的问题：确保背景完全覆盖，防止系统高亮透出
+                                    .background(AppColors.cardBackground.clipShape(cardShape))
+                                    // 移除 drawingGroup：在 ScrollView+LazyVGrid 中会导致长按取消后立即滑动时，
+                                    // 被长按的卡片在长按位置短暂停留，体验不佳。
+                                    .compositingGroup() // 合成为一层再应用阴影，保证圆角与边界正确，且不栅格化
+                                    // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
+                                    .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
+                                    .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            // 增强：记录跳过任务（用于推荐系统负反馈）
+                                            recordTaskSkip(taskId: task.id)
+                                        } label: {
+                                            Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
+                                        }
+                                    }
+                                    // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
+                                    .modifier(TaskCardContextMenuPreviewModifier(shape: cardShape))
+                                    // 移除 zIndex(100)：与 drawingGroup 叠加时，长按取消后立即滑动会导致卡片在旧位置
+                                    // 短暂停留。不设 zIndex 可避免该粘连感，context menu 预览仍正常。
+                                    .id(task.id) // 确保稳定的id，优化视图复用
+                                    .onAppear {
+                                        // 性能优化：只在接近最后一个任务时加载更多（提前3个）
+                                        let threshold = max(0, allTasks.count - 3)
+                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
+                                           index >= threshold {
+                                            viewModel.loadMoreTasks()
+                                        }
                                         
-                                        NavigationLink(destination: TaskDetailView(taskId: task.id)) {
-                                            TaskCard(
-                                                task: task,
-                                                isRecommended: task.isRecommended == true,
-                                                onNotInterested: nil, // contextMenu 移到外层
-                                                enableLongPress: false // contextMenu 移到外层
-                                            )
-                                        }
-                                        .buttonStyle(PlainButtonStyle()) // 使用PlainButtonStyle，避免长按时的缩放效果
-                                        // 关键：把 clipShape/contentShape/contextMenu 都放在 NavigationLink 这层，确保长按高亮按圆角显示
-                                        .clipShape(cardShape)
-                                        .contentShape(cardShape)
-                                        // 关键：使用 .interaction 精确控制交互区域（iOS 16+），避免长按高亮在矩形容器上显示
-                                        // 这解决了iPad和iPhone上长按手势"容器感"差异的问题
-                                        // InteractionContentShapeModifier 已添加iOS版本检查，确保向后兼容
-                                        // 虽然项目最低版本是iOS 16，但不同设备/系统版本可能有行为差异
-                                        .modifier(InteractionContentShapeModifier(shape: cardShape))
-                                        // 修复真机长按显示灰色容器的问题：确保背景完全覆盖，防止系统高亮透出
-                                        .background(AppColors.cardBackground.clipShape(cardShape))
-                                        .drawingGroup() // 强制合成渲染，确保背景和圆角正确显示
-                                        // 使用非常柔和的阴影，减少容器边界感（借鉴钱包余额视图的做法）
-                                        .shadow(color: AppColors.primary.opacity(0.08), radius: 12, x: 0, y: 4)
-                                        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
-                                        .contextMenu {
-                                            Button(role: .destructive) {
-                                                // 增强：记录跳过任务（用于推荐系统负反馈）
-                                                recordTaskSkip(taskId: task.id)
-                                            } label: {
-                                                Label(LocalizationKey.tasksNotInterested.localized, systemImage: "hand.thumbsdown.fill")
-                                            }
-                                        }
-                                        // iOS 17+ 优化：指定 context menu 预览形状，避免预览边缘漏底色
-                                        .modifier(TaskCardContextMenuPreviewModifier(shape: cardShape))
-                                        .zIndex(100) // 优化：使用更高的zIndex，确保长按时卡片浮在最上层
-                                        .id(task.id) // 确保稳定的id，优化视图复用
-                                        .onAppear {
-                                            // 性能优化：只在接近最后一个任务时加载更多（提前3个）
-                                            let threshold = max(0, allTasks.count - 3)
-                                            if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                               index >= threshold {
-                                                viewModel.loadMoreTasks()
-                                            }
-                                            
-                                            // 图片预加载：预加载即将显示的任务图片（提前2个）
-                                            if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                               index < allTasks.count - 2 {
-                                                let nextIndex = index + 1
-                                                if nextIndex < allTasks.count {
-                                                    let nextTask = allTasks[nextIndex]
-                                                    if let images = nextTask.images, let firstImage = images.first, !firstImage.isEmpty {
-                                                        // 检查是否已缓存，未缓存则预加载
-                                                        if ImageCache.shared.getCachedImage(from: firstImage) == nil {
-                                                            ImageCache.shared.loadImage(from: firstImage)
-                                                                .sink(receiveValue: { _ in })
-                                                                .store(in: &imagePreloadCancellables)
-                                                        }
+                                        // 图片预加载：预加载即将显示的任务图片（提前2个）
+                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
+                                           index < allTasks.count - 2 {
+                                            let nextIndex = index + 1
+                                            if nextIndex < allTasks.count {
+                                                let nextTask = allTasks[nextIndex]
+                                                if let images = nextTask.images, let firstImage = images.first, !firstImage.isEmpty {
+                                                    // 检查是否已缓存，未缓存则预加载
+                                                    if ImageCache.shared.getCachedImage(from: firstImage) == nil {
+                                                        ImageCache.shared.loadImage(from: firstImage)
+                                                            .sink(receiveValue: { _ in })
+                                                            .store(in: &imagePreloadCancellables)
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                    
-                                    // 加载更多指示器（使用动态列数）
-                                    if viewModel.isLoadingMore || recommendedViewModel.isLoadingMore {
-                                        HStack {
-                                            Spacer()
-                                            CompactLoadingView()
-                                                .padding()
-                                            Spacer()
-                                        }
-                                        .gridCellColumns(AdaptiveLayout.gridColumnCount(
-                                            horizontalSizeClass: horizontalSizeClass,
-                                            itemType: .task
-                                        ))
-                                    }
                                 }
-                                .padding(.horizontal, AppSpacing.md)
-                                .padding(.vertical, AppSpacing.md)
-                                // 优化：在Grid底部添加额外padding，确保最后一个卡片长按时不被裁剪
-                                .padding(.bottom, AppSpacing.lg)
+                                
+                                // 加载更多指示器（使用动态列数）
+                                if viewModel.isLoadingMore || recommendedViewModel.isLoadingMore {
+                                    HStack {
+                                        Spacer()
+                                        CompactLoadingView()
+                                            .padding()
+                                        Spacer()
+                                    }
+                                    .gridCellColumns(AdaptiveLayout.gridColumnCount(
+                                        horizontalSizeClass: horizontalSizeClass,
+                                        itemType: .task
+                                    ))
+                                }
                             }
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.md)
+                            // 优化：在Grid底部添加额外padding，确保最后一个卡片长按时不被裁剪
+                            .padding(.bottom, AppSpacing.lg)
                         }
                         // 优化：禁用ScrollView的裁剪，允许contextMenu超出边界显示
                         .scrollContentBackground(.hidden)
@@ -448,22 +450,21 @@ struct TasksView: View {
         }
         
         // 再添加推荐任务（覆盖普通任务，保留推荐原因）
+        // 修复：确保所有推荐任务都被添加到 taskMap 中
+        // 如果任务在 recommendedViewModel.tasks 中，无论 isRecommended 标记如何，都应该被视为推荐任务
         for task in recommendedViewModel.tasks {
             // 推荐任务优先，保留推荐原因和 isRecommended 标记
-            if task.isRecommended == true {
-                taskMap[task.id] = task
-            } else if taskMap[task.id] == nil {
-                // 如果普通任务中没有，也添加
-                taskMap[task.id] = task
-            }
+            // 如果 isRecommended 标记不正确，仍然将其添加到 taskMap（确保推荐任务不被遗漏）
+            taskMap[task.id] = task
         }
         
         // 转换为数组，推荐任务在前（保留推荐原因），按匹配分数排序
         var mergedTasks: [Task] = []
         
         // 先添加推荐任务（保留推荐原因），按匹配分数降序排序
+        // 修复：确保所有在推荐任务 ViewModel 中的任务都被识别为推荐任务
+        // 如果任务在 recommendedViewModel.tasks 中，即使 isRecommended 标记不正确，也应该被视为推荐任务
         let recommendedTasks = recommendedViewModel.tasks
-            .filter { $0.isRecommended == true }
             .sorted { (task1, task2) -> Bool in
                 let score1 = task1.matchScore ?? 0.0
                 let score2 = task2.matchScore ?? 0.0
@@ -473,9 +474,16 @@ struct TasksView: View {
         // 获取推荐任务 ID 集合，用于去重
         let recommendedTaskIds = Set(recommendedTasks.map { $0.id })
         
+        // 修复：确保所有推荐任务都被添加到合并列表中
+        // 如果推荐任务在 taskMap 中，使用 taskMap 中的版本（可能包含更多信息）
+        // 如果不在，直接使用推荐任务本身（确保推荐任务不被遗漏）
         for task in recommendedTasks {
             if let mergedTask = taskMap[task.id] {
                 mergedTasks.append(mergedTask)
+            } else {
+                // 如果推荐任务不在 taskMap 中，直接添加（确保推荐任务不被遗漏）
+                mergedTasks.append(task)
+                Logger.warning("推荐任务 \(task.id) 不在 taskMap 中，直接添加", category: .ui)
             }
         }
         
@@ -485,6 +493,13 @@ struct TasksView: View {
                 mergedTasks.append(task)
             }
         }
+        
+        // 调试日志：记录任务数量和详细信息
+        let recommendedTaskIdsList = recommendedTasks.map { "\($0.id)" }.joined(separator: ", ")
+        let allTaskIdsList = mergedTasks.map { "\($0.id)" }.joined(separator: ", ")
+        Logger.debug("任务合并完成 - 普通任务: \(viewModel.tasks.count), 推荐任务ViewModel: \(recommendedViewModel.tasks.count), 筛选后推荐任务: \(recommendedTasks.count), 合并后总数: \(mergedTasks.count)", category: .ui)
+        Logger.debug("推荐任务IDs: [\(recommendedTaskIdsList)]", category: .ui)
+        Logger.debug("合并后任务IDs: [\(allTaskIdsList)]", category: .ui)
         
         // 优化：只在数据真正变化时更新
         if mergedTasks.count != allTasks.count || 
@@ -749,19 +764,21 @@ struct TaskCard: View {
             // 图片区域（符合 HIG，使用系统圆角）
             ZStack(alignment: .top) {
                 // 图片背景 - 使用 AsyncImageView 优化图片加载和缓存
+                // 修复：使用 Color.clear + overlay 模式，确保图片不会撑开布局
+                // 先用 Color.clear 建立固定尺寸的框架，然后在 overlay 中显示图片
                 if let images = task.images, let firstImage = images.first, !firstImage.isEmpty {
-                    AsyncImageView(
-                        urlString: firstImage,
-                        placeholder: Image(systemName: "photo"),
-                        width: nil,
-                        height: 180,
-                        contentMode: .fill,
-                        cornerRadius: 0
-                    )
-                    .frame(height: 180)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .id("\(task.id)-\(firstImage)") // 使用任务ID和图片URL作为id，优化缓存
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .overlay(
+                            AsyncImageView(
+                                urlString: firstImage,
+                                placeholder: Image(systemName: "photo"),
+                                contentMode: .fill
+                            )
+                        )
+                        .clipped()
+                        .id("\(task.id)-\(firstImage)") // 使用任务ID和图片URL作为id，优化缓存
                 } else {
                     placeholderBackground()
                 }

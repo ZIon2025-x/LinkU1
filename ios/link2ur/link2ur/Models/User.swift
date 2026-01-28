@@ -78,6 +78,7 @@ struct LoginResponse: Codable {
     let expiresIn: Int?
     let mobileAuth: Bool?
     let authHeaders: AuthHeaders?
+    let refreshToken: String?
     
     enum CodingKeys: String, CodingKey {
         case message
@@ -86,6 +87,7 @@ struct LoginResponse: Codable {
         case expiresIn = "expires_in"
         case mobileAuth = "mobile_auth"
         case authHeaders = "auth_headers"
+        case refreshToken = "refresh_token"
     }
 }
 
@@ -105,11 +107,15 @@ struct RefreshResponse: Codable {
     let message: String
     let sessionId: String?
     let expiresIn: Int?
+    let refreshToken: String?
+    let recovered: Bool?
     
     enum CodingKeys: String, CodingKey {
         case message
         case sessionId = "session_id"
         case expiresIn = "expires_in"
+        case refreshToken = "refresh_token"
+        case recovered
     }
 }
 

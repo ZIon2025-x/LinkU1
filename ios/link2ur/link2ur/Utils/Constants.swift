@@ -185,6 +185,19 @@ extension String {
             }
         }
         
+        // 后端可能返回「主机 + 路径」无协议格式（如 cdn.link2ur.com/public/images/...）
+        // 勿当作相对路径拼接 baseURL，否则会变成 https://www.link2ur.com/cdn.link2ur.com/...
+        if self.contains("/"), !self.hasPrefix("/"), !self.hasPrefix(".") {
+            let firstSegment = String(self.prefix(upTo: self.firstIndex(of: "/")!))
+            if firstSegment.contains(".") {
+                let fullURL = "https://\(self)"
+                if let url = URL(string: fullURL) {
+                    Logger.debug("转换相对路径为完整 URL: \(self) -> \(fullURL)", category: .network)
+                    return url
+                }
+            }
+        }
+        
         // 如果是相对路径，使用前端服务器 URL（静态资源在前端 public/static 文件夹中）
         let baseURL = Constants.Frontend.baseURL
         let imagePath = self.hasPrefix("/") ? self : "/\(self)"

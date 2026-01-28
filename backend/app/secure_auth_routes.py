@@ -183,7 +183,7 @@ def secure_login(
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
 
-        return {
+        response_data = {
             "message": "登录成功",
             "user": {
                 "id": user.id,
@@ -201,6 +201,12 @@ def secure_login(
                 "X-Auth-Status": "authenticated"
             } if is_mobile else None
         }
+        
+        # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
+        if is_mobile:
+            response_data["refresh_token"] = refresh_token
+        
+        return response_data
 
     except HTTPException:
         raise
@@ -306,12 +312,22 @@ def refresh_session(
                     
                     logger.info(f"通过refresh_token恢复会话成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
                     
-                    return {
+                    # 检测是否为移动端请求，如果是则返回 refresh_token 供移动端存储
+                    from app.secure_auth import is_ios_app_request
+                    is_mobile = is_ios_app_request(request)
+                    
+                    response_data = {
                         "message": "会话恢复成功",
                         "session_id": session.session_id,
                         "expires_in": 300,
                         "recovered": True
                     }
+                    
+                    # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
+                    if is_mobile:
+                        response_data["refresh_token"] = new_refresh_token
+                    
+                    return response_data
             
             # 如果refresh_token也不存在或无效，返回401
             raise HTTPException(
@@ -354,11 +370,21 @@ def refresh_session(
         
         logger.info(f"会话刷新成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
         
-        return {
+        # 检测是否为移动端请求，如果是则返回 refresh_token 供移动端存储
+        from app.secure_auth import is_ios_app_request
+        is_mobile = is_ios_app_request(request)
+        
+        response_data = {
             "message": "会话刷新成功",
             "session_id": session.session_id,  # 仅用于调试
             "expires_in": 300,  # 5分钟
         }
+        
+        # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
+        if is_mobile:
+            response_data["refresh_token"] = refresh_token
+        
+        return response_data
 
     except HTTPException:
         raise
@@ -1547,7 +1573,7 @@ def login_with_phone_verification_code(
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
 
-        return {
+        response_data = {
             "message": "登录成功",
             "user": {
                 "id": user.id,
@@ -1567,6 +1593,12 @@ def login_with_phone_verification_code(
             } if is_mobile else None,
             "is_new_user": is_new_user
         }
+        
+        # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
+        if is_mobile:
+            response_data["refresh_token"] = refresh_token
+        
+        return response_data
 
     except HTTPException:
         raise
@@ -1765,7 +1797,7 @@ def login_with_verification_code(
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
 
-        return {
+        response_data = {
             "message": "登录成功",
             "user": {
                 "id": user.id,
@@ -1784,6 +1816,12 @@ def login_with_verification_code(
             } if is_mobile else None,
             "is_new_user": is_new_user
         }
+        
+        # 移动端需要 refresh_token 在响应体中（无法读取 HTTP-only cookies）
+        if is_mobile:
+            response_data["refresh_token"] = refresh_token
+        
+        return response_data
 
     except HTTPException:
         raise

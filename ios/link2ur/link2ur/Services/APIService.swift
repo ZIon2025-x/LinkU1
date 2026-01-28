@@ -513,6 +513,12 @@ public class APIService {
             refreshRequest.setValue(sessionId, forHTTPHeaderField: "X-Session-ID")
         }
         
+        // 如果存在 refresh_token，也发送它（作为备用，当 session 无效时使用）
+        if let refreshToken = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey), !refreshToken.isEmpty {
+            refreshRequest.setValue(refreshToken, forHTTPHeaderField: "X-Refresh-Token")
+            Logger.debug("🔄 已附加 Refresh Token 到刷新请求", category: .api)
+        }
+        
         Logger.debug("🔄 开始刷新 Session: \(refreshURL.absoluteString)", category: .api)
         if let sessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
             Logger.debug("🔄 当前 Session ID: \(sessionId.prefix(20))...", category: .api)
@@ -543,6 +549,12 @@ public class APIService {
                             KeychainHelper.shared.save(sessionId, service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
                         } else {
                             Logger.warning("⚠️ Session 刷新响应中没有新的 Session ID", category: .api)
+                        }
+                        
+                        // 保存新的 refresh_token（如果存在）
+                        if let refreshToken = refreshResponse.refreshToken, !refreshToken.isEmpty {
+                            KeychainHelper.shared.save(refreshToken, service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
+                            Logger.success("✅ Refresh Token 已更新", category: .api)
                         }
                         
                         // 更新请求的Authorization header

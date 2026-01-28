@@ -120,20 +120,20 @@ struct ItemCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 1. 商品图片 (正方形)
+            // 1. 商品图片 (正方形)（使用 Color.clear + overlay 固定比例，避免宽图撑开布局）
             ZStack(alignment: .topTrailing) {
                 if let images = item.images, let firstImage = images.first, !firstImage.isEmpty {
-                    AsyncImageView(
-                        urlString: firstImage,
-                        placeholder: Image(systemName: "bag.fill"),
-                        width: nil, // 自动填满
-                        height: nil,
-                        contentMode: .fill,
-                        cornerRadius: 0
-                    )
-                    .aspectRatio(1, contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            AsyncImageView(
+                                urlString: firstImage,
+                                placeholder: Image(systemName: "bag.fill"),
+                                contentMode: .fill
+                            )
+                        )
+                        .clipped()
                 } else {
                     ZStack {
                         Rectangle()

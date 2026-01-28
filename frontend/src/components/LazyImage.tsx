@@ -201,6 +201,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     // 关键修复：确保容器不会超出父容器
     maxWidth: '100%',
     maxHeight: '100%',
+    // 防止在 flex/grid 中被大图撑开（与 iOS Color.clear+overlay 同理）
+    minWidth: 0,
+    minHeight: 0,
     // 如果 style 中有 borderRadius，应用到容器以保持圆形
     borderRadius: style?.borderRadius || undefined,
   };

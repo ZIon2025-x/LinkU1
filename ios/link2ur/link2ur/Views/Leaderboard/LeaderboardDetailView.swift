@@ -200,16 +200,19 @@ struct LeaderboardHeroSection: View {
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // 背景图 - 使用 maxWidth 替代 UIScreen.main.bounds，避免弹窗出现时右侧和底部被裁切
+            // 背景图（使用 Color.clear + overlay 固定尺寸，避免宽图撑开布局）
             if let coverImage = leaderboard.coverImage, !coverImage.isEmpty {
-                AsyncImageView(
-                    urlString: coverImage,
-                    placeholder: Image(systemName: "photo.fill")
-                )
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .frame(height: 240)
-                .clipped()
+                Color.clear
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
+                    .overlay(
+                        AsyncImageView(
+                            urlString: coverImage,
+                            placeholder: Image(systemName: "photo.fill"),
+                            contentMode: .fill
+                        )
+                    )
+                    .clipped()
             } else {
                 Rectangle()
                     .fill(
