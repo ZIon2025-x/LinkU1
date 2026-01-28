@@ -1354,6 +1354,11 @@
 "payment.refresh_account_info" = "刷新账户信息";
 "payment.transaction_details" = "交易详情";
 "payment.complete" = "完成";
+"payment.countdown.expired" = "已过期";
+"payment.countdown.remaining" = "剩余 %@";
+"payment.countdown.banner.title" = "请在30分钟内完成支付";
+"payment.countdown.banner.subtitle" = "剩余时间：%@";
+"payment.countdown.banner.expired" = "支付已过期，任务将自动取消";
 
 // MARK: - My Tasks
 "my_tasks.loading_completed" = "加载已完成任务...";

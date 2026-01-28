@@ -511,8 +511,8 @@ def apply_to_activity(
         expert_service_id=db_activity.expert_service_id,
         # 对于有时间段的活动申请，或者多人活动，设置接受时间
         accepted_at=get_utc_time() if (db_activity.has_time_slots or is_multi_participant) else None,
-        # 如果需要支付，设置支付过期时间（24小时）
-        payment_expires_at=get_utc_time() + timedelta(hours=24) if (needs_payment and price > 0) else None,
+        # 如果需要支付，设置支付过期时间（30分钟）
+        payment_expires_at=get_utc_time() + timedelta(minutes=30) if (needs_payment and price > 0) else None,
         is_paid=0,  # 明确标记为未支付
         task_source="expert_activity",  # 达人活动任务
     )

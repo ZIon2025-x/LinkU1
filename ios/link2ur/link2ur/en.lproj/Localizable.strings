@@ -835,6 +835,11 @@
 "payment.account_info_below" = "Your account information is as follows";
 "payment.refresh_account_info" = "Refresh Account Info";
 "payment.complete" = "Complete";
+"payment.countdown.expired" = "Expired";
+"payment.countdown.remaining" = "%@ left";
+"payment.countdown.banner.title" = "Complete payment within 30 minutes";
+"payment.countdown.banner.subtitle" = "Time remaining: %@";
+"payment.countdown.banner.expired" = "Payment expired, task will be cancelled";
 
 // MARK: - Coupon
 "coupon.min_amount_available" = "Available for %@ or more";

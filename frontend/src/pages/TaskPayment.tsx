@@ -5,6 +5,7 @@ import api from '../api';
 import StripePaymentForm from '../components/payment/StripePaymentForm';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { usePaymentCountdown } from '../hooks/usePaymentCountdown';
 import LoginModal from '../components/LoginModal';
 import LazyImage from '../components/LazyImage';
 import { obfuscateLocation } from '../utils/formatUtils';
@@ -42,6 +43,8 @@ interface TaskInfo {
   agreed_reward: number | null;
   currency: string;
   location: string;
+  status?: string;
+  payment_expires_at?: string | null;
 }
 
 const TaskPayment: React.FC = () => {
@@ -62,6 +65,9 @@ const TaskPayment: React.FC = () => {
   const [loadingTask, setLoadingTask] = useState(true);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
   const [returnType, setReturnType] = useState<string | null>(null);
+
+  const showCountdown = taskInfo?.status === 'pending_payment' && taskInfo?.payment_expires_at;
+  const { formatted, isExpired } = usePaymentCountdown(showCountdown ? taskInfo!.payment_expires_at! : null);
 
   // 加载任务信息
   useEffect(() => {
@@ -96,6 +102,8 @@ const TaskPayment: React.FC = () => {
           agreed_reward: task.agreed_reward,
           currency: task.currency || 'GBP',
           location: task.location || '',
+          status: task.status,
+          payment_expires_at: task.payment_expires_at ?? null,
         });
       } catch (error) {
         console.error('Failed to load task info:', error);
@@ -484,6 +492,31 @@ const TaskPayment: React.FC = () => {
 
         {/* 支付内容区域 */}
         <div style={{ padding: '40px' }}>
+          {showCountdown && (
+            <div style={{
+              marginBottom: '24px',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              background: isExpired ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              border: `1px solid ${isExpired ? '#f87171' : '#fbbf24'}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}>
+              <span style={{ fontSize: '16px', fontWeight: '600', color: isExpired ? '#b91c1c' : '#92400e' }}>
+                {isExpired
+                  ? (language === 'zh' ? '支付已过期，任务将自动取消' : 'Payment expired, task will be cancelled')
+                  : (language === 'zh' ? '请在30分钟内完成支付' : 'Complete payment within 30 minutes')}
+              </span>
+              {!isExpired && (
+                <span style={{ fontFamily: 'monospace', fontSize: '20px', fontWeight: 'bold', color: '#92400e' }}>
+                  {language === 'zh' ? '剩余 ' : 'Left '}{formatted}
+                </span>
+              )}
+            </div>
+          )}
           {!paymentData ? (
             <div>
               <h2 style={{ 

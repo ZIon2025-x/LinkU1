@@ -399,6 +399,7 @@ struct TaskDetailView: View {
                 ephemeralKeySecret: paymentEphemeralKeySecret,
                 taskTitle: task.title,
                 applicantName: applicantName,
+                paymentExpiresAt: task.paymentExpiresAt,
                 onPaymentSuccess: {
                     // 支付成功后的回调
                     // 清除 client_secret 和申请者名字
@@ -1859,38 +1860,54 @@ struct TaskActionButtonsView: View {
             // ⚠️ 重要：即使奖励金额为 0，也要显示支付按钮，因为可能涉及平台服务费或其他费用
             // StripePaymentView 会自动处理金额为 0 的情况（优惠券全额抵扣等）
             if isPoster && task.status == .pendingPayment {
-                Button(action: {
-                    // 优化：如果已有支付信息，直接使用；否则让 StripePaymentView 自动获取
-                    // 后端 API 会复用已有的 PaymentIntent（如果存在且未完成），不会创建新的
-                    // 只有在以下情况才清除支付信息：
-                    // 1. 支付信息不存在（首次支付）
-                    // 2. 需要刷新支付信息（比如优惠券变更等）
-                    // 这里不清除，让 StripePaymentView 根据 clientSecret 是否存在来决定是否调用 API
-                    // 如果 clientSecret 为 nil，StripePaymentView 会自动调用 API 获取
-                    // 后端会检查是否有已有的 PaymentIntent，如果有且未完成，会复用而不是创建新的
-                    showPaymentView = true
-                }) {
-                    HStack {
-                        Image(systemName: "creditcard.fill")
-                        Text("支付平台服务费")
+                VStack(spacing: AppSpacing.sm) {
+                    // 支付倒计时
+                    if let paymentExpiresAt = task.paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                        PaymentCountdownView(expiresAt: paymentExpiresAt)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    
+                    Button(action: {
+                        // 优化：如果已有支付信息，直接使用；否则让 StripePaymentView 自动获取
+                        // 后端 API 会复用已有的 PaymentIntent（如果存在且未完成），不会创建新的
+                        // 只有在以下情况才清除支付信息：
+                        // 1. 支付信息不存在（首次支付）
+                        // 2. 需要刷新支付信息（比如优惠券变更等）
+                        // 这里不清除，让 StripePaymentView 根据 clientSecret 是否存在来决定是否调用 API
+                        // 如果 clientSecret 为 nil，StripePaymentView 会自动调用 API 获取
+                        // 后端会检查是否有已有的 PaymentIntent，如果有且未完成，会复用而不是创建新的
+                        showPaymentView = true
+                    }) {
+                        HStack {
+                            Image(systemName: "creditcard.fill")
+                            Text("支付平台服务费")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
-                .buttonStyle(PrimaryButtonStyle())
             }
             
             // 申请按钮或状态显示
             if !isPoster {
                 // 如果用户是接受者且任务状态是待支付，显示继续支付按钮
                 if isTaker && task.status == .pendingPayment {
-                    Button(action: {
-                        // 打开支付页面，StripePaymentView 会自动获取支付信息
-                        showPaymentView = true
-                    }) {
-                        Label(LocalizationKey.activityContinuePayment.localized, systemImage: "creditcard.fill")
+                    VStack(spacing: AppSpacing.sm) {
+                        // 支付倒计时
+                        if let paymentExpiresAt = task.paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                            PaymentCountdownView(expiresAt: paymentExpiresAt)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        Button(action: {
+                            // 打开支付页面，StripePaymentView 会自动获取支付信息
+                            showPaymentView = true
+                        }) {
+                            Label(LocalizationKey.activityContinuePayment.localized, systemImage: "creditcard.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
                     }
-                    .buttonStyle(PrimaryButtonStyle())
                 }
                 // 如果用户已申请，无论任务状态如何，都显示申请状态卡片
                 else if let userApp = viewModel.userApplication {

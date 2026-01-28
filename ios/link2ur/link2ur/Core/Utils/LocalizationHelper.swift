@@ -476,6 +476,11 @@ public enum LocalizationKey: String {
     case paymentAccountInfoBelow = "payment.account_info_below"
     case paymentRefreshAccountInfo = "payment.refresh_account_info"
     case paymentComplete = "payment.complete"
+    case paymentCountdownExpired = "payment.countdown.expired"
+    case paymentCountdownRemaining = "payment.countdown.remaining"
+    case paymentCountdownBannerTitle = "payment.countdown.banner.title"
+    case paymentCountdownBannerSubtitle = "payment.countdown.banner.subtitle"
+    case paymentCountdownBannerExpired = "payment.countdown.banner.expired"
     
     // MARK: - Student Verification (Extended)
     case studentVerificationEmail = "student_verification.verification_email"

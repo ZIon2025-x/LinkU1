@@ -230,11 +230,11 @@ PUSH_NOTIFICATION_TEMPLATES = {
     "flea_market_pending_payment": {
         "en": {
             "title": "💳 Payment Reminder",
-            "body_template": "Please complete payment for「{item_title}」within 24 hours"
+            "body_template": "Please complete payment for「{item_title}」within 30 minutes"
         },
         "zh": {
             "title": "💳 支付提醒",
-            "body_template": "请在24小时内完成「{item_title}」的支付"
+            "body_template": "请在30分钟内完成「{item_title}」的支付"
         }
     },
     

@@ -9,13 +9,14 @@ struct StripePaymentView: View {
     let ephemeralKeySecret: String?
     let taskTitle: String?
     let applicantName: String?
+    let paymentExpiresAt: String?  // 支付过期时间（ISO 格式）
     let onPaymentSuccess: (() -> Void)?
     
     @StateObject private var viewModel: PaymentViewModel
     @Environment(\.dismiss) var dismiss
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
     
-    init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
+    init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, paymentExpiresAt: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
         self.taskId = taskId
         self.amount = amount
         self.clientSecret = clientSecret
@@ -23,6 +24,7 @@ struct StripePaymentView: View {
         self.ephemeralKeySecret = ephemeralKeySecret
         self.taskTitle = taskTitle
         self.applicantName = applicantName
+        self.paymentExpiresAt = paymentExpiresAt
         self.onPaymentSuccess = onPaymentSuccess
         _viewModel = StateObject(
             wrappedValue: PaymentViewModel(
@@ -39,6 +41,12 @@ struct StripePaymentView: View {
         NavigationView {
             KeyboardAvoidingScrollView(extraPadding: 20) {
                 VStack(spacing: 24) {
+                    // 支付倒计时横幅
+                    if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                        PaymentCountdownBanner(expiresAt: paymentExpiresAt)
+                            .padding(.horizontal)
+                    }
+                    
                     if viewModel.isLoading {
                         VStack(spacing: 16) {
                             LoadingView(message: LocalizationKey.paymentLoadingForm.localized)

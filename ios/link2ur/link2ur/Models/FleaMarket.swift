@@ -58,6 +58,7 @@ struct FleaMarketItem: Codable, Identifiable {
     let pendingPaymentCurrency: String? // 支付货币
     let pendingPaymentCustomerId: String? // Stripe客户ID
     let pendingPaymentEphemeralKeySecret: String? // Stripe临时密钥
+    let pendingPaymentExpiresAt: String? // 支付过期时间（ISO 格式）
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
@@ -75,6 +76,7 @@ struct FleaMarketItem: Codable, Identifiable {
         case pendingPaymentCurrency = "pending_payment_currency"
         case pendingPaymentCustomerId = "pending_payment_customer_id"
         case pendingPaymentEphemeralKeySecret = "pending_payment_ephemeral_key_secret"
+        case pendingPaymentExpiresAt = "pending_payment_expires_at"
     }
     
     // 自定义解码，处理 price 可能是字符串的情况
@@ -265,6 +267,7 @@ struct DirectPurchaseResponse: Decodable {
         let currency: String?
         let customerId: String?
         let ephemeralKeySecret: String?
+        let paymentExpiresAt: String?  // 支付过期时间（ISO 格式）
         
         enum CodingKeys: String, CodingKey {
             case taskId = "task_id"
@@ -277,6 +280,7 @@ struct DirectPurchaseResponse: Decodable {
             case currency
             case customerId = "customer_id"
             case ephemeralKeySecret = "ephemeral_key_secret"
+            case paymentExpiresAt = "payment_expires_at"
         }
     }
 }

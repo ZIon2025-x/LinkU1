@@ -498,6 +498,7 @@ async def get_flea_market_item(
         pending_payment_currency = None
         pending_payment_customer_id = None
         pending_payment_ephemeral_key_secret = None
+        pending_payment_expires_at = None
         
         if current_user and item.sold_task_id:
             # 检查关联的任务是否是当前用户的未付款购买
@@ -526,6 +527,7 @@ async def get_flea_market_item(
                         pending_payment_amount = payment_intent.amount
                         pending_payment_amount_display = f"{payment_intent.amount / 100:.2f}"
                         pending_payment_currency = payment_intent.currency.upper()
+                        pending_payment_expires_at = task.payment_expires_at.isoformat() if task.payment_expires_at else None
                         
                         # 注意：customer_id和ephemeral_key_secret在iOS端可能不需要
                         # 如果iOS端需要这些信息，可以在支付时从任务详情API获取
@@ -568,6 +570,7 @@ async def get_flea_market_item(
             pending_payment_currency=pending_payment_currency,
             pending_payment_customer_id=pending_payment_customer_id,
             pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
+            pending_payment_expires_at=pending_payment_expires_at,
             is_available=is_available,  # 标识商品是否可购买
         )
     except HTTPException:
@@ -1297,7 +1300,7 @@ async def direct_purchase_item(
             taker_id=item.seller_id,  # 卖家
             status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
@@ -1467,6 +1470,7 @@ async def direct_purchase_item(
                 "currency": payment_intent.currency.upper(),
                 "customer_id": customer_id,
                 "ephemeral_key_secret": ephemeral_key_secret,
+                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None,
             },
             "message": "购买已创建，请完成支付。支付完成后商品将自动下架。"
         }
@@ -1701,7 +1705,7 @@ async def approve_purchase_request(
             taker_id=item.seller_id,  # 卖家
             status="pending_payment",  # 等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
@@ -1883,6 +1887,7 @@ async def approve_purchase_request(
                 "currency": payment_intent.currency.upper(),
                 "customer_id": customer_id,
                 "ephemeral_key_secret": ephemeral_key_secret,
+                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None,
             },
             "message": "议价已同意，请完成支付。支付完成后商品将自动下架。"
         }
@@ -2025,7 +2030,7 @@ async def accept_purchase_request(
             taker_id=item.seller_id,  # 卖家
             status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
             is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
             is_flexible=1,  # 灵活时间模式
             deadline=None,  # 无截止日期
             images=json.dumps(images) if images else None,
@@ -2205,6 +2210,7 @@ async def accept_purchase_request(
                 "currency": payment_intent.currency.upper(),
                 "customer_id": customer_id,
                 "ephemeral_key_secret": ephemeral_key_secret,
+                "payment_expires_at": new_task.payment_expires_at.isoformat() if new_task.payment_expires_at else None,
             },
             "message": "购买申请已接受，请完成支付。支付完成后商品将自动下架。"
         }

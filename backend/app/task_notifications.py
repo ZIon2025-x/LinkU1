@@ -1349,7 +1349,7 @@ async def send_service_application_approved_notification(
         if task and task.payment_expires_at:
             from app.utils.time_utils import format_iso_utc
             expires_at_str = format_iso_utc(task.payment_expires_at)
-            payment_expires_info = f"\n支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+            payment_expires_info = f"\n支付过期时间：{expires_at_str}\n请在30分钟内完成支付，否则任务将自动取消。"
         
         # ⚠️ 直接使用文本内容，不存储 JSON
         notification_content = f"您的服务申请已通过，任务已创建。\n任务达人：{expert_name}\n服务名称：{service_name}\n请尽快完成支付以开始任务。{payment_expires_info}"

@@ -125,7 +125,7 @@ async def send_purchase_accepted_notification(
         if task and task.status == "pending_payment" and task.payment_expires_at:
             from app.utils.time_utils import format_iso_utc
             expires_at_str = format_iso_utc(task.payment_expires_at)
-            payment_expires_info = f"\n请尽快完成支付以开始交易。支付过期时间：{expires_at_str}\n请在24小时内完成支付，否则任务将自动取消。"
+            payment_expires_info = f"\n请尽快完成支付以开始交易。支付过期时间：{expires_at_str}\n请在30分钟内完成支付，否则任务将自动取消。"
         
         content = f"您的购买申请已被接受！\n商品：{item.title}\n成交价：£{final_price:.2f}\n任务已创建。{payment_expires_info}"
         

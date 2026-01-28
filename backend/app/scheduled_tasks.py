@@ -564,7 +564,7 @@ def check_expired_payment_tasks(db: Session):
                             user_id=task.poster_id,
                             type="task_cancelled",
                             title="任务支付已过期",
-                            content=f'您的任务"{task.title}"因支付超时已自动取消。请在24小时内完成支付以避免任务被取消。',
+                            content=f'您的任务"{task.title}"因支付超时（未在限定时间内完成支付）已自动取消。',
                             related_id=str(task.id),
                             auto_commit=False
                         )

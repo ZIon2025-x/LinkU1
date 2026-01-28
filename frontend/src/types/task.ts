@@ -46,6 +46,7 @@ export interface Task {
   paid_to_user_id?: string;
   is_public: number;
   visibility: 'public' | 'private';
+  payment_expires_at?: string | null;  // ISO string, for pending_payment countdown
 }
 
 export interface Review {

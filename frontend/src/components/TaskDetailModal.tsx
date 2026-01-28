@@ -14,6 +14,7 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
 import { useDebounce } from '../hooks/useDebounce';
 import { useThrottle } from '../hooks/useThrottle';
+import { usePaymentCountdown } from '../hooks/usePaymentCountdown';
 import LazyImage from './LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
@@ -118,6 +119,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [timeSlot, setTimeSlot] = useState<any>(null);
   // 确认倒计时相关状态
   const [confirmationRemainingSeconds, setConfirmationRemainingSeconds] = useState<number | null>(null);
+
+  const paymentCountdownExpiresAt = task?.status === 'pending_payment' && task?.payment_expires_at ? task.payment_expires_at : null;
+  const { formatted: paymentCountdownFormatted, isExpired: paymentCountdownExpired } = usePaymentCountdown(paymentCountdownExpiresAt);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -3203,22 +3207,38 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
           {/* 支付按钮：任务状态为 pending_payment 且用户是发布者时显示 */}
           {task.status === 'pending_payment' && isTaskPoster && taskId && (
-            <button
-              onClick={() => navigate(`/${language}/tasks/${taskId}/payment`)}
-              style={{
-                background: '#10b981',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: 'pointer',
-                marginRight: '16px'
-              }}
-            >
-              💳 {language === 'zh' ? '立即支付' : 'Pay Now'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px', flexWrap: 'wrap' }}>
+              {task.payment_expires_at && (
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  background: paymentCountdownExpired ? '#fee2e2' : '#fef3c7',
+                  color: paymentCountdownExpired ? '#b91c1c' : '#92400e',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                }}>
+                  {paymentCountdownExpired
+                    ? (language === 'zh' ? '已过期' : 'Expired')
+                    : (language === 'zh' ? `剩余 ${paymentCountdownFormatted}` : `${paymentCountdownFormatted} left`)}
+                </span>
+              )}
+              <button
+                onClick={() => navigate(`/${language}/tasks/${taskId}/payment`)}
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 32px',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  cursor: 'pointer',
+                }}
+              >
+                💳 {language === 'zh' ? '立即支付' : 'Pay Now'}
+              </button>
+            </div>
           )}
 
           {task.status === 'pending_confirmation' && isTaskPoster && (

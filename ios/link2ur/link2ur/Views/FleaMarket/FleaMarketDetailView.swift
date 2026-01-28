@@ -15,6 +15,7 @@ struct FleaMarketDetailView: View {
     @State private var paymentAmount: Double = 0
     @State private var paymentCustomerId: String?
     @State private var paymentEphemeralKeySecret: String?
+    @State private var paymentExpiresAt: String?
     @State private var isPreparingPayment = false
     @State private var showNegotiateSuccess = false
     @State private var isProcessingPurchase = false  // 购买处理中状态
@@ -168,6 +169,7 @@ struct FleaMarketDetailView: View {
                             }
                             paymentCustomerId = data.customerId
                             paymentEphemeralKeySecret = data.ephemeralKeySecret
+                            paymentExpiresAt = data.paymentExpiresAt
                             
                             // 关闭购买页面，显示加载状态
                             showPurchaseSheet = false
@@ -222,6 +224,7 @@ struct FleaMarketDetailView: View {
                     customerId: paymentCustomerId,
                     ephemeralKeySecret: paymentEphemeralKeySecret,
                     taskTitle: viewModel.item?.title,
+                    paymentExpiresAt: paymentExpiresAt ?? nil,  // 使用从商品详情或购买响应中获取的过期时间
                     onPaymentSuccess: {
                         showPaymentView = false
                         // 支付成功后，清除缓存并刷新商品信息
@@ -781,6 +784,7 @@ struct FleaMarketDetailView: View {
                                     }
                                     paymentCustomerId = item.pendingPaymentCustomerId
                                     paymentEphemeralKeySecret = item.pendingPaymentEphemeralKeySecret
+                                    paymentExpiresAt = item.pendingPaymentExpiresAt
                                     
                                     // 短暂延迟后显示支付页面，让加载状态可见
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak viewModel] in

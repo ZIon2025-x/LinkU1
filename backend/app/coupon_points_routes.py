@@ -1506,7 +1506,8 @@ def get_task_payment_status(
         "task_amount": task_amount,
         "escrow_amount": task.escrow_amount,  # 从数据库读取，不修改
         "status": task.status,  # 从数据库读取，不修改
-        "currency": task.currency or "GBP"
+        "currency": task.currency or "GBP",
+        "payment_expires_at": task.payment_expires_at.isoformat() if task.payment_expires_at else None,
     }
     
     # 如果有 Payment Intent ID，从 Stripe 获取详细信息（只读）

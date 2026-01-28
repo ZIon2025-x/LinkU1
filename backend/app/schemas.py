@@ -360,6 +360,7 @@ class TaskOut(TaskBase):
     time_slot_end_datetime: Optional[str] = None  # 时间段结束时间（UTC，ISO格式）
     # 任务来源
     task_source: Optional[str] = "normal"  # normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
+    payment_expires_at: Optional[str] = None  # 支付过期时间（ISO 格式），待支付任务有效
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -571,6 +572,7 @@ class TaskOut(TaskBase):
             "time_slot_id": None,
             "time_slot_start_datetime": None,
             "time_slot_end_datetime": None,
+            "payment_expires_at": obj.payment_expires_at.isoformat() if getattr(obj, 'payment_expires_at', None) else None,
         }
         
         # 如果任务有关联的时间段，获取时间段信息
@@ -2388,6 +2390,7 @@ class FleaMarketItemResponse(BaseModel):
     pending_payment_currency: Optional[str] = None  # 支付货币
     pending_payment_customer_id: Optional[str] = None  # Stripe客户ID
     pending_payment_ephemeral_key_secret: Optional[str] = None  # Stripe临时密钥
+    pending_payment_expires_at: Optional[str] = None  # 支付过期时间（ISO 格式）
     is_available: Optional[bool] = True  # 商品是否可购买（未被其他用户购买或预留）
 
     class Config:

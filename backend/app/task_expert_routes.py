@@ -2467,15 +2467,11 @@ async def apply_for_service(
         # 如果服务启用了时间段，不需要截至日期（时间段已经包含了日期信息）
         deadline = None
     
-    # 8. 判断是否自动批准：不议价且选择了时间段
-    should_auto_approve = (
-        application_data.negotiated_price is None and  # 没有议价
-        service.has_time_slots and  # 服务启用了时间段
-        application_data.time_slot_id is not None  # 选择了时间段
-    )
+    # 8. 达人服务一律需要达人审核（时间安排、任务强度等）
+    should_auto_approve = False
     
     # 9. 创建申请记录
-    initial_status = "approved" if should_auto_approve else "pending"
+    initial_status = "pending"
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
@@ -2617,7 +2613,7 @@ async def apply_for_service(
             taker_id=service.expert_id,  # 任务达人接收方
             status="pending_payment",  # ⚠️ 需要支付，等待支付完成
             is_paid=0,  # 明确标记为未支付
-            payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+            payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
             images=images_json,  # 存储为JSON字符串
             accepted_at=get_utc_time(),
             task_source="expert_service",  # 达人服务任务
@@ -3008,7 +3004,7 @@ async def approve_service_application(
         taker_id=application.expert_id,  # 任务达人接收方
         status="pending_payment",  # ⚠️ 安全修复：等待支付，不直接进入进行中状态
         is_paid=0,  # 明确标记为未支付
-        payment_expires_at=get_utc_time() + timedelta(hours=24),  # 支付过期时间（24小时）
+        payment_expires_at=get_utc_time() + timedelta(minutes=30),  # 支付过期时间（30分钟）
         images=images_json,  # 存储为JSON字符串
         accepted_at=get_utc_time(),
         task_source="expert_service",  # 达人服务任务
