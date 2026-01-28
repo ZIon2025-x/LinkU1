@@ -86,6 +86,13 @@ class PasswordChange(BaseModel):
     new_password: str = Field(..., min_length=6)
 
 
+class VIPActivationRequest(BaseModel):
+    """VIP激活请求（通过IAP购买）"""
+    product_id: str = Field(..., description="产品ID，如 com.link2ur.vip.monthly")
+    transaction_id: str = Field(..., description="交易ID")
+    transaction_jws: str = Field(..., description="交易JWS表示（用于验证）")
+
+
 # 客服相关Schema
 class CustomerServiceLogin(BaseModel):
     email: str

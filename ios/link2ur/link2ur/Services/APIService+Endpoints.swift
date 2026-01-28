@@ -1151,3 +1151,32 @@ extension APIService {
     }
 }
 
+// MARK: - VIP (VIP会员)
+extension APIService {
+    /// 激活VIP会员（通过IAP购买）
+    func activateVIP(productID: String, transactionID: String, transactionJWS: String) async throws {
+        let body: [String: Any] = [
+            "product_id": productID,
+            "transaction_id": transactionID,
+            "transaction_jws": transactionJWS
+        ]
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            var cancellable: AnyCancellable?
+            cancellable = request(EmptyResponse.self, APIEndpoints.Users.activateVIP, method: "POST", body: body)
+                .sink(
+                    receiveCompletion: { completion in
+                        if case .failure(let error) = completion {
+                            continuation.resume(throwing: error)
+                        }
+                        cancellable?.cancel()
+                    },
+                    receiveValue: { _ in
+                        continuation.resume()
+                        cancellable?.cancel()
+                    }
+                )
+        }
+    }
+}
+

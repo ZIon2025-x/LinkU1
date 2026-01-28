@@ -67,6 +67,7 @@ enum APIEndpoints {
         }
         static let myServiceApplications = "/api/users/me/service-applications"
         static let deleteAccount = "/api/users/account"
+        static let activateVIP = "/api/users/vip/activate"
     }
     
     // MARK: - Tasks (任务)

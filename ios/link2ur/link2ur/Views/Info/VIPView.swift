@@ -11,24 +11,53 @@ struct VIPView: View {
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.top, AppSpacing.md)
                 
-                // VIP功能即将推出提示
-                VStack(spacing: AppSpacing.md) {
-                    Text(LocalizationKey.vipComingSoon.localized)
-                        .font(AppTypography.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.textPrimary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, AppSpacing.lg)
-                        .padding(.vertical, AppSpacing.md)
+                // 购买按钮（如果不是VIP）
+                if !isVIP {
+                    NavigationLink(destination: VIPPurchaseView()) {
+                        HStack {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 20))
+                            
+                            Text("升级VIP会员")
+                                .font(AppTypography.bodyBold)
+                        }
+                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .background(AppColors.cardBackground)
-                        .cornerRadius(AppCornerRadius.large)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                                .stroke(Color.gray.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                        .padding(.vertical, AppSpacing.md)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.yellow, Color.orange]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
+                        .cornerRadius(AppCornerRadius.large)
+                        .shadow(color: Color.yellow.opacity(0.3), radius: 10, x: 0, y: 5)
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                } else {
+                    // VIP用户显示状态
+                    VStack(spacing: AppSpacing.sm) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            
+                            Text("您已是VIP会员")
+                                .font(AppTypography.bodyBold)
+                                .foregroundColor(AppColors.textPrimary)
+                        }
+                        
+                        Text("感谢您的支持，享受所有VIP权益")
+                            .font(AppTypography.subheadline)
+                            .foregroundColor(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(AppSpacing.md)
+                    .frame(maxWidth: .infinity)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(AppCornerRadius.large)
+                    .padding(.horizontal, AppSpacing.md)
                 }
-                .padding(.horizontal, AppSpacing.md)
                 
                 // 会员权益
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -78,7 +107,7 @@ struct VIPView: View {
                     
                     FAQRow(
                         question: LocalizationKey.vipFaqHowToUpgrade.localized,
-                        answer: LocalizationKey.vipComingSoon.localized
+                        answer: "您可以在VIP会员页面点击"升级VIP会员"按钮，选择适合的套餐进行购买。"
                     )
                     
                     FAQRow(

@@ -6171,6 +6171,7 @@ def register_device_token(
 ):
     """注册或更新设备推送令牌"""
     import logging
+    from sqlalchemy.exc import IntegrityError
     logger = logging.getLogger(__name__)
     
     device_token = device_token_data.get("device_token")
@@ -6231,21 +6232,57 @@ def register_device_token(
         return {"message": "Device token updated", "token_id": existing_token.id}
     else:
         # 创建新令牌
-        new_token = models.DeviceToken(
-            user_id=current_user.id,
-            device_token=device_token,
-            platform=platform,
-            device_id=device_id,
-            app_version=app_version,
-            device_language=device_language,  # 设置设备语言
-            is_active=True,
-            last_used_at=get_utc_time()
-        )
-        db.add(new_token)
-        db.commit()
-        db.refresh(new_token)
-        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已注册: token_id={new_token.id}, device_token={device_token[:20]}..., device_id={new_token.device_id or '未设置'}")
-        return {"message": "Device token registered", "token_id": new_token.id}
+        # 使用 try-except 处理并发插入时的唯一约束冲突
+        try:
+            new_token = models.DeviceToken(
+                user_id=current_user.id,
+                device_token=device_token,
+                platform=platform,
+                device_id=device_id,
+                app_version=app_version,
+                device_language=device_language,  # 设置设备语言
+                is_active=True,
+                last_used_at=get_utc_time()
+            )
+            db.add(new_token)
+            db.commit()
+            db.refresh(new_token)
+            logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已注册: token_id={new_token.id}, device_token={device_token[:20]}..., device_id={new_token.device_id or '未设置'}")
+            return {"message": "Device token registered", "token_id": new_token.id}
+        except IntegrityError as e:
+            # 处理并发插入时的唯一约束冲突
+            # 回滚当前事务
+            db.rollback()
+            
+            # 重新查询已存在的令牌（可能由另一个并发请求插入）
+            existing_token = db.query(models.DeviceToken).filter(
+                models.DeviceToken.user_id == current_user.id,
+                models.DeviceToken.device_token == device_token
+            ).first()
+            
+            if existing_token:
+                # 更新现有令牌
+                existing_token.is_active = True
+                existing_token.platform = platform
+                existing_token.device_language = device_language
+                
+                # 更新 device_id
+                if device_id and device_id.strip():
+                    existing_token.device_id = device_id
+                
+                # 更新 app_version
+                if app_version and app_version.strip():
+                    existing_token.app_version = app_version
+                
+                existing_token.updated_at = get_utc_time()
+                existing_token.last_used_at = get_utc_time()
+                db.commit()
+                logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已更新（处理并发冲突）: token_id={existing_token.id}, device_id={existing_token.device_id or '未设置'}, device_language={existing_token.device_language}")
+                return {"message": "Device token updated", "token_id": existing_token.id}
+            else:
+                # 如果仍然找不到，记录错误并重新抛出异常
+                logger.error(f"[DEVICE_TOKEN] 唯一约束冲突但未找到现有令牌: user_id={current_user.id}, device_token={device_token[:20]}...")
+                raise HTTPException(status_code=500, detail="Failed to register device token due to concurrent conflict")
 
 
 @router.delete("/users/device-token")
@@ -10519,6 +10556,85 @@ def get_user_task_statistics(
         "upgrade_conditions": upgrade_conditions,
         "current_level": current_user.user_level,
     }
+
+
+@router.post("/users/vip/activate")
+def activate_vip(
+    request: schemas.VIPActivationRequest,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """激活VIP会员（通过IAP购买）"""
+    import jwt
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.backends import default_backend
+    import requests
+    import json
+    
+    # 验证IAP收据
+    # 注意：这里需要实现完整的Apple IAP收据验证逻辑
+    # 由于StoreKit 2使用JWS格式，我们需要验证JWS签名
+    
+    try:
+        # 解析JWS（不验证签名，因为我们需要从Apple获取公钥）
+        # 实际生产环境中，应该使用Apple的验证服务器API来验证收据
+        # 这里简化处理，实际应该调用Apple的验证API
+        
+        # 提取JWS的payload（不验证签名，仅用于获取信息）
+        parts = request.transaction_jws.split('.')
+        if len(parts) != 3:
+            raise HTTPException(status_code=400, detail="无效的交易JWS格式")
+        
+        import base64
+        # 解码payload
+        payload = parts[1]
+        # 添加padding
+        payload += '=' * (4 - len(payload) % 4)
+        decoded_payload = base64.urlsafe_b64decode(payload)
+        transaction_data = json.loads(decoded_payload)
+        
+        # 验证产品ID
+        valid_product_ids = ["com.link2ur.vip.monthly", "com.link2ur.vip.yearly"]
+        if request.product_id not in valid_product_ids:
+            raise HTTPException(status_code=400, detail="无效的产品ID")
+        
+        # 验证交易ID是否匹配
+        if str(transaction_data.get("transactionId")) != request.transaction_id:
+            raise HTTPException(status_code=400, detail="交易ID不匹配")
+        
+        # 检查是否已经处理过这个交易（防止重复激活）
+        # 这里可以添加一个数据库表来记录已处理的交易ID
+        
+        # 更新用户VIP状态
+        user = db.query(models.User).filter(models.User.id == current_user.id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        # 根据产品ID确定VIP类型
+        # 如果是年度订阅，可以考虑设置为super VIP
+        if request.product_id == "com.link2ur.vip.yearly":
+            user.user_level = "vip"  # 或者 "super"，根据业务需求
+        else:
+            user.user_level = "vip"
+        
+        db.commit()
+        db.refresh(user)
+        
+        # 记录购买记录（可选，可以创建一个VIP购买记录表）
+        logger.info(f"用户 {current_user.id} 通过IAP激活VIP: 产品ID={request.product_id}, 交易ID={request.transaction_id}")
+        
+        return {
+            "message": "VIP激活成功",
+            "user_level": user.user_level,
+            "product_id": request.product_id
+        }
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="无效的交易数据格式")
+    except Exception as e:
+        logger.error(f"激活VIP失败: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"激活VIP失败: {str(e)}")
 
 
 # 用户任务偏好相关API

@@ -1218,6 +1218,10 @@
 "my_tasks.role.user" = "User";
 "my_tasks.role.organizer" = "Organizer";
 "my_tasks.role.unknown" = "Unknown";
+"task_source.normal" = "Normal Task";
+"task_source.flea_market" = "Flea Market";
+"task_source.expert_service" = "Expert Service";
+"task_source.expert_activity" = "Expert Activity";
 "task_status.open" = "Open";
 "task_status.in_progress" = "In Progress";
 "task_status.completed" = "Completed";

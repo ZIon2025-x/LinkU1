@@ -495,6 +495,32 @@ struct EnhancedTaskCard: View {
         }
     }
     
+    private func getTaskSourceIcon(_ source: String) -> String {
+        switch source {
+        case "flea_market":
+            return "bag.fill"
+        case "expert_service":
+            return "star.fill"
+        case "expert_activity":
+            return "person.3.fill"
+        default:
+            return "tag.fill"
+        }
+    }
+    
+    private func getTaskSourceLabel(_ source: String) -> String {
+        switch source {
+        case "flea_market":
+            return LocalizationKey.taskSourceFleaMarket.localized
+        case "expert_service":
+            return LocalizationKey.taskSourceExpertService.localized
+        case "expert_activity":
+            return LocalizationKey.taskSourceExpertActivity.localized
+        default:
+            return LocalizationKey.taskSourceNormal.localized
+        }
+    }
+    
     private func getStatusColor() -> Color {
         switch task.status {
         case .open:
@@ -531,19 +557,38 @@ struct EnhancedTaskCard: View {
                         }
                     }
                     
-                    // 用户角色标签
-                    HStack(spacing: 4) {
-                        Image(systemName: getRoleIcon())
-                            .font(.system(size: 10))
-                            .foregroundColor(AppColors.textTertiary)
-                        Text(userRole)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(AppColors.textTertiary)
+                    // 用户角色标签和任务来源标签
+                    HStack(spacing: AppSpacing.xs) {
+                        // 用户角色标签
+                        HStack(spacing: 4) {
+                            Image(systemName: getRoleIcon())
+                                .font(.system(size: 10))
+                                .foregroundColor(AppColors.textTertiary)
+                            Text(userRole)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(AppColors.textTertiary)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(AppColors.fill)
+                        .clipShape(Capsule())
+                        
+                        // 任务来源标签
+                        if let taskSource = task.taskSource, taskSource != "normal" {
+                            HStack(spacing: 4) {
+                                Image(systemName: getTaskSourceIcon(taskSource))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(AppColors.textTertiary)
+                                Text(getTaskSourceLabel(taskSource))
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(AppColors.textTertiary)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(AppColors.fill)
+                            .clipShape(Capsule())
+                        }
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(AppColors.fill)
-                    .clipShape(Capsule())
                 }
                 
                 Spacer()

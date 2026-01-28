@@ -921,6 +921,10 @@
 "my_tasks.role.user" = "用戶";
 "my_tasks.role.organizer" = "組織者";
 "my_tasks.role.unknown" = "未知";
+"task_source.normal" = "普通任務";
+"task_source.flea_market" = "跳蚤市場";
+"task_source.expert_service" = "達人服務";
+"task_source.expert_activity" = "達人活動";
 "task_status.open" = "開放中";
 "task_status.in_progress" = "進行中";
 "task_status.completed" = "已完成";
