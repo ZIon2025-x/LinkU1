@@ -10772,9 +10772,11 @@ def activate_vip(
         try:
             from app.push_notification_service import send_push_notification
             send_push_notification(
+                db=db,
                 user_id=current_user.id,
                 title="VIP激活成功",
                 body=f"恭喜您成为VIP会员！现在可以享受所有VIP权益了。",
+                notification_type="vip_activated",
                 data={"type": "vip_activated", "subscription_id": subscription.id}
             )
         except Exception as e:
