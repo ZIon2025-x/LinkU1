@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程
+@MainActor
 class FleaMarketViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var items: [FleaMarketItem] = []
@@ -9,16 +11,32 @@ class FleaMarketViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var favoritedItemIds: Set<String> = [] // 收藏的商品ID集合
     
+    // MARK: - 性能优化：搜索防抖
+    @Published var searchKeyword: String = ""
+    private var searchCancellable: AnyCancellable?
+    
     // 使用依赖注入获取服务
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
     
     init(apiService: APIService? = nil) {
         self.apiService = apiService ?? APIService.shared
+        setupSearchDebounce()
     }
     
     deinit {
         cancellables.removeAll()
+        searchCancellable?.cancel()
+    }
+    
+    // MARK: - 搜索防抖设置
+    private func setupSearchDebounce() {
+        searchCancellable = $searchKeyword
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .sink { [weak self] keyword in
+                self?.loadItems(keyword: keyword.isEmpty ? nil : keyword)
+            }
     }
     
     func loadCategories() {
@@ -116,6 +134,8 @@ class FleaMarketViewModel: ObservableObject {
     }
 }
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程
+@MainActor
 class FleaMarketDetailViewModel: ObservableObject {
     @Published var item: FleaMarketItem?
     @Published var isLoading = false
@@ -235,6 +255,21 @@ class FleaMarketDetailViewModel: ObservableObject {
         apiService.request(CreatePurchaseRequestResponse.self, "/api/flea-market/items/\(itemId)/purchase-request", method: "POST", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
+                    // 检查是否是 409 冲突错误（表示已经提交过申请）
+                    // 409 错误应该被视为成功，因为申请已经存在
+                    if case .serverError(let statusCode, _) = error, statusCode == 409 {
+                        // 409 冲突错误：申请已存在，视为成功
+                        Logger.debug("购买申请已存在（409冲突），视为成功", category: .network)
+                        completion(true, nil)
+                        return
+                    }
+                    if case .httpError(let statusCode) = error, statusCode == 409 {
+                        // 409 冲突错误：申请已存在，视为成功
+                        Logger.debug("购买申请已存在（409冲突），视为成功", category: .network)
+                        completion(true, nil)
+                        return
+                    }
+                    
                     // 提取用户友好的错误消息
                     let errorMessage = error.userFriendlyMessage
                     // 使用 ErrorHandler 统一处理错误（用于日志记录）

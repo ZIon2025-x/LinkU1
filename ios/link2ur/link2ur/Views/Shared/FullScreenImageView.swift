@@ -20,7 +20,8 @@ struct FullScreenImageView: View {
             
             // 图片轮播
             TabView(selection: $selectedIndex) {
-                ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                // 性能优化：使用稳定ID (\.element) 替代 (\.offset)
+                ForEach(Array(images.enumerated()), id: \.element) { index, imageUrl in
                     ImageViewWithGestures(
                         imageUrl: imageUrl,
                         scale: $scale,

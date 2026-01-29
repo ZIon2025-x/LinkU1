@@ -21,272 +21,335 @@ struct FleaMarketDetailView: View {
     @State private var isProcessingPurchase = false  // 购买处理中状态
     
     var body: some View {
+        mainContentView
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
+            .toolbar {
+                toolbarContent
+            }
+            .sheet(isPresented: $showLogin) {
+                LoginView()
+            }
+            .sheet(isPresented: $showPurchaseSheet) {
+                purchaseSheetContent
+            }
+            .alert(LocalizationKey.successRefreshSuccess.localized, isPresented: $showRefreshSuccess) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) { }
+            } message: {
+                Text(LocalizationKey.successRefreshSuccessMessage.localized)
+            }
+            .alert(LocalizationKey.fleaMarketNegotiateRequestSent.localized, isPresented: $showNegotiateSuccess) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) { }
+            } message: {
+                Text(LocalizationKey.fleaMarketNegotiateRequestSentMessage.localized)
+            }
+            .fullScreenCover(isPresented: $showPaymentView) {
+                paymentViewContent
+            }
+            .task(id: itemId) {
+                await loadItemIfNeeded()
+            }
+            .onAppear {
+                handleOnAppear()
+            }
+            .onDisappear {
+                handleOnDisappear()
+            }
+            .onChange(of: appState.shouldResetHomeView) { shouldReset in
+                print("🔍 [FleaMarketDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
+            }
+            .onChange(of: appState.isAuthenticated) { isAuthenticated in
+                print("🔍 [FleaMarketDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
+            }
+            .onChange(of: appState.currentUser?.id) { userId in
+                print("🔍 [FleaMarketDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
+            }
+            .onChange(of: viewModel.item?.id) { itemId in
+                print("🔍 [FleaMarketDetailView] viewModel.item?.id 变化: \(itemId ?? "nil"), 时间: \(Date())")
+            }
+    }
+    
+    // MARK: - 主内容视图
+    
+    @ViewBuilder
+    private var mainContentView: some View {
         ZStack(alignment: .bottom) {
             // 背景色
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.item == nil {
-                VStack(spacing: 16) {
-                ProgressView()
-                        .scaleEffect(1.2)
-                    Text(LocalizationKey.fleaMarketLoading.localized)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                }
+                loadingView
             } else if let item = viewModel.item {
-                // 显示商品内容
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // 图片区域
-                        imageGallery(item: item)
-                        
-                        // 内容区域 - 带圆角遮盖图片底部
-                        VStack(spacing: 20) {
-                            // 价格标题卡片
-                            priceAndTitleCard(item: item)
-                            
-                            // 商品详情卡片
-                            detailsCard(item: item)
-                            
-                            // 卖家信息卡片
-                            sellerCard(item: item)
-                            
-                            // 购买申请列表（仅商品所有者可见）
-                            if isSeller && item.status == "active" {
-                                purchaseRequestsCard(item: item)
-                            }
-                            
-                            // 底部安全区域
-                            Spacer().frame(height: 100)
-                        }
-                        .padding(.top, -20) // 让内容区域覆盖图片底部
-                        .background(
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color(UIColor.systemBackground))
-                                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
-                        )
-                    }
-                }
-                .ignoresSafeArea(edges: .top)
-                .scrollIndicators(.hidden)
-                
-                // 底部操作栏
+                itemScrollView(item: item)
                 bottomBar(item: item)
             } else {
-                // 如果 item 为 nil 且不在加载中，显示错误状态（不应该发生，但作为保护）
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 48))
-                        .foregroundColor(AppColors.textTertiary)
-                    Text(LocalizationKey.fleaMarketLoadFailed.localized)
-                        .font(AppTypography.body)
-                        .foregroundColor(AppColors.textSecondary)
-                }
+                errorView
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    ShareLink(item: "\(LocalizationKey.fleaMarketViewItem.localized): \(viewModel.item?.title ?? "")") {
-                        Circle()
-                            .fill(Color.black.opacity(0.3))
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                            )
+    }
+    
+    @ViewBuilder
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text(LocalizationKey.fleaMarketLoading.localized)
+                .font(AppTypography.caption)
+                .foregroundColor(AppColors.textTertiary)
+        }
+    }
+    
+    @ViewBuilder
+    private var errorView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(AppColors.textTertiary)
+            Text(LocalizationKey.fleaMarketLoadFailed.localized)
+                .font(AppTypography.body)
+                .foregroundColor(AppColors.textSecondary)
+        }
+    }
+    
+    @ViewBuilder
+    private func itemScrollView(item: FleaMarketItem) -> some View {
+        ScrollView {
+            // 性能优化：使用LazyVStack延迟加载
+            LazyVStack(spacing: 0) {
+                // 图片区域
+                imageGallery(item: item)
+                
+                // 内容区域 - 带圆角遮盖图片底部
+                LazyVStack(spacing: 20) {
+                    // 价格标题卡片
+                    priceAndTitleCard(item: item)
+                    
+                    // 商品详情卡片
+                    detailsCard(item: item)
+                    
+                    // 卖家信息卡片
+                    sellerCard(item: item)
+                    
+                    // 购买申请列表（仅商品所有者可见）
+                    if isSeller && item.status == "active" {
+                        purchaseRequestsCard(item: item)
                     }
                     
-                                Button(action: {
-                                    if appState.isAuthenticated {
-                            viewModel.toggleFavorite(itemId: itemId) { success in
-                                if success { HapticFeedback.success() }
-                            }
-                                    } else {
-                                        showLogin = true
-                                    }
-                                }) {
-                        Circle()
-                            .fill(Color.black.opacity(0.3))
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Group {
-                                    if viewModel.isTogglingFavorite {
-                                        ProgressView()
-                                            .scaleEffect(0.6)
-                                            .tint(.white)
-                                    } else {
-                                        Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(viewModel.isFavorited ? .red : .white)
-                                    }
-                                }
-                            )
-                    }
-                    .disabled(viewModel.isTogglingFavorite)
+                    // 底部安全区域
+                    Spacer().frame(height: 100)
                 }
-            }
-        }
-        .sheet(isPresented: $showLogin) {
-            LoginView()
-        }
-        .sheet(isPresented: $showPurchaseSheet) {
-            if let item = viewModel.item {
-                PurchaseDetailView(
-                    item: item,
-                    itemId: itemId,
-                    viewModel: viewModel,
-                    onPurchaseComplete: { purchaseData in
-                        // 如果返回了支付信息，先设置支付参数，然后关闭购买页面
-                        if let data = purchaseData,
-                           data.taskStatus == "pending_payment",
-                           let clientSecret = data.clientSecret {
-                            // 转换 taskId（支持字符串和数字格式）
-                            let taskIdInt: Int?
-                            if let taskIdValue = Int(data.taskId) {
-                                taskIdInt = taskIdValue
-                            } else {
-                                Logger.error("无法转换 taskId 为 Int: \(data.taskId)", category: .network)
-                                taskIdInt = nil
-                            }
-                            
-                            guard let taskId = taskIdInt else {
-                                Logger.error("taskId 转换失败，无法显示支付页面", category: .network)
-                                isProcessingPurchase = false
-                                showPurchaseSheet = false
-                                return
-                            }
-                            
-                            // 先设置支付参数（在关闭购买页面前）
-                            paymentTaskId = taskId
-                            paymentClientSecret = clientSecret
-                            // 计算支付金额（amount 是分为单位，需要转换为元）
-                            if let amount = data.amount {
-                                paymentAmount = Double(amount) / 100.0
-                            } else if let amountDisplay = data.amountDisplay, let amountValue = Double(amountDisplay) {
-                                paymentAmount = amountValue
-                            } else {
-                                paymentAmount = 0.0
-                            }
-                            paymentCustomerId = data.customerId
-                            paymentEphemeralKeySecret = data.ephemeralKeySecret
-                            paymentExpiresAt = data.paymentExpiresAt
-                            
-                            // 关闭购买页面并立即显示支付页面
-                            // 使用 fullScreenCover 可以并行显示，无需等待 sheet 关闭
-                            // 注意：onPurchaseComplete 回调已经在主线程，无需额外的异步包装
-                            isProcessingPurchase = false
-                            showPurchaseSheet = false
-                            showPaymentView = true
-                        } else if purchaseData != nil {
-                            // 如果没有支付信息，可能是直接购买成功（不需要支付）
-                            Logger.debug("直接购买成功，无需支付", category: .network)
-                            isProcessingPurchase = false
-                            showPurchaseSheet = false
-                            // 刷新商品信息
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                CacheManager.shared.invalidateFleaMarketCache()
-                                viewModel.loadItem(itemId: itemId, preserveItem: true)
-                            }
-                        } else {
-                            // 购买失败，关闭购买页面
-                            isProcessingPurchase = false
-                            showPurchaseSheet = false
-                        }
-                    },
-                    onNegotiateComplete: {
-                        showPurchaseSheet = false
-                        // 议价请求已发送，显示成功提示
-                        HapticFeedback.success()
-                        showNegotiateSuccess = true
-                    }
+                .padding(.top, -20) // 让内容区域覆盖图片底部
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(UIColor.systemBackground))
+                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
                 )
             }
         }
-        .alert(LocalizationKey.successRefreshSuccess.localized, isPresented: $showRefreshSuccess) {
-            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
-        } message: {
-            Text(LocalizationKey.successRefreshSuccessMessage.localized)
+        .ignoresSafeArea(edges: .top)
+        .scrollIndicators(.hidden)
+    }
+    
+    // MARK: - 工具栏内容
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            HStack(spacing: 16) {
+                shareButton
+                favoriteButton
+            }
         }
-        .alert(LocalizationKey.fleaMarketNegotiateRequestSent.localized, isPresented: $showNegotiateSuccess) {
-            Button(LocalizationKey.commonOk.localized, role: .cancel) { }
-        } message: {
-            Text(LocalizationKey.fleaMarketNegotiateRequestSentMessage.localized)
-        }
-        .fullScreenCover(isPresented: $showPaymentView) {
-            if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
-                StripePaymentView(
-                    taskId: taskId,
-                    amount: paymentAmount,
-                    clientSecret: clientSecret,
-                    customerId: paymentCustomerId,
-                    ephemeralKeySecret: paymentEphemeralKeySecret,
-                    taskTitle: viewModel.item?.title,
-                    paymentExpiresAt: paymentExpiresAt ?? nil,  // 使用从商品详情或购买响应中获取的过期时间
-                    onPaymentSuccess: {
-                        showPaymentView = false
-                        // 支付成功后，清除缓存并刷新商品信息
-                        // 使用重试机制确保状态正确更新
-                        refreshItemAfterPayment(attempt: 1, maxAttempts: 5)
-                    }
+    }
+    
+    @ViewBuilder
+    private var shareButton: some View {
+        ShareLink(item: "\(LocalizationKey.fleaMarketViewItem.localized): \(viewModel.item?.title ?? "")") {
+            Circle()
+                .fill(Color.black.opacity(0.3))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
                 )
-            }
         }
-        .task(id: itemId) {
-            print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
-            
-            // 如果正在处理购买或显示支付页面，跳过重新加载，避免阻塞支付流程
-            guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
-                print("🔍 [FleaMarketDetailView] 正在处理购买流程，跳过商品重新加载")
-                return
-            }
-            
-            // 使用 .task(id:) 确保只在 itemId 变化时重新加载
-            // 添加延迟，避免与导航动画冲突
-            // 使用 _Concurrency.Task 明确指定 Swift 并发框架的 Task（因为项目中存在 Task 模型）
-            try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
-            
-            // 再次检查状态（可能在延迟期间状态已变化）
-            guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
-                print("🔍 [FleaMarketDetailView] 延迟后检测到购买流程进行中，跳过商品重新加载")
-                return
-            }
-            
-            // 只有在 item 为空或 itemId 变化时才加载
-            if viewModel.item == nil || viewModel.item?.id != itemId {
-                print("🔍 [FleaMarketDetailView] 开始加载商品: \(itemId)")
-                viewModel.loadItem(itemId: itemId)
+    }
+    
+    @ViewBuilder
+    private var favoriteButton: some View {
+        Button(action: {
+            if appState.isAuthenticated {
+                viewModel.toggleFavorite(itemId: itemId) { success in
+                    if success { HapticFeedback.success() }
+                }
             } else {
-                print("🔍 [FleaMarketDetailView] 商品已存在，跳过加载: \(itemId)")
+                showLogin = true
+            }
+        }) {
+            Circle()
+                .fill(Color.black.opacity(0.3))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Group {
+                        if viewModel.isTogglingFavorite {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .tint(.white)
+                        } else {
+                            Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(viewModel.isFavorited ? .red : .white)
+                        }
+                    }
+                )
+        }
+        .disabled(viewModel.isTogglingFavorite)
+    }
+    
+    // MARK: - 购买页面内容
+    
+    @ViewBuilder
+    private var purchaseSheetContent: some View {
+        if let item = viewModel.item {
+            PurchaseDetailView(
+                item: item,
+                itemId: itemId,
+                viewModel: viewModel,
+                onPurchaseComplete: { purchaseData in
+                    handlePurchaseComplete(purchaseData: purchaseData)
+                },
+                onNegotiateComplete: {
+                    showPurchaseSheet = false
+                    HapticFeedback.success()
+                    showNegotiateSuccess = true
+                }
+            )
+        }
+    }
+    
+    // MARK: - 支付页面内容
+    
+    @ViewBuilder
+    private var paymentViewContent: some View {
+        if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
+            StripePaymentView(
+                taskId: taskId,
+                amount: paymentAmount,
+                clientSecret: clientSecret,
+                customerId: paymentCustomerId,
+                ephemeralKeySecret: paymentEphemeralKeySecret,
+                taskTitle: viewModel.item?.title,
+                paymentExpiresAt: paymentExpiresAt ?? nil,
+                onPaymentSuccess: {
+                    showPaymentView = false
+                    refreshItemAfterPayment(attempt: 1, maxAttempts: 5)
+                }
+            )
+        } else {
+            VStack {
+                ProgressView()
+                Text("正在准备支付...")
             }
         }
-        .onAppear {
-            print("🔍 [FleaMarketDetailView] onAppear - itemId: \(itemId), 时间: \(Date())")
-            print("🔍 [FleaMarketDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
-            print("🔍 [FleaMarketDetailView] viewModel.item: \(viewModel.item?.id ?? "nil")")
+    }
+    
+    // MARK: - 购买完成处理
+    
+    private func handlePurchaseComplete(purchaseData: DirectPurchaseResponse.DirectPurchaseData?) {
+        guard let data = purchaseData else {
+            isProcessingPurchase = false
+            showPurchaseSheet = false
+            return
         }
-        .onDisappear {
-            print("🔍 [FleaMarketDetailView] onDisappear - itemId: \(itemId), 时间: \(Date())")
-            print("🔍 [FleaMarketDetailView] 视图消失原因追踪")
-            // 视图消失时清理，释放内存
-            // 注意：不要清空 item，因为返回时可能需要显示
+        
+        if data.taskStatus == "pending_payment", let clientSecret = data.clientSecret {
+            handlePaymentSetup(data: data, clientSecret: clientSecret)
+        } else {
+            handleDirectPurchaseSuccess()
         }
-        .onChange(of: appState.shouldResetHomeView) { shouldReset in
-            print("🔍 [FleaMarketDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
+    }
+    
+    private func handlePaymentSetup(data: DirectPurchaseResponse.DirectPurchaseData, clientSecret: String) {
+        guard let taskIdValue = Int(data.taskId) else {
+            Logger.error("无法转换 taskId 为 Int: \(data.taskId)", category: .network)
+            isProcessingPurchase = false
+            showPurchaseSheet = false
+            return
         }
-        .onChange(of: appState.isAuthenticated) { isAuthenticated in
-            print("🔍 [FleaMarketDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
+        
+        paymentTaskId = taskIdValue
+        paymentClientSecret = clientSecret
+        
+        if let amount = data.amount {
+            paymentAmount = Double(amount) / 100.0
+        } else if let amountDisplay = data.amountDisplay, let amountValue = Double(amountDisplay) {
+            paymentAmount = amountValue
+        } else {
+            paymentAmount = 0.0
         }
-        .onChange(of: appState.currentUser?.id) { userId in
-            print("🔍 [FleaMarketDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
+        
+        paymentCustomerId = data.customerId
+        paymentEphemeralKeySecret = data.ephemeralKeySecret
+        paymentExpiresAt = data.paymentExpiresAt
+        
+        Logger.debug("准备显示支付页面，taskId: \(taskIdValue), clientSecret: \(clientSecret.prefix(20))...", category: .network)
+        
+        isProcessingPurchase = false
+        
+        _Concurrency.Task { @MainActor in
+            Logger.debug("设置 showPaymentView = true", category: .network)
+            showPaymentView = true
+            showPurchaseSheet = false
         }
-        .onChange(of: viewModel.item?.id) { itemId in
-            print("🔍 [FleaMarketDetailView] viewModel.item?.id 变化: \(itemId ?? "nil"), 时间: \(Date())")
+    }
+    
+    private func handleDirectPurchaseSuccess() {
+        Logger.debug("直接购买成功，无需支付", category: .network)
+        isProcessingPurchase = false
+        showPurchaseSheet = false
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            CacheManager.shared.invalidateFleaMarketCache()
+            viewModel.loadItem(itemId: itemId, preserveItem: true)
         }
+    }
+    
+    // MARK: - 生命周期处理
+    
+    private func loadItemIfNeeded() async {
+        print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
+        
+        guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
+            print("🔍 [FleaMarketDetailView] 正在处理购买流程，跳过商品重新加载")
+            return
+        }
+        
+        try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000)
+        
+        guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
+            print("🔍 [FleaMarketDetailView] 延迟后检测到购买流程进行中，跳过商品重新加载")
+            return
+        }
+        
+        if viewModel.item == nil || viewModel.item?.id != itemId {
+            print("🔍 [FleaMarketDetailView] 开始加载商品: \(itemId)")
+            viewModel.loadItem(itemId: itemId)
+        } else {
+            print("🔍 [FleaMarketDetailView] 商品已存在，跳过加载: \(itemId)")
+        }
+    }
+    
+    private func handleOnAppear() {
+        print("🔍 [FleaMarketDetailView] onAppear - itemId: \(itemId), 时间: \(Date())")
+        print("🔍 [FleaMarketDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
+        print("🔍 [FleaMarketDetailView] viewModel.item: \(viewModel.item?.id ?? "nil")")
+    }
+    
+    private func handleOnDisappear() {
+        print("🔍 [FleaMarketDetailView] onDisappear - itemId: \(itemId), 时间: \(Date())")
+        print("🔍 [FleaMarketDetailView] 视图消失原因追踪")
     }
     
     // MARK: - 距离自动下架天数视图
@@ -340,24 +403,14 @@ struct FleaMarketDetailView: View {
             // 使用 maxWidth + aspectRatio 替代 UIScreen.main.bounds，避免弹窗出现时图片右侧和底部被裁切
             ZStack(alignment: .bottom) {
                 TabView(selection: $currentImageIndex) {
-                    ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
-                        AsyncImage(url: imageUrl.toImageURL()) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure:
-                                placeholderImage
-                            case .empty:
-                                ZStack {
-                                    Color(UIColor.secondarySystemBackground)
-                                    ProgressView()
-                                }
-                            @unknown default:
-                                placeholderImage
-                            }
-                        }
+                    // 性能优化：使用稳定ID (\.element) 替代 (\.offset)
+                    ForEach(Array(images.enumerated()), id: \.element) { index, imageUrl in
+                        // 性能优化：使用 AsyncImageView 替代系统 AsyncImage，带缓存
+                        AsyncImageView(
+                            urlString: imageUrl,
+                            placeholder: Image(systemName: "photo"),
+                            contentMode: .fill
+                        )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
                         .tag(index)
@@ -985,13 +1038,15 @@ struct PurchaseDetailView: View {
                     // 商品预览卡片
                     HStack(spacing: 16) {
                         if let images = item.images, let firstImage = images.first {
-                            AsyncImage(url: firstImage.toImageURL()) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Color(UIColor.secondarySystemBackground)
-                            }
-                            .frame(width: 90, height: 90)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            // 性能优化：使用 AsyncImageView 替代系统 AsyncImage
+                            AsyncImageView(
+                                urlString: firstImage,
+                                placeholder: Image(systemName: "photo"),
+                                width: 90,
+                                height: 90,
+                                contentMode: .fill,
+                                cornerRadius: 12
+                            )
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
@@ -1247,21 +1302,11 @@ struct PurchaseDetailView: View {
                 DispatchQueue.main.async {
                     isSubmitting = false
                     if success {
+                        // 购买申请成功（包括 409 冲突，表示申请已存在）
                         onNegotiateComplete()
                     } else {
-                        // 检查是否是409冲突错误（重复提交）
-                        if let errorMsg = errorMsg,
-                           errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
-                            // 这是信息提示，不是错误
-                            infoMessage = errorMsg
-                            // 延迟关闭页面，让用户看到提示
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                dismiss()
-                            }
-                        } else {
-                            // 显示详细的错误消息，如果没有则使用默认消息
-                            errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
-                        }
+                        // 显示详细的错误消息，如果没有则使用默认消息
+                        errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
                     }
                 }
             }
@@ -1278,17 +1323,8 @@ struct PurchaseDetailView: View {
             }, onError: { [self] errorMsg in
                 DispatchQueue.main.async {
                     isSubmitting = false
-                    // 检查是否是409冲突错误（重复提交）
-                    if errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
-                        // 这是信息提示，不是错误
-                        infoMessage = errorMsg
-                        // 延迟关闭页面，让用户看到提示
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            dismiss()
-                        }
-                    } else {
-                        errorMessage = errorMsg
-                    }
+                    // 显示错误消息
+                    errorMessage = errorMsg
                 }
             })
         }

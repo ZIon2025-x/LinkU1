@@ -112,6 +112,8 @@ extension Notification.Name {
     static let refreshHomeContent = Notification.Name("refreshHomeContent") // 刷新首页所有内容
 }
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程
+@MainActor
 class MyTasksViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     private let cacheManager = CacheManager.shared

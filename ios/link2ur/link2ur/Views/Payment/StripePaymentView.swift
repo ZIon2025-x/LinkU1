@@ -17,6 +17,7 @@ struct StripePaymentView: View {
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
     
     init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, paymentExpiresAt: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
+        Logger.debug("StripePaymentView init - taskId: \(taskId), clientSecret: \(clientSecret?.prefix(20) ?? "nil")...", category: .api)
         self.taskId = taskId
         self.amount = amount
         self.clientSecret = clientSecret
@@ -35,6 +36,7 @@ struct StripePaymentView: View {
                 ephemeralKeySecret: ephemeralKeySecret
             )
         )
+        Logger.debug("StripePaymentView init 完成", category: .api)
     }
     
     var body: some View {

@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程，避免多余的DispatchQueue.main.async
+@MainActor
 class TaskDetailViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var task: Task?
@@ -66,19 +68,18 @@ class TaskDetailViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] task in
-                DispatchQueue.main.async {
-                    // 如果任务状态变为已完成或取消，清理相关图片缓存
-                    if task.status == .completed || task.status == .cancelled {
-                        ImageCache.shared.clearTaskImages(task: task)
-                    }
-                    
-                    self?.task = task
-                    // 发送任务更新通知，让其他页面（如"我的任务"）也更新
-                    NotificationCenter.default.post(name: .taskUpdated, object: task)
-                    // 如果任务状态变为已完成，也发送状态更新通知
-                    if task.status == .completed {
-                        NotificationCenter.default.post(name: .taskStatusUpdated, object: task)
-                    }
+                // 性能优化：@MainActor已确保主线程，无需DispatchQueue.main.async
+                // 如果任务状态变为已完成或取消，清理相关图片缓存
+                if task.status == .completed || task.status == .cancelled {
+                    ImageCache.shared.clearTaskImages(task: task)
+                }
+                
+                self?.task = task
+                // 发送任务更新通知，让其他页面（如"我的任务"）也更新
+                NotificationCenter.default.post(name: .taskUpdated, object: task)
+                // 如果任务状态变为已完成，也发送状态更新通知
+                if task.status == .completed {
+                    NotificationCenter.default.post(name: .taskStatusUpdated, object: task)
                 }
             })
             .store(in: &cancellables)
@@ -92,16 +93,13 @@ class TaskDetailViewModel: ObservableObject {
         apiService.getTaskApplications(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
-                DispatchQueue.main.async {
-                    self?.isLoadingApplications = false
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.isLoadingApplications = false
                 if case .failure(let error) = result {
                     // 403 错误表示用户没有权限查看申请列表（例如不是任务发布者），静默处理
                     if case .httpError(let statusCode) = error, statusCode == 403 {
                         Logger.debug("用户无权限查看申请列表（403），静默处理", category: .api)
-                        DispatchQueue.main.async {
-                            self?.applications = [] // 设置为空数组，不显示错误
-                        }
+                        self?.applications = [] // 设置为空数组，不显示错误
                     } else {
                         // 其他错误才显示
                         ErrorHandler.shared.handle(error, context: "加载任务申请列表")
@@ -134,11 +132,10 @@ class TaskDetailViewModel: ObservableObject {
                 }
                 // 非发布者时接口只返回当前用户的申请，若仅一条则必为当前用户
                 let userApp = found ?? (applications.count == 1 ? applications.first : nil)
-                DispatchQueue.main.async {
-                    self?.applications = applications
-                    self?.userApplication = userApp
-                    self?.isLoadingApplications = false
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.applications = applications
+                self?.userApplication = userApp
+                self?.isLoadingApplications = false
             })
             .store(in: &cancellables)
     }
@@ -238,17 +235,13 @@ class TaskDetailViewModel: ObservableObject {
                     completion(false)
                 } else {
                     completion(true)
-                    // 立即强制重新加载任务以获取最新状态
-                    DispatchQueue.main.async {
-                        self?.loadTask(taskId: taskId, force: true)
-                    }
+                    // 性能优化：@MainActor已确保主线程
+                    self?.loadTask(taskId: taskId, force: true)
                 }
             }, receiveValue: { [weak self] response in
                 completion(true)
-                // 立即强制重新加载任务以获取最新状态
-                DispatchQueue.main.async {
-                    self?.loadTask(taskId: taskId, force: true)
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.loadTask(taskId: taskId, force: true)
             })
             .store(in: &cancellables)
     }
@@ -296,17 +289,15 @@ class TaskDetailViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 404错误表示没有退款申请，这是正常的，不需要处理
                     if case .httpError(let code) = error, code == 404 {
-                        DispatchQueue.main.async {
-                            self?.refundRequest = nil
-                        }
+                        // 性能优化：@MainActor已确保主线程
+                        self?.refundRequest = nil
                     } else {
                         Logger.warning("加载退款状态失败: \(error.localizedDescription)", category: .api)
                     }
                 }
             }, receiveValue: { [weak self] refundRequest in
-                DispatchQueue.main.async {
-                    self?.refundRequest = refundRequest
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.refundRequest = refundRequest
             })
             .store(in: &cancellables)
     }
@@ -318,14 +309,12 @@ class TaskDetailViewModel: ObservableObject {
                 self?.isLoadingRefundHistory = false
                 if case .failure(let error) = result {
                     Logger.warning("加载退款历史失败: \(error.localizedDescription)", category: .api)
-                    DispatchQueue.main.async {
-                        self?.refundHistory = []
-                    }
+                    // 性能优化：@MainActor已确保主线程
+                    self?.refundHistory = []
                 }
             }, receiveValue: { [weak self] history in
-                DispatchQueue.main.async {
-                    self?.refundHistory = history
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.refundHistory = history
             })
             .store(in: &cancellables)
     }
@@ -343,9 +332,8 @@ class TaskDetailViewModel: ObservableObject {
                     self?.loadTask(taskId: taskId, force: true)
                 }
             }, receiveValue: { [weak self] refundRequest in
-                DispatchQueue.main.async {
-                    self?.refundRequest = refundRequest
-                }
+                // 性能优化：@MainActor已确保主线程
+                self?.refundRequest = refundRequest
             })
             .store(in: &cancellables)
     }
@@ -368,9 +356,8 @@ class TaskDetailViewModel: ObservableObject {
                 self?.loadTask(taskId: taskId, force: true)
             }
         }, receiveValue: { [weak self] refundRequest in
-            DispatchQueue.main.async {
-                self?.refundRequest = refundRequest
-            }
+            // 性能优化：@MainActor已确保主线程
+            self?.refundRequest = refundRequest
         })
         .store(in: &cancellables)
     }

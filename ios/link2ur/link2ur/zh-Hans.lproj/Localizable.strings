@@ -218,7 +218,7 @@
 "flea_market.edit_item" = "编辑商品";
 "flea_market.enter_amount" = "输入金额";
 "flea_market.negotiate_request_sent" = "议价请求已发送";
-"flea_market.negotiate_request_sent_message" = "卖家同意后，您将收到通知并可以继续支付";
+"flea_market.negotiate_request_sent_message" = "您已提交购买申请，请等待卖家处理";
 "flea_market.negotiate_request_failed" = "议价请求发送失败，请重试";
 "flea_market.negotiate_price_invalid" = "请输入有效的议价金额。";
 "flea_market.negotiate_price_too_high" = "议价金额不能高于原价。";

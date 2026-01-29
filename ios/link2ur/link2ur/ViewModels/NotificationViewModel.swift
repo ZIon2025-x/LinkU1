@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程
+@MainActor
 class NotificationViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     private let cacheManager = CacheManager.shared

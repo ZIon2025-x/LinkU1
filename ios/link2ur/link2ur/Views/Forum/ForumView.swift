@@ -337,17 +337,14 @@ struct CategoryCard: View {
                 if let icon = category.icon, !icon.isEmpty {
                     // 检查是否是有效的 URL（以 http:// 或 https:// 开头）
                     if icon.hasPrefix("http://") || icon.hasPrefix("https://") {
-                        AsyncImage(url: icon.toImageURL()) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                        } placeholder: {
-                            Image(systemName: "folder.fill")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-                        .frame(width: 36, height: 36)
-                        .clipped()
+                        // 性能优化：使用 AsyncImageView 替代系统 AsyncImage
+                        AsyncImageView(
+                            urlString: icon,
+                            placeholder: Image(systemName: "folder.fill"),
+                            width: 36,
+                            height: 36,
+                            contentMode: .fit
+                        )
                     } else {
                         // 如果是 emoji 或其他文本，直接显示
                         // 使用更大的frame并确保居中，避免emoji被裁剪

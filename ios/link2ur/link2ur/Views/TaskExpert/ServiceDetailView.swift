@@ -132,7 +132,8 @@ struct ServiceDetailView: View {
             // 父级尺寸变化导致图片右侧和底部被裁切、露出背后容器
             ZStack(alignment: .bottom) {
                 TabView(selection: $currentImageIndex) {
-                    ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                    // 性能优化：使用稳定ID (\.element) 替代 (\.offset)
+                    ForEach(Array(images.enumerated()), id: \.element) { index, imageUrl in
                         AsyncImageView(urlString: imageUrl, placeholder: Image(systemName: "photo.fill"))
                             .aspectRatio(contentMode: .fill)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)

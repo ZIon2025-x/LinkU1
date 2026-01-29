@@ -4,6 +4,21 @@ import LinkPresentation
 import Combine
 import PhotosUI
 
+// MARK: - 性能优化：静态DateFormatter缓存（避免重复创建）
+private enum DateFormatters {
+    static let iso8601WithFractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    static let iso8601Standard: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+}
+
 struct TaskDetailView: View {
     let taskId: Int
     /// 从「待处理申请」等列表进入时传入 true，详情页会立即显示「等待发布者确认」而不依赖申请列表接口
@@ -77,6 +92,7 @@ struct TaskDetailView: View {
     }
     
     // 判断支付是否已过期
+    // MARK: - 性能优化：使用静态缓存的DateFormatter
     private var isPaymentExpired: Bool {
         guard let task = viewModel.task,
               let paymentExpiresAt = task.paymentExpiresAt,
@@ -84,19 +100,10 @@ struct TaskDetailView: View {
             return false
         }
         
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        guard let expiryDate = formatter.date(from: paymentExpiresAt) else {
-            // 尝试不带毫秒的格式
-            formatter.formatOptions = [.withInternetDateTime]
-            guard let expiryDateFallback = formatter.date(from: paymentExpiresAt) else {
-                return false
-            }
-            return Date() >= expiryDateFallback
-        }
-        
-        return Date() >= expiryDate
+        // 使用静态缓存的 DateFormatter，避免每次调用都创建新实例
+        let expiryDate = DateFormatters.iso8601WithFractional.date(from: paymentExpiresAt)
+                        ?? DateFormatters.iso8601Standard.date(from: paymentExpiresAt)
+        return expiryDate.map { Date() >= $0 } ?? false
     }
     
     // 判断是否可以评价
@@ -303,22 +310,24 @@ struct TaskDetailView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.task?.status) { newStatus in
+            // 性能优化：合并任务状态和ID的监听，减少onChange触发次数
+            .onChange(of: viewModel.task) { newTask in
+                guard let task = newTask else { return }
+                
                 // 当任务状态变化时，如果是发布者且状态为pending_confirmation，加载退款状态
-                if isPoster, newStatus == .pendingConfirmation {
+                if isPoster, task.status == .pendingConfirmation {
                     viewModel.loadRefundStatus(taskId: taskId)
                 }
-                // 优化：只在状态确实变化时处理
-                guard newStatus != nil else { return }
+                
                 // 只在特定状态变化时重新加载申请列表
-                if newStatus == .open || newStatus == .inProgress {
+                if task.status == .open || task.status == .inProgress {
                     handleTaskChange()
                 }
-            }
-            .onChange(of: viewModel.task?.id) { newTaskId in
-                // 优化：只在任务ID确实变化且不为nil时处理
-                guard let newTaskId = newTaskId, newTaskId == taskId else { return }
-                handleTaskChange()
+                
+                // 任务ID匹配时处理变化
+                if task.id == taskId {
+                    handleTaskChange()
+                }
             }
             .onChange(of: appState.currentUser?.id) { _ in
                 // 用户登录/切换后重新加载申请列表，确保已申请任务显示「等待发布者确认」
@@ -1200,7 +1209,8 @@ struct TaskDetailContentView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            // MARK: - 性能优化：使用LazyVStack延迟加载内容
+            LazyVStack(spacing: 0) {
                 // 图片轮播区域（过滤掉空或纯空格的 URL，避免占位无效条目）
                 TaskImageCarouselView(
                     images: (task.images ?? []).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty },
@@ -1209,7 +1219,7 @@ struct TaskDetailContentView: View {
                 )
                 
                 // 内容区域 - iPad上限制最大宽度并居中
-                VStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
+                LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
                     // 标题和状态卡片
                     TaskHeaderCard(task: task)
                     
@@ -1380,7 +1390,8 @@ struct TaskImageCarouselView: View {
             
             if !images.isEmpty {
                 TabView(selection: $selectedIndex) {
-                    ForEach(Array(images.enumerated()), id: \.offset) { index, imageUrl in
+                    // 性能优化：使用稳定ID (\.element) 替代 (\.offset)
+                    ForEach(Array(images.enumerated()), id: \.element) { index, imageUrl in
                         TaskImageView(imageUrl: imageUrl, index: index, selectedIndex: $selectedIndex, showFullScreen: $showFullScreen)
                             .tag(index)
                     }
@@ -2720,7 +2731,8 @@ struct RefundHistorySheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        VStack(spacing: AppSpacing.md) {
+                        // 性能优化：使用LazyVStack
+                        LazyVStack(spacing: AppSpacing.md) {
                             ForEach(refundHistory) { refund in
                                 RefundHistoryItemCard(refund: refund)
                             }
@@ -5521,7 +5533,8 @@ struct DisputeTimelineView: View {
                     LoadingView()
                 } else if let timeline = viewModel.timeline {
                     ScrollView {
-                        VStack(spacing: AppSpacing.md) {
+                        // 性能优化：使用LazyVStack
+                        LazyVStack(spacing: AppSpacing.md) {
                             // 任务标题
                             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                                 Text("任务争议详情")

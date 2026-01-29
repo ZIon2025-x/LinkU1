@@ -2,6 +2,8 @@ import Foundation
 import Combine
 import CoreLocation
 
+// MARK: - 性能优化：使用@MainActor确保UI更新在主线程
+@MainActor
 class TasksViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var tasks: [Task] = []

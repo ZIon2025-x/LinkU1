@@ -1231,14 +1231,15 @@ struct SearchTaskCard: View {
         HStack(spacing: AppSpacing.md) {
             // 图片
             if let images = task.images, let firstImage = images.first, !firstImage.isEmpty {
-                AsyncImage(url: URL(string: firstImage)) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
-                        .fill(AppColors.cardBackground)
-                }
-                .frame(width: 60, height: 60)
-                .cornerRadius(AppCornerRadius.small)
+                // 性能优化：使用 AsyncImageView 替代系统 AsyncImage
+                AsyncImageView(
+                    urlString: firstImage,
+                    placeholder: Image(systemName: "doc.text.fill"),
+                    width: 60,
+                    height: 60,
+                    contentMode: .fill,
+                    cornerRadius: AppCornerRadius.small
+                )
             } else {
                 RoundedRectangle(cornerRadius: AppCornerRadius.small)
                     .fill(AppColors.primary.opacity(0.1))
@@ -1313,20 +1314,12 @@ struct SearchExpertCard: View {
     
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            // 头像
-            AsyncImage(url: URL(string: expert.avatar ?? "")) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(AppColors.primary.opacity(0.1))
-                    .overlay(
-                        Text(String(expert.name.prefix(1)))
-                            .font(AppTypography.bodyBold)
-                            .foregroundColor(AppColors.primary)
-                    )
-            }
-            .frame(width: 50, height: 50)
-            .clipShape(Circle())
+            // 头像 - 性能优化：使用 AvatarView 替代系统 AsyncImage
+            AvatarView(
+                urlString: expert.avatar,
+                size: 50,
+                placeholder: Image(systemName: "person.circle.fill")
+            )
             
             // 信息
             VStack(alignment: .leading, spacing: 4) {
@@ -1388,16 +1381,16 @@ struct SearchFleaMarketCard: View {
     
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            // 图片
+            // 图片 - 性能优化：使用 AsyncImageView 替代系统 AsyncImage
             if let images = item.images, let firstImage = images.first {
-                AsyncImage(url: URL(string: firstImage)) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: AppCornerRadius.small)
-                        .fill(AppColors.cardBackground)
-                }
-                .frame(width: 60, height: 60)
-                .cornerRadius(AppCornerRadius.small)
+                AsyncImageView(
+                    urlString: firstImage,
+                    placeholder: Image(systemName: "bag.fill"),
+                    width: 60,
+                    height: 60,
+                    contentMode: .fill,
+                    cornerRadius: AppCornerRadius.small
+                )
             } else {
                 RoundedRectangle(cornerRadius: AppCornerRadius.small)
                     .fill(AppColors.warning.opacity(0.1))
