@@ -444,11 +444,20 @@ def send_apns_notification(
         )
         
         # 创建 APNs 客户端
-        apns_client = APNsClient(
-            credentials=credentials,
-            use_sandbox=APNS_USE_SANDBOX,
-            use_alternative_port=False
-        )
+        # 注意：每次调用都创建新客户端，避免连接复用问题
+        try:
+            apns_client = APNsClient(
+                credentials=credentials,
+                use_sandbox=APNS_USE_SANDBOX,
+                use_alternative_port=False
+            )
+            logger.debug(f"[APNs诊断] APNs 客户端创建成功")
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(f"[APNs诊断] 创建 APNs 客户端失败: {str(e)}")
+            logger.error(f"[APNs诊断] 异常堆栈:\n{error_traceback}")
+            return None
         
         # 发送通知
         topic = APNS_BUNDLE_ID
@@ -463,19 +472,34 @@ def send_apns_notification(
             logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
         
         try:
+            logger.debug(f"[APNs诊断] 调用 send_notification，device_token={device_token[:20]}..., topic={topic}")
             response = apns_client.send_notification(device_token, payload, topic)
+            logger.debug(f"[APNs诊断] send_notification 返回: {response}")
         except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
             logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}")
+            logger.error(f"[APNs诊断] 异常类型: {type(e).__name__}")
+            logger.error(f"[APNs诊断] 异常堆栈:\n{error_traceback}")
+            # 检查是否是设备令牌相关的错误
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']):
+                logger.warning(f"设备令牌无效（异常: {type(e).__name__}），应标记为不活跃")
+                return False
+            # 其他异常视为系统错误
             return None
         
         # 检查响应是否为 None（某些情况下 apns2 可能返回 None）
         if response is None:
             logger.warning(f"[APNs诊断] send_notification 返回 None，可能是异步发送或配置问题")
+            logger.warning(f"[APNs诊断] 检查 APNs 客户端状态和配置")
+            logger.warning(f"[APNs诊断] 密钥文件: {key_file}, 沙盒模式: {APNS_USE_SANDBOX}, Bundle ID: {APNS_BUNDLE_ID}")
             # 对于异步发送，可能需要等待响应，这里先返回 None（系统错误，不标记令牌为不活跃）
             # 但我们可以尝试等待一小段时间，看看是否有响应
             import time
             time.sleep(0.1)  # 等待100ms，看看是否有异步响应
             # 注意：apns2 库的 send_notification 是同步的，如果返回 None 可能是配置问题
+            # 或者网络连接问题，这种情况下不应该标记令牌为不活跃
             return None
         
         # 检查响应

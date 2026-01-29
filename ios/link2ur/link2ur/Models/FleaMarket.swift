@@ -272,6 +272,27 @@ struct ApprovePurchaseRequestResponse: Decodable {
     }
 }
 
+// 创建购买申请响应
+struct CreatePurchaseRequestResponse: Decodable {
+    let success: Bool
+    let data: CreatePurchaseRequestData
+    let message: String?
+    
+    struct CreatePurchaseRequestData: Decodable {
+        let purchaseRequestId: String
+        let status: String
+        let proposedPrice: Double?
+        let createdAt: String
+        
+        enum CodingKeys: String, CodingKey {
+            case purchaseRequestId = "purchase_request_id"
+            case status
+            case proposedPrice = "proposed_price"
+            case createdAt = "created_at"
+        }
+    }
+}
+
 // 拒绝购买申请响应
 struct RejectPurchaseRequestResponse: Decodable {
     let success: Bool

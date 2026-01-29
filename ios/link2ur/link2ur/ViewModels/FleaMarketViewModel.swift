@@ -232,7 +232,7 @@ class FleaMarketDetailViewModel: ObservableObject {
             body["message"] = message
         }
         
-        apiService.request(PurchaseRequest.self, "/api/flea-market/items/\(itemId)/purchase-request", method: "POST", body: body)
+        apiService.request(CreatePurchaseRequestResponse.self, "/api/flea-market/items/\(itemId)/purchase-request", method: "POST", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
                     // 提取用户友好的错误消息
@@ -241,7 +241,9 @@ class FleaMarketDetailViewModel: ObservableObject {
                     ErrorHandler.shared.handle(error, context: "发送跳蚤市场议价请求")
                     completion(false, errorMessage)
                 }
-            }, receiveValue: { _ in
+            }, receiveValue: { response in
+                // 创建购买申请成功
+                Logger.debug("购买申请创建成功: \(response.data.purchaseRequestId)", category: .network)
                 completion(true, nil)
             })
             .store(in: &cancellables)
