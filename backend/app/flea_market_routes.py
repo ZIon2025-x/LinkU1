@@ -546,6 +546,24 @@ async def get_flea_market_item(
         if item.status != "active":
             is_available = False
         
+        # ⚠️ 检查当前用户是否有待处理的购买申请（议价请求）
+        user_purchase_request_status = None
+        user_purchase_request_proposed_price = None
+        
+        if current_user:
+            purchase_request_result = await db.execute(
+                select(models.FleaMarketPurchaseRequest)
+                .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+                .where(models.FleaMarketPurchaseRequest.buyer_id == current_user.id)
+                .where(models.FleaMarketPurchaseRequest.status.in_(["pending", "seller_negotiating"]))
+                .order_by(models.FleaMarketPurchaseRequest.created_at.desc())
+            )
+            user_purchase_request = purchase_request_result.scalar_one_or_none()
+            
+            if user_purchase_request:
+                user_purchase_request_status = user_purchase_request.status
+                user_purchase_request_proposed_price = float(user_purchase_request.proposed_price) if user_purchase_request.proposed_price else None
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -572,6 +590,8 @@ async def get_flea_market_item(
             pending_payment_ephemeral_key_secret=pending_payment_ephemeral_key_secret,
             pending_payment_expires_at=pending_payment_expires_at,
             is_available=is_available,  # 标识商品是否可购买
+            user_purchase_request_status=user_purchase_request_status,  # 当前用户的购买申请状态
+            user_purchase_request_proposed_price=user_purchase_request_proposed_price,  # 议价金额
         )
     except HTTPException:
         raise
@@ -1271,6 +1291,24 @@ async def direct_purchase_item(
                 detail="不能购买自己的商品"
             )
         
+        # ⚠️ 检查用户是否已有待处理的议价请求
+        # 如果有，自动取消（因为用户选择直接购买，说明不想再议价了）
+        existing_request = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+            .where(models.FleaMarketPurchaseRequest.buyer_id == current_user.id)
+            .where(models.FleaMarketPurchaseRequest.status.in_(["pending", "seller_negotiating"]))
+        )
+        existing_purchase_request = existing_request.scalar_one_or_none()
+        if existing_purchase_request:
+            # 自动取消用户的议价请求
+            await db.execute(
+                update(models.FleaMarketPurchaseRequest)
+                .where(models.FleaMarketPurchaseRequest.id == existing_purchase_request.id)
+                .values(status="rejected")
+            )
+            logger.info(f"用户 {current_user.id} 选择直接购买商品 {item_id}，已自动取消其待处理的议价请求 {existing_purchase_request.id}")
+        
         # 解析images JSON
         images = []
         if item.images:
@@ -1402,12 +1440,24 @@ async def direct_purchase_item(
                 detail="创建支付失败，请稍后重试"
             )
         
-        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建）
+        # ⚠️ 自动拒绝所有待处理的议价请求（因为商品已被直接购买）
+        await db.execute(
+            update(models.FleaMarketPurchaseRequest)
+            .where(
+                and_(
+                    models.FleaMarketPurchaseRequest.item_id == db_id,
+                    models.FleaMarketPurchaseRequest.status.in_(["pending", "seller_negotiating"])
+                )
+            )
+            .values(status="rejected")
+        )
+        
+        # 提交事务（任务和商品状态都已更新，PaymentIntent 已创建，所有议价请求已拒绝）
         await db.commit()
         
         # ⚠️ 事务提交成功后，立即清除缓存，确保商品不再显示在列表中
         invalidate_item_cache(item.id)
-        logger.info(f"✅ 商品 {item_id} 已预留，事务已提交，缓存已清除")
+        logger.info(f"✅ 商品 {item_id} 已预留，事务已提交，所有待处理的议价请求已自动拒绝，缓存已清除")
         
         # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
         customer_id = None

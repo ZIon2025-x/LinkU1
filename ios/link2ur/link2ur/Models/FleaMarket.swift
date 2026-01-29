@@ -59,6 +59,9 @@ struct FleaMarketItem: Codable, Identifiable {
     let pendingPaymentCustomerId: String? // Stripe客户ID
     let pendingPaymentEphemeralKeySecret: String? // Stripe临时密钥
     let pendingPaymentExpiresAt: String? // 支付过期时间（ISO 格式）
+    // 当前用户的购买申请信息（仅当用户有待处理的议价请求时返回）
+    let userPurchaseRequestStatus: String? // 购买申请状态：pending, seller_negotiating
+    let userPurchaseRequestProposedPrice: Double? // 议价金额
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
@@ -77,6 +80,8 @@ struct FleaMarketItem: Codable, Identifiable {
         case pendingPaymentCustomerId = "pending_payment_customer_id"
         case pendingPaymentEphemeralKeySecret = "pending_payment_ephemeral_key_secret"
         case pendingPaymentExpiresAt = "pending_payment_expires_at"
+        case userPurchaseRequestStatus = "user_purchase_request_status"
+        case userPurchaseRequestProposedPrice = "user_purchase_request_proposed_price"
     }
     
     // 自定义解码，处理 price 可能是字符串的情况
@@ -120,6 +125,17 @@ struct FleaMarketItem: Codable, Identifiable {
         pendingPaymentCustomerId = try container.decodeIfPresent(String.self, forKey: .pendingPaymentCustomerId)
         pendingPaymentEphemeralKeySecret = try container.decodeIfPresent(String.self, forKey: .pendingPaymentEphemeralKeySecret)
         pendingPaymentExpiresAt = try container.decodeIfPresent(String.self, forKey: .pendingPaymentExpiresAt)
+        userPurchaseRequestStatus = try container.decodeIfPresent(String.self, forKey: .userPurchaseRequestStatus)
+        
+        // user_purchase_request_proposed_price 字段：可能是 Double 或 String
+        if let priceValue = try? container.decode(Double.self, forKey: .userPurchaseRequestProposedPrice) {
+            userPurchaseRequestProposedPrice = priceValue
+        } else if let priceString = try? container.decode(String.self, forKey: .userPurchaseRequestProposedPrice),
+                  let priceValue = Double(priceString) {
+            userPurchaseRequestProposedPrice = priceValue
+        } else {
+            userPurchaseRequestProposedPrice = nil
+        }
     }
     
     // 自定义编码

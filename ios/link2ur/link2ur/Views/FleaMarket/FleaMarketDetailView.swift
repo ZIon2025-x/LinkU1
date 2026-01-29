@@ -700,13 +700,11 @@ struct FleaMarketDetailView: View {
                             itemId: itemId,
                             onApprove: {
                                 viewModel.approvePurchaseRequest(requestId: request.id) { data in
-                                    if let data = data {
+                                    if data != nil {
                                         // 同意成功，刷新列表
                                         viewModel.loadPurchaseRequests(itemId: itemId)
-                                        // 如果返回了支付信息，可以跳转到支付页面
-                                        if data.taskStatus == "pending_payment", let taskId = Int(data.taskId) {
-                                            // 可以在这里处理支付跳转
-                                        }
+                                        // 如果返回了支付信息，可以在这里处理支付跳转
+                                        // 目前由推送通知处理跳转
                                     }
                                 }
                             },
@@ -974,6 +972,7 @@ struct PurchaseDetailView: View {
     @State private var message = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+    @State private var infoMessage: String? // 信息提示（非错误）
     
     var body: some View {
         NavigationView {
@@ -1015,17 +1014,46 @@ struct PurchaseDetailView: View {
                     
                     // 我要议价复选框
                     VStack(alignment: .leading, spacing: 12) {
-                        Toggle(isOn: $wantsNegotiate) {
+                        // 检查用户是否已有待处理的议价请求
+                        if let requestStatus = item.userPurchaseRequestStatus,
+                           (requestStatus == "pending" || requestStatus == "seller_negotiating") {
+                            // 显示等待卖家确认的状态
                             HStack(spacing: 8) {
-                                Image(systemName: "hand.raised.fill")
+                                Image(systemName: "clock.fill")
                                     .font(.system(size: 16))
                                     .foregroundColor(AppColors.primary)
-                                Text(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(AppColors.textPrimary)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("等待卖家确认")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(AppColors.textPrimary)
+                                    
+                                    if let proposedPrice = item.userPurchaseRequestProposedPrice {
+                                        Text("议价金额：£\(String(format: "%.2f", proposedPrice))")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                }
+                                
+                                Spacer()
                             }
+                            .padding(12)
+                            .background(AppColors.primary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        } else {
+                            // 正常的议价复选框
+                            Toggle(isOn: $wantsNegotiate) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "hand.raised.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(AppColors.primary)
+                                    Text(LocalizationKey.taskApplicationIWantToNegotiatePrice.localized)
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(AppColors.textPrimary)
+                                }
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: AppColors.primary))
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: AppColors.primary))
                         
                         if wantsNegotiate {
                             // 议价金额输入
@@ -1042,6 +1070,11 @@ struct PurchaseDetailView: View {
                                     TextField(LocalizationKey.fleaMarketEnterAmount.localized, value: $proposedPrice, format: .number)
                                         .keyboardType(.decimalPad)
                                         .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .onChange(of: proposedPrice) { _ in
+                                            // 用户开始输入时清除错误和信息提示
+                                            errorMessage = nil
+                                            infoMessage = nil
+                                        }
                                 }
                                 .padding(16)
                                 .background(Color(UIColor.secondarySystemBackground))
@@ -1067,6 +1100,11 @@ struct PurchaseDetailView: View {
                             .scrollContentBackground(.hidden)
                             .background(Color(UIColor.secondarySystemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .onChange(of: message) { _ in
+                                // 用户开始输入时清除错误和信息提示
+                                errorMessage = nil
+                                infoMessage = nil
+                            }
                             .overlay(
                                 Group {
                                     if message.isEmpty {
@@ -1080,6 +1118,21 @@ struct PurchaseDetailView: View {
                                 },
                                 alignment: .topLeading
                             )
+                    }
+                    
+                    // 信息提示（非错误）
+                    if let infoMessage = infoMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(AppColors.primary)
+                            Text(infoMessage)
+                                .font(.system(size: 14))
+                                .foregroundColor(AppColors.textPrimary)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppColors.primary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     
                     // 错误提示
@@ -1112,6 +1165,10 @@ struct PurchaseDetailView: View {
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
+                        // 检查用户是否已有待处理的议价请求
+                        let hasPendingRequest = item.userPurchaseRequestStatus != nil && 
+                                               (item.userPurchaseRequestStatus == "pending" || item.userPurchaseRequestStatus == "seller_negotiating")
+                        
                         Button(action: submitPurchase) {
                             if isSubmitting {
                                 ProgressView()
@@ -1125,9 +1182,9 @@ struct PurchaseDetailView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(isSubmitting ? Color.gray : AppColors.primary)
+                        .background((isSubmitting || hasPendingRequest) ? Color.gray : AppColors.primary)
                         .clipShape(Capsule())
-                        .disabled(isSubmitting)
+                        .disabled(isSubmitting || hasPendingRequest)
                     }
                 }
                 
@@ -1170,6 +1227,7 @@ struct PurchaseDetailView: View {
         
         isSubmitting = true
         errorMessage = nil
+        infoMessage = nil
         
         if wantsNegotiate {
             // 发送议价请求
@@ -1183,8 +1241,19 @@ struct PurchaseDetailView: View {
                     if success {
                         onNegotiateComplete()
                     } else {
-                        // 显示详细的错误消息，如果没有则使用默认消息
-                        errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
+                        // 检查是否是409冲突错误（重复提交）
+                        if let errorMsg = errorMsg,
+                           errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
+                            // 这是信息提示，不是错误
+                            infoMessage = errorMsg
+                            // 延迟关闭页面，让用户看到提示
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                dismiss()
+                            }
+                        } else {
+                            // 显示详细的错误消息，如果没有则使用默认消息
+                            errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
+                        }
                     }
                 }
             }
@@ -1201,7 +1270,18 @@ struct PurchaseDetailView: View {
             }, onError: { [self] errorMsg in
                 DispatchQueue.main.async {
                     isSubmitting = false
-                    errorMessage = errorMsg
+                    // 检查是否是409冲突错误（重复提交）
+                    if let errorMsg = errorMsg,
+                       errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
+                        // 这是信息提示，不是错误
+                        infoMessage = errorMsg
+                        // 延迟关闭页面，让用户看到提示
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            dismiss()
+                        }
+                    } else {
+                        errorMessage = errorMsg
+                    }
                 }
             })
         }
@@ -1232,11 +1312,9 @@ struct PurchaseRequestCard: View {
                         .font(AppTypography.bodyBold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    if let createdAt = DateFormatterHelper.shared.date(from: request.createdAt) {
-                        Text(DateFormatterHelper.shared.formatTime(request.createdAt))
-                            .font(AppTypography.caption2)
-                            .foregroundColor(AppColors.textTertiary)
-                    }
+                    Text(DateFormatterHelper.shared.formatTime(request.createdAt))
+                        .font(AppTypography.caption2)
+                        .foregroundColor(AppColors.textTertiary)
                 }
                 
                 Spacer()
@@ -1258,7 +1336,8 @@ struct PurchaseRequestCard: View {
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     Text("£\(String(format: "%.2f", proposedPrice))")
-                        .font(AppTypography.subheadlineBold)
+                        .font(AppTypography.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundColor(AppColors.primary)
                 }
             }
@@ -1270,7 +1349,8 @@ struct PurchaseRequestCard: View {
                         .font(AppTypography.subheadline)
                         .foregroundColor(AppColors.textSecondary)
                     Text("£\(String(format: "%.2f", sellerCounterPrice))")
-                        .font(AppTypography.subheadlineBold)
+                        .font(AppTypography.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundColor(AppColors.success)
                 }
             }
