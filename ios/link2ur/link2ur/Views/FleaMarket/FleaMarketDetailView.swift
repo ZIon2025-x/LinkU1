@@ -1165,10 +1165,6 @@ struct PurchaseDetailView: View {
                     }
                     
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        // 检查用户是否已有待处理的议价请求
-                        let hasPendingRequest = item.userPurchaseRequestStatus != nil && 
-                                               (item.userPurchaseRequestStatus == "pending" || item.userPurchaseRequestStatus == "seller_negotiating")
-                        
                         Button(action: submitPurchase) {
                             if isSubmitting {
                                 ProgressView()
@@ -1182,9 +1178,9 @@ struct PurchaseDetailView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background((isSubmitting || hasPendingRequest) ? Color.gray : AppColors.primary)
+                        .background(isSubmitting ? Color.gray : AppColors.primary)
                         .clipShape(Capsule())
-                        .disabled(isSubmitting || hasPendingRequest)
+                        .disabled(isSubmitting)
                     }
                 }
                 
@@ -1213,6 +1209,15 @@ struct PurchaseDetailView: View {
     }
     
     private func submitPurchase() {
+        // 检查用户是否已有待处理的议价请求
+        let hasPendingRequest = item.userPurchaseRequestStatus != nil && 
+                               (item.userPurchaseRequestStatus == "pending" || item.userPurchaseRequestStatus == "seller_negotiating")
+        
+        // 如果用户有待处理的议价请求，强制执行直接购买（不允许再次议价）
+        if hasPendingRequest {
+            wantsNegotiate = false
+        }
+        
         // 验证议价金额
         if wantsNegotiate {
             guard let price = proposedPrice, price > 0 else {
@@ -1271,8 +1276,7 @@ struct PurchaseDetailView: View {
                 DispatchQueue.main.async {
                     isSubmitting = false
                     // 检查是否是409冲突错误（重复提交）
-                    if let errorMsg = errorMsg,
-                       errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
+                    if errorMsg.contains("您已提交购买申请") || errorMsg.contains("请等待卖家处理") {
                         // 这是信息提示，不是错误
                         infoMessage = errorMsg
                         // 延迟关闭页面，让用户看到提示

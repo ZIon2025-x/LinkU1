@@ -105,6 +105,9 @@ class IAPVerificationService:
         """
         验证JWS签名（使用Apple公钥）
         
+        Apple的JWS交易收据通常包含x5c证书链，应该优先使用x5c进行验证。
+        x5c是自包含的，不需要从外部API获取。
+        
         Args:
             transaction_jws: JWS格式的交易数据
             header: JWS header
@@ -113,45 +116,53 @@ class IAPVerificationService:
             ValueError: 如果签名验证失败
         """
         try:
-            # 从header获取密钥ID
-            kid = header.get("kid")
-            if not kid:
-                # 如果没有kid，尝试从x5c获取证书
-                x5c = header.get("x5c")
-                if x5c and len(x5c) > 0:
-                    # 使用证书验证
-                    cert_data = base64.b64decode(x5c[0])
-                    cert = x509.load_der_x509_certificate(cert_data, default_backend())
-                    public_key = cert.public_key()
-                    
-                    # 验证JWS签名
-                    jwt.decode(
-                        transaction_jws,
-                        public_key,
-                        algorithms=["ES256"],
-                        options={"verify_signature": True}
-                    )
-                else:
-                    logger.warning("JWS header中缺少kid和x5c，跳过签名验证")
-            else:
-                # 使用JWK客户端获取公钥
-                jwks_url = f"https://api.appstoreconnect.apple.com/v1/certificates/{kid}"
-                jwks_client = PyJWKClient(jwks_url)
-                signing_key = jwks_client.get_signing_key_from_jwt(transaction_jws)
+            # 优先使用x5c证书链（Apple的JWS通常都包含x5c）
+            x5c = header.get("x5c")
+            if x5c and len(x5c) > 0:
+                # 使用证书链中的第一个证书（叶子证书）验证签名
+                cert_data = base64.b64decode(x5c[0])
+                cert = x509.load_der_x509_certificate(cert_data, default_backend())
+                public_key = cert.public_key()
                 
                 # 验证JWS签名
                 jwt.decode(
                     transaction_jws,
-                    signing_key.key,
+                    public_key,
                     algorithms=["ES256"],
                     options={"verify_signature": True}
                 )
+                logger.debug("JWS签名验证成功（使用x5c证书）")
+                return
+            
+            # 如果没有x5c，尝试使用kid（但Apple的JWS通常都有x5c）
+            kid = header.get("kid")
+            if kid:
+                # 注意：Apple的公开JWKS端点可能不适用于所有情况
+                # 如果kid存在但没有x5c，记录警告
+                error_msg = f"JWS header包含kid但没有x5c，无法验证签名。kid={kid}"
+                logger.warning(error_msg)
+                # 如果启用完整验证且不是沙盒环境，抛出异常
+                if self.enable_full_verification and not self.use_sandbox:
+                    raise ValueError(error_msg)
+            else:
+                error_msg = "JWS header中缺少x5c和kid，无法验证签名"
+                logger.warning(error_msg)
+                # 如果启用完整验证且不是沙盒环境，抛出异常
+                if self.enable_full_verification and not self.use_sandbox:
+                    raise ValueError(error_msg)
+                
+        except jwt.InvalidSignatureError as e:
+            error_msg = f"JWS签名验证失败: 签名无效 - {str(e)}"
+            logger.error(error_msg)
+            if self.enable_full_verification and not self.use_sandbox:
+                raise ValueError(error_msg)
         except Exception as e:
-            logger.warning(f"JWS签名验证失败（继续处理）: {str(e)}")
+            error_msg = f"JWS签名验证失败: {str(e)}"
+            logger.warning(f"{error_msg}（继续处理）")
             # 在生产环境中，如果验证失败应该抛出异常
             # 但在开发环境中，我们可以记录警告并继续
             if self.enable_full_verification and not self.use_sandbox:
-                raise ValueError(f"JWS签名验证失败: {str(e)}")
+                raise ValueError(error_msg)
     
     def get_transaction_info(self, transaction_id: str, environment: str = "Production") -> Optional[Dict[str, Any]]:
         """
