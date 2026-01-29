@@ -4226,14 +4226,21 @@ def update_user_vip_status(db: Session, user_id: str, user_level: str):
 
 
 def check_and_update_expired_subscriptions(db: Session):
-    """检查并更新过期的订阅（批量更新）"""
+    """检查并更新过期的订阅（批量更新）
+    
+    包括以下情况：
+    1. 状态为 "active" 但已过期的订阅
+    2. 状态为 "cancelled" 但已过期的订阅（取消订阅后等到到期才降级）
+    """
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
     utc_now = get_utc_time()
 
+    # 检查所有已过期但尚未标记为 "expired" 的订阅
+    # 包括 "active" 和 "cancelled" 状态的订阅
     expired = db.query(models.VIPSubscription).filter(
-        models.VIPSubscription.status == "active",
+        models.VIPSubscription.status.in_(["active", "cancelled"]),
         models.VIPSubscription.expires_date.isnot(None),
         models.VIPSubscription.expires_date < now,
     ).all()
@@ -4244,6 +4251,7 @@ def check_and_update_expired_subscriptions(db: Session):
     ids = [s.id for s in expired]
     user_ids = list({s.user_id for s in expired})
 
+    # 将所有过期的订阅更新为 "expired" 状态
     db.query(models.VIPSubscription).filter(
         models.VIPSubscription.id.in_(ids),
     ).update(
@@ -4254,6 +4262,7 @@ def check_and_update_expired_subscriptions(db: Session):
         synchronize_session="fetch",
     )
 
+    # 检查每个用户是否还有其他有效订阅，如果没有则降级
     for uid in user_ids:
         active = get_active_vip_subscription(db, uid)
         if not active:
