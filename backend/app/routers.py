@@ -6299,7 +6299,7 @@ def register_device_token(
     if not device_token:
         raise HTTPException(status_code=400, detail="device_token is required")
     
-    # 查找是否已存在该设备令牌
+    # 查找是否已存在该设备令牌（当前用户的）
     existing_token = db.query(models.DeviceToken).filter(
         models.DeviceToken.user_id == current_user.id,
         models.DeviceToken.device_token == device_token

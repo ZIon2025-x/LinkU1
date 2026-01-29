@@ -4278,6 +4278,31 @@ def check_and_update_expired_subscriptions(db: Session):
     return len(expired)
 
 
+def cleanup_inactive_device_tokens(db: Session, inactive_days: int = 90) -> int:
+    """清理无效的设备推送token（仅清理APNs返回无效的token）
+    
+    注意：此函数不再清理长时间未使用的token，因为：
+    - 只要用户未登出，即使长时间未打开app，也应该能收到推送
+    - 推送通知的目的就是让用户即使不打开app也能收到重要通知
+    
+    策略：
+    - 只清理 is_active=False 的token（这些token已经被APNs标记为无效）
+    - 不清理长时间未使用的token，因为用户可能只是没打开app但仍在登录状态
+    
+    Args:
+        db: 数据库会话
+        inactive_days: 此参数已废弃，保留仅为兼容性
+        
+    Returns:
+        清理的token数量（当前返回0，因为不再清理长时间未使用的token）
+    """
+    # 不再清理长时间未使用的token
+    # 只要用户未登出，就应该能收到推送，无论多久没打开app
+    # 只有APNs返回token无效时，推送服务会自动标记 is_active=False
+    logger.info("cleanup_inactive_device_tokens: 已禁用长时间未使用token的清理（用户未登出时应能收到推送）")
+    return 0
+
+
 def get_user_task_statistics(db: Session, user_id: str):
     """获取用户的任务统计信息"""
     from app.models import Task

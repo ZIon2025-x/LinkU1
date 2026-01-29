@@ -933,6 +933,28 @@ public class APIService {
             .store(in: &cancellables)
     }
     
+    // 注销设备Token（用于推送通知）
+    public func unregisterDeviceToken(_ token: String, completion: @escaping (Bool) -> Void) {
+        let body: [String: Any] = [
+            "device_token": token
+        ]
+        
+        request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "DELETE", body: body)
+            .sink(receiveCompletion: { result in
+                if case .failure = result {
+                    // 如果API不存在或token不存在，静默失败（不影响应用使用）
+                    print("Device token unregistration failed (API may not exist or token not found)")
+                    completion(false)
+                } else {
+                    completion(true)
+                }
+            }, receiveValue: { _ in
+                print("Device token unregistered successfully")
+                completion(true)
+            })
+            .store(in: &cancellables)
+    }
+    
     // MARK: - 文件上传（用于任务证据等）
     func uploadFile(data: Data, filename: String, taskId: Int? = nil, completion: @escaping (Result<String, APIError>) -> Void) {
         // 如果有 taskId，添加到 URL 查询参数

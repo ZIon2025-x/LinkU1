@@ -604,6 +604,18 @@ public class AppState: ObservableObject {
         // 断开WebSocket连接并清除用户信息
         WebSocketService.shared.disconnectAndClear()
         
+        // 登出时注销设备token（防止其他用户登录后收到当前用户的推送）
+        if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
+            // 注意：需要在删除token之前调用，因为API需要认证
+            APIService.shared.unregisterDeviceToken(deviceToken) { success in
+                if success {
+                    Logger.debug("设备令牌已注销（登出时）", category: .api)
+                } else {
+                    Logger.warning("设备令牌注销失败（登出时），可能已登出或token不存在", category: .api)
+                }
+            }
+        }
+        
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
         isAuthenticated = false
