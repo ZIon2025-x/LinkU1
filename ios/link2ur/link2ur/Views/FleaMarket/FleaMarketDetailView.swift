@@ -53,6 +53,11 @@ struct FleaMarketDetailView: View {
                             // 卖家信息卡片
                             sellerCard(item: item)
                             
+                            // 购买申请列表（仅商品所有者可见）
+                            if isSeller && item.status == "active" {
+                                purchaseRequestsCard(item: item)
+                            }
+                            
                             // 底部安全区域
                             Spacer().frame(height: 100)
                         }
@@ -658,6 +663,79 @@ struct FleaMarketDetailView: View {
         }
     }
     
+    // MARK: - 购买申请列表卡片
+    
+    @ViewBuilder
+    private func purchaseRequestsCard(item: FleaMarketItem) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                IconStyle.icon("person.2.fill", size: 18)
+                    .foregroundColor(AppColors.primary)
+                Text("购买申请 (\(viewModel.purchaseRequests.count))")
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            if viewModel.isLoadingPurchaseRequests {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(AppSpacing.xl)
+            } else if viewModel.purchaseRequests.isEmpty {
+                VStack(spacing: AppSpacing.sm) {
+                    IconStyle.icon("tray", size: 40)
+                        .foregroundColor(AppColors.textQuaternary)
+                    Text("暂无购买申请")
+                        .font(AppTypography.body)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(AppSpacing.xl)
+                .background(AppColors.background.opacity(0.5))
+                .cornerRadius(AppCornerRadius.medium)
+            } else {
+                VStack(spacing: AppSpacing.md) {
+                    ForEach(viewModel.purchaseRequests) { request in
+                        PurchaseRequestCard(
+                            request: request,
+                            itemId: itemId,
+                            onApprove: {
+                                viewModel.approvePurchaseRequest(requestId: request.id) { data in
+                                    if let data = data {
+                                        // 同意成功，刷新列表
+                                        viewModel.loadPurchaseRequests(itemId: itemId)
+                                        // 如果返回了支付信息，可以跳转到支付页面
+                                        if data.taskStatus == "pending_payment", let taskId = Int(data.taskId) {
+                                            // 可以在这里处理支付跳转
+                                        }
+                                    }
+                                }
+                            },
+                            onReject: {
+                                viewModel.rejectPurchaseRequest(itemId: itemId, requestId: request.id) { success in
+                                    if success {
+                                        // 拒绝成功，刷新列表
+                                        viewModel.loadPurchaseRequests(itemId: itemId)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(UIColor.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 16)
+        .onAppear {
+            // 首次加载时获取购买申请列表
+            if viewModel.purchaseRequests.isEmpty {
+                viewModel.loadPurchaseRequests(itemId: itemId)
+            }
+        }
+    }
+    
     // MARK: - 底部操作栏
     
     private var isSeller: Bool {
@@ -1099,13 +1177,14 @@ struct PurchaseDetailView: View {
                 itemId: itemId,
                 proposedPrice: proposedPrice,
                 message: message.isEmpty ? nil : message
-            ) { [self] success in
+            ) { [self] success, errorMsg in
                 DispatchQueue.main.async {
                     isSubmitting = false
                     if success {
                         onNegotiateComplete()
                     } else {
-                        errorMessage = LocalizationKey.fleaMarketNegotiateRequestFailed.localized
+                        // 显示详细的错误消息，如果没有则使用默认消息
+                        errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
                     }
                 }
             }
@@ -1125,6 +1204,173 @@ struct PurchaseDetailView: View {
                     errorMessage = errorMsg
                 }
             })
+        }
+    }
+}
+
+// MARK: - 购买申请卡片组件
+
+struct PurchaseRequestCard: View {
+    let request: PurchaseRequest
+    let itemId: String
+    let onApprove: () -> Void
+    let onReject: () -> Void
+    @State private var showRejectConfirm = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                AvatarView(
+                    urlString: nil,
+                    size: 40,
+                    placeholder: Image(systemName: "person.fill")
+                )
+                .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(request.buyerName)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    if let createdAt = DateFormatterHelper.shared.date(from: request.createdAt) {
+                        Text(DateFormatterHelper.shared.formatTime(request.createdAt))
+                            .font(AppTypography.caption2)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+                
+                Spacer()
+                
+                // 状态标签
+                Text(statusText)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(statusColor)
+                    .clipShape(Capsule())
+            }
+            
+            // 议价信息
+            if let proposedPrice = request.proposedPrice {
+                HStack(spacing: 4) {
+                    Text("议价金额:")
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("£\(String(format: "%.2f", proposedPrice))")
+                        .font(AppTypography.subheadlineBold)
+                        .foregroundColor(AppColors.primary)
+                }
+            }
+            
+            // 卖家议价
+            if let sellerCounterPrice = request.sellerCounterPrice {
+                HStack(spacing: 4) {
+                    Text("卖家议价:")
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text("£\(String(format: "%.2f", sellerCounterPrice))")
+                        .font(AppTypography.subheadlineBold)
+                        .foregroundColor(AppColors.success)
+                }
+            }
+            
+            // 留言
+            if let message = request.message, !message.isEmpty {
+                Text(message)
+                    .font(AppTypography.subheadline)
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(AppSpacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppColors.background)
+                    .cornerRadius(AppCornerRadius.small)
+            }
+            
+            // 操作按钮（仅pending状态显示）
+            if request.status == "pending" {
+                HStack(spacing: AppSpacing.md) {
+                    // 批准按钮 - 图标样式（与任务申请者列表一致）
+                    Button(action: {
+                        HapticFeedback.success()
+                        onApprove()
+                    }) {
+                        IconStyle.icon("checkmark.circle.fill", size: 24)
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [AppColors.success, AppColors.success.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(Circle())
+                            .shadow(color: AppColors.success.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                    
+                    // 增加间距，防止误触
+                    Spacer()
+                        .frame(width: 16)
+                    
+                    // 拒绝按钮 - 图标样式（与任务申请者列表一致）
+                    Button(action: {
+                        HapticFeedback.warning()
+                        showRejectConfirm = true
+                    }) {
+                        IconStyle.icon("xmark.circle.fill", size: 24)
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [AppColors.error, AppColors.error.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(Circle())
+                            .shadow(color: AppColors.error.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                    
+                    Spacer()
+                }
+                .padding(.top, AppSpacing.xs)
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.medium)
+        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        .alert("拒绝购买申请", isPresented: $showRejectConfirm) {
+            Button("取消", role: .cancel) {
+                showRejectConfirm = false
+            }
+            Button("确认", role: .destructive) {
+                onReject()
+            }
+        } message: {
+            Text("确定要拒绝这个购买申请吗？")
+        }
+    }
+    
+    private var statusColor: Color {
+        switch request.status {
+        case "pending": return AppColors.warning
+        case "seller_negotiating": return AppColors.primary
+        case "accepted": return AppColors.success
+        case "rejected": return AppColors.error
+        default: return AppColors.textSecondary
+        }
+    }
+    
+    private var statusText: String {
+        switch request.status {
+        case "pending": return "待处理"
+        case "seller_negotiating": return "卖家已议价"
+        case "accepted": return "已接受"
+        case "rejected": return "已拒绝"
+        default: return request.status
         }
     }
 }

@@ -87,6 +87,7 @@ async def send_purchase_request_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=item.seller_id,
@@ -94,7 +95,7 @@ async def send_purchase_request_notification(
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="flea_market_purchase_request",
                 data={
-                    "item_id": item.id
+                    "item_id": format_flea_market_id(item.id)  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
                 },
                 template_vars={
                     "buyer_name": buyer_name,
@@ -146,6 +147,7 @@ async def send_purchase_accepted_notification(
             push_title = "购买申请已接受，请完成支付" if task and task.status == "pending_payment" else None
             push_body = f"商品「{item.title}」的购买申请已被接受，请尽快完成支付" if task and task.status == "pending_payment" else None
             
+            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=buyer.id,
@@ -153,7 +155,7 @@ async def send_purchase_accepted_notification(
                 body=push_body,  # 如果需要支付，使用自定义内容
                 notification_type="flea_market_purchase_accepted",
                 data={
-                    "item_id": item.id,
+                    "item_id": format_flea_market_id(item.id),  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
                     "task_id": task_id
                 },
                 template_vars={
@@ -193,6 +195,7 @@ async def send_direct_purchase_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=item.seller_id,
@@ -200,7 +203,7 @@ async def send_direct_purchase_notification(
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="flea_market_direct_purchase",
                 data={
-                    "item_id": item.id,
+                    "item_id": format_flea_market_id(item.id),  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
                     "task_id": task_id
                 },
                 template_vars={
@@ -275,6 +278,7 @@ async def send_seller_counter_offer_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=buyer.id,
@@ -282,7 +286,7 @@ async def send_seller_counter_offer_notification(
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="flea_market_seller_counter_offer",
                 data={
-                    "item_id": item.id
+                    "item_id": format_flea_market_id(item.id)  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
                 },
                 template_vars={
                     "seller_name": seller_name,
@@ -322,6 +326,7 @@ async def send_purchase_rejected_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=buyer.id,
@@ -329,7 +334,7 @@ async def send_purchase_rejected_notification(
                 body=None,  # 从模板生成（会根据用户语言偏好）
                 notification_type="flea_market_purchase_rejected",
                 data={
-                    "item_id": item.id
+                    "item_id": format_flea_market_id(item.id)  # 使用格式化的ID（S0020格式）以便iOS客户端正确跳转
                 },
                 template_vars={
                     "seller_name": seller_name,

@@ -122,6 +122,8 @@ class FleaMarketDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isFavorited = false
     @Published var isTogglingFavorite = false
+    @Published var purchaseRequests: [PurchaseRequest] = []
+    @Published var isLoadingPurchaseRequests = false
     
     private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -221,7 +223,7 @@ class FleaMarketDetailViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func requestPurchase(itemId: String, proposedPrice: Double?, message: String?, completion: @escaping (Bool) -> Void) {
+    func requestPurchase(itemId: String, proposedPrice: Double?, message: String?, completion: @escaping (Bool, String?) -> Void) {
         var body: [String: Any] = [:]
         if let price = proposedPrice {
             body["proposed_price"] = price
@@ -232,11 +234,15 @@ class FleaMarketDetailViewModel: ObservableObject {
         
         apiService.request(PurchaseRequest.self, "/api/flea-market/items/\(itemId)/purchase-request", method: "POST", body: body)
             .sink(receiveCompletion: { result in
-                if case .failure = result {
-                    completion(false)
+                if case .failure(let error) = result {
+                    // 提取用户友好的错误消息
+                    let errorMessage = error.userFriendlyMessage
+                    // 使用 ErrorHandler 统一处理错误（用于日志记录）
+                    ErrorHandler.shared.handle(error, context: "发送跳蚤市场议价请求")
+                    completion(false, errorMessage)
                 }
             }, receiveValue: { _ in
-                completion(true)
+                completion(true, nil)
             })
             .store(in: &cancellables)
     }
@@ -256,6 +262,80 @@ class FleaMarketDetailViewModel: ObservableObject {
                     self?.loadItem(itemId: itemId, preserveItem: true)
                 }
                 completion(true)
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 加载购买申请列表（仅商品所有者可查看）
+    func loadPurchaseRequests(itemId: String) {
+        isLoadingPurchaseRequests = true
+        
+        apiService.request(PurchaseRequestListResponse.self, "/api/flea-market/items/\(itemId)/purchase-requests", method: "GET")
+            .sink(receiveCompletion: { [weak self] result in
+                self?.isLoadingPurchaseRequests = false
+                if case .failure(let error) = result {
+                    Logger.error("加载购买申请列表失败: \(error.localizedDescription)", category: .network)
+                    ErrorHandler.shared.handle(error, context: "加载购买申请列表")
+                }
+            }, receiveValue: { [weak self] response in
+                if response.success {
+                    self?.purchaseRequests = response.data.requests
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 同意购买申请
+    func approvePurchaseRequest(requestId: String, completion: @escaping (ApprovePurchaseRequestResponse.ApprovePurchaseRequestData?) -> Void) {
+        apiService.request(ApprovePurchaseRequestResponse.self, "/api/flea-market/purchase-requests/\(requestId)/approve", method: "POST", body: [:])
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.error("同意购买申请失败: \(error.localizedDescription)", category: .network)
+                    ErrorHandler.shared.handle(error, context: "同意购买申请")
+                    completion(nil)
+                }
+            }, receiveValue: { response in
+                if response.success {
+                    completion(response.data)
+                } else {
+                    completion(nil)
+                }
+            })
+            .store(in: &cancellables)
+    }
+    
+    /// 拒绝购买申请
+    func rejectPurchaseRequest(itemId: String, requestId: String, completion: @escaping (Bool) -> Void) {
+        // 解析请求ID（从格式化ID转换为数据库ID，如"S0020" -> 20）
+        let dbRequestId: Int
+        if requestId.hasPrefix("S") {
+            // 移除"S"前缀并转换为整数
+            let numericPart = String(requestId.dropFirst())
+            guard let id = Int(numericPart) else {
+                Logger.error("无效的请求ID格式: \(requestId)", category: .network)
+                completion(false)
+                return
+            }
+            dbRequestId = id
+        } else {
+            // 直接转换为整数
+            guard let id = Int(requestId) else {
+                Logger.error("无效的请求ID格式: \(requestId)", category: .network)
+                completion(false)
+                return
+            }
+            dbRequestId = id
+        }
+        
+        apiService.request(RejectPurchaseRequestResponse.self, "/api/flea-market/items/\(itemId)/reject-purchase", method: "POST", body: ["purchase_request_id": dbRequestId])
+            .sink(receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.error("拒绝购买申请失败: \(error.localizedDescription)", category: .network)
+                    ErrorHandler.shared.handle(error, context: "拒绝购买申请")
+                    completion(false)
+                }
+            }, receiveValue: { response in
+                completion(response.success)
             })
             .store(in: &cancellables)
     }

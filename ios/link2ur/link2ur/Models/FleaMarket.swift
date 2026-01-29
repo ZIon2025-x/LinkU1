@@ -192,21 +192,74 @@ struct CreateFleaMarketItemResponse: Decodable {
 
 // 购买申请
 struct PurchaseRequest: Codable, Identifiable {
-    let id: Int
-    let itemId: String // 改为 String，因为商品 ID 是字符串格式
+    let id: String // 格式化的ID（如S0020）
+    let itemId: String
     let buyerId: String
+    let buyerName: String
     let proposedPrice: Double?
+    let sellerCounterPrice: Double?
     let message: String?
     let status: String
     let createdAt: String
+    let updatedAt: String?
     
     enum CodingKeys: String, CodingKey {
         case id, message, status
         case itemId = "item_id"
         case buyerId = "buyer_id"
+        case buyerName = "buyer_name"
         case proposedPrice = "proposed_price"
+        case sellerCounterPrice = "seller_counter_price"
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
+}
+
+// 购买申请列表响应
+struct PurchaseRequestListResponse: Decodable {
+    let success: Bool
+    let data: PurchaseRequestListData
+    let message: String?
+    
+    struct PurchaseRequestListData: Decodable {
+        let requests: [PurchaseRequest]
+        let total: Int
+    }
+}
+
+// 同意购买申请响应
+struct ApprovePurchaseRequestResponse: Decodable {
+    let success: Bool
+    let data: ApprovePurchaseRequestData?
+    let message: String?
+    
+    struct ApprovePurchaseRequestData: Decodable {
+        let taskId: String
+        let taskStatus: String
+        let clientSecret: String?
+        let amount: Int?
+        let amountDisplay: String?
+        let currency: String?
+        let customerId: String?
+        let ephemeralKeySecret: String?
+        
+        enum CodingKeys: String, CodingKey {
+            case taskId = "task_id"
+            case taskStatus = "task_status"
+            case clientSecret = "client_secret"
+            case amount
+            case amountDisplay = "amount_display"
+            case currency
+            case customerId = "customer_id"
+            case ephemeralKeySecret = "ephemeral_key_secret"
+        }
+    }
+}
+
+// 拒绝购买申请响应
+struct RejectPurchaseRequestResponse: Decodable {
+    let success: Bool
+    let message: String?
 }
 
 // 收藏操作响应
