@@ -109,6 +109,12 @@ struct StripePaymentView: View {
                     // 移除延迟，因为 sheet 已经显示，可以立即初始化
                     viewModel.ensurePaymentSheetReady()
                 }
+                
+                // 延迟加载优惠券，避免阻塞支付页面初始化
+                // 使用异步延迟，让支付页面先显示，然后后台加载优惠券
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    viewModel.loadAvailableCoupons()
+                }
             }
             .alert(LocalizationKey.paymentError.localized, isPresented: .constant(viewModel.errorMessage != nil && !viewModel.isLoading)) {
                 Button(LocalizationKey.commonOk.localized, role: .cancel) {

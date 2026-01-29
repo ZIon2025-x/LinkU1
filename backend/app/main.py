@@ -1466,7 +1466,7 @@ async def websocket_chat(
     last_ping_time = get_utc_time()  # 统一使用UTC时间
     ping_interval = 20  # 20秒发送一次ping
     missing_pongs = 0
-    max_missing_pongs = 3
+    max_missing_pongs = 6  # 6 * 10s = 60s 无响应才断开，适应移动网络
 
     try:
         # 主消息循环（统一处理心跳和业务消息）
@@ -1484,7 +1484,7 @@ async def websocket_chat(
             try:
                 data = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=5.0
+                    timeout=10.0
                 )
             except asyncio.TimeoutError:
                 # 超时检查pong

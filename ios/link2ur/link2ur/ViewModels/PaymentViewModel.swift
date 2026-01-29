@@ -135,8 +135,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         // 注意：延迟初始化 PaymentSheet，直到 sheet 真正显示，避免阻塞主线程
         // ensurePaymentSheetReady() 将在 StripePaymentView 的 onAppear 中调用
         
-        // 加载可用优惠券
-        loadAvailableCoupons()
+        // 延迟加载优惠券，避免阻塞支付流程初始化
+        // 优惠券加载将在支付页面显示后异步进行
         
         // 根据设备支持情况设置默认支付方式
         // 如果设备支持 Apple Pay 且已配置 Merchant ID，优先选择 Apple Pay
@@ -310,7 +310,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
 
     /// 确保 PaymentSheet 已准备好（仅在 clientSecret 变化时重建）
     /// - Note: 统一入口，避免 View 层多处重复触发 setup
-    /// 优化：延迟初始化，避免阻塞 UI
+    /// 优化：立即初始化，因为调用时已经在主线程（onAppear 或设置支付参数后）
     func ensurePaymentSheetReady() {
         guard let clientSecret = activeClientSecret, !clientSecret.isEmpty else {
             return
@@ -320,16 +320,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             return
         }
 
-        // 延迟初始化 PaymentSheet，避免阻塞 UI
-        // 使用异步延迟，让 UI 先响应切换操作
-        // 注意：PaymentSheet 的创建必须在主线程执行
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            // 再次检查，避免重复创建
-            if self.paymentSheet == nil || self.paymentSheetClientSecret != clientSecret {
-                self.setupPaymentElement(with: clientSecret)
-            }
-        }
+        // 立即初始化 PaymentSheet，因为调用时已经在主线程
+        // 移除异步延迟，加快支付页面显示速度
+        setupPaymentElement(with: clientSecret)
     }
 
     /// 统一的支付方式切换入口（便于扩展更多支付方式）

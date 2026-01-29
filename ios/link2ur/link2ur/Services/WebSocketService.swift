@@ -12,6 +12,7 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     private var currentUserId: String?
     private var isConnecting = false // 防止并发连接
     private let connectionQueue = DispatchQueue(label: "com.link2ur.websocket.connection")
+    private var heartbeatTimer: Timer?
     
     // 发布接收到的消息
     let messageSubject = PassthroughSubject<Message, Never>()
@@ -93,6 +94,8 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
         // 取消正在进行的重连
         reconnectWorkItem?.cancel()
         reconnectWorkItem = nil
+        
+        stopHeartbeat()
         
         // 取消 WebSocket 任务
         webSocketTask?.cancel(with: .goingAway, reason: nil)
@@ -227,8 +230,33 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
     }
     
     private func sendPong() {
-        let pongMessage = "{\"type\":\"pong\"}"
-        send(pongMessage)
+        // 直接用 task 发送，不依赖 isConnected 标志（避免 didOpen 未回调时无法响应 ping）
+        guard let webSocketTask = webSocketTask else { return }
+        let pongMessage = URLSessionWebSocketTask.Message.string("{\"type\":\"pong\"}")
+        webSocketTask.send(pongMessage) { error in
+            if let error = error {
+                print("⚠️ Pong 发送失败: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func startHeartbeat() {
+        stopHeartbeat()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            // 将心跳间隔从 25 秒增加到 30 秒，减少心跳频率，降低超时风险
+            // 同时避免过于频繁的心跳占用资源
+            self.heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+                self?.sendPong()
+            }
+        }
+    }
+    
+    private func stopHeartbeat() {
+        DispatchQueue.main.async { [weak self] in
+            self?.heartbeatTimer?.invalidate()
+            self?.heartbeatTimer = nil
+        }
     }
     
     func send(_ message: String) {
@@ -332,6 +360,7 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             self?.isConnecting = false
             self?.reconnectAttempts = 0
         }
+        startHeartbeat()
     }
     
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {

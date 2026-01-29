@@ -19,7 +19,6 @@ struct FleaMarketDetailView: View {
     @State private var isPreparingPayment = false
     @State private var showNegotiateSuccess = false
     @State private var isProcessingPurchase = false  // 购买处理中状态
-    @State private var pendingShowPaymentView = false  // 等待显示支付视图的标志
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -135,17 +134,7 @@ struct FleaMarketDetailView: View {
         .sheet(isPresented: $showLogin) {
             LoginView()
         }
-        .sheet(isPresented: $showPurchaseSheet, onDismiss: {
-            // 当购买确认页面完全关闭后，检查是否需要显示支付页面
-            if pendingShowPaymentView {
-                pendingShowPaymentView = false
-                isProcessingPurchase = false
-                // 使用短暂延迟确保 sheet dismiss 完全完成
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    showPaymentView = true
-                }
-            }
-        }) {
+        .sheet(isPresented: $showPurchaseSheet) {
             if let item = viewModel.item {
                 PurchaseDetailView(
                     item: item,
@@ -187,12 +176,12 @@ struct FleaMarketDetailView: View {
                             paymentEphemeralKeySecret = data.ephemeralKeySecret
                             paymentExpiresAt = data.paymentExpiresAt
                             
-                            // 标记需要在 sheet 关闭后显示支付页面
-                            pendingShowPaymentView = true
-                            isProcessingPurchase = true
-                            
-                            // 关闭购买页面（支付页面将在 onDismiss 回调中显示）
+                            // 关闭购买页面并立即显示支付页面
+                            // 使用 fullScreenCover 可以并行显示，无需等待 sheet 关闭
+                            // 注意：onPurchaseComplete 回调已经在主线程，无需额外的异步包装
+                            isProcessingPurchase = false
                             showPurchaseSheet = false
+                            showPaymentView = true
                         } else if purchaseData != nil {
                             // 如果没有支付信息，可能是直接购买成功（不需要支付）
                             Logger.debug("直接购买成功，无需支付", category: .network)
@@ -228,7 +217,7 @@ struct FleaMarketDetailView: View {
         } message: {
             Text(LocalizationKey.fleaMarketNegotiateRequestSentMessage.localized)
         }
-        .sheet(isPresented: $showPaymentView) {
+        .fullScreenCover(isPresented: $showPaymentView) {
             if let taskId = paymentTaskId, let clientSecret = paymentClientSecret {
                 StripePaymentView(
                     taskId: taskId,
@@ -249,10 +238,24 @@ struct FleaMarketDetailView: View {
         }
         .task(id: itemId) {
             print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
+            
+            // 如果正在处理购买或显示支付页面，跳过重新加载，避免阻塞支付流程
+            guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
+                print("🔍 [FleaMarketDetailView] 正在处理购买流程，跳过商品重新加载")
+                return
+            }
+            
             // 使用 .task(id:) 确保只在 itemId 变化时重新加载
             // 添加延迟，避免与导航动画冲突
             // 使用 _Concurrency.Task 明确指定 Swift 并发框架的 Task（因为项目中存在 Task 模型）
             try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000) // 0.1秒延迟
+            
+            // 再次检查状态（可能在延迟期间状态已变化）
+            guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
+                print("🔍 [FleaMarketDetailView] 延迟后检测到购买流程进行中，跳过商品重新加载")
+                return
+            }
+            
             // 只有在 item 为空或 itemId 变化时才加载
             if viewModel.item == nil || viewModel.item?.id != itemId {
                 print("🔍 [FleaMarketDetailView] 开始加载商品: \(itemId)")
