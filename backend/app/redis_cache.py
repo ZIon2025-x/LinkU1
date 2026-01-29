@@ -227,7 +227,8 @@ class RedisCache:
             f"user_tasks:{user_id}*",  # 使用通配符匹配所有用户任务缓存
             f"user_profile:{user_id}",
             f"user_notifications:{user_id}",
-            f"user_reviews:{user_id}"
+            f"user_reviews:{user_id}",
+            f"vip_status:{user_id}",
         ]
         
         total_deleted = 0
@@ -252,7 +253,8 @@ CACHE_PREFIXES = {
     'TASKS': 'tasks',
     'TASK_DETAIL': 'task_detail',
     'NOTIFICATIONS': 'notifications',
-    'SYSTEM_SETTINGS': 'system_settings'
+    'SYSTEM_SETTINGS': 'system_settings',
+    'VIP_STATUS': 'vip_status',
 }
 
 # 默认TTL配置（秒）
@@ -264,6 +266,7 @@ DEFAULT_TTL = {
     'TASK_DETAIL': 300,      # 任务详情5分钟
     'NOTIFICATIONS': 30,     # 通知30秒
     'SYSTEM_SETTINGS': 600,  # 系统设置10分钟
+    'VIP_STATUS': 60,       # VIP状态1分钟
     'DEFAULT': 60            # 默认1分钟
 }
 
@@ -306,6 +309,13 @@ def get_user_info(user_id: str) -> Optional[Any]:
     """获取用户信息缓存"""
     key = get_cache_key(CACHE_PREFIXES['USER'], user_id)
     return redis_cache.get(key)
+
+
+def invalidate_vip_status(user_id: str) -> bool:
+    """清除用户 VIP 状态缓存（激活、webhook、管理员更新后调用）"""
+    key = get_cache_key(CACHE_PREFIXES['VIP_STATUS'], user_id)
+    return redis_cache.delete(key)
+
 
 def cache_user_tasks(cache_key: str, tasks_data: Any, ttl: int = DEFAULT_TTL['USER_TASKS']) -> bool:
     """缓存用户任务"""

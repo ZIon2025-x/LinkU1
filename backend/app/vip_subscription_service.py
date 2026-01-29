@@ -9,6 +9,13 @@ from sqlalchemy.orm import Session
 
 from app import crud, models
 from app.iap_verification_service import iap_verification_service
+from app.redis_cache import (
+    redis_cache,
+    get_cache_key,
+    CACHE_PREFIXES,
+    DEFAULT_TTL,
+    invalidate_vip_status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +68,29 @@ class VIPSubscriptionService:
             "is_trial_period": subscription.is_trial_period,
             "is_in_intro_offer_period": subscription.is_in_intro_offer_period
         }
+
+    @staticmethod
+    def check_subscription_status_cached(db: Session, user_id: str) -> Optional[dict]:
+        """检查用户订阅状态（带 Redis 缓存，TTL 60s）"""
+        key = get_cache_key(CACHE_PREFIXES["VIP_STATUS"], user_id)
+        try:
+            cached = redis_cache.get(key)
+            if cached is not None and isinstance(cached, dict):
+                return cached
+        except Exception as e:
+            logger.debug("VIP status cache get: %s", e)
+        result = VIPSubscriptionService.check_subscription_status(db, user_id)
+        try:
+            if result is not None:
+                redis_cache.set(key, result, DEFAULT_TTL["VIP_STATUS"])
+        except Exception as e:
+            logger.debug("VIP status cache set: %s", e)
+        return result
+
+    @staticmethod
+    def invalidate_vip_cache(user_id: str) -> None:
+        """使指定用户的 VIP 状态缓存失效"""
+        invalidate_vip_status(user_id)
     
     @staticmethod
     def process_subscription_renewal(
@@ -132,14 +162,12 @@ class VIPSubscriptionService:
             ).first()
             if user and user.user_level != "vip" and user.user_level != "super":
                 crud.update_user_vip_status(db, user.id, "vip")
-            
+            VIPSubscriptionService.invalidate_vip_cache(original_subscription.user_id)
             logger.info(
                 f"订阅续费成功: 用户={original_subscription.user_id}, "
                 f"原始交易={original_transaction_id}, 新交易={new_transaction_id}"
             )
-            
             return subscription
-            
         except Exception as e:
             logger.error(f"处理订阅续费失败: {str(e)}", exc_info=True)
             return None
@@ -182,14 +210,13 @@ class VIPSubscriptionService:
             if not active_subscription:
                 # 如果没有其他有效订阅，降级用户
                 crud.update_user_vip_status(db, subscription.user_id, "normal")
-            
+
+            VIPSubscriptionService.invalidate_vip_cache(subscription.user_id)
             logger.info(
                 f"退款处理成功: 用户={subscription.user_id}, "
                 f"交易={transaction_id}, 原因={refund_reason}"
             )
-            
             return True
-            
         except Exception as e:
             logger.error(f"处理退款失败: {str(e)}", exc_info=True)
             return False
@@ -227,18 +254,14 @@ class VIPSubscriptionService:
             )
             
             # 注意：取消订阅不会立即降级用户，等到订阅到期后才降级
-            # 这里可以设置auto_renew_status为False
-            
             subscription.auto_renew_status = False
             db.commit()
-            
+            VIPSubscriptionService.invalidate_vip_cache(subscription.user_id)
             logger.info(
                 f"订阅取消成功: 用户={subscription.user_id}, "
                 f"交易={transaction_id}, 原因={cancellation_reason}"
             )
-            
             return True
-            
         except Exception as e:
             logger.error(f"取消订阅失败: {str(e)}", exc_info=True)
             return False

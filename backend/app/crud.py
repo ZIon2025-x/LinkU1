@@ -4110,6 +4110,51 @@ def get_active_vip_subscription(db: Session, user_id: str):
     ).order_by(models.VIPSubscription.expires_date.desc().nullsfirst()).first()
 
 
+def get_vip_subscription_history(
+    db: Session,
+    user_id: str,
+    limit: int = 50,
+    offset: int = 0
+):
+    """获取用户VIP订阅历史（按购买时间倒序）"""
+    return (
+        db.query(models.VIPSubscription)
+        .filter(models.VIPSubscription.user_id == user_id)
+        .order_by(models.VIPSubscription.purchase_date.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+def count_vip_subscriptions_by_user(db: Session, user_id: str) -> int:
+    """获取用户VIP订阅总数"""
+    return (
+        db.query(models.VIPSubscription)
+        .filter(models.VIPSubscription.user_id == user_id)
+        .count()
+    )
+
+
+def get_all_vip_subscriptions(
+    db: Session,
+    user_id: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """管理员：获取VIP订阅列表（支持筛选、分页）"""
+    q = db.query(models.VIPSubscription)
+    if user_id:
+        q = q.filter(models.VIPSubscription.user_id == user_id)
+    if status:
+        q = q.filter(models.VIPSubscription.status == status)
+    q = q.order_by(models.VIPSubscription.purchase_date.desc())
+    total = q.count()
+    rows = q.offset(offset).limit(limit).all()
+    return rows, total
+
+
 def create_vip_subscription(
     db: Session,
     user_id: str,
@@ -4181,35 +4226,47 @@ def update_user_vip_status(db: Session, user_id: str, user_level: str):
 
 
 def check_and_update_expired_subscriptions(db: Session):
-    """检查并更新过期的订阅"""
+    """检查并更新过期的订阅（批量更新）"""
     from datetime import datetime, timezone
-    
+
     now = datetime.now(timezone.utc)
-    
-    # 查找已过期但仍标记为active的订阅
-    expired_subscriptions = db.query(models.VIPSubscription).filter(
+    utc_now = get_utc_time()
+
+    expired = db.query(models.VIPSubscription).filter(
         models.VIPSubscription.status == "active",
         models.VIPSubscription.expires_date.isnot(None),
-        models.VIPSubscription.expires_date < now
+        models.VIPSubscription.expires_date < now,
     ).all()
-    
-    updated_count = 0
-    for subscription in expired_subscriptions:
-        subscription.status = "expired"
-        subscription.updated_at = get_utc_time()
-        
-        # 更新用户VIP状态
-        active_subscription = get_active_vip_subscription(db, subscription.user_id)
-        if not active_subscription:
-            update_user_vip_status(db, subscription.user_id, "normal")
-        
-        updated_count += 1
-    
-    if updated_count > 0:
-        db.commit()
-        logger.info(f"更新了 {updated_count} 个过期订阅")
-    
-    return updated_count
+
+    if not expired:
+        return 0
+
+    ids = [s.id for s in expired]
+    user_ids = list({s.user_id for s in expired})
+
+    db.query(models.VIPSubscription).filter(
+        models.VIPSubscription.id.in_(ids),
+    ).update(
+        {
+            models.VIPSubscription.status: "expired",
+            models.VIPSubscription.updated_at: utc_now,
+        },
+        synchronize_session="fetch",
+    )
+
+    for uid in user_ids:
+        active = get_active_vip_subscription(db, uid)
+        if not active:
+            update_user_vip_status(db, uid, "normal")
+            try:
+                from app.redis_cache import invalidate_vip_status
+                invalidate_vip_status(uid)
+            except Exception:
+                pass
+
+    db.commit()
+    logger.info("更新了 %d 个过期订阅", len(expired))
+    return len(expired)
 
 
 def get_user_task_statistics(db: Session, user_id: str):

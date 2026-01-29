@@ -4271,6 +4271,107 @@ def reject_refund_request(
     return refund_request
 
 
+# ==================== 管理员 VIP 订阅管理 API ====================
+
+@router.get("/admin/vip-subscriptions")
+def admin_list_vip_subscriptions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    user_id: Optional[str] = Query(None, description="按用户ID筛选"),
+    status: Optional[str] = Query(None, description="按状态筛选 active|expired|cancelled|refunded"),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员获取VIP订阅列表"""
+    rows, total = crud.get_all_vip_subscriptions(
+        db, user_id=user_id, status=status, limit=limit, offset=skip
+    )
+    items = []
+    for s in rows:
+        items.append({
+            "id": s.id,
+            "user_id": s.user_id,
+            "product_id": s.product_id,
+            "transaction_id": s.transaction_id,
+            "original_transaction_id": s.original_transaction_id,
+            "purchase_date": s.purchase_date.isoformat() if s.purchase_date else None,
+            "expires_date": s.expires_date.isoformat() if s.expires_date else None,
+            "status": s.status,
+            "environment": s.environment,
+            "auto_renew_status": s.auto_renew_status,
+            "cancellation_reason": s.cancellation_reason,
+            "refunded_at": s.refunded_at.isoformat() if s.refunded_at else None,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        })
+    return {"items": items, "total": total}
+
+
+@router.get("/admin/vip-subscriptions/stats")
+def admin_vip_subscription_stats(
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员获取VIP订阅统计数据"""
+    q = db.query(
+        models.VIPSubscription.status,
+        func.count(models.VIPSubscription.id).label("count"),
+    ).group_by(models.VIPSubscription.status)
+    by_status = {r.status: r.count for r in q.all()}
+    total = sum(by_status.values())
+    active_users = (
+        db.query(models.User)
+        .filter(models.User.user_level.in_(["vip", "super"]))
+        .count()
+    )
+    return {
+        "by_status": by_status,
+        "total_subscriptions": total,
+        "active_vip_users": active_users,
+    }
+
+
+@router.patch("/admin/vip-subscriptions/{subscription_id}")
+def admin_update_vip_subscription(
+    subscription_id: int,
+    body: schemas.AdminVipSubscriptionUpdate,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """管理员手动更新VIP订阅状态"""
+    if body.status not in ("active", "expired", "cancelled", "refunded"):
+        raise HTTPException(status_code=400, detail="无效的 status")
+    sub = (
+        db.query(models.VIPSubscription)
+        .filter(models.VIPSubscription.id == subscription_id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="订阅记录不存在")
+    refunded_at = get_utc_time() if body.status == "refunded" else None
+    updated = crud.update_vip_subscription_status(
+        db,
+        sub.id,
+        body.status,
+        cancellation_reason=body.cancellation_reason,
+        refunded_at=refunded_at,
+    )
+    if body.status in ("expired", "refunded"):
+        active = crud.get_active_vip_subscription(db, sub.user_id)
+        if not active:
+            crud.update_user_vip_status(db, sub.user_id, "normal")
+    try:
+        from app.vip_subscription_service import vip_subscription_service
+        vip_subscription_service.invalidate_vip_cache(updated.user_id)
+    except Exception as e:
+        logger.debug("VIP cache invalidate: %s", e)
+    return {
+        "id": updated.id,
+        "user_id": updated.user_id,
+        "status": body.status,
+        "message": "已更新",
+    }
+
+
 @router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
 def confirm_task_completion(
     task_id: int,
@@ -10559,15 +10660,18 @@ def get_user_task_statistics(
 
 
 @router.post("/users/vip/activate")
+@rate_limit("vip_activate")
 def activate_vip(
-    request: schemas.VIPActivationRequest,
+    http_request: Request,
+    activation_request: schemas.VIPActivationRequest,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """激活VIP会员（通过IAP购买）- 生产级实现"""
     from app.iap_verification_service import iap_verification_service
     from datetime import datetime, timezone
-    
+
+    request = activation_request
     try:
         # 1. 验证产品ID
         if not iap_verification_service.validate_product_id(request.product_id):
@@ -10649,7 +10753,12 @@ def activate_vip(
             user_level = "vip"  # 或 "super"
         
         crud.update_user_vip_status(db, current_user.id, user_level)
-        
+        try:
+            from app.vip_subscription_service import vip_subscription_service
+            vip_subscription_service.invalidate_vip_cache(current_user.id)
+        except Exception as e:
+            logger.debug("VIP cache invalidate: %s", e)
+
         # 10. 记录日志
         logger.info(
             f"用户 {current_user.id} 通过IAP激活VIP成功: "
@@ -10692,18 +10801,44 @@ def get_vip_status(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
-    """获取当前用户的VIP订阅状态"""
+    """获取当前用户的VIP订阅状态（带缓存）"""
     from app.vip_subscription_service import vip_subscription_service
-    
-    subscription_status = vip_subscription_service.check_subscription_status(
+
+    subscription_status = vip_subscription_service.check_subscription_status_cached(
         db, current_user.id
     )
-    
     return {
         "user_level": current_user.user_level,
         "is_vip": current_user.user_level in ["vip", "super"],
         "subscription": subscription_status
     }
+
+
+@router.get("/users/vip/history")
+def get_vip_history(
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """获取当前用户的VIP订阅历史"""
+    rows = crud.get_vip_subscription_history(db, current_user.id, limit=limit, offset=offset)
+    total = crud.count_vip_subscriptions_by_user(db, current_user.id)
+    items = []
+    for s in rows:
+        items.append({
+            "id": s.id,
+            "product_id": s.product_id,
+            "transaction_id": s.transaction_id,
+            "purchase_date": s.purchase_date.isoformat() if s.purchase_date else None,
+            "expires_date": s.expires_date.isoformat() if s.expires_date else None,
+            "status": s.status,
+            "environment": s.environment,
+            "is_trial_period": s.is_trial_period,
+            "is_in_intro_offer_period": s.is_in_intro_offer_period,
+            "auto_renew_status": s.auto_renew_status,
+        })
+    return {"items": items, "total": total}
 
 
 @router.post("/webhooks/apple-iap")
@@ -10713,72 +10848,177 @@ async def apple_iap_webhook(
 ):
     """
     Apple IAP Webhook端点
-    处理Apple发送的订阅状态更新通知
+    处理 App Store Server Notifications V2（signedPayload 验证）及 V1 兼容。
     """
     from app.vip_subscription_service import vip_subscription_service
-    import json
-    
+    from app.apple_webhook_verifier import verify_and_decode_notification
+
     try:
-        # 获取请求体
         body = await request.json()
-        
-        # 验证请求（可选：验证Apple的签名）
-        # 在生产环境中，应该验证请求是否真的来自Apple
-        
-        notification_type = body.get("notification_type")
-        unified_receipt = body.get("unified_receipt", {})
-        latest_receipt_info = unified_receipt.get("latest_receipt_info", [])
-        
-        logger.info(f"收到Apple IAP Webhook: {notification_type}")
-        
-        # 处理不同类型的通知
-        if notification_type == "INITIAL_BUY":
-            # 初始购买（已在activate_vip中处理）
-            logger.info("收到初始购买通知")
-            
-        elif notification_type == "DID_RENEW":
-            # 订阅续费
-            if latest_receipt_info:
-                latest_transaction = latest_receipt_info[-1]
-                original_transaction_id = latest_transaction.get("original_transaction_id")
-                transaction_id = latest_transaction.get("transaction_id")
-                
-                # 注意：这里需要从receipt中提取JWS
-                # 实际实现中，应该从latest_receipt获取JWS
-                logger.info(f"处理订阅续费: {original_transaction_id} -> {transaction_id}")
-                # vip_subscription_service.process_subscription_renewal(...)
-            
-        elif notification_type == "DID_FAIL_TO_RENEW":
-            # 续费失败
-            logger.warning("订阅续费失败")
-            
-        elif notification_type == "CANCEL":
-            # 取消订阅
-            if latest_receipt_info:
-                latest_transaction = latest_receipt_info[-1]
-                transaction_id = latest_transaction.get("transaction_id")
-                cancellation_reason = latest_transaction.get("cancellation_reason")
-                
-                vip_subscription_service.cancel_subscription(
-                    db, transaction_id, cancellation_reason
-                )
-            
-        elif notification_type == "REFUND":
-            # 退款
-            if latest_receipt_info:
-                latest_transaction = latest_receipt_info[-1]
-                transaction_id = latest_transaction.get("transaction_id")
-                
-                vip_subscription_service.process_refund(db, transaction_id, "Apple退款")
-        
-        return {"status": "success"}
-        
     except Exception as e:
-        logger.error(f"处理Apple IAP Webhook失败: {str(e)}", exc_info=True)
+        logger.warning("Apple IAP Webhook 无效 JSON: %s", e)
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid JSON"})
+
+    reject_v1 = os.getenv("APPLE_IAP_WEBHOOK_REJECT_V1", "true").lower() == "true"
+
+    try:
+        if "signedPayload" in body:
+            signed_payload = body["signedPayload"]
+            decoded = verify_and_decode_notification(signed_payload)
+            if not decoded:
+                logger.warning("Apple IAP Webhook V2 签名验证失败或未配置")
+                return JSONResponse(
+                    status_code=401,
+                    content={"status": "error", "message": "Verification failed"},
+                )
+            notification_type = decoded.get("notificationType") or ""
+            data = decoded.get("data") or {}
+            logger.info("Apple IAP Webhook V2 已验证: %s", notification_type)
+
+            if notification_type == "SUBSCRIBED":
+                logger.info("V2 新订阅通知（激活由 /users/vip/activate 处理）")
+            elif notification_type == "DID_RENEW":
+                jws = data.get("signedTransactionInfo")
+                if jws:
+                    _handle_v2_renewal(db, vip_subscription_service, jws)
+                else:
+                    logger.warning("V2 DID_RENEW 缺少 signedTransactionInfo")
+            elif notification_type == "DID_FAIL_TO_RENEW":
+                logger.warning("V2 订阅续费失败")
+            elif notification_type == "CANCEL":
+                jws = data.get("signedTransactionInfo")
+                if jws:
+                    _handle_v2_cancel(db, vip_subscription_service, jws)
+            elif notification_type == "DID_CHANGE_RENEWAL_STATUS":
+                logger.info("V2 续订状态变更")
+            elif notification_type == "EXPIRED":
+                jws = data.get("signedTransactionInfo")
+                if jws:
+                    _handle_v2_expired(db, vip_subscription_service, jws)
+            elif notification_type == "REFUND":
+                jws = data.get("signedTransactionInfo")
+                if jws:
+                    _handle_v2_refund(db, vip_subscription_service, jws)
+            elif notification_type == "REVOKE":
+                jws = data.get("signedTransactionInfo")
+                if jws:
+                    _handle_v2_revoke(db, vip_subscription_service, jws)
+            elif notification_type == "GRACE_PERIOD_EXPIRED":
+                logger.warning("V2 宽限期已过期")
+            elif notification_type == "OFFER_REDEEMED":
+                logger.info("V2 优惠兑换")
+            elif notification_type == "DID_CHANGE_RENEWAL_PREF":
+                logger.info("V2 续订偏好变更")
+            elif notification_type == "RENEWAL_EXTENDED":
+                logger.info("V2 续订已延长")
+            elif notification_type == "TEST":
+                logger.info("V2 测试通知")
+            else:
+                logger.info("V2 未处理类型: %s", notification_type)
+            return {"status": "success"}
+
+        notification_type = body.get("notification_type")
+        if notification_type is not None:
+            if reject_v1:
+                logger.warning("拒绝未验证的 V1 Webhook（APPLE_IAP_WEBHOOK_REJECT_V1=true）")
+                return JSONResponse(
+                    status_code=400,
+                    content={"status": "error", "message": "V1 notifications rejected"},
+                )
+            unified_receipt = body.get("unified_receipt", {})
+            latest_receipt_info = unified_receipt.get("latest_receipt_info", [])
+            logger.info("Apple IAP Webhook V1（未验证）: %s", notification_type)
+
+            if notification_type == "INITIAL_BUY":
+                logger.info("V1 初始购买")
+            elif notification_type == "DID_RENEW" and latest_receipt_info:
+                lt = latest_receipt_info[-1]
+                orig = lt.get("original_transaction_id")
+                tid = lt.get("transaction_id")
+                logger.info("V1 续费: %s -> %s（无 JWS，仅记录）", orig, tid)
+            elif notification_type == "DID_FAIL_TO_RENEW":
+                logger.warning("V1 续费失败")
+            elif notification_type == "CANCEL" and latest_receipt_info:
+                lt = latest_receipt_info[-1]
+                tid = lt.get("transaction_id")
+                reason = lt.get("cancellation_reason")
+                if tid:
+                    vip_subscription_service.cancel_subscription(db, tid, reason)
+            elif notification_type == "REFUND" and latest_receipt_info:
+                lt = latest_receipt_info[-1]
+                tid = lt.get("transaction_id")
+                if tid:
+                    vip_subscription_service.process_refund(db, tid, "Apple退款")
+
+            return {"status": "success"}
+
+        logger.warning("Apple IAP Webhook 无法识别格式（无 signedPayload 且无 notification_type）")
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Unknown payload"})
+    except Exception as e:
+        logger.error("处理Apple IAP Webhook失败: %s", e, exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": str(e)}
+            content={"status": "error", "message": str(e)},
         )
+
+
+def _decode_jws_transaction(jws: str):
+    """解析 JWS 获取 transactionId、originalTransactionId。"""
+    from app.iap_verification_service import iap_verification_service
+    try:
+        info = iap_verification_service.verify_transaction_jws(jws)
+        return info
+    except Exception:
+        return None
+
+
+def _handle_v2_renewal(db, vip_subscription_service, jws: str):
+    info = _decode_jws_transaction(jws)
+    if not info:
+        logger.warning("V2 DID_RENEW 解析 JWS 失败")
+        return
+    otid = info.get("original_transaction_id") or info.get("transaction_id")
+    tid = info.get("transaction_id")
+    vip_subscription_service.process_subscription_renewal(db, otid, tid, jws)
+
+
+def _handle_v2_cancel(db, vip_subscription_service, jws: str):
+    info = _decode_jws_transaction(jws)
+    if not info:
+        return
+    tid = info.get("transaction_id")
+    if tid:
+        vip_subscription_service.cancel_subscription(db, tid, "Apple 取消")
+
+
+def _handle_v2_expired(db, vip_subscription_service, jws: str):
+    info = _decode_jws_transaction(jws)
+    if not info:
+        return
+    tid = info.get("transaction_id")
+    sub = crud.get_vip_subscription_by_transaction_id(db, tid)
+    if sub and sub.status == "active":
+        crud.update_vip_subscription_status(db, sub.id, "expired")
+        active = crud.get_active_vip_subscription(db, sub.user_id)
+        if not active:
+            crud.update_user_vip_status(db, sub.user_id, "normal")
+        vip_subscription_service.invalidate_vip_cache(sub.user_id)
+
+
+def _handle_v2_refund(db, vip_subscription_service, jws: str):
+    info = _decode_jws_transaction(jws)
+    if not info:
+        return
+    tid = info.get("transaction_id")
+    vip_subscription_service.process_refund(db, tid, "Apple退款")
+
+
+def _handle_v2_revoke(db, vip_subscription_service, jws: str):
+    info = _decode_jws_transaction(jws)
+    if not info:
+        return
+    tid = info.get("transaction_id")
+    vip_subscription_service.process_refund(db, tid, "Apple撤销")
 
 
 # 用户任务偏好相关API

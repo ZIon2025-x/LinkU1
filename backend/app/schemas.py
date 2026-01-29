@@ -93,6 +93,12 @@ class VIPActivationRequest(BaseModel):
     transaction_jws: str = Field(..., description="交易JWS表示（用于验证）")
 
 
+class AdminVipSubscriptionUpdate(BaseModel):
+    """管理员更新VIP订阅状态"""
+    status: str = Field(..., description="active|expired|cancelled|refunded")
+    cancellation_reason: Optional[str] = Field(None, description="取消/退款原因")
+
+
 # 客服相关Schema
 class CustomerServiceLogin(BaseModel):
     email: str

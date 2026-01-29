@@ -74,4 +74,7 @@ qrcode[pil]>=7.4.2,<8.0.0  # QR 码生成（用于 Authenticator 设置）
 # 测试
 pytest>=7.0.0,<9.0.0
 
+# Apple App Store Server (IAP Webhook V2 验证)
+app-store-server-library>=2.0.0,<3.0.0
+
 # 依赖更新日期: 2026-01-15 (强制 Docker 重新构建缓存层)

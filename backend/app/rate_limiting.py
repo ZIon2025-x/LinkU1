@@ -221,6 +221,7 @@ RATE_LIMITS = {
     "create_payment": {"limit": 10, "window": 3600},  # 10次/小时
     "refund_request": {"limit": 5, "window": 3600},  # 5次/小时
     "create_dispute": {"limit": 3, "window": 3600},  # 3次/小时
+    "vip_activate": {"limit": 10, "window": 300},  # VIP激活 10次/5分钟
     
     # 客服相关
     "customer_service": {"limit": 20, "window": 60},  # 20次/分钟
