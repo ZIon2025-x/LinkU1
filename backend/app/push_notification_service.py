@@ -71,6 +71,55 @@ APNS_USE_SANDBOX = os.getenv("APNS_USE_SANDBOX", "false").lower() == "true"  # �
 _temp_key_file: Optional[str] = None
 
 
+def normalize_device_token(device_token: str) -> Optional[str]:
+    """
+    规范化设备令牌格式
+    
+    APNs设备令牌应该是32字节的二进制数据，转换为64个十六进制字符。
+    此函数处理各种可能的格式：
+    - 64字符十六进制字符串（标准格式）
+    - Base64编码的令牌
+    - 包含空格或连字符的令牌
+    - 其他格式
+    
+    Args:
+        device_token: 原始设备令牌字符串
+        
+    Returns:
+        规范化后的64字符十六进制字符串，如果无法解析则返回None
+    """
+    if not device_token:
+        return None
+    
+    # 移除空格和连字符
+    token = device_token.replace(" ", "").replace("-", "").replace("_", "")
+    
+    # 如果已经是64字符的十六进制字符串，直接返回
+    if len(token) == 64 and all(c in '0123456789abcdefABCDEF' for c in token):
+        return token.lower()
+    
+    # 尝试Base64解码（某些iOS版本可能发送Base64编码的令牌）
+    if len(token) > 64:
+        try:
+            # 尝试Base64解码
+            decoded = base64.b64decode(token)
+            if len(decoded) == 32:
+                # 转换为十六进制字符串
+                return decoded.hex()
+        except Exception:
+            pass
+    
+    # 如果长度是128字符（可能是两个令牌拼接），尝试取前64字符
+    if len(token) == 128:
+        token = token[:64]
+        if all(c in '0123456789abcdefABCDEF' for c in token):
+            return token.lower()
+    
+    # 如果无法解析，记录警告并返回None
+    logger.warning(f"无法规范化设备令牌格式: 长度={len(device_token)}, 前32字符={device_token[:32]}")
+    return None
+
+
 def get_apns_key_file() -> Optional[str]:
     """
     获取 APNs 密钥文件路径
@@ -245,13 +294,20 @@ def send_push_notification(
                 
                 logger.debug(f"[推送通知] 设备 {device_token.id} 语言: {device_language}, 标题: {device_push_title[:50]}..., 内容: {device_push_body[:100]}...")
                 
-                # 记录设备令牌信息（用于诊断 BadDeviceToken 错误）
-                logger.info(f"[推送诊断] 准备发送到设备: token_id={device_token.id}, device_token长度={len(device_token.device_token)}, device_id={device_token.device_id or '未设置'}, platform={device_token.platform}, device_language={device_language}, is_active={device_token.is_active}")
-                
                 # 发送推送通知（使用根据设备语言生成的内容）
                 if device_token.platform == "ios":
+                    # 规范化设备令牌格式
+                    normalized_token = normalize_device_token(device_token.device_token)
+                    if not normalized_token:
+                        logger.warning(f"设备令牌格式无效，跳过推送: token_id={device_token.id}, 原始长度={len(device_token.device_token)}, 原始前32字符={device_token.device_token[:32]}")
+                        failed_tokens.append(device_token)
+                        continue
+                    
+                    # 记录设备令牌信息（用于诊断 BadDeviceToken 错误）
+                    logger.info(f"[推送诊断] 准备发送到设备: token_id={device_token.id}, 原始长度={len(device_token.device_token)}, 规范化后长度={len(normalized_token)}, device_id={device_token.device_id or '未设置'}, platform={device_token.platform}, device_language={device_language}, is_active={device_token.is_active}")
+                    
                     result = send_apns_notification(
-                        device_token.device_token,
+                        normalized_token,
                         title=device_push_title,
                         body=device_push_body,
                         notification_type=notification_type,
@@ -406,12 +462,20 @@ def send_apns_notification(
         if not all(c in '0123456789abcdefABCDEF' for c in device_token):
             logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
         
-        response = apns_client.send_notification(device_token, payload, topic)
+        try:
+            response = apns_client.send_notification(device_token, payload, topic)
+        except Exception as e:
+            logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}")
+            return None
         
         # 检查响应是否为 None（某些情况下 apns2 可能返回 None）
         if response is None:
             logger.warning(f"[APNs诊断] send_notification 返回 None，可能是异步发送或配置问题")
             # 对于异步发送，可能需要等待响应，这里先返回 None（系统错误，不标记令牌为不活跃）
+            # 但我们可以尝试等待一小段时间，看看是否有响应
+            import time
+            time.sleep(0.1)  # 等待100ms，看看是否有异步响应
+            # 注意：apns2 库的 send_notification 是同步的，如果返回 None 可能是配置问题
             return None
         
         # 检查响应
