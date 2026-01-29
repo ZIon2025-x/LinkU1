@@ -34,13 +34,19 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
                 return
             }
             
-            // 如果正在连接中，等待完成
+            // 如果正在连接同一用户（task 已创建但 didOpen 未回调），也不要重复建连，避免「连接中」被 forceDisconnect 导致反复断连
+            if self.webSocketTask != nil && self.currentUserId == userId {
+                print("✅ WebSocket 正在连接用户 \(userId)，跳过重复连接")
+                return
+            }
+            
+            // 如果正在连接中（其他用户或首次），等待完成
             if self.isConnecting {
                 print("⏳ WebSocket 正在连接中，跳过重复连接")
                 return
             }
             
-            // 如果连接到不同用户，先断开旧连接
+            // 如果连接到不同用户，或已有旧连接需要替换，先断开旧连接
             if self.isConnected || self.webSocketTask != nil {
                 print("🔄 断开旧连接")
                 self.forceDisconnect()
@@ -138,6 +144,8 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
                 } else {
                     print("⚠️ WebSocket receive error: \(error)")
                 }
+                // 立即清空 task，避免后续 send 对已关闭连接写入
+                self.webSocketTask = nil
                 self.isConnected = false
                 // 只有在非正常断开时才尝试重连
                 if let nsError = error as NSError?, nsError.code != 57 {
@@ -333,6 +341,9 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
         connectionQueue.async { [weak self] in
             guard let self = self else { return }
             
+            // 立即清空 task，避免任何后续 send/receive 对已关闭连接写入（消除 nw_flow_add_write_request / Socket is not connected）
+            self.webSocketTask?.cancel(with: .goingAway, reason: nil)
+            self.webSocketTask = nil
             self.isConnected = false
             self.isConnecting = false
             

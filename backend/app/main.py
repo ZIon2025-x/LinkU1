@@ -1423,7 +1423,10 @@ async def websocket_chat(
             
             # 异步关闭旧连接（不影响新连接）
             if old_websocket:
-                logger.debug(f"Closing old WebSocket connection for user {user_id}")
+                logger.info(
+                    f"Closing previous WebSocket for user {user_id} (replaced by new connection); "
+                    "frequent repeats may indicate client reconnecting or multi-instance without sticky session."
+                )
                 asyncio.create_task(close_old_connection(old_websocket, user_id))
         
         # 在锁外启动清理和心跳任务（避免阻塞）
