@@ -154,6 +154,8 @@ struct UserProfileUser: Codable {
     let daysSinceJoined: Int?
     let taskCount: Int?
     let completedTaskCount: Int?
+    let isExpert: Bool?
+    let isStudentVerified: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id, name, avatar
@@ -163,6 +165,8 @@ struct UserProfileUser: Codable {
         case daysSinceJoined = "days_since_joined"
         case taskCount = "task_count"
         case completedTaskCount = "completed_task_count"
+        case isExpert = "is_expert"
+        case isStudentVerified = "is_student_verified"
     }
 }
 

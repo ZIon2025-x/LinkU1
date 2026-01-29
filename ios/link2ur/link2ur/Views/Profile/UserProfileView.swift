@@ -327,58 +327,41 @@ struct UserInfoCard: View {
                                 }
                             }
                             
-                            // 用户等级和评分
-                            HStack(spacing: AppSpacing.md) {
-                                if let userLevel = profile.user.userLevel {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "crown.fill")
-                                            .font(.system(size: 12))
-                                        Text(userLevel.uppercased())
-                                            .font(AppTypography.caption)
-                                            .fontWeight(.bold)
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, AppSpacing.md)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: AppColors.gradientWarning),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .cornerRadius(AppCornerRadius.medium)
-                                    .shadow(color: AppColors.warning.opacity(0.4), radius: 6, x: 0, y: 3)
+                            // 用户身份标识（VIP、super）
+                            UserIdentityBadges(
+                                userLevel: profile.user.userLevel,
+                                isExpert: nil, // 暂时不显示达人标识
+                                isStudentVerified: nil // 暂时不显示学生标识
+                            )
+                            
+                            // 用户评分
+                            if let avgRating = profile.user.avgRating, avgRating > 0 {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "star.fill")
+                                        .foregroundColor(.yellow)
+                                        .font(.system(size: 16))
+                                    Text(String(format: "%.1f", avgRating))
+                                        .font(AppTypography.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(AppColors.textPrimary)
                                 }
-                                
-                                if let avgRating = profile.user.avgRating, avgRating > 0 {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "star.fill")
-                                            .foregroundColor(.yellow)
-                                            .font(.system(size: 16))
-                                        Text(String(format: "%.1f", avgRating))
-                                            .font(AppTypography.subheadline)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(AppColors.textPrimary)
-                                    }
-                                    .padding(.horizontal, AppSpacing.sm)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color.yellow.opacity(0.2),
-                                                Color.orange.opacity(0.1)
-                                            ]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
+                                .padding(.horizontal, AppSpacing.sm)
+                                .padding(.vertical, 6)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.yellow.opacity(0.2),
+                                            Color.orange.opacity(0.1)
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     )
-                                    .cornerRadius(AppCornerRadius.medium)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                            .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
-                                    )
-                                }
+                                )
+                                .cornerRadius(AppCornerRadius.medium)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppCornerRadius.medium)
+                                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                                )
                             }
                             
                             // 加入天数

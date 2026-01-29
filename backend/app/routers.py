@@ -5420,6 +5420,22 @@ def user_profile(
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
+    # 检查用户是否是任务达人（在task_experts表中且status为active）
+    from app.models import TaskExpert
+    task_expert = db.query(TaskExpert).filter(
+        TaskExpert.id == user_id,
+        TaskExpert.status == "active"
+    ).first()
+    is_expert = task_expert is not None
+
+    # 检查用户是否通过学生认证（在student_verifications表中有verified状态的记录）
+    from app.models import StudentVerification
+    student_verification = db.query(StudentVerification).filter(
+        StudentVerification.user_id == user_id,
+        StudentVerification.status == "verified"
+    ).order_by(StudentVerification.created_at.desc()).first()
+    is_student_verified = student_verification is not None
+
     # 安全：只返回公开信息，不返回敏感信息（email, phone）
     # 所有用户看到的用户页面内容都是一样的，包括自己查看自己的页面，避免信息泄露
     user_data = {
@@ -5433,6 +5449,8 @@ def user_profile(
         "days_since_joined": days_since_joined,
         "task_count": user.task_count,
         "completed_task_count": user.completed_task_count,
+        "is_expert": is_expert,
+        "is_student_verified": is_student_verified,
     }
     
     return {

@@ -103,6 +103,15 @@ struct ProfileView: View {
                     }
                 }
                 
+                // 用户身份标识（VIP、super）
+                if let userLevel = appState.currentUser?.userLevel, (userLevel == "vip" || userLevel == "super") {
+                    UserIdentityBadges(
+                        userLevel: userLevel,
+                        isExpert: nil, // ProfileView中暂时不显示达人标识（需要额外API调用）
+                        isStudentVerified: nil // ProfileView中暂时不显示学生标识（需要额外API调用）
+                    )
+                }
+                
                 Text(appState.currentUser?.email ?? appState.currentUser?.phone ?? LocalizationKey.profileNoContactInfo.localized)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppColors.textSecondary)
