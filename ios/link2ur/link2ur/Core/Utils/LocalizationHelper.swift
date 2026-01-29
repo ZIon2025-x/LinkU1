@@ -925,6 +925,7 @@ public enum LocalizationKey: String {
     case taskDetailApplicationApprovedMessage = "task_detail.application_approved_message"
     case taskDetailPendingPaymentMessage = "task_detail.pending_payment_message"
     case taskDetailApplicationRejectedMessage = "task_detail.application_rejected_message"
+    case taskDetailAlreadyApplied = "task_detail.already_applied"
     case taskDetailTaskAcceptedByOthers = "task_detail.task_accepted_by_others"
     case taskDetailPendingReview = "task_detail.pending_review"
     case taskDetailApproved = "task_detail.approved"

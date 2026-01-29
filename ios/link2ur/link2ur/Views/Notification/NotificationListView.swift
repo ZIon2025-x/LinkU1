@@ -342,8 +342,14 @@ struct NotificationRow: View {
                             respondToNegotiation(accept: true)
                         }) {
                             HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 16))
+                                if isResponding {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 16))
+                                }
                                 Text(LocalizationKey.notificationAgree.localized)
                                     .font(AppTypography.caption)
                                     .fontWeight(.bold)
@@ -355,13 +361,20 @@ struct NotificationRow: View {
                             .cornerRadius(AppCornerRadius.small)
                         }
                         .disabled(isResponding || isLoadingTokens || tokenAccept == nil || isNegotiationExpired)  // 优化：过期时不可点击
+                        .opacity((isResponding || isLoadingTokens || tokenAccept == nil || isNegotiationExpired) ? 0.6 : 1.0)
                         
                         Button(action: {
                             respondToNegotiation(accept: false)
                         }) {
                             HStack {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 16))
+                                if isResponding {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 16))
+                                }
                                 Text(LocalizationKey.notificationReject.localized)
                                     .font(AppTypography.caption)
                                     .fontWeight(.bold)
@@ -373,6 +386,7 @@ struct NotificationRow: View {
                             .cornerRadius(AppCornerRadius.small)
                         }
                         .disabled(isResponding || isLoadingTokens || tokenReject == nil || isNegotiationExpired)  // 优化：过期时不可点击
+                        .opacity((isResponding || isLoadingTokens || tokenReject == nil || isNegotiationExpired) ? 0.6 : 1.0)
                         }
                     }
                     .padding(.top, 4)

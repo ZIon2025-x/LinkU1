@@ -359,7 +359,11 @@ class MyTasksViewModel: ObservableObject {
             loadTasksFromCache()
         }
         
-        // 防止重复请求
+        // 始终并行加载申请记录（不受任务加载状态影响）
+        // 这确保了切换到待处理申请标签页时能正确显示数据
+        loadApplicationsAsync()
+        
+        // 防止重复请求（仅针对任务列表）
         guard !isLoading else {
             Logger.warning("我的任务请求已在进行中，跳过重复请求", category: .api)
             return
@@ -514,9 +518,7 @@ class MyTasksViewModel: ObservableObject {
             })
         
         mainRequest.store(in: &cancellables)
-        
-        // 并行加载申请记录（失败不影响任务列表显示）
-        loadApplications()
+        // 注：申请记录已在方法开头调用 loadApplicationsAsync() 加载
     }
     
     // 从缓存加载任务（公开方法，供 View 调用，优先内存缓存，快速响应）
@@ -672,7 +674,10 @@ class MyTasksViewModel: ObservableObject {
             group.leave()
         }
         
-        // 3. 等待所有请求完成，然后一次性合并显示
+        // 3. 并行加载申请记录（不阻塞主任务加载）
+        loadApplicationsAsync()
+        
+        // 4. 等待所有请求完成，然后一次性合并显示
         group.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
             self.isLoading = false
@@ -781,18 +786,30 @@ class MyTasksViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    // 加载申请记录
-    private func loadApplications() {
+    // 加载申请记录（异步方法，可并行调用，不受任务加载状态影响）
+    private func loadApplicationsAsync() {
         apiService.request([UserTaskApplication].self, "/api/my-applications", method: "GET")
-            .sink(receiveCompletion: { _ in
-                // 静默处理错误，不影响主任务列表
+            .sink(receiveCompletion: { completion in
+                if case .failure(let error) = completion {
+                    Logger.error("加载申请记录失败: \(error.localizedDescription)", category: .api)
+                }
             }, receiveValue: { [weak self] applications in
                 guard let self = self else { return }
-                self.applications = applications
-                // 保存申请记录到缓存
-                self.saveTasksToCache()
+                DispatchQueue.main.async {
+                    self.applications = applications
+                    // 清除缓存，触发重新计算统计数据
+                    self.cachedStats = nil
+                    // 保存申请记录到缓存
+                    self.saveTasksToCache()
+                    Logger.debug("✅ 已加载 \(applications.count) 条申请记录", category: .api)
+                }
             })
             .store(in: &cancellables)
+    }
+    
+    // 公开方法：加载申请记录（供 View 在切换到待处理申请标签时调用）
+    func refreshApplications() {
+        loadApplicationsAsync()
     }
     
     // 加载已完成的任务（公开方法，供View调用）

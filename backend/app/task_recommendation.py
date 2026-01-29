@@ -1661,8 +1661,11 @@ class TaskRecommendationEngine:
         """构建用户偏好向量"""
         vector = {
             "task_types": [],
+            "task_types_from_preference": False,
             "locations": [],
+            "locations_from_preference": False,
             "price_range": {"min": 0, "max": float('inf')},
+            "price_range_from_history": False,
             "task_levels": [],
             "keywords": []
         }
@@ -1671,8 +1674,10 @@ class TaskRecommendationEngine:
         if preferences:
             if preferences.task_types:
                 vector["task_types"] = json.loads(preferences.task_types)
+                vector["task_types_from_preference"] = True
             if preferences.locations:
                 vector["locations"] = json.loads(preferences.locations)
+                vector["locations_from_preference"] = True
             if preferences.task_levels:
                 vector["task_levels"] = json.loads(preferences.task_levels)
             if preferences.keywords:
@@ -1781,6 +1786,7 @@ class TaskRecommendationEngine:
             if prices:
                 vector["price_range"]["min"] = min(prices) * 0.8
                 vector["price_range"]["max"] = max(prices) * 1.2
+                vector["price_range_from_history"] = True
         
         return vector
     
@@ -1838,8 +1844,11 @@ class TaskRecommendationEngine:
         """获取默认用户偏好向量（冷启动）"""
         return {
             "task_types": [],
+            "task_types_from_preference": False,
             "locations": [user.residence_city] if user.residence_city else [],
+            "locations_from_preference": False,
             "price_range": {"min": 0, "max": float('inf')},
+            "price_range_from_history": False,
             "task_levels": [user.user_level] if user.user_level else ["normal"],
             "keywords": []
         }
@@ -1949,15 +1958,18 @@ class TaskRecommendationEngine:
             # 只有当用户实际接受过该类型的任务时，才显示"经常接受"的理由
             if task.task_type and task.task_type in accepted_task_types:
                 reasons.append(f"You often accept {task.task_type} tasks")
-            elif user_vector["task_types"] and task.task_type in user_vector["task_types"]:
-                # 如果任务类型在偏好中，但不是实际接受过的，使用更温和的表述
+            elif user_vector.get("task_types_from_preference") and user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+                # 只有当用户主动设置了偏好时，才显示"符合您的兴趣"
                 reasons.append(f"Matches your interest in {task.task_type} tasks")
             
             if user_vector["locations"] and task.location:
                 for loc in user_vector["locations"]:
                     if loc.lower() in task.location.lower() or task.location.lower() in loc.lower():
                         if "online" not in task.location.lower():
-                            reasons.append(f"Located in {loc} where you often work")
+                            if user_vector.get("locations_from_preference"):
+                                reasons.append(f"Located in {loc} where you often work")
+                            else:
+                                reasons.append(f"Located in {loc}")
                         else:
                             reasons.append("Can be completed online")
                         break
@@ -1966,7 +1978,9 @@ class TaskRecommendationEngine:
                 price = float(task.reward)
                 price_range = user_vector["price_range"]
                 if price_range["min"] <= price <= price_range["max"]:
-                    reasons.append("Price within your range")
+                    # 只有当价格范围来自用户历史时，才显示此理由
+                    if user_vector.get("price_range_from_history"):
+                        reasons.append("Price within your range")
                 elif price > price_range["max"]:
                     reasons.append("High-value task")
             
@@ -1997,8 +2011,8 @@ class TaskRecommendationEngine:
             # 只有当用户实际接受过该类型的任务时，才显示"经常接受"的理由
             if task.task_type and task.task_type in accepted_task_types:
                 reasons.append(f"您常接受{task.task_type}类任务")
-            elif user_vector["task_types"] and task.task_type in user_vector["task_types"]:
-                # 如果任务类型在偏好中，但不是实际接受过的，使用更温和的表述
+            elif user_vector.get("task_types_from_preference") and user_vector["task_types"] and task.task_type in user_vector["task_types"]:
+                # 只有当用户主动设置了偏好时，才显示"符合您的兴趣"
                 reasons.append(f"符合您对{task.task_type}类任务的兴趣")
             
             # 位置匹配
@@ -2006,7 +2020,10 @@ class TaskRecommendationEngine:
                 for loc in user_vector["locations"]:
                     if loc.lower() in task.location.lower() or task.location.lower() in loc.lower():
                         if "online" not in task.location.lower():
-                            reasons.append(f"位于您常去的{loc}")
+                            if user_vector.get("locations_from_preference"):
+                                reasons.append(f"位于您常去的{loc}")
+                            else:
+                                reasons.append(f"位于{loc}")
                         else:
                             reasons.append("支持在线完成")
                         break
@@ -2016,7 +2033,9 @@ class TaskRecommendationEngine:
                 price = float(task.reward)
                 price_range = user_vector["price_range"]
                 if price_range["min"] <= price <= price_range["max"]:
-                    reasons.append("价格在您的接受范围内")
+                    # 只有当价格范围来自用户历史时，才显示此理由
+                    if user_vector.get("price_range_from_history"):
+                        reasons.append("价格在您的接受范围内")
                 elif price > price_range["max"]:
                     reasons.append("高价值任务")
             

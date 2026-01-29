@@ -617,6 +617,7 @@
 "task_detail.application_approved_message" = "恭喜！您的申请已通过，可以开始执行任务了。";
 "task_detail.pending_payment_message" = "任务发布者正在支付平台服务费，支付完成后任务将开始。";
 "task_detail.application_rejected_message" = "很抱歉，您的申请未通过审核。";
+"task_detail.already_applied" = "您已经申请过此任务";
 "task_detail.task_accepted_by_others" = "此任务已被其他用户接受";
 "task_detail.pending_review" = "待审核";
 "task_detail.approved" = "已通过";

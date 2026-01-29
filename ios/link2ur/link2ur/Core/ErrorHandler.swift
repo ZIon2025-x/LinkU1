@@ -62,7 +62,11 @@ extension APIError {
         case .serverError(let code, let message):
             switch code {
             case 400:
-                return "\(LocalizationKey.errorBadRequest.localized): \(message)"
+                // 「已申请过此任务」使用国际化文案，其余 400 直接展示后端文案
+                if message.contains("已经申请过") || message.contains("already applied") {
+                    return LocalizationKey.taskDetailAlreadyApplied.localized
+                }
+                return message
             case 401:
                 return LocalizationKey.errorUnauthorized.localized
             case 403:

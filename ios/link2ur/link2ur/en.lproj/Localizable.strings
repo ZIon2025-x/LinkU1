@@ -617,6 +617,7 @@
 "task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
 "task_detail.pending_payment_message" = "The task poster is paying the platform service fee. The task will start after payment is completed.";
 "task_detail.application_rejected_message" = "Sorry, your application was not approved.";
+"task_detail.already_applied" = "You have already applied for this task.";
 "task_detail.task_accepted_by_others" = "This task has been accepted by another user.";
 "task_detail.pending_review" = "Pending Review";
 "task_detail.approved" = "Approved";

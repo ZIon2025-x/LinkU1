@@ -6,6 +6,8 @@ import PhotosUI
 
 struct TaskDetailView: View {
     let taskId: Int
+    /// 从「待处理申请」等列表进入时传入 true，详情页会立即显示「等待发布者确认」而不依赖申请列表接口
+    var initialHasAppliedPending: Bool = false
     @StateObject private var viewModel = TaskDetailViewModel()
     @EnvironmentObject var appState: AppState
     @State private var showApplySheet = false
@@ -191,6 +193,7 @@ struct TaskDetailView: View {
                     hasApplied: hasApplied,
                     canReview: canReview,
                     hasReviewed: hasReviewed,
+                    initialHasAppliedPending: initialHasAppliedPending,
                     taskId: taskId,
                     viewModel: viewModel
                 )
@@ -276,6 +279,10 @@ struct TaskDetailView: View {
             .onAppear {
                 // 加载任务详情
                 viewModel.loadTask(taskId: taskId)
+                // 同时加载申请列表，确保申请者进入时能拿到 userApplication，从而显示「等待发布者确认」而非申请按钮
+                if appState.currentUser != nil {
+                    viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                }
                 // 如果是发布者且任务状态为pending_confirmation，加载退款状态
                 if isPoster, let task = viewModel.task, task.status == .pendingConfirmation {
                     viewModel.loadRefundStatus(taskId: taskId)
@@ -312,6 +319,12 @@ struct TaskDetailView: View {
                 // 优化：只在任务ID确实变化且不为nil时处理
                 guard let newTaskId = newTaskId, newTaskId == taskId else { return }
                 handleTaskChange()
+            }
+            .onChange(of: appState.currentUser?.id) { _ in
+                // 用户登录/切换后重新加载申请列表，确保已申请任务显示「等待发布者确认」
+                if appState.currentUser != nil {
+                    viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
+                }
             }
     }
     
@@ -465,7 +478,7 @@ struct TaskDetailView: View {
                 negotiatedPrice: $negotiatedPrice,
                 showNegotiatePrice: $showNegotiatePrice,
                 task: task,
-                onApply: {
+                onApply: { completion in
                     viewModel.applyTask(
                         taskId: taskId,
                         message: applyMessage.isEmpty ? nil : applyMessage,
@@ -487,6 +500,8 @@ struct TaskDetailView: View {
                             showApplySuccessAlert = true
                             HapticFeedback.success()
                         }
+                        // 调用 completion 回调，重置 loading 状态
+                        completion(success)
                     }
                 }
             )
@@ -526,7 +541,7 @@ struct TaskDetailView: View {
             selectedTags: $selectedReviewTags,
             task: viewModel.task,
             isPoster: isPoster,
-            onSubmit: {
+            onSubmit: { completion in
                 viewModel.createReview(
                     taskId: taskId,
                     rating: reviewRating,
@@ -549,6 +564,8 @@ struct TaskDetailView: View {
                     }
                     // 错误信息已通过ErrorHandler统一显示，不需要在这里额外处理
                     // 如果失败，保持弹窗打开，让用户可以看到错误并重试
+                    // 调用 completion 回调，重置 loading 状态
+                    completion(success)
                 }
             }
         )
@@ -1153,6 +1170,8 @@ struct TaskDetailContentView: View {
     let hasApplied: Bool
     let canReview: Bool
     let hasReviewed: Bool
+    /// 从「待处理申请」等列表进入时传入 true，详情页会立即显示「等待发布者确认」而不依赖申请列表接口
+    var initialHasAppliedPending: Bool = false
     let taskId: Int
     @ObservedObject var viewModel: TaskDetailViewModel
     @EnvironmentObject var appState: AppState
@@ -1227,7 +1246,7 @@ struct TaskDetailContentView: View {
                                 isLoading: viewModel.isLoadingApplications,
                                 taskId: taskId,
                                 taskTitle: task.displayTitle,
-                                onApprove: { applicationId in
+                                onApprove: { applicationId, completion in
                                     actionLoading = true
                                     // 获取申请者名字（在批准前保存）
                                     let application = viewModel.applications.first { $0.id == applicationId }
@@ -1278,9 +1297,11 @@ struct TaskDetailContentView: View {
                                         } else {
                                             actionLoading = false
                                         }
+                                        // 调用 completion 回调，重置 ApplicationItemCard 的 loading 状态
+                                        completion(success)
                                     }
                                 },
-                                onReject: { applicationId in
+                                onReject: { applicationId, completion in
                                     actionLoading = true
                                     viewModel.rejectApplication(taskId: taskId, applicationId: applicationId) { success in
                                         actionLoading = false
@@ -1288,6 +1309,8 @@ struct TaskDetailContentView: View {
                                             viewModel.loadTask(taskId: taskId)
                                             viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
                                         }
+                                        // 调用 completion 回调，重置 ApplicationItemCard 的 loading 状态
+                                        completion(success)
                                     }
                                 }
                             )
@@ -1301,6 +1324,7 @@ struct TaskDetailContentView: View {
                         isTaker: isTaker,
                         canReview: canReview,
                         hasReviewed: hasReviewed,
+                        initialHasAppliedPending: initialHasAppliedPending,
                         actionLoading: $actionLoading,
                         showApplySheet: $showApplySheet,
                         showReviewModal: $showReviewModal,
@@ -1862,6 +1886,8 @@ struct TaskActionButtonsView: View {
     let isTaker: Bool
     let canReview: Bool
     let hasReviewed: Bool
+    /// 从「待处理申请」等列表进入时传入 true，详情页会立即显示「等待发布者确认」而不依赖申请列表接口
+    var initialHasAppliedPending: Bool = false
     @Binding var actionLoading: Bool
     @Binding var showApplySheet: Bool
     @Binding var showReviewModal: Bool
@@ -1916,282 +1942,358 @@ struct TaskActionButtonsView: View {
     
     var body: some View {
         VStack(spacing: AppSpacing.md) {
-            // ⚠️ 支付按钮（发布者已接受申请且任务未支付时显示）
-            // 支付条件：
-            // 1. 用户是发布者（isPoster == true）
-            // 2. 任务状态是 pendingPayment（已接受但未支付，等待支付后进入进行中状态）
-            // 注意：
-            // - pendingConfirmation 状态不应该显示支付按钮，因为任务已经支付过了
-            // - takerId 可能为 nil（后端在 accept_application 时不设置 taker_id，等待支付成功后由 webhook 设置）
-            //   所以不检查 takerId，只要状态是 pendingPayment 且用户是发布者，就显示支付按钮
-            // ⚠️ 重要：即使奖励金额为 0，也要显示支付按钮，因为可能涉及平台服务费或其他费用
-            // StripePaymentView 会自动处理金额为 0 的情况（优惠券全额抵扣等）
-            if isPoster && task.status == .pendingPayment {
-                VStack(spacing: AppSpacing.sm) {
-                    // 支付倒计时
-                    if let paymentExpiresAt = task.paymentExpiresAt, !paymentExpiresAt.isEmpty {
-                        PaymentCountdownView(expiresAt: paymentExpiresAt)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    
-                    Button(action: {
-                        // 优化：如果已有支付信息，直接使用；否则让 StripePaymentView 自动获取
-                        // 后端 API 会复用已有的 PaymentIntent（如果存在且未完成），不会创建新的
-                        // 只有在以下情况才清除支付信息：
-                        // 1. 支付信息不存在（首次支付）
-                        // 2. 需要刷新支付信息（比如优惠券变更等）
-                        // 这里不清除，让 StripePaymentView 根据 clientSecret 是否存在来决定是否调用 API
-                        // 如果 clientSecret 为 nil，StripePaymentView 会自动调用 API 获取
-                        // 后端会检查是否有已有的 PaymentIntent，如果有且未完成，会复用而不是创建新的
-                        showPaymentView = true
-                    }) {
-                        HStack {
-                            Image(systemName: "creditcard.fill")
-                            Text("支付平台服务费")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isPaymentExpired)
-                    .opacity(isPaymentExpired ? 0.6 : 1.0)
-                }
-            }
-            
-            // 申请按钮或状态显示
-            if !isPoster {
-                // 如果用户是接受者且任务状态是待支付，显示继续支付按钮
-                if isTaker && task.status == .pendingPayment {
-                    VStack(spacing: AppSpacing.sm) {
-                        // 支付倒计时
-                        if let paymentExpiresAt = task.paymentExpiresAt, !paymentExpiresAt.isEmpty {
-                            PaymentCountdownView(expiresAt: paymentExpiresAt)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        
-                        Button(action: {
-                            // 打开支付页面，StripePaymentView 会自动获取支付信息
-                            showPaymentView = true
-                        }) {
-                            Label(LocalizationKey.activityContinuePayment.localized, systemImage: "creditcard.fill")
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .disabled(isPaymentExpired)
-                        .opacity(isPaymentExpired ? 0.6 : 1.0)
-                    }
-                }
-                // 如果用户已申请，无论任务状态如何，都显示申请状态卡片
-                else if let userApp = viewModel.userApplication {
-                    ApplicationStatusCard(application: userApp, task: task, isTaker: isTaker)
-                }
-                // 如果用户未申请，且任务状态为 open 且没有接受者，显示申请按钮
-                else if task.status == .open && task.takerId == nil {
-                    Button(action: {
-                        if appState.isAuthenticated {
-                            // 直接打开申请表单，议价默认关闭
-                            showNegotiatePrice = false
-                            negotiatedPrice = nil
-                            showApplySheet = true
-                        } else {
-                            showLogin = true
-                        }
-                    }) {
-                        Label(LocalizationKey.actionsApplyForTask.localized, systemImage: "hand.raised.fill")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                }
-            }
-            
-            // 其他操作按钮
-            if task.status == .inProgress && isTaker {
-                Button(action: {
-                    showCompleteTaskSheet = true
-                }) {
-                    HStack(spacing: AppSpacing.sm) {
-                        IconStyle.icon("checkmark.circle.fill", size: 20)
-                        Text(LocalizationKey.actionsMarkComplete.localized)
-                    }
-                }
-                .buttonStyle(PrimaryButtonStyle(useGradient: false))
-                .tint(AppColors.success)
-            }
-            
-            if task.status == .pendingConfirmation && isPoster {
-                // 确认完成按钮
-                Button(action: {
-                    // 打开确认完成页面（支持上传证据）
-                    showConfirmCompletionSheet = true
-                }) {
-                    HStack(spacing: AppSpacing.sm) {
-                        if actionLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            IconStyle.icon("checkmark.seal.fill", size: 20)
-                        }
-                        Text(actionLoading ? LocalizationKey.actionsProcessing.localized : LocalizationKey.actionsConfirmComplete.localized)
-                    }
-                }
-                .buttonStyle(PrimaryButtonStyle(useGradient: false))
-                .tint(AppColors.success)
-                .disabled(actionLoading)
-                
-                // 退款申请状态或按钮
-                if let refundRequest = viewModel.refundRequest {
-                    // 如果已有退款申请，显示状态卡片
-                    VStack(spacing: AppSpacing.sm) {
-                        RefundRequestStatusCard(refundRequest: refundRequest)
-                        
-                        // 如果是接单者且状态为pending且还没有提交反驳，显示提交反驳按钮
-                        if isTaker && refundRequest.status == "pending" && refundRequest.rebuttalText == nil {
-                            Button(action: {
-                                showRefundRebuttalSheet = true
-                            }) {
-                                HStack(spacing: AppSpacing.sm) {
-                                    IconStyle.icon("exclamationmark.bubble.fill", size: 20)
-                                    Text("提交反驳证据")
-                                }
-                            }
-                            .buttonStyle(PrimaryButtonStyle(useGradient: false))
-                            .tint(AppColors.warning)
-                        }
-                        
-                        // 撤销按钮（仅在pending状态时显示，且是发布者）
-                        if isPoster && refundRequest.status == "pending" {
-                            HStack(spacing: AppSpacing.sm) {
-                                Button(action: {
-                                    // 显示确认对话框
-                                    let alert = UIAlertController(
-                                        title: "撤销退款申请",
-                                        message: "确定要撤销此退款申请吗？撤销后将无法恢复。",
-                                        preferredStyle: .alert
-                                    )
-                                    alert.addAction(UIAlertAction(title: "取消", style: .cancel))
-                                    alert.addAction(UIAlertAction(title: "确定", style: .destructive) { _ in
-                                        viewModel.cancelRefundRequest(taskId: taskId, refundId: refundRequest.id)
-                                    })
-                                    
-                                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                       let rootViewController = windowScene.windows.first?.rootViewController {
-                                        var topController = rootViewController
-                                        while let presented = topController.presentedViewController {
-                                            topController = presented
-                                        }
-                                        topController.present(alert, animated: true)
-                                    }
-                                }) {
-                                    HStack(spacing: 6) {
-                                        if viewModel.isCancellingRefund {
-                                            ProgressView()
-                                                .scaleEffect(0.8)
-                                        }
-                                        Text(viewModel.isCancellingRefund ? "撤销中..." : "撤销申请")
-                                            .font(AppTypography.body)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 40)
-                                }
-                                .buttonStyle(SecondaryButtonStyle())
-                                .disabled(viewModel.isCancellingRefund)
-                                
-                                Button(action: {
-                                    viewModel.loadRefundHistory(taskId: taskId)
-                                    showRefundHistorySheet = true
-                                }) {
-                                    Text("查看历史")
-                                        .font(AppTypography.body)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 40)
-                                }
-                                .buttonStyle(SecondaryButtonStyle())
-                            }
-                        } else {
-                            // 非pending状态时也显示历史按钮
-                            Button(action: {
-                                viewModel.loadRefundHistory(taskId: taskId)
-                                showRefundHistorySheet = true
-                            }) {
-                                Text("查看历史记录")
-                                    .font(AppTypography.body)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 40)
-                            }
-                            .buttonStyle(SecondaryButtonStyle())
-                        }
-                    }
-                } else if !viewModel.isLoadingRefundStatus {
-                    // 如果没有退款申请且不在加载中，显示申请按钮
-                    VStack(spacing: AppSpacing.sm) {
-                        Button(action: {
-                            // 打开退款申请页面
-                            showRefundRequestSheet = true
-                        }) {
-                            HStack(spacing: AppSpacing.sm) {
-                                IconStyle.icon("arrow.uturn.backward.circle.fill", size: 20)
-                                Text("任务未完成（申请退款）")
-                            }
-                        }
-                        .buttonStyle(PrimaryButtonStyle(useGradient: false))
-                        .tint(AppColors.error)
-                        
-                        // 如果有历史记录，显示查看历史按钮
-                        if !viewModel.refundHistory.isEmpty {
-                            Button(action: {
-                                viewModel.loadRefundHistory(taskId: taskId)
-                                showRefundHistorySheet = true
-                            }) {
-                                Text("📋 退款历史")
-                                    .font(AppTypography.body)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 40)
-                            }
-                            .buttonStyle(SecondaryButtonStyle())
-                        }
-                    }
-                }
-            }
-            
-            // 沟通按钮
-            if (task.status == .inProgress || task.status == .pendingConfirmation || task.status == .pendingPayment) && (isPoster || isTaker) {
-                NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: task.title)) {
-                    Label(isPoster ? LocalizationKey.actionsContactRecipient.localized : LocalizationKey.actionsContactPoster.localized, systemImage: "message.fill")
-                        .font(AppTypography.bodyBold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(AppColors.primary)
-                        .cornerRadius(AppCornerRadius.medium)
-                }
-                .buttonStyle(ScaleButtonStyle())
-            }
-            
-            // 评价按钮
-            if canReview && !hasReviewed {
-                Button(action: {
-                    showReviewModal = true
-                }) {
-                    Label(LocalizationKey.actionsRateTask.localized, systemImage: "star.fill")
-                }
-                .buttonStyle(PrimaryButtonStyle(useGradient: false))
-                .tint(AppColors.warning)
-            }
-            
-            // 取消按钮 (次要操作)
-            if (isPoster || isTaker) && (task.status == .open || task.status == .inProgress) {
-                Button(action: {
-                    showCancelConfirm = true
-                }) {
-                    Label(LocalizationKey.actionsCancelTask.localized, systemImage: "xmark.circle")
-                        .font(AppTypography.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(AppColors.error)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                }
-                .buttonStyle(ScaleButtonStyle())
-            }
+            posterPaymentButton
+            applicantButtons
+            takerCompleteButton
+            posterConfirmationButtons
+            communicationButton
+            reviewButton
+            cancelButton
         }
         .padding(.vertical, AppSpacing.sm)
+    }
+    
+    // MARK: - 发布者支付按钮
+    @ViewBuilder
+    private var posterPaymentButton: some View {
+        // ⚠️ 支付按钮（发布者已接受申请且任务未支付时显示）
+        if isPoster && task.status == .pendingPayment {
+            VStack(spacing: AppSpacing.sm) {
+                // 支付倒计时
+                if let paymentExpiresAt = task.paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                    PaymentCountdownView(expiresAt: paymentExpiresAt)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                
+                Button(action: {
+                    showPaymentView = true
+                }) {
+                    HStack {
+                        Image(systemName: "creditcard.fill")
+                        Text("支付平台服务费")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isPaymentExpired)
+                .opacity(isPaymentExpired ? 0.6 : 1.0)
+            }
+        }
+    }
+    
+    // MARK: - 申请者按钮区域
+    @ViewBuilder
+    private var applicantButtons: some View {
+        if !isPoster {
+            nonPosterApplicantButtonsContent
+        }
+    }
+    
+    /// 非发布者时的申请/支付相关按钮（拆分子视图以减轻编译器类型检查负担）
+    @ViewBuilder
+    private var nonPosterApplicantButtonsContent: some View {
+        // 待支付时仅发布者支付平台服务费，接受者不显示支付按钮
+        if let userApp = viewModel.userApplication {
+            // 如果用户已申请，显示申请状态
+            userApplicationStatusView(userApp: userApp)
+        } else {
+            // 无申请记录时的按钮（待确认占位 或 申请按钮）
+            applicantButtonsWhenNoUserApplication
+        }
+    }
+    
+    @ViewBuilder
+    private var applicantButtonsWhenNoUserApplication: some View {
+        // 从待处理申请列表进入时，先用初始状态显示「等待发布者确认」
+        if initialHasAppliedPending && task.status == .open && task.takerId == nil {
+            pendingConfirmationButton
+        } else if task.status == .open && task.takerId == nil {
+            // 如果用户未申请，显示申请按钮
+            applyButton
+        }
+    }
+    
+    @ViewBuilder
+    private func userApplicationStatusView(userApp: TaskApplication) -> some View {
+        // 如果申请状态为 pending，在按钮位置显示"等待发布者确认⌛️"的禁用按钮
+        if userApp.status == "pending" {
+            Button(action: {}) {
+                Label("等待发布者确认⌛️", systemImage: "clock.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(true)
+            .opacity(0.7)
+        } else {
+            // 其他状态（approved, rejected）显示申请状态卡片
+            ApplicationStatusCard(application: userApp, task: task, isTaker: isTaker)
+        }
+    }
+    
+    @ViewBuilder
+    private var pendingConfirmationButton: some View {
+        Button(action: {}) {
+            Label("等待发布者确认⌛️", systemImage: "clock.fill")
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(true)
+        .opacity(0.7)
+    }
+    
+    @ViewBuilder
+    private var applyButton: some View {
+        Button(action: {
+            if appState.isAuthenticated {
+                showNegotiatePrice = false
+                negotiatedPrice = nil
+                showApplySheet = true
+            } else {
+                showLogin = true
+            }
+        }) {
+            Label(LocalizationKey.actionsApplyForTask.localized, systemImage: "hand.raised.fill")
+        }
+        .buttonStyle(PrimaryButtonStyle())
+    }
+    
+    // MARK: - 接单者完成按钮
+    @ViewBuilder
+    private var takerCompleteButton: some View {
+        if task.status == .inProgress && isTaker {
+            Button(action: {
+                showCompleteTaskSheet = true
+            }) {
+                HStack(spacing: AppSpacing.sm) {
+                    IconStyle.icon("checkmark.circle.fill", size: 20)
+                    Text(LocalizationKey.actionsMarkComplete.localized)
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle(useGradient: false))
+            .tint(AppColors.success)
+        }
+    }
+    
+    // MARK: - 发布者确认完成按钮
+    @ViewBuilder
+    private var posterConfirmationButtons: some View {
+        if task.status == .pendingConfirmation && isPoster {
+            posterConfirmCompleteButton
+            refundRequestSection
+        }
+    }
+    
+    @ViewBuilder
+    private var posterConfirmCompleteButton: some View {
+        Button(action: {
+            showConfirmCompletionSheet = true
+        }) {
+            HStack(spacing: AppSpacing.sm) {
+                if actionLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    IconStyle.icon("checkmark.seal.fill", size: 20)
+                }
+                Text(actionLoading ? LocalizationKey.actionsProcessing.localized : LocalizationKey.actionsConfirmComplete.localized)
+            }
+        }
+        .buttonStyle(PrimaryButtonStyle(useGradient: false))
+        .tint(AppColors.success)
+        .disabled(actionLoading)
+    }
+    
+    @ViewBuilder
+    private var refundRequestSection: some View {
+        if let refundRequest = viewModel.refundRequest {
+            refundRequestStatusSection(refundRequest: refundRequest)
+        } else if !viewModel.isLoadingRefundStatus {
+            refundRequestApplySection
+        }
+    }
+    
+    @ViewBuilder
+    private func refundRequestStatusSection(refundRequest: RefundRequest) -> some View {
+        VStack(spacing: AppSpacing.sm) {
+            RefundRequestStatusCard(refundRequest: refundRequest)
+            refundRebuttalButtonView(refundRequest: refundRequest)
+            refundStatusActionsView(refundRequest: refundRequest)
+        }
+    }
+    
+    /// 接单者：提交反驳证据按钮（仅 pending 且未提交反驳时显示）
+    @ViewBuilder
+    private func refundRebuttalButtonView(refundRequest: RefundRequest) -> some View {
+        if isTaker && refundRequest.status == "pending" && refundRequest.rebuttalText == nil {
+            Button(action: {
+                showRefundRebuttalSheet = true
+            }) {
+                HStack(spacing: AppSpacing.sm) {
+                    IconStyle.icon("exclamationmark.bubble.fill", size: 20)
+                    Text("提交反驳证据")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle(useGradient: false))
+            .tint(AppColors.warning)
+        }
+    }
+    
+    /// 退款状态下的操作区：发布者 pending 时显示「撤销+查看历史」，否则显示「查看历史记录」
+    @ViewBuilder
+    private func refundStatusActionsView(refundRequest: RefundRequest) -> some View {
+        if isPoster && refundRequest.status == "pending" {
+            refundCancelAndHistoryButtons
+        } else {
+            refundHistoryOnlyButton
+        }
+    }
+    
+    @ViewBuilder
+    private var refundCancelAndHistoryButtons: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Button(action: {
+                if let refundRequest = viewModel.refundRequest {
+                    showCancelRefundAlert(refundRequest: refundRequest)
+                }
+            }) {
+                HStack(spacing: 6) {
+                    if viewModel.isCancellingRefund {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                    Text(viewModel.isCancellingRefund ? "撤销中..." : "撤销申请")
+                        .font(AppTypography.body)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+            .disabled(viewModel.isCancellingRefund)
+            
+            Button(action: {
+                viewModel.loadRefundHistory(taskId: taskId)
+                showRefundHistorySheet = true
+            }) {
+                Text("查看历史")
+                    .font(AppTypography.body)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+            }
+            .buttonStyle(SecondaryButtonStyle())
+        }
+    }
+    
+    @ViewBuilder
+    private var refundHistoryOnlyButton: some View {
+        Button(action: {
+            viewModel.loadRefundHistory(taskId: taskId)
+            showRefundHistorySheet = true
+        }) {
+            Text("查看历史记录")
+                .font(AppTypography.body)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+        }
+        .buttonStyle(SecondaryButtonStyle())
+    }
+    
+    private func showCancelRefundAlert(refundRequest: RefundRequest) {
+        let alert = UIAlertController(
+            title: "撤销退款申请",
+            message: "确定要撤销此退款申请吗？撤销后将无法恢复。",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "取消", style: .cancel))
+        alert.addAction(UIAlertAction(title: "确定", style: .destructive) { _ in
+            viewModel.cancelRefundRequest(taskId: taskId, refundId: refundRequest.id)
+        })
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            var topController = rootViewController
+            while let presented = topController.presentedViewController {
+                topController = presented
+            }
+            topController.present(alert, animated: true)
+        }
+    }
+    
+    @ViewBuilder
+    private var refundRequestApplySection: some View {
+        VStack(spacing: AppSpacing.sm) {
+            Button(action: {
+                showRefundRequestSheet = true
+            }) {
+                HStack(spacing: AppSpacing.sm) {
+                    IconStyle.icon("arrow.uturn.backward.circle.fill", size: 20)
+                    Text("任务未完成（申请退款）")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle(useGradient: false))
+            .tint(AppColors.error)
+            
+            // 如果有历史记录，显示查看历史按钮
+            if !viewModel.refundHistory.isEmpty {
+                Button(action: {
+                    viewModel.loadRefundHistory(taskId: taskId)
+                    showRefundHistorySheet = true
+                }) {
+                    Text("📋 退款历史")
+                        .font(AppTypography.body)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                }
+                .buttonStyle(SecondaryButtonStyle())
+            }
+        }
+    }
+    
+    // MARK: - 沟通按钮
+    @ViewBuilder
+    private var communicationButton: some View {
+        if (task.status == .inProgress || task.status == .pendingConfirmation || task.status == .pendingPayment) && (isPoster || isTaker) {
+            NavigationLink(destination: TaskChatView(taskId: taskId, taskTitle: task.title)) {
+                Label(isPoster ? LocalizationKey.actionsContactRecipient.localized : LocalizationKey.actionsContactPoster.localized, systemImage: "message.fill")
+                    .font(AppTypography.bodyBold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(AppColors.primary)
+                    .cornerRadius(AppCornerRadius.medium)
+            }
+            .buttonStyle(ScaleButtonStyle())
+        }
+    }
+    
+    // MARK: - 评价按钮
+    @ViewBuilder
+    private var reviewButton: some View {
+        if canReview && !hasReviewed {
+            Button(action: {
+                showReviewModal = true
+            }) {
+                Label(LocalizationKey.actionsRateTask.localized, systemImage: "star.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle(useGradient: false))
+            .tint(AppColors.warning)
+        }
+    }
+    
+    // MARK: - 取消按钮
+    @ViewBuilder
+    private var cancelButton: some View {
+        if (isPoster || isTaker) && (task.status == .open || task.status == .inProgress) {
+            Button(action: {
+                showCancelConfirm = true
+            }) {
+                Label(LocalizationKey.actionsCancelTask.localized, systemImage: "xmark.circle")
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppColors.error)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(ScaleButtonStyle())
+        }
     }
 }
 
@@ -2228,23 +2330,7 @@ struct ReviewRow: View {
                 
                 Spacer()
                 
-                HStack(spacing: 2) {
-                    ForEach(1...5, id: \.self) { star in
-                        let fullStars = Int(review.rating)
-                        let hasHalfStar = review.rating - Double(fullStars) >= 0.5
-                        
-                        if star <= fullStars {
-                            IconStyle.icon("star.fill", size: IconStyle.small)
-                                .foregroundColor(AppColors.warning)
-                        } else if star == fullStars + 1 && hasHalfStar {
-                            IconStyle.icon("star.lefthalf.fill", size: IconStyle.small)
-                                .foregroundColor(AppColors.warning)
-                        } else {
-                            IconStyle.icon("star", size: IconStyle.small)
-                                .foregroundColor(AppColors.textTertiary)
-                        }
-                    }
-                }
+                ReviewStarRatingView(rating: review.rating)
             }
             
             if let comment = review.comment, !comment.isEmpty {
@@ -2269,6 +2355,36 @@ struct ReviewRow: View {
     }
 }
 
+/// 星级显示（1–5 星，支持半星），拆分为独立视图以减轻类型检查
+private struct ReviewStarRatingView: View {
+    let rating: Double
+    
+    private var fullStars: Int { Int(rating) }
+    private var hasHalfStar: Bool { rating - Double(fullStars) >= 0.5 }
+    
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(1...5, id: \.self) { star in
+                starIcon(for: star)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func starIcon(for star: Int) -> some View {
+        if star <= fullStars {
+            IconStyle.icon("star.fill", size: IconStyle.small)
+                .foregroundColor(AppColors.warning)
+        } else if star == fullStars + 1 && hasHalfStar {
+            IconStyle.icon("star.lefthalf.fill", size: IconStyle.small)
+                .foregroundColor(AppColors.warning)
+        } else {
+            IconStyle.icon("star", size: IconStyle.small)
+                .foregroundColor(AppColors.textTertiary)
+        }
+    }
+}
+
 // MARK: - 辅助函数
 private func formatPrice(_ price: Double) -> String {
     if price.truncatingRemainder(dividingBy: 1) == 0 {
@@ -2284,8 +2400,9 @@ struct ApplyTaskSheet: View {
     @Binding var negotiatedPrice: Double?
     @Binding var showNegotiatePrice: Bool
     let task: Task?
-    let onApply: () -> Void
+    let onApply: (@escaping (Bool) -> Void) -> Void
     @Environment(\.dismiss) var dismiss
+    @State private var isSubmitting = false
     
     var body: some View {
         NavigationView {
@@ -2359,16 +2476,27 @@ struct ApplyTaskSheet: View {
                         
                         // 提交按钮
                         Button(action: {
+                            guard !isSubmitting else { return }
+                            isSubmitting = true
                             HapticFeedback.success()
-                            onApply()
+                            onApply { success in
+                                isSubmitting = false
+                            }
                         }) {
                             HStack(spacing: 8) {
-                                IconStyle.icon("hand.raised.fill", size: 18)
+                                if isSubmitting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    IconStyle.icon("hand.raised.fill", size: 18)
+                                }
                                 Text(LocalizationKey.taskApplicationSubmitApplication.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
                         .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isSubmitting)
                         .padding(.top, AppSpacing.lg)
                     }
                     .padding(AppSpacing.md)
@@ -2884,8 +3012,8 @@ struct ApplicationsListView: View {
     let isLoading: Bool
     let taskId: Int
     let taskTitle: String
-    let onApprove: (Int) -> Void
-    let onReject: (Int) -> Void
+    let onApprove: (Int, @escaping (Bool) -> Void) -> Void
+    let onReject: (Int, @escaping (Bool) -> Void) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -2920,8 +3048,12 @@ struct ApplicationsListView: View {
                             application: app,
                             taskId: taskId,
                             taskTitle: taskTitle,
-                            onApprove: { onApprove(app.id) },
-                            onReject: { onReject(app.id) }
+                            onApprove: { completion in
+                                onApprove(app.id, completion)
+                            },
+                            onReject: { completion in
+                                onReject(app.id, completion)
+                            }
                         )
                     }
                 }
@@ -2935,10 +3067,12 @@ struct ApplicationItemCard: View {
     let application: TaskApplication
     let taskId: Int
     let taskTitle: String
-    let onApprove: () -> Void
-    let onReject: () -> Void
+    let onApprove: (@escaping (Bool) -> Void) -> Void
+    let onReject: (@escaping (Bool) -> Void) -> Void
     @State private var showMessageSheet = false
     @State private var showRejectConfirm = false
+    @State private var isApproving = false
+    @State private var isRejecting = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -2989,23 +3123,37 @@ struct ApplicationItemCard: View {
                 HStack(spacing: AppSpacing.md) {
                     // 批准按钮 - 图标样式
                     Button(action: {
+                        guard !isApproving else { return }
+                        isApproving = true
                         HapticFeedback.success()
-                        onApprove()
+                        onApprove { success in
+                            isApproving = false
+                        }
                     }) {
-                        IconStyle.icon("checkmark.circle.fill", size: 24)
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [AppColors.success, AppColors.success.opacity(0.8)]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                        ZStack {
+                            if isApproving {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.7)
+                            } else {
+                                IconStyle.icon("checkmark.circle.fill", size: 24)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [AppColors.success, AppColors.success.opacity(0.8)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .clipShape(Circle())
-                            .shadow(color: AppColors.success.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
+                        .clipShape(Circle())
+                        .shadow(color: AppColors.success.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .buttonStyle(ScaleButtonStyle())
+                    .disabled(isApproving || isRejecting)
+                    .opacity((isApproving || isRejecting) ? 0.6 : 1.0)
                     
                     // 增加间距，防止误触
                     Spacer()
@@ -3013,23 +3161,34 @@ struct ApplicationItemCard: View {
                     
                     // 拒绝按钮 - 图标样式
                     Button(action: {
+                        guard !isRejecting else { return }
                         HapticFeedback.warning()
                         showRejectConfirm = true
                     }) {
-                        IconStyle.icon("xmark.circle.fill", size: 24)
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [AppColors.error, AppColors.error.opacity(0.8)]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                        ZStack {
+                            if isRejecting {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.7)
+                            } else {
+                                IconStyle.icon("xmark.circle.fill", size: 24)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .frame(width: 44, height: 44)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [AppColors.error, AppColors.error.opacity(0.8)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .clipShape(Circle())
-                            .shadow(color: AppColors.error.opacity(0.3), radius: 8, x: 0, y: 4)
+                        )
+                        .clipShape(Circle())
+                        .shadow(color: AppColors.error.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .buttonStyle(ScaleButtonStyle())
+                    .disabled(isApproving || isRejecting)
+                    .opacity((isApproving || isRejecting) ? 0.6 : 1.0)
                     
                     Spacer()
                     
@@ -3075,7 +3234,11 @@ struct ApplicationItemCard: View {
                 showRejectConfirm = false
             }
             Button(LocalizationKey.commonConfirm.localized, role: .destructive) {
-                onReject()
+                guard !isRejecting else { return }
+                isRejecting = true
+                onReject { success in
+                    isRejecting = false
+                }
             }
         } message: {
             Text(LocalizationKey.taskDetailRejectApplicationConfirm.localized)
@@ -3276,10 +3439,11 @@ struct ReviewModal: View {
     @Binding var selectedTags: [String]
     let task: Task?
     let isPoster: Bool
-    let onSubmit: () -> Void
+    let onSubmit: (@escaping (Bool) -> Void) -> Void
     @Environment(\.dismiss) var dismiss
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var hoverRating: Double = 0
+    @State private var isSubmitting = false
     
     private var reviewTags: [String] {
         guard task != nil else { return [] }
@@ -3436,10 +3600,11 @@ struct ReviewModal: View {
                         // 提交按钮
                         Button(action: {
                             // 验证评分是否有效
-                            guard rating >= 0.5 && rating <= 5.0 else {
+                            guard rating >= 0.5 && rating <= 5.0, !isSubmitting else {
                                 return
                             }
                             
+                            isSubmitting = true
                             HapticFeedback.success()
                             // 将标签添加到评论中
                             if !selectedTags.isEmpty {
@@ -3451,17 +3616,25 @@ struct ReviewModal: View {
                                     comment = "\(tagsText)\n\n\(comment)"
                                 }
                             }
-                            onSubmit()
+                            onSubmit { success in
+                                isSubmitting = false
+                            }
                         }) {
                             HStack(spacing: 8) {
-                                IconStyle.icon("checkmark.circle.fill", size: 18)
+                                if isSubmitting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    IconStyle.icon("checkmark.circle.fill", size: 18)
+                                }
                                 Text(LocalizationKey.ratingSubmit.localized)
                                     .font(AppTypography.bodyBold)
                             }
                         }
                         .buttonStyle(PrimaryButtonStyle())
-                        .disabled(rating < 0.5 || rating > 5.0)
-                        .opacity((rating >= 0.5 && rating <= 5.0) ? 1.0 : 0.6)
+                        .disabled(rating < 0.5 || rating > 5.0 || isSubmitting)
+                        .opacity((rating >= 0.5 && rating <= 5.0 && !isSubmitting) ? 1.0 : 0.6)
                         .padding(.top, AppSpacing.lg)
                         .padding(.bottom, AppSpacing.xxl)
                     }

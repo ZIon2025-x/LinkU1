@@ -92,7 +92,9 @@ class TaskDetailViewModel: ObservableObject {
         apiService.getTaskApplications(taskId: taskId)
             .sink(receiveCompletion: { [weak self] result in
                 let duration = Date().timeIntervalSince(startTime)
-                self?.isLoadingApplications = false
+                DispatchQueue.main.async {
+                    self?.isLoadingApplications = false
+                }
                 if case .failure(let error) = result {
                     // 403 错误表示用户没有权限查看申请列表（例如不是任务发布者），静默处理
                     if case .httpError(let statusCode) = error, statusCode == 403 {
@@ -122,14 +124,21 @@ class TaskDetailViewModel: ObservableObject {
                     )
                 }
             }, receiveValue: { [weak self] response in
-                self?.applications = response.applications
-                // 查找当前用户的申请
-                if let userId = currentUserId {
-                    self?.userApplication = response.applications.first { app in
-                        String(app.applicantId) == userId
+                let applications = response.applications
+                let userId = currentUserId
+                // 查找当前用户的申请（兼容 applicantId 字符串比较）
+                let found = userId.flatMap { uid in
+                    applications.first { app in
+                        String(app.applicantId).trimmingCharacters(in: .whitespaces) == uid.trimmingCharacters(in: .whitespaces)
                     }
                 }
-                self?.isLoadingApplications = false
+                // 非发布者时接口只返回当前用户的申请，若仅一条则必为当前用户
+                let userApp = found ?? (applications.count == 1 ? applications.first : nil)
+                DispatchQueue.main.async {
+                    self?.applications = applications
+                    self?.userApplication = userApp
+                    self?.isLoadingApplications = false
+                }
             })
             .store(in: &cancellables)
     }

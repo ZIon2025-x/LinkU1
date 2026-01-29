@@ -520,7 +520,18 @@ public class APIService {
                         }
                         .eraseToAnyPublisher()
                 } else {
-                    return Fail(error: APIError.httpError(httpResponse.statusCode)).eraseToAnyPublisher()
+                    // 非 2xx、非 401：尝试解析响应体中的 detail，便于展示「您已经申请过此任务」等后端提示
+                    let apiError: APIError
+                    if let (parsedError, errorMessage) = APIError.parse(from: data) {
+                        if case .serverError(0, _) = parsedError {
+                            apiError = .serverError(httpResponse.statusCode, errorMessage)
+                        } else {
+                            apiError = parsedError
+                        }
+                    } else {
+                        apiError = .httpError(httpResponse.statusCode)
+                    }
+                    return Fail(error: apiError).eraseToAnyPublisher()
                 }
             }
             .receive(on: DispatchQueue.main)

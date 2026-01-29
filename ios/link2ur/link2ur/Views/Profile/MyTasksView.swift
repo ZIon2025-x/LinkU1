@@ -71,7 +71,7 @@ struct MyTasksView: View {
                         tab: tab,
                         count: getTabCount(for: tab),
                         isSelected: selectedTab == tab
-                    ) {
+                    )                     {
                         let previousTab = selectedTab
                         selectedTab = tab
                         viewModel.currentTab = tab
@@ -82,6 +82,10 @@ struct MyTasksView: View {
                         // 切换标签页时，如果是"进行中"标签页，刷新任务列表
                         if tab == .inProgress && previousTab != .inProgress {
                             viewModel.loadTasks(forceRefresh: false)
+                        }
+                        // 切换标签页时，如果是"待处理申请"标签页，刷新申请记录
+                        if tab == .pending && previousTab != .pending {
+                            viewModel.refreshApplications()
                         }
                     }
                 }
@@ -382,7 +386,7 @@ struct MyTasksApplicationCard: View {
             }
             
             // 操作按钮
-            NavigationLink(destination: TaskDetailView(taskId: application.taskId)) {
+            NavigationLink(destination: TaskDetailView(taskId: application.taskId, initialHasAppliedPending: true)) {
                 HStack {
                     Text(LocalizationKey.myTasksViewDetails.localized)
                         .font(.system(size: 14, weight: .medium))
