@@ -216,6 +216,10 @@ def send_push_notification(
         
         logger.info(f"找到 {len(device_tokens)} 个设备令牌，准备发送推送通知给用户 {user_id}")
         
+        # 按 device_id 分组，同一设备只需要成功发送一次
+        # 这样可以避免同一设备的多个旧令牌都尝试发送
+        device_id_success = set()  # 已成功发送的 device_id 集合
+        
         success_count = 0
         failed_tokens = []
         from app.utils.time_utils import get_utc_time
@@ -228,6 +232,12 @@ def send_push_notification(
         # 为每个设备生成对应语言的推送内容
         for device_token in device_tokens:
             try:
+                # 检查该 device_id 是否已成功发送，避免同一设备发送多次
+                current_device_id = getattr(device_token, 'device_id', None)
+                if current_device_id and current_device_id in device_id_success:
+                    logger.debug(f"[推送通知] 设备 {device_token.id} 的 device_id={current_device_id} 已成功发送，跳过")
+                    continue
+                
                 # 获取设备语言（默认为英文）
                 # 只有中文使用中文推送，其他所有语言都使用英文推送
                 device_language = getattr(device_token, 'device_language', 'en') or 'en'
@@ -328,6 +338,10 @@ def send_push_notification(
                     success_count += 1
                     # 更新最后使用时间
                     device_token.last_used_at = get_utc_time()
+                    # 记录已成功发送的 device_id，避免同一设备发送多次
+                    if current_device_id:
+                        device_id_success.add(current_device_id)
+                        logger.debug(f"[推送通知] device_id={current_device_id} 已记录为成功")
                 elif result is False:
                     # result 为 False 表示推送失败且设备令牌无效，应该标记为不活跃
                     logger.warning(f"推送失败且设备令牌无效，标记设备令牌为不活跃: {device_token.id}")

@@ -6323,6 +6323,18 @@ def register_device_token(
         models.DeviceToken.device_token == device_token
     ).first()
     
+    # 在注册/更新令牌前，禁用同一 device_id 的其他旧令牌
+    # 这样可以避免同一设备有多个活跃的令牌（iOS 令牌刷新时会产生新令牌）
+    if device_id and device_id.strip():
+        deactivated_count = db.query(models.DeviceToken).filter(
+            models.DeviceToken.user_id == current_user.id,
+            models.DeviceToken.device_id == device_id,
+            models.DeviceToken.device_token != device_token,
+            models.DeviceToken.is_active == True
+        ).update({"is_active": False, "updated_at": get_utc_time()})
+        if deactivated_count > 0:
+            logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 的 {deactivated_count} 个旧令牌: user_id={current_user.id}, device_id={device_id}")
+    
     if existing_token:
         # 更新现有令牌
         existing_token.is_active = True
@@ -6380,6 +6392,17 @@ def register_device_token(
             ).first()
             
             if existing_token:
+                # 禁用同一 device_id 的其他旧令牌（并发处理时也需要）
+                if device_id and device_id.strip():
+                    deactivated_count = db.query(models.DeviceToken).filter(
+                        models.DeviceToken.user_id == current_user.id,
+                        models.DeviceToken.device_id == device_id,
+                        models.DeviceToken.device_token != device_token,
+                        models.DeviceToken.is_active == True
+                    ).update({"is_active": False, "updated_at": get_utc_time()})
+                    if deactivated_count > 0:
+                        logger.info(f"[DEVICE_TOKEN] 已禁用同一 device_id 的 {deactivated_count} 个旧令牌（并发处理）: user_id={current_user.id}, device_id={device_id}")
+                
                 # 更新现有令牌
                 existing_token.is_active = True
                 existing_token.platform = platform

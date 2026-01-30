@@ -562,22 +562,22 @@ struct StripePaymentView: View {
                         endPoint: .trailing
                     )
                 ) {
-                    Image("WeChatPayLogo")
-                        .renderingMode(.template)
+                    SwiftUI.Image("WeChatPayLogo")
+                        .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
-                        .foregroundColor(Color.white)
+                        .foregroundColor(SwiftUI.Color.white)
                 }
             } else if viewModel.paymentSheet != nil {
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        Image("WeChatPayLogo")
-                            .renderingMode(.template)
+                        SwiftUI.Image("WeChatPayLogo")
+                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 18, height: 18)
-                            .foregroundColor(Color.white)
+                            .foregroundColor(SwiftUI.Color.white)
                         Text(LocalizationKey.paymentPayWithWeChatPay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
@@ -609,22 +609,20 @@ struct StripePaymentView: View {
                         endPoint: .trailing
                     )
                 ) {
-                    Image("AlipayLogo")
-                        .renderingMode(.template)
+                    SwiftUI.Image("AlipayLogo")
+                        .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 18, height: 18)
-                        .foregroundColor(Color.white)
                 }
             } else if viewModel.paymentSheet != nil {
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        Image("AlipayLogo")
-                            .renderingMode(.template)
+                        SwiftUI.Image("AlipayLogo")
+                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 18, height: 18)
-                            .foregroundColor(Color.white)
                         Text(LocalizationKey.paymentPayWithAlipay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
