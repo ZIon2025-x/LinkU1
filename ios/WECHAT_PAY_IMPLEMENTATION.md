@@ -10,6 +10,7 @@
 - ✅ 后端已配置 `payment_method_types=["card", "wechat_pay", "alipay"]`（任务支付、闲鱼、优惠券等）
 - ✅ iOS 已配置 PaymentSheet 的 `returnURL`（`link2ur://stripe-redirect`）
 - ✅ iOS 已注册 URL Scheme（`link2ur://`）
+- ✅ iOS 收到支付重定向 URL 后调用 `StripeAPI.handleURLCallback(with: url)` 转发给 Stripe SDK（`onOpenURL` 与 `application(_:open:options:)` 均已实现），否则微信/支付宝跳转返回后 PaymentSheet 无法完成流程
 - ✅ iOS 支付方式选择卡片中已显示「微信支付」选项
 - ✅ iOS 已显示「使用微信支付」绿色按钮及加载状态
 

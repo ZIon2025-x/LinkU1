@@ -20,7 +20,7 @@
 - 支付方式选择卡片中已显示「支付宝」选项。
 - 支付宝支付按钮（蓝色样式）及 PaymentSheet 流程已接入。
 - 本地化：简体/繁体/英文已添加「使用支付宝支付」文案。
-- URL 处理：`link2ur://stripe-redirect` 与 `link2ur://safepay` 均会作为 Stripe 支付回调处理。
+- URL 处理：`link2ur://stripe-redirect` 与 `link2ur://safepay` 均会作为 Stripe 支付回调处理；收到后**必须**调用 `StripeAPI.handleURLCallback(with: url)` 将 URL 转给 Stripe SDK（`onOpenURL` 与 `application(_:open:options:)` 均已实现），否则跳转支付宝返回后 PaymentSheet 无法完成流程。
 
 ### 前端 Web
 - PaymentModal、StripePaymentForm 的 `confirmPayment` 已传入 `return_url`，支持支付宝等重定向类支付方式返回当前页。

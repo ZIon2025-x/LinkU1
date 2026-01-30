@@ -40,13 +40,14 @@ struct link2urApp: App {
                     SpotlightIndexer.shared.indexQuickActions()
                 }
                 .onOpenURL { url in
-                    // 处理Universal Links和深度链接
+                    // 处理 Universal Links 和深度链接
                     print("🔗 [App] 收到URL: \(url.absoluteString)")
                     
-                    // 处理 Stripe 支付回调（WeChat Pay、支付宝等）
-                    if url.scheme == "link2ur" && (url.host == "stripe-redirect" || url.host == "safepay") {
-                        // Stripe PaymentSheet 会自动处理这个回调（含支付宝 returnURL: link2ur://safepay/）
-                        print("✅ [Stripe] 收到支付回调: \(url.absoluteString)")
+                    // 必须将 URL 转给 Stripe SDK，否则支付宝/微信支付重定向返回后 PaymentSheet 无法完成流程
+                    let stripeHandled = StripeAPI.handleURLCallback(with: url)
+                    if stripeHandled {
+                        print("✅ [Stripe] 已处理支付重定向回调: \(url.absoluteString)")
+                        return
                     }
                     
                     DeepLinkHandler.shared.handle(url)
@@ -80,9 +81,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
     
-    // MARK: - URL处理（微信和QQ回调）
+    // MARK: - URL处理（Stripe 支付回调、微信、QQ）
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        // 优先处理 Stripe 支付重定向（支付宝/微信支付等），否则 PaymentSheet 无法完成流程
+        if StripeAPI.handleURLCallback(with: url) {
+            return true
+        }
+        
         // 处理微信回调
         #if canImport(WechatOpenSDK)
         if WXApi.handleOpen(url, delegate: WeChatShareManager.shared) {
