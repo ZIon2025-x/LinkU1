@@ -479,8 +479,41 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
     
     private func formatPaymentError(_ error: Error) -> String {
         let errorDescription = error.localizedDescription.lowercased()
+        let nsError = error as NSError
         
-        // 常见错误的中文化
+        // 检查 Stripe 特定错误域
+        if nsError.domain == "com.stripe.lib" || nsError.domain.contains("stripe") {
+            // Stripe SDK 错误代码处理
+            switch nsError.code {
+            case 50: // STPAPIError
+                return "支付服务暂时不可用，请稍后重试"
+            case 60: // STPConnectionError
+                return "网络连接失败，请检查网络后重试"
+            case 70: // STPInvalidRequestError
+                return "支付请求无效，请重试"
+            case 80: // STPAuthenticationError
+                return "支付验证失败，请重试"
+            default:
+                break
+            }
+        }
+        
+        // 检查是否有 Stripe 返回的错误消息
+        if let stripeErrorMessage = nsError.userInfo["com.stripe.lib:StripeErrorMessageKey"] as? String {
+            let lowerMessage = stripeErrorMessage.lowercased()
+            
+            // 支付方式不匹配错误
+            if lowerMessage.contains("payment_method_type") || lowerMessage.contains("not allowed") {
+                return "当前支付方式不可用，请选择其他支付方式"
+            }
+            
+            // 支付方式未启用
+            if lowerMessage.contains("not enabled") || lowerMessage.contains("not supported") {
+                return "该支付方式暂不可用，请选择其他支付方式"
+            }
+        }
+        
+        // 常见错误的中文化（基于错误描述）
         if errorDescription.contains("card") && errorDescription.contains("declined") {
             return "银行卡被拒绝，请尝试其他支付方式"
         } else if errorDescription.contains("insufficient") {
@@ -491,26 +524,49 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return "网络连接失败，请检查网络后重试"
         } else if errorDescription.contains("timeout") {
             return "请求超时，请重试"
-        } else {
-            return "支付失败: \(error.localizedDescription)"
+        } else if errorDescription.contains("authentication") || errorDescription.contains("authenticate") {
+            return "支付验证失败，请重试"
+        } else if errorDescription.contains("canceled") || errorDescription.contains("cancelled") {
+            return "支付已取消"
+        } else if errorDescription.contains("invalid") && errorDescription.contains("request") {
+            return "支付请求无效，请重试"
         }
+        
+        // 特殊处理"意外错误"（来自 Stripe SDK 的本地化消息）
+        if errorDescription.contains("unexpected") || errorDescription.contains("意外") {
+            return "支付服务暂时不可用，请稍后重试或使用其他支付方式"
+        }
+        
+        // 默认错误消息
+        return "支付失败: \(error.localizedDescription)"
     }
     
     // 保留用于兼容性（如果需要弹出式 Payment Sheet）
     func handlePaymentResult(_ result: PaymentSheetResult) {
+        Logger.debug("PaymentSheet 结果处理", category: .api)
+        
         switch result {
         case .completed:
-            Logger.info("支付成功", category: .api)
+            Logger.info("PaymentSheet 支付成功", category: .api)
             paymentSuccess = true
             // 清除支付缓存，因为有了新的支付记录
             CacheManager.shared.invalidatePaymentCache()
         case .failed(let error):
-            Logger.error("支付失败: \(error.localizedDescription)", category: .api)
+            let nsError = error as NSError
+            Logger.error("PaymentSheet 支付失败: \(error.localizedDescription)", category: .api)
+            Logger.error("PaymentSheet 错误详情 - 域: \(nsError.domain), 代码: \(nsError.code)", category: .api)
+            Logger.error("PaymentSheet 错误 userInfo: \(nsError.userInfo)", category: .api)
+            
+            // 检查是否有嵌套的底层错误
+            if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+                Logger.error("PaymentSheet 底层错误 - 域: \(underlyingError.domain), 代码: \(underlyingError.code), 描述: \(underlyingError.localizedDescription)", category: .api)
+            }
+            
             // 使用格式化的错误消息
             errorMessage = formatPaymentError(error)
         case .canceled:
             // 用户取消，不显示错误
-            Logger.debug("用户取消支付", category: .api)
+            Logger.debug("用户取消 PaymentSheet 支付", category: .api)
             break
         }
     }
@@ -569,10 +625,17 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         }
 
         // 必须有 client_secret 才能确认 PaymentIntent
-        guard activeClientSecret != nil else {
+        guard let clientSecret = activeClientSecret else {
             errorMessage = "支付信息未准备好，请稍后再试"
             Logger.warning("缺少 client_secret，无法使用 Apple Pay，尝试创建支付意图 - 设备类型: \(deviceType)", category: .api)
             createPaymentIntent()
+            return
+        }
+        
+        // 验证 clientSecret 格式
+        guard clientSecret.contains("_secret_") else {
+            errorMessage = "支付信息无效，请刷新页面重试"
+            Logger.error("Apple Pay clientSecret 格式无效: \(clientSecret.prefix(30))... - 设备类型: \(deviceType)", category: .api)
             return
         }
 
@@ -582,6 +645,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             paymentSuccess = true
             return
         }
+        
+        Logger.debug("Apple Pay 参数验证通过 - clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
         
         // 创建支付请求
         let currency = activeCurrency
@@ -729,6 +794,13 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         
+        // 验证 clientSecret 格式
+        guard clientSecret.contains("_secret_") else {
+            errorMessage = "支付信息无效，请刷新页面重试"
+            Logger.error("clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
+            return
+        }
+        
         // 检查最终支付金额
         guard activeFinalAmountPence > 0 else {
             Logger.info("最终支付金额为 0，无需支付", category: .api)
@@ -751,22 +823,33 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         paymentIntentParams.paymentMethodParams = paymentMethodParams
         paymentIntentParams.returnURL = "link2ur://stripe-redirect"
         
-        Logger.debug("准备确认支付宝支付，clientSecret: \(clientSecret.prefix(20))...", category: .api)
+        Logger.debug("准备确认支付宝支付，clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
         
-        // 使用 STPPaymentHandler 确认支付（会自动跳转到支付宝）
-        STPPaymentHandler.shared().confirmPayment(paymentIntentParams, with: self) { [weak self] status, _, error in
+        // 使用新版 API 确认支付（会自动跳转到支付宝）
+        STPPaymentHandler.shared().confirmPaymentIntent(params: paymentIntentParams, authenticationContext: self) { [weak self] status, paymentIntent, error in
             DispatchQueue.main.async {
                 self?.isProcessingDirectPayment = false
+                
+                // 记录详细的诊断信息
+                if let error = error {
+                    let nsError = error as NSError
+                    Logger.error("支付宝支付错误详情 - domain: \(nsError.domain), code: \(nsError.code)", category: .api)
+                    Logger.error("支付宝支付错误 userInfo: \(nsError.userInfo)", category: .api)
+                }
+                if let pi = paymentIntent {
+                    Logger.debug("支付宝 PaymentIntent 状态: \(pi.status.rawValue), ID: \(pi.stripeId)", category: .api)
+                }
+                
                 self?.handleDirectPaymentResult(status: status, error: error, paymentMethod: "支付宝")
             }
         }
     }
     
-    // MARK: - 微信支付直接支付
+    // MARK: - 微信支付
     
-    /// 使用微信支付直接支付（跳转微信 App/网页）
+    /// 使用微信支付（Stripe iOS SDK 未暴露 STPPaymentMethodWeChatPayParams，故通过 PaymentSheet 展示仅含 wechat_pay 的 PI）
     func confirmWeChatPayment() {
-        Logger.debug("开始微信支付直接支付流程", category: .api)
+        Logger.debug("开始微信支付流程（PaymentSheet）", category: .api)
         
         guard let clientSecret = activeClientSecret else {
             errorMessage = "支付信息未准备好，请稍后再试"
@@ -775,48 +858,54 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         
-        // 检查最终支付金额
+        // 验证 clientSecret 格式
+        guard clientSecret.contains("_secret_") else {
+            errorMessage = "支付信息无效，请刷新页面重试"
+            Logger.error("微信支付 clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
+            return
+        }
+        
         guard activeFinalAmountPence > 0 else {
             Logger.info("最终支付金额为 0，无需支付", category: .api)
             paymentSuccess = true
             return
         }
         
-        isProcessingDirectPayment = true
+        Logger.debug("微信支付参数 - clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
         
-        // 创建微信支付方式参数
-        // 注意：微信支付需要指定 appId（如果使用微信 App 支付）
-        // 这里使用网页版微信支付，不需要 appId
-        let wechatParams = STPPaymentMethodWeChatPayParams()
-        let paymentMethodParams = STPPaymentMethodParams(
-            weChatPay: wechatParams,
-            billingDetails: nil,
-            metadata: nil
-        )
-        
-        // 创建 PaymentIntent 确认参数
-        let paymentIntentParams = STPPaymentIntentParams(clientSecret: clientSecret)
-        paymentIntentParams.paymentMethodParams = paymentMethodParams
-        paymentIntentParams.returnURL = "link2ur://stripe-redirect"
-        
-        // 微信支付需要设置额外的支付方式选项
-        let wechatPayOptions = STPConfirmWeChatPayOptions(appId: nil)
-        paymentIntentParams.paymentMethodOptions = STPConfirmPaymentMethodOptions()
-        paymentIntentParams.paymentMethodOptions?.weChatPayOptions = wechatPayOptions
-        
-        Logger.debug("准备确认微信支付，clientSecret: \(clientSecret.prefix(20))...", category: .api)
-        
-        // 使用 STPPaymentHandler 确认支付（会自动跳转到微信）
-        STPPaymentHandler.shared().confirmPayment(paymentIntentParams, with: self) { [weak self] status, _, error in
-            DispatchQueue.main.async {
-                self?.isProcessingDirectPayment = false
-                self?.handleDirectPaymentResult(status: status, error: error, paymentMethod: "微信")
-            }
+        // 微信支付：使用 PaymentSheet（后端已创建仅含 wechat_pay 的 PI，Sheet 只显示微信支付）
+        if let paymentSheet = paymentSheet {
+            presentPaymentSheet(from: paymentSheet)
+        } else {
+            errorMessage = "支付表单未准备好，请稍后重试"
+            Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
+            ensurePaymentSheetReady()
+        }
+    }
+    
+    /// 弹出 PaymentSheet（银行卡或微信支付共用）
+    private func presentPaymentSheet(from sheet: PaymentSheet) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            errorMessage = "无法打开支付界面，请重试"
+            Logger.error("无法获取顶层视图控制器", category: .api)
+            return
+        }
+        var topViewController = rootViewController
+        while let presented = topViewController.presentedViewController {
+            topViewController = presented
+        }
+        Logger.debug("准备弹出 PaymentSheet", category: .api)
+        sheet.present(from: topViewController) { [weak self] result in
+            Logger.debug("PaymentSheet 结果: \(result)", category: .api)
+            self?.handlePaymentResult(result)
         }
     }
     
     /// 处理直接支付结果（支付宝/微信）
     private func handleDirectPaymentResult(status: STPPaymentHandlerActionStatus, error: Error?, paymentMethod: String) {
+        Logger.debug("\(paymentMethod)支付结果处理 - 状态: \(status.rawValue)", category: .api)
+        
         switch status {
         case .succeeded:
             Logger.info("\(paymentMethod)支付成功", category: .api)
@@ -835,29 +924,43 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
                 Logger.error("\(paymentMethod)支付失败: \(errorDescription)", category: .api)
                 
                 // 记录错误的详细信息
-                if let nsError = error as NSError? {
-                    Logger.error("错误详情 - 域: \(nsError.domain), 代码: \(nsError.code), 用户信息: \(nsError.userInfo)", category: .api)
+                let nsError = error as NSError
+                Logger.error("错误详情 - 域: \(nsError.domain), 代码: \(nsError.code)", category: .api)
+                Logger.error("错误 userInfo: \(nsError.userInfo)", category: .api)
+                
+                // 检查是否有嵌套的底层错误
+                if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+                    Logger.error("底层错误 - 域: \(underlyingError.domain), 代码: \(underlyingError.code), 描述: \(underlyingError.localizedDescription)", category: .api)
                 }
                 
                 errorMessage = formatPaymentError(error)
             } else {
-                Logger.error("\(paymentMethod)支付失败（未知错误）", category: .api)
+                Logger.error("\(paymentMethod)支付失败（未知错误，error 为 nil）", category: .api)
                 errorMessage = "支付失败，请重试或使用其他支付方式"
             }
             
         @unknown default:
-            Logger.warning("\(paymentMethod)支付未知状态", category: .api)
+            Logger.warning("\(paymentMethod)支付未知状态: \(status.rawValue)", category: .api)
             errorMessage = "支付过程中出现未知错误，请重试"
         }
     }
     
     /// 执行支付（根据选择的支付方式）
     func performPayment() {
+        Logger.debug("执行支付 - 支付方式: \(selectedPaymentMethod.rawValue)", category: .api)
+        
         // 必须有 client_secret 才能发起支付；没有则创建支付意图
-        guard activeClientSecret != nil else {
+        guard let clientSecret = activeClientSecret else {
             errorMessage = "支付信息未准备好，正在加载..."
             Logger.warning("缺少 client_secret，重新创建支付意图", category: .api)
             createPaymentIntent()
+            return
+        }
+        
+        // 验证 clientSecret 格式（Stripe clientSecret 格式: pi_xxx_secret_xxx）
+        guard clientSecret.contains("_secret_") else {
+            errorMessage = "支付信息无效，请刷新页面重试"
+            Logger.error("clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
             return
         }
 
@@ -868,38 +971,24 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             return
         }
         
+        Logger.debug("支付参数验证通过 - clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
+        
         switch selectedPaymentMethod {
         case .card:
-            // 使用 PaymentSheet 支付
+            // 银行卡：使用 PaymentSheet
             if let paymentSheet = paymentSheet {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootViewController = windowScene.windows.first?.rootViewController {
-                    var topViewController = rootViewController
-                    while let presented = topViewController.presentedViewController {
-                        topViewController = presented
-                    }
-                    Logger.debug("准备弹出 PaymentSheet", category: .api)
-                    paymentSheet.present(from: topViewController) { [weak self] result in
-                        Logger.debug("PaymentSheet 结果: \(result)", category: .api)
-                        self?.handlePaymentResult(result)
-                    }
-                } else {
-                    errorMessage = "无法打开支付界面，请重试"
-                    Logger.error("无法获取顶层视图控制器", category: .api)
-                }
+                presentPaymentSheet(from: paymentSheet)
             } else {
                 errorMessage = "支付表单未准备好，请稍后重试"
                 Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-                // 尝试按统一入口创建/复用 PaymentSheet
                 ensurePaymentSheetReady()
             }
         case .applePay:
-            // 使用 Apple Pay 原生实现
             Logger.debug("使用 Apple Pay 原生实现支付", category: .api)
             payWithApplePay()
         case .wechatPay:
-            // 使用 API 直接跳转微信支付（不经过 PaymentSheet）
-            Logger.debug("使用微信支付直接跳转", category: .api)
+            // 微信支付：使用 PaymentSheet（SDK 未暴露 WeChat 直接 confirm API，后端已建仅含 wechat_pay 的 PI）
+            Logger.debug("使用微信支付（PaymentSheet）", category: .api)
             confirmWeChatPayment()
         case .alipayPay:
             // 使用 API 直接跳转支付宝（不经过 PaymentSheet）

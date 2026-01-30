@@ -474,7 +474,7 @@ export async function getTaskRecommendations(
       }
     }
     
-    const response = await api.get('/recommendations', { params });
+    const response = await api.get('/api/recommendations', { params });
     return response.data;
   } catch (error: any) {
     logger.error('获取推荐失败:', error);
@@ -488,7 +488,7 @@ export async function getTaskRecommendations(
  */
 export async function getTaskMatchScore(taskId: number) {
   try {
-    const response = await api.get(`/tasks/${taskId}/match-score`);
+    const response = await api.get(`/api/tasks/${taskId}/match-score`);
     return response.data;
   } catch (error: any) {
     logger.error('获取匹配分数失败:', error);
@@ -558,7 +558,7 @@ export async function recordTaskInteraction(
       requestData.metadata = metadata;
     }
     
-    await api.post(`/tasks/${taskId}/interaction`, requestData);
+    await api.post(`/api/tasks/${taskId}/interaction`, requestData);
   } catch (error: any) {
     // 静默失败，不影响用户体验
     logger.warn('记录交互失败:', error);
@@ -577,7 +577,7 @@ export async function submitRecommendationFeedback(
   recommendationId?: string
 ) {
   try {
-    await api.post(`/recommendations/${taskId}/feedback`, {
+    await api.post(`/api/recommendations/${taskId}/feedback`, {
       feedback_type: feedbackType,
       recommendation_id: recommendationId
     });

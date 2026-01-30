@@ -78,14 +78,17 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
             query_params = {}
             if params:
                 query_params.update(params)
-            # 处理 include 参数（支持 data 或 params，retrieve 使用 params）；Stripe 期望 include[]
+            # 处理 include 参数（支持 data 或 params，retrieve 使用 params）
+            # Stripe V2 API 需要精确索引格式：include[0], include[1], etc.
+            # 不支持 include[]=value1&include[]=value2 的数组语法
             include_list = None
             if data and "include" in data:
                 include_list = data.get("include", [])
             elif "include" in query_params:
                 include_list = query_params.pop("include", [])
             if include_list:
-                query_params["include[]"] = include_list
+                for idx, value in enumerate(include_list):
+                    query_params[f"include[{idx}]"] = value
             response = requests.get(url, headers=headers, params=query_params, timeout=timeout)
         elif method.upper() == "POST":
             response = requests.post(url, headers=headers, json=data, timeout=timeout)

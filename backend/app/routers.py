@@ -6434,24 +6434,35 @@ def unregister_device_token(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    """注销设备推送令牌"""
+    """注销设备推送令牌 - 标记为不活跃而非删除
+    
+    登出或切换账号时调用此接口，将设备令牌标记为不活跃，
+    而不是完全删除，这样可以：
+    1. 保留历史记录用于调试
+    2. 重新登录时可以快速重新激活
+    3. 避免删除后重新注册时的竞态条件
+    """
+    logger = logging.getLogger(__name__)
     device_token = device_token_data.get("device_token")
     
     if not device_token:
         raise HTTPException(status_code=400, detail="device_token is required")
     
-    # 查找并删除令牌
-    token = db.query(models.DeviceToken).filter(
+    # 查找令牌并标记为不活跃（而不是删除）
+    updated = db.query(models.DeviceToken).filter(
         models.DeviceToken.user_id == current_user.id,
         models.DeviceToken.device_token == device_token
-    ).first()
+    ).update({"is_active": False, "updated_at": get_utc_time()})
     
-    if token:
-        db.delete(token)
-        db.commit()
-        return {"message": "Device token unregistered"}
+    db.commit()
+    
+    if updated > 0:
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌已标记为不活跃（登出）: token={device_token[:20]}...")
+        return {"message": "Device token deactivated"}
     else:
-        raise HTTPException(status_code=404, detail="Device token not found")
+        # 令牌不存在时也返回成功（幂等操作，避免客户端重试问题）
+        logger.info(f"[DEVICE_TOKEN] 用户 {current_user.id} 的设备令牌未找到或已不活跃: token={device_token[:20]}...")
+        return {"message": "Device token not found or already deactivated"}
 
 
 @router.delete("/users/account")

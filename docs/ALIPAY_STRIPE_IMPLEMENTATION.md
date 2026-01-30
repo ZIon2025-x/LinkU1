@@ -110,6 +110,12 @@ A: 检查以下几点：
 2. 后端创建 PaymentIntent 时是否包含 `wechat_pay`（查看日志）
 3. 账户所在地区是否支持 WeChat Pay
 
+**Q: 微信支付是否支持沙盒/测试模式？**
+A: Stripe 测试模式下可以创建包含 `wechat_pay` 的 PaymentIntent，但实际跳转微信完成支付在测试环境可能受限（例如仅模拟或部分地区不可用）。生产环境需在 Stripe Dashboard 完成 WeChat Pay 的正式配置。
+
+**Q: 为什么微信支付用 PaymentSheet 而不是直接跳转？**
+A: Stripe iOS SDK 的 StripePayments 模块未暴露 `STPPaymentMethodWeChatPayParams` 等微信直接确认 API，因此 App 内对微信支付采用「仅含 wechat_pay 的 PaymentIntent + PaymentSheet」方式，由 Sheet 展示微信支付入口并完成跳转。
+
 **Q: 点击支付后没有跳转到支付宝/微信？**
 A: 
 1. 确保 `returnURL` 已正确配置为 `link2ur://stripe-redirect`

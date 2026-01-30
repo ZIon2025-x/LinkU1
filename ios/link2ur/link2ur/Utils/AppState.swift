@@ -605,17 +605,30 @@ public class AppState: ObservableObject {
         WebSocketService.shared.disconnectAndClear()
         
         // 登出时注销设备token（防止其他用户登录后收到当前用户的推送）
+        // 重要：必须在删除认证token之前完成API调用，否则认证会失败
         if let deviceToken = UserDefaults.standard.string(forKey: "device_token") {
-            // 注意：需要在删除token之前调用，因为API需要认证
+            // 使用 DispatchGroup 确保 API 调用完成后再清除认证信息
+            let logoutGroup = DispatchGroup()
+            logoutGroup.enter()
+            
             APIService.shared.unregisterDeviceToken(deviceToken) { success in
                 if success {
                     Logger.debug("设备令牌已注销（登出时）", category: .api)
                 } else {
                     Logger.warning("设备令牌注销失败（登出时），可能已登出或token不存在", category: .api)
                 }
+                logoutGroup.leave()
+            }
+            
+            // 最多等待 2 秒，避免阻塞主线程太久
+            // 如果超时，仍然继续登出流程
+            let waitResult = logoutGroup.wait(timeout: .now() + 2.0)
+            if waitResult == .timedOut {
+                Logger.warning("设备令牌注销超时，继续登出流程", category: .api)
             }
         }
         
+        // 现在安全地删除认证 token
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey)
         _ = KeychainHelper.shared.delete(service: Constants.Keychain.service, account: Constants.Keychain.refreshTokenKey)
         isAuthenticated = false
