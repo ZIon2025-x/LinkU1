@@ -1225,7 +1225,7 @@ async def get_task_reviews_async(
         logger.debug("返回评价数量: %s", len(public_reviews))
         logger.debug("返回的评价ID: %s", [r.id for r in public_reviews])
         logger.debug("返回的评价用户ID: %s", [r.user_id for r in public_reviews])
-        return public_reviews
+        return [schemas.ReviewOut.model_validate(r) for r in public_reviews]
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get task reviews: {str(e)}")

@@ -197,4 +197,8 @@ async def prefetch_task_by_id(
         
     except Exception as e:
         logger.error(f"预翻译任务失败: {e}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return 0

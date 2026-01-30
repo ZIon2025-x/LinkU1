@@ -5,6 +5,7 @@ from typing import Optional
 from dateutil.relativedelta import relativedelta
 
 from sqlalchemy import and_, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -5240,7 +5241,7 @@ def create_or_update_task_translation(
         db.refresh(existing)
         return existing
     else:
-        # 创建新翻译
+        # 创建新翻译（并发时可能发生唯一约束冲突，捕获后改为更新）
         translation_data = {
             'task_id': task_id,
             'field_type': field_type,
@@ -5252,12 +5253,29 @@ def create_or_update_task_translation(
         # 如果表中有content_hash字段，添加它
         if hasattr(models.TaskTranslation, 'content_hash'):
             translation_data['content_hash'] = content_hash
-        
-        new_translation = models.TaskTranslation(**translation_data)
-        db.add(new_translation)
-        db.commit()
-        db.refresh(new_translation)
-        return new_translation
+
+        try:
+            new_translation = models.TaskTranslation(**translation_data)
+            db.add(new_translation)
+            db.commit()
+            db.refresh(new_translation)
+            return new_translation
+        except IntegrityError as e:
+            db.rollback()
+            # PostgreSQL 23505 = unique_violation；并发插入冲突时改为查询并更新
+            if getattr(getattr(e, "orig", None), "pgcode", None) == "23505":
+                existing = get_task_translation(db, task_id, field_type, target_language)
+                if existing:
+                    existing.original_text = original_text
+                    existing.translated_text = translated_text
+                    existing.source_language = source_language
+                    if hasattr(existing, 'content_hash'):
+                        existing.content_hash = content_hash
+                    existing.updated_at = get_utc_time()
+                    db.commit()
+                    db.refresh(existing)
+                    return existing
+            raise
 
 
 def cleanup_stale_task_translations(db: Session, batch_size: int = 100) -> int:

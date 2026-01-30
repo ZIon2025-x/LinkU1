@@ -2015,7 +2015,8 @@ def create_review(
 @measure_api_performance("get_task_reviews")
 @cache_response(ttl=180, key_prefix="task_reviews")  # 缓存3分钟
 def get_task_reviews(task_id: int, db: Session = Depends(get_db)):
-    return crud.get_task_reviews(db, task_id)
+    reviews = crud.get_task_reviews(db, task_id)
+    return [schemas.ReviewOut.model_validate(r) for r in reviews]
 
 
 @router.get("/users/{user_id}/received-reviews", response_model=list[schemas.ReviewOut])
