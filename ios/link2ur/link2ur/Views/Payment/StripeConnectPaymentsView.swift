@@ -49,11 +49,9 @@ struct StripeConnectPaymentsView: View {
     }
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            LoadingView(message: LocalizationKey.paymentRecordsLoading.localized)
-                .foregroundColor(AppColors.textSecondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ListSkeleton(itemCount: 6, itemHeight: 72)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.lg)
     }
     
     private func errorView(error: String) -> some View {

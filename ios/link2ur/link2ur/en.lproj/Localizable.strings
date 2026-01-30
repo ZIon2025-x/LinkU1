@@ -18,6 +18,7 @@
 "common.search" = "Search";
 "common.clear" = "Clear";
 "common.submit" = "Submit";
+"common.submitting" = "Submitting...";
 "common.back" = "Back";
 "common.next" = "Next";
 "common.finish" = "Finish";
@@ -613,7 +614,11 @@
 "task_detail.application_success_message" = "You have successfully applied for this task. Please wait for the publisher to review.";
 "task_detail.task_completed_message" = "Congratulations! You have completed the task. Please wait for the publisher to confirm.";
 "task_detail.confirm_completion_success" = "Task Completion Confirmed";
+"task_detail.task_already_reviewed" = "Task already reviewed";
+"task_detail.complete_task_success" = "Completion submitted";
 "task_detail.confirm_completion_success_message" = "Task status has been updated to completed. Rewards will be automatically transferred to the task recipient.";
+"refund.request_submitted" = "Refund request submitted";
+"refund.rebuttal_submitted" = "Rebuttal submitted";
 "task_detail.application_approved_message" = "Congratulations! Your application has been approved. You can start working on the task.";
 "task_detail.pending_payment_message" = "The task poster is paying the platform service fee. The task will start after payment is completed.";
 "task_detail.application_rejected_message" = "Sorry, your application was not approved.";
@@ -701,6 +706,7 @@
 "rating.comment" = "Comment (Optional)";
 "rating.anonymous" = "Anonymous Rating";
 "rating.submit" = "Submit Rating";
+"rating.success" = "Review submitted";
 "rating.anonymous_rating" = "Anonymous Rating";
 "rating.submit_rating" = "Submit Rating";
 "rating.half_star" = "%@ stars";
@@ -1168,6 +1174,8 @@
 // MARK: - Settings
 "settings.notifications" = "Notification Settings";
 "settings.allow_notifications" = "Allow Notifications";
+"settings.success_sound" = "Success Sound";
+"settings.success_sound_description" = "Play a short sound when an action succeeds";
 "settings.appearance" = "Appearance";
 "settings.theme_mode" = "Theme Mode";
 "settings.membership" = "Membership";

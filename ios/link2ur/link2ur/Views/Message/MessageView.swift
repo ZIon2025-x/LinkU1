@@ -51,12 +51,13 @@ struct MessageView: View {
                                 )
                                 .padding(.top, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
                             } else {
-                                ForEach(viewModel.taskChats) { taskChat in
+                                ForEach(Array(viewModel.taskChats.enumerated()), id: \.element.id) { index, taskChat in
                                     NavigationLink(destination: TaskChatView(taskId: taskChat.id, taskTitle: taskChat.displayTitle, taskChat: taskChat)
                                         .environmentObject(appState)) {
                                         TaskChatRow(taskChat: taskChat, currentUserId: appState.currentUser?.id)
                                     }
                                     .buttonStyle(ScaleButtonStyle())
+                                    .listItemAppear(index: index, totalItems: viewModel.taskChats.count) // 分步入场动画
                                 }
                             }
                         }

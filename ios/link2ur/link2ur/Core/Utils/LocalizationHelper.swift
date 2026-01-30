@@ -88,6 +88,7 @@ public enum LocalizationKey: String {
     case commonSearch = "common.search"
     case commonClear = "common.clear"
     case commonSubmit = "common.submit"
+    case commonSubmitting = "common.submitting"
     case commonBack = "common.back"
     case commonNext = "common.next"
     case commonFinish = "common.finish"
@@ -610,7 +611,9 @@ public enum LocalizationKey: String {
     case settingsUserID = "settings.user_id"
     case settingsDeleteAccount = "settings.delete_account"
     case settingsDeleteAccountMessage = "settings.delete_account_message"
-    
+    case settingsSuccessSound = "settings.success_sound"
+    case settingsSuccessSoundDescription = "settings.success_sound_description"
+
     // MARK: - Theme
     case themeSystem = "theme.system"
     case themeLight = "theme.light"
@@ -923,6 +926,7 @@ public enum LocalizationKey: String {
     case taskDetailTaskCompletedMessage = "task_detail.task_completed_message"
     case taskDetailConfirmCompletionSuccess = "task_detail.confirm_completion_success"
     case taskDetailConfirmCompletionSuccessMessage = "task_detail.confirm_completion_success_message"
+    case taskDetailTaskAlreadyReviewed = "task_detail.task_already_reviewed"
     case taskDetailApplicationApprovedMessage = "task_detail.application_approved_message"
     case taskDetailPendingPaymentMessage = "task_detail.pending_payment_message"
     case taskDetailApplicationRejectedMessage = "task_detail.application_rejected_message"
@@ -1016,9 +1020,14 @@ public enum LocalizationKey: String {
     case ratingComment = "rating.comment"
     case ratingAnonymous = "rating.anonymous"
     case ratingSubmit = "rating.submit"
+    case ratingSuccess = "rating.success"
     case ratingAnonymousRating = "rating.anonymous_rating"
     case ratingSubmitRating = "rating.submit_rating"
-    
+
+    case taskDetailCompleteTaskSuccess = "task_detail.complete_task_success"
+    case refundRequestSubmitted = "refund.request_submitted"
+    case refundRebuttalSubmitted = "refund.rebuttal_submitted"
+
     // MARK: - Menu
     case menuMenu = "menu.menu"
     case menuMy = "menu.my"

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var appTheme = AppTheme.shared
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    @AppStorage("success_sound_enabled") private var successSoundEnabled = true
     @State private var showDeleteAccountAlert = false
     @State private var isDeletingAccount = false
     @State private var cancellables = Set<AnyCancellable>()
@@ -19,7 +20,14 @@ struct SettingsView: View {
                 Section(LocalizationKey.settingsNotifications.localized) {
                     Toggle(LocalizationKey.settingsAllowNotifications.localized, isOn: $notificationsEnabled)
                 }
-                
+
+                // 声音与反馈（与 SoundFeedback 共用 UserDefaults key "success_sound_enabled"）
+                Section {
+                    Toggle(LocalizationKey.settingsSuccessSound.localized, isOn: $successSoundEnabled)
+                } footer: {
+                    Text(LocalizationKey.settingsSuccessSoundDescription.localized)
+                }
+
                 // 外观设置
                 Section(LocalizationKey.settingsAppearance.localized) {
                     Picker(LocalizationKey.settingsThemeMode.localized, selection: Binding(

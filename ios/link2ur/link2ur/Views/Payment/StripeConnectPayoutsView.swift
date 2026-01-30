@@ -64,9 +64,14 @@ struct StripeConnectPayoutsView: View {
     }
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            LoadingView(message: LocalizationKey.commonLoading.localized)
-                .foregroundColor(AppColors.textSecondary)
+        ScrollView {
+            VStack(spacing: AppSpacing.md) {
+                // 余额卡片骨架
+                SkeletonShape(width: nil, height: 80, cornerRadius: AppCornerRadius.medium)
+                ListSkeleton(itemCount: 5, itemHeight: 72)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.lg)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

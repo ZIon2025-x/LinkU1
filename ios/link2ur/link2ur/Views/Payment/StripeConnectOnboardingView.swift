@@ -69,9 +69,10 @@ struct StripeConnectOnboardingView: View {
     }
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            LoadingView(message: LocalizationKey.commonLoading.localized)
-                .foregroundColor(AppColors.textSecondary)
+        ScrollView {
+            ListSkeleton(itemCount: 5, itemHeight: 80)
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.lg)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

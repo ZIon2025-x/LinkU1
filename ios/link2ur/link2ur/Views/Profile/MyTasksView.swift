@@ -114,18 +114,11 @@ struct MyTasksView: View {
         }
     }
     
-    // 已完成任务加载视图
+    // 已完成任务加载视图（使用列表骨架屏）
     private var completedTasksLoadingView: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: AppSpacing.md) {
-                CompactLoadingView()
-                Text(LocalizationKey.myTasksLoadingCompleted.localized)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textSecondary)
-            }
-            Spacer()
-        }
+        ListSkeleton(itemCount: 5, itemHeight: 120)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
     }
     
     // 离线视图
@@ -147,13 +140,11 @@ struct MyTasksView: View {
         }
     }
     
-    // 加载视图
+    // 加载视图（使用列表骨架屏）
     private var loadingView: some View {
-        VStack {
-            Spacer()
-            LoadingView()
-            Spacer()
-        }
+        ListSkeleton(itemCount: 5, itemHeight: 120)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
     }
     
     // 待处理申请视图

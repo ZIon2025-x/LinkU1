@@ -12,20 +12,22 @@ struct ServiceDetailView: View {
     @State private var paymentTaskId: Int?
     @State private var selectedDeadline: Date?
     @State private var isFlexible: Bool = false
-    
+    @State private var showSuccessOverlay = false
+    @State private var successOverlayMessage: String = ""
+    @State private var showApplyLoading = false
+
     var body: some View {
         ZStack(alignment: .bottom) {
             AppColors.background
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.service == nil {
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text(LocalizationKey.serviceLoading.localized)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textTertiary)
+                ScrollView {
+                    DetailSkeleton()
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.lg)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let service = viewModel.service {
                 ScrollView {
                     VStack(spacing: 0) {
@@ -74,6 +76,17 @@ struct ServiceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbar(.hidden, for: .tabBar)
+        .overlay {
+            if showSuccessOverlay {
+                OperationResultOverlay(
+                    isPresented: $showSuccessOverlay,
+                    type: .success,
+                    message: successOverlayMessage.isEmpty ? nil : successOverlayMessage,
+                    autoDismissSeconds: 1.5,
+                    onDismiss: { }
+                )
+            }
+        }
         .sheet(isPresented: $showApplySheet) {
             ApplyServiceSheet(
                 message: $applicationMessage,
@@ -82,6 +95,7 @@ struct ServiceDetailView: View {
                 selectedDeadline: $selectedDeadline,
                 isFlexible: $isFlexible,
                 hasTimeSlots: viewModel.service?.hasTimeSlots == true,
+                isSubmitting: $showApplyLoading,
                 onApply: {
                     viewModel.applyService(
                         serviceId: serviceId,
@@ -90,13 +104,15 @@ struct ServiceDetailView: View {
                         deadline: isFlexible ? nil : selectedDeadline,
                         isFlexible: isFlexible ? 1 : 0
                     ) { success in
+                        showApplyLoading = false
                         if success {
-                            HapticFeedback.success()
                             showApplySheet = false
                             applicationMessage = ""
                             counterPrice = nil
                             selectedDeadline = nil
                             isFlexible = false
+                            successOverlayMessage = LocalizationKey.taskExpertApplicationSubmitted.localized
+                            showSuccessOverlay = true
                         }
                     }
                 }
@@ -548,11 +564,13 @@ struct ApplyServiceSheet: View {
     @Binding var selectedDeadline: Date?
     @Binding var isFlexible: Bool
     let hasTimeSlots: Bool
+    @Binding var isSubmitting: Bool
     let onApply: () -> Void
     @Environment(\.dismiss) var dismiss
-    
+
     var body: some View {
         NavigationView {
+            ZStack {
             KeyboardAvoidingScrollView(extraPadding: 20) {
                 VStack(spacing: 24) {
                     // 留言
@@ -681,11 +699,11 @@ struct ApplyServiceSheet: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // 验证：如果服务没有时间段且不是灵活模式，必须选择日期
+                        guard !isSubmitting else { return }
                         if !hasTimeSlots && !isFlexible && selectedDeadline == nil {
-                            // 设置默认日期（7天后）
                             selectedDeadline = Calendar.current.date(byAdding: .day, value: 7, to: Date())
                         }
+                        isSubmitting = true
                         onApply()
                     }) {
                         Text("提交")
@@ -696,7 +714,12 @@ struct ApplyServiceSheet: View {
                             .background(AppColors.primary)
                             .clipShape(Capsule())
                     }
+                    .disabled(isSubmitting)
                 }
+            }
+            if isSubmitting {
+                LoadingOverlay(message: LocalizationKey.commonSubmitting.localized)
+            }
             }
         }
     }

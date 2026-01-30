@@ -741,7 +741,9 @@ struct TaskExpertListContentView: View {
                 // 内容区域
                 Group {
                     if viewModel.isLoading && viewModel.experts.isEmpty {
-                        LoadingView()
+                        ListSkeleton(itemCount: 4, itemHeight: 100)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
                     } else if viewModel.experts.isEmpty {
                         VStack {
                             Spacer()

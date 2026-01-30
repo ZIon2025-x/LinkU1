@@ -10,7 +10,7 @@ struct NotificationListView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.notifications.isEmpty {
-                LoadingView()
+                ListSkeleton(itemCount: 5, itemHeight: 120)
             } else if let error = viewModel.errorMessage, viewModel.notifications.isEmpty {
                 ErrorStateView(
                     message: error,

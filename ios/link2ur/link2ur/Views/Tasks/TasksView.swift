@@ -146,7 +146,7 @@ struct TasksView: View {
                             
                             LazyVGrid(columns: columns, spacing: AppSpacing.md) {
                                 // 优化：添加padding，给卡片留出空间，避免长按时被裁剪
-                                ForEach(allTasks, id: \.id) { task in
+                                ForEach(Array(allTasks.enumerated()), id: \.element.id) { index, task in
                                     let cardShape = RoundedRectangle(cornerRadius: AppCornerRadius.medium, style: .continuous)
                                     
                                     NavigationLink(destination: TaskDetailView(taskId: task.id)) {
@@ -187,17 +187,16 @@ struct TasksView: View {
                                     // 移除 zIndex(100)：与 drawingGroup 叠加时，长按取消后立即滑动会导致卡片在旧位置
                                     // 短暂停留。不设 zIndex 可避免该粘连感，context menu 预览仍正常。
                                     .id(task.id) // 确保稳定的id，优化视图复用
+                                    .listItemAppear(index: index, totalItems: allTasks.count) // 分步入场动画
                                     .onAppear {
                                         // 性能优化：只在接近最后一个任务时加载更多（提前3个）
                                         let threshold = max(0, allTasks.count - 3)
-                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                           index >= threshold {
+                                        if index >= threshold {
                                             viewModel.loadMoreTasks()
                                         }
                                         
                                         // 图片预加载：预加载即将显示的任务图片（提前2个）
-                                        if let index = allTasks.firstIndex(where: { $0.id == task.id }),
-                                           index < allTasks.count - 2 {
+                                        if index < allTasks.count - 2 {
                                             let nextIndex = index + 1
                                             if nextIndex < allTasks.count {
                                                 let nextTask = allTasks[nextIndex]

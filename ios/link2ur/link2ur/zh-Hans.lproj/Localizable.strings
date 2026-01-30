@@ -26,6 +26,7 @@
 "common.long_press_to_copy" = "长按复制";
 "common.clear" = "清空";
 "common.submit" = "提交";
+"common.submitting" = "提交中...";
 "common.back" = "返回";
 "common.next" = "下一步";
 "common.finish" = "完成";
@@ -613,7 +614,11 @@
 "task_detail.application_success_message" = "您已成功申请此任务，请等待发布者审核。";
 "task_detail.task_completed_message" = "恭喜！您已完成任务，请等待发布者确认。";
 "task_detail.confirm_completion_success" = "任务已确认完成";
+"task_detail.task_already_reviewed" = "任务已评价";
+"task_detail.complete_task_success" = "已提交完成";
 "task_detail.confirm_completion_success_message" = "任务状态已更新为已完成。奖励将自动转给任务接受者。";
+"refund.request_submitted" = "退款申请已提交";
+"refund.rebuttal_submitted" = "反驳已提交";
 "task_detail.application_approved_message" = "恭喜！您的申请已通过，可以开始执行任务了。";
 "task_detail.pending_payment_message" = "任务发布者正在支付平台服务费，支付完成后任务将开始。";
 "task_detail.application_rejected_message" = "很抱歉，您的申请未通过审核。";
@@ -707,6 +712,7 @@
 "rating.comment" = "评论（可选）";
 "rating.anonymous" = "匿名评价";
 "rating.submit" = "提交评价";
+"rating.success" = "评价成功";
 "rating.anonymous_rating" = "匿名评价";
 "rating.submit_rating" = "提交评价";
 "rating.half_star" = "%@星";
@@ -1242,6 +1248,8 @@
 // MARK: - Settings
 "settings.notifications" = "通知设置";
 "settings.allow_notifications" = "允许通知";
+"settings.success_sound" = "成功提示音";
+"settings.success_sound_description" = "操作成功时播放短促提示音";
 "settings.appearance" = "外观";
 "settings.theme_mode" = "主题模式";
 "settings.membership" = "会员";

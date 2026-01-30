@@ -8,7 +8,6 @@ struct FleaMarketDetailView: View {
     @State private var showLogin = false
     @State private var currentImageIndex = 0
     @State private var isRefreshing = false
-    @State private var showRefreshSuccess = false
     @State private var showPaymentView = false
     @State private var paymentTaskId: Int?
     @State private var paymentClientSecret: String?
@@ -17,9 +16,10 @@ struct FleaMarketDetailView: View {
     @State private var paymentEphemeralKeySecret: String?
     @State private var paymentExpiresAt: String?
     @State private var isPreparingPayment = false
-    @State private var showNegotiateSuccess = false
     @State private var isProcessingPurchase = false  // 购买处理中状态
-    
+    @State private var showSuccessOverlay = false
+    @State private var successOverlayMessage: String = ""
+
     var body: some View {
         mainContentView
             .navigationBarTitleDisplayMode(.inline)
@@ -33,15 +33,21 @@ struct FleaMarketDetailView: View {
             .sheet(isPresented: $showPurchaseSheet) {
                 purchaseSheetContent
             }
-            .alert(LocalizationKey.successRefreshSuccess.localized, isPresented: $showRefreshSuccess) {
-                Button(LocalizationKey.commonOk.localized, role: .cancel) { }
-            } message: {
-                Text(LocalizationKey.successRefreshSuccessMessage.localized)
+            .overlay {
+                if showSuccessOverlay {
+                    OperationResultOverlay(
+                        isPresented: $showSuccessOverlay,
+                        type: .success,
+                        message: successOverlayMessage.isEmpty ? nil : successOverlayMessage,
+                        autoDismissSeconds: 1.5,
+                        onDismiss: { }
+                    )
+                }
             }
-            .alert(LocalizationKey.fleaMarketNegotiateRequestSent.localized, isPresented: $showNegotiateSuccess) {
-                Button(LocalizationKey.commonOk.localized, role: .cancel) { }
-            } message: {
-                Text(LocalizationKey.fleaMarketNegotiateRequestSentMessage.localized)
+            .overlay {
+                if isRefreshing {
+                    LoadingOverlay(message: LocalizationKey.fleaMarketRefreshing.localized)
+                }
             }
             .fullScreenCover(isPresented: $showPaymentView) {
                 paymentViewContent
@@ -79,13 +85,12 @@ struct FleaMarketDetailView: View {
     
     @ViewBuilder
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-            Text(LocalizationKey.fleaMarketLoading.localized)
-                .font(AppTypography.caption)
-                .foregroundColor(AppColors.textTertiary)
+        ScrollView {
+            DetailSkeleton()
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.vertical, AppSpacing.lg)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     @ViewBuilder
@@ -210,8 +215,8 @@ struct FleaMarketDetailView: View {
                 },
                 onNegotiateComplete: {
                     showPurchaseSheet = false
-                    HapticFeedback.success()
-                    showNegotiateSuccess = true
+                    successOverlayMessage = LocalizationKey.fleaMarketNegotiateRequestSent.localized
+                    showSuccessOverlay = true
                 }
             )
         }
@@ -818,8 +823,8 @@ struct FleaMarketDetailView: View {
                             DispatchQueue.main.async {
                                 isRefreshing = false
                                 if success {
-                                    showRefreshSuccess = true
-                                    HapticFeedback.success()
+                                    successOverlayMessage = LocalizationKey.successRefreshSuccess.localized
+                                    showSuccessOverlay = true
                                 }
                             }
                         }

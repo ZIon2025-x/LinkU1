@@ -42,7 +42,6 @@ struct TaskDetailView: View {
     @State private var showLogin = false
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
-    @State private var showApplySuccessAlert = false
     @State private var showPaymentView = false
     @State private var paymentClientSecret: String?
     @State private var paymentCustomerId: String?
@@ -58,6 +57,11 @@ struct TaskDetailView: View {
     @State private var showRefundRebuttalSheet = false // 显示反驳页面
     @State private var showCancelRefundConfirm = false // 显示撤销退款确认对话框
     @State private var showDisputeTimeline = false // 显示争议详情页面
+    @State private var showSuccessOverlay = false
+    @State private var successOverlayMessage: String = ""
+    /// 成功类型，用于 onDismiss 分支：apply | confirmCompletion | review | completeTask | refundRequest | refundRebuttal
+    @State private var successOverlayKind: String = ""
+    @State private var showConfirmCompletionLoading = false
     @State private var interactionCancellables = Set<AnyCancellable>()  // 用于交互记录的 cancellables
     @State private var lastInteractionType: String? = nil  // 上次交互类型（用于防抖）
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
@@ -156,8 +160,12 @@ struct TaskDetailView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.task == nil {
-                LoadingView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ScrollView {
+                    DetailSkeleton()
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, AppSpacing.lg)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let errorMessage = viewModel.errorMessage, viewModel.task == nil {
                 // 显示错误状态
                 ErrorStateView(
@@ -271,17 +279,47 @@ struct TaskDetailView: View {
             } message: {
                 Text(LocalizationKey.taskDetailCancelTaskConfirm.localized)
             }
-            .alert(LocalizationKey.taskDetailApplicationSuccess.localized, isPresented: $showApplySuccessAlert) {
-                Button(LocalizationKey.commonOk.localized) {
-                    showApplySuccessAlert = false
+            .overlay {
+                if showSuccessOverlay {
+                    OperationResultOverlay(
+                        isPresented: $showSuccessOverlay,
+                        type: .success,
+                        message: successOverlayMessage.isEmpty ? nil : successOverlayMessage,
+                        autoDismissSeconds: 1.5,
+                        onDismiss: {
+                            switch successOverlayKind {
+                            case "apply", "confirmCompletion":
+                                break
+                            case "review":
+                                showReviewModal = false
+                                reviewRating = 5.0
+                                reviewComment = ""
+                                isAnonymousReview = false
+                                selectedReviewTags = []
+                                viewModel.loadReviews(taskId: taskId)
+                                viewModel.loadTask(taskId: taskId)
+                            case "completeTask":
+                                break
+                            case "refundRequest":
+                                showRefundRequestSheet = false
+                                viewModel.loadTask(taskId: taskId, force: true)
+                                viewModel.loadRefundStatus(taskId: taskId)
+                            case "refundRebuttal":
+                                showRefundRebuttalSheet = false
+                                viewModel.loadTask(taskId: taskId, force: true)
+                                viewModel.loadRefundStatus(taskId: taskId)
+                            default:
+                                break
+                            }
+                            successOverlayKind = ""
+                        }
+                    )
                 }
             }
-            .alert(LocalizationKey.taskDetailConfirmCompletionSuccess.localized, isPresented: $showConfirmCompletionSuccess) {
-                Button(LocalizationKey.commonOk.localized, role: .cancel) {
-                    showConfirmCompletionSuccess = false
+            .overlay {
+                if showConfirmCompletionLoading {
+                    LoadingOverlay(message: LocalizationKey.commonSubmitting.localized)
                 }
-            } message: {
-                Text(LocalizationKey.taskDetailConfirmCompletionSuccessMessage.localized)
             }
             .onAppear {
                 // 加载任务详情
@@ -502,14 +540,12 @@ struct TaskDetailView: View {
                             recordTaskInteraction(type: "apply")
                             // 发送任务更新通知，触发推荐任务实时刷新
                             NotificationCenter.default.post(name: .taskUpdated, object: viewModel.task)
-                            // 重新加载任务和申请列表
                             viewModel.loadTask(taskId: taskId)
                             viewModel.loadApplications(taskId: taskId, currentUserId: appState.currentUser?.id)
-                            // 显示成功提示
-                            showApplySuccessAlert = true
-                            HapticFeedback.success()
+                            successOverlayMessage = LocalizationKey.taskDetailApplicationSuccess.localized
+                            successOverlayKind = "apply"
+                            showSuccessOverlay = true
                         }
-                        // 调用 completion 回调，重置 loading 状态
                         completion(success)
                     }
                 }
@@ -532,8 +568,9 @@ struct TaskDetailView: View {
                         if success {
                             showCompleteTaskSheet = false
                             viewModel.loadTask(taskId: taskId)
-                            HapticFeedback.success()
-                            // 注意：系统消息已由后端自动发送，不需要前端再次发送
+                            successOverlayMessage = LocalizationKey.taskDetailCompleteTaskSuccess.localized
+                            successOverlayKind = "completeTask"
+                            showSuccessOverlay = true
                         }
                     }
                 }
@@ -558,22 +595,10 @@ struct TaskDetailView: View {
                     isAnonymous: isAnonymousReview
                 ) { success in
                     if success {
-                        showReviewModal = false
-                        reviewRating = 5.0
-                        reviewComment = ""
-                        isAnonymousReview = false
-                        selectedReviewTags = []
-                        // 立即重新加载评价列表，以更新 hasReviewed 状态并隐藏评价按钮
-                        DispatchQueue.main.async {
-                            viewModel.loadReviews(taskId: taskId)
-                            // 也重新加载任务详情，确保状态同步
-                            viewModel.loadTask(taskId: taskId)
-                        }
-                        HapticFeedback.success()
+                        successOverlayMessage = LocalizationKey.ratingSuccess.localized
+                        successOverlayKind = "review"
+                        showSuccessOverlay = true
                     }
-                    // 错误信息已通过ErrorHandler统一显示，不需要在这里额外处理
-                    // 如果失败，保持弹窗打开，让用户可以看到错误并重试
-                    // 调用 completion 回调，重置 loading 状态
                     completion(success)
                 }
             }
@@ -2275,17 +2300,28 @@ struct TaskActionButtonsView: View {
         }
     }
     
-    // MARK: - 评价按钮
+    // MARK: - 评价按钮（未评价可点击，已评价显示灰色不可点击）
     @ViewBuilder
     private var reviewButton: some View {
-        if canReview && !hasReviewed {
-            Button(action: {
-                showReviewModal = true
-            }) {
-                Label(LocalizationKey.actionsRateTask.localized, systemImage: "star.fill")
+        if canReview {
+            if hasReviewed {
+                Label(LocalizationKey.taskDetailTaskAlreadyReviewed.localized, systemImage: "checkmark.circle.fill")
+                    .font(AppTypography.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppColors.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(AppColors.fill)
+                    .cornerRadius(AppCornerRadius.medium)
+            } else {
+                Button(action: {
+                    showReviewModal = true
+                }) {
+                    Label(LocalizationKey.actionsRateTask.localized, systemImage: "star.fill")
+                }
+                .buttonStyle(PrimaryButtonStyle(useGradient: false))
+                .tint(AppColors.warning)
             }
-            .buttonStyle(PrimaryButtonStyle(useGradient: false))
-            .tint(AppColors.warning)
         }
     }
     
@@ -2511,6 +2547,9 @@ struct ApplyTaskSheet: View {
                         .padding(.top, AppSpacing.lg)
                     }
                     .padding(AppSpacing.md)
+                }
+                if isSubmitting {
+                    LoadingOverlay(message: LocalizationKey.commonSubmitting.localized)
                 }
             }
             .navigationTitle(LocalizationKey.taskApplicationApplyTask.localized)
@@ -3652,6 +3691,9 @@ struct ReviewModal: View {
                     }
                     .padding(AppSpacing.md)
                 }
+                if isSubmitting {
+                    LoadingOverlay(message: LocalizationKey.commonSubmitting.localized)
+                }
             }
             .navigationTitle(LocalizationKey.actionsRateTask.localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -4252,20 +4294,16 @@ extension TaskDetailView {
                     task: task,
                     onComplete: { fileIds in
                 // 确认完成，传入文件ID列表
+                showConfirmCompletionLoading = true
                 viewModel.confirmTaskCompletion(taskId: taskId, evidenceFiles: fileIds.isEmpty ? nil : fileIds) { success in
                     DispatchQueue.main.async {
+                        showConfirmCompletionLoading = false
                         if success {
-                            // 触觉反馈：成功
-                            HapticFeedback.success()
-                            
-                            // 显示成功提示
-                            showConfirmCompletionSuccess = true
-                            
-                            // 立即强制刷新任务详情以获取最新状态
                             viewModel.loadTask(taskId: taskId, force: true)
-                            
-                            // 关闭 sheet
                             showConfirmCompletionSheet = false
+                            successOverlayMessage = LocalizationKey.taskDetailConfirmCompletionSuccess.localized
+                            successOverlayKind = "confirmCompletion"
+                            showSuccessOverlay = true
                         }
                     }
                 }
@@ -4296,13 +4334,9 @@ extension TaskDetailView {
                     taskId: taskId,
                     task: task,
                     onSuccess: {
-                // 退款申请提交成功
-                HapticFeedback.success()
-                // 立即强制刷新任务详情和退款状态以获取最新状态
-                viewModel.loadTask(taskId: taskId, force: true)
-                viewModel.loadRefundStatus(taskId: taskId)
-                // 关闭 sheet
-                showRefundRequestSheet = false
+                successOverlayMessage = LocalizationKey.refundRequestSubmitted.localized
+                successOverlayKind = "refundRequest"
+                showSuccessOverlay = true
             }
                 )
             } else {
@@ -4332,13 +4366,9 @@ extension TaskDetailView {
                     refundId: refundRequest.id,
                     task: task,
                     onSuccess: {
-                        // 反驳提交成功
-                        HapticFeedback.success()
-                        // 立即强制刷新任务详情和退款状态以获取最新状态
-                        viewModel.loadTask(taskId: taskId, force: true)
-                        viewModel.loadRefundStatus(taskId: taskId)
-                        // 关闭 sheet
-                        showRefundRebuttalSheet = false
+                        successOverlayMessage = LocalizationKey.refundRebuttalSubmitted.localized
+                        successOverlayKind = "refundRebuttal"
+                        showSuccessOverlay = true
                     }
                 )
             } else {

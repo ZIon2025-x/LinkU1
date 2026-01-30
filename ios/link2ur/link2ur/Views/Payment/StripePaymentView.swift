@@ -15,7 +15,8 @@ struct StripePaymentView: View {
     @StateObject private var viewModel: PaymentViewModel
     @Environment(\.dismiss) var dismiss
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
-    
+    @State private var showSuccessOverlay = false
+
     init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, taskTitle: String? = nil, applicantName: String? = nil, paymentExpiresAt: String? = nil, onPaymentSuccess: (() -> Void)? = nil) {
         Logger.debug("StripePaymentView init - taskId: \(taskId), clientSecret: \(clientSecret?.prefix(20) ?? "nil")...", category: .api)
         self.taskId = taskId
@@ -50,10 +51,9 @@ struct StripePaymentView: View {
                     }
                     
                     if viewModel.isLoading {
-                        VStack(spacing: 16) {
-                            LoadingView(message: LocalizationKey.paymentLoadingForm.localized)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 400)
+                        ListSkeleton(itemCount: 5, itemHeight: 56)
+                            .padding(.vertical, AppSpacing.md)
+                            .frame(maxWidth: .infinity, minHeight: 400)
                     } else if viewModel.paymentSuccess {
                         paymentSuccessView
                     } else if let error = viewModel.errorMessage {
@@ -64,10 +64,9 @@ struct StripePaymentView: View {
                         // 批准申请支付：外部已提供 PaymentIntent client_secret，此时 paymentResponse 可能为空
                         approvalPaymentFallbackView
                     } else {
-                        VStack(spacing: 16) {
-                            LoadingView(message: LocalizationKey.paymentPreparing.localized)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 400)
+                        ListSkeleton(itemCount: 5, itemHeight: 56)
+                            .padding(.vertical, AppSpacing.md)
+                            .frame(maxWidth: .infinity, minHeight: 400)
                     }
                 }
                 .padding()
@@ -81,6 +80,20 @@ struct StripePaymentView: View {
                     }
                     .foregroundColor(AppColors.primary)
                 }
+            }
+            .overlay {
+                if showSuccessOverlay {
+                    OperationResultOverlay(
+                        isPresented: $showSuccessOverlay,
+                        type: .success,
+                        message: LocalizationKey.paymentSuccess.localized,
+                        autoDismissSeconds: 1.5,
+                        onDismiss: {}
+                    )
+                }
+            }
+            .onChange(of: viewModel.paymentSuccess) { newValue in
+                if newValue { showSuccessOverlay = true }
             }
             .onAppear {
                 // ⚠️ 检查支付是否已过期
@@ -507,8 +520,14 @@ struct StripePaymentView: View {
             } else if viewModel.paymentSheet != nil {
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        Image(systemName: "lock.shield.fill").font(.system(size: 18))
-                        Text(LocalizationKey.paymentConfirmPayment.localized)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(width: 18, height: 18)
+                        } else {
+                            Image(systemName: "lock.shield.fill").font(.system(size: 18))
+                        }
+                        Text(viewModel.isLoading ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentConfirmPayment.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
                     }
@@ -526,6 +545,8 @@ struct StripePaymentView: View {
                     .shadow(color: AppColors.primary.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isLoading)
+                .opacity(viewModel.isLoading ? 0.8 : 1)
             } else {
                 paymentFormLoadingView {
                     viewModel.ensurePaymentSheetReady()
@@ -538,9 +559,15 @@ struct StripePaymentView: View {
                     viewModel.performPayment()
                 }) {
                     HStack(spacing: 12) {
-                        Image(systemName: "applelogo")
-                            .font(.system(size: 18))
-                        Text(LocalizationKey.paymentPayWithApplePay.localized)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(width: 18, height: 18)
+                        } else {
+                            Image(systemName: "applelogo")
+                                .font(.system(size: 18))
+                        }
+                        Text(viewModel.isLoading ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentPayWithApplePay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
                     }
@@ -552,6 +579,8 @@ struct StripePaymentView: View {
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isLoading)
+                .opacity(viewModel.isLoading ? 0.8 : 1)
             } else {
                 // 加载状态
                 VStack(spacing: 16) {
@@ -591,13 +620,19 @@ struct StripePaymentView: View {
                 // 有 client_secret，可以支付
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        SwiftUI.Image("WeChatPayLogo")
-                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 18, height: 18)
-                            .foregroundColor(SwiftUI.Color.white)
-                        Text(LocalizationKey.paymentPayWithWeChatPay.localized)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(width: 18, height: 18)
+                        } else {
+                            SwiftUI.Image("WeChatPayLogo")
+                                .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                                .foregroundColor(SwiftUI.Color.white)
+                        }
+                        Text(viewModel.isLoading ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentPayWithWeChatPay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
                     }
@@ -615,6 +650,8 @@ struct StripePaymentView: View {
                     .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isLoading)
+                .opacity(viewModel.isLoading ? 0.8 : 1)
             } else {
                 // 加载 PaymentIntent 中
                 paymentFormLoadingView { viewModel.createPaymentIntent(isMethodSwitch: true) }
@@ -646,12 +683,18 @@ struct StripePaymentView: View {
                 // 有 client_secret，可以支付
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        SwiftUI.Image("AlipayLogo")
-                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 18, height: 18)
-                        Text(LocalizationKey.paymentPayWithAlipay.localized)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(width: 18, height: 18)
+                        } else {
+                            SwiftUI.Image("AlipayLogo")
+                                .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                        }
+                        Text(viewModel.isLoading ? LocalizationKey.paymentPreparingPayment.localized : LocalizationKey.paymentPayWithAlipay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
                     }
@@ -669,6 +712,8 @@ struct StripePaymentView: View {
                     .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isLoading)
+                .opacity(viewModel.isLoading ? 0.8 : 1)
             } else {
                 // 加载 PaymentIntent 中
                 paymentFormLoadingView { viewModel.createPaymentIntent(isMethodSwitch: true) }
