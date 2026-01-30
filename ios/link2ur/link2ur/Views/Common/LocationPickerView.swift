@@ -749,21 +749,9 @@ struct LocationPickerView: View {
         // 标记正在初始化，防止 handleRegionChange 触发地址更新
         isInitializing = true
         
-        #if DEBUG
-        print("📍 LocationPicker initializeLocation:")
-        print("   - selectedLatitude: \(String(describing: selectedLatitude))")
-        print("   - selectedLongitude: \(String(describing: selectedLongitude))")
-        print("   - selectedLocation: \(selectedLocation)")
-        #endif
-        
         // 优先使用已保存的坐标
         if let lat = selectedLatitude, let lon = selectedLongitude {
             let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            
-            #if DEBUG
-            print("📍 Setting region to: \(lat), \(lon)")
-            #endif
-            
             // 使用更精确的 span（减少偏移）
             let newRegion = MKCoordinateRegion(
                 center: coordinate,
@@ -1140,7 +1128,6 @@ class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchComplete
         DispatchQueue.main.async { [weak self] in
             self?.isSearching = false
         }
-        print("Search completer error: \(error.localizedDescription)")
     }
     
     /// 判断搜索结果是否为 UK 地址

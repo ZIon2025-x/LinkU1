@@ -4,7 +4,9 @@
 
 项目已通过 Stripe API 支持支付宝和微信支付。两者均为单次使用、需用户验证的支付方式：用户会跳转到对应支付平台完成授权后返回应用/网页。
 
-**重要更新（2026-01）**：iOS 端已改用 `STPPaymentHandler.confirmPayment()` 直接跳转方式，不再通过 PaymentSheet 中转，用户体验更流畅。
+**重要更新（2026-01）**：
+- **支付宝**：iOS 端支付宝改为通过 **PaymentSheet** 发起（与微信一致）。后端创建仅含 `alipay` 的 PaymentIntent，由 Sheet 展示支付宝入口并统一处理跳转与回调，避免使用 `STPPaymentHandler.confirmPaymentIntent` 直接跳转时的闪退。
+- **微信**：继续使用 PaymentSheet（后端创建仅含 `wechat_pay` 的 PI）。
 
 ## 已实现内容
 
@@ -21,8 +23,9 @@
 ### iOS
 - `PaymentMethodType` 枚举已增加 `alipayPay` 和 `wechatPay`。
 - 支付方式选择卡片中已显示「支付宝」和「微信支付」选项。
-- **直接跳转支付**：支付宝/微信使用 `STPPaymentHandler.confirmPayment()` 直接跳转，不再弹出 PaymentSheet 选择窗口。
-- 银行卡支付仍使用 PaymentSheet（需要收集卡号信息）。
+- **支付宝**：使用 PaymentSheet（后端创建仅含 `alipay` 的 PI，Sheet 只显示支付宝并由 SDK 处理跳转与回调）。
+- **微信**：使用 PaymentSheet（后端创建仅含 `wechat_pay` 的 PI）。
+- 银行卡支付使用 PaymentSheet（需要收集卡号信息）。
 - 本地化：简体/繁体/英文已添加「使用支付宝支付」和「使用微信支付」文案。
 - URL 处理：`link2ur://stripe-redirect` 与 `link2ur://safepay` 均会作为 Stripe 支付回调处理；收到后**必须**调用 `StripeAPI.handleURLCallback(with: url)` 将 URL 转给 Stripe SDK（`onOpenURL` 与 `application(_:open:options:)` 均已实现），否则跳转支付宝/微信返回后无法完成流程。
 
@@ -98,8 +101,8 @@ curl https://api.stripe.com/v1/payment_method_configurations \
 3. 确认 `return_url` 带回的 `payment_intent` / `payment_intent_client_secret` 能正确展示结果
 
 ### iOS 端
-1. 选择「支付宝」→ 点击支付按钮 → 直接跳转到支付宝 App/网页完成支付 → 返回 App
-2. 选择「微信支付」→ 点击支付按钮 → 直接跳转到微信 App 完成支付 → 返回 App
+1. 选择「支付宝」→ 点击支付按钮 → 弹出 PaymentSheet（仅显示支付宝）→ 在 Sheet 内跳转到支付宝 App/网页完成支付 → 返回 App
+2. 选择「微信支付」→ 点击支付按钮 → 弹出 PaymentSheet（仅显示微信）→ 在 Sheet 内跳转到微信 App 完成支付 → 返回 App
 3. 返回后应通过 `link2ur://stripe-redirect` 回调，App 自动处理支付结果
 
 ### 常见问题
@@ -115,6 +118,9 @@ A: Stripe 测试模式下可以创建包含 `wechat_pay` 的 PaymentIntent，但
 
 **Q: 为什么微信支付用 PaymentSheet 而不是直接跳转？**
 A: Stripe iOS SDK 的 StripePayments 模块未暴露 `STPPaymentMethodWeChatPayParams` 等微信直接确认 API，因此 App 内对微信支付采用「仅含 wechat_pay 的 PaymentIntent + PaymentSheet」方式，由 Sheet 展示微信支付入口并完成跳转。
+
+**Q: 为什么支付宝也改用 PaymentSheet？**
+A: 原先使用 `STPPaymentHandler.confirmPaymentIntent` 直接跳转支付宝时，在部分设备上会出现点击支付后闪退。改为与微信一致的 PaymentSheet 流程后，由 SDK 统一处理跳转与回调，可避免该问题。
 
 **Q: 点击支付后没有跳转到支付宝/微信？**
 A: 

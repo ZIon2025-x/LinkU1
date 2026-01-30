@@ -40,13 +40,7 @@ public class SpotlightIndexer {
             )
         )
         
-        CSSearchableIndex.default().indexSearchableItems([searchableItem]) { error in
-            if let error = error {
-                print("❌ Spotlight 索引任务失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已索引任务: \(title)")
-            }
-        }
+        CSSearchableIndex.default().indexSearchableItems([searchableItem]) { _ in }
     }
     
     /// 批量索引任务
@@ -66,24 +60,12 @@ public class SpotlightIndexer {
             )
         }
         
-        CSSearchableIndex.default().indexSearchableItems(searchableItems) { error in
-            if let error = error {
-                print("❌ Spotlight 批量索引任务失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已索引 \(tasks.count) 个任务")
-            }
-        }
+        CSSearchableIndex.default().indexSearchableItems(searchableItems) { _ in }
     }
     
     /// 删除任务索引
     public func deleteTaskIndex(taskId: Int) {
-        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["task_\(taskId)"]) { error in
-            if let error = error {
-                print("❌ Spotlight 删除任务索引失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已删除任务索引: \(taskId)")
-            }
-        }
+        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["task_\(taskId)"]) { _ in }
     }
     
     // MARK: - 用户索引
@@ -111,24 +93,12 @@ public class SpotlightIndexer {
             )
         )
         
-        CSSearchableIndex.default().indexSearchableItems([searchableItem]) { error in
-            if let error = error {
-                print("❌ Spotlight 索引任务达人失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已索引任务达人: \(name)")
-            }
-        }
+        CSSearchableIndex.default().indexSearchableItems([searchableItem]) { _ in }
     }
     
     /// 删除用户索引
     public func deleteExpertIndex(userId: Int) {
-        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["expert_\(userId)"]) { error in
-            if let error = error {
-                print("❌ Spotlight 删除任务达人索引失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已删除任务达人索引: \(userId)")
-            }
-        }
+        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ["expert_\(userId)"]) { _ in }
     }
     
     // MARK: - 快速操作索引
@@ -156,13 +126,7 @@ public class SpotlightIndexer {
             )
         }
         
-        CSSearchableIndex.default().indexSearchableItems(searchableItems) { error in
-            if let error = error {
-                print("❌ Spotlight 索引快速操作失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已索引快速操作")
-            }
-        }
+        CSSearchableIndex.default().indexSearchableItems(searchableItems) { _ in }
     }
     
     // MARK: - 辅助方法
@@ -272,23 +236,11 @@ public class SpotlightIndexer {
     
     /// 清除所有索引
     public func deleteAllIndexes() {
-        CSSearchableIndex.default().deleteAllSearchableItems { error in
-            if let error = error {
-                print("❌ Spotlight 清除所有索引失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已清除所有索引")
-            }
-        }
+        CSSearchableIndex.default().deleteAllSearchableItems { _ in }
     }
     
     /// 清除指定域的所有索引
     public func deleteIndexes(forDomain domain: String) {
-        CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [domain]) { error in
-            if let error = error {
-                print("❌ Spotlight 清除域索引失败: \(error.localizedDescription)")
-            } else {
-                print("✅ Spotlight 已清除域索引: \(domain)")
-            }
-        }
+        CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [domain]) { _ in }
     }
 }

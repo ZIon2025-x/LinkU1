@@ -27,10 +27,7 @@ class LocalNotificationManager {
     ) {
         // 检查通知权限
         UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized else {
-                print("⚠️ 推送通知权限未授予，无法发送本地推送")
-                return
-            }
+            guard settings.authorizationStatus == .authorized else { return }
             
             // 创建通知内容
             let content = UNMutableNotificationContent()
@@ -64,13 +61,7 @@ class LocalNotificationManager {
             let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
             
             // 发送通知
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("❌ 发送本地推送通知失败: \(error.localizedDescription)")
-                } else {
-                    print("✅ 已发送本地推送通知: \(title) - \(body)")
-                }
-            }
+            UNUserNotificationCenter.current().add(request) { _ in }
         }
     }
     

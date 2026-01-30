@@ -184,14 +184,12 @@ struct InAppWebViewWrapper: UIViewRepresentable {
                 self.canGoBack = webView.canGoBack
                 self.canGoForward = webView.canGoForward
             }
-            print("❌ WebView 加载失败: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             DispatchQueue.main.async { [weak self] in
                 self?.isLoading = false
             }
-            print("❌ WebView 初始加载失败: \(error.localizedDescription)")
         }
         
         // 允许导航到外部链接

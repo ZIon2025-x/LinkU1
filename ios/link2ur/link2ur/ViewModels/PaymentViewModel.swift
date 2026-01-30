@@ -883,7 +883,42 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         }
     }
     
-    /// 弹出 PaymentSheet（银行卡或微信支付共用）
+    /// 使用支付宝（通过 PaymentSheet，与微信一致）
+    /// 后端已创建仅含 alipay 的 PI，Sheet 只显示支付宝入口并由 SDK 统一处理跳转与回调，避免 STPPaymentHandler 直接 confirm 导致的闪退
+    func confirmAlipayPaymentViaPaymentSheet() {
+        Logger.debug("开始支付宝支付流程（PaymentSheet）", category: .api)
+        
+        guard let clientSecret = activeClientSecret else {
+            errorMessage = "支付信息未准备好，请稍后再试"
+            Logger.warning("缺少 client_secret，无法使用支付宝支付", category: .api)
+            createPaymentIntent()
+            return
+        }
+        
+        guard clientSecret.contains("_secret_") else {
+            errorMessage = "支付信息无效，请刷新页面重试"
+            Logger.error("支付宝 clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
+            return
+        }
+        
+        guard activeFinalAmountPence > 0 else {
+            Logger.info("最终支付金额为 0，无需支付", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        Logger.debug("支付宝 PaymentSheet 参数 - clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
+        
+        if let paymentSheet = paymentSheet {
+            presentPaymentSheet(from: paymentSheet)
+        } else {
+            errorMessage = "支付表单未准备好，请稍后重试"
+            Logger.warning("支付宝 PaymentSheet 为 nil，尝试重新创建", category: .api)
+            ensurePaymentSheetReady()
+        }
+    }
+    
+    /// 弹出 PaymentSheet（银行卡 / 微信 / 支付宝共用）
     private func presentPaymentSheet(from sheet: PaymentSheet) {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let rootViewController = windowScene.windows.first?.rootViewController else {
@@ -991,10 +1026,125 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             Logger.debug("使用微信支付（PaymentSheet）", category: .api)
             confirmWeChatPayment()
         case .alipayPay:
-            // 使用 API 直接跳转支付宝（不经过 PaymentSheet）
-            Logger.debug("使用支付宝直接跳转", category: .api)
-            confirmAlipayPayment()
+            // 支付宝：改用 PaymentSheet 统一处理（与微信一致），避免 STPPaymentHandler 直接跳转导致的闪退
+            Logger.debug("使用支付宝（PaymentSheet）", category: .api)
+            confirmAlipayPaymentViaPaymentSheet()
         }
+    }
+    
+    // MARK: - 支付状态检查
+    
+    /// 检查任务支付状态（用于检测支付是否已在后台完成，例如闪退后重新打开）
+    /// - Parameter completion: 完成回调，参数为是否已支付成功
+    func checkPaymentStatus(completion: ((Bool) -> Void)? = nil) {
+        Logger.debug("检查任务支付状态: taskId=\(taskId)", category: .api)
+        
+        apiService.request(
+            TaskPaymentStatusResponse.self,
+            APIEndpoints.Payment.getTaskPaymentStatus(taskId),
+            method: "GET"
+        )
+        .sink(
+            receiveCompletion: { result in
+                if case .failure(let error) = result {
+                    Logger.warning("检查支付状态失败: \(error.localizedDescription)", category: .api)
+                    completion?(false)
+                }
+            },
+            receiveValue: { [weak self] response in
+                Logger.debug("支付状态响应: is_paid=\(response.isPaid), status=\(response.status)", category: .api)
+                
+                // 检查 Stripe PaymentIntent 状态
+                if let paymentDetails = response.paymentDetails {
+                    Logger.debug("PaymentIntent 状态: \(paymentDetails.status)", category: .api)
+                    
+                    // 如果 PaymentIntent 状态是 succeeded，说明支付已完成
+                    if paymentDetails.status == "succeeded" {
+                        Logger.info("✅ 检测到支付已完成（PaymentIntent succeeded），更新状态", category: .api)
+                        self?.paymentSuccess = true
+                        self?.errorMessage = nil
+                        CacheManager.shared.invalidatePaymentCache()
+                        completion?(true)
+                        return
+                    }
+                }
+                
+                // 检查任务是否已支付
+                if response.isPaid {
+                    Logger.info("✅ 检测到任务已支付（is_paid=true），更新状态", category: .api)
+                    self?.paymentSuccess = true
+                    self?.errorMessage = nil
+                    CacheManager.shared.invalidatePaymentCache()
+                    completion?(true)
+                    return
+                }
+                
+                completion?(false)
+            }
+        )
+        .store(in: &cancellables)
+    }
+}
+
+// MARK: - Task Payment Status Response Model
+/// 任务支付状态响应（只读查询）
+struct TaskPaymentStatusResponse: Codable {
+    let taskId: Int
+    let isPaid: Bool
+    let paymentIntentId: String?
+    let taskAmount: Double
+    let escrowAmount: Double?
+    let status: String
+    let currency: String
+    let paymentExpiresAt: String?
+    let paymentDetails: PaymentIntentDetails?
+    
+    enum CodingKeys: String, CodingKey {
+        case taskId = "task_id"
+        case isPaid = "is_paid"
+        case paymentIntentId = "payment_intent_id"
+        case taskAmount = "task_amount"
+        case escrowAmount = "escrow_amount"
+        case status
+        case currency
+        case paymentExpiresAt = "payment_expires_at"
+        case paymentDetails = "payment_details"
+    }
+}
+
+/// PaymentIntent 详情
+struct PaymentIntentDetails: Codable {
+    let paymentIntentId: String
+    let status: String  // succeeded, processing, requires_payment_method, etc.
+    let amount: Int
+    let amountDisplay: String
+    let currency: String
+    let created: Int
+    let charges: [ChargeInfo]?
+    
+    enum CodingKeys: String, CodingKey {
+        case paymentIntentId = "payment_intent_id"
+        case status
+        case amount
+        case amountDisplay = "amount_display"
+        case currency
+        case created
+        case charges
+    }
+}
+
+/// Charge 信息
+struct ChargeInfo: Codable {
+    let chargeId: String
+    let status: String
+    let amount: Int
+    let receiptUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case chargeId = "charge_id"
+        case status
+        case amount
+        case receiptUrl = "receipt_url"
     }
 }
 

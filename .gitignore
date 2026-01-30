@@ -53,6 +53,9 @@ DerivedData/
 *.xcuserstate
 project.xcworkspace/xcuserdata/
 
+# Stripe sample code (may contain secrets - do not commit)
+stripe-sample-code (1)/
+
 # Environment variables
 .env
 .env.local

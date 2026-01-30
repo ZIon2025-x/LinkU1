@@ -933,12 +933,9 @@ public class APIService {
         request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "POST", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure = result {
-                    // 如果API不存在，静默失败（不影响应用使用）
-                    print("Device token registration failed (API may not exist)")
                     completion(false)
                 }
             }, receiveValue: { _ in
-                print("Device token registered successfully")
                 completion(true)
             })
             .store(in: &cancellables)
@@ -953,14 +950,11 @@ public class APIService {
         request(EmptyResponse.self, APIEndpoints.Users.deviceToken, method: "DELETE", body: body)
             .sink(receiveCompletion: { result in
                 if case .failure = result {
-                    // 如果API不存在或token不存在，静默失败（不影响应用使用）
-                    print("Device token unregistration failed (API may not exist or token not found)")
                     completion(false)
                 } else {
                     completion(true)
                 }
             }, receiveValue: { _ in
-                print("Device token unregistered successfully")
                 completion(true)
             })
             .store(in: &cancellables)

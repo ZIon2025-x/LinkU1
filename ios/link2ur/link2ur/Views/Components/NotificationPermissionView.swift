@@ -169,12 +169,8 @@ struct NotificationPermissionView_Previews: PreviewProvider {
     static var previews: some View {
         NotificationPermissionView(
             isPresented: .constant(true),
-            onAllow: {
-                print("允许")
-            },
-            onNotNow: {
-                print("稍后")
-            }
+            onAllow: { },
+            onNotNow: { }
         )
     }
 }

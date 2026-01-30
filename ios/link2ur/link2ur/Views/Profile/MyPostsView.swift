@@ -41,9 +41,7 @@ struct MyPostsView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .onChange(of: viewModel.selectedCategory) { newCategory in
-                    print("🔍 [MyPostsView] selectedCategory 变化: \(newCategory), 时间: \(Date())")
-                }
+                .onChange(of: viewModel.selectedCategory) { _ in }
             }
         }
         .navigationTitle(LocalizationKey.myPostsTitle.localized)
@@ -75,68 +73,33 @@ struct MyPostsView: View {
             }
         }
         .onAppear {
-            print("🔍 [MyPostsView] 视图出现, isViewVisible: \(isViewVisible)")
-            // 标记视图为可见（在导航栈顶部）
             isViewVisible = true
-            
-            // 先尝试从缓存加载（立即显示）
             if let userId = appState.currentUser?.id {
                 viewModel.loadAllCategoriesFromCache(userId: String(userId))
             }
-            
-            // 检查是否需要加载数据
-            let hasData = !viewModel.sellingItems.isEmpty || 
-                         !viewModel.purchasedItems.isEmpty || 
-                         !viewModel.favoriteItems.isEmpty || 
+            let hasData = !viewModel.sellingItems.isEmpty ||
+                         !viewModel.purchasedItems.isEmpty ||
+                         !viewModel.favoriteItems.isEmpty ||
                          !viewModel.soldItems.isEmpty
-            
-            // 如果已经有数据，标记为已加载
             if hasData {
                 hasLoadedOnce = true
-                print("🔍 [MyPostsView] 已有数据，跳过加载")
                 return
             }
-            
-            // 如果已经加载过，不再加载
-            if hasLoadedOnce {
-                print("🔍 [MyPostsView] 已加载过，跳过加载")
-                return
-            }
-            
-            // 只有在视图可见且数据为空时才加载
-            guard let userId = appState.currentUser?.id else { 
-                print("🔍 [MyPostsView] 用户ID为空，跳过加载")
-                return 
-            }
-            
-            print("🔍 [MyPostsView] 准备加载数据，延迟0.2秒")
-            // 延迟加载，避免与导航动画冲突
+            if hasLoadedOnce { return }
+            guard let userId = appState.currentUser?.id else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                // 再次检查视图是否仍然可见（可能在延迟期间导航到了详情页）
-                guard self.isViewVisible else { 
-                    print("🔍 [MyPostsView] 延迟后视图不可见，取消加载")
-                    return 
-                }
-                
-                // 再次检查数据是否仍然为空
-                let stillHasNoData = self.viewModel.sellingItems.isEmpty && 
-                                   self.viewModel.purchasedItems.isEmpty && 
-                                   self.viewModel.favoriteItems.isEmpty && 
+                guard self.isViewVisible else { return }
+                let stillHasNoData = self.viewModel.sellingItems.isEmpty &&
+                                   self.viewModel.purchasedItems.isEmpty &&
+                                   self.viewModel.favoriteItems.isEmpty &&
                                    self.viewModel.soldItems.isEmpty
-                
-                // 再次检查是否已加载过
                 if stillHasNoData && !self.hasLoadedOnce {
-                    print("🔍 [MyPostsView] 开始加载数据")
                     self.hasLoadedOnce = true
                     self.viewModel.loadAllCategories(userId: String(userId), forceRefresh: false)
-                } else {
-                    print("🔍 [MyPostsView] 延迟后数据已存在或已加载，跳过")
                 }
             }
         }
         .onDisappear {
-            // 标记视图为不可见（不在导航栈顶部）
-            print("🔍 [MyPostsView] 视图消失, isViewVisible: \(isViewVisible), 时间: \(Date())")
             isViewVisible = false
         }
     }

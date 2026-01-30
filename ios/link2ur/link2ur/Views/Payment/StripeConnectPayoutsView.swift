@@ -691,15 +691,12 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                         }
                     }
                     self?.error = errorMessage
-                    print("❌ 获取余额失败: \(errorMessage)")
                 }
             },
             receiveValue: { [weak self] balance in
                 guard let self = self else { return }
                 self.isLoadingBalance = false
                 self.balance = balance
-                print("✅ 成功加载余额: 可用 \(balance.available) \(balance.currency)")
-                
                 // 异步保存到缓存，避免阻塞主线程
                 // 使用非隔离的缓存管理器方法，避免 main actor 隔离问题
                 let balanceToSave = balance
@@ -765,15 +762,12 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                         }
                     }
                     self?.error = errorMessage
-                    print("❌ 获取提现记录失败: \(errorMessage)")
                 }
             },
             receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 self.isLoadingTransactions = false
                 self.transactions = response.transactions
-                print("✅ 成功加载 \(response.transactions.count) 条交易记录")
-                
                 // 异步保存到缓存，避免阻塞主线程
                 DispatchQueue.global(qos: .utility).async {
                     self.cacheManager.save(response.transactions, forKey: self.transactionsCacheKey)
@@ -843,14 +837,12 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                         errorMessage = "创建提现失败 (HTTP \(code))"
                     }
                     self?.error = errorMessage
-                    print("❌ 创建提现失败: \(errorMessage)")
                     completion(false)
                 }
             },
             receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 self.isCreatingPayout = false
-                print("✅ 成功创建提现: \(response.id)")
                 // 清除提现缓存，因为有了新的提现记录
                 self.cacheManager.invalidatePaymentCache()
                 completion(true)
@@ -892,7 +884,6 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                         errorMessage = "获取账户详情失败 (HTTP \(code))"
                     }
                     self?.error = errorMessage
-                    print("❌ 获取账户详情失败: \(errorMessage)")
                 }
             },
             receiveValue: { [weak self] response in
@@ -934,20 +925,16 @@ class StripeConnectPayoutsViewModel: ObservableObject {
                     // 如果是 404 错误，可能是账户没有外部账户，设置为空列表而不是显示错误
                     if case .httpError(let code) = apiError {
                         if code == 404 {
-                            print("ℹ️ 账户没有外部账户，返回空列表")
                             self?.externalAccounts = []
                             return
                         }
                     }
-                    // 其他错误只记录，不阻止显示账户详情
-                    print("⚠️ 获取外部账户失败: \(apiError.localizedDescription)，继续显示账户详情")
                     self?.externalAccounts = []
                 }
             },
             receiveValue: { [weak self] response in
                 self?.isLoadingAccountDetails = false
                 self?.externalAccounts = response.external_accounts
-                print("✅ 成功加载 \(response.external_accounts.count) 个外部账户")
             }
         )
         .store(in: &cancellables)

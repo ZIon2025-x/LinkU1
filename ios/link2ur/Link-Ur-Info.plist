@@ -2,41 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- URL Schemes - 用于 Stripe 支付回调（WeChat Pay 等）和深度链接 -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.link2ur.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>link2ur</string>
-			</array>
-		</dict>
-	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<!-- 微信 -->
-		<string>weixin</string>
-		<string>weixinULAPI</string>
-		<!-- QQ -->
-		<string>mqq</string>
-		<string>mqqapi</string>
-		<string>mqqopensdkapiV2</string>
-		<string>mqqopensdkapiV3</string>
-		<string>mqqopensdkapiV4</string>
-		<string>mqqopensdknopasteboard</string>
-		<string>mqqopensdknopasteboardios16</string>
-		<string>mqzone</string>
-		<string>mqqopensdklaunchminiapp</string>
-		<string>tim</string>
-		<!-- 其他平台 -->
-		<string>instagram</string>
-		<string>fb</string>
-		<string>twitter</string>
-		<string>weibosdk</string>
-	</array>
-	<!-- Spotlight 搜索关键词 - 让用户可以通过这些关键词搜索到应用 -->
 	<key>CFBundleKeywords</key>
 	<array>
 		<string>link2ur</string>
@@ -50,11 +15,45 @@
 		<string>flea market</string>
 		<string>forum</string>
 	</array>
-	<!-- 加密合规声明：应用仅使用标准加密算法（HTTPS/TLS、CryptoKit、Keychain），无需出口合规文档 -->
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<!-- Stripe Connect 嵌入式组件（收款账号设置）需要相机拍摄身份证件，缺少此 key 会导致 assertion 闪退 -->
-	<key>NSCameraUsageDescription</key>
-	<string>This app will use the camera to take photos of your ID documents for setting up your payment account.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.link2ur.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>link2ur</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.link2ur</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>link2ur</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>weixin</string>
+		<string>weixinULAPI</string>
+		<string>mqq</string>
+		<string>mqqapi</string>
+		<string>mqqopensdkapiV2</string>
+		<string>mqqopensdkapiV3</string>
+		<string>mqqopensdkapiV4</string>
+		<string>mqqopensdknopasteboard</string>
+		<string>mqqopensdknopasteboardios16</string>
+		<string>mqzone</string>
+		<string>mqqopensdklaunchminiapp</string>
+		<string>tim</string>
+		<string>instagram</string>
+		<string>fb</string>
+		<string>twitter</string>
+		<string>weibosdk</string>
+	</array>
 </dict>
 </plist>

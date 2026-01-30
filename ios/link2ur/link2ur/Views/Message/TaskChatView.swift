@@ -546,33 +546,7 @@ struct TaskChatView: View {
                             markAsReadWorkItem = workItem
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
                         }
-                        
-                        // 如果应用在后台且消息不是来自当前用户，发送本地推送通知
-                        if let senderId = message.senderId, senderId != currentUserId {
-                            if LocalNotificationManager.shared.isAppInBackground() || !viewModel.isViewVisible {
-                                // 获取发送者名称
-                                let senderName = message.senderName ?? "有人"
-                                // 获取消息内容（如果是图片消息，显示提示）
-                                let messageContent = message.content ?? "[图片]"
-                                let displayContent = messageContent == "[图片]" ? "发送了一张图片" : messageContent
-                                
-                                // 获取消息ID（可能是字符串或整数）
-                                let messageIdString: String
-                                if let messageId = message.messageId {
-                                    messageIdString = String(messageId)
-                                } else {
-                                    messageIdString = message.id
-                                }
-                                
-                                LocalNotificationManager.shared.sendMessageNotification(
-                                    title: senderName,
-                                    body: displayContent,
-                                    messageId: messageIdString,
-                                    senderId: senderId,
-                                    taskId: currentTaskId
-                                )
-                            }
-                        }
+                        // 不再在此处发本地推送：服务端已对任务聊天发 APNs，同一条消息会重复（APNs + 本地）
                     }
                 }
             }

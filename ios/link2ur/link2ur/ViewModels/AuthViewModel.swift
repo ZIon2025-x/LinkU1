@@ -276,8 +276,6 @@ class AuthViewModel: ObservableObject {
             return
         }
         
-        print("📱 发送验证码: phone=\(fullPhone), captchaToken=\(captchaToken != nil ? "已设置" : "未设置"), captchaEnabled=\(captchaEnabled)")
-        
         let startTime = Date()
         let endpoint = "/api/secure-auth/send-phone-code"
         
@@ -344,8 +342,6 @@ class AuthViewModel: ObservableObject {
             completion(false, "请先完成人机验证")
             return
         }
-        
-        print("📧 发送邮箱验证码: email=\(email), captchaToken=\(captchaToken != nil ? "已设置" : "未设置"), captchaEnabled=\(captchaEnabled)")
         
         let startTime = Date()
         let endpoint = "/api/secure-auth/send-verification-code"

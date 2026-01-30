@@ -145,8 +145,6 @@ public struct ContentView: View {
             return
         }
         
-        print("🔔 [ContentView] 处理推送通知点击，类型: \(notificationType), userInfo: \(userInfo)")
-        
         // 根据通知类型进行跳转
         switch notificationType {
         case "message":
@@ -156,7 +154,6 @@ public struct ContentView: View {
                 case "task_message":
                     // 任务聊天消息
                     if let taskId = extractTaskId(from: userInfo) {
-                        print("🔔 [ContentView] 跳转到任务聊天: \(taskId)")
                         // 在 UserDefaults 中标记需要刷新该任务的消息
                         UserDefaults.standard.set(true, forKey: "refresh_task_chat_\(taskId)")
                         // 发送通知，标记需要刷新任务聊天消息
@@ -170,78 +167,64 @@ public struct ContentView: View {
                 case "private_message":
                     // 私信消息
                     if let partnerId = userInfo["partner_id"] as? String {
-                        print("🔔 [ContentView] 跳转到私信聊天: \(partnerId)")
                         navigateToChat(partnerId: partnerId)
                     }
                 default:
-                    print("🔔 [ContentView] 未知消息类型: \(notificationTypeString)")
+                    break
                 }
             }
         case "task_application", "task_completed", "task_confirmed", "application_accepted":
             // 跳转到任务详情
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳转到任务详情: \(taskId)")
                 navigateToTask(id: taskId)
             }
         case "forum_reply":
             // 跳转到论坛帖子
             if let postIdString = userInfo["post_id"] as? String,
                let postId = Int(postIdString) {
-                print("🔔 [ContentView] 跳转到论坛帖子: \(postId)")
                 navigateToPost(id: postId)
             }
         case "application_message_reply":
             // 跳转到任务聊天
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳转到任务聊天: \(taskId)")
                 navigateToTask(id: taskId)
             }
         case "flea_market_purchase_request":
             // 买家发送议价请求 → 通知卖家，跳转到商品详情页
             if let itemId = extractItemId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场议价请求通知，跳转到商品详情: \(itemId)")
                 navigateToFleaMarketItem(id: itemId)
             }
         case "flea_market_purchase_accepted":
             // 卖家同意议价 → 通知买家，跳转到任务详情（支付页面）
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场议价已同意，跳转到任务支付: \(taskId)")
                 navigateToTask(id: taskId)
             } else if let itemId = extractItemId(from: userInfo) {
-                // 如果没有taskId，跳转到商品详情页
-                print("🔔 [ContentView] 跳蚤市场议价已同意，跳转到商品详情: \(itemId)")
                 navigateToFleaMarketItem(id: itemId)
             }
         case "flea_market_direct_purchase":
             // 直接购买 → 跳转到任务详情（支付页面）
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场直接购买通知，跳转到任务支付: \(taskId)")
                 navigateToTask(id: taskId)
             }
         case "flea_market_pending_payment":
             // 支付提醒 → 跳转到任务详情或商品详情
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场支付提醒，跳转到任务支付: \(taskId)")
                 navigateToTask(id: taskId)
             } else if let itemId = extractItemId(from: userInfo) {
-                print("🔔 [ContentView] 跳蚤市场支付提醒，跳转到商品详情: \(itemId)")
                 navigateToFleaMarketItem(id: itemId)
             }
         case "service_application_approved", "payment_reminder":
             // 达人服务申请通过、支付提醒 → 跳转到任务详情（支付页）
             if let taskId = extractTaskId(from: userInfo) {
-                print("🔔 [ContentView] 达人服务/支付提醒，跳转到任务详情: \(taskId)")
                 navigateToTask(id: taskId)
             }
         case "activity_reward_points", "activity_reward_cash":
             // 达人活动奖励 → 跳转到活动详情
             if let activityId = extractActivityId(from: userInfo) {
-                print("🔔 [ContentView] 活动奖励通知，跳转到活动详情: \(activityId)")
                 navigateToActivity(id: activityId)
             }
         default:
-            // 其他通知类型，跳转到通知列表
-            print("🔔 [ContentView] 未知通知类型，跳转到通知列表")
+            break
         }
     }
     
@@ -369,22 +352,15 @@ public struct ContentView: View {
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
         
         // 调试日志
-        print("📱 [ContentView] 检查引导教程状态: hasSeenOnboarding = \(hasSeenOnboarding)")
-        
         if !hasSeenOnboarding {
             // 延迟显示引导教程，确保登录状态检查完成
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 // 再次检查，防止在延迟期间状态已改变
                 let currentStatus = UserDefaults.standard.bool(forKey: "has_seen_onboarding")
                 if !currentStatus {
-                    print("📱 [ContentView] 显示引导教程")
                     showOnboarding = true
-                } else {
-                    print("📱 [ContentView] 引导教程已在延迟期间被标记为已看过，跳过显示")
                 }
             }
-        } else {
-            print("📱 [ContentView] 用户已看过引导教程，跳过显示")
         }
     }
     
@@ -423,14 +399,8 @@ public struct ContentView: View {
                             // 标记已经请求过
                             UserDefaults.standard.set(true, forKey: "has_requested_notification_permission")
                             
-                            if let error = error {
-                                print("推送通知权限请求失败: \(error)")
-                            } else if granted {
-                                print("推送通知权限已授予")
-                                // 权限授予后，注册远程推送
+                            if granted {
                                 UIApplication.shared.registerForRemoteNotifications()
-                            } else {
-                                print("推送通知权限被拒绝")
                             }
                         }
                     }

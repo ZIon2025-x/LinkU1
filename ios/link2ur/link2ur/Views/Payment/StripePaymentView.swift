@@ -103,13 +103,24 @@ struct StripePaymentView: View {
                     }
                 }
                 
-                // 如果没有提供 client_secret，才调用 API 创建支付意图
-                if clientSecret == nil {
-                    viewModel.createPaymentIntent()
-                } else {
-                    // 已提供 client_secret：立即初始化 PaymentSheet，减少延迟
-                    // 移除延迟，因为 sheet 已经显示，可以立即初始化
-                    viewModel.ensurePaymentSheetReady()
+                // 🔍 先检查支付状态（防止闪退后重复支付）
+                // 如果支付已在后台完成（例如支付宝跳转后闪退），直接显示成功
+                viewModel.checkPaymentStatus { alreadyPaid in
+                    if alreadyPaid {
+                        // 支付已完成，不需要再创建支付意图
+                        Logger.info("支付状态检查：已完成支付，跳过创建支付意图", category: .api)
+                        return
+                    }
+                    
+                    // 支付未完成，继续正常流程
+                    // 如果没有提供 client_secret，才调用 API 创建支付意图
+                    if self.clientSecret == nil {
+                        self.viewModel.createPaymentIntent()
+                    } else {
+                        // 已提供 client_secret：立即初始化 PaymentSheet，减少延迟
+                        // 移除延迟，因为 sheet 已经显示，可以立即初始化
+                        self.viewModel.ensurePaymentSheetReady()
+                    }
                 }
                 
                 // 延迟加载优惠券，避免阻塞支付页面初始化

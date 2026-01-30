@@ -192,8 +192,6 @@ public class BiometricAuth {
             .biometryAny,
             nil
         ) else {
-            // 如果创建访问控制失败，回退到普通存储
-            print("⚠️ 无法创建生物识别访问控制，使用普通 Keychain 存储")
             return KeychainHelper.shared.save(data, service: service, account: account)
         }
         
@@ -210,8 +208,6 @@ public class BiometricAuth {
         let status = SecItemAdd(query as CFDictionary, nil)
         
         if status != errSecSuccess {
-            print("⚠️ Keychain 保存失败，状态码: \(status)")
-            // 如果保存失败，尝试使用普通方式保存
             return KeychainHelper.shared.save(data, service: service, account: account)
         }
         
@@ -224,10 +220,7 @@ public class BiometricAuth {
     /// 必须在主线程调用此方法
     public func loadCredentials() -> (username: String?, password: String?, phone: String?)? {
         // 确保在主线程执行
-        guard Thread.isMainThread else {
-            print("⚠️ loadCredentials 必须在主线程调用")
-            return nil
-        }
+        guard Thread.isMainThread else { return nil }
         
         let service = Constants.Keychain.service
         let account = "biometric_credentials"
@@ -255,24 +248,10 @@ public class BiometricAuth {
         // errSecAuthFailed (-25293): 生物识别验证失败
         // errSecItemNotFound (-25300): Keychain 中不存在该项
         // errSecInteractionNotAllowed (-25308): 需要用户交互但当前不允许
-        guard status == errSecSuccess else {
-            if status == -128 {  // errSecUserCancel
-                print("⚠️ 用户取消了生物识别验证")
-            } else if status == -25293 {  // errSecAuthFailed
-                print("⚠️ 生物识别验证失败")
-            } else if status == -25300 {  // errSecItemNotFound
-                print("⚠️ Keychain 中未找到凭据")
-            } else if status == -25308 {  // errSecInteractionNotAllowed
-                print("⚠️ 需要用户交互但当前不允许")
-            } else {
-                print("⚠️ Keychain 读取失败，状态码: \(status)")
-            }
-            return nil
-        }
+        guard status == errSecSuccess else { return nil }
         
         guard let data = result as? Data,
               let credentials = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            print("⚠️ 无法解析 Keychain 数据")
             return nil
         }
         

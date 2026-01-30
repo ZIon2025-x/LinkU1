@@ -201,7 +201,6 @@ class TaskExpertViewModel: ObservableObject {
                     .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
                     .sink { [weak self] newLocation in
                         if newLocation != nil {
-                            print("🔄 位置已更新，重新排序达人列表")
                             self?.sortExpertsByDistance()
                         }
                     }
@@ -212,14 +211,7 @@ class TaskExpertViewModel: ObservableObject {
     
     /// 按距离排序达人（基于城市距离）
     private func sortExpertsByDistance() {
-        print("🔍 [TaskExpertViewModel] sortExpertsByDistance() 被调用")
-        print("🔍 [TaskExpertViewModel] rawExperts.count = \(rawExperts.count)")
-        print("🔍 [TaskExpertViewModel] locationService.currentLocation = \(locationService.currentLocation != nil ? "有位置" : "无位置")")
-        print("🔍 [TaskExpertViewModel] locationService.authorizationStatus = \(locationService.authorizationStatus.rawValue)")
-        
         guard !rawExperts.isEmpty else {
-            print("⚠️ 原始达人数据为空，无法排序")
-            // 清空专家列表，确保搜索无结果时显示空状态
             DispatchQueue.main.async { [weak self] in
                 self?.experts = []
             }
@@ -235,31 +227,12 @@ class TaskExpertViewModel: ObservableObject {
                 longitude: userLocation.longitude
             )
             
-            print("📍 开始按城市距离排序达人")
-            print("📍 用户位置: 纬度 \(String(format: "%.4f", userLocation.latitude)), 经度 \(String(format: "%.4f", userLocation.longitude))")
-            if let cityName = userLocation.cityName {
-                print("📍 用户城市: \(cityName)")
-            }
-            
-            // 计算每个达人的距离（基于城市）
             experts = experts.map { expert in
                 var expert = expert
-                let distance = DistanceCalculator.distanceToCity(
+                expert.distance = DistanceCalculator.distanceToCity(
                     from: userCoordinate,
                     to: expert.location
                 )
-                expert.distance = distance
-                
-                if let location = expert.location {
-                    if let dist = distance {
-                        print("  - \(expert.name) [\(location)]: \(String(format: "%.2f", dist)) km")
-                    } else {
-                        print("  - \(expert.name) [\(location)]: 无法计算距离")
-                    }
-                } else {
-                    print("  - \(expert.name) [无城市信息]")
-                }
-                
                 return expert
             }
             
@@ -278,15 +251,7 @@ class TaskExpertViewModel: ObservableObject {
                 return distance1 < distance2
             }
             
-            print("✅ 已按城市距离排序任务达人（共\(experts.count)条）")
-            print("📊 排序结果（前5名）:")
-            for (index, expert) in experts.prefix(5).enumerated() {
-                let distStr = expert.distance.map { String(format: "%.2f km", $0) } ?? "未知"
-                print("  \(index + 1). \(expert.name) [\(expert.location ?? "无")] - \(distStr)")
-            }
         } else {
-            print("⚠️ 用户位置不可用，保持原始顺序")
-            print("⚠️ 位置服务状态: \(locationService.authorizationStatus.rawValue)")
         }
         
         // 更新到主线程
@@ -412,11 +377,9 @@ class TaskExpertDetailViewModel: ObservableObject {
                     ErrorHandler.shared.handle(error, context: "加载服务列表")
                     // error 已经是 APIError 类型，无需转换
                     self?.errorMessage = error.userFriendlyMessage
-                    print("❌ 服务列表加载失败: \(error)")
                 }
             }, receiveValue: { [weak self] response in
                 self?.services = response.services.filter { $0.status == "active" }
-                print("✅ 服务列表加载成功，共\(response.services.count)条")
             })
             .store(in: &cancellables)
     }

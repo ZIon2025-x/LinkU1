@@ -28,8 +28,6 @@ struct link2urApp: App {
                 .preferredColorScheme(appTheme.colorScheme) // 应用主题颜色方案
                 .onAppear {
                     // 应用启动时的初始化操作
-                    print("Link²Ur App Started")
-                    
                     // 初始化 Stripe
                     StripeAPI.defaultPublishableKey = Constants.Stripe.publishableKey
                     
@@ -41,12 +39,9 @@ struct link2urApp: App {
                 }
                 .onOpenURL { url in
                     // 处理 Universal Links 和深度链接
-                    print("🔗 [App] 收到URL: \(url.absoluteString)")
-                    
                     // 必须将 URL 转给 Stripe SDK，否则支付宝/微信支付重定向返回后 PaymentSheet 无法完成流程
                     let stripeHandled = StripeAPI.handleURLCallback(with: url)
                     if stripeHandled {
-                        print("✅ [Stripe] 已处理支付重定向回调: \(url.absoluteString)")
                         return
                     }
                     
@@ -135,8 +130,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // 处理 Spotlight 搜索
     private func handleSpotlightSearch(identifier: String) {
-        print("🔍 [Spotlight] 用户点击了搜索结果: \(identifier)")
-        
         // 解析标识符并跳转
         if identifier.hasPrefix("task_") {
             let taskIdString = String(identifier.dropFirst(5))
@@ -163,23 +156,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // 处理快速操作（Spotlight 和 Shortcuts 共用）
     private func handleQuickAction(_ actionId: String) {
-        print("⚡ [AppDelegate] 快速操作: \(actionId)")
         NotificationCenter.default.post(name: NSNotification.Name("QuickAction"), object: actionId)
     }
     
     // 请求推送通知权限
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if let error = error {
-                print("推送通知权限请求失败: \(error)")
-            } else if granted {
-                print("推送通知权限已授予")
-                // 权限授予后，注册远程推送
+            if granted {
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
-            } else {
-                print("推送通知权限被拒绝")
             }
         }
     }
@@ -188,23 +174,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // 使用 %02x 将每字节转为 2 位十六进制，确保生成 64 字符 (32 字节) 的标准 APNs 令牌
         let tokenParts = deviceToken.map { String(format: "%02x", $0) }
         let token = tokenParts.joined()
-        print("Device Token: \(token)")
-        
         // 保存到UserDefaults，以便在登录后发送
         UserDefaults.standard.set(token, forKey: "device_token")
         
         // 如果用户已登录，立即发送到后端
         if KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) != nil {
-            APIService.shared.registerDeviceToken(token) { success in
-                if success {
-                    print("Device token sent to backend successfully")
-                }
-            }
+            APIService.shared.registerDeviceToken(token) { _ in }
         }
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Failed to register for remote notifications: \(error)")
     }
     
     // MARK: - UNUserNotificationCenterDelegate

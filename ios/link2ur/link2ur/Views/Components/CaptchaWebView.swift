@@ -254,25 +254,16 @@ struct CaptchaWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            // WebView 开始加载
-            print("🔍 CAPTCHA WebView 开始加载")
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // WebView 加载完成
-            print("✅ CAPTCHA WebView 加载完成")
-            // 消息处理器已经在 makeUIView 中设置
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            // WebView 加载失败
-            print("❌ CAPTCHA WebView 加载失败: \(error.localizedDescription)")
             onError?("加载失败: \(error.localizedDescription)")
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            // WebView 初始加载失败
-            print("❌ CAPTCHA WebView 初始加载失败: \(error.localizedDescription)")
             onError?("加载失败: \(error.localizedDescription)")
         }
         

@@ -138,7 +138,6 @@ extension EmptyStateView {
             message: "没有找到匹配的搜索结果，请尝试其他关键词",
             actionTitle: "重新搜索"
         ) {
-            print("重新搜索")
         }
         .frame(height: 300)
     }

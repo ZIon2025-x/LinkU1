@@ -374,9 +374,6 @@ class StripeConnectPaymentsViewModel: ObservableObject {
                         }
                     }
                     completion(errorMessage)
-                    if let errorMessage = errorMessage {
-                        print("❌ 获取 Stripe Connect 交易记录失败: \(errorMessage)")
-                    }
                 } else {
                     // 成功完成，completion 已在 receiveValue 中调用
                     completion(nil)
@@ -385,8 +382,6 @@ class StripeConnectPaymentsViewModel: ObservableObject {
             receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 self.transactions = response.transactions
-                print("✅ 成功加载 \(response.transactions.count) 条 Stripe Connect 交易记录")
-                
                 // 异步保存到缓存，避免阻塞主线程
                 DispatchQueue.global(qos: .utility).async {
                     self.cacheManager.save(response.transactions, forKey: self.stripeTransactionsCacheKey)
@@ -418,7 +413,6 @@ class StripeConnectPaymentsViewModel: ObservableObject {
             receiveCompletion: { result in
                 if case .failure(let apiError) = result {
                     let errorMessage = apiError.localizedDescription
-                    print("❌ 获取任务付款记录失败: \(errorMessage)")
                     completion(errorMessage)
                 } else {
                     // 成功完成，completion 已在 receiveValue 中调用
@@ -428,8 +422,6 @@ class StripeConnectPaymentsViewModel: ObservableObject {
             receiveValue: { [weak self] response in
                 guard let self = self else { return }
                 self.taskPayments = response.payments
-                print("✅ 成功加载 \(response.payments.count) 条任务付款记录")
-                
                 // 异步保存到缓存，避免阻塞主线程
                 DispatchQueue.global(qos: .utility).async {
                     self.cacheManager.save(response.payments, forKey: self.taskPaymentsCacheKey)

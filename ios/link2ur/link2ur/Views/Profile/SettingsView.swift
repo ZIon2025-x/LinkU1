@@ -205,10 +205,7 @@ struct SettingsView: View {
             .sink(
                 receiveCompletion: { result in
                     isDeletingAccount = false
-                    if case .failure(let error) = result {
-                        // 显示错误提示
-                        print("删除账户失败: \(error.localizedDescription)")
-                        // 这里可以添加错误提示UI
+                    if case .failure = result {
                     } else {
                         // 删除成功，登出并返回登录页面
                         appState.logout()

@@ -132,25 +132,15 @@ struct HomeView: View {
             // 点击空白区域关闭键盘
             .keyboardDismissable()
             .onReceive(resetNotification) { _ in
-                // 不重置 selectedTab，保持用户选择的标签页状态
-                // 只处理导航路径相关的重置（如果需要）
-                print("🔍 [HomeView] 收到重置通知，但保持 selectedTab 状态: \(selectedTab)")
             }
             .onChange(of: appState.shouldResetHomeView) { shouldReset in
-                print("🔍 [HomeView] shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
-                print("🔍 [HomeView] 当前 navigationPath.count: \(navigationPath.count), selectedTab: \(selectedTab)")
                 if shouldReset {
-                    print("🔍 [HomeView] ⚠️ 执行首页重置，但保持 selectedTab 状态: \(selectedTab)")
-                    // 不重置 selectedTab，保持用户选择的标签页状态
-                    // 只重置标志
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        print("🔍 [HomeView] 重置 shouldResetHomeView 标志为 false")
                         appState.shouldResetHomeView = false
                     }
                 }
             }
-            .onChange(of: navigationPath.count) { count in
-                print("🔍 [HomeView] navigationPath.count 变化: \(count), 时间: \(Date())")
+            .onChange(of: navigationPath.count) { _ in
             }
             .onChange(of: deepLinkHandler.currentLink) { link in
                 // 处理深度链接
@@ -185,28 +175,18 @@ struct HomeView: View {
     private func handleDeepLink(_ link: DeepLinkHandler.DeepLink) {
         switch link {
         case .activity(let id):
-            // 导航到活动详情页
-            print("🔗 [HomeView] 处理活动深度链接: \(id)")
             navigateToActivityId = id
             showActivityDetail = true
         case .task(let id):
-            // 导航到任务详情页
-            print("🔗 [HomeView] 处理任务深度链接: \(id)")
             navigateToTaskId = id
             showTaskDetail = true
         case .post(let id):
-            // 导航到论坛帖子详情页
-            print("🔗 [HomeView] 处理帖子深度链接: \(id)")
             navigateToPostId = id
             showPostDetail = true
         case .fleaMarketItem(let id):
-            // 导航到跳蚤市场商品详情页
-            print("🔗 [HomeView] 处理商品深度链接: \(id)")
             navigateToFleaMarketItemId = id
             showFleaMarketItemDetail = true
         default:
-            // 其他类型的链接暂时不处理
-            print("🔗 [HomeView] 未知深度链接类型")
             break
         }
         
@@ -412,24 +392,17 @@ struct NearbyTasksView: View {
             }
         }
         .onChange(of: locationService.currentCityName) { cityName in
-            // 当城市更新时，重新加载同城任务
             if let cityName = cityName, !cityName.isEmpty {
-                print("🏠 [NearbyTasksView] 城市已更新: \(cityName)，加载同城任务列表...")
                 viewModel.loadTasks(city: cityName, status: "open", sortBy: "distance", forceRefresh: true)
             }
         }
         .onChange(of: locationService.currentLocation) { newLocation in
-            // 当位置更新时，如果任务列表为空且城市名可用，自动加载任务
             if let _ = newLocation, let cityName = locationService.currentCityName, !cityName.isEmpty, viewModel.tasks.isEmpty {
-                print("🏠 [NearbyTasksView] 位置已更新，加载同城任务列表...")
                 viewModel.loadTasks(city: cityName, status: "open", sortBy: "distance")
             }
         }
         .refreshable {
-            print("🔄 [NearbyTasksView] 下拉刷新")
-            // 刷新位置
             if locationService.isAuthorized {
-                print("🔄 [NearbyTasksView] 刷新位置...")
                 locationService.requestLocation()
             }
             // 加载所有同城任务，按距离排序（强制刷新）

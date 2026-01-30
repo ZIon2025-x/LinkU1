@@ -209,12 +209,7 @@ extension WeChatShareManager: WXApiDelegate {
     
     public func onResp(_ resp: BaseResp!) {
         // 处理微信响应
-        if let sendResp = resp as? SendMessageToWXResp {
-            if sendResp.errCode == WXSuccess.rawValue {
-                print("微信分享成功")
-            } else {
-                print("微信分享失败: \(sendResp.errStr ?? "未知错误")")
-            }
+        if let _ = resp as? SendMessageToWXResp {
         }
     }
 }

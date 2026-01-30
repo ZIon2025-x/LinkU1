@@ -52,10 +52,7 @@ class VideoPlayerUIView: UIView {
             }
         }
         
-        // 开始播放
         newPlayer.play()
-        
-        print("✅ [VideoPlayerView] 视频播放器已设置并开始播放")
     }
     
     deinit {
@@ -84,14 +81,10 @@ struct VideoPlayerView: UIViewRepresentable {
         // 方法1: 从 Bundle 加载（文件需要添加到 Xcode 项目中）
         if let bundleURL = Bundle.main.url(forResource: videoName, withExtension: videoExtension) {
             url = bundleURL
-            print("✅ [VideoPlayerView] 从 Bundle 加载视频: \(videoName).\(videoExtension)")
-        }
-        // 方法2: 从文件系统加载（开发时使用，如果文件在项目文件夹中但未添加到 Xcode）
-        else if let documentsPath = Bundle.main.resourcePath {
+        } else if let documentsPath = Bundle.main.resourcePath {
             let filePath = (documentsPath as NSString).appendingPathComponent("\(videoName).\(videoExtension)")
             if FileManager.default.fileExists(atPath: filePath) {
                 url = URL(fileURLWithPath: filePath)
-                print("✅ [VideoPlayerView] 从文件系统加载视频: \(filePath)")
             }
         }
         // 方法3: 尝试从项目根目录加载（开发时备用方案）
@@ -106,15 +99,12 @@ struct VideoPlayerView: UIViewRepresentable {
             for path in possiblePaths {
                 if FileManager.default.fileExists(atPath: path) {
                     url = URL(fileURLWithPath: path)
-                    print("✅ [VideoPlayerView] 从备用路径加载视频: \(path)")
                     break
                 }
             }
         }
         
         guard let videoURL = url else {
-            print("❌ [VideoPlayerView] 无法找到视频文件: \(videoName).\(videoExtension)")
-            print("   提示: 请确保文件已添加到 Xcode 项目中（右键项目文件夹 → Add Files to Project）")
             return view
         }
         
@@ -181,7 +171,6 @@ struct VideoLoadingView: View {
             // 每次视图出现时，如果有多个视频，重新随机选择
             if let videoNames = videoNames, !videoNames.isEmpty {
                 selectedVideoName = videoNames.randomElement() ?? videoName
-                print("🎲 [VideoLoadingView] 随机选择视频: \(selectedVideoName).\(videoExtension)")
             }
         }
     }

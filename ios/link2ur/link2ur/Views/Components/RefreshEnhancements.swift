@@ -264,7 +264,6 @@ struct ParallaxHeader<Content: View>: View {
         Spacer()
         
         ScrollToTopButton {
-            print("滚动到顶部")
         }
     }
     .padding()

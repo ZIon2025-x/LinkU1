@@ -339,7 +339,6 @@ extension LocationService: CLLocationManagerDelegate {
             case .authorizedWhenInUse, .authorizedAlways:
                 // 权限已授予，开始更新位置
                 if oldStatus != manager.authorizationStatus {
-                    print("✅ [LocationService] 位置权限已授予")
                 }
                 self.startUpdatingLocation()
             case .denied, .restricted:

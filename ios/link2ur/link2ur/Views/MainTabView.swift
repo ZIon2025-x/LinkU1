@@ -16,18 +16,10 @@ public struct MainTabView: View {
                 set: { newValue in
                     // 如果点击的是首页 tab
                     if newValue == 0 {
-                        print("🔍 [MainTabView] 切换到首页 tab, 当前 selection: \(selection)")
-                        // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
-                        // 如果已经在首页，什么都不做，保持导航栈状态
                         if selection != 0 {
-                            print("🔍 [MainTabView] ⚠️ 从其他 tab 切换到首页，触发重置")
-                            // 只触发 selectedTab 重置，不清空导航路径
                             appState.shouldResetHomeView = true
                             NotificationCenter.default.post(name: .resetHomeView, object: nil)
-                        } else {
-                            print("🔍 [MainTabView] 已在首页，不触发重置")
                         }
-                        // 更新 previousSelection 为 0，确保中间占位视图显示首页
                         previousSelection = 0
                     }
                     
@@ -120,19 +112,12 @@ public struct MainTabView: View {
                         selection = previousSelection
                     }
                 } else if newValue == 0 {
-                    print("🔍 [MainTabView] onChange - 切换到首页, oldSelection: \(previousSelection)")
-                    // 切换到首页时，更新 previousSelection
                     let oldSelection = previousSelection
                     previousSelection = newValue
                     handleSelectionChange(newValue, oldSelection: oldSelection)
-                    // 只在从其他 tab 切换到首页时，重置 selectedTab（不重置导航栈）
                     if oldSelection != 0 {
-                        print("🔍 [MainTabView] ⚠️ 立即触发首页重置")
-                        // 优化：移除延迟，立即触发，提升响应速度
                         appState.shouldResetHomeView = true
                         NotificationCenter.default.post(name: .resetHomeView, object: nil)
-                    } else {
-                        print("🔍 [MainTabView] 已在首页，不触发重置")
                     }
                 } else {
                     // 正常切换 tab（社区、我的等）
@@ -166,8 +151,6 @@ public struct MainTabView: View {
     // 处理快捷指令
     private func handleQuickAction(_ actionId: String?, userInfo: [AnyHashable: Any]?) {
         guard let actionId = actionId else { return }
-        
-        print("⚡ [MainTabView] 处理快捷指令: \(actionId)")
         
         switch actionId {
         case "publish_task":
@@ -222,7 +205,7 @@ public struct MainTabView: View {
             previousSelection = 1
             
         default:
-            print("⚠️ [MainTabView] 未知的快捷指令: \(actionId)")
+            break
         }
         
         HapticFeedback.selection()

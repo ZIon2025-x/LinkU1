@@ -334,26 +334,21 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         // MARK: - AccountOnboardingControllerDelegate
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCompleteWith account: Any) {
-            print("✅ Account onboarding completed")
             DispatchQueue.main.async {
                 self.onComplete()
             }
         }
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didCancelWith account: Any?) {
-            print("ℹ️ Account onboarding canceled")
-            // 用户取消，不需要处理
         }
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailWith error: Error) {
-            print("❌ Account onboarding failed: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 self.onError(error.localizedDescription)
             }
         }
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailLoadWithError error: Error) {
-            print("❌ Account onboarding failed to load: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 self.onError("加载失败: \(error.localizedDescription)")
             }
@@ -444,7 +439,6 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                             errorMessage = "请求失败 (HTTP \(code))"
                         }
                         self?.error = errorMessage
-                        print("❌ Stripe Connect 创建失败: \(errorMessage)")
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -495,7 +489,6 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                         errorMessage = "获取账户详情失败 (HTTP \(code))"
                     }
                     self?.error = errorMessage
-                    print("❌ 获取账户详情失败: \(errorMessage)")
                 }
             },
             receiveValue: { [weak self] response in
@@ -537,18 +530,15 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                     // 如果是 404 错误，可能是账户没有外部账户，设置为空列表
                     if case .httpError(let code) = apiError {
                         if code == 404 {
-                            print("ℹ️ 账户没有外部账户，返回空列表")
                             self?.externalAccounts = []
                             return
                         }
                     }
-                    print("⚠️ 获取外部账户失败: \(apiError.localizedDescription)，继续显示账户详情")
                     self?.externalAccounts = []
                 }
             },
             receiveValue: { [weak self] response in
                 self?.externalAccounts = response.external_accounts
-                print("✅ 成功加载 \(response.external_accounts.count) 个外部账户")
             }
         )
         .store(in: &cancellables)

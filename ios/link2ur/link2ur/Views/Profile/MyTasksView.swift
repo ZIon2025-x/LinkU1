@@ -207,9 +207,7 @@ struct MyTasksView: View {
                     }
                     .listItemAppear(index: index, totalItems: viewModel.getFilteredTasks().count) // 添加错落入场动画
                     .buttonStyle(PlainButtonStyle())
-                    .onAppear {
-                        print("🔍 [MyTasksView] 任务卡片出现: \(task.id), 标题: \(task.title)")
-                    }
+                    .onAppear { }
                 }
             }
             .padding(.horizontal, AppSpacing.md)

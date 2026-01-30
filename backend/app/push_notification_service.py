@@ -530,25 +530,13 @@ def send_apns_notification(
             # 其他异常视为系统错误
             return None
         
-        # 检查响应是否为 None（某些情况下 apns2 可能返回 None，如连接被 BadDeviceToken 影响后）
+        # 当 response 为 None 时不重试，避免同一条推送被发送两次。
+        # 原因：apns2 在部分情况下（如异步/连接状态）可能已成功发送但返回 None，
+        # 若此时再重试发送相同 payload，用户会收到两条相同推送。
         if response is None:
-            logger.warning(f"[APNs诊断] send_notification 返回 None，尝试使用新连接重试一次")
-            import time
-            time.sleep(0.3)  # 短暂等待后重试，避免连接状态问题
-            try:
-                apns_client_new = APNsClient(
-                    credentials=credentials,
-                    use_sandbox=APNS_USE_SANDBOX,
-                    use_alternative_port=False
-                )
-                response = apns_client_new.send_notification(device_token, payload, topic)
-            except Exception as retry_e:
-                logger.warning(f"[APNs诊断] 重试失败: {retry_e}")
-                return None
-            if response is None:
-                logger.warning(f"[APNs诊断] 重试后仍返回 None，可能是库的异步行为或网络问题，不标记令牌为不活跃")
-                return None
-        
+            logger.warning(f"[APNs诊断] send_notification 返回 None，不重试以避免重复推送")
+            return None
+
         # 检查响应
         if response.is_successful:
             logger.info(f"APNs 推送通知已发送: device_token={device_token[:20]}..., topic={topic}, title={alert_title[:30] if alert_title else 'None'}...")

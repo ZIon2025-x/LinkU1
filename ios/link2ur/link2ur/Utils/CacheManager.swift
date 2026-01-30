@@ -378,11 +378,8 @@ nonisolated public class CacheManager: @unchecked Sendable {
                     removedSize += fileInfo.size
                     totalSize -= fileInfo.size
                 }
-                
-                print("🧹 缓存清理完成，释放了 \(removedSize / 1024 / 1024)MB 空间")
             }
         } catch {
-            print("⚠️ 检查缓存大小失败: \(error.localizedDescription)")
         }
     }
     
@@ -475,7 +472,6 @@ nonisolated public class CacheManager: @unchecked Sendable {
     /// 清除活动相关缓存
     func invalidateActivitiesCache() {
         clearCache(forKey: "activities")
-        print("✅ 活动缓存已清除")
     }
     
     /// 清除论坛帖子相关缓存
@@ -491,7 +487,6 @@ nonisolated public class CacheManager: @unchecked Sendable {
                 Logger.success("论坛帖子缓存已清除", category: .cache)
             }
         } catch {
-            print("⚠️ 清除论坛帖子缓存失败: \(error.localizedDescription)")
         }
     }
     
@@ -508,7 +503,6 @@ nonisolated public class CacheManager: @unchecked Sendable {
                 Logger.success("跳蚤市场缓存已清除", category: .cache)
             }
         } catch {
-            print("⚠️ 清除跳蚤市场缓存失败: \(error.localizedDescription)")
         }
     }
     
@@ -525,7 +519,6 @@ nonisolated public class CacheManager: @unchecked Sendable {
                 Logger.success("任务达人缓存已清除", category: .cache)
             }
         } catch {
-            print("⚠️ 清除任务达人缓存失败: \(error.localizedDescription)")
         }
     }
     
@@ -542,7 +535,6 @@ nonisolated public class CacheManager: @unchecked Sendable {
                 Logger.success("排行榜缓存已清除", category: .cache)
             }
         } catch {
-            print("⚠️ 清除排行榜缓存失败: \(error.localizedDescription)")
         }
     }
     
@@ -674,11 +666,7 @@ nonisolated public class CacheManager: @unchecked Sendable {
                     }
                 }
             }
-            if clearedCount > 0 {
-                print("🧹 已清除 \(clearedCount) 个过期缓存文件")
-            }
         } catch {
-            print("⚠️ 清除过期缓存失败: \(error.localizedDescription)")
         }
     }
     

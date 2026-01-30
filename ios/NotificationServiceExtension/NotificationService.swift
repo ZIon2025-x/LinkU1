@@ -19,20 +19,25 @@ class NotificationService: UNNotificationServiceExtension {
         
         guard bestAttemptContent != nil else {
             contentHandler(request.content)
+            self.contentHandler = nil
+            self.bestAttemptContent = nil
             return
         }
         
         // 使用 PushNotificationLocalizer 获取本地化内容
         let localizedContent = PushNotificationLocalizer.localizeNotificationContent(request)
-        
-        // 返回修改后的内容
         contentHandler(localizedContent)
+        // 必须清空，防止 serviceExtensionTimeWillExpire 再次调用 contentHandler 导致同一条推送显示两次
+        self.contentHandler = nil
+        self.bestAttemptContent = nil
     }
     
     override func serviceExtensionTimeWillExpire() {
         // 如果处理超时，使用原始内容（系统会在 30 秒后终止 Extension）
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
             contentHandler(bestAttemptContent)
+            self.contentHandler = nil
+            self.bestAttemptContent = nil
         }
     }
 

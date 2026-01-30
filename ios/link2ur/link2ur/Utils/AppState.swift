@@ -5,26 +5,9 @@ import UIKit
 public class AppState: ObservableObject {
     @Published public var isAuthenticated: Bool = false
     @Published public var currentUser: User?
-    @Published public var shouldResetHomeView: Bool = false { // 用于触发首页重置
-        didSet {
-            print("🔍 [AppState] shouldResetHomeView 变化: \(oldValue) -> \(shouldResetHomeView), 时间: \(Date())")
-            if shouldResetHomeView {
-                print("🔍 [AppState] ⚠️ 触发首页重置！这可能导致详情页返回")
-            }
-        }
-    }
-    @Published public var unreadNotificationCount: Int = 0 { // 未读通知数量
-        didSet {
-            // 当未读通知数量变化时，更新应用图标 Badge
-            updateAppIconBadge()
-        }
-    }
-    @Published public var unreadMessageCount: Int = 0 { // 未读消息数量（任务聊天）
-        didSet {
-            // 当未读消息数量变化时，更新应用图标 Badge
-            updateAppIconBadge()
-        }
-    }
+    @Published public var shouldResetHomeView: Bool = false // 用于触发首页重置
+    @Published public var unreadNotificationCount: Int = 0 // 未读通知数量
+    @Published public var unreadMessageCount: Int = 0 // 未读消息数量（任务聊天）
     @Published public var isCheckingLoginStatus: Bool = true // 是否正在检查登录状态
     @Published public var userSkippedLogin: Bool = false // 用户是否选择跳过登录
     
@@ -118,6 +101,14 @@ public class AppState: ObservableObject {
             }
             .store(in: &cancellables)
         
+        // 未读数量变化时更新应用图标 Badge（替代原 didSet）
+        $unreadNotificationCount.merge(with: $unreadMessageCount)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateAppIconBadge()
+            }
+            .store(in: &cancellables)
+
         // 监听任务状态更新，清理已完成/取消任务的图片缓存
         NotificationCenter.default.publisher(for: .taskUpdated)
             .compactMap { $0.object as? Task }
@@ -180,8 +171,7 @@ public class AppState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoadingNotificationCount = false
-                if case .failure(let error) = result {
-                    print("⚠️ 加载未读通知数量失败: \(error.localizedDescription)")
+                if case .failure = result {
                 }
             }, receiveValue: { [weak self] response in
                 // 后端返回格式：{"unread_count": 5}（参考 frontend api.ts）
@@ -224,15 +214,13 @@ public class AppState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoadingMessageCount = false
-                if case .failure(let error) = result {
-                    print("⚠️ 加载任务聊天未读消息数量失败: \(error.localizedDescription)")
+                if case .failure = result {
                     // 失败时不清零，保持上次的值
                 }
             }, receiveValue: { [weak self] response in
                 // 后端返回格式：{"unread_count": 5}
                 if let count = response["unread_count"] {
                     self?.unreadMessageCount = count
-                    print("📱 [AppState] 任务聊天未读消息数量已更新: \(count)")
                 } else {
                     // 如果没有找到 unread_count 字段，设置为0
                     self?.unreadMessageCount = 0

@@ -55,18 +55,6 @@ struct FleaMarketDetailView: View {
             .onDisappear {
                 handleOnDisappear()
             }
-            .onChange(of: appState.shouldResetHomeView) { shouldReset in
-                print("🔍 [FleaMarketDetailView] appState.shouldResetHomeView 变化: \(shouldReset), 时间: \(Date())")
-            }
-            .onChange(of: appState.isAuthenticated) { isAuthenticated in
-                print("🔍 [FleaMarketDetailView] appState.isAuthenticated 变化: \(isAuthenticated), 时间: \(Date())")
-            }
-            .onChange(of: appState.currentUser?.id) { userId in
-                print("🔍 [FleaMarketDetailView] appState.currentUser?.id 变化: \(userId ?? "nil"), 时间: \(Date())")
-            }
-            .onChange(of: viewModel.item?.id) { itemId in
-                print("🔍 [FleaMarketDetailView] viewModel.item?.id 变化: \(itemId ?? "nil"), 时间: \(Date())")
-            }
     }
     
     // MARK: - 主内容视图
@@ -319,37 +307,25 @@ struct FleaMarketDetailView: View {
     // MARK: - 生命周期处理
     
     private func loadItemIfNeeded() async {
-        print("🔍 [FleaMarketDetailView] task 开始 - itemId: \(itemId), 时间: \(Date())")
-        
         guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
-            print("🔍 [FleaMarketDetailView] 正在处理购买流程，跳过商品重新加载")
             return
         }
         
         try? await _Concurrency.Task.sleep(nanoseconds: 100_000_000)
         
         guard !isProcessingPurchase && !showPurchaseSheet && !showPaymentView else {
-            print("🔍 [FleaMarketDetailView] 延迟后检测到购买流程进行中，跳过商品重新加载")
             return
         }
         
         if viewModel.item == nil || viewModel.item?.id != itemId {
-            print("🔍 [FleaMarketDetailView] 开始加载商品: \(itemId)")
             viewModel.loadItem(itemId: itemId)
-        } else {
-            print("🔍 [FleaMarketDetailView] 商品已存在，跳过加载: \(itemId)")
         }
     }
     
     private func handleOnAppear() {
-        print("🔍 [FleaMarketDetailView] onAppear - itemId: \(itemId), 时间: \(Date())")
-        print("🔍 [FleaMarketDetailView] 当前导航栈状态 - appState.shouldResetHomeView: \(appState.shouldResetHomeView)")
-        print("🔍 [FleaMarketDetailView] viewModel.item: \(viewModel.item?.id ?? "nil")")
     }
     
     private func handleOnDisappear() {
-        print("🔍 [FleaMarketDetailView] onDisappear - itemId: \(itemId), 时间: \(Date())")
-        print("🔍 [FleaMarketDetailView] 视图消失原因追踪")
     }
     
     // MARK: - 距离自动下架天数视图

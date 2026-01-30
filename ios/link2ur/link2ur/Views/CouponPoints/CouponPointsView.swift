@@ -996,11 +996,7 @@ struct CheckInView: View {
         viewModel.performCheckIn()
             .receive(on: DispatchQueue.main)
             .sink(
-                receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        print("Check in error: \(error)")
-                    }
-                },
+                receiveCompletion: { _ in },
                 receiveValue: { response in
                     checkInResult = response
                     showingResult = true

@@ -405,7 +405,6 @@ struct TasksView: View {
         if let preferredCity = UserDefaults.standard.string(forKey: "preferred_city"),
            !preferredCity.isEmpty {
             selectedCity = preferredCity
-            print("✅ [TasksView] 应用引导偏好城市: \(preferredCity)")
         }
         
         // 读取保存的偏好任务类型
@@ -431,7 +430,6 @@ struct TasksView: View {
                let firstType = preferredTaskTypes.first,
                let backendValue = taskTypeMapping[firstType] {
                 selectedCategory = backendValue
-                print("✅ [TasksView] 应用引导偏好任务类型: \(firstType) -> \(backendValue)")
             }
         }
     }

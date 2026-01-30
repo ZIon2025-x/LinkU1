@@ -198,8 +198,7 @@ struct OnboardingView: View {
     private func skipOnboarding() {
         // 优化：同步保存 UserDefaults，确保立即生效
         UserDefaults.standard.set(true, forKey: "has_seen_onboarding")
-        UserDefaults.standard.synchronize() // 立即同步，确保保存成功
-        print("📱 [OnboardingView] 用户跳过引导，已保存 has_seen_onboarding = true")
+        UserDefaults.standard.synchronize()
         isPresented = false
         HapticFeedback.selection()
     }
@@ -212,9 +211,7 @@ struct OnboardingView: View {
         
         // 标记已看过引导
         UserDefaults.standard.set(true, forKey: "has_seen_onboarding")
-        UserDefaults.standard.synchronize() // 立即同步，确保保存成功
-        print("📱 [OnboardingView] 用户完成引导，已保存 has_seen_onboarding = true")
-        
+        UserDefaults.standard.synchronize()
         // 如果用户选择了启用通知，请求通知权限
         if notificationEnabled {
             requestNotificationPermission()
@@ -230,9 +227,6 @@ struct OnboardingView: View {
             DispatchQueue.main.async {
                 if granted {
                     UIApplication.shared.registerForRemoteNotifications()
-                    print("✅ 通知权限已授予")
-                } else {
-                    print("⚠️ 通知权限被拒绝")
                 }
             }
         }

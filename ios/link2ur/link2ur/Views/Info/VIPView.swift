@@ -228,7 +228,6 @@ struct VIPView: View {
             let response = try await APIService.shared.getVIPStatus()
             subscriptionStatus = response.subscription
         } catch {
-            print("获取VIP状态失败: \(error)")
         }
     }
     

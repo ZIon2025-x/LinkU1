@@ -200,6 +200,10 @@ enum APIEndpoints {
         static func createTaskPayment(_ taskId: Int) -> String {
             "/api/coupon-points/tasks/\(taskId)/payment"
         }
+        /// 查询任务支付状态（只读，用于检查支付是否已完成）
+        static func getTaskPaymentStatus(_ taskId: Int) -> String {
+            "/api/coupon-points/tasks/\(taskId)/payment-status"
+        }
         static let paymentHistory = "/api/coupon-points/payment-history"
     }
     
