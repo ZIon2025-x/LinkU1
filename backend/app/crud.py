@@ -4279,6 +4279,87 @@ def check_and_update_expired_subscriptions(db: Session):
     return len(expired)
 
 
+def cleanup_duplicate_device_tokens(db: Session) -> int:
+    """清理同一 device_id 下的重复活跃令牌，保留最新的一个
+    
+    当 iOS 设备令牌刷新时，若注册逻辑未及时执行，可能留下同一设备的多个活跃令牌。
+    此函数用于批量清理这类重复记录。
+    
+    Args:
+        db: 数据库会话
+        
+    Returns:
+        禁用的令牌数量
+    """
+    from sqlalchemy import func
+    
+    # 查找 (user_id, device_id) 组合中存在多个活跃令牌的情况
+    dup_pairs = (
+        db.query(models.DeviceToken.user_id, models.DeviceToken.device_id)
+        .filter(
+            models.DeviceToken.is_active == True,
+            models.DeviceToken.device_id.isnot(None),
+            models.DeviceToken.device_id != ""
+        )
+        .group_by(models.DeviceToken.user_id, models.DeviceToken.device_id)
+        .having(func.count(models.DeviceToken.id) > 1)
+        .all()
+    )
+    
+    deactivated = 0
+    for user_id, device_id in dup_pairs:
+        # 按 updated_at 降序，保留最新的一条，禁用其余
+        tokens = (
+            db.query(models.DeviceToken)
+            .filter(
+                models.DeviceToken.user_id == user_id,
+                models.DeviceToken.device_id == device_id,
+                models.DeviceToken.is_active == True,
+            )
+            .order_by(models.DeviceToken.updated_at.desc())
+            .all()
+        )
+        for t in tokens[1:]:
+            t.is_active = False
+            t.updated_at = get_utc_time()
+            deactivated += 1
+    
+    if deactivated > 0:
+        db.commit()
+        logger.info(f"cleanup_duplicate_device_tokens: 禁用了 {deactivated} 个重复设备令牌")
+    return deactivated
+
+
+def delete_old_inactive_device_tokens(db: Session, inactive_days: int = 180) -> int:
+    """删除长期不活跃的 is_active=False 令牌记录，释放数据库空间
+    
+    这些令牌已被 APNs 标记为无效，推送服务已将 is_active 设为 False。
+    长期保留无意义，可安全删除。
+    
+    Args:
+        db: 数据库会话
+        inactive_days: 不活跃天数阈值，默认 180 天
+        
+    Returns:
+        删除的令牌数量
+    """
+    from datetime import timedelta
+    
+    cutoff = get_utc_time() - timedelta(days=inactive_days)
+    deleted = (
+        db.query(models.DeviceToken)
+        .filter(
+            models.DeviceToken.is_active == False,
+            models.DeviceToken.updated_at < cutoff,
+        )
+        .delete()
+    )
+    if deleted > 0:
+        db.commit()
+        logger.info(f"delete_old_inactive_device_tokens: 删除了 {deleted} 个长期不活跃的令牌记录")
+    return deleted
+
+
 def cleanup_inactive_device_tokens(db: Session, inactive_days: int = 90) -> int:
     """清理无效的设备推送token（仅清理APNs返回无效的token）
     

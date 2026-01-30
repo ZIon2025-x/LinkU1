@@ -75,48 +75,62 @@ def normalize_device_token(device_token: str) -> Optional[str]:
     """
     规范化设备令牌格式
     
-    APNs设备令牌应该是32字节的二进制数据，转换为64个十六进制字符。
-    此函数处理各种可能的格式：
-    - 64字符十六进制字符串（标准格式）
-    - Base64编码的令牌
+    APNs 设备令牌通常是 32 字节（64 十六进制字符），iOS 13+ 可能为 64 字节（128 字符）。
+    Apple 文档指出令牌长度可能变化，本函数支持多种格式：
+    - 64 字符十六进制（标准格式）
+    - 128 字符十六进制（iOS 13+）
+    - Base64 编码的令牌
     - 包含空格或连字符的令牌
-    - 其他格式
+    - 超长字符串中提取前 64 或 128 字符（处理客户端拼接错误）
     
     Args:
         device_token: 原始设备令牌字符串
         
     Returns:
-        规范化后的64字符十六进制字符串，如果无法解析则返回None
+        规范化后的十六进制字符串（64 或 128 字符），如果无法解析则返回 None
     """
     if not device_token:
         return None
     
     # 移除空格和连字符
     token = device_token.replace(" ", "").replace("-", "").replace("_", "")
+    hex_chars = set('0123456789abcdefABCDEF')
     
-    # 如果已经是64字符的十六进制字符串，直接返回
-    if len(token) == 64 and all(c in '0123456789abcdefABCDEF' for c in token):
+    def is_valid_hex(s: str) -> bool:
+        return len(s) > 0 and all(c in hex_chars for c in s)
+    
+    # 标准格式：64 字符十六进制
+    if len(token) == 64 and is_valid_hex(token):
         return token.lower()
     
-    # 尝试Base64解码（某些iOS版本可能发送Base64编码的令牌）
-    if len(token) > 64:
+    # iOS 13+ 格式：128 字符十六进制（64 字节）
+    if len(token) == 128 and is_valid_hex(token):
+        return token.lower()
+    
+    # 尝试 Base64 解码（某些客户端可能发送 Base64）
+    if len(token) >= 40:  # Base64(32 bytes) ≈ 44 字符
         try:
-            # 尝试Base64解码
-            decoded = base64.b64decode(token)
-            if len(decoded) == 32:
-                # 转换为十六进制字符串
-                return decoded.hex()
+            decoded = base64.b64decode(token, validate=True)
+            if len(decoded) in (32, 64):
+                return decoded.hex().lower()
         except Exception:
             pass
     
-    # 如果长度是128字符（可能是两个令牌拼接），尝试取前64字符
-    if len(token) == 128:
-        token = token[:64]
-        if all(c in '0123456789abcdefABCDEF' for c in token):
-            return token.lower()
+    # 超长字符串：提取前 64 或 128 字符（处理客户端拼接/重复发送）
+    if len(token) > 64 and is_valid_hex(token):
+        for extract_len in (64, 128):
+            if len(token) >= extract_len:
+                extracted = token[:extract_len]
+                if is_valid_hex(extracted):
+                    logger.info(
+                        f"设备令牌长度异常({len(token)}字符)，已提取前{extract_len}字符用于推送"
+                    )
+                    return extracted.lower()
     
-    # 如果无法解析，记录警告并返回None
-    logger.warning(f"无法规范化设备令牌格式: 长度={len(device_token)}, 前32字符={device_token[:32]}")
+    # 无法解析
+    logger.warning(
+        f"无法规范化设备令牌格式: 长度={len(device_token)}, 前32字符={device_token[:32]}"
+    )
     return None
 
 
@@ -205,10 +219,18 @@ def send_push_notification(
             return False
         
         # 获取用户的所有激活的设备令牌，按更新时间倒序（新令牌更可能有效，优先发送）
-        device_tokens = db.query(models.DeviceToken).filter(
-            models.DeviceToken.user_id == user_id,
-            models.DeviceToken.is_active == True
-        ).order_by(models.DeviceToken.updated_at.desc()).all()
+        # 限制每用户最多尝试的令牌数，避免资源浪费（同一用户大量旧令牌时）
+        max_tokens_per_user = int(os.getenv("PUSH_MAX_TOKENS_PER_USER", "5"))
+        device_tokens = (
+            db.query(models.DeviceToken)
+            .filter(
+                models.DeviceToken.user_id == user_id,
+                models.DeviceToken.is_active == True,
+            )
+            .order_by(models.DeviceToken.updated_at.desc())
+            .limit(max_tokens_per_user)
+            .all()
+        )
         
         if not device_tokens:
             logger.warning(f"用户 {user_id} 没有注册的设备令牌，无法发送推送通知")
@@ -479,9 +501,9 @@ def send_apns_notification(
         # 记录详细的诊断信息（用于调试 BadDeviceToken 错误）
         logger.info(f"[APNs诊断] 准备发送推送: device_token长度={len(device_token)}, device_token前32字符={device_token[:32] if len(device_token) >= 32 else device_token}, topic={topic}, use_sandbox={APNS_USE_SANDBOX}, bundle_id={APNS_BUNDLE_ID}, key_id={APNS_KEY_ID}, team_id={APNS_TEAM_ID}")
         
-        # 验证设备令牌格式（APNs 设备令牌应该是 64 个十六进制字符）
-        if len(device_token) != 64:
-            logger.warning(f"[APNs诊断] 设备令牌长度异常: 期望64字符，实际{len(device_token)}字符")
+        # 验证设备令牌格式（APNs 支持 64 或 128 个十六进制字符）
+        if len(device_token) not in (64, 128):
+            logger.warning(f"[APNs诊断] 设备令牌长度异常: 期望64或128字符，实际{len(device_token)}字符")
         if not all(c in '0123456789abcdefABCDEF' for c in device_token):
             logger.warning(f"[APNs诊断] 设备令牌格式异常: 包含非十六进制字符")
         

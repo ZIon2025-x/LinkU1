@@ -14689,6 +14689,43 @@ def cleanup_all_old_tasks_files_api(
         raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
 
 
+@router.post("/admin/cleanup/duplicate-device-tokens")
+def cleanup_duplicate_device_tokens_api(
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """清理同一 device_id 下的重复活跃令牌，保留最新的（管理员接口）"""
+    try:
+        deactivated = crud.cleanup_duplicate_device_tokens(db)
+        return {
+            "success": True,
+            "message": f"禁用了 {deactivated} 个重复设备令牌",
+            "deactivated_count": deactivated
+        }
+    except Exception as e:
+        logger.error(f"清理重复设备令牌失败: {e}")
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
+@router.post("/admin/cleanup/old-inactive-device-tokens")
+def cleanup_old_inactive_device_tokens_api(
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+    inactive_days: int = Query(180, ge=30, le=365, description="不活跃天数阈值"),
+):
+    """删除长期不活跃的 is_active=False 令牌记录（管理员接口）"""
+    try:
+        deleted = crud.delete_old_inactive_device_tokens(db, inactive_days=inactive_days)
+        return {
+            "success": True,
+            "message": f"删除了 {deleted} 个长期不活跃的无效设备令牌",
+            "deleted_count": deleted
+        }
+    except Exception as e:
+        logger.error(f"删除旧无效设备令牌失败: {e}")
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
 # ==================== Banner 广告 API ====================
 
 @router.get("/banners")

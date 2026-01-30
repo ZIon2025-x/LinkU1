@@ -185,7 +185,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        // 使用 %02x 将每字节转为 2 位十六进制，确保生成 64 字符 (32 字节) 的标准 APNs 令牌
+        let tokenParts = deviceToken.map { String(format: "%02x", $0) }
         let token = tokenParts.joined()
         print("Device Token: \(token)")
         

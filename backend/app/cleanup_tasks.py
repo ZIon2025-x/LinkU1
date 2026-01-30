@@ -21,6 +21,7 @@
                                   # 临时改用 6h/2天/14天 及 2 倍单次上限
   CLEANUP_COMPLETED_TASK_DAYS=1   # 已完成任务文件保留天数，默认 3（crud）
   CLEANUP_EXPIRED_TASK_DAYS=1     # 过期任务文件保留天数，默认 3（crud）
+  CLEANUP_INACTIVE_DEVICE_TOKEN_DAYS=180  # 删除 is_active=False 的令牌记录前保留天数，默认 180
 """
 
 import asyncio
@@ -178,6 +179,12 @@ class CleanupTasks:
             
             # 清理过期翻译（每天检查一次）
             await self._cleanup_stale_task_translations()
+            
+            # 清理重复设备令牌（每天检查一次）
+            await self._cleanup_duplicate_device_tokens()
+            
+            # 删除长期不活跃的无效令牌记录（每天检查一次）
+            await self._cleanup_old_inactive_device_tokens()
             
             # 自动生成未来时间段（每天检查一次）
             # ⚠️ 已禁用：不需要每天新增时间段服务的下一个时间段
@@ -1612,6 +1619,57 @@ class CleanupTasks:
             logger.error(f"清理过期翻译失败: {e}")
         finally:
             # 释放锁
+            release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_duplicate_device_tokens(self):
+        """清理同一 device_id 下的重复活跃令牌，保留最新的（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_duplicate_device_tokens:lock"
+        lock_ttl = 3600
+        
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理重复设备令牌：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from app.deps import get_sync_db
+            from app.crud import cleanup_duplicate_device_tokens
+            
+            db = next(get_sync_db())
+            try:
+                deactivated = cleanup_duplicate_device_tokens(db)
+                if deactivated > 0:
+                    logger.info(f"清理了 {deactivated} 个重复设备令牌")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"清理重复设备令牌失败: {e}")
+        finally:
+            release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_old_inactive_device_tokens(self):
+        """删除长期不活跃的 is_active=False 令牌记录（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_old_inactive_device_tokens:lock"
+        lock_ttl = 3600
+        
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("删除旧无效设备令牌：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from app.deps import get_sync_db
+            from app.crud import delete_old_inactive_device_tokens
+            
+            inactive_days = _env_int("CLEANUP_INACTIVE_DEVICE_TOKEN_DAYS", 180)
+            db = next(get_sync_db())
+            try:
+                deleted = delete_old_inactive_device_tokens(db, inactive_days=inactive_days)
+                if deleted > 0:
+                    logger.info(f"删除了 {deleted} 个长期不活跃的无效设备令牌")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"删除旧无效设备令牌失败: {e}")
+        finally:
             release_redis_distributed_lock(lock_key)
     
     async def _auto_generate_future_time_slots(self):
