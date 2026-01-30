@@ -1024,8 +1024,9 @@ def create_task_payment(
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
         
         # ⚠️ 重要：检查是否已有未完成的 PaymentIntent，避免重复创建
-        # 如果任务已有 payment_intent_id，检查其状态，如果未完成则复用
-        if task.payment_intent_id:
+        # 若请求了 preferred_payment_method（仅用该方式），不复用已有 PI，必须新建仅含该方式的 PI
+        # 这样 PaymentSheet 只显示该方式，不再弹支付方式选择窗
+        if task.payment_intent_id and not payment_request.preferred_payment_method:
             try:
                 existing_payment_intent = stripe.PaymentIntent.retrieve(task.payment_intent_id)
                 
@@ -1280,13 +1281,16 @@ def create_task_payment(
         # 
         # 注意：官方示例代码使用的是 Checkout Session + Direct Charges 模式（立即转账）
         # 但交易市场需要托管模式，所以不设置 transfer_data.destination
+        pm_types = (
+            [payment_request.preferred_payment_method]
+            if payment_request.preferred_payment_method
+            else ["card", "wechat_pay", "alipay"]
+        )
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",
-            # 明确指定支付方式类型，确保 WeChat Pay 可用
-            # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-            # 必须在 Stripe Dashboard 中启用 WeChat Pay
-            payment_method_types=["card", "wechat_pay", "alipay"],
+            # 有 preferred_payment_method 时仅该方式，PaymentSheet 不弹选择窗；否则支持 card / wechat_pay / alipay
+            payment_method_types=pm_types,
             # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
             # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             metadata={

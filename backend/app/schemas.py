@@ -1749,11 +1749,20 @@ class TaskPaymentRequest(BaseModel):
     coupon_code: Optional[str] = None  # 优惠券代码
     user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
     application_id: Optional[int] = None  # 申请ID（用于验证 PaymentIntent 是否属于此申请者）
+    preferred_payment_method: Optional[str] = None  # 首选支付方式：card / alipay / wechat_pay；传则创建仅含该方式的 PI，PaymentSheet 不再弹选择窗
     
     @validator('payment_method')
     def validate_payment_method(cls, v):
         if v != "stripe":
             raise ValueError("payment_method 必须是 'stripe'（积分不能作为支付手段，只能用于兑换优惠券）")
+        return v
+    
+    @validator('preferred_payment_method')
+    def validate_preferred_payment_method(cls, v):
+        if v is None or v == "":
+            return None
+        if v not in ("card", "alipay", "wechat_pay"):
+            raise ValueError("preferred_payment_method 只能是 'card'、'alipay' 或 'wechat_pay'")
         return v
 
 

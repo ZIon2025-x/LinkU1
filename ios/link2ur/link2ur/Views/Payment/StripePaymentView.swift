@@ -566,7 +566,7 @@ struct StripePaymentView: View {
                     viewModel.performPayment()
                 }) {
                     HStack(spacing: 12) {
-                        Image("WeChatLogo")
+                        Image("WeChatPayLogo")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 18, height: 18)
@@ -608,8 +608,10 @@ struct StripePaymentView: View {
                     viewModel.performPayment()
                 }) {
                     HStack(spacing: 12) {
-                        Image(systemName: "dollarsign.circle.fill")
-                            .font(.system(size: 18))
+                        Image("AlipayLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
                         Text(LocalizationKey.paymentPayWithAlipay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
@@ -742,25 +744,23 @@ struct StripePaymentView: View {
         var body: some View {
             Button(action: action) {
                 HStack(spacing: 16) {
-                    // 图标
-                    Group {
+                    // 图标：统一 40×40 圆形容器，微信/支付宝 logo 缩小至与 Apple Pay 相当并裁成圆形
+                    ZStack {
+                        Circle()
+                            .fill(isSelected ? AppColors.primary.opacity(0.1) : AppColors.surface)
                         if method.isAssetIcon {
-                            // 使用 asset 中的图标（如微信图标），保持原始颜色
                             Image(method.icon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
+                                .frame(width: 24, height: 24)
+                                .clipShape(Circle())
                         } else {
-                            // 使用系统图标，可以应用颜色
                             Image(systemName: method.icon)
                                 .font(.system(size: 24))
                                 .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
                         }
                     }
                     .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(isSelected ? AppColors.primary.opacity(0.1) : AppColors.surface)
-                    )
                     
                     // 名称
                     Text(method.displayName)

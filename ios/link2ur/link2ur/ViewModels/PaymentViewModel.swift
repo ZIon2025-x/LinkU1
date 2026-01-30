@@ -39,18 +39,18 @@ enum PaymentMethodType: String, CaseIterable {
         case .applePay:
             return "applelogo"
         case .wechatPay:
-            return "WeChatLogo"  // 使用 asset 中的微信图标
+            return "WeChatPayLogo"
         case .alipayPay:
-            return "dollarsign.circle.fill"  // 支付宝无系统图标，使用通用支付图标
+            return "AlipayLogo"
         }
     }
     
     /// 判断图标是否为 asset 图标（而非系统图标）
     var isAssetIcon: Bool {
         switch self {
-        case .card, .applePay, .alipayPay:
+        case .card, .applePay:
             return false
-        case .wechatPay:
+        case .wechatPay, .alipayPay:
             return true
         }
     }
@@ -110,6 +110,16 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     /// 是否已具备可发起支付的 client_secret
     var hasActivePaymentClientSecret: Bool {
         return activeClientSecret != nil
+    }
+    
+    /// 当前选中支付方式对应的 preferred_payment_method API 值；Apple Pay 不传
+    private var preferredPaymentMethodForAPI: String? {
+        switch selectedPaymentMethod {
+        case .card: return "card"
+        case .alipayPay: return "alipay"
+        case .wechatPay: return "wechat_pay"
+        case .applePay: return nil
+        }
     }
     
     init(taskId: Int, amount: Double, clientSecret: String? = nil, customerId: String? = nil, ephemeralKeySecret: String? = nil, apiService: APIService? = nil) {
@@ -342,50 +352,32 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         selectedPaymentMethod = method
 
         // 延迟准备支付方式，避免阻塞 UI 切换动画
-        // 使用 debounce 机制，避免快速切换时重复调用
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self, self.selectedPaymentMethod == method else {
                 return
             }
             
             switch method {
-            case .card:
-                // 优先预热 PaymentSheet；如果还没拿到 clientSecret，则拉取一次支付信息
-                if self.activeClientSecret == nil {
-                    self.createPaymentIntent()
-                } else {
-                    // 只在 PaymentSheet 不存在时才创建，避免重复初始化
-                    if self.paymentSheet == nil {
-                        self.ensurePaymentSheetReady()
-                    }
-                }
+            case .card, .wechatPay, .alipayPay:
+                // 银行卡 / 微信 / 支付宝 用 PaymentSheet，且每种方式对应单独 PI，直接进该方式不弹选择窗
+                // 切换时废弃旧 PI、重建，避免复用「多方式」PI 导致再弹选择窗
+                self.clearPaymentSheetAndSecretForMethodSwitch()
+                self.createPaymentIntent()
             case .applePay:
-                // Apple Pay 需要 paymentResponse；如果没有则拉取
+                // Apple Pay 用原生流程，不弹 PaymentSheet；无 preferred_payment_method，可复用已有 PI
                 if self.activeClientSecret == nil {
                     self.createPaymentIntent()
-                }
-                // Apple Pay 不需要额外准备，直接可用
-            case .wechatPay:
-                // WeChat Pay 使用 PaymentSheet，需要 clientSecret
-                if self.activeClientSecret == nil {
-                    self.createPaymentIntent()
-                } else {
-                    // 只在 PaymentSheet 不存在时才创建，避免重复初始化
-                    if self.paymentSheet == nil {
-                        self.ensurePaymentSheetReady()
-                    }
-                }
-            case .alipayPay:
-                // 支付宝使用 PaymentSheet，需要 clientSecret（Stripe 会跳转支付宝后通过 returnURL 返回）
-                if self.activeClientSecret == nil {
-                    self.createPaymentIntent()
-                } else {
-                    if self.paymentSheet == nil {
-                        self.ensurePaymentSheetReady()
-                    }
                 }
             }
         }
+    }
+    
+    /// 切换银行卡/微信/支付宝时清空 PI 与 PaymentSheet，后续 create 会按当前选中方式建单方式 PI
+    private func clearPaymentSheetAndSecretForMethodSwitch() {
+        paymentResponse = nil
+        initialClientSecret = nil
+        paymentSheet = nil
+        paymentSheetClientSecret = nil
     }
     
     func createPaymentIntent(couponCode: String? = nil, userCouponId: Int? = nil) {
@@ -402,6 +394,11 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         var requestBody: [String: Any] = [
             "payment_method": "stripe"  // 只支持 Stripe 支付
         ]
+        
+        // 传首选支付方式，后端创建仅含该方式的 PI，PaymentSheet 直接进对应流程不弹选择窗
+        if let preferred = preferredPaymentMethodForAPI {
+            requestBody["preferred_payment_method"] = preferred
+        }
         
         // 优先使用传入的 couponCode，否则使用已选择的优惠券
         let finalCouponCode = couponCode ?? selectedCoupon?.coupon.code
