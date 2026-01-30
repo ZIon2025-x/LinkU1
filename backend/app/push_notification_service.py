@@ -204,11 +204,11 @@ def send_push_notification(
             logger.warning(f"用户 {user_id} 不存在，无法发送推送通知")
             return False
         
-        # 获取用户的所有激活的设备令牌
+        # 获取用户的所有激活的设备令牌，按更新时间倒序（新令牌更可能有效，优先发送）
         device_tokens = db.query(models.DeviceToken).filter(
             models.DeviceToken.user_id == user_id,
             models.DeviceToken.is_active == True
-        ).all()
+        ).order_by(models.DeviceToken.updated_at.desc()).all()
         
         if not device_tokens:
             logger.warning(f"用户 {user_id} 没有注册的设备令牌，无法发送推送通知")
@@ -481,26 +481,37 @@ def send_apns_notification(
             logger.error(f"[APNs诊断] 发送通知时发生异常: {str(e)}")
             logger.error(f"[APNs诊断] 异常类型: {type(e).__name__}")
             logger.error(f"[APNs诊断] 异常堆栈:\n{error_traceback}")
-            # 检查是否是设备令牌相关的错误
+            # 检查是否是设备令牌相关的错误（同时检查异常类型名，因为 str(e) 可能为空）
             error_str = str(e).lower()
-            if any(keyword in error_str for keyword in ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']):
-                logger.warning(f"设备令牌无效（异常: {type(e).__name__}），应标记为不活跃")
+            exc_name = type(e).__name__
+            token_invalid_keywords = ['baddevicetoken', 'unregistered', 'devicetokennotfortopic', 'invalid token']
+            if exc_name in ['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic'] or \
+               any(kw in error_str for kw in token_invalid_keywords):
+                logger.warning(f"设备令牌无效（异常: {exc_name}），应标记为不活跃")
+                if exc_name == 'BadDeviceToken':
+                    logger.info("[APNs诊断] 提示: BadDeviceToken 通常表示令牌无效、过期，或沙盒/生产环境不匹配（APNS_USE_SANDBOX 需与 App 分发渠道一致）")
                 return False
             # 其他异常视为系统错误
             return None
         
-        # 检查响应是否为 None（某些情况下 apns2 可能返回 None）
+        # 检查响应是否为 None（某些情况下 apns2 可能返回 None，如连接被 BadDeviceToken 影响后）
         if response is None:
-            logger.warning(f"[APNs诊断] send_notification 返回 None，可能是异步发送或配置问题")
-            logger.warning(f"[APNs诊断] 检查 APNs 客户端状态和配置")
-            logger.warning(f"[APNs诊断] 密钥文件: {key_file}, 沙盒模式: {APNS_USE_SANDBOX}, Bundle ID: {APNS_BUNDLE_ID}")
-            # 对于异步发送，可能需要等待响应，这里先返回 None（系统错误，不标记令牌为不活跃）
-            # 但我们可以尝试等待一小段时间，看看是否有响应
+            logger.warning(f"[APNs诊断] send_notification 返回 None，尝试使用新连接重试一次")
             import time
-            time.sleep(0.1)  # 等待100ms，看看是否有异步响应
-            # 注意：apns2 库的 send_notification 是同步的，如果返回 None 可能是配置问题
-            # 或者网络连接问题，这种情况下不应该标记令牌为不活跃
-            return None
+            time.sleep(0.3)  # 短暂等待后重试，避免连接状态问题
+            try:
+                apns_client_new = APNsClient(
+                    credentials=credentials,
+                    use_sandbox=APNS_USE_SANDBOX,
+                    use_alternative_port=False
+                )
+                response = apns_client_new.send_notification(device_token, payload, topic)
+            except Exception as retry_e:
+                logger.warning(f"[APNs诊断] 重试失败: {retry_e}")
+                return None
+            if response is None:
+                logger.warning(f"[APNs诊断] 重试后仍返回 None，可能是库的异步行为或网络问题，不标记令牌为不活跃")
+                return None
         
         # 检查响应
         if response.is_successful:

@@ -1286,6 +1286,10 @@ def create_task_payment(
             if payment_request.preferred_payment_method
             else ["card", "wechat_pay", "alipay"]
         )
+        logger.info(
+            f"创建 PaymentIntent: preferred_payment_method={payment_request.preferred_payment_method!r}, "
+            f"pm_types={pm_types}"
+        )
         payment_intent = stripe.PaymentIntent.create(
             amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
             currency="gbp",

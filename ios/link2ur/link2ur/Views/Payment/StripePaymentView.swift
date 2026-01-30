@@ -487,13 +487,16 @@ struct StripePaymentView: View {
     private var paymentButton: some View {
         if viewModel.selectedPaymentMethod == .card {
             // 信用卡支付按钮
-            if viewModel.paymentSheet != nil {
-                Button(action: {
-                    viewModel.performPayment()
-                }) {
+            if viewModel.isSwitchingPaymentMethod {
+                paymentMethodSwitchPlaceholderButton(
+                    gradient: LinearGradient(gradient: Gradient(colors: AppColors.gradientPrimary), startPoint: .leading, endPoint: .trailing)
+                ) {
+                    Image(systemName: "lock.shield.fill").font(.system(size: 18))
+                }
+            } else if viewModel.paymentSheet != nil {
+                Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
-                        Image(systemName: "lock.shield.fill")
-                            .font(.system(size: 18))
+                        Image(systemName: "lock.shield.fill").font(.system(size: 18))
                         Text(LocalizationKey.paymentConfirmPayment.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
@@ -513,17 +516,7 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                // 加载状态
-                VStack(spacing: 16) {
-                    CompactLoadingView()
-                    Text(LocalizationKey.paymentPreparingPayment.localized)
-                        .font(AppTypography.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 100)
-                .padding()
-                .onAppear {
-                    // 统一入口：只在必要时创建/复用 PaymentSheet
+                paymentFormLoadingView {
                     viewModel.ensurePaymentSheetReady()
                 }
             }
@@ -561,15 +554,30 @@ struct StripePaymentView: View {
             }
         } else if viewModel.selectedPaymentMethod == .wechatPay {
             // 微信支付按钮（需在 Stripe Dashboard 启用 WeChat Pay）
-            if viewModel.paymentSheet != nil {
-                Button(action: {
-                    viewModel.performPayment()
-                }) {
+            if viewModel.isSwitchingPaymentMethod {
+                paymentMethodSwitchPlaceholderButton(
+                    gradient: LinearGradient(
+                        gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                ) {
+                    Image("WeChatPayLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 18, height: 18)
+                        .foregroundColor(Color.white)
+                }
+            } else if viewModel.paymentSheet != nil {
+                Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
                         Image("WeChatPayLogo")
+                            .renderingMode(.template)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 18, height: 18)
+                            .foregroundColor(Color.white)
                         Text(LocalizationKey.paymentPayWithWeChatPay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
@@ -589,29 +597,34 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                VStack(spacing: 16) {
-                    CompactLoadingView()
-                    Text(LocalizationKey.paymentPreparingPayment.localized)
-                        .font(AppTypography.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 100)
-                .padding()
-                .onAppear {
-                    viewModel.ensurePaymentSheetReady()
-                }
+                paymentFormLoadingView { viewModel.ensurePaymentSheetReady() }
             }
         } else if viewModel.selectedPaymentMethod == .alipayPay {
             // 支付宝支付按钮
-            if viewModel.paymentSheet != nil {
-                Button(action: {
-                    viewModel.performPayment()
-                }) {
+            if viewModel.isSwitchingPaymentMethod {
+                paymentMethodSwitchPlaceholderButton(
+                    gradient: LinearGradient(
+                        gradient: Gradient(colors: [Color(red: 0.2, green: 0.5, blue: 0.95), Color(red: 0.1, green: 0.4, blue: 0.9)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                ) {
+                    Image("AlipayLogo")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 18, height: 18)
+                        .foregroundColor(Color.white)
+                }
+            } else if viewModel.paymentSheet != nil {
+                Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
                         Image("AlipayLogo")
+                            .renderingMode(.template)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 18, height: 18)
+                            .foregroundColor(Color.white)
                         Text(LocalizationKey.paymentPayWithAlipay.localized)
                             .font(AppTypography.title3)
                             .fontWeight(.semibold)
@@ -631,17 +644,7 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                VStack(spacing: 16) {
-                    CompactLoadingView()
-                    Text(LocalizationKey.paymentPreparingPayment.localized)
-                        .font(AppTypography.subheadline)
-                        .foregroundColor(AppColors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 100)
-                .padding()
-                .onAppear {
-                    viewModel.ensurePaymentSheetReady()
-                }
+                paymentFormLoadingView { viewModel.ensurePaymentSheetReady() }
             }
         } else {
             // 默认加载状态
@@ -654,6 +657,41 @@ struct StripePaymentView: View {
             .frame(maxWidth: .infinity, minHeight: 100)
             .padding()
         }
+    }
+    
+    /// 切换支付方式时的占位按钮：与真实按钮同款样式，禁用态 +「准备支付…」
+    @ViewBuilder
+    private func paymentMethodSwitchPlaceholderButton<Icon: View>(
+        gradient: LinearGradient,
+        @ViewBuilder icon: () -> Icon
+    ) -> some View {
+        HStack(spacing: 12) {
+            icon()
+            Text(LocalizationKey.paymentPreparing.localized)
+                .font(AppTypography.title3)
+                .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.md)
+        .background(gradient)
+        .cornerRadius(AppCornerRadius.large)
+        .opacity(0.85)
+        .allowsHitTesting(false)
+    }
+    
+    /// 「正在加载支付表单」区块，onAppear 时执行 onPrepare（如 ensurePaymentSheetReady）
+    @ViewBuilder
+    private func paymentFormLoadingView(onPrepare: @escaping () -> Void) -> some View {
+        VStack(spacing: 16) {
+            CompactLoadingView()
+            Text(LocalizationKey.paymentPreparingPayment.localized)
+                .font(AppTypography.subheadline)
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .padding()
+        .onAppear { onPrepare() }
     }
     
     // MARK: - Payment Method Selection Card

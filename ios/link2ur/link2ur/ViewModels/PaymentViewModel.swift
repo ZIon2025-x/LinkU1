@@ -67,10 +67,14 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     @Published var isLoadingCoupons = false
     @Published var selectedCoupon: UserCoupon?
     @Published var selectedPaymentMethod: PaymentMethodType = .card
+    /// 切换银行卡/微信/支付宝时為 true，用于展示「准备中」而非「正在加载支付表单」
+    @Published var isSwitchingPaymentMethod = false
     
     private let apiService: APIService
     private let taskId: Int
     private let amount: Double
+    /// 批准流程传入的 clientSecret：不参与 clear+create 切换，切换时保持使用该 PI（避免破坏 webhook 关联）
+    private let hasApprovalFlowClientSecret: Bool
     private var cancellables = Set<AnyCancellable>()
     
     private var initialClientSecret: String?
@@ -128,6 +132,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         self.initialClientSecret = clientSecret
         self.initialCustomerId = customerId
         self.initialEphemeralKeySecret = ephemeralKeySecret
+        self.hasApprovalFlowClientSecret = (clientSecret != nil && !(clientSecret?.isEmpty ?? true))
         self.apiService = apiService ?? APIService.shared
         
         // 必须先调用 super.init() 因为继承自 NSObject
@@ -359,10 +364,13 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             
             switch method {
             case .card, .wechatPay, .alipayPay:
+                if self.hasApprovalFlowClientSecret {
+                    // 批准流程使用 approve PI，不 clear+create，否则破坏 webhook 关联；仍会弹选择窗
+                    return
+                }
                 // 银行卡 / 微信 / 支付宝 用 PaymentSheet，且每种方式对应单独 PI，直接进该方式不弹选择窗
-                // 切换时废弃旧 PI、重建，避免复用「多方式」PI 导致再弹选择窗
                 self.clearPaymentSheetAndSecretForMethodSwitch()
-                self.createPaymentIntent()
+                self.createPaymentIntent(isMethodSwitch: true)
             case .applePay:
                 // Apple Pay 用原生流程，不弹 PaymentSheet；无 preferred_payment_method，可复用已有 PI
                 if self.activeClientSecret == nil {
@@ -373,14 +381,15 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     }
     
     /// 切换银行卡/微信/支付宝时清空 PI 与 PaymentSheet，后续 create 会按当前选中方式建单方式 PI
+    /// 保留 paymentResponse（金额、步骤）用于展示，仅清空 sheet/secret；置 isSwitchingPaymentMethod 以显示「准备中」
     private func clearPaymentSheetAndSecretForMethodSwitch() {
-        paymentResponse = nil
+        isSwitchingPaymentMethod = true
         initialClientSecret = nil
         paymentSheet = nil
         paymentSheetClientSecret = nil
     }
     
-    func createPaymentIntent(couponCode: String? = nil, userCouponId: Int? = nil) {
+    func createPaymentIntent(couponCode: String? = nil, userCouponId: Int? = nil, isMethodSwitch: Bool = false) {
         // 防止重复请求
         guard !isCreatingPaymentIntent else {
             Logger.debug("支付意图创建中，跳过重复请求", category: .network)
@@ -388,7 +397,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         }
         
         isCreatingPaymentIntent = true
-        isLoading = true
+        if !isMethodSwitch { isLoading = true }
         errorMessage = nil
         
         var requestBody: [String: Any] = [
@@ -398,6 +407,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         // 传首选支付方式，后端创建仅含该方式的 PI，PaymentSheet 直接进对应流程不弹选择窗
         if let preferred = preferredPaymentMethodForAPI {
             requestBody["preferred_payment_method"] = preferred
+            Logger.debug("createPaymentIntent 传入 preferred_payment_method=\(preferred)", category: .api)
         }
         
         // 优先使用传入的 couponCode，否则使用已选择的优惠券
@@ -419,6 +429,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             receiveCompletion: { [weak self] completion in
                 self?.isCreatingPaymentIntent = false
                 self?.isLoading = false
+                self?.isSwitchingPaymentMethod = false
                 if case .failure(let error) = completion {
                     self?.errorMessage = error.userFriendlyMessage
                 }
@@ -454,8 +465,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         // 更新 initialClientSecret 为最新的
         initialClientSecret = clientSecret
 
+        isSwitchingPaymentMethod = false
         // 无论当前选择哪种支付方式，都预热 PaymentSheet（用于信用卡支付）
-        // 这样用户可以自由切换；且 ensure 内部会避免重复重建
         ensurePaymentSheetReady()
     }
     

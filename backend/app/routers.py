@@ -6601,7 +6601,7 @@ def create_payment(
         return {"message": "Task already paid."}
     # 创建Stripe支付会话
     session = stripe.checkout.Session.create(
-        payment_method_types=["card", "alipay"],
+        payment_method_types=["card", "wechat_pay", "alipay"],
         line_items=[
             {
                 "price_data": {

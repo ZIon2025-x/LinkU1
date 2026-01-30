@@ -89,6 +89,17 @@ A:
 
 A: 查看 Railway 日志，如果看到 "已从环境变量加载 APNs 密钥" 的日志，说明配置成功。
 
+### Q: 出现 BadDeviceToken 或推送失败怎么办？
+
+A: BadDeviceToken 常见原因：
+- **沙盒/生产环境不匹配**：`APNS_USE_SANDBOX` 必须与 App 分发渠道一致
+  - Xcode 直接运行 / 开发签名 → `true`（沙盒）
+  - TestFlight / App Store 正式版 → `false`（生产）
+- 设备令牌过期或无效（用户重装 App 后旧令牌失效）
+- 设备令牌格式错误
+
+系统会自动将无效令牌标记为不活跃，用户重新打开 App 时会注册新令牌。
+
 ### Q: 密钥文件安全吗？
 
 A: 
