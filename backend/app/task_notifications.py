@@ -1374,7 +1374,6 @@ async def send_service_application_approved_notification(
                 notification_type="service_application_approved",
                 data={
                     "task_id": task_id,
-                    "service_id": service_id
                 },
                 template_vars={
                     "service_name": service_name,

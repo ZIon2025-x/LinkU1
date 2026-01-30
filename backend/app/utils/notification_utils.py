@@ -104,6 +104,12 @@ def enrich_notification_dict_with_task_id_sync(
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
+    # 达人服务/活动相关：service_application_approved、payment_reminder 的 related_id 就是 task_id
+    expert_task_types = ["service_application_approved", "payment_reminder"]
+    if notification.type in expert_task_types and notification.related_id:
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+        return notification_dict
+    
     return notification_dict
 
 
@@ -199,6 +205,12 @@ async def enrich_notification_dict_with_task_id_async(
     task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
     if notification.type in task_status_types and notification.related_id:
         # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+        notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+        return notification_dict
+    
+    # 达人服务/活动相关：service_application_approved、payment_reminder 的 related_id 就是 task_id
+    expert_task_types = ["service_application_approved", "payment_reminder"]
+    if notification.type in expert_task_types and notification.related_id:
         notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         return notification_dict
     
@@ -308,10 +320,13 @@ def enrich_notifications_with_task_id_sync(
                     # 如果不是有效的 task_id，不设置 task_id（可能是旧数据中的 application_id，避免误判）
             
             # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
+            # 达人服务/活动：service_application_approved、payment_reminder 的 related_id 就是 task_id
             else:
                 task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
+                expert_task_types = ["service_application_approved", "payment_reminder"]
                 if notification.type in task_status_types and notification.related_id:
-                    # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+                    notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+                elif notification.type in expert_task_types and notification.related_id:
                     notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         
         result.append(schemas.NotificationOut(**notification_dict))
@@ -426,10 +441,13 @@ async def enrich_notifications_with_task_id_async(
                     # 如果不是有效的 task_id，不设置 task_id（可能是旧数据中的 application_id，避免误判）
             
             # task_approved, task_completed, task_confirmed, task_cancelled 等类型：related_id 就是 task_id
+            # 达人服务/活动：service_application_approved、payment_reminder 的 related_id 就是 task_id
             else:
                 task_status_types = ["task_approved", "task_completed", "task_confirmed", "task_cancelled", "task_reward_paid"]
+                expert_task_types = ["service_application_approved", "payment_reminder"]
                 if notification.type in task_status_types and notification.related_id:
-                    # 确保 task_id 是整数类型（related_id 在数据库中已经是 Integer，但确保类型正确）
+                    notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
+                elif notification.type in expert_task_types and notification.related_id:
                     notification_dict["task_id"] = int(notification.related_id) if notification.related_id else None
         
         result.append(schemas.NotificationOut(**notification_dict))

@@ -204,8 +204,44 @@ struct SystemMessageView: View {
                 ScrollView {
                     LazyVStack(spacing: AppSpacing.md) {
                         ForEach(viewModel.notifications) { notification in
+                            // 优先判断是否是跳蚤市场相关的通知
+                            if NotificationHelper.isFleaMarketRelated(notification) {
+                                let onTapCallback: () -> Void = {
+                                    // 点击时立即标记为已读
+                                    if notification.isRead == 0 {
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
+                                
+                                // 优先检查是否有 task_id（部分跳蚤市场通知需要跳转到任务/支付页面）
+                                if let taskId = NotificationHelper.extractFleaMarketTaskId(from: notification) {
+                                    NavigationLink(destination: TaskDetailView(taskId: taskId)) {
+                                        NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .simultaneousGesture(
+                                        TapGesture().onEnded {
+                                            onTapCallback()
+                                        }
+                                    )
+                                } else if let itemId = NotificationHelper.extractFleaMarketItemId(from: notification) {
+                                    // 有商品ID，跳转到商品详情页
+                                    NavigationLink(destination: FleaMarketDetailView(itemId: itemId)) {
+                                        NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .simultaneousGesture(
+                                        TapGesture().onEnded {
+                                            onTapCallback()
+                                        }
+                                    )
+                                } else {
+                                    // 没有可跳转的ID，显示通知详情
+                                    NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                }
+                            }
                             // 判断是否是任务相关的通知，并提取任务ID
-                            if NotificationHelper.isTaskRelated(notification) {
+                            else if NotificationHelper.isTaskRelated(notification) {
                                 let extractedTaskId = NotificationHelper.extractTaskId(from: notification)
                                 
                                 let onTapCallback: () -> Void = {
@@ -231,6 +267,20 @@ struct SystemMessageView: View {
                                     // NotificationRow 内部会等待异步加载完成
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                 }
+                            }
+                            // 达人活动相关通知（活动奖励等）→ 跳转活动详情
+                            else if NotificationHelper.isActivityRelated(notification),
+                                    let activityId = NotificationHelper.extractActivityId(from: notification) {
+                                let onTapCallback: () -> Void = {
+                                    if notification.isRead == 0 {
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
+                                NavigationLink(destination: ActivityDetailView(activityId: activityId)) {
+                                    NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .simultaneousGesture(TapGesture().onEnded { onTapCallback() })
                             } else {
                                 NotificationRow(notification: notification, isTaskRelated: false, onTap: {
                                     // 标记为已读

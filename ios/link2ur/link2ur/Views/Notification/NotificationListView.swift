@@ -28,8 +28,47 @@ struct NotificationListView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
+                            // 优先判断是否是跳蚤市场相关的通知
+                            if NotificationHelper.isFleaMarketRelated(notification) {
+                                let onTapCallback: () -> Void = {
+                                    // 点击时立即标记为已读
+                                    if notification.isRead == 0 {
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
+                                
+                                // 优先检查是否有 task_id（部分跳蚤市场通知需要跳转到任务/支付页面）
+                                if let taskId = NotificationHelper.extractFleaMarketTaskId(from: notification) {
+                                    NavigationLink(destination: TaskDetailView(taskId: taskId)) {
+                                        NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                    .listItemAppear(index: index, totalItems: viewModel.notifications.count)
+                                    .simultaneousGesture(
+                                        TapGesture().onEnded {
+                                            onTapCallback()
+                                        }
+                                    )
+                                } else if let itemId = NotificationHelper.extractFleaMarketItemId(from: notification) {
+                                    // 有商品ID，跳转到商品详情页
+                                    NavigationLink(destination: FleaMarketDetailView(itemId: itemId)) {
+                                        NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                    .listItemAppear(index: index, totalItems: viewModel.notifications.count)
+                                    .simultaneousGesture(
+                                        TapGesture().onEnded {
+                                            onTapCallback()
+                                        }
+                                    )
+                                } else {
+                                    // 没有可跳转的ID，显示通知详情
+                                    NotificationRow(notification: notification, isTaskRelated: false, isFleaMarketRelated: true, onTap: onTapCallback)
+                                        .listItemAppear(index: index, totalItems: viewModel.notifications.count)
+                                }
+                            }
                             // 判断是否是任务相关的通知，并提取任务ID
-                            if NotificationHelper.isTaskRelated(notification) {
+                            else if NotificationHelper.isTaskRelated(notification) {
                                 let extractedTaskId = NotificationHelper.extractTaskId(from: notification)
                                 
                                 let onTapCallback: () -> Void = {
@@ -57,6 +96,23 @@ struct NotificationListView: View {
                                     NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
                                         .listItemAppear(index: index, totalItems: viewModel.notifications.count)
                                 }
+                            }
+                            // 达人活动相关通知（活动奖励等）→ 跳转活动详情
+                            else if NotificationHelper.isActivityRelated(notification),
+                                    let activityId = NotificationHelper.extractActivityId(from: notification) {
+                                let onTapCallback: () -> Void = {
+                                    if notification.isRead == 0 {
+                                        viewModel.markAsRead(notificationId: notification.id)
+                                    }
+                                }
+                                NavigationLink(destination: ActivityDetailView(activityId: activityId)) {
+                                    NotificationRow(notification: notification, isTaskRelated: false, onTap: onTapCallback)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                                .listItemAppear(index: index, totalItems: viewModel.notifications.count)
+                                .simultaneousGesture(
+                                    TapGesture().onEnded { onTapCallback() }
+                                )
                             } else {
                                 NotificationRow(notification: notification, isTaskRelated: false, onTap: {
                                     // 标记为已读
@@ -92,6 +148,7 @@ struct NotificationListView: View {
 struct NotificationRow: View {
     let notification: SystemNotification
     let isTaskRelated: Bool  // 是否是任务相关的通知（由外层传入）
+    let isFleaMarketRelated: Bool  // 是否是跳蚤市场相关的通知（由外层传入）
     let onTap: (() -> Void)?  // 点击回调（用于标记已读等）
     @State private var isLoadingTokens = false
     @State private var isResponding = false
@@ -106,9 +163,10 @@ struct NotificationRow: View {
     @State private var taskStatus: String? = nil  // 优化：任务状态，用于判断是否已过期
     @State private var showDetail = false  // 显示详情弹窗
     
-    init(notification: SystemNotification, isTaskRelated: Bool = false, onTap: (() -> Void)? = nil) {
+    init(notification: SystemNotification, isTaskRelated: Bool = false, isFleaMarketRelated: Bool = false, onTap: (() -> Void)? = nil) {
         self.notification = notification
         self.isTaskRelated = isTaskRelated
+        self.isFleaMarketRelated = isFleaMarketRelated
         self.onTap = onTap
     }
     
@@ -206,18 +264,20 @@ struct NotificationRow: View {
         Group {
             // 如果是议价通知或留言通知，且有 task_id，可以跳转
             // 优先使用 notification.taskId（直接从后端返回），如果没有则使用 @State 变量 taskId（异步加载）
-            // 注意：如果通知被外层识别为任务相关（isTaskRelated=true），外层会创建 NavigationLink，这里不应该再创建
+            // 注意：如果通知被外层识别为任务相关（isTaskRelated=true）或跳蚤市场相关（isFleaMarketRelated=true），
+            // 外层会创建 NavigationLink，这里不应该再创建
             if (isNegotiationOffer || isApplicationMessage), 
                !isTaskRelated,  // 只有在外层没有识别为任务相关时，才在这里创建 NavigationLink
+               !isFleaMarketRelated,  // 也不是跳蚤市场相关
                let taskId = notification.taskId ?? taskId {
                 NavigationLink(destination: TaskDetailView(taskId: taskId)) {
                     notificationContent
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                // 对于其他通知，如果不是任务相关的，都可以点击查看详情
-                // 如果是任务相关的通知，应该由外层的 NavigationLink 处理，不在这里添加 onTapGesture
-                if !isTaskRelated {
+                // 对于其他通知，如果不是任务相关的也不是跳蚤市场相关的，都可以点击查看详情
+                // 如果是任务相关或跳蚤市场相关的通知，应该由外层的 NavigationLink 处理，不在这里添加 onTapGesture
+                if !isTaskRelated && !isFleaMarketRelated {
                     notificationContent
                         .onTapGesture {
                             // 先执行外层的回调（如标记已读）
@@ -232,6 +292,30 @@ struct NotificationRow: View {
         }
     }
     
+    // 计算通知图标
+    private var notificationIcon: String {
+        if isFleaMarketRelated {
+            return "bag.fill"  // 跳蚤市场通知使用购物袋图标
+        }
+        return "bell.fill"  // 默认使用铃铛图标
+    }
+    
+    // 计算通知图标颜色
+    private var notificationIconColor: Color {
+        if isFleaMarketRelated {
+            return AppColors.warning  // 跳蚤市场通知使用橙色
+        }
+        return AppColors.primary  // 默认使用主题色
+    }
+    
+    // 计算通知图标背景色
+    private var notificationIconBackground: Color {
+        if isFleaMarketRelated {
+            return AppColors.warning.opacity(0.15)  // 跳蚤市场通知使用淡橙色背景
+        }
+        return AppColors.primaryLight  // 默认使用淡主题色背景
+    }
+    
     @ViewBuilder
     private var notificationContent: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -239,10 +323,10 @@ struct NotificationRow: View {
                 // 头像/图标
                 ZStack {
                     Circle()
-                        .fill(AppColors.primaryLight)
+                        .fill(notificationIconBackground)
                         .frame(width: 50, height: 50)
-                    Image(systemName: "bell.fill")
-                        .foregroundColor(AppColors.primary)
+                    Image(systemName: notificationIcon)
+                        .foregroundColor(notificationIconColor)
                         .font(.system(size: 20))
                 }
                 

@@ -227,9 +227,40 @@ public struct ContentView: View {
                 print("🔔 [ContentView] 跳蚤市场支付提醒，跳转到商品详情: \(itemId)")
                 navigateToFleaMarketItem(id: itemId)
             }
+        case "service_application_approved", "payment_reminder":
+            // 达人服务申请通过、支付提醒 → 跳转到任务详情（支付页）
+            if let taskId = extractTaskId(from: userInfo) {
+                print("🔔 [ContentView] 达人服务/支付提醒，跳转到任务详情: \(taskId)")
+                navigateToTask(id: taskId)
+            }
+        case "activity_reward_points", "activity_reward_cash":
+            // 达人活动奖励 → 跳转到活动详情
+            if let activityId = extractActivityId(from: userInfo) {
+                print("🔔 [ContentView] 活动奖励通知，跳转到活动详情: \(activityId)")
+                navigateToActivity(id: activityId)
+            }
         default:
             // 其他通知类型，跳转到通知列表
             print("🔔 [ContentView] 未知通知类型，跳转到通知列表")
+        }
+    }
+    
+    // 从 userInfo 中提取活动 ID（推送 payload 的 data 中）
+    private func extractActivityId(from userInfo: [AnyHashable: Any]) -> Int? {
+        if let data = userInfo["data"] as? [String: Any],
+           let activityIdValue = data["activity_id"] {
+            return parseTaskId(activityIdValue)
+        }
+        if let activityIdValue = userInfo["activity_id"] {
+            return parseTaskId(activityIdValue)
+        }
+        return nil
+    }
+    
+    // 导航到活动详情页
+    private func navigateToActivity(id: Int) {
+        if let url = DeepLinkHandler.generateURL(for: .activity(id: id)) {
+            DeepLinkHandler.shared.handle(url)
         }
     }
     

@@ -144,10 +144,10 @@ async def send_purchase_accepted_notification(
         # 发送推送通知
         try:
             from app.push_notification_service import send_push_notification_async_safe
+            from app.id_generator import format_flea_market_id
             push_title = "购买申请已接受，请完成支付" if task and task.status == "pending_payment" else None
             push_body = f"商品「{item.title}」的购买申请已被接受，请尽快完成支付" if task and task.status == "pending_payment" else None
             
-            from app.id_generator import format_flea_market_id
             send_push_notification_async_safe(
                 async_db=db,
                 user_id=buyer.id,
