@@ -441,6 +441,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             },
             receiveValue: { [weak self] response in
                 self?.isCreatingPaymentIntent = false
+                self?.isLoading = false
+                self?.isSwitchingPaymentMethod = false
                 self?.handlePaymentResponse(response)
             }
         )
@@ -778,70 +780,6 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
             let errorMsg = "Apple Pay 支付未知状态 - 设备类型: \(deviceType)"
             Logger.warning(errorMsg, category: .api)
             errorMessage = "支付过程中出现未知错误，请重试"
-        }
-    }
-    
-    // MARK: - 支付宝直接支付
-    
-    /// 使用支付宝直接支付（跳转支付宝 App/网页）
-    func confirmAlipayPayment() {
-        Logger.debug("开始支付宝直接支付流程", category: .api)
-        
-        guard let clientSecret = activeClientSecret else {
-            errorMessage = "支付信息未准备好，请稍后再试"
-            Logger.warning("缺少 client_secret，无法使用支付宝支付", category: .api)
-            createPaymentIntent()
-            return
-        }
-        
-        // 验证 clientSecret 格式
-        guard clientSecret.contains("_secret_") else {
-            errorMessage = "支付信息无效，请刷新页面重试"
-            Logger.error("clientSecret 格式无效: \(clientSecret.prefix(30))...", category: .api)
-            return
-        }
-        
-        // 检查最终支付金额
-        guard activeFinalAmountPence > 0 else {
-            Logger.info("最终支付金额为 0，无需支付", category: .api)
-            paymentSuccess = true
-            return
-        }
-        
-        isProcessingDirectPayment = true
-        
-        // 创建支付宝支付方式参数
-        let alipayParams = STPPaymentMethodAlipayParams()
-        let paymentMethodParams = STPPaymentMethodParams(
-            alipay: alipayParams,
-            billingDetails: nil,
-            metadata: nil
-        )
-        
-        // 创建 PaymentIntent 确认参数
-        let paymentIntentParams = STPPaymentIntentParams(clientSecret: clientSecret)
-        paymentIntentParams.paymentMethodParams = paymentMethodParams
-        paymentIntentParams.returnURL = "link2ur://stripe-redirect"
-        
-        Logger.debug("准备确认支付宝支付，clientSecret: \(clientSecret.prefix(20))..., 金额: \(activeFinalAmountPence) 便士", category: .api)
-        
-        // 使用新版 API 确认支付（会自动跳转到支付宝）
-        STPPaymentHandler.shared().confirmPaymentIntent(params: paymentIntentParams, authenticationContext: self) { [weak self] status, paymentIntent, error in
-            DispatchQueue.main.async {
-                self?.isProcessingDirectPayment = false
-                
-                // 记录详细的诊断信息
-                if let error = error {
-                    let nsError = error as NSError
-                    Logger.error("支付宝支付错误详情 - domain: \(nsError.domain), code: \(nsError.code)", category: .api)
-                    Logger.error("支付宝支付错误 userInfo: \(nsError.userInfo)", category: .api)
-                }
-                if let pi = paymentIntent {
-                    Logger.debug("支付宝 PaymentIntent 状态: \(pi.status.rawValue), ID: \(pi.stripeId)", category: .api)
-                }
-                
-                self?.handleDirectPaymentResult(status: status, error: error, paymentMethod: "支付宝")
-            }
         }
     }
     

@@ -27,7 +27,7 @@
 - **微信**：使用 PaymentSheet（后端创建仅含 `wechat_pay` 的 PI）。
 - 银行卡支付使用 PaymentSheet（需要收集卡号信息）。
 - 本地化：简体/繁体/英文已添加「使用支付宝支付」和「使用微信支付」文案。
-- URL 处理：`link2ur://stripe-redirect` 与 `link2ur://safepay` 均会作为 Stripe 支付回调处理；收到后**必须**调用 `StripeAPI.handleURLCallback(with: url)` 将 URL 转给 Stripe SDK（`onOpenURL` 与 `application(_:open:options:)` 均已实现），否则跳转支付宝/微信返回后无法完成流程。
+- URL 处理：PaymentSheet 与确认流程使用的 return_url 为 `link2ur://stripe-redirect`。App 内所有通过 `link2ur` scheme 打开的 URL（含 `stripe-redirect`、`safepay` 等）均会传入 `StripeAPI.handleURLCallback(with: url)`（`onOpenURL` 与 `application(_:open:options:)` 均已实现），由 Stripe SDK 判断是否处理，否则跳转支付宝/微信返回后无法完成流程。
 
 ### 前端 Web
 - PaymentModal、StripePaymentForm 的 `confirmPayment` 已传入 `return_url`，支持支付宝/微信等重定向类支付方式返回当前页。
