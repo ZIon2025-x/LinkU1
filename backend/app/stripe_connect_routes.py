@@ -27,6 +27,12 @@ from app import schemas, models
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.utils.time_utils import get_utc_time
 
+try:
+    from app.celery_tasks import get_redis_distributed_lock, release_redis_distributed_lock
+except ImportError:
+    get_redis_distributed_lock = lambda k, t=30: True
+    release_redis_distributed_lock = lambda k: None
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stripe/connect", tags=["Stripe Connect"])
@@ -72,11 +78,14 @@ def stripe_v2_api_request(method: str, endpoint: str, data: dict = None, params:
             query_params = {}
             if params:
                 query_params.update(params)
-            # 处理 include 参数
+            # 处理 include 参数（支持 data 或 params，retrieve 使用 params）；Stripe 期望 include[]
+            include_list = None
             if data and "include" in data:
                 include_list = data.get("include", [])
-                if include_list:
-                    query_params["include[]"] = include_list
+            elif "include" in query_params:
+                include_list = query_params.pop("include", [])
+            if include_list:
+                query_params["include[]"] = include_list
             response = requests.get(url, headers=headers, params=query_params, timeout=timeout)
         elif method.upper() == "POST":
             response = requests.post(url, headers=headers, json=data, timeout=timeout)
@@ -322,6 +331,42 @@ def create_account_session_safe(
     )
 
 
+def _retrieve_existing_connect_account_for_reuse(account_id: str) -> tuple:
+    """
+    检索已有 Connect 账户状态（V2 优先，V1 回退），用于复用已有账户。
+    返回 (details_submitted, charges_enabled)。
+    失败时抛出 stripe.error.StripeError。
+    """
+    try:
+        account = stripe_v2.core.accounts.retrieve(
+            account_id,
+            include=["requirements", "configuration.recipient"]
+        )
+        requirements = account.get("requirements", {})
+        summary = requirements.get("summary", {})
+        minimum_deadline = summary.get("minimum_deadline", {})
+        deadline_status = minimum_deadline.get("status")
+        details_submitted = not deadline_status or deadline_status == "eventually_due"
+        configuration = account.get("configuration") or {}
+        recipient_config = configuration.get("recipient") or {}
+        recipient_capabilities = recipient_config.get("capabilities", {})
+        stripe_balance = recipient_capabilities.get("stripe_balance", {})
+        stripe_transfers = stripe_balance.get("stripe_transfers", {})
+        charges_enabled = stripe_transfers.get("status") == "active"
+        if not charges_enabled:
+            merchant_config = configuration.get("merchant") or {}
+            merchant_capabilities = merchant_config.get("capabilities", {})
+            card_payments = merchant_capabilities.get("card_payments", {})
+            charges_enabled = card_payments.get("status") == "active"
+        return (details_submitted, charges_enabled)
+    except stripe.error.StripeError as v2_err:
+        err_msg = str(v2_err)
+        if "v1_account_instead_of_v2_account" in err_msg or "V1 Accounts cannot be used" in err_msg:
+            account = stripe.Account.retrieve(account_id)
+            return (account.details_submitted, account.charges_enabled)
+        raise
+
+
 def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
     """
     检查用户是否已有 Stripe Connect 账户
@@ -347,6 +392,14 @@ def check_user_has_stripe_account(user_id: int, db: Session) -> Optional[str]:
             )
             account_metadata = account.get("metadata", {})
             account_user_id = account_metadata.get("user_id") if isinstance(account_metadata, dict) else None
+            # V2 成功分支：校验 user_id 并返回已有账户（修复重复创建）
+            if account_user_id and str(account_user_id) == str(user_id):
+                logger.info(f"User {user_id} already has Stripe account {user.stripe_account_id} (verified via metadata, V2)")
+                return user.stripe_account_id
+            elif account_user_id:
+                logger.warning(f"User {user_id} has stripe_account_id {user.stripe_account_id} but metadata.user_id doesn't match")
+            else:
+                logger.warning(f"User {user_id} has stripe_account_id {user.stripe_account_id} but no user_id in metadata")
         except stripe.error.StripeError as v2_err:
             # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
             error_message = str(v2_err)
@@ -452,285 +505,309 @@ def create_connect_account(
         # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
         existing_account_id = check_user_has_stripe_account(current_user.id, db)
         if existing_account_id:
-            # 检查账户状态（优先使用 V2 API，兼容 V1 API）
+            # 沿用已有账户：复用 _retrieve_existing_connect_account_for_reuse，返回已有账户而非 400
             try:
-                # 尝试使用 V2 API
-                account = None
-                is_complete = False
-                try:
-                    account = stripe_v2.core.accounts.retrieve(
-                        existing_account_id,
-                        include=["requirements"]
-                    )
-                    requirements = account.get("requirements", {})
-                    currently_due = requirements.get("currently_due", [])
-                    is_complete = len(currently_due) == 0
-                except stripe.error.StripeError as v2_err:
-                    # 如果 V2 API 失败（可能是 V1 账户），尝试 V1 API
-                    error_message = str(v2_err)
-                    if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
-                        logger.debug(f"Account {existing_account_id} is a V1 account, using V1 API")
-                    else:
-                        logger.debug(f"V2 API retrieval failed, trying V1 API: {v2_err}")
-                    # 回退到 V1 API
-                    account = stripe.Account.retrieve(existing_account_id)
-                    is_complete = account.details_submitted
-                
+                details_submitted, charges_enabled = _retrieve_existing_connect_account_for_reuse(existing_account_id)
                 logger.info(f"User {current_user.id} already has Stripe account {existing_account_id}, returning existing account")
-                raise HTTPException(
-                    status_code=400,
-                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
-                )
-            except HTTPException:
-                raise
-            except stripe.error.StripeError as e:
-                logger.error(f"Error retrieving Stripe account: {e}")
-                # 如果账户不存在，清除记录并继续创建
-                db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
-                if db_user_clear:
-                    db_user_clear.stripe_account_id = None
-                    db.commit()
-                    db.refresh(db_user_clear)
-        
-        # 创建 Express Account (使用 V2 API)
-        # 参考: 官方文档 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
-        try:
-            # 使用 V2 API 创建账户（通过 HTTP 请求）
-            # 根据官方文档，使用 merchant 配置用于接收支付
-            account_data = stripe_v2_api_request(
-                "POST",
-                "accounts",
-                data={
-                    "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
-                    "display_name": current_user.name or f"User {current_user.id}",
-                    "dashboard": "express",  # Express Dashboard
-                    "identity": {
-                        "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
-                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
-                    },
-                    "configuration": {
-                        # 使用 recipient 配置用于接收支付（与 sample code 一致）
-                        "recipient": {
-                            "capabilities": {
-                                "stripe_balance": {
-                                    "stripe_transfers": {
-                                        "requested": True
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "defaults": {
-                        "currency": "gbp",
-                        "responsibilities": {
-                            "fees_collector": "application",  # 平台收取费用
-                            "losses_collector": "application"  # 平台承担损失
-                        },
-                        "locales": ["en-GB"]
-                    },
-                    "metadata": {
-                    "user_id": str(current_user.id),
-                    "platform": "Link²Ur",
-                        "user_name": current_user.name or f"User {current_user.id}"
-                    },
-                    "include": [
-                        "configuration.recipient",
-                        "identity",
-                        "requirements"
-                    ]
-                }
-            )
-            account = StripeV2Account(account_data)
-            logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
-        except Exception as e:
-            logger.error(f"Error creating Stripe Connect account: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"创建 Stripe 账户失败: {str(e)}"
-            )
-        
-        # 再次检查用户是否已有账户（防止并发创建）
-        # 重新查询用户以确保对象在当前会话中
-        db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
-        if db_user_check and db_user_check.stripe_account_id:
-            logger.warning(f"User {current_user.id} already has a Stripe account {db_user_check.stripe_account_id}, skipping creation of {account.id}")
-            # 如果用户已经有账户，返回现有账户信息（使用嵌入式组件）
-            try:
-                existing_account = stripe.Account.retrieve(db_user_check.stripe_account_id)
-                
-                # 检查账户状态（V2 API 使用 requirements 字段）
-                # 尝试使用 V2 API 检索账户
-                try:
-                    v2_account = stripe_v2.core.accounts.retrieve(
-                        existing_account.id,
-                        include=["requirements"]
-                    )
-                    # V2 API: 检查 requirements 中是否有 currently_due 或 eventually_due
-                    requirements = v2_account.get("requirements", {})
-                    currently_due = requirements.get("currently_due", [])
-                    eventually_due = requirements.get("eventually_due", [])
-                    is_complete = len(currently_due) == 0 and len(eventually_due) == 0
-                    
-                    if is_complete:
-                        return {
-                            "account_id": existing_account.id,
-                            "client_secret": None,
-                            "account_status": True,
-                            "charges_enabled": True,  # V2 API 中需要从其他地方获取
-                            "message": "您已经有一个 Stripe 账户且已完成设置"
-                        }
-                except stripe.error.StripeError as v2_err:
-                    # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
-                    error_message = str(v2_err)
-                    if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
-                        logger.debug(f"Account {existing_account.id} is a V1 account, using V1 API result")
-                    else:
-                        logger.warning(f"Failed to retrieve account using V2 API: {v2_err}, falling back to V1 check")
-                    # 回退到 V1 API 检查
-                    is_complete = existing_account.details_submitted
-                if is_complete or existing_account.details_submitted:
+                if details_submitted and charges_enabled:
                     return {
-                        "account_id": existing_account.id,
+                        "account_id": existing_account_id,
                         "client_secret": None,
-                        "account_status": existing_account.details_submitted,
-                        "charges_enabled": existing_account.charges_enabled,
+                        "account_status": details_submitted,
+                        "charges_enabled": charges_enabled,
                         "message": "您已经有一个 Stripe 账户且已完成设置"
                     }
-                
-                # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
-                onboarding_session = create_account_session_safe(existing_account.id)
-                
+                onboarding_session = create_account_session_safe(
+                    existing_account_id, enable_account_onboarding=True
+                )
                 return {
-                    "account_id": existing_account.id,
+                    "account_id": existing_account_id,
                     "client_secret": onboarding_session.client_secret,
-                    "account_status": existing_account.details_submitted,
-                    "charges_enabled": existing_account.charges_enabled,
+                    "account_status": details_submitted,
+                    "charges_enabled": charges_enabled,
                     "message": "您已经有一个 Stripe 账户，请完成设置"
                 }
             except stripe.error.StripeError as e:
-                logger.error(f"Error retrieving existing account: {e}")
-                # 如果现有账户无效，清除记录并继续
-                db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
-                if db_user_clear:
-                    db_user_clear.stripe_account_id = None
-                    db.commit()
-                    db.refresh(db_user_clear)
+                logger.error(f"Error retrieving Stripe account {existing_account_id}: {e}")
+                if getattr(e, "http_status", None) == 404:
+                    db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
+                    if db_user_clear:
+                        db_user_clear.stripe_account_id = None
+                        db.commit()
+                        db.refresh(db_user_clear)
+                else:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="无法获取 Stripe 账户状态，请稍后重试"
+                    )
         
-        # 保存账户 ID 到用户记录
+        lock_key = f"stripe_connect:create:{current_user.id}"
+        if not get_redis_distributed_lock(lock_key, 30):
+            raise HTTPException(status_code=409, detail="操作进行中，请稍后重试")
         try:
-            # 重新查询用户以确保对象在当前会话中
-            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-            if not db_user:
-                raise HTTPException(status_code=404, detail="用户不存在")
-            
-            db_user.stripe_account_id = account.id
-            db.add(db_user)  # 确保对象被添加到会话
-            db.commit()
-            db.refresh(db_user)  # 刷新对象以确保数据是最新的
-            
-            # 验证保存是否成功
-            if db_user.stripe_account_id == account.id:
-                logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
-            else:
-                logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
-                # 尝试再次保存
-                if db_user:
-                    db_user.stripe_account_id = account.id
-                    db.commit()
-                    db.refresh(db_user)
-                    logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
-        except Exception as db_err:
-            # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
-            db.rollback()
-            if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
-                logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+            existing2 = check_user_has_stripe_account(current_user.id, db)
+            if existing2:
+                details_submitted, charges_enabled = _retrieve_existing_connect_account_for_reuse(existing2)
+                logger.info(f"User {current_user.id} already has Stripe account {existing2} (double-check), returning")
+                if details_submitted and charges_enabled:
+                    return {
+                        "account_id": existing2,
+                        "client_secret": None,
+                        "account_status": details_submitted,
+                        "charges_enabled": charges_enabled,
+                        "message": "您已经有一个 Stripe 账户且已完成设置"
+                    }
+                onboarding_session = create_account_session_safe(existing2, enable_account_onboarding=True)
+                return {
+                    "account_id": existing2,
+                    "client_secret": onboarding_session.client_secret,
+                    "account_status": details_submitted,
+                    "charges_enabled": charges_enabled,
+                    "message": "您已经有一个 Stripe 账户，请完成设置"
+                }
+            # 创建 Express Account (使用 V2 API)
+            # 参考: 官方文档 https://docs.stripe.com/connect/embedded-onboarding?accounts-namespace=v2
+            try:
+                # 使用 V2 API 创建账户（通过 HTTP 请求）
+                # 根据官方文档，使用 merchant 配置用于接收支付
+                account_data = stripe_v2_api_request(
+                    "POST",
+                    "accounts",
+                    data={
+                        "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                        "display_name": current_user.name or f"User {current_user.id}",
+                        "dashboard": "express",  # Express Dashboard
+                        "identity": {
+                            "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
+                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
+                        },
+                        "configuration": {
+                            # 使用 recipient 配置用于接收支付（与 sample code 一致）
+                            "recipient": {
+                                "capabilities": {
+                                    "stripe_balance": {
+                                        "stripe_transfers": {
+                                            "requested": True
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "defaults": {
+                            "currency": "gbp",
+                            "responsibilities": {
+                                "fees_collector": "application",  # 平台收取费用
+                                "losses_collector": "application"  # 平台承担损失
+                            },
+                            "locales": ["en-GB"]
+                        },
+                        "metadata": {
+                            "user_id": str(current_user.id),
+                            "platform": "Link²Ur",
+                            "user_name": current_user.name or f"User {current_user.id}"
+                        },
+                        "include": [
+                            "configuration.recipient",
+                            "identity",
+                            "requirements"
+                        ]
+                    }
+                )
+                account = StripeV2Account(account_data)
+                logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
+            except Exception as e:
+                logger.error(f"Error creating Stripe Connect account: {e}")
                 raise HTTPException(
                     status_code=400,
-                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                    detail=f"创建 Stripe 账户失败: {str(e)}"
                 )
-            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
-            raise
         
-        # 创建 AccountSession 用于嵌入式 onboarding（不使用跳转链接）
-        try:
-            onboarding_session = create_account_session_safe(account.id)
-            logger.info(f"Created AccountSession for account {account.id}")
-        except stripe.error.StripeError as session_err:
-            logger.error(f"Stripe error creating AccountSession: {session_err}")
-            # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
-            return {
-                "account_id": account.id,
-                "client_secret": None,
-                "account_status": account.details_submitted,
-                "charges_enabled": account.charges_enabled,
-                "message": f"账户创建成功，但无法立即创建 onboarding session: {str(session_err)}"
-            }
+            # 再次检查用户是否已有账户（防止并发创建）
+            # 重新查询用户以确保对象在当前会话中
+            db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if db_user_check and db_user_check.stripe_account_id:
+                logger.warning(f"User {current_user.id} already has a Stripe account {db_user_check.stripe_account_id}, skipping creation of {account.id}")
+                # 如果用户已经有账户，返回现有账户信息（使用嵌入式组件）
+                try:
+                    existing_account = stripe.Account.retrieve(db_user_check.stripe_account_id)
+                    
+                    # 检查账户状态（V2 API 使用 requirements 字段）
+                    # 尝试使用 V2 API 检索账户
+                    try:
+                        v2_account = stripe_v2.core.accounts.retrieve(
+                            existing_account.id,
+                            include=["requirements"]
+                        )
+                        # V2 API: 检查 requirements 中是否有 currently_due 或 eventually_due
+                        requirements = v2_account.get("requirements", {})
+                        currently_due = requirements.get("currently_due", [])
+                        eventually_due = requirements.get("eventually_due", [])
+                        is_complete = len(currently_due) == 0 and len(eventually_due) == 0
+                        
+                        if is_complete:
+                            return {
+                                "account_id": existing_account.id,
+                                "client_secret": None,
+                                "account_status": True,
+                                "charges_enabled": True,  # V2 API 中需要从其他地方获取
+                                "message": "您已经有一个 Stripe 账户且已完成设置"
+                            }
+                    except stripe.error.StripeError as v2_err:
+                        # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
+                        error_message = str(v2_err)
+                        if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                            logger.debug(f"Account {existing_account.id} is a V1 account, using V1 API result")
+                        else:
+                            logger.warning(f"Failed to retrieve account using V2 API: {v2_err}, falling back to V1 check")
+                        # 回退到 V1 API 检查
+                        is_complete = existing_account.details_submitted
+                    if is_complete or existing_account.details_submitted:
+                        return {
+                            "account_id": existing_account.id,
+                            "client_secret": None,
+                            "account_status": existing_account.details_submitted,
+                            "charges_enabled": existing_account.charges_enabled,
+                            "message": "您已经有一个 Stripe 账户且已完成设置"
+                        }
+                    
+                    # 如果账户未完成 onboarding，创建 AccountSession 用于嵌入式组件
+                    onboarding_session = create_account_session_safe(existing_account.id)
+                    
+                    return {
+                        "account_id": existing_account.id,
+                        "client_secret": onboarding_session.client_secret,
+                        "account_status": existing_account.details_submitted,
+                        "charges_enabled": existing_account.charges_enabled,
+                        "message": "您已经有一个 Stripe 账户，请完成设置"
+                    }
+                except stripe.error.StripeError as e:
+                    logger.error(f"Error retrieving existing account: {e}")
+                    # 如果现有账户无效，清除记录并继续
+                    db_user_clear = db.query(models.User).filter(models.User.id == current_user.id).first()
+                    if db_user_clear:
+                        db_user_clear.stripe_account_id = None
+                        db.commit()
+                        db.refresh(db_user_clear)
         
-        # V2 API 返回的账户对象结构不同，需要从 requirements 判断状态
-        # 参考: stripe-sample-code/server.js 的账户状态检查逻辑
-        account_status = False
-        charges_enabled = False
-        payouts_enabled = False
-        try:
-            # 尝试从 V2 API 获取完整账户信息
-            v2_account = stripe_v2.core.accounts.retrieve(
-                account.id,
-                include=["requirements", "configuration.recipient"]  # 与 sample code 一致
-            )
-            requirements = v2_account.get("requirements", {})
-            currently_due = requirements.get("currently_due", [])
-            
-            # 检查 summary 状态（参考 sample code）
-            summary = requirements.get("summary", {})
-            minimum_deadline = summary.get("minimum_deadline", {})
-            deadline_status = minimum_deadline.get("status")
-            # details_submitted 表示没有当前需要提交的要求
-            account_status = not deadline_status or deadline_status == "eventually_due"
-            
-            # 检查 recipient 配置中的 capabilities（用于接收支付）
-            configuration = v2_account.get("configuration") or {}
-            recipient_config = configuration.get("recipient") or {}
-            recipient_capabilities = recipient_config.get("capabilities", {})
-            stripe_balance = recipient_capabilities.get("stripe_balance", {})
-            stripe_transfers = stripe_balance.get("stripe_transfers", {})
-            charges_enabled = stripe_transfers.get("status") == "active"
-            
-            # 检查 payouts 状态
-            payouts = stripe_balance.get("payouts", {})
-            payouts_enabled = payouts.get("status") == "active"
-            
-            # 如果 recipient 不可用，回退到 merchant 配置
-            if not charges_enabled:
-                merchant_config = configuration.get("merchant") or {}
-                merchant_capabilities = merchant_config.get("capabilities", {})
-                card_payments = merchant_capabilities.get("card_payments", {})
-                charges_enabled = card_payments.get("status") == "active"
-        except stripe.error.StripeError as v2_err:
-            # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
-            error_message = str(v2_err)
-            if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
-                logger.debug(f"Account {account.id} is a V1 account, using V1 API result")
-            else:
-                logger.warning(f"Failed to get account status from V2 API: {v2_err}, using V1 API result")
-            # 使用 V1 API 已经检索的账户信息
-            account_status = account.details_submitted
-            charges_enabled = account.charges_enabled
-            payouts_enabled = account.payouts_enabled
-        except Exception as status_err:
-            logger.warning(f"Failed to get account status: {status_err}, using defaults")
-            # 如果所有 API 都失败，使用默认值
+            # 保存账户 ID 到用户记录
+            try:
+                # 重新查询用户以确保对象在当前会话中
+                db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if not db_user:
+                    raise HTTPException(status_code=404, detail="用户不存在")
+                
+                db_user.stripe_account_id = account.id
+                db.add(db_user)  # 确保对象被添加到会话
+                db.commit()
+                db.refresh(db_user)  # 刷新对象以确保数据是最新的
+                
+                # 验证保存是否成功
+                if db_user.stripe_account_id == account.id:
+                    logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+                else:
+                    logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
+                    # 尝试再次保存
+                    if db_user:
+                        db_user.stripe_account_id = account.id
+                        db.commit()
+                        db.refresh(db_user)
+                        logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            except Exception as db_err:
+                # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
+                db.rollback()
+                if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
+                    logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                    )
+                logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
+                raise
+        
+            # 创建 AccountSession 用于嵌入式 onboarding（不使用跳转链接）
+            try:
+                onboarding_session = create_account_session_safe(account.id)
+                logger.info(f"Created AccountSession for account {account.id}")
+            except stripe.error.StripeError as session_err:
+                logger.error(f"Stripe error creating AccountSession: {session_err}")
+                # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
+                return {
+                    "account_id": account.id,
+                    "client_secret": None,
+                    "account_status": account.details_submitted,
+                    "charges_enabled": account.charges_enabled,
+                    "message": f"账户创建成功，但无法立即创建 onboarding session: {str(session_err)}"
+                }
+        
+            # V2 API 返回的账户对象结构不同，需要从 requirements 判断状态
+            # 参考: stripe-sample-code/server.js 的账户状态检查逻辑
             account_status = False
             charges_enabled = False
             payouts_enabled = False
+            try:
+                # 尝试从 V2 API 获取完整账户信息
+                v2_account = stripe_v2.core.accounts.retrieve(
+                    account.id,
+                    include=["requirements", "configuration.recipient"]  # 与 sample code 一致
+                )
+                requirements = v2_account.get("requirements", {})
+                currently_due = requirements.get("currently_due", [])
+                
+                # 检查 summary 状态（参考 sample code）
+                summary = requirements.get("summary", {})
+                minimum_deadline = summary.get("minimum_deadline", {})
+                deadline_status = minimum_deadline.get("status")
+                # details_submitted 表示没有当前需要提交的要求
+                account_status = not deadline_status or deadline_status == "eventually_due"
+                
+                # 检查 recipient 配置中的 capabilities（用于接收支付）
+                configuration = v2_account.get("configuration") or {}
+                recipient_config = configuration.get("recipient") or {}
+                recipient_capabilities = recipient_config.get("capabilities", {})
+                stripe_balance = recipient_capabilities.get("stripe_balance", {})
+                stripe_transfers = stripe_balance.get("stripe_transfers", {})
+                charges_enabled = stripe_transfers.get("status") == "active"
+                
+                # 检查 payouts 状态
+                payouts = stripe_balance.get("payouts", {})
+                payouts_enabled = payouts.get("status") == "active"
+                
+                # 如果 recipient 不可用，回退到 merchant 配置
+                if not charges_enabled:
+                    merchant_config = configuration.get("merchant") or {}
+                    merchant_capabilities = merchant_config.get("capabilities", {})
+                    card_payments = merchant_capabilities.get("card_payments", {})
+                    charges_enabled = card_payments.get("status") == "active"
+            except stripe.error.StripeError as v2_err:
+                # 如果 V2 API 失败（可能是 V1 账户），使用 V1 API 的结果
+                error_message = str(v2_err)
+                if "v1_account_instead_of_v2_account" in error_message or "V1 Accounts cannot be used" in error_message:
+                    logger.debug(f"Account {account.id} is a V1 account, using V1 API result")
+                else:
+                    logger.warning(f"Failed to get account status from V2 API: {v2_err}, using V1 API result")
+                # 使用 V1 API 已经检索的账户信息
+                account_status = account.details_submitted
+                charges_enabled = account.charges_enabled
+                payouts_enabled = account.payouts_enabled
+            except Exception as status_err:
+                logger.warning(f"Failed to get account status: {status_err}, using defaults")
+                # 如果所有 API 都失败，使用默认值
+                account_status = False
+                charges_enabled = False
+                payouts_enabled = False
+            
+            return {
+                "account_id": account.id,
+                "client_secret": onboarding_session.client_secret,
+                "account_status": account_status,
+                "charges_enabled": charges_enabled,
+                "message": "账户创建成功，请完成账户设置"
+            }
+        finally:
+            release_redis_distributed_lock(lock_key)
         
-        return {
-            "account_id": account.id,
-            "client_secret": onboarding_session.client_secret,
-            "account_status": account_status,
-            "charges_enabled": charges_enabled,
-            "message": "账户创建成功，请完成账户设置"
-        }
-        
+    except HTTPException:
+        raise
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error creating account: {e}")
         raise HTTPException(
@@ -769,215 +846,246 @@ def create_connect_account_embedded(
         # 检查用户是否已有 Stripe Connect 账户（每个用户只能有一个账户）
         existing_account_id = check_user_has_stripe_account(current_user.id, db)
         if existing_account_id:
-            # 检查账户状态
+            # 沿用已有账户：复用 _retrieve_existing_connect_account_for_reuse；仅 404 时清空 DB
             try:
-                account = stripe.Account.retrieve(existing_account_id)
-                
-                # 如果账户已完成 onboarding，返回成功
-                if account.details_submitted:
+                details_submitted, charges_enabled = _retrieve_existing_connect_account_for_reuse(existing_account_id)
+                if details_submitted and charges_enabled:
                     return {
-                        "account_id": account.id,
+                        "account_id": existing_account_id,
                         "client_secret": None,
-                        "account_status": account.details_submitted,
-                        "charges_enabled": account.charges_enabled,
+                        "account_status": details_submitted,
+                        "charges_enabled": charges_enabled,
                         "message": "账户已存在且已完成设置"
                     }
-                
-                # 如果账户未完成 onboarding，创建 onboarding session
-                onboarding_session = create_account_session_safe(account.id)
-                
+                onboarding_session = create_account_session_safe(
+                    existing_account_id, enable_account_onboarding=True
+                )
                 return {
-                    "account_id": account.id,
+                    "account_id": existing_account_id,
                     "client_secret": onboarding_session.client_secret,
-                    "account_status": account.details_submitted,
-                    "charges_enabled": account.charges_enabled,
+                    "account_status": details_submitted,
+                    "charges_enabled": charges_enabled,
                     "message": "账户已存在，请完成设置"
                 }
             except stripe.error.StripeError as e:
-                logger.error(f"Error retrieving Stripe account: {e}")
-                # 如果账户不存在，清除记录
-                current_user.stripe_account_id = None
-                db.commit()
+                logger.error(f"Error retrieving Stripe account {existing_account_id}: {e}")
+                if getattr(e, "http_status", None) == 404:
+                    db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+                    if db_user:
+                        db_user.stripe_account_id = None
+                        db.commit()
+                raise HTTPException(
+                    status_code=503,
+                    detail="无法获取 Stripe 账户状态，请稍后重试"
+                )
         
-        # 创建 Express Account (使用 V2 API)
-        # 参考: Stripe Connect Embedded Onboarding 官方文档
-        # 注意：使用 V2 API 创建账户，但 AccountSession API 是 V1 API（可以与 V2 账户一起使用）
-        account = None
+        lock_key = f"stripe_connect:create:{current_user.id}"
+        if not get_redis_distributed_lock(lock_key, 30):
+            raise HTTPException(status_code=409, detail="操作进行中，请稍后重试")
         try:
-            logger.info(f"使用 V2 API 创建 Stripe Connect 账户 for user {current_user.id}")
-            # 使用 V2 API 创建账户（根据官方文档）
-            account_data = stripe_v2_api_request(
-                "POST",
-                "accounts",
-                data={
-                    "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
-                    "display_name": current_user.name or f"User {current_user.id}",
-                    "dashboard": "express",  # Express Dashboard
-                    "identity": {
-                        "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
-                        "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
-                    },
-                    "configuration": {
-                        # 使用 recipient 配置用于接收支付（与 sample code 一致）
-                        "recipient": {
-                            "capabilities": {
-                                "stripe_balance": {
-                                    "stripe_transfers": {
-                                        "requested": True
+            existing2 = check_user_has_stripe_account(current_user.id, db)
+            if existing2:
+                details_submitted, charges_enabled = _retrieve_existing_connect_account_for_reuse(existing2)
+                logger.info(f"User {current_user.id} already has Stripe account {existing2} (double-check), returning")
+                if details_submitted and charges_enabled:
+                    return {
+                        "account_id": existing2,
+                        "client_secret": None,
+                        "account_status": details_submitted,
+                        "charges_enabled": charges_enabled,
+                        "message": "账户已存在且已完成设置"
+                    }
+                onboarding_session = create_account_session_safe(existing2, enable_account_onboarding=True)
+                return {
+                    "account_id": existing2,
+                    "client_secret": onboarding_session.client_secret,
+                    "account_status": details_submitted,
+                    "charges_enabled": charges_enabled,
+                    "message": "账户已存在，请完成设置"
+                }
+            # 创建 Express Account (使用 V2 API)
+            # 参考: Stripe Connect Embedded Onboarding 官方文档
+            # 注意：使用 V2 API 创建账户，但 AccountSession API 是 V1 API（可以与 V2 账户一起使用）
+            account = None
+            try:
+                logger.info(f"使用 V2 API 创建 Stripe Connect 账户 for user {current_user.id}")
+                # 使用 V2 API 创建账户（根据官方文档）
+                account_data = stripe_v2_api_request(
+                    "POST",
+                    "accounts",
+                    data={
+                        "contact_email": current_user.email or f"user_{current_user.id}@link2ur.com",
+                        "display_name": current_user.name or f"User {current_user.id}",
+                        "dashboard": "express",  # Express Dashboard
+                        "identity": {
+                            "country": "GB",  # 默认使用 GB（与 sample code 一致），用户可以在 onboarding 时更改
+                            "entity_type": "individual"  # 默认为个人，用户可以在 onboarding 时更改（sample code 使用 company，但我们使用 individual 更符合任务接受人的场景）
+                        },
+                        "configuration": {
+                            # 使用 recipient 配置用于接收支付（与 sample code 一致）
+                            "recipient": {
+                                "capabilities": {
+                                    "stripe_balance": {
+                                        "stripe_transfers": {
+                                            "requested": True
+                                        }
                                     }
                                 }
                             }
-                        }
-                    },
-                    "defaults": {
-                        "currency": "gbp",
-                        "responsibilities": {
-                            "fees_collector": "application",  # 平台收取费用
-                            "losses_collector": "application"  # 平台承担损失
                         },
-                        "locales": ["en-GB"]
-                    },
-                    "metadata": {
-                    "user_id": str(current_user.id),
-                    "platform": "Link²Ur",
-                        "user_name": current_user.name or f"User {current_user.id}"
-                    },
-                    "include": [
-                        "configuration.recipient",
-                        "identity",
-                        "requirements"
-                    ]
-                }
-            )
-            account = StripeV2Account(account_data)
-            logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
-        except stripe.error.StripeError as e:
-            logger.error(f"Stripe error creating account: {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=f"创建 Stripe 账户失败: {str(e)}"
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error creating Stripe Connect account: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"创建 Stripe 账户失败: {str(e)}"
-            )
-        
-        if not account:
-            raise HTTPException(
-                status_code=500,
-                detail="无法创建 Stripe 账户：未知错误"
-            )
-        
-        # 再次检查用户是否已有账户（防止并发创建）
-        # 重新查询用户以确保对象在当前会话中
-        db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
-        if db_user_check:
-            existing_account_id = check_user_has_stripe_account(db_user_check.id, db)
-        else:
-            existing_account_id = None
-        if existing_account_id and existing_account_id != account.id:
-            logger.warning(f"User {current_user.id} already has a Stripe account {existing_account_id}, skipping creation of {account.id}")
-            # 如果用户已经有账户，返回现有账户信息
-            try:
-                existing_account = stripe.Account.retrieve(existing_account_id)
-                if existing_account.details_submitted:
-                    return {
-                        "account_id": existing_account.id,
-                        "client_secret": None,
-                        "account_status": existing_account.details_submitted,
-                        "charges_enabled": existing_account.charges_enabled,
-                        "message": "您已经有一个 Stripe 账户且已完成设置"
+                        "defaults": {
+                            "currency": "gbp",
+                            "responsibilities": {
+                                "fees_collector": "application",  # 平台收取费用
+                                "losses_collector": "application"  # 平台承担损失
+                            },
+                            "locales": ["en-GB"]
+                        },
+                        "metadata": {
+                            "user_id": str(current_user.id),
+                            "platform": "Link²Ur",
+                            "user_name": current_user.name or f"User {current_user.id}"
+                        },
+                        "include": [
+                            "configuration.recipient",
+                            "identity",
+                            "requirements"
+                        ]
                     }
-                # 如果账户未完成 onboarding，创建 onboarding session
-                onboarding_session = create_account_session_safe(existing_account.id)
-                return {
-                    "account_id": existing_account.id,
-                    "client_secret": onboarding_session.client_secret,
-                    "account_status": existing_account.details_submitted,
-                    "charges_enabled": existing_account.charges_enabled,
-                    "message": "您已经有一个 Stripe 账户，请完成设置"
-                }
+                )
+                account = StripeV2Account(account_data)
+                logger.info(f"Created Stripe Connect account {account.id} using V2 API for user {current_user.id}")
             except stripe.error.StripeError as e:
-                logger.error(f"Error retrieving existing account: {e}")
-                # 如果现有账户无效，清除记录并继续
-                current_user.stripe_account_id = None
-                db.commit()
-        
-        # 保存账户 ID 到用户记录
-        try:
-            # 重新查询用户以确保对象在当前会话中
-            db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
-            if not db_user:
-                raise HTTPException(status_code=404, detail="用户不存在")
-            
-            db_user.stripe_account_id = account.id
-            db.add(db_user)  # 确保对象被添加到会话
-            db.commit()
-            db.refresh(db_user)  # 刷新对象以确保数据是最新的
-            
-            # 验证保存是否成功
-            if db_user.stripe_account_id == account.id:
-                logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
-            else:
-                logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
-                # 尝试再次保存
-                db_user.stripe_account_id = account.id
-                db.commit()
-                db.refresh(db_user)
-                logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
-        except Exception as db_err:
-            # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
-            db.rollback()
-            if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
-                logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+                logger.error(f"Stripe error creating account: {e}")
                 raise HTTPException(
                     status_code=400,
-                    detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                    detail=f"创建 Stripe 账户失败: {str(e)}"
                 )
-            logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"保存账户信息失败: {str(db_err)}"
-            )
+            except Exception as e:
+                logger.error(f"Unexpected error creating Stripe Connect account: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"创建 Stripe 账户失败: {str(e)}"
+                )
         
-        # 最终验证：确保账户 ID 已保存到数据库
-        final_check = db.query(models.User).filter(models.User.id == current_user.id).first()
-        if not final_check or final_check.stripe_account_id != account.id:
-            logger.error(f"❌ Final check failed: stripe_account_id not saved for user {current_user.id}")
-            # 最后一次尝试保存
-            if final_check:
-                final_check.stripe_account_id = account.id
-                db.commit()
-                db.refresh(final_check)
-                logger.info(f"Final retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            if not account:
+                raise HTTPException(
+                    status_code=500,
+                    detail="无法创建 Stripe 账户：未知错误"
+                )
+        
+            # 再次检查用户是否已有账户（防止并发创建）
+            # 重新查询用户以确保对象在当前会话中
+            db_user_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if db_user_check:
+                existing_account_id = check_user_has_stripe_account(db_user_check.id, db)
             else:
-                logger.error(f"Cannot find user {current_user.id} in database for final check")
+                existing_account_id = None
+            if existing_account_id and existing_account_id != account.id:
+                logger.warning(f"User {current_user.id} already has a Stripe account {existing_account_id}, skipping creation of {account.id}")
+                # 如果用户已经有账户，返回现有账户信息
+                try:
+                    existing_account = stripe.Account.retrieve(existing_account_id)
+                    if existing_account.details_submitted:
+                        return {
+                            "account_id": existing_account.id,
+                            "client_secret": None,
+                            "account_status": existing_account.details_submitted,
+                            "charges_enabled": existing_account.charges_enabled,
+                            "message": "您已经有一个 Stripe 账户且已完成设置"
+                        }
+                    # 如果账户未完成 onboarding，创建 onboarding session
+                    onboarding_session = create_account_session_safe(existing_account.id)
+                    return {
+                        "account_id": existing_account.id,
+                        "client_secret": onboarding_session.client_secret,
+                        "account_status": existing_account.details_submitted,
+                        "charges_enabled": existing_account.charges_enabled,
+                        "message": "您已经有一个 Stripe 账户，请完成设置"
+                    }
+                except stripe.error.StripeError as e:
+                    logger.error(f"Error retrieving existing account: {e}")
+                    # 如果现有账户无效，清除记录并继续
+                    current_user.stripe_account_id = None
+                    db.commit()
         
-        # 创建 AccountSession 用于嵌入式 onboarding
-        try:
-            onboarding_session = create_account_session_safe(account.id)
-            logger.info(f"Created AccountSession for account {account.id}")
-        except stripe.error.StripeError as session_err:
-            logger.error(f"Stripe error creating AccountSession: {session_err}")
-            # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
+            # 保存账户 ID 到用户记录
+            try:
+                # 重新查询用户以确保对象在当前会话中
+                db_user = db.query(models.User).filter(models.User.id == current_user.id).first()
+                if not db_user:
+                    raise HTTPException(status_code=404, detail="用户不存在")
+                
+                db_user.stripe_account_id = account.id
+                db.add(db_user)  # 确保对象被添加到会话
+                db.commit()
+                db.refresh(db_user)  # 刷新对象以确保数据是最新的
+                
+                # 验证保存是否成功
+                if db_user.stripe_account_id == account.id:
+                    logger.info(f"✅ Verified: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+                else:
+                    logger.error(f"❌ Failed to verify: stripe_account_id not saved correctly for user {current_user.id}")
+                    # 尝试再次保存
+                    db_user.stripe_account_id = account.id
+                    db.commit()
+                    db.refresh(db_user)
+                    logger.info(f"Retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+            except Exception as db_err:
+                # 捕获唯一性约束错误（虽然理论上不应该发生，因为我们已经检查过了）
+                db.rollback()
+                if "unique" in str(db_err).lower() or "duplicate" in str(db_err).lower():
+                    logger.warning(f"User {current_user.id} already has a Stripe account (database constraint violation)")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="您已经有一个 Stripe Connect 账户，每个用户只能有一个账户"
+                    )
+                logger.error(f"Error saving stripe_account_id to database: {db_err}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"保存账户信息失败: {str(db_err)}"
+                )
+        
+            # 最终验证：确保账户 ID 已保存到数据库
+            final_check = db.query(models.User).filter(models.User.id == current_user.id).first()
+            if not final_check or final_check.stripe_account_id != account.id:
+                logger.error(f"❌ Final check failed: stripe_account_id not saved for user {current_user.id}")
+                # 最后一次尝试保存
+                if final_check:
+                    final_check.stripe_account_id = account.id
+                    db.commit()
+                    db.refresh(final_check)
+                    logger.info(f"Final retry: Stripe Connect account {account.id} saved to database for user {current_user.id}")
+                else:
+                    logger.error(f"Cannot find user {current_user.id} in database for final check")
+        
+            # 创建 AccountSession 用于嵌入式 onboarding
+            try:
+                onboarding_session = create_account_session_safe(account.id)
+                logger.info(f"Created AccountSession for account {account.id}")
+            except stripe.error.StripeError as session_err:
+                logger.error(f"Stripe error creating AccountSession: {session_err}")
+                # 即使创建 session 失败，也返回账户信息，让用户可以稍后重试
+                return {
+                    "account_id": account.id,
+                    "client_secret": None,
+                    "account_status": getattr(account, 'details_submitted', False),
+                    "charges_enabled": getattr(account, 'charges_enabled', False),
+                    "message": f"账户创建成功，但无法创建 onboarding session: {str(session_err)}"
+                }
+        
             return {
                 "account_id": account.id,
-                "client_secret": None,
+                "client_secret": onboarding_session.client_secret,
                 "account_status": getattr(account, 'details_submitted', False),
                 "charges_enabled": getattr(account, 'charges_enabled', False),
-                "message": f"账户创建成功，但无法创建 onboarding session: {str(session_err)}"
+                "message": "账户创建成功，请完成账户设置"
             }
+        finally:
+            release_redis_distributed_lock(lock_key)
         
-        return {
-            "account_id": account.id,
-            "client_secret": onboarding_session.client_secret,
-            "account_status": getattr(account, 'details_submitted', False),
-            "charges_enabled": getattr(account, 'charges_enabled', False),
-            "message": "账户创建成功，请完成账户设置"
-        }
-        
+    except HTTPException:
+        raise
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error creating account: {e}")
         raise HTTPException(
