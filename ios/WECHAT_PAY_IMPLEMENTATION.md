@@ -4,21 +4,18 @@
 
 根据 Stripe 文档，WeChat Pay（微信支付）可以在 iOS 应用中通过 Stripe PaymentSheet 支持。本指南说明如何配置和实现。
 
-## ⚠️ 当前状态
+## 当前状态
 
-### 🔴 重要提示
-**WeChat Pay 功能目前已暂时隐藏**，因为 Stripe 账户需要申请额外权限才能使用 WeChat Pay。
+### ✅ 已完成的代码实现
+- ✅ 后端已配置 `payment_method_types=["card", "wechat_pay", "alipay"]`（任务支付、闲鱼、优惠券等）
+- ✅ iOS 已配置 PaymentSheet 的 `returnURL`（`link2ur://stripe-redirect`）
+- ✅ iOS 已注册 URL Scheme（`link2ur://`）
+- ✅ iOS 支付方式选择卡片中已显示「微信支付」选项
+- ✅ iOS 已显示「使用微信支付」绿色按钮及加载状态
 
-### 已完成的代码实现
-- ✅ 后端已配置 `payment_method_types=["card", "wechat_pay"]`
-- ✅ iOS 已配置 PaymentSheet 的 `returnURL`
-- ✅ iOS 已注册 URL Scheme (`link2ur://`)
-- ✅ iOS UI 代码已实现（目前已注释）
-
-### 🚧 需要完成的步骤
-- ⚠️ **联系 Stripe 支持**：申请启用 `wechat_pay_payments` capability
-- ⚠️ **在 Stripe Dashboard 中启用 WeChat Pay**：确保状态为 "Active"
-- ⚠️ 启用后，取消 `StripePaymentView.swift` 中的注释即可显示微信支付选项
+### 使用前需完成
+- ⚠️ **在 Stripe Dashboard 中启用 WeChat Pay**：Settings → Payment methods → 启用 WeChat Pay，确保状态为 "Active"
+- ⚠️ **Connect 账户**：若为无标准 Dashboard 的 Connect 子账户，需向 Stripe 申请 `wechat_pay_payments` capability（私密预览）
 
 ## 📋 Stripe WeChat Pay 支持情况
 

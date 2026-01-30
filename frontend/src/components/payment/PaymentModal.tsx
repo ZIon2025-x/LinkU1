@@ -86,10 +86,10 @@ const PaymentForm: React.FC<{
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          // 对于嵌入式支付，不需要 return_url
-          // 如果需要重定向（如某些支付方式），Stripe 会自动处理
+          // 支付宝等支付方式会重定向，需提供 return_url 以便支付完成后返回
+          return_url: `${window.location.origin}${window.location.pathname}${window.location.search}`,
         },
-        redirect: 'if_required', // 只在需要时重定向（如 3D Secure）
+        redirect: 'if_required', // 只在需要时重定向（如 3D Secure、支付宝）
       });
 
       // 错误处理（参考 Stripe sample code）

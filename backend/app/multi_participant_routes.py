@@ -552,7 +552,7 @@ def apply_to_activity(
                 amount=task_amount_pence,
                 currency=db_activity.currency.lower(),
                 # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay"],
+                payment_method_types=["card", "wechat_pay", "alipay"],
                 # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
                 # 不设置 application_fee_amount，服务费在任务完成转账时扣除
                 metadata={

@@ -2637,7 +2637,7 @@ async def apply_for_service(
                 amount=task_amount_pence,
                 currency=(application_data.currency or service.currency).lower(),
                 # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay"],
+                payment_method_types=["card", "wechat_pay", "alipay"],
                 # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
                 # 不设置 application_fee_amount，服务费在任务完成转账时扣除
                 metadata={
@@ -3035,7 +3035,7 @@ async def approve_service_application(
             # 明确指定支付方式类型，确保 WeChat Pay 可用
             # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
             # 必须在 Stripe Dashboard 中启用 WeChat Pay
-            payment_method_types=["card", "wechat_pay"],
+            payment_method_types=["card", "wechat_pay", "alipay"],
             # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
             # 不设置 application_fee_amount，服务费在任务完成转账时扣除
             description=f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",

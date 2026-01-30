@@ -1142,6 +1142,7 @@
 "payment.select_method" = "Select Payment Method";
 "payment.pay_with_apple_pay" = "Pay with Apple Pay";
 "payment.pay_with_wechat_pay" = "Pay with WeChat Pay";
+"payment.pay_with_alipay" = "Pay with Alipay";
 
 // MARK: - Share
 "share.wechat" = "WeChat";

@@ -559,51 +559,88 @@ struct StripePaymentView: View {
                 .frame(maxWidth: .infinity, minHeight: 100)
                 .padding()
             }
-        // ⚠️ 微信支付按钮暂时隐藏：Stripe 账户需要申请 wechat_pay_payments capability
-        // 联系 Stripe 支持启用后，取消下面的注释即可显示
-        // } else if viewModel.selectedPaymentMethod == .wechatPay {
-        //     // 微信支付按钮
-        //     if viewModel.paymentSheet != nil {
-        //         Button(action: {
-        //             viewModel.performPayment()
-        //         }) {
-        //             HStack(spacing: 12) {
-        //                 Image("WeChatLogo")
-        //                     .resizable()
-        //                     .aspectRatio(contentMode: .fit)
-        //                     .frame(width: 18, height: 18)
-        //                 Text(LocalizationKey.paymentPayWithWeChatPay.localized)
-        //                     .font(AppTypography.title3)
-        //                     .fontWeight(.semibold)
-        //             }
-        //             .foregroundColor(.white)
-        //             .frame(maxWidth: .infinity)
-        //             .padding(.vertical, AppSpacing.md)
-        //             .background(
-        //                 LinearGradient(
-        //                     gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
-        //                     startPoint: .leading,
-        //                     endPoint: .trailing
-        //                 )
-        //             )
-        //             .cornerRadius(AppCornerRadius.large)
-        //             .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
-        //         }
-        //         .buttonStyle(PlainButtonStyle())
-        //     } else {
-        //         // 加载状态
-        //         VStack(spacing: 16) {
-        //             CompactLoadingView()
-        //             Text(LocalizationKey.paymentPreparingPayment.localized)
-        //                 .font(AppTypography.subheadline)
-        //                 .foregroundColor(AppColors.textSecondary)
-        //         }
-        //         .frame(maxWidth: .infinity, minHeight: 100)
-        //         .padding()
-        //         .onAppear {
-        //             viewModel.ensurePaymentSheetReady()
-        //         }
-        //     }
+        } else if viewModel.selectedPaymentMethod == .wechatPay {
+            // 微信支付按钮（需在 Stripe Dashboard 启用 WeChat Pay）
+            if viewModel.paymentSheet != nil {
+                Button(action: {
+                    viewModel.performPayment()
+                }) {
+                    HStack(spacing: 12) {
+                        Image("WeChatLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
+                        Text(LocalizationKey.paymentPayWithWeChatPay.localized)
+                            .font(AppTypography.title3)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                VStack(spacing: 16) {
+                    CompactLoadingView()
+                    Text(LocalizationKey.paymentPreparingPayment.localized)
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .padding()
+                .onAppear {
+                    viewModel.ensurePaymentSheetReady()
+                }
+            }
+        } else if viewModel.selectedPaymentMethod == .alipayPay {
+            // 支付宝支付按钮
+            if viewModel.paymentSheet != nil {
+                Button(action: {
+                    viewModel.performPayment()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.system(size: 18))
+                        Text(LocalizationKey.paymentPayWithAlipay.localized)
+                            .font(AppTypography.title3)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(red: 0.2, green: 0.5, blue: 0.95), Color(red: 0.1, green: 0.4, blue: 0.9)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(AppCornerRadius.large)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                VStack(spacing: 16) {
+                    CompactLoadingView()
+                    Text(LocalizationKey.paymentPreparingPayment.localized)
+                        .font(AppTypography.subheadline)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .padding()
+                .onAppear {
+                    viewModel.ensurePaymentSheetReady()
+                }
+            }
         } else {
             // 默认加载状态
             VStack(spacing: 16) {
@@ -664,18 +701,27 @@ struct StripePaymentView: View {
                     }
                 }
                 
-                // 微信支付选项
-                // ⚠️ 暂时隐藏：Stripe 账户需要申请 wechat_pay_payments capability
-                // 联系 Stripe 支持启用后，取消下面的注释即可显示
-                // PaymentMethodOption(
-                //     method: .wechatPay,
-                //     isSelected: viewModel.selectedPaymentMethod == .wechatPay,
-                //     isAvailable: true
-                // ) {
-                //     withTransaction(Transaction(animation: nil)) {
-                //         viewModel.selectPaymentMethod(.wechatPay)
-                //     }
-                // }
+                // 微信支付选项（需在 Stripe Dashboard 启用 WeChat Pay）
+                PaymentMethodOption(
+                    method: .wechatPay,
+                    isSelected: viewModel.selectedPaymentMethod == .wechatPay,
+                    isAvailable: true
+                ) {
+                    withTransaction(Transaction(animation: nil)) {
+                        viewModel.selectPaymentMethod(.wechatPay)
+                    }
+                }
+                
+                // 支付宝选项
+                PaymentMethodOption(
+                    method: .alipayPay,
+                    isSelected: viewModel.selectedPaymentMethod == .alipayPay,
+                    isAvailable: true
+                ) {
+                    withTransaction(Transaction(animation: nil)) {
+                        viewModel.selectPaymentMethod(.alipayPay)
+                    }
+                }
             }
         }
         .padding()

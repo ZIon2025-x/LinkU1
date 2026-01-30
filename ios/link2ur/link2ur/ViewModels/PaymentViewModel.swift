@@ -17,6 +17,7 @@ enum PaymentMethodType: String, CaseIterable {
     case card = "card"
     case applePay = "applePay"
     case wechatPay = "wechatPay"
+    case alipayPay = "alipayPay"
     
     var displayName: String {
         switch self {
@@ -26,6 +27,8 @@ enum PaymentMethodType: String, CaseIterable {
             return "Apple Pay"
         case .wechatPay:
             return "微信支付"
+        case .alipayPay:
+            return "支付宝"
         }
     }
     
@@ -37,13 +40,15 @@ enum PaymentMethodType: String, CaseIterable {
             return "applelogo"
         case .wechatPay:
             return "WeChatLogo"  // 使用 asset 中的微信图标
+        case .alipayPay:
+            return "dollarsign.circle.fill"  // 支付宝无系统图标，使用通用支付图标
         }
     }
     
     /// 判断图标是否为 asset 图标（而非系统图标）
     var isAssetIcon: Bool {
         switch self {
-        case .card, .applePay:
+        case .card, .applePay, .alipayPay:
             return false
         case .wechatPay:
             return true
@@ -366,6 +371,15 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
                     self.createPaymentIntent()
                 } else {
                     // 只在 PaymentSheet 不存在时才创建，避免重复初始化
+                    if self.paymentSheet == nil {
+                        self.ensurePaymentSheetReady()
+                    }
+                }
+            case .alipayPay:
+                // 支付宝使用 PaymentSheet，需要 clientSecret（Stripe 会跳转支付宝后通过 returnURL 返回）
+                if self.activeClientSecret == nil {
+                    self.createPaymentIntent()
+                } else {
                     if self.paymentSheet == nil {
                         self.ensurePaymentSheetReady()
                     }
@@ -718,7 +732,6 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             payWithApplePay()
         case .wechatPay:
             // 使用 PaymentSheet 支付（WeChat Pay 通过 PaymentSheet 处理）
-            // PaymentSheet 会自动显示 WeChat Pay 选项（如果后端支持）
             if let paymentSheet = paymentSheet {
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let rootViewController = windowScene.windows.first?.rootViewController {
@@ -738,7 +751,29 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             } else {
                 errorMessage = "支付表单未准备好，请稍后重试"
                 Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-                // 尝试按统一入口创建/复用 PaymentSheet
+                ensurePaymentSheetReady()
+            }
+        case .alipayPay:
+            // 使用 PaymentSheet 支付（支付宝通过 PaymentSheet 处理，会跳转支付宝 App/网页后通过 returnURL 返回）
+            if let paymentSheet = paymentSheet {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootViewController = windowScene.windows.first?.rootViewController {
+                    var topViewController = rootViewController
+                    while let presented = topViewController.presentedViewController {
+                        topViewController = presented
+                    }
+                    Logger.debug("准备弹出 PaymentSheet（支付宝）", category: .api)
+                    paymentSheet.present(from: topViewController) { [weak self] result in
+                        Logger.debug("PaymentSheet 结果（支付宝）: \(result)", category: .api)
+                        self?.handlePaymentResult(result)
+                    }
+                } else {
+                    errorMessage = "无法打开支付界面，请重试"
+                    Logger.error("无法获取顶层视图控制器", category: .api)
+                }
+            } else {
+                errorMessage = "支付表单未准备好，请稍后重试"
+                Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
                 ensurePaymentSheetReady()
             }
         }

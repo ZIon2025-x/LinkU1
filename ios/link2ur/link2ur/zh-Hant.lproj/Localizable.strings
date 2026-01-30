@@ -844,6 +844,7 @@
 "payment.select_method" = "選擇支付方式";
 "payment.pay_with_apple_pay" = "使用 Apple Pay 支付";
 "payment.pay_with_wechat_pay" = "使用微信支付";
+"payment.pay_with_alipay" = "使用支付寶支付";
 "payment.countdown.expired" = "已過期";
 "payment.countdown.remaining" = "剩餘 %@";
 "payment.countdown.banner.title" = "請在30分鐘內完成支付";

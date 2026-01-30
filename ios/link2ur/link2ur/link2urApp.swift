@@ -43,10 +43,9 @@ struct link2urApp: App {
                     // 处理Universal Links和深度链接
                     print("🔗 [App] 收到URL: \(url.absoluteString)")
                     
-                    // 处理 Stripe 支付回调（WeChat Pay 等）
-                    if url.scheme == "link2ur" && url.host == "stripe-redirect" {
-                        // Stripe PaymentSheet 会自动处理这个回调
-                        // 这里只需要记录日志
+                    // 处理 Stripe 支付回调（WeChat Pay、支付宝等）
+                    if url.scheme == "link2ur" && (url.host == "stripe-redirect" || url.host == "safepay") {
+                        // Stripe PaymentSheet 会自动处理这个回调（含支付宝 returnURL: link2ur://safepay/）
                         print("✅ [Stripe] 收到支付回调: \(url.absoluteString)")
                     }
                     
