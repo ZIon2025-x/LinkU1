@@ -553,8 +553,9 @@ struct StripePaymentView: View {
                 .padding()
             }
         } else if viewModel.selectedPaymentMethod == .wechatPay {
-            // 微信支付按钮（需在 Stripe Dashboard 启用 WeChat Pay）
-            if viewModel.isSwitchingPaymentMethod {
+            // 微信支付按钮（使用直接跳转方式）
+            if viewModel.isSwitchingPaymentMethod || viewModel.isProcessingDirectPayment {
+                // 准备中或正在处理支付
                 paymentMethodSwitchPlaceholderButton(
                     gradient: LinearGradient(
                         gradient: Gradient(colors: [Color(red: 0.2, green: 0.8, blue: 0.2), Color(red: 0.1, green: 0.7, blue: 0.1)]),
@@ -562,14 +563,21 @@ struct StripePaymentView: View {
                         endPoint: .trailing
                     )
                 ) {
-                    SwiftUI.Image("WeChatPayLogo")
-                        .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 18, height: 18)
-                        .foregroundColor(SwiftUI.Color.white)
+                    if viewModel.isProcessingDirectPayment {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 18, height: 18)
+                    } else {
+                        SwiftUI.Image("WeChatPayLogo")
+                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.template)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
+                            .foregroundColor(SwiftUI.Color.white)
+                    }
                 }
-            } else if viewModel.paymentSheet != nil {
+            } else if viewModel.hasActivePaymentClientSecret {
+                // 有 client_secret，可以支付
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
                         SwiftUI.Image("WeChatPayLogo")
@@ -597,11 +605,13 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                paymentFormLoadingView { viewModel.ensurePaymentSheetReady() }
+                // 加载 PaymentIntent 中
+                paymentFormLoadingView { viewModel.createPaymentIntent(isMethodSwitch: true) }
             }
         } else if viewModel.selectedPaymentMethod == .alipayPay {
-            // 支付宝支付按钮
-            if viewModel.isSwitchingPaymentMethod {
+            // 支付宝支付按钮（使用直接跳转方式）
+            if viewModel.isSwitchingPaymentMethod || viewModel.isProcessingDirectPayment {
+                // 准备中或正在处理支付
                 paymentMethodSwitchPlaceholderButton(
                     gradient: LinearGradient(
                         gradient: Gradient(colors: [Color(red: 0.2, green: 0.5, blue: 0.95), Color(red: 0.1, green: 0.4, blue: 0.9)]),
@@ -609,13 +619,20 @@ struct StripePaymentView: View {
                         endPoint: .trailing
                     )
                 ) {
-                    SwiftUI.Image("AlipayLogo")
-                        .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 18, height: 18)
+                    if viewModel.isProcessingDirectPayment {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(width: 18, height: 18)
+                    } else {
+                        SwiftUI.Image("AlipayLogo")
+                            .renderingMode(SwiftUI.Image.TemplateRenderingMode.original)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
+                    }
                 }
-            } else if viewModel.paymentSheet != nil {
+            } else if viewModel.hasActivePaymentClientSecret {
+                // 有 client_secret，可以支付
                 Button(action: { viewModel.performPayment() }) {
                     HStack(spacing: 12) {
                         SwiftUI.Image("AlipayLogo")
@@ -642,7 +659,8 @@ struct StripePaymentView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
-                paymentFormLoadingView { viewModel.ensurePaymentSheetReady() }
+                // 加载 PaymentIntent 中
+                paymentFormLoadingView { viewModel.createPaymentIntent(isMethodSwitch: true) }
             }
         } else {
             // 默认加载状态

@@ -57,7 +57,7 @@ enum PaymentMethodType: String, CaseIterable {
 }
 
 @MainActor
-class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
+class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STPAuthenticationContext {
     @Published var isLoading = false
     @Published var paymentSheet: PaymentSheet?
     @Published var errorMessage: String?
@@ -69,6 +69,8 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
     @Published var selectedPaymentMethod: PaymentMethodType = .card
     /// 切换银行卡/微信/支付宝时為 true，用于展示「准备中」而非「正在加载支付表单」
     @Published var isSwitchingPaymentMethod = false
+    /// 支付宝/微信直接支付时为 true，用于显示加载状态
+    @Published var isProcessingDirectPayment = false
     
     private let apiService: APIService
     private let taskId: Int
@@ -347,6 +349,7 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
 
     /// 统一的支付方式切换入口（便于扩展更多支付方式）
     /// 优化：立即更新 UI，延迟准备支付方式，避免阻塞
+    /// 注意：支付宝/微信使用直接跳转方式，不再需要预先创建 PaymentIntent
     func selectPaymentMethod(_ method: PaymentMethodType) {
         // 如果已经是当前选择的方式，直接返回，避免重复操作
         guard selectedPaymentMethod != method else {
@@ -363,16 +366,18 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             }
             
             switch method {
-            case .card, .wechatPay, .alipayPay:
-                if self.hasApprovalFlowClientSecret {
-                    // 批准流程使用 approve PI，不 clear+create，否则破坏 webhook 关联；仍会弹选择窗
-                    return
-                }
-                // 银行卡 / 微信 / 支付宝 用 PaymentSheet，且每种方式对应单独 PI，直接进该方式不弹选择窗
+            case .card:
+                // 银行卡使用 PaymentSheet，需要创建只包含 card 的 PaymentIntent
+                // 移除批准流程的特殊处理，始终创建新的 PI 以确保只包含 card
+                self.clearPaymentSheetAndSecretForMethodSwitch()
+                self.createPaymentIntent(isMethodSwitch: true)
+            case .wechatPay, .alipayPay:
+                // 支付宝/微信使用直接跳转方式，需要创建包含对应支付方式的 PaymentIntent
+                // 如果已有 PI 但不是当前选择的支付方式，需要重新创建
                 self.clearPaymentSheetAndSecretForMethodSwitch()
                 self.createPaymentIntent(isMethodSwitch: true)
             case .applePay:
-                // Apple Pay 用原生流程，不弹 PaymentSheet；无 preferred_payment_method，可复用已有 PI
+                // Apple Pay 用原生流程，可复用已有 PI（因为后端会自动处理）
                 if self.activeClientSecret == nil {
                     self.createPaymentIntent()
                 }
@@ -507,6 +512,25 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             // 用户取消，不显示错误
             Logger.debug("用户取消支付", category: .api)
             break
+        }
+    }
+    
+    // MARK: - STPAuthenticationContext
+    
+    /// 返回用于显示支付认证界面的视图控制器
+    nonisolated func authenticationPresentingViewController() -> UIViewController {
+        // 在主线程上同步获取顶层视图控制器
+        return DispatchQueue.main.sync {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                var topViewController = rootViewController
+                while let presented = topViewController.presentedViewController {
+                    topViewController = presented
+                }
+                return topViewController
+            }
+            // 如果无法获取，返回一个空的视图控制器（不应该发生）
+            return UIViewController()
         }
     }
     
@@ -692,6 +716,141 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
         }
     }
     
+    // MARK: - 支付宝直接支付
+    
+    /// 使用支付宝直接支付（跳转支付宝 App/网页）
+    func confirmAlipayPayment() {
+        Logger.debug("开始支付宝直接支付流程", category: .api)
+        
+        guard let clientSecret = activeClientSecret else {
+            errorMessage = "支付信息未准备好，请稍后再试"
+            Logger.warning("缺少 client_secret，无法使用支付宝支付", category: .api)
+            createPaymentIntent()
+            return
+        }
+        
+        // 检查最终支付金额
+        guard activeFinalAmountPence > 0 else {
+            Logger.info("最终支付金额为 0，无需支付", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        isProcessingDirectPayment = true
+        
+        // 创建支付宝支付方式参数
+        let alipayParams = STPPaymentMethodAlipayParams()
+        let paymentMethodParams = STPPaymentMethodParams(
+            alipay: alipayParams,
+            billingDetails: nil,
+            metadata: nil
+        )
+        
+        // 创建 PaymentIntent 确认参数
+        let paymentIntentParams = STPPaymentIntentParams(clientSecret: clientSecret)
+        paymentIntentParams.paymentMethodParams = paymentMethodParams
+        paymentIntentParams.returnURL = "link2ur://stripe-redirect"
+        
+        Logger.debug("准备确认支付宝支付，clientSecret: \(clientSecret.prefix(20))...", category: .api)
+        
+        // 使用 STPPaymentHandler 确认支付（会自动跳转到支付宝）
+        STPPaymentHandler.shared().confirmPayment(paymentIntentParams, with: self) { [weak self] status, _, error in
+            DispatchQueue.main.async {
+                self?.isProcessingDirectPayment = false
+                self?.handleDirectPaymentResult(status: status, error: error, paymentMethod: "支付宝")
+            }
+        }
+    }
+    
+    // MARK: - 微信支付直接支付
+    
+    /// 使用微信支付直接支付（跳转微信 App/网页）
+    func confirmWeChatPayment() {
+        Logger.debug("开始微信支付直接支付流程", category: .api)
+        
+        guard let clientSecret = activeClientSecret else {
+            errorMessage = "支付信息未准备好，请稍后再试"
+            Logger.warning("缺少 client_secret，无法使用微信支付", category: .api)
+            createPaymentIntent()
+            return
+        }
+        
+        // 检查最终支付金额
+        guard activeFinalAmountPence > 0 else {
+            Logger.info("最终支付金额为 0，无需支付", category: .api)
+            paymentSuccess = true
+            return
+        }
+        
+        isProcessingDirectPayment = true
+        
+        // 创建微信支付方式参数
+        // 注意：微信支付需要指定 appId（如果使用微信 App 支付）
+        // 这里使用网页版微信支付，不需要 appId
+        let wechatParams = STPPaymentMethodWeChatPayParams()
+        let paymentMethodParams = STPPaymentMethodParams(
+            weChatPay: wechatParams,
+            billingDetails: nil,
+            metadata: nil
+        )
+        
+        // 创建 PaymentIntent 确认参数
+        let paymentIntentParams = STPPaymentIntentParams(clientSecret: clientSecret)
+        paymentIntentParams.paymentMethodParams = paymentMethodParams
+        paymentIntentParams.returnURL = "link2ur://stripe-redirect"
+        
+        // 微信支付需要设置额外的支付方式选项
+        let wechatPayOptions = STPConfirmWeChatPayOptions(appId: nil)
+        paymentIntentParams.paymentMethodOptions = STPConfirmPaymentMethodOptions()
+        paymentIntentParams.paymentMethodOptions?.weChatPayOptions = wechatPayOptions
+        
+        Logger.debug("准备确认微信支付，clientSecret: \(clientSecret.prefix(20))...", category: .api)
+        
+        // 使用 STPPaymentHandler 确认支付（会自动跳转到微信）
+        STPPaymentHandler.shared().confirmPayment(paymentIntentParams, with: self) { [weak self] status, _, error in
+            DispatchQueue.main.async {
+                self?.isProcessingDirectPayment = false
+                self?.handleDirectPaymentResult(status: status, error: error, paymentMethod: "微信")
+            }
+        }
+    }
+    
+    /// 处理直接支付结果（支付宝/微信）
+    private func handleDirectPaymentResult(status: STPPaymentHandlerActionStatus, error: Error?, paymentMethod: String) {
+        switch status {
+        case .succeeded:
+            Logger.info("\(paymentMethod)支付成功", category: .api)
+            paymentSuccess = true
+            errorMessage = nil
+            // 清除支付缓存，因为有了新的支付记录
+            CacheManager.shared.invalidatePaymentCache()
+            
+        case .canceled:
+            Logger.debug("用户取消\(paymentMethod)支付", category: .api)
+            // 用户取消，不显示错误消息
+            
+        case .failed:
+            if let error = error {
+                let errorDescription = error.localizedDescription
+                Logger.error("\(paymentMethod)支付失败: \(errorDescription)", category: .api)
+                
+                // 记录错误的详细信息
+                if let nsError = error as NSError? {
+                    Logger.error("错误详情 - 域: \(nsError.domain), 代码: \(nsError.code), 用户信息: \(nsError.userInfo)", category: .api)
+                }
+                
+                errorMessage = formatPaymentError(error)
+            } else {
+                Logger.error("\(paymentMethod)支付失败（未知错误）", category: .api)
+                errorMessage = "支付失败，请重试或使用其他支付方式"
+            }
+            
+        @unknown default:
+            Logger.warning("\(paymentMethod)支付未知状态", category: .api)
+            errorMessage = "支付过程中出现未知错误，请重试"
+        }
+    }
+    
     /// 执行支付（根据选择的支付方式）
     func performPayment() {
         // 必须有 client_secret 才能发起支付；没有则创建支付意图
@@ -739,51 +898,13 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate {
             Logger.debug("使用 Apple Pay 原生实现支付", category: .api)
             payWithApplePay()
         case .wechatPay:
-            // 使用 PaymentSheet 支付（WeChat Pay 通过 PaymentSheet 处理）
-            if let paymentSheet = paymentSheet {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootViewController = windowScene.windows.first?.rootViewController {
-                    var topViewController = rootViewController
-                    while let presented = topViewController.presentedViewController {
-                        topViewController = presented
-                    }
-                    Logger.debug("准备弹出 PaymentSheet（WeChat Pay）", category: .api)
-                    paymentSheet.present(from: topViewController) { [weak self] result in
-                        Logger.debug("PaymentSheet 结果（WeChat Pay）: \(result)", category: .api)
-                        self?.handlePaymentResult(result)
-                    }
-                } else {
-                    errorMessage = "无法打开支付界面，请重试"
-                    Logger.error("无法获取顶层视图控制器", category: .api)
-                }
-            } else {
-                errorMessage = "支付表单未准备好，请稍后重试"
-                Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-                ensurePaymentSheetReady()
-            }
+            // 使用 API 直接跳转微信支付（不经过 PaymentSheet）
+            Logger.debug("使用微信支付直接跳转", category: .api)
+            confirmWeChatPayment()
         case .alipayPay:
-            // 使用 PaymentSheet 支付（支付宝通过 PaymentSheet 处理，会跳转支付宝 App/网页后通过 returnURL 返回）
-            if let paymentSheet = paymentSheet {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootViewController = windowScene.windows.first?.rootViewController {
-                    var topViewController = rootViewController
-                    while let presented = topViewController.presentedViewController {
-                        topViewController = presented
-                    }
-                    Logger.debug("准备弹出 PaymentSheet（支付宝）", category: .api)
-                    paymentSheet.present(from: topViewController) { [weak self] result in
-                        Logger.debug("PaymentSheet 结果（支付宝）: \(result)", category: .api)
-                        self?.handlePaymentResult(result)
-                    }
-                } else {
-                    errorMessage = "无法打开支付界面，请重试"
-                    Logger.error("无法获取顶层视图控制器", category: .api)
-                }
-            } else {
-                errorMessage = "支付表单未准备好，请稍后重试"
-                Logger.warning("PaymentSheet 为 nil，尝试重新创建", category: .api)
-                ensurePaymentSheetReady()
-            }
+            // 使用 API 直接跳转支付宝（不经过 PaymentSheet）
+            Logger.debug("使用支付宝直接跳转", category: .api)
+            confirmAlipayPayment()
         }
     }
 }
