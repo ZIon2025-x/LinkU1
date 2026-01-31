@@ -2923,7 +2923,9 @@
     "notificationPromptTitle": "Enable Notifications",
     "notificationPromptMessage": "Get timely alerts for new messages and task updates so you never miss a reply.",
     "notificationAllow": "Allow",
-    "notificationNotNow": "Not Now"
+    "notificationNotNow": "Not Now",
+    "openInApp": "Open in App",
+    "downloadApp": "Download App"
   },
   "forum": {
     "title": "Forum",

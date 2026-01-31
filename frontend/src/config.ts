@@ -9,6 +9,10 @@ export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
   : 'ws://localhost:8000';
 
+/** App Store 链接（用于「在 App 内打开」条中的「下载 App」）。上架后请替换为实际链接，如 https://apps.apple.com/app/idXXXXXXXX */
+export const APP_STORE_URL =
+  process.env.REACT_APP_APP_STORE_URL || 'https://apps.apple.com/app/link2ur/id000000000';
+
 // 调试信息
 
 // 导出API端点

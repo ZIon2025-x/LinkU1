@@ -19,6 +19,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
 import NotificationPermissionPrompt from './components/NotificationPermissionPrompt';
+import OpenInAppBanner from './components/OpenInAppBanner';
 import { detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // P1 优化：创建 React Query 客户端
@@ -346,6 +347,7 @@ function App() {
                       <LanguageRoutes />
                       <CookieManager />
                       <NotificationPermissionPrompt />
+                      <OpenInAppBanner />
                     </ErrorBoundary>
                   </Router>
                 </UnreadMessageProvider>

@@ -2839,7 +2839,9 @@
     "notificationPromptTitle": "开启消息通知",
     "notificationPromptMessage": "开启后，新消息和任务动态会及时提醒您，不错过重要回复。",
     "notificationAllow": "允许",
-    "notificationNotNow": "暂不"
+    "notificationNotNow": "暂不",
+    "openInApp": "在 App 内打开",
+    "downloadApp": "下载 App"
   },
   "forum": {
     "title": "论坛",
