@@ -24,6 +24,7 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import LazyImage from '../components/LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
 import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
+import { getTaskDisplayTitle, getTaskDisplayDescription } from '../utils/displayLocale';
 import styles from './TaskDetail.module.css';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
 
@@ -2199,7 +2200,7 @@ const TaskDetail: React.FC = () => {
                 flex: 1,
                 minWidth: '200px'
               }}>
-                {translatedTitle || task.title}
+                {translatedTitle || getTaskDisplayTitle(task, language)}
               </h2>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {translatedTitle ? (
@@ -2674,7 +2675,7 @@ const TaskDetail: React.FC = () => {
             lineHeight: 1.6,
             color: '#374151',
             whiteSpace: 'pre-wrap'
-          }}>{translatedDescription || task.description}</div>
+          }}>{translatedDescription || getTaskDisplayDescription(task, language)}</div>
         </div>
         
         {/* 金额/积分显示区域 */}

@@ -23,6 +23,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
+import { getForumPostDisplayTitle } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import SafeContent from '../components/SafeContent';
 import styles from './ForumMyContent.module.css';
@@ -33,6 +34,8 @@ const { TabPane } = Tabs;
 interface ForumPost {
   id: number;
   title: string;
+  title_zh?: string | null;
+  title_en?: string | null;
   category: {
     id: number;
     name: string;
@@ -324,7 +327,7 @@ const ForumMyContent: React.FC = () => {
                             className={styles.itemTitle}
                             ellipsis={{ rows: 2 }}
                           >
-                            {post.title}
+                            {getForumPostDisplayTitle(post, language)}
                           </Title>
                           <Space>
                             <Button
@@ -401,7 +404,7 @@ const ForumMyContent: React.FC = () => {
                       >
                         <div className={styles.itemHeader}>
                           <Title level={5} className={styles.itemTitle}>
-                            {reply.post.title}
+                            {getForumPostDisplayTitle(reply.post, language)}
                           </Title>
                           <Button
                             type="text"
@@ -470,9 +473,9 @@ const ForumMyContent: React.FC = () => {
                       <div className={styles.itemHeader}>
                         <Title level={5} className={styles.itemTitle}>
                           {like.target_type === 'post' && like.post
-                            ? like.post.title
+                            ? getForumPostDisplayTitle(like.post, language)
                             : like.target_type === 'reply' && like.reply
-                            ? like.reply.post.title
+                            ? getForumPostDisplayTitle(like.reply.post, language)
                             : `#${like.post?.id || like.reply?.id || ''}`}
                         </Title>
                         <Tag>{like.target_type === 'post' ? t('forum.posts') : t('forum.replies')}</Tag>
@@ -527,7 +530,7 @@ const ForumMyContent: React.FC = () => {
                             className={styles.itemTitle}
                             ellipsis={{ rows: 2 }}
                           >
-                            {favorite.post.title}
+                            {getForumPostDisplayTitle(favorite.post, language)}
                           </Title>
                         </div>
                         <div className={styles.itemMeta}>

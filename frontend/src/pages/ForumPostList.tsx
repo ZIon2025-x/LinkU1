@@ -19,6 +19,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
+import { getForumPostDisplayTitle } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumPostList.module.css';
 
@@ -29,6 +30,8 @@ const { Option } = Select;
 interface ForumPost {
   id: number;
   title: string;
+  title_zh?: string | null;
+  title_en?: string | null;
   content: string;
   category: {
     id: number;
@@ -320,7 +323,7 @@ const ForumPostList: React.FC = () => {
                         className={styles.postTitle}
                         ellipsis={{ rows: 2 }}
                       >
-                        {post.title}
+                        {getForumPostDisplayTitle(post, language)}
                       </Title>
                     </div>
                     {currentUser && currentUser.id === post.author.id && (

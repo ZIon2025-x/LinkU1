@@ -355,6 +355,7 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile: _isMob
               title={task.title}
               language={language}
               taskId={task.id}
+              task={task}
               autoTranslate={true}
             />
           </div>
@@ -3982,6 +3983,7 @@ const MessagePage: React.FC = () => {
                     title={activeTask.title}
                     language={language}
                     taskId={activeTask.id}
+                    task={activeTask}
                     autoTranslate={true}
                   />
                 </h3>
@@ -7518,6 +7520,7 @@ const MessagePage: React.FC = () => {
                           title={task.title}
                           language={language}
                           taskId={task.id}
+                          task={task}
                           autoTranslate={true}
                         />
                       </div>

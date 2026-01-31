@@ -27,6 +27,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import SafeContent from '../components/SafeContent';
 import { getErrorMessage } from '../utils/errorHandler';
+import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumPostDetail.module.css';
 
@@ -54,7 +55,11 @@ interface ForumReply {
 interface ForumPost {
   id: number;
   title: string;
+  title_zh?: string | null;
+  title_en?: string | null;
   content: string;
+  content_zh?: string | null;
+  content_en?: string | null;
   category: {
     id: number;
     name: string;
@@ -1091,7 +1096,7 @@ const ForumPostDetail: React.FC = () => {
               {post.is_pinned && <Tag color="red">{t('forum.pinned')}</Tag>}
               {post.is_featured && <Tag color="gold">{t('forum.featured')}</Tag>}
               {post.is_locked && <Tag color="orange">{t('forum.locked')}</Tag>}
-              <Title level={2}>{post.title}</Title>
+              <Title level={2}>{getForumPostDisplayTitle(post, language)}</Title>
             </div>
             {currentUser && currentUser.id === post.author.id && (
               <Space>
@@ -1135,7 +1140,7 @@ const ForumPostDetail: React.FC = () => {
           <Divider />
 
           <div className={styles.postContent} style={{ position: 'relative' }}>
-            <SafeContent content={post.content} />
+            <SafeContent content={getForumPostDisplayContent(post, language) ?? post.content} />
             <div style={{ 
               position: 'absolute', 
               bottom: 0, 

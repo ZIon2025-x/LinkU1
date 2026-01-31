@@ -17,6 +17,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
+import { getForumPostDisplayTitle } from '../utils/displayLocale';
 import styles from './Forum.module.css';
 
 const { Title, Text } = Typography;
@@ -32,6 +33,8 @@ interface ForumCategory {
   latest_post?: {
     id: number;
     title: string;
+    title_zh?: string | null;
+    title_en?: string | null;
     author: {
       id: string;
       name: string;
@@ -294,7 +297,7 @@ const Forum: React.FC = () => {
                 {category.latest_post && (
                   <div className={styles.latestPost}>
                     <div className={styles.latestPostTitle}>
-                      <MessageOutlined /> {category.latest_post.title}
+                      <MessageOutlined /> {getForumPostDisplayTitle(category.latest_post, language)}
                     </div>
                     <div className={styles.latestPostMeta}>
                       <Space size="small" split="|">

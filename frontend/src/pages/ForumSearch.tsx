@@ -18,6 +18,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import SafeContent from '../components/SafeContent';
 import styles from './ForumSearch.module.css';
@@ -28,7 +29,11 @@ const { Search } = Input;
 interface ForumPost {
   id: number;
   title: string;
+  title_zh?: string | null;
+  title_en?: string | null;
   content: string;
+  content_zh?: string | null;
+  content_en?: string | null;
   category: {
     id: number;
     name: string;
@@ -232,13 +237,13 @@ const ForumSearch: React.FC = () => {
                         className={styles.postTitle}
                         ellipsis={{ rows: 2 }}
                       >
-                        {post.title}
+                        {getForumPostDisplayTitle(post, language)}
                       </Title>
                     </div>
                   </div>
 
                   <div className={styles.postContent}>
-                    <SafeContent content={post.content} />
+                    <SafeContent content={getForumPostDisplayContent(post, language) ?? post.content} />
                   </div>
 
                   <div className={styles.postMeta}>

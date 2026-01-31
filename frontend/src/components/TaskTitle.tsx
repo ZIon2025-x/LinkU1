@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAutoTranslate } from '../hooks/useAutoTranslate';
 import { Language, useLanguage } from '../contexts/LanguageContext';
+import { getTaskDisplayTitle } from '../utils/displayLocale';
 
 interface TaskTitleProps {
   title: string;
@@ -10,31 +11,39 @@ interface TaskTitleProps {
   showOriginalButton?: boolean;
   autoTranslate?: boolean;
   taskId?: number;  // 任务ID（可选，如果提供则使用任务翻译持久化）
+  /** 任务对象（可选）。若含 title_zh/title_en，则与 iOS 一致优先按语言显示双语字段，不再走自动翻译 */
+  task?: { title: string; title_zh?: string | null; title_en?: string | null };
 }
 
 /**
- * 任务标题组件 - 支持自动翻译和查看原文
+ * 任务标题组件 - 优先双语字段（与 iOS 一致），否则支持自动翻译和查看原文
  */
 const TaskTitle: React.FC<TaskTitleProps> = ({
   title,
   language,
   className,
   style,
-  showOriginalButton = false,  // 默认不显示按钮，任务卡片上不需要
-  autoTranslate = true,  // 自动翻译，但会检测文本语言，只在需要时翻译
-  taskId  // 任务ID（可选，如果提供则使用任务翻译持久化）
+  showOriginalButton = false,
+  autoTranslate = true,
+  taskId,
+  task
 }) => {
   const { t } = useLanguage();
+  const hasBilingual =
+    task &&
+    ((task.title_zh != null && String(task.title_zh).trim() !== '') ||
+     (task.title_en != null && String(task.title_en).trim() !== ''));
+  const effectiveTitle = hasBilingual ? getTaskDisplayTitle(task!, language) : title;
+
   const { translatedText, isTranslating, showOriginal, toggleOriginal } = useAutoTranslate(
-    title,
+    effectiveTitle,
     language,
-    autoTranslate,
-    taskId,  // 传递 taskId
-    'title'  // 字段类型为 title
+    !hasBilingual && autoTranslate,
+    taskId,
+    'title'
   );
 
-  // 显示的文字：如果有翻译且不显示原文，则显示翻译；否则显示原文
-  const displayText = translatedText && !showOriginal ? translatedText : title;
+  const displayText = hasBilingual ? effectiveTitle : (translatedText && !showOriginal ? translatedText : title);
 
   return (
     <div
