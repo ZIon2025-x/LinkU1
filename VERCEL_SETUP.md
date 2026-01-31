@@ -202,6 +202,15 @@ echo $?  # 0 = 无更改, 非0 = 有更改
 4. 点击某个部署查看日志
 5. 检查 "Ignored" 或 "Building" 状态
 
+## 404 NOT_FOUND 排查
+
+若前端出现 **404: NOT_FOUND**，请检查：
+
+1. **Root Directory**：Frontend 项目必须设置 Root Directory 为 `frontend`，这样会使用 `frontend/vercel.json` 且构建输出为 `frontend/build`。
+2. **SPA 回退**：`frontend/vercel.json` 的 `rewrites` 最后必须保留 `{ "source": "/:path*", "destination": "/index.html" }`，所有未匹配到静态资源或 API 的路径都应回退到 `index.html`，由前端路由处理。
+3. **不要将前端路由代理到 API**：不要把 `/en/tasks/:id`、`/zh/forum/post/:id` 等前端页面路径写成 rewrite 到 `https://api.xxx`，否则访问这些 URL 会收到 API 的 404。
+4. **从仓库根部署时**：若未设置 Root Directory、使用仓库根目录的 `vercel.json` 部署前端，则 `builds[0].config.distDir` 需为 `frontend/build`（因 CRA 输出在 `frontend/build`）。
+
 ## 注意事项
 
 1. **首次部署**: 首次连接项目时，即使 Ignore Build Step 返回 0，Vercel 也会构建一次
