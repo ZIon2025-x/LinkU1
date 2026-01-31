@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import enTranslations from '../locales/en.json';
 import zhTranslations from '../locales/zh.json';
-import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, DEFAULT_LANGUAGE } from '../utils/i18n';
+import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath } from '../utils/i18n';
 import api from '../api';
 
 export type Language = 'en' | 'zh';

@@ -25,10 +25,11 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   currentUserId,
   userTimezone,
-  timezoneInfo,
-  isServiceMode,
-  currentChat
+  timezoneInfo: _timezoneInfo,
+  isServiceMode: _isServiceMode,
+  currentChat: _currentChat
 }) => {
+  void _timezoneInfo; void _isServiceMode; void _currentChat;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {

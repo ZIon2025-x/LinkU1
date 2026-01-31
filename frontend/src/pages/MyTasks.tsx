@@ -3,7 +3,7 @@ import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications, requestExitFromTask, getTaskParticipants } from '../api';
+import { fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications, requestExitFromTask, getTaskParticipants } from '../api';
 import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
 import api from '../api';
@@ -79,7 +79,7 @@ const MyTasks: React.FC = () => {
   // 分页相关状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(12);
-  const [totalTasks, setTotalTasks] = useState(0);
+  const [, setTotalTasks] = useState(0);
   
   // 通知相关状态
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -94,6 +94,7 @@ const MyTasks: React.FC = () => {
   // 申请状态相关
   const [applications, setApplications] = useState<any[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
+  void loadingApplications;
   // 任务申请信息（taskId -> applications数组）
   const [taskApplicationsMap, setTaskApplicationsMap] = useState<{[key: number]: any[]}>({});
   
@@ -164,12 +165,12 @@ const MyTasks: React.FC = () => {
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
-          }).catch(error => {
-                      });
+          }).catch(() => {});
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
     }
+    return;
   }, [user]);
 
   // 当通知面板打开时，定期刷新通知列表
@@ -180,8 +181,8 @@ const MyTasks: React.FC = () => {
         try {
           const notificationsData = await getNotificationsWithRecentRead(10);
           setNotifications(notificationsData);
-        } catch (error) {
-                  }
+        } catch {
+        }
       };
       loadNotificationsList();
       
@@ -194,6 +195,7 @@ const MyTasks: React.FC = () => {
       
       return () => clearInterval(interval);
     }
+    return;
   }, [showNotifications, user]);
 
   // WebSocket实时更新通知（监听notification_created事件）
@@ -211,15 +213,15 @@ const MyTasks: React.FC = () => {
         // 立即刷新未读通知数量
         getUnreadNotificationCount().then(count => {
           setUnreadCount(count);
-        }).catch(error => {
-                  });
+        }).catch(() => {
+        });
 
         // 如果通知面板已打开，刷新通知列表
         if (showNotifications) {
           getNotificationsWithRecentRead(10).then(notificationsData => {
             setNotifications(notificationsData);
-          }).catch(error => {
-                      });
+          }).catch(() => {
+          });
         }
       }
     });
@@ -416,7 +418,8 @@ const MyTasks: React.FC = () => {
     }
   };
 
-  // 加载多人任务的参与者信息
+  // 加载多人任务的参与者信息（预留，暂未调用）
+  // @ts-expect-error TS6133 - 预留供后续多人任务详情使用
   const loadTaskParticipants = async (taskIds: number[]) => {
     if (!user) return;
     
@@ -428,8 +431,8 @@ const MyTasks: React.FC = () => {
         if (userPart) {
           participantsMap[taskId] = userPart;
         }
-      } catch (error) {
-              }
+      } catch {
+      }
     }
     setTaskParticipants(prev => ({ ...prev, ...participantsMap }));
   };
@@ -723,14 +726,15 @@ const MyTasks: React.FC = () => {
   const hasReviewed = (task: Task) => {
     if (!user) return false;
     
+    const reviews = taskReviews[task.id];
     // 如果评价数据还没有加载，先加载它
-    if (!taskReviews[task.id]) {
+    if (!reviews) {
       loadTaskReviews(task.id);
       return false; // 暂时返回false，等数据加载完成后再重新渲染
     }
     
     // 检查是否有用户自己的评价（即使匿名评价也会记录user_id）
-    return taskReviews[task.id].some((review: any) => review.user_id === user.id);
+    return reviews.some((review: any) => review.user_id === user.id);
   };
 
   const getStatusText = (task: Task) => {
@@ -823,6 +827,7 @@ const MyTasks: React.FC = () => {
         };
     }
   };
+  void getTaskLevelStyle;
 
   // 根据标签页过滤数据
   const getFilteredData = () => {
@@ -1073,7 +1078,7 @@ const MyTasks: React.FC = () => {
             </div>
           ) : (
                   <div className={styles.tasksGrid}>
-              {paginatedData.map((item, index) => {
+              {paginatedData.map((item) => {
                 // 如果是申请记录，需要特殊处理
                 if (activeTab === 'pending') {
                   const application = item;
@@ -1425,12 +1430,12 @@ const MyTasks: React.FC = () => {
                       )}
 
                       {/* 查看评价按钮 */}
-                      {task.status === 'completed' && taskReviews[task.id] && taskReviews[task.id].length > 0 && (
+                      {task.status === 'completed' && (taskReviews[task.id] ?? []).length > 0 && (
                         <button
                           onClick={() => toggleTaskReviews(task.id)}
                           className={styles.taskCardButtonViewReviews}
                         >
-{showTaskReviews[task.id] ? t('myTasks.actions.hideReviews') : `${t('myTasks.actions.viewReviews')} (${taskReviews[task.id].length})`}
+{(showTaskReviews[task.id] ?? false) ? t('myTasks.actions.hideReviews') : `${t('myTasks.actions.viewReviews')} (${(taskReviews[task.id] ?? []).length})`}
                         </button>
                       )}
 
@@ -1447,21 +1452,21 @@ const MyTasks: React.FC = () => {
                     </div>
 
                     {/* 评价列表 */}
-                    {showTaskReviews[task.id] && taskReviews[task.id] && taskReviews[task.id].length > 0 && (
+                    {(showTaskReviews[task.id] ?? false) && (taskReviews[task.id] ?? []).length > 0 && (
                       <div className={styles.taskCardReviewsContainer}>
                         <h4 className={styles.taskCardReviewsTitle}>
 {t('myTasks.actions.viewReviews')}
                         </h4>
-                        {taskReviews[task.id].map((review: any, index: number) => (
+                        {(taskReviews[task.id] ?? []).map((review: any, index: number) => (
                           <div key={index} className={styles.taskCardReviewItem}>
                             <div className={styles.taskCardReviewHeader}>
                               <div className={styles.taskCardReviewUser}>
                                 {t('myTasks.user')} {review.user_id}
                               </div>
                               <div className={styles.taskCardReviewRating}>
-                                {Array.from({length: Math.floor(review.rating)}, (_, i) => '⭐').join('')}
+                                {Array.from({length: Math.floor(review.rating)}, () => '⭐').join('')}
                                 {review.rating % 1 !== 0 && '☆'}
-                                {Array.from({length: 5 - Math.ceil(review.rating)}, (_, i) => '☆').join('')}
+                                {Array.from({length: 5 - Math.ceil(review.rating)}, () => '☆').join('')}
                               </div>
                             </div>
                             {review.comment && (

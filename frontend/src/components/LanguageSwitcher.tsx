@@ -31,7 +31,7 @@ const LanguageSwitcherContainer = styled.div`
 `;
 
 const LanguageSwitcher: React.FC = () => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const navigate = useNavigate();
 
   const handleLanguageChange = (value: string) => {

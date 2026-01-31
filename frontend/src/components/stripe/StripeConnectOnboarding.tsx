@@ -10,11 +10,6 @@ import StripeConnectAccountInfo from './StripeConnectAccountInfo';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { logger } from '../../utils/logger';
 
-// 从环境变量获取 Stripe Publishable Key
-const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 
-  (process.env as any).STRIPE_PUBLISHABLE_KEY || 
-  '';
-
 interface StripeConnectOnboardingProps {
   onComplete?: () => void;
   onError?: (error: string) => void;
@@ -52,7 +47,7 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
 
   // 防止页面跳转到 Stripe 外部页面
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = (_e: BeforeUnloadEvent) => {
       // 如果正在 onboarding 过程中，阻止跳转
       if (stripeConnectInstance || manualStripeConnectInstance) {
         // 不阻止，让用户正常完成流程
@@ -77,10 +72,10 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           return false;
         }
       }
+      return;
     };
     
     // 监听 window.location 变化，防止程序化跳转
-    const originalLocation = window.location;
     const checkLocation = () => {
       if (window.location.href.includes('connect.stripe.com') || 
           window.location.href.includes('stripe.com/app/express')) {
@@ -132,8 +127,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           setConnectedAccountId(data.account_id);
           setAccountStatus({
             account_id: data.account_id,
-            account_status: data.details_submitted || false,
-            charges_enabled: data.charges_enabled || false,
+            account_status: data.details_submitted ?? false,
+            charges_enabled: data.charges_enabled ?? false,
           });
 
           // 如果账户已完成设置，调用 onComplete
@@ -240,8 +235,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         if (data && data.account_id) {
           setAccountStatus({
             account_id: data.account_id,
-            account_status: data.details_submitted || false,
-            charges_enabled: data.charges_enabled || false,
+            account_status: data.details_submitted ?? false,
+            charges_enabled: data.charges_enabled ?? false,
           });
 
           // 如果账户已完成设置，调用 onComplete
@@ -273,8 +268,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
         setConnectedAccountId(data.account_id);
         setAccountStatus({
           account_id: data.account_id,
-          account_status: data.details_submitted,
-          charges_enabled: data.charges_enabled,
+          account_status: data.details_submitted ?? false,
+          charges_enabled: data.charges_enabled ?? false,
         });
 
         // 如果账户已完成设置，调用 onComplete
@@ -516,9 +511,8 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
           <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
             <ConnectAccountOnboarding
               onExit={handleOnboardingExit}
-              onStepChange={(stepChange) => {
+              onStepChange={(stepChange: { step?: string }) => {
                 // 监听步骤变化，用于分析和调试
-                // stepChange.step 包含当前步骤名称，如 'business_type', 'external_account' 等
                 logger.log('Onboarding step changed:', stepChange.step);
               }}
               // 根据官方文档，这些是可选的配置

@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Spin, Empty, Tag, Tooltip } from 'antd';
 import { FireOutlined, StarOutlined, ClockCircleOutlined, EnvironmentOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { getTaskRecommendations, recordTaskInteraction } from '../api';
-import TaskCard from './TaskCard';
 import { useLanguage } from '../contexts/LanguageContext';
 import './RecommendedTasks.css';
 
@@ -42,7 +41,7 @@ const RecommendedTasks: React.FC<RecommendedTasksProps> = ({
   const [recommendations, setRecommendations] = useState<RecommendedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {

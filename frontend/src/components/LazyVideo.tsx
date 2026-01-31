@@ -62,14 +62,11 @@ const LazyVideo: React.FC<LazyVideoProps> = ({
   }, [isLoaded]);
 
   useEffect(() => {
-    if (isInView && videoRef.current && autoplay) {
-      // 延迟播放，确保视频已加载
-      const timer = setTimeout(() => {
-        videoRef.current?.play().catch((error) => {
-                  });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
+    if (!(isInView && videoRef.current && autoplay)) return;
+    const timer = setTimeout(() => {
+      videoRef.current?.play().catch(() => {});
+    }, 100);
+    return () => clearTimeout(timer);
   }, [isInView, autoplay]);
 
   return (

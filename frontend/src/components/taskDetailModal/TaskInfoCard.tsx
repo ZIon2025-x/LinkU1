@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Task, TaskLevel } from '../../types/task';
-import { cardStyles, statusStyles, levelStyles } from '../../utils/taskModalStyles';
+import { cardStyles } from '../../utils/taskModalStyles';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
 import { obfuscateLocation } from '../../utils/formatUtils';
 
@@ -14,11 +14,14 @@ interface TaskInfoCardProps {
 
 const TaskInfoCard: React.FC<TaskInfoCardProps> = ({
   task,
-  getTaskLevelText,
-  getStatusText,
-  shouldHideStatus,
+  getTaskLevelText: _getTaskLevelText,
+  getStatusText: _getStatusText,
+  shouldHideStatus: _shouldHideStatus,
   t
 }) => {
+  void _getTaskLevelText;
+  void _getStatusText;
+  void _shouldHideStatus;
   return (
     <div style={{
       display: 'grid',

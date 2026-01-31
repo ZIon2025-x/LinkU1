@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload, QRCode, Typography, Divider } from 'antd';
-import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined } from '@ant-design/icons';
+import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, UploadOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateName } from '../utils/inputValidators';
-import { TimeHandlerV2 } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import {
   getCustomLeaderboardDetail,
@@ -15,7 +14,6 @@ import {
   reportLeaderboard
 } from '../api';
 import { fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
-import { LOCATIONS } from '../constants/leaderboard';
 import { compressImage } from '../utils/imageCompression';
 import { formatImageUrl } from '../utils/imageUtils';
 import api from '../api';
@@ -62,7 +60,7 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [uploadingFileList, setUploadingFileList] = useState<any[]>([]);
   const previewUrlsRef = useRef<Set<string>>(new Set());
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -87,8 +85,6 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
   };
 
-  // 用于分享的描述（在榜单描述后追加提示文字，限制长度在200字符内，微信分享建议不超过200字符）
-  const shareDescription = leaderboard ? getShareDescription(leaderboard.description) : '';
   // 修复：使用正确的路由路径 /leaderboard/custom/:leaderboardId
   const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
   
@@ -735,7 +731,7 @@ const CustomLeaderboardDetail: React.FC = () => {
   };
 
   const handleImageChange = (info: any) => {
-    const { file, fileList } = info;
+    const { file } = info;
     
         // 处理文件删除
     if (file.status === 'removed') {

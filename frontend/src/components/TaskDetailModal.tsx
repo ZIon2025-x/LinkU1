@@ -51,7 +51,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [reviewComment, setReviewComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [showReviews, setShowReviews] = useState(false);
+  const [, setShowReviews] = useState(false); void setShowReviews;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
@@ -124,7 +124,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const { formatted: paymentCountdownFormatted, isExpired: paymentCountdownExpired } = usePaymentCountdown(paymentCountdownExpiresAt);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // 加载任务评价 - 使用低优先级渲染
   const loadTaskReviews = useCallback(async () => {
@@ -133,8 +133,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     startTransition(() => {
       getTaskReviews(taskId)
         .then(setReviews)
-        .catch(error => {
-                  });
+        .catch(() => {});
     });
   }, [taskId]);
 
@@ -394,6 +393,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         window.removeEventListener('storage', handleStorageChange);
       };
     }
+    return;
   }, [isOpen, taskId, loadTaskData, loadApplications]);
 
   // 轮询刷新任务数据（确保实时更新）
@@ -561,16 +561,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           try {
             // 通过任务获取时间段信息（通过TaskTimeSlotRelation）
             const taskRes = await api.get(`/api/tasks/${taskId}`);
-            const taskData = taskRes.data;
+            void taskRes.data; // taskData 未使用，保留请求逻辑
             // 如果有time_slot_id，尝试获取时间段详情
             // 注意：这里可能需要通过服务ID获取时间段，暂时先不实现
             // 或者可以通过后端API直接返回时间段信息
-          } catch (error) {
-                      }
+          } catch {
+          }
         }
       }
-    } catch (error) {
-          } finally {
+    } catch {
+    } finally {
       setLoadingParticipants(false);
     }
   }, [task, taskId, user]);
@@ -597,6 +597,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       
       return () => clearInterval(interval);
     }
+    return;
   }, [isOpen, task, taskId, loadParticipants]);
 
   // P0 优化：使用 useMemo 缓存复杂计算
@@ -647,10 +648,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     return userLevelValue >= taskLevelValue;
   }, [user, task]);
 
-  // 检查用户是否已接受任务
-  const hasAcceptedTask = (user: any, task: any) => {
-    return user && task && task.taker_id === user.id;
-  };
+  // 检查用户是否已接受任务（预留）
+  const _hasAcceptedTask = (user: any, task: any) => user && task && task.taker_id === user.id;
+  void _hasAcceptedTask;
 
   // 当任务加载或语言改变时,重置翻译
   useEffect(() => {
@@ -691,7 +691,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         params.set('return_url', window.location.href);
         params.set('return_type', 'task_detail'); // 标识来源页面类型
         const paymentUrl = `/${language}/tasks/${taskId}/payment?${params.toString()}`;
-        const paymentWindow = window.open(paymentUrl, '_blank');
+        window.open(paymentUrl, '_blank');
         
         // 监听支付成功消息（这个监听器会在上面的 useEffect 中统一处理，这里保留作为备用）
         const handlePaymentSuccess = (event: MessageEvent) => {
@@ -940,25 +940,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [taskId, t, language]);
 
-  const handleApproveTaker = useCallback(async () => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
+  const _handleApproveTaker = useCallback(async () => {
+    if (!user) { setShowLoginModal(true); return; }
     setActionLoading(true);
     try {
       await approveTaskTaker(taskId!);
       alert(t('taskDetail.takerApproved'));
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
-    } catch (error: any) {
-      alert(getErrorMessage(error));
+    } catch (err: any) {
+      alert(getErrorMessage(err));
     } finally {
       setActionLoading(false);
     }
   }, [user, taskId, t]);
+  void _handleApproveTaker;
 
-  const handleRejectTaker = useCallback(async () => {
+  const _handleRejectTaker = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -978,6 +976,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setActionLoading(false);
     }
   }, [user, taskId, t]);
+  void _handleRejectTaker;
 
   const handleSubmitReview = useCallback(async () => {
     if (!user) {
@@ -1053,8 +1052,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       !hasApplied; // 如果已经申请过，隐藏按钮
   }, [task, canViewTask, user, userApplication, hasApplied]);
 
-  // 是否可以申请任务（需要登录）
-  const canAcceptTask = useMemo(() => {
+  // 是否可以申请任务（需要登录，预留）
+  const _canAcceptTask = useMemo(() => {
     if (!user || !task) return false;
     return user.id !== task.poster_id && 
       (task.status === 'open' || task.status === 'taken') && 
@@ -1062,6 +1061,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       !userApplication &&
       !hasApplied;
   }, [user, task, canViewTask, userApplication, hasApplied]);
+  void _canAcceptTask;
 
   // 判断是否应该对非相关用户隐藏真实状态（显示为open）
   const shouldHideStatus = useMemo(() => {

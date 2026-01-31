@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Select, Pagination } from 'antd';
+import { Card, Empty, Typography, Space, Tag, Button, Input, Select, Pagination } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, LikeOutlined, StarOutlined, 
   PlusOutlined, SearchOutlined, FireOutlined, ClockCircleOutlined,
@@ -22,7 +22,7 @@ import { formatViewCount } from '../utils/formatUtils';
 import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumPostList.module.css';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
@@ -54,7 +54,7 @@ interface ForumPost {
 
 const ForumPostList: React.FC = () => {
   const { lang: langParam, categoryId } = useParams<{ lang: string; categoryId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  useSearchParams(); // searchParams/setSearchParams 未使用
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
@@ -74,7 +74,7 @@ const ForumPostList: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
 
   useEffect(() => {
     if (categoryId) {

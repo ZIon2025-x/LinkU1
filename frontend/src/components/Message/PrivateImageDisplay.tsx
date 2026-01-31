@@ -18,7 +18,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [, setRetryCount] = useState(0);
 
   const loadImage = async (retry = 0) => {
     try {
@@ -122,7 +122,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
         </div>
         <button 
           onClick={() => {
-            setRetryCount(prev => prev + 1);
+            setRetryCount((prev) => prev + 1);
             loadImage();
           }}
           style={{

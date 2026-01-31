@@ -27,7 +27,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
   onCancel,
   onSuccess
 }) => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -37,7 +37,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
   // 处理文件选择
-  const handleChange: UploadProps['onChange'] = useCallback((info) => {
+  const handleChange: UploadProps['onChange'] = useCallback((info: { file: UploadFile; fileList: UploadFile[] }) => {
     const newFileList = [...info.fileList];
     
     // 限制文件数量
@@ -236,6 +236,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
+      if (!file) continue;
       if (file.originFileObj) {
         try {
           // 尝试压缩以检查最终大小
@@ -315,6 +316,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
     for (let i = 0; i < validFiles.length; i++) {
       const file = validFiles[i];
+      if (!file) continue;
       if (file.originFileObj) {
         try {
           const url = await uploadImage(file.originFileObj, taskId);
@@ -486,7 +488,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
             <Progress
               percent={Math.round((uploadProgress.current / uploadProgress.total) * 100)}
               status="active"
-              format={(percent) => `${uploadProgress.current}/${uploadProgress.total}`}
+              format={() => `${uploadProgress.current}/${uploadProgress.total}`}
             />
           </div>
         )}

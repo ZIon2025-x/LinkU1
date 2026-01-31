@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Spin, Rate } from 'antd';
+import { Spin } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getTaskExpert } from '../api';

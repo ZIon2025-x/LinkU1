@@ -20,7 +20,6 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    // 更严格的类型检查
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,

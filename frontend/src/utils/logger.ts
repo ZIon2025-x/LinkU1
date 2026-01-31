@@ -7,11 +7,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // 生产环境禁用 console.log 和 console.debug
 if (isProduction && typeof window !== 'undefined') {
-  // 保存原始方法（用于调试）
-  const originalLog = console.log;
-  const originalDebug = console.debug;
-
-  // 覆盖 console.log 和 console.debug
+  // 覆盖 console.log 和 console.debug（原始方法未保存）
   console.log = () => {};
   console.debug = () => {};
 

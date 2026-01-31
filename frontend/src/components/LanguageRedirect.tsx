@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, hasLanguagePrefix } from '../utils/i18n';
+import { useLocation } from 'react-router-dom';
+import { detectBrowserLanguage, addLanguageToPath, hasLanguagePrefix } from '../utils/i18n';
 
 const LanguageRedirect: React.FC = () => {
   const location = useLocation();

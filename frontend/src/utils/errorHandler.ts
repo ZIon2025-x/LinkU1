@@ -159,6 +159,7 @@ export const logError = (error: any, context?: Record<string, any>): void => {
     context,
     timestamp: new Date().toISOString(),
   };
+  void errorInfo;
 
   // 在生产环境中，可以发送到错误监控服务（如 Sentry）
   if (process.env.NODE_ENV === 'production') {

@@ -179,13 +179,13 @@ class PerformanceMonitor {
       if (!grouped[metric.name]) {
         grouped[metric.name] = [];
       }
-      grouped[metric.name].push(metric.value);
+      (grouped[metric.name] as number[]).push(metric.value);
     });
 
-    Object.keys(grouped).forEach((name) => {
-      const values = grouped[name];
+    Object.keys(grouped).forEach((key) => {
+      const values = grouped[key] ?? [];
       const sum = values.reduce((acc, val) => acc + val, 0);
-      averages[name] = sum / values.length;
+      averages[key] = sum / values.length;
     });
 
     return averages;
@@ -212,7 +212,7 @@ export const usePerformanceMeasure = (componentName: string) => {
 /**
  * 装饰器：自动测量函数执行时间
  */
-export function measurePerformance(name: string, type: PerformanceMetric['type'] = 'custom') {
+export function measurePerformance(_name: string, type: PerformanceMetric['type'] = 'custom') {
   return function (
     target: any,
     propertyKey: string,

@@ -7,7 +7,6 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import { Button, message, Spin } from 'antd';
-import api from '../../api';
 import { logger } from '../../utils/logger';
 
 // 初始化 Stripe
@@ -30,13 +29,14 @@ interface StripePaymentFormProps {
 
 // 支付表单组件
 const PaymentForm: React.FC<StripePaymentFormProps> = ({
-  clientSecret,
+  clientSecret: _clientSecret,
   amount,
-  currency,
+  currency: _currency,
   onSuccess,
   onError,
   onCancel
 }) => {
+  void _clientSecret; void _currency;
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -191,7 +191,7 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
   useEffect(() => {
     stripePromise.then(() => {
       setStripeLoaded(true);
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       console.error('Failed to load Stripe:', err);
       props.onError('无法加载支付服务');
     });

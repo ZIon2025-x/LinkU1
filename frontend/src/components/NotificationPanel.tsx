@@ -131,8 +131,8 @@ const NegotiationOfferNotification: React.FC<{
             task_id: data.task_id
           });
         })
-        .catch(err => {
-                    // 如果获取失败，可能是旧数据，尝试解析 JSON
+        .catch(() => {
+          // 如果获取失败，可能是旧数据，尝试解析 JSON
           try {
             const negotiationData: NegotiationContent = JSON.parse(notification.content);
             if (negotiationData.token_accept && negotiationData.token_reject) {
@@ -415,19 +415,6 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
            type === 'task_reward_paid' ||
            type === 'application_accepted' ||
            type === 'application_rejected';
-  };
-
-  const getNotificationColor = (type?: string) => {
-    switch (type) {
-      case 'success':
-        return '#28a745';
-      case 'warning':
-        return '#ffc107';
-      case 'error':
-        return '#dc3545';
-      default:
-        return '#007bff';
-    }
   };
 
   return (

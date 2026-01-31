@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Form, Input, Button, Select, message, Spin } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import api, { getVisibleForums, createForumPost, updateForumPost, getForumPost, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
+import { getVisibleForums, createForumPost, updateForumPost, getForumPost, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
-import { Typography } from 'antd';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateName } from '../utils/inputValidators';
 import styles from './ForumCreatePost.module.css';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 

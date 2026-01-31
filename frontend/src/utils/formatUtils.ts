@@ -44,7 +44,8 @@ export function obfuscateLocation(location: string | null | undefined): string {
   let filteredComponents = [...components];
   
   // 移除第一个部分（如果是街道地址）
-  if (hasStreetNumber(filteredComponents[0]) && filteredComponents.length > 1) {
+  const first = filteredComponents[0];
+  if (first !== undefined && hasStreetNumber(first) && filteredComponents.length > 1) {
     filteredComponents = filteredComponents.slice(1);
   }
   
@@ -56,14 +57,14 @@ export function obfuscateLocation(location: string | null | undefined): string {
     const lastTwo = filteredComponents.slice(-2);
     return lastTwo.join(', ');
   } else if (filteredComponents.length === 1) {
-    // 只有一个部分，直接返回
-    return filteredComponents[0];
+    return filteredComponents[0] ?? trimmed;
   }
   
   // 如果过滤后没有内容，返回原始内容的最后两个非邮编部分
   const validComponents: string[] = [];
   for (let i = components.length - 1; i >= 0; i--) {
     const component = components[i];
+    if (component === undefined) continue;
     if (!isPostcode(component) && !hasStreetNumber(component)) {
       validComponents.unshift(component);
       if (validComponents.length >= 2) {

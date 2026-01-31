@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Navigate } from 'react-router-dom';
-import { detectBrowserLanguage, DEFAULT_LANGUAGE, addLanguageToPath } from '../utils/i18n';
+import { detectBrowserLanguage, addLanguageToPath } from '../utils/i18n';
 
 /**
  * 根路径处理器

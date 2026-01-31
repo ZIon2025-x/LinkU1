@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select, Dropdown, QRCode } from 'antd';
+import { Card, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select, QRCode } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, LikeOutlined, LikeFilled, 
   StarOutlined, StarFilled, UserOutlined, ClockCircleOutlined,
-  EditOutlined, DeleteOutlined, FlagOutlined, ArrowLeftOutlined,
+  EditOutlined, DeleteOutlined, FlagOutlined,
   ShareAltOutlined, CopyOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { 
   getForumPost, getForumReplies, createForumReply, toggleForumLike, 
-  toggleForumFavorite, incrementPostViewCount, deleteForumPost, deleteForumReply,
+  toggleForumFavorite, deleteForumPost, deleteForumReply,
   createForumReport, fetchCurrentUser, getPublicSystemSettings, logout,
   getForumUnreadNotificationCount
 } from '../api';
@@ -25,7 +25,6 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
-import { formatViewCount } from '../utils/formatUtils';
 import SafeContent from '../components/SafeContent';
 import { getErrorMessage } from '../utils/errorHandler';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -93,8 +92,8 @@ const ForumPostDetail: React.FC = () => {
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyLoading, setReplyLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [currentPage] = useState(1);
+  const [, setTotal] = useState(0);
   const [replyContent, setReplyContent] = useState('');
   const [parentReplyId, setParentReplyId] = useState<number | undefined>(undefined);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -178,9 +177,6 @@ const ForumPostDetail: React.FC = () => {
       document.head.insertBefore(metaTag, document.head.firstChild);
     };
 
-    // 构建帖子详情页的URL
-    const postUrl = `${window.location.origin}${window.location.pathname}`;
-    
     // 强制更新meta描述（先移除所有旧标签，再插入到head最前面，确保优先被读取）
     const allDescriptions = document.querySelectorAll('meta[name="description"]');
     allDescriptions.forEach(tag => tag.remove());

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../api';
 import LoginModal from './LoginModal';
 
@@ -10,7 +9,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   useEffect(() => {
@@ -28,7 +27,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         });
 
         // ⚠️ 使用fetchCurrentUser，利用缓存机制
-        const response = await Promise.race([
+        await Promise.race([
           fetchCurrentUser().finally(() => {
             // ⚠️ 请求完成时清理定时器
             if (timeoutId) {

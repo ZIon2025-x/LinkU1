@@ -32,7 +32,7 @@ interface UserCoupon {
 
 const Coupons: React.FC = () => {
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'available' | 'my'>('available');
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([]);
@@ -156,7 +156,7 @@ const Coupons: React.FC = () => {
         bgColor: '#fee2e2'
       }
     };
-    const statusInfo = statusMap[status] || statusMap.unused;
+    const statusInfo = statusMap[status] ?? statusMap.unused ?? { text: String(status), color: '#666', bgColor: '#e2e8f0' };
     return (
       <span style={{
         padding: '4px 12px',

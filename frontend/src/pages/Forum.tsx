@@ -56,7 +56,7 @@ const Forum: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState<{ [key: number]: boolean }>({});

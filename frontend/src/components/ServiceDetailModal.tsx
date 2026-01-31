@@ -37,6 +37,12 @@ interface ServiceDetail {
   time_slot_start_time?: string;
   time_slot_end_time?: string;
   participants_per_slot?: number;
+  user_application_id?: number;
+  user_application_has_negotiation?: boolean;
+  user_task_status?: string;
+  user_task_is_paid?: boolean;
+  user_task_id?: number;
+  user_application_status?: string;
 }
 
 interface TimeSlot {
@@ -58,7 +64,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   serviceId,
   onApplySuccess,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { navigate: navigateLocalized } = useLocalizedNavigation();
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [loading, setLoading] = useState(true);

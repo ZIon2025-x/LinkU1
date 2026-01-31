@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Avatar, Pagination } from 'antd';
+import { Card, Empty, Typography, Space, Button, Avatar, Pagination } from 'antd';
 import { 
   MessageOutlined, LikeOutlined, StarOutlined, PushpinOutlined,
   UserOutlined, ClockCircleOutlined, CheckOutlined, CheckCircleOutlined
@@ -24,7 +24,7 @@ import { formatRelativeTime } from '../utils/timeUtils';
 import SkeletonLoader from '../components/SkeletonLoader';
 import styles from './ForumNotifications.module.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface ForumNotification {
   id: number;

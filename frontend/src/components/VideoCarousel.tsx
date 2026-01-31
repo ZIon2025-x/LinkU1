@@ -17,12 +17,13 @@ interface VideoCarouselProps {
 
 const VideoCarousel: React.FC<VideoCarouselProps> = ({
   videos,
-  autoplay = false,
-  loop = true
+  autoplay: _autoplay = false,
+  loop: _loop = true
 }) => {
+  void _autoplay;
+  void _loop;
   const [currentIndex, setCurrentIndex] = useState(0);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -41,29 +42,25 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
     const firstVideo = videoRefs.current[0];
     if (firstVideo) {
       firstVideo.load();
-      // 延迟播放，确保视频已加载
       const timer = setTimeout(() => {
-        firstVideo.play().catch((error) => {
-                  });
+        firstVideo.play().catch(() => {});
       }, 100);
       return () => clearTimeout(timer);
     }
+    return;
   }, []);
 
   // 切换视频时加载并播放新视频（懒加载）
   useEffect(() => {
     const currentVideo = videoRefs.current[currentIndex];
-    if (currentVideo) {
-      // 如果视频还没有src，设置src（懒加载）
+    const vid = videos[currentIndex];
+    if (currentVideo && vid) {
       if (!currentVideo.src) {
-        currentVideo.src = videos[currentIndex].src;
+        currentVideo.src = vid.src;
       }
       currentVideo.load();
-      // 延迟播放，确保视频已加载
       const timer = setTimeout(() => {
-        currentVideo.play().catch((error) => {
-                  });
-        // 更新视频尺寸
+        currentVideo.play().catch(() => {});
         if (currentVideo.videoWidth && currentVideo.videoHeight) {
           setVideoDimensions({
             width: currentVideo.videoWidth,
@@ -73,52 +70,33 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
       }, 100);
       return () => clearTimeout(timer);
     }
+    return;
   }, [currentIndex, videos]);
 
   const handlePrevious = () => {
     const newIndex = currentIndex === 0 ? videos.length - 1 : currentIndex - 1;
-    // 暂停当前视频
-    if (videoRefs.current[currentIndex]) {
-      videoRefs.current[currentIndex]?.pause();
-    }
+    videoRefs.current[currentIndex]?.pause();
     setCurrentIndex(newIndex);
-    // 播放新视频
     setTimeout(() => {
-      if (videoRefs.current[newIndex]) {
-        videoRefs.current[newIndex]?.play().catch((error) => {
-                  });
-      }
+      videoRefs.current[newIndex]?.play().catch(() => {});
     }, 50);
   };
 
   const handleNext = () => {
     const newIndex = currentIndex === videos.length - 1 ? 0 : currentIndex + 1;
-    // 暂停当前视频
-    if (videoRefs.current[currentIndex]) {
-      videoRefs.current[currentIndex]?.pause();
-    }
+    videoRefs.current[currentIndex]?.pause();
     setCurrentIndex(newIndex);
-    // 播放新视频
     setTimeout(() => {
-      if (videoRefs.current[newIndex]) {
-        videoRefs.current[newIndex]?.play().catch((error) => {
-                  });
-      }
+      videoRefs.current[newIndex]?.play().catch(() => {});
     }, 50);
   };
 
   const handleVideoPlay = () => {
-    setIsPlaying(true);
-    // 暂停其他视频
     videoRefs.current.forEach((video, index) => {
       if (video && index !== currentIndex) {
         video.pause();
       }
     });
-  };
-
-  const handleVideoPause = () => {
-    setIsPlaying(false);
   };
 
   // 计算容器宽度，根据视频比例自适应
@@ -188,7 +166,6 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 pointerEvents: 'none'
               }}
               onPlay={handleVideoPlay}
-              onPause={handleVideoPause}
               onEnded={() => {
                 // 视频播放完成后自动切换到下一个
                 if (index === currentIndex) {
@@ -204,8 +181,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                     width: video.videoWidth,
                     height: video.videoHeight
                   });
-                  video.play().catch((error) => {
-                                      });
+                  video.play().catch(() => {});
                 }
               }}
             />
@@ -424,8 +400,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 // 播放新视频
                 setTimeout(() => {
                   if (videoRefs.current[index]) {
-                    videoRefs.current[index]?.play().catch((error) => {
-                                          });
+                    videoRefs.current[index]?.play().catch(() => {});
                   }
                 }, 50);
               }}

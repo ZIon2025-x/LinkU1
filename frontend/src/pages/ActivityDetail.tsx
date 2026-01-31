@@ -1,14 +1,13 @@
 import React, { useEffect, useLayoutEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { message } from 'antd';
-import { getActivityDetail, applyToActivity, getServiceTimeSlotsPublic, fetchCurrentUser } from '../api';
+import { getActivityDetail, applyToActivity, getServiceTimeSlotsPublic } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
 import LazyImage from '../components/LazyImage';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -16,9 +15,7 @@ import styles from './ActivityDetail.module.css';
 
 const ActivityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { navigate: navigateLocalized } = useLocalizedNavigation();
   const { user } = useCurrentUser();
   
@@ -422,14 +419,15 @@ const ActivityDetail: React.FC = () => {
                         if (!slotsByDate[slotDateUK]) {
                           slotsByDate[slotDateUK] = [];
                         }
-                        slotsByDate[slotDateUK].push(slot);
+                        slotsByDate[slotDateUK]!.push(slot);
                       });
 
                     const dates = Object.keys(slotsByDate).sort();
                     
                     return dates.map(date => {
-                      const slots = slotsByDate[date];
+                      const slots = slotsByDate[date] ?? [];
                       const firstSlot = slots[0];
+                      if (!firstSlot) return null;
                       const dateStr = firstSlot.slot_start_datetime || firstSlot.slot_date;
                       const formattedDate = TimeHandlerV2.formatUtcToLocal(
                         dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00Z`,

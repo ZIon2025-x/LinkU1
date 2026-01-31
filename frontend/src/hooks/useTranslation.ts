@@ -3,13 +3,6 @@ import { translateText, translateBatch } from '../api';
 import { getTranslationCache, setTranslationCache } from '../utils/translationCache';
 import { translationQueue } from '../utils/translationQueue';
 
-interface TranslationResult {
-  translatedText: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  originalText: string;
-}
-
 interface UseTranslationReturn {
   translate: (text: string, targetLang: string, sourceLang?: string) => Promise<string>;
   translateBatch: (texts: string[], targetLang: string, sourceLang?: string) => Promise<string[]>;
@@ -144,7 +137,7 @@ export const useTranslation = (): UseTranslationReturn => {
       const translateIndices: number[] = [];
       
       for (let i = 0; i < processedTexts.length; i++) {
-        const text = processedTexts[i];
+        const text = processedTexts[i]!;
         const cached = getTranslationCache(text, targetLang, sourceLang);
         if (cached) {
           cachedResults.set(text, cached);
@@ -158,7 +151,7 @@ export const useTranslation = (): UseTranslationReturn => {
       let translatedResults: string[] = [];
       if (textsToTranslate.length > 0) {
         const result = await translateBatch(textsToTranslate, targetLang, sourceLang);
-        translatedResults = result.translations.map((t: any) => t.translated_text || t.original_text);
+        translatedResults = (result.translations ?? []).map((t: { translated_text?: string; original_text?: string }) => (t?.translated_text ?? t?.original_text) ?? '');
         
         // 保存到本地缓存
         textsToTranslate.forEach((text, idx) => {
@@ -174,11 +167,11 @@ export const useTranslation = (): UseTranslationReturn => {
       let translateIdx = 0;
       
       for (let i = 0; i < processedTexts.length; i++) {
-        const text = processedTexts[i];
+        const text = processedTexts[i]!;
         if (cachedResults.has(text)) {
           allResults.push(cachedResults.get(text)!);
         } else {
-          allResults.push(translatedResults[translateIdx] || text);
+          allResults.push(translatedResults[translateIdx] ?? text);
           translateIdx++;
         }
       }
@@ -186,7 +179,7 @@ export const useTranslation = (): UseTranslationReturn => {
       // 4. 根据原始索引映射返回结果（处理重复文本）
       return textToIndex.map(idx => {
         if (idx === -1) return ''; // 空文本
-        return allResults[idx];
+        return allResults[idx] ?? '';
       });
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || err.message || '批量翻译失败';

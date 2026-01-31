@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Tabs, Spin, Empty, Typography, Space, Tag, Button, Pagination } from 'antd';
+import { Card, Tabs, Empty, Typography, Space, Tag, Button, Pagination } from 'antd';
 import { 
-  MessageOutlined, EyeOutlined, LikeOutlined, StarOutlined,
-  EditOutlined, DeleteOutlined, UserOutlined, ClockCircleOutlined,
+  MessageOutlined, EyeOutlined, LikeOutlined,
+  EditOutlined, DeleteOutlined, ClockCircleOutlined,
   FileTextOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';

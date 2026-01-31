@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// 认证状态类型
+// 认证状态类型（admin、service 在各自子域，本前端仅 user）
 export type AuthRole = 'user' | null;
 
 export interface AuthState {
@@ -54,8 +54,9 @@ export const useAuth = () => {
             });
             return;
           }
-        } catch (error) {
-                  }
+        } catch {
+          // 忽略单次检查失败
+        }
       }
 
       // 如果所有检查都失败
@@ -102,8 +103,9 @@ export const useAuth = () => {
           });
           if (csrfResponse.ok) {
           }
-        } catch (error) {
-                  }
+        } catch {
+          // 忽略 CSRF 请求失败
+        }
         
         // 获取用户数据
         const userData = data.user || null;
@@ -119,8 +121,8 @@ export const useAuth = () => {
         
         return true;
       } else {
-        const errorData = await response.json();
-                return false;
+        await response.json();
+        return false;
       }
     } catch (error) {
             return false;
@@ -136,8 +138,9 @@ export const useAuth = () => {
           credentials: 'include'
         });
       }
-    } catch (error) {
-          } finally {
+    } catch {
+      // 忽略登出请求失败
+    } finally {
       setAuthState({
         isAuthenticated: false,
         role: null,

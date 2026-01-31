@@ -40,10 +40,11 @@ export async function loadTaskTranslationsBatch(
 
   // 过滤出需要加载的任务ID（还没有缓存的）
   const needLoadIds = taskIds.filter(id => {
+    const c = translationCache[id];
     if (fieldType) {
-      return !translationCache[id]?.[fieldType];
+      return !c?.[fieldType];
     }
-    return !translationCache[id] || !translationCache[id].title || !translationCache[id].description;
+    return !c || !c.title || !c.description;
   });
 
   if (needLoadIds.length === 0) {
@@ -59,11 +60,9 @@ export async function loadTaskTranslationsBatch(
         getTaskTranslationsBatch(needLoadIds, 'title', language)
           .then(result => {
             Object.entries(result.translations || {}).forEach(([taskIdStr, data]: [string, any]) => {
-              const taskId = parseInt(taskIdStr);
-              if (!translationCache[taskId]) {
-                translationCache[taskId] = {};
-              }
-              translationCache[taskId].title = data.translated_text;
+              const taskId = parseInt(taskIdStr, 10);
+              const slot = translationCache[taskId] ??= {};
+              slot.title = data.translated_text;
             });
           })
           .catch(error => {
@@ -77,11 +76,9 @@ export async function loadTaskTranslationsBatch(
         getTaskTranslationsBatch(needLoadIds, 'description', language)
           .then(result => {
             Object.entries(result.translations || {}).forEach(([taskIdStr, data]: [string, any]) => {
-              const taskId = parseInt(taskIdStr);
-              if (!translationCache[taskId]) {
-                translationCache[taskId] = {};
-              }
-              translationCache[taskId].description = data.translated_text;
+              const taskId = parseInt(taskIdStr, 10);
+              const slot = translationCache[taskId] ??= {};
+              slot.description = data.translated_text;
             });
           })
           .catch(error => {
@@ -119,10 +116,8 @@ export function setCachedTaskTranslation(
   fieldType: 'title' | 'description',
   translatedText: string
 ): void {
-  if (!translationCache[taskId]) {
-    translationCache[taskId] = {};
-  }
-  translationCache[taskId][fieldType] = translatedText;
+  const slot = translationCache[taskId] ??= {};
+  slot[fieldType] = translatedText;
 }
 
 /**

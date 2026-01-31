@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Tabs, Spin, Empty, Typography, Space, Tag, Button, Avatar, Select } from 'antd';
+import { Card, Tabs, Spin, Empty, Avatar, Select } from 'antd';
 import { 
   TrophyOutlined, UserOutlined, MessageOutlined, LikeOutlined,
-  FireOutlined, StarOutlined, ClockCircleOutlined
+  StarOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getForumLeaderboard, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
@@ -16,7 +16,6 @@ import LoginModal from '../components/LoginModal';
 import CustomLeaderboardsTab from '../components/CustomLeaderboardsTab';
 import styles from './ForumLeaderboard.module.css';
 
-const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 const { Option } = Select;
 
@@ -45,7 +44,7 @@ const ForumLeaderboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
@@ -86,13 +85,6 @@ const ForumLeaderboard: React.FC = () => {
     }
   };
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return rank;
-  };
-
   const renderLeaderboardContent = () => {
     if (loading) {
       return (
@@ -118,7 +110,7 @@ const ForumLeaderboard: React.FC = () => {
             {topThree[1] && (
               <div 
                 className={`${styles.podiumItem} ${styles.podium2}`}
-                onClick={() => navigate(`/${lang}/user/${topThree[1].user.id}`)}
+                onClick={() => navigate(`/${lang}/user/${topThree[1]!.user.id}`)}
               >
                 <Avatar
                   src={topThree[1].user.avatar}
@@ -138,7 +130,7 @@ const ForumLeaderboard: React.FC = () => {
             {topThree[0] && (
               <div 
                 className={`${styles.podiumItem} ${styles.podium1}`}
-                onClick={() => navigate(`/${lang}/user/${topThree[0].user.id}`)}
+                onClick={() => navigate(`/${lang}/user/${topThree[0]!.user.id}`)}
               >
                 <Avatar
                   src={topThree[0].user.avatar}
@@ -158,7 +150,7 @@ const ForumLeaderboard: React.FC = () => {
             {topThree[2] && (
               <div 
                 className={`${styles.podiumItem} ${styles.podium3}`}
-                onClick={() => navigate(`/${lang}/user/${topThree[2].user.id}`)}
+                onClick={() => navigate(`/${lang}/user/${topThree[2]!.user.id}`)}
               >
                 <Avatar
                   src={topThree[2].user.avatar}
@@ -214,19 +206,6 @@ const ForumLeaderboard: React.FC = () => {
         return <LikeOutlined />;
       default:
         return null;
-    }
-  };
-
-  const getTabTitle = (type: string) => {
-    switch (type) {
-      case 'posts':
-        return t('forum.leaderboardPosts');
-      case 'favorites':
-        return t('forum.leaderboardFavorites');
-      case 'likes':
-        return t('forum.leaderboardLikes');
-      default:
-        return '';
     }
   };
 

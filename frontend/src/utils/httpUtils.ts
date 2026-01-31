@@ -4,7 +4,7 @@
  */
 
 // 创建强制使用HTTP/1.1的fetch配置
-export const createHttp1FetchConfig = (url: string, options: RequestInit = {}) => {
+export const createHttp1FetchConfig = (_url: string, options: RequestInit = {}) => {
   return {
     ...options,
     headers: {

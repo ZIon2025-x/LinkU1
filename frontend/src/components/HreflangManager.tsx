@@ -11,17 +11,6 @@ const HreflangManager: React.FC<HreflangManagerProps> = ({ type, id, path }) => 
   const base = 'https://www.link2ur.com';
   const location = useLocation(); // 添加 useLocation 作为 fallback
   
-  // 语言代码映射（支持未来扩展）
-  // ⚠️ 注意：前端 i18n 代码里语言变量是 'en' 和 'zh'，这里统一映射为 hreflang 格式
-  const getLanguageCode = (lang: string): string => {
-    const langMap: Record<string, string> = {
-      'en': 'en-GB',
-      'zh': 'zh-CN',
-      // 未来可扩展：'en-US': 'en-US', 'zh-HK': 'zh-HK'
-    };
-    return langMap[lang] || 'en-GB';
-  };
-  
   const getUrls = () => {
     if (type === 'task' && id) {
       return {

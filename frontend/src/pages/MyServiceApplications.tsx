@@ -42,9 +42,11 @@ interface ServiceApplication {
 }
 
 const MyServiceApplications: React.FC = () => {
-  const { t } = useLanguage();
+  const { t: _t } = useLanguage();
+  void _t;
   const { navigate } = useLocalizedNavigation();
-  const { unreadCount: messageUnreadCount } = useUnreadMessages();
+  const { unreadCount: _messageUnreadCount } = useUnreadMessages();
+  void _messageUnreadCount;
   
   const [user, setUser] = useState<any>(null);
   const [applications, setApplications] = useState<ServiceApplication[]>([]);
@@ -52,8 +54,10 @@ const MyServiceApplications: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // 通知相关状态
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, _setNotifications] = useState<any[]>([]);
+  void _setNotifications;
+  const [unreadCount, _setUnreadCount] = useState(0);
+  void _setUnreadCount;
   const [showNotifications, setShowNotifications] = useState(false);
   const [systemSettings, setSystemSettings] = useState<any>({
     vip_button_visible: false
@@ -239,7 +243,7 @@ const MyServiceApplications: React.FC = () => {
         onClose={() => setShowNotifications(false)}
         notifications={notifications}
         unreadCount={unreadCount}
-        onMarkAsRead={async (id) => {
+        onMarkAsRead={async () => {
           // 标记已读逻辑
         }}
         onMarkAllRead={async () => {

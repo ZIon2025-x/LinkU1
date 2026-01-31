@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { message, Modal, Input, InputNumber, Button, Upload, Space, Card, Empty, Spin, UploadFile, Select, Checkbox, Tabs } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined, HeartFilled } from '@ant-design/icons';
+import { message, Modal, Input, InputNumber, Button, Upload, Empty, Spin, UploadFile, Select, Checkbox, Tabs } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, HeartFilled } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { CITIES } from './Tasks';
@@ -59,7 +59,7 @@ interface FleaMarketItem {
 }
 
 const FleaMarketPage: React.FC = () => {
-  const { lang } = useParams<{ lang: string }>();
+  useParams<{ lang: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
@@ -165,13 +165,11 @@ const FleaMarketPage: React.FC = () => {
     if (user) {
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
-      }).catch(error => {
-              });
+      }).catch(() => {});
       
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
-      }).catch(error => {
-              });
+      }).catch(() => {});
     }
   }, [user]);
 
@@ -182,12 +180,12 @@ const FleaMarketPage: React.FC = () => {
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
-          }).catch(error => {
-                      });
+          }).catch(() => {});
         }
       }, 30000);
       return () => clearInterval(interval);
     }
+    return;
   }, [user]);
 
   // 处理通知点击 - 使用useCallback优化
@@ -651,7 +649,7 @@ const FleaMarketPage: React.FC = () => {
         <div className={styles.itemImageWrapper}>
           {item.images && item.images.length > 0 ? (
             <LazyImage
-              src={item.images[0]}
+              src={item.images[0] ?? ''}
               alt={item.title}
               className={styles.itemImage}
               placeholder="/placeholder.png"

@@ -1,7 +1,6 @@
 import type React from 'react';
 import { TaskApplication, Task, User } from '../../types/task';
 import { applicationStatusStyles } from '../../utils/taskModalStyles';
-import { TimeHandlerV2 } from '../../utils/timeUtils';
 
 interface ApplicationStatusDisplayProps {
   userApplication: TaskApplication | null;

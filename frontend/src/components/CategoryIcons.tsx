@@ -1,5 +1,4 @@
 import React from 'react';
-import { TASK_TYPES } from '../pages/Tasks';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface CategoryIconsProps {
@@ -15,7 +14,7 @@ const CategoryIcons: React.FC<CategoryIconsProps> = React.memo(({
   onTypeClick,
   selectedType
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const icons = ['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'];
   const colors = [
     ['#ef4444', '#dc2626'],
@@ -63,7 +62,7 @@ const CategoryIcons: React.FC<CategoryIconsProps> = React.memo(({
             style={{
               width: '64px',
               height: '64px',
-              background: `linear-gradient(135deg, ${colors[index][0]}, ${colors[index][1]})`,
+              background: `linear-gradient(135deg, ${colors[index]?.[0] ?? '#ef4444'}, ${colors[index]?.[1] ?? '#dc2626'})`,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',

@@ -29,24 +29,23 @@ interface TaskDetailModalProps {
 // 使用memo避免不必要的重新渲染
 const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, onClose, taskId }) => {
   const { t } = useLanguage();
-  const { navigate } = useLocalizedNavigation();
+  useLocalizedNavigation(); // navigate 未使用，admin/service 在独立子域
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const [showPriceEdit, setShowPriceEdit] = useState(false);
-  const [newPrice, setNewPrice] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
+  const [, setNewPrice] = useState('');
+  const [actionLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [loadingApplications, setLoadingApplications] = useState(false);
-  const [userApplication, setUserApplication] = useState<any>(null);
-  const [hasApplied, setHasApplied] = useState(false);
+  const [applications] = useState<any[]>([]);
+  const [loadingApplications] = useState(false);
+  const [userApplication] = useState<any>(null);
+  const [hasApplied] = useState(false);
 
   // 使用useCallback缓存函数
   const loadTaskData = useCallback(async () => {
@@ -81,7 +80,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
 
   // 使用useMemo缓存计算结果
   const isTaskPoster = useMemo(() => user && task && user.id === task.poster_id, [user, task]);
-  const isTaskTaker = useMemo(() => user && task && user.id === task.taker_id, [user, task]);
+  const _isTaskTaker = useMemo(() => user && task && user.id === task.taker_id, [user, task]);
+  void _isTaskTaker;
 
   const getTaskLevelText = useCallback((level: string) => {
     switch (level) {
@@ -261,10 +261,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
               applications={applications}
               loadingApplications={loadingApplications}
               actionLoading={actionLoading}
-              onApproveApplication={async (applicationId) => {
+              onApproveApplication={async (_applicationId) => {
                 // 实现批准申请逻辑
               }}
-              onRejectApplication={async (applicationId) => {
+              onRejectApplication={async (_applicationId) => {
                 // 实现拒绝申请逻辑
               }}
               t={t}

@@ -140,6 +140,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
     return (
       <div
         ref={imgRef}
+        onClick={onClick}
+        title={title}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         style={{
           position: 'relative',
           width: width || '100%',
@@ -261,6 +265,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
       ref={imgRef}
       style={containerStyle}
       className={className}
+      onClick={onClick}
+      title={title}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {!isInView && (
         <div style={{

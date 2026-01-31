@@ -4,9 +4,7 @@ import { API_BASE_URL, WS_BASE_URL } from '../config';
 import api, { 
   fetchCurrentUser, 
   assignCustomerService, 
-  sendMessage, 
   checkCustomerServiceAvailability, 
-  markChatMessagesAsRead, 
   // 任务聊天相关API
   getTaskChatList,
   getTaskMessages,
@@ -15,16 +13,10 @@ import api, {
   getTaskApplicationsWithFilter,
   acceptApplication,
   rejectApplication,
-  withdrawApplication,
-  negotiateApplication,
-  respondNegotiation,
   sendApplicationMessage,
-  replyApplicationMessage,
   applyForTask,
   // 任务操作相关API
-  completeTask,
   confirmTaskCompletion,
-  createReview,
   getTaskReviews
 } from '../api';
 import { useLocation } from 'react-router-dom';
@@ -233,7 +225,7 @@ const TASK_TYPES = [
 const getTaskTypeEmoji = (taskType: string): string => {
   const emojiList = ['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'];
   const index = TASK_TYPES.indexOf(taskType);
-  return index >= 0 ? emojiList[index] : '📋';
+  return index >= 0 ? (emojiList[index] ?? '📋') : '📋';
 };
 
 // 获取任务图片URL（处理私密图片和公开图片）
@@ -274,7 +266,8 @@ interface TaskListItemProps {
   onRemoveTask: (taskId: number) => void;
 }
 
-const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTaskClick, onRemoveTask }) => {
+const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile: _isMobile, onTaskClick, onRemoveTask }) => {
+  void _isMobile;
   const { t, language } = useLanguage();
   
   const handleClick = useCallback(() => {
@@ -490,8 +483,10 @@ const MessagePage: React.FC = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingChatId, setRatingChatId] = useState<string | null>(null);
-  const [serviceAvailable, setServiceAvailable] = useState<boolean>(false);
-  const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
+  const [, setServiceAvailable] = useState<boolean>(false);
+  const [, setServiceStatusLoading] = useState<boolean>(true);
+  void setServiceAvailable;
+  void setServiceStatusLoading;
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false); // 移动端是否显示聊天框
   
@@ -501,7 +496,8 @@ const MessagePage: React.FC = () => {
   const [showTaskCardModal, setShowTaskCardModal] = useState(false);
   
   // 任务聊天相关状态
-  const [chatMode, setChatMode] = useState<'tasks'>('tasks'); // 聊天模式：任务（联系人功能已移除）
+  const [chatMode, setChatMode] = useState<'tasks'>('tasks');
+  void setChatMode;
   const [tasks, setTasks] = useState<any[]>([]); // 任务列表
   const [tasksLoading, setTasksLoading] = useState(false);
   const [taskSearchTerm, setTaskSearchTerm] = useState(''); // 任务搜索关键词
@@ -553,9 +549,8 @@ const MessagePage: React.FC = () => {
   const [taskScrollButtonBottom, setTaskScrollButtonBottom] = useState(100); // 任务聊天滚动按钮距离底部的位置
   const [taskScrollButtonLeft, setTaskScrollButtonLeft] = useState<number | null>(null); // 任务聊天滚动按钮距离左侧的位置（相对于输入框居中）
   
-  // 翻译相关状态
+  // 翻译相关状态（language 已在组件顶部通过 useLanguage() 获取）
   const { translate } = useTranslation();
-  const { language } = useLanguage();
   // 使用消息ID或内容+时间戳作为key
   const [messageTranslations, setMessageTranslations] = useState<Map<string, string>>(new Map());
   const [translatingMessages, setTranslatingMessages] = useState<Set<string>>(new Set());
@@ -630,11 +625,15 @@ const MessagePage: React.FC = () => {
   
   // 无限滚动相关状态
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  void setLoadingMoreMessages;
+  const [, setHasMoreMessages] = useState(true);
+  const [, setCurrentPage] = useState(1);
+  void setHasMoreMessages;
+  void setCurrentPage;
   
   // 滚动控制状态
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
+  const [, setShouldScrollToBottom] = useState(false);
+  void setShouldScrollToBottom;
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   
   // 发送状态
@@ -656,14 +655,11 @@ const MessagePage: React.FC = () => {
     // 注意：不再处理 uid 参数，因为联系人聊天功能已移除
   }, [location.search, activeTaskId]);
 
-  // 格式化时间为用户时区 - 使用新的统一时间处理系统
-  const formatTime = (timeString: string) => {
-    try {
-      return TimeHandlerV2.formatDetailedTime(timeString, userTimezone, t);
-    } catch (error) {
-            return timeString;
-    }
+  // 格式化时间为用户时区（未使用）
+  const _formatTime = (timeString: string) => {
+    try { return TimeHandlerV2.formatDetailedTime(timeString, userTimezone, t); } catch { return timeString; }
   };
+  void _formatTime;
 
   // 添加表情到输入框
   const addEmoji = (emoji: string) => {
@@ -888,11 +884,9 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 取消图片选择
-  const cancelImageSelection = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-  };
+  // 取消图片选择（未使用）
+  const _cancelImageSelection = () => { setSelectedImage(null); setImagePreview(null); };
+  void _cancelImageSelection;
 
   // 发送文件
   const sendFile = async () => {
@@ -1090,14 +1084,12 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 取消文件选择
-  const cancelFileSelection = () => {
-    setSelectedFile(null);
-    setFilePreview(null);
-  };
+  // 取消文件选择（未使用）
+  const _cancelFileSelection = () => { setSelectedFile(null); setFilePreview(null); };
+  void _cancelFileSelection;
 
-  // 渲染消息内容（支持图片）
-  const renderMessageContent = (content: string, message: any) => {
+  // 渲染消息内容（支持图片，未使用）
+  const _renderMessageContent = (content: string, message: any) => {
     // 检查是否是图片消息
     if (content.startsWith('[图片] ') || message.image_id) {
       const imageId = message.image_id || content.replace('[图片] ', '');
@@ -1168,6 +1160,7 @@ const MessagePage: React.FC = () => {
     // 普通文本消息
     return <div style={{ fontSize: 16 }}>{content}</div>;
   };
+  void _renderMessageContent;
 
   // 获取用户时区
   // 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
@@ -1833,17 +1826,18 @@ const MessagePage: React.FC = () => {
     };
   }, [navigate]);
 
-  // 初始化时区信息
-  const initializeTimezone = useCallback(async () => {
+  // 初始化时区信息（未使用）
+  const _initializeTimezone = useCallback(async () => {
     try {
       const detectedTimezone = TimeHandlerV2.getUserTimezone();
       setUserTimezone(detectedTimezone);
       
       // 获取服务器时区信息（用于后续可能的时区转换）
       await TimeHandlerV2.getTimezoneInfo();
-    } catch (error) {
-          }
+    } catch {
+    }
   }, []);
+  void _initializeTimezone;
 
   // 加载任务列表
   const loadTasks = useCallback(async () => {
@@ -1935,8 +1929,8 @@ const MessagePage: React.FC = () => {
     });
   }, [tasks, taskSearchTerm]);
 
-  // 恢复客服聊天状态
-  const restoreCustomerServiceChat = useCallback(async () => {
+  // 恢复客服聊天状态（未使用）
+  const _restoreCustomerServiceChat = useCallback(async () => {
     try {
       const savedChat = localStorage.getItem('currentCustomerServiceChat');
       if (savedChat) {
@@ -1996,6 +1990,7 @@ const MessagePage: React.FC = () => {
       // setService(null); // 已移除service状态
     }
   }, []);
+  void _restoreCustomerServiceChat;
 
   // 加载任务消息
   const loadTaskMessages = useCallback(async (taskId: number, cursor?: string | null) => {
@@ -2274,16 +2269,13 @@ const MessagePage: React.FC = () => {
                   if (latestMessage.id) {
                     markTaskMessagesRead(activeTaskId, latestMessage.id)
                       .then(() => {
-                        // 标记已读后立即刷新未读计数
                         loadUnreadCount();
                       })
-                      .catch(err => {
-                                              });
+                      .catch(() => {});
                   }
                   
                   // 重新加载任务列表以更新未读计数
-                  loadTasks().catch(err => {
-                                      });
+                  loadTasks().catch(() => {});
                 }
               }
             }
@@ -2296,6 +2288,7 @@ const MessagePage: React.FC = () => {
         clearInterval(pollInterval);
       };
     }
+    return;
   }, [chatMode, activeTaskId, user, isNearBottom, loadTaskMessages, loadTasks, t]);
 
   // 跟踪最后加载任务列表的用户ID和模式，避免重复加载
@@ -2339,6 +2332,7 @@ const MessagePage: React.FC = () => {
     if (!user) {
       hasAttemptedLoadRef.current = false;
     }
+    return;
   }, [user?.id, chatMode, tasks.length, tasksLoading, loadTasks]);
 
   // 定期刷新任务消息和申请列表（每30秒）
@@ -2355,6 +2349,7 @@ const MessagePage: React.FC = () => {
       
       return () => clearInterval(interval);
     }
+    return;
   }, [activeTaskId, chatMode, user, isServiceMode, loadTaskMessages, loadApplications, loadTasks]);
 
 
@@ -2693,8 +2688,7 @@ const MessagePage: React.FC = () => {
               }
               
               // 无论是否在查看该任务，都重新加载任务列表以更新状态
-              loadTasks().catch(err => {
-                              });
+              loadTasks().catch(() => {});
               
               return; // 事件已处理，不再继续处理为普通消息
             }
@@ -2789,17 +2783,12 @@ const MessagePage: React.FC = () => {
                   // 自动标记为已读（如果用户正在查看该任务）
                   if (activeTaskId && activeTaskId === msg.task_id && taskMessage.id && typeof taskMessage.id === 'number') {
                     markTaskMessagesRead(activeTaskId, taskMessage.id)
-                      .then(() => {
-                        // 标记已读后立即刷新未读计数
-                        loadUnreadCount();
-                      })
-                      .catch(err => {
-                                              });
+                      .then(() => { loadUnreadCount(); })
+                      .catch(() => {});
                   }
                   
                   // 重新加载任务列表以更新未读计数
-                  loadTasks().catch(err => {
-                                      });
+                  loadTasks().catch(() => {});
                 }
                 
                 return [...prev, taskMessage];
@@ -3024,6 +3013,7 @@ const MessagePage: React.FC = () => {
         setWs(null);
       };
     }
+    return;
   }, [user?.id]);
 
   // 定期检查客服对话是否已结束
@@ -3068,9 +3058,11 @@ const MessagePage: React.FC = () => {
       
       return () => clearInterval(interval);
     }
+    return;
   }, [isServiceMode, currentChatId, currentChat?.is_ended]);
 
-  const loadChatHistory = useCallback(async (serviceId: string, chatId: string) => {
+  const loadChatHistory = useCallback(async (_serviceId: string, chatId: string) => {
+    void _serviceId;
     try {
       
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
@@ -3257,6 +3249,7 @@ const MessagePage: React.FC = () => {
         }
       };
     }
+    return;
   }, [isServiceMode, chatMode, activeTaskId, imagePreview, filePreview, showEmojiPicker]);
 
   // 跟踪最后处理的消息ID，避免重复滚动
@@ -3270,19 +3263,17 @@ const MessagePage: React.FC = () => {
     }
 
     if (messages.length > 0) {
-      // 获取最后一条消息
       const lastMessage = messages[messages.length - 1];
+      if (!lastMessage) return;
       
-      // 检查是否是真正的新消息（通过ID判断，避免图片加载等导致的重复触发）
       const messageId = lastMessage.id;
-      if (!messageId) return; // 如果没有ID，跳过
+      if (!messageId) return;
       
       const isNewMessage = messageId !== lastProcessedMessageIdRef.current;
       
       if (isNewMessage) {
         lastProcessedMessageIdRef.current = messageId;
         
-        // 如果是系统消息，强制滚动到底部
         if (lastMessage.from === t('messages.system')) {
           setTimeout(() => {
             scrollToBottomImmediate(0, true);
@@ -3484,8 +3475,8 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 检查并更新客服在线状态
-  const checkServiceAvailability = useCallback(async () => {
+  // 检查并更新客服在线状态（未使用）
+  const _checkServiceAvailability = useCallback(async () => {
     setServiceStatusLoading(true);
     try {
       const isAvailable = await checkCustomerServiceAvailabilityLocal();
@@ -3496,6 +3487,7 @@ const MessagePage: React.FC = () => {
       setServiceStatusLoading(false);
     }
   }, []);
+  void _checkServiceAvailability;
 
   // 结束客服对话
   const handleEndConversation = async () => {
@@ -3511,7 +3503,7 @@ const MessagePage: React.FC = () => {
     }
     
     try {
-      const response = await api.post(`/api/user/customer-service/chats/${currentChatId}/end`);
+      await api.post(`/api/user/customer-service/chats/${currentChatId}/end`);
       
       // 显示系统消息
       const endMessage: Message = {

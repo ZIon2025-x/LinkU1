@@ -19,10 +19,11 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
   actionLoading,
   onApproveApplication,
   onRejectApplication,
-  taskId,
+  taskId: _taskId,
   t
 }) => {
-  const { navigate } = useLocalizedNavigation();
+  void _taskId;
+  useLocalizedNavigation(); // navigate 未使用
 
   return (
     <div style={{

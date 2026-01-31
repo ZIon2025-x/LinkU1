@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
-import { Card, Row, Col, Typography, Space, Avatar, Divider, Button } from 'antd';
+import { Card, Row, Col, Typography, Avatar, Button } from 'antd';
 import { 
   TeamOutlined, 
   RocketOutlined, 
@@ -10,7 +10,7 @@ import {
   BulbOutlined,
   SafetyOutlined
 } from '@ant-design/icons';
-import { fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
+import { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
@@ -41,7 +41,7 @@ const About: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [systemSettings, setSystemSettings] = useState({});
+  const [systemSettings] = useState({});
 
   // 加载用户数据和通知
   useEffect(() => {

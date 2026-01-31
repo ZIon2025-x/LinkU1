@@ -11,11 +11,11 @@ import LoginModal from '../components/LoginModal';
 const MerchantCooperation: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
-  const [user, setUser] = useState<any>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [user] = useState<any>(null);
+  const [unreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [systemSettings, setSystemSettings] = useState({});
+  const [systemSettings] = useState({});
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

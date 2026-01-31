@@ -160,13 +160,11 @@ export const useAutoTranslate = (
   // 当文本或语言改变时自动翻译（优化防抖：300ms）
   useEffect(() => {
     if (autoTranslate && !showOriginal) {
-      // 延迟执行翻译，避免在快速切换时频繁请求（从100ms增加到300ms）
       const timer = setTimeout(() => {
         performTranslation();
       }, 300);
       return () => {
         clearTimeout(timer);
-        // 如果组件卸载或依赖变化，取消正在进行的请求
         if (currentRequestRef.current) {
           currentRequestRef.current = null;
         }
@@ -174,6 +172,7 @@ export const useAutoTranslate = (
     } else {
       setTranslatedText(null);
       currentRequestRef.current = null;
+      return;
     }
   }, [text, language, autoTranslate, showOriginal, performTranslation]);
 

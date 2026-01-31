@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import { Form, Input, Button, Card } from 'antd';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -31,7 +30,6 @@ const ForgotPassword: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const navigate = useNavigate();
 
   const onFinish = async (values: any) => {
     try {

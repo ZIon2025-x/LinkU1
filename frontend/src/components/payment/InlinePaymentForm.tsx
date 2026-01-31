@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Select, Spin, message } from 'antd';
+import { Input, Spin, message } from 'antd';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import {
   Elements,
@@ -8,8 +8,6 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import api from '../../api';
-
-const { Option } = Select;
 
 // 初始化 Stripe
 const stripePromise = loadStripe(
@@ -58,13 +56,14 @@ const PaymentForm: React.FC<{
   onError: (error: string) => void;
   onCancel?: () => void;
 }> = ({
-  clientSecret,
+  clientSecret: _clientSecret,
   amount,
-  currency,
+  currency: _currency,
   onSuccess,
   onError,
   onCancel
 }) => {
+  void _clientSecret; void _currency;
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -177,17 +176,13 @@ const PaymentForm: React.FC<{
 const InlinePaymentForm: React.FC<InlinePaymentFormProps> = ({
   taskId,
   clientSecret: propClientSecret,
-  paymentIntentId,
   amount: propAmount,
   amountDisplay: propAmountDisplay,
-  currency: propCurrency = 'GBP',
   onSuccess,
   onCancel
 }) => {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  // 只支持 Stripe 支付，积分不能作为支付手段
   const [couponCode, setCouponCode] = useState<string>('');
-  const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [stripeLoaded, setStripeLoaded] = useState(false);
 
@@ -196,25 +191,12 @@ const InlinePaymentForm: React.FC<InlinePaymentFormProps> = ({
     if (propClientSecret) {
       stripePromise.then(() => {
         setStripeLoaded(true);
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error('Failed to load Stripe:', err);
         message.error('无法加载支付服务');
       });
     }
   }, [propClientSecret]);
-
-  // 加载积分余额
-  useEffect(() => {
-    const loadPointsBalance = async () => {
-      try {
-        const response = await api.get('/api/coupon-points/points/balance');
-        setPointsBalance(response.data.balance || 0);
-      } catch (err) {
-        // 忽略错误
-      }
-    };
-    loadPointsBalance();
-  }, []);
 
   const handleCreatePayment = async () => {
     setLoading(true);
@@ -242,7 +224,7 @@ const InlinePaymentForm: React.FC<InlinePaymentFormProps> = ({
         // 加载 Stripe
         stripePromise.then(() => {
           setStripeLoaded(true);
-        }).catch((err) => {
+        }).catch((err: unknown) => {
           console.error('Failed to load Stripe:', err);
           message.error('无法加载支付服务');
         });

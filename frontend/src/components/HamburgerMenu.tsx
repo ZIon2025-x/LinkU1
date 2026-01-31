@@ -15,9 +15,10 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   user,
   onLogout,
   onLoginClick,
-  systemSettings,
+  systemSettings: _systemSettings,
   unreadCount = 0
 }) => {
+  void _systemSettings;
   const [isOpen, setIsOpen] = useState(false);
   const { navigate } = useLocalizedNavigation();
   const { t } = useLanguage();

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Select, Modal, Form, message, Empty, Tag, Input, Pagination, Spin, Upload, Image } from 'antd';
-import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, DeleteOutlined, StarOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Button, Select, Modal, Form, message, Empty, Input, Pagination, Spin, Upload, Image } from 'antd';
+import { PlusOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, StarOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -171,7 +171,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   };
 
   const handleCoverImageChange = async (info: any) => {
-    const { file, fileList } = info;
+    const { file } = info;
     
         // 处理文件删除
     if (file.status === 'removed') {
@@ -630,9 +630,9 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
             <Upload
               listType="picture-card"
               maxCount={1}
-              beforeUpload={(file) => {
+              beforeUpload={() => {
                 // 阻止默认上传，手动处理
-                                return false;
+                return false;
               }}
               onChange={handleCoverImageChange}
               onRemove={handleRemoveCoverImage}

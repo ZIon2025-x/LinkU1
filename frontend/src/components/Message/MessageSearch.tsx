@@ -118,6 +118,7 @@ const MessageSearch: React.FC<MessageSearchProps> = ({
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
+    return;
   }, [showResults]);
 
   return (

@@ -15,15 +15,12 @@ import {
   Col,
   Typography,
   Switch,
-  Divider,
   Tooltip
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
-  SearchOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
 import {

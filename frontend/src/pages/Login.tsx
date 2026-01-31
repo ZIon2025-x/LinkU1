@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import styled from 'styled-components';
-import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -46,9 +45,6 @@ const Login: React.FC = () => {
   const [phoneForCode, setPhoneForCode] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState('+44'); // 仅支持英国
   const countdownTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  
-  // 生成canonical URL
-  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
   
   // 清理倒计时
   useEffect(() => {
@@ -123,7 +119,7 @@ const Login: React.FC = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.post('/api/secure-auth/send-phone-verification-code', {
+      await api.post('/api/secure-auth/send-phone-verification-code', {
         phone: phone.trim(),
       });
       

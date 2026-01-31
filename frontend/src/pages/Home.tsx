@@ -2,11 +2,10 @@ import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import { performanceMonitor } from '../utils/performanceMonitor';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards, getPublicStats, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead } from '../api';
+import { fetchTasks, fetchCurrentUser, getNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards, getPublicStats, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { TimeHandlerV2 } from '../utils/timeUtils';
 import { formatViewCount, obfuscateLocation } from '../utils/formatUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
@@ -115,27 +114,6 @@ function roundUpApproximate(num: number): string {
   // 150以上，向上取整到最近的100
   const rounded = Math.ceil(num / 100) * 100;
   return `${rounded}+`;
-}
-
-// Check if task has expired - using UK time
-function isExpired(deadline: string) {
-  try {
-    // Parse UTC time and convert to UK time
-    let utcTime;
-    if (deadline.endsWith('Z')) {
-      utcTime = dayjs.utc(deadline);
-    } else if (deadline.includes('T')) {
-      utcTime = dayjs.utc(deadline + 'Z');
-    } else {
-      utcTime = dayjs.utc(deadline);
-    }
-    
-    const nowUK = dayjs().tz('Europe/London');
-    const endUK = utcTime.tz('Europe/London');
-    return nowUK.isAfter(endUK);
-  } catch (error) {
-        return true; // If parsing fails, assume expired
-  }
 }
 
 // Add cute animation styles
@@ -277,25 +255,11 @@ const Home: React.FC = () => {
     performanceMonitor.measurePageLoad('HomePage');
   }, []);
 
-  // Task types array - using translations
-  const TASK_TYPES = [
-    t('taskCategories.housekeeping'),
-    t('taskCategories.campusLife'),
-    t('taskCategories.secondHandRental'),
-    t('taskCategories.errandRunning'),
-    t('taskCategories.skillService'),
-    t('taskCategories.socialHelp'),
-    t('taskCategories.transportation'),
-    t('taskCategories.petCare'),
-    t('taskCategories.lifeConvenience'),
-    t('taskCategories.other')
-  ];
-  
   // Debug related states
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [maxTaskId, setMaxTaskId] = useState<number>(0);
-  const [totalTasks, setTotalTasks] = useState<number>(0);
+  const [, setTotalTasks] = useState<number>(0);
   
   // 热门达人相关状态
   const [hotExperts, setHotExperts] = useState<any[]>([]);
@@ -318,7 +282,8 @@ const Home: React.FC = () => {
 
   // User login and avatar logic
   const [user, setUser] = useState<any>(null);
-  const [showMenu, setShowMenu] = useState(false);
+  const [, setShowMenu] = useState(false);
+  void setShowMenu;
   
   // Notification related states
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -495,6 +460,7 @@ const Home: React.FC = () => {
         }
       };
     }
+    return;
   }, [user]);
 
   // 当通知面板打开时，定期刷新通知列表 - 合并论坛和任务通知
@@ -551,7 +517,7 @@ const Home: React.FC = () => {
           });
           
           setNotifications(allNotifications);
-        } catch (error) {
+        } catch {
           // 忽略错误
         }
       };
@@ -566,6 +532,7 @@ const Home: React.FC = () => {
       
       return () => clearInterval(interval);
     }
+    return;
   }, [showNotifications, user]);
 
   // WebSocket实时更新通知（监听notification_created事件）- 合并论坛和任务通知
@@ -706,9 +673,7 @@ const Home: React.FC = () => {
         const leaderboardsList = data.items || [];
         setHotLeaderboards(leaderboardsList.slice(0, 3)); // 只取前3个
       })
-      .catch(error => {
-                setHotLeaderboards([]);
-      })
+      .catch(() => { setHotLeaderboards([]); })
       .finally(() => setLoadingHotLeaderboards(false));
   }, []);
 
@@ -720,9 +685,7 @@ const Home: React.FC = () => {
         const postsList = data.posts || [];
         setHotPosts(postsList.slice(0, 3)); // 只取前3个
       })
-      .catch(error => {
-                setHotPosts([]);
-      })
+      .catch(() => { setHotPosts([]); })
       .finally(() => setLoadingHotPosts(false));
   }, []);
 
@@ -733,9 +696,7 @@ const Home: React.FC = () => {
       .then(data => {
         setTotalUsers(data.total_users || 0);
       })
-      .catch(error => {
-                setTotalUsers(0);
-      })
+      .catch(() => { setTotalUsers(0); })
       .finally(() => {
         setLoadingStats(false);
       });
@@ -773,9 +734,7 @@ const Home: React.FC = () => {
         
         setHotExperts(sortedExperts);
       })
-      .catch(error => {
-                setHotExperts([]);
-      })
+      .catch(() => { setHotExperts([]); })
       .finally(() => setLoadingExperts(false));
   }, []);
 
@@ -811,30 +770,19 @@ const Home: React.FC = () => {
             
             setTasks(sortedTasks);
           })
-          .catch(error => {
-                      });
+          .catch(() => {});
       }
     }, 60000); // 每分钟更新一次
     return () => clearInterval(interval);
   }, [tasks.length]);
 
-  // 处理通知点击 - 只标记为已读，不跳转
-  const handleNotificationClick = async (notification: Notification) => {
-    // 只标记通知为已读，不进行任何跳转
+  // 处理通知点击 - 只标记为已读，不跳转（预留，NotificationPanel 使用 onMarkAsRead）
+  const _handleNotificationClick = async (notification: Notification) => {
     await markNotificationRead(notification.id);
-    
-    // 更新本地状态，标记为已读
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notification.id ? { ...n, is_read: 1 } : n
-      )
-    );
-    
-    // 更新未读数量
+    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_read: 1 } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
-    
-    // 不关闭通知面板，让用户可以继续查看其他通知
   };
+  void _handleNotificationClick;
 
   // 处理单个通知标记为已读 - 支持论坛和任务通知
   const handleMarkAsRead = async (id: number) => {
@@ -1667,31 +1615,15 @@ const Home: React.FC = () => {
               // 获取显示的状态
               const displayStatus = shouldHideStatus() ? 'open' : task.status;
               
-              // 任务等级标签样式
-              const getTaskLevelStyle = (level: string) => {
+              // 任务等级标签样式（预留，当前用 getTaskLevelText）
+              const _getTaskLevelStyle = (level: string) => {
                 switch (level) {
-                  case 'vip':
-                    return {
-                      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                      color: '#8B4513',
-                      border: '2px solid #FFD700',
-                      boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)'
-                    };
-                  case 'super':
-                    return {
-                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
-                      color: '#fff',
-                      border: '2px solid #FF4757',
-                      boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)'
-                    };
-                  default:
-                    return {
-                      background: '#f8f9fa',
-                      color: '#6c757d',
-                      border: '1px solid #dee2e6'
-                    };
+                  case 'vip': return { background: 'linear-gradient(135deg, #FFD700, #FFA500)', color: '#8B4513', border: '2px solid #FFD700', boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)' };
+                  case 'super': return { background: 'linear-gradient(135deg, #FF6B6B, #FF4757)', color: '#fff', border: '2px solid #FF4757', boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)' };
+                  default: return { background: '#f8f9fa', color: '#6c757d', border: '1px solid #dee2e6' };
                 }
               };
+              void _getTaskLevelStyle;
 
               const getTaskLevelText = (level: string) => {
                 switch (level) {

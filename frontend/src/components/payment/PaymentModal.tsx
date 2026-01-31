@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Spin, message, Input, Select, Card } from 'antd';
+import { Modal, Spin, message, Input } from 'antd';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 import {
   Elements,
@@ -8,10 +8,6 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import api from '../../api';
-import { useLocalizedNavigation } from '../../hooks/useLocalizedNavigation';
-
-const { Option } = Select;
-
 // 初始化 Stripe
 const stripePromise = loadStripe(
   (process.env as any).REACT_APP_STRIPE_PUBLISHABLE_KEY || 
@@ -69,6 +65,8 @@ const PaymentForm: React.FC<{
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // clientSecret/currency 由父级 Elements 使用，此处仅保留以符合接口
+  void clientSecret; void currency;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -189,43 +187,22 @@ const PaymentForm: React.FC<{
 const PaymentModal: React.FC<PaymentModalProps> = ({
   visible,
   taskId,
-  taskTitle,
   clientSecret: propClientSecret,
-  paymentIntentId: propPaymentIntentId,
   onSuccess,
   onCancel
 }) => {
-  const { navigate: localizedNavigate } = useLocalizedNavigation();
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  // 只支持 Stripe 支付，积分不能作为支付手段
   const [couponCode, setCouponCode] = useState<string>('');
-  const [pointsBalance, setPointsBalance] = useState<number>(0);
   const [stripeLoaded, setStripeLoaded] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<number>(300); // 5分钟 = 300秒
-  const [timeoutTimer, setTimeoutTimer] = useState<NodeJS.Timeout | null>(null);
-
-  // 加载积分余额
-  useEffect(() => {
-    if (visible) {
-      const loadPointsBalance = async () => {
-        try {
-          const response = await api.get('/api/coupon-points/points/balance');
-          setPointsBalance(response.data.balance || 0);
-        } catch (err) {
-          // 忽略错误
-        }
-      };
-      loadPointsBalance();
-    }
-  }, [visible]);
+  const [timeRemaining] = useState<number>(300); // 5分钟 = 300秒，倒计时逻辑可后续实现
 
   // 加载 Stripe
   useEffect(() => {
     if (visible && (paymentData?.client_secret || propClientSecret)) {
       stripePromise.then(() => {
         setStripeLoaded(true);
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error('Failed to load Stripe:', err);
         message.error('无法加载支付服务');
       });
@@ -274,8 +251,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const handleCancel = () => {
     setPaymentData(null);
-    setPaymentMethod('stripe');
-    setPointsAmount(0);
     setCouponCode('');
     onCancel();
   };

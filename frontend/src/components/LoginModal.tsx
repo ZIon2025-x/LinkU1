@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
@@ -115,68 +115,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
   });
   const navigate = useNavigate();
 
-  // 翻译密码验证错误信息
-  const translatePasswordError = (errorText: string): string => {
-    // 匹配密码长度错误
-    const tooShortMatch = errorText.match(/密码长度至少需要(\d+)个字符/);
-    if (tooShortMatch) {
-      const minLength = tooShortMatch[1];
-      return t('auth.passwordTooShort').replace('{minLength}', minLength);
-    }
-    
-    const tooShort12Match = errorText.match(/密码长度至少需要12个字符/);
-    if (tooShort12Match) {
-      return t('auth.passwordTooShort12');
-    }
-    
-    const tooLongMatch = errorText.match(/密码长度不能超过(\d+)个字符/);
-    if (tooLongMatch) {
-      const maxLength = tooLongMatch[1];
-      return t('auth.passwordTooLong').replace('{maxLength}', maxLength);
-    }
-    
-    // 匹配字符类型错误
-    if (errorText.includes('密码必须包含至少一个大写字母')) {
-      return t('auth.passwordMissingUppercase');
-    }
-    if (errorText.includes('密码必须包含至少一个小写字母')) {
-      return t('auth.passwordMissingLowercase');
-    }
-    if (errorText.includes('密码必须包含至少一个数字')) {
-      return t('auth.passwordMissingDigit');
-    }
-    if (errorText.includes('密码必须包含至少一个特殊字符')) {
-      return t('auth.passwordMissingSpecial');
-    }
-    
-    // 匹配其他错误
-    if (errorText.includes('密码过于常见')) {
-      return t('auth.passwordTooCommon');
-    }
-    if (errorText.includes('密码不能包含用户名')) {
-      return t('auth.passwordContainsUsername');
-    }
-    if (errorText.includes('密码不能包含邮箱前缀')) {
-      return t('auth.passwordContainsEmail');
-    }
-    
-    // 如果没有匹配，返回原文
-    return errorText;
-  };
-
-  // 翻译密码验证建议信息
-  const translatePasswordSuggestion = (suggestionText: string): string => {
-    if (suggestionText.includes('避免使用重复的字符序列')) {
-      return t('auth.passwordAvoidRepeating');
-    }
-    return suggestionText;
-  };
-
   // 密码验证防抖定时器
   const passwordValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // 前端密码强度验证函数（当后端不可用时使用）
-  const validatePasswordFrontend = React.useCallback((password: string, username?: string, email?: string) => {
+  const validatePasswordFrontend = React.useCallback((password: string, _username?: string, _email?: string) => {
     const errors: string[] = [];
     const missing_requirements: string[] = [];
     let score = 0;
@@ -366,7 +309,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   }, [validatePassword]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
     let currentValue = e.target.value; // 确保获取最新值
     
     // 邀请码自动转换为大写（不区分大小写，但统一显示为大写）
@@ -420,7 +363,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setLoading(true);
     setError('');
     try {
-      const res = await api.post('/api/secure-auth/send-verification-code', {
+      await api.post('/api/secure-auth/send-verification-code', {
         email: email.trim().toLowerCase(),
         captcha_token: captchaToken || null,
       });
@@ -470,7 +413,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setError('');
     try {
       logger.log('发送手机验证码请求:', { phone: phone.trim(), captchaToken: captchaToken ? `${captchaToken.substring(0, 20)}...` : 'null' });
-      const res = await api.post('/api/secure-auth/send-phone-verification-code', {
+      await api.post('/api/secure-auth/send-phone-verification-code', {
         phone: phone.trim(),
         captcha_token: captchaToken || null,
       });
@@ -702,7 +645,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }
         
         // 密码登录逻辑 - 使用与Login.tsx相同的格式
-        const res = await api.post('/api/secure-auth/login', {
+        await api.post('/api/secure-auth/login', {
           email: formData.email,
           password: formData.password,
         });
@@ -1002,7 +945,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 onVerify={(token) => {
                   setCaptchaToken(token);
                 }}
-                onError={(error) => {
+                onError={() => {
                   setError('人机验证失败，请重试');
                 }}
               />
@@ -1126,7 +1069,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   setError(''); // 清除错误
                   logger.log('CAPTCHA 验证成功，token 已设置:', token ? `${token.substring(0, 20)}...` : 'null');
                 }}
-                onError={(error) => {
+                onError={() => {
                   setError('人机验证失败，请重试');
                   setCaptchaToken('');
                   console.error('CAPTCHA 验证失败:', error);

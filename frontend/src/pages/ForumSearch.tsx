@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Pagination } from 'antd';
+import { Card, Empty, Typography, Space, Tag, Input, Pagination } from 'antd';
 import { 
-  MessageOutlined, EyeOutlined, LikeOutlined, StarOutlined,
+  MessageOutlined, EyeOutlined, LikeOutlined,
   SearchOutlined, UserOutlined, ClockCircleOutlined, FireOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -64,12 +64,12 @@ const ForumSearch: React.FC = () => {
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [searchKeyword, setSearchKeyword] = useState(searchParams.get('q') || '');
-  const [categoryId, setCategoryId] = useState<number | undefined>(
+  const [categoryId] = useState<number | undefined>(
     searchParams.get('category_id') ? Number(searchParams.get('category_id')) : undefined
   );
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 

@@ -11,11 +11,8 @@ import {
   Select, 
   Upload, 
   message,
-  Space,
-  Divider,
   Tag,
   Timeline,
-  Progress,
   Modal
 } from 'antd';
 import { 
@@ -66,11 +63,12 @@ const JoinUs: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [systemSettings, setSystemSettings] = useState({});
+  const [systemSettings] = useState({});
   const [positions, setPositions] = useState<any[]>([]);
   const [positionsLoading, setPositionsLoading] = useState(true);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
+  const [, setSelectedPosition] = useState<string | null>(null);
+  void setSelectedPosition;
 
   // 加载用户数据和通知
   useEffect(() => {
@@ -204,7 +202,8 @@ const JoinUs: React.FC = () => {
     }
   ];
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (_values: any) => {
+    void _values;
     setLoading(true);
     try {
       // 模拟提交

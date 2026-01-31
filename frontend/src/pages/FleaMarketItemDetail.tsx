@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { message, Button, Space, Modal, Input, InputNumber, Rate, Card, Empty, Image } from 'antd';
+import { message, Button, Space, Modal, Input, InputNumber, Rate, Empty, Image } from 'antd';
 import { 
   HeartOutlined, 
   HeartFilled, 
@@ -240,7 +240,7 @@ const FleaMarketItemDetail: React.FC = () => {
     
     setRefreshLoading(true);
     try {
-      const response = await api.post(`/api/flea-market/items/${itemId}/refresh`);
+      await api.post(`/api/flea-market/items/${itemId}/refresh`);
       message.success(t('fleaMarket.refreshSuccess') || '商品刷新成功，已更新刷新时间');
       
       // 重新加载商品信息以更新刷新时间

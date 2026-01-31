@@ -2,7 +2,7 @@
  * 任务详情相关 React Query Hooks
  * P1 优化：集成 React Query 统一数据层，提供请求去重、重试、失效、预取等能力
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import api, { fetchCurrentUser, getTaskReviews } from '../api';
 
 // 查询键工厂（使用 as const 确保类型安全）
@@ -50,14 +50,13 @@ export const useCurrentUser = () => {
 export const useTaskReviews = (taskId: number | null) => {
   return useQuery({
     queryKey: taskKeys.reviews(taskId!),
-    queryFn: async ({ signal }) => {
+    queryFn: async ({ signal: _signal }) => {
+      void _signal;
       if (!taskId) return [];
-      // 注意：getTaskReviews 需要支持 AbortSignal
-      // 如果 API 函数不支持，需要修改 api.ts
       try {
         return await getTaskReviews(taskId);
-      } catch (error) {
-                return [];
+      } catch {
+        return [];
       }
     },
     enabled: !!taskId,

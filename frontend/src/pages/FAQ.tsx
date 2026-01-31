@@ -8,16 +8,16 @@ import Footer from '../components/Footer';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 const FAQ: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const L = (zh: string, en: string) => (language === 'zh' ? zh : en);
 
-  const [user, setUser] = React.useState<any>(null);
-  const [unreadCount, setUnreadCount] = React.useState<number>(0);
+  const [user] = React.useState<any>(null);
+  const [unreadCount] = React.useState<number>(0);
   const [showNotifications, setShowNotifications] = React.useState(false);
-  const [showLoginModal, setShowLoginModal] = React.useState(false);
-  const [showForgotPasswordModal, setShowForgotPasswordModal] = React.useState(false);
-  const [systemSettings, setSystemSettings] = React.useState<any>({ vip_button_visible: false });
+  const [, setShowLoginModal] = React.useState(false);
+  // setShowForgotPasswordModal 已移除：FAQ 无 ForgotPassword 弹窗
+  const [systemSettings] = React.useState<any>({ vip_button_visible: false });
 
   return (
     <div>

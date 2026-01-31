@@ -6,8 +6,7 @@
 import { 
   WS_CLOSE_CODE_NORMAL,
   WS_CLOSE_CODE_HEARTBEAT_TIMEOUT,
-  WS_CLOSE_REASON_NEW_CONNECTION,
-  WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+  WS_CLOSE_REASON_NEW_CONNECTION
 } from '../constants/websocket';
 
 type MessageHandler = (message: any) => void;
@@ -121,15 +120,14 @@ class WebSocketManager {
           this.messageHandlers.forEach(handler => {
             try {
               handler(msg);
-            } catch (error) {
-                          }
+            } catch {
+            }
           });
-        } catch (error) {
-                  }
+        } catch {
+        }
       };
 
-      this.ws.onerror = (error) => {
-              };
+      this.ws.onerror = () => {};
 
       this.ws.onclose = (event) => {
         this.cleanup();

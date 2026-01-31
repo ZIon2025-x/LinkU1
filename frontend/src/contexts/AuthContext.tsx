@@ -31,17 +31,11 @@ export const useCurrentUser = () => {
   return { user, role, isAuthenticated };
 };
 
-// 便捷的Hook，用于检查是否为管理员
-export const useIsAdmin = () => {
-  const { role, isAuthenticated } = useAuthContext();
-  return isAuthenticated && role === 'admin';
-};
+// 便捷的Hook，用于检查是否为管理员（admin 在独立子域，本前端恒为 false）
+export const useIsAdmin = () => false;
 
-// 便捷的Hook，用于检查是否为客服
-export const useIsService = () => {
-  const { role, isAuthenticated } = useAuthContext();
-  return isAuthenticated && role === 'service';
-};
+// 便捷的Hook，用于检查是否为客服（service 在独立子域，本前端恒为 false）
+export const useIsService = () => false;
 
 // 便捷的Hook，用于检查是否为用户
 export const useIsUser = () => {

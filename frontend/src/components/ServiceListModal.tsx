@@ -64,7 +64,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   expertId,
   expertName,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -194,7 +194,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
     // 如果服务启用了时间段，需要先选择日期
     if (service.has_time_slots) {
       // 设置默认日期为今天
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0] as string;
       setSelectedDate(today);
       // 加载今天的时间段
       loadTimeSlots(service.id, today);
@@ -477,7 +477,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                     {/* 服务图片 */}
                     {service.images && service.images.length > 0 && (
                       <LazyImage
-                        src={service.images[0]}
+                        src={service.images[0] ?? ''}
                         alt={service.service_name}
                         style={{
                           width: '120px',

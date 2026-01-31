@@ -239,10 +239,10 @@ const FaviconManager: React.FC = () => {
     // DOM加载完成后执行
     if (document.readyState === 'complete') {
       setFaviconOnLoad();
-    } else {
-      window.addEventListener('load', setFaviconOnLoad);
-      return () => window.removeEventListener('load', setFaviconOnLoad);
+      return;
     }
+    window.addEventListener('load', setFaviconOnLoad);
+    return () => window.removeEventListener('load', setFaviconOnLoad);
   }, []);
 
   return null; // 此组件不渲染任何内容

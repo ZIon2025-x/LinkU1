@@ -360,7 +360,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     
     setRefreshLoading(true);
     try {
-      const response = await api.post(`/api/flea-market/items/${itemId}/refresh`);
+      await api.post(`/api/flea-market/items/${itemId}/refresh`);
       message.success(t('fleaMarket.refreshSuccess') || '商品刷新成功，已更新刷新时间');
       
       // 重新加载商品信息以更新刷新时间
@@ -424,7 +424,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                 <>
                   <div className={styles.mainImage}>
                     <LazyImage
-                      src={item.images[currentImageIndex]}
+                      src={item.images[currentImageIndex] ?? ''}
                       alt={item.title}
                       className={styles.mainImageImg}
                     />

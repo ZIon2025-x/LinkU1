@@ -30,7 +30,7 @@ const TaskExpertApplicationModal: React.FC<TaskExpertApplicationModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { t } = useLanguage();
+  useLanguage(); // 保留以维持上下文，t 暂未使用
   const [applicationMessage, setApplicationMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [existingApplication, setExistingApplication] = useState<ApplicationStatus | null>(null);
