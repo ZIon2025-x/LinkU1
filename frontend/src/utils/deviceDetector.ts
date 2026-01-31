@@ -59,6 +59,11 @@ export function detectOS(): { name: string; version: string } {
   if (/Windows NT 6.1/i.test(userAgent)) {
     return { name: 'Windows', version: '7' };
   }
+  // 必须先于 Mac OS X 检测：iPhone/iPad 的 UA 含 "like Mac OS X"，否则会误判为 macOS
+  if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    const match = userAgent.match(/OS (\d+[._]\d+)/);
+    return { name: 'iOS', version: match ? match[1].replace('_', '.') : 'Unknown' };
+  }
   if (/Mac OS X/i.test(userAgent)) {
     const match = userAgent.match(/Mac OS X (\d+[._]\d+)/);
     return { name: 'macOS', version: match ? match[1].replace('_', '.') : 'Unknown' };
@@ -66,10 +71,6 @@ export function detectOS(): { name: string; version: string } {
   if (/Android/i.test(userAgent)) {
     const match = userAgent.match(/Android (\d+\.\d+)/);
     return { name: 'Android', version: match ? match[1] : 'Unknown' };
-  }
-  if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    const match = userAgent.match(/OS (\d+[._]\d+)/);
-    return { name: 'iOS', version: match ? match[1].replace('_', '.') : 'Unknown' };
   }
   if (/Linux/i.test(userAgent)) {
     return { name: 'Linux', version: 'Unknown' };
