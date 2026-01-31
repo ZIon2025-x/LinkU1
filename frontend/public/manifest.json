@@ -53,6 +53,20 @@
       "description": "浏览所有任务",
       "url": "/zh/tasks",
       "icons": [{ "src": "/static/pwa.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Publish Task",
+      "short_name": "Publish",
+      "description": "Quickly publish a new task",
+      "url": "/en/publish",
+      "icons": [{ "src": "/static/pwa.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tasks",
+      "short_name": "Tasks",
+      "description": "Browse all tasks",
+      "url": "/en/tasks",
+      "icons": [{ "src": "/static/pwa.png", "sizes": "192x192" }]
     }
   ],
   "share_target": {

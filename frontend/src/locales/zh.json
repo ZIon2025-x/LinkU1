@@ -2481,6 +2481,13 @@
     },
     "importantNotice": "重要提示：本隐私通知是您与Link²Ur之间关于个人信息处理的协议。我们承诺按照本通知保护您的隐私权益。"
   },
+  "cookiePolicy": {
+    "title": "Cookie 政策",
+    "intro": "本页面说明 Link²Ur 如何使用 Cookie 及类似技术。您可以在 Cookie 横幅或设置中随时更改偏好。",
+    "necessary": "必要 Cookie：用于网站基本功能（如登录、安全），无法关闭。",
+    "optional": "分析/功能 Cookie（可选）：仅在您明确同意后启用；您可随时在 Cookie 横幅或设置中更改。",
+    "contact": "如有疑问请联系：info@link2ur.com"
+  },
   "seo": {
     "tips": {
       "title": "SEO优化建议",
@@ -2828,7 +2835,11 @@
     "installLater": "稍后",
     "iosInstallInstructions": "请在分享界面中选择\"添加到主屏幕\"选项",
     "androidInstallInstructions": "请在分享界面中选择\"添加到主屏幕\"或\"安装应用\"选项",
-    "shareText": "将 Link²Ur 添加到主屏幕，享受更好的体验！"
+    "shareText": "将 Link²Ur 添加到主屏幕，享受更好的体验！",
+    "notificationPromptTitle": "开启消息通知",
+    "notificationPromptMessage": "开启后，新消息和任务动态会及时提醒您，不错过重要回复。",
+    "notificationAllow": "允许",
+    "notificationNotNow": "暂不"
   },
   "forum": {
     "title": "论坛",

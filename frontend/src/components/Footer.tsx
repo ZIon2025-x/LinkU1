@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
   const [showWechatModal, setShowWechatModal] = useState(false);
   
   return (
-    <footer style={{
+    <footer className="footer-root" style={{
       background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
       color: '#fff',
       padding: '60px 0 30px',
@@ -101,6 +101,17 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.termsOfService')}
+                </LocalizedLink>
+                <LocalizedLink to="/cookie-policy" style={{
+                  color: 'rgba(255,255,255,0.8)',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
+                >
+                  {t('footer.cookiePolicy')}
                 </LocalizedLink>
               </div>
             </div>
@@ -490,6 +501,11 @@ const Footer: React.FC = () => {
               opacity: 1;
               transform: translateY(0);
             }
+          }
+          
+          /* iOS 底部安全区 */
+          .footer-root {
+            padding-bottom: max(30px, env(safe-area-inset-bottom));
           }
           
           /* 移动端适配 */

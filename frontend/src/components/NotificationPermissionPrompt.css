@@ -1,0 +1,100 @@
+.notification-permission-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.notification-permission-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.notification-permission-card {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.notification-permission-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.notification-permission-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+}
+
+.notification-permission-message {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+.notification-permission-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.notification-permission-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.notification-permission-btn:active {
+  opacity: 0.9;
+}
+
+.notification-permission-btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+}
+
+.notification-permission-btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.notification-permission-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .notification-permission-card {
+    background: #1a1a1a;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  .notification-permission-title {
+    color: #fff;
+  }
+  .notification-permission-message {
+    color: #94a3b8;
+  }
+  .notification-permission-btn-secondary {
+    background: #334155;
+    color: #e2e8f0;
+  }
+  .notification-permission-btn-secondary:hover {
+    background: #475569;
+  }
+}

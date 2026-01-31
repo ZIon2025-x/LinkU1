@@ -553,11 +553,11 @@
   }
 }
 
-/* 跳蚤市场悬浮按钮 */
+/* 跳蚤市场悬浮按钮 - 兼容 iOS 底部安全区 */
 .fleaMarketFloatButton {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  right: max(30px, env(safe-area-inset-right));
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -609,8 +609,8 @@
 /* 移动端适配 */
 @media (max-width: 768px) {
   .fleaMarketFloatButton {
-    bottom: 20px;
-    right: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    right: max(20px, env(safe-area-inset-right));
     width: 56px;
     height: 56px;
   }

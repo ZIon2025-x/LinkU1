@@ -7,6 +7,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 固定底部元素（如 PWA 安装提示、页脚）可加 class 使用 safe-area */
+.support-safe-area-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

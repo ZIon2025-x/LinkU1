@@ -19,6 +19,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
 import InstallPrompt from './components/InstallPrompt';
+import NotificationPermissionPrompt from './components/NotificationPermissionPrompt';
 import { detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // P1 优化：创建 React Query 客户端
@@ -76,6 +77,7 @@ const JoinUs = lazyWithRetry(() => import('./pages/JoinUs'));
 const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const CookiePolicy = lazyWithRetry(() => import('./pages/CookiePolicy'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
@@ -206,6 +208,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
+          <Route path={`/${lang}/cookie-policy`} element={<CookiePolicy />} />
           <Route path={`/${lang}/support`} element={<Support />} />
           <Route path={`/${lang}/partners`} element={<Partners />} />
           <Route path={`/${lang}/merchant-cooperation`} element={<MerchantCooperation />} />
@@ -293,6 +296,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/cookie-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-test`} replace />} />
       <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
       <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
+      <Route path="/cookie-policy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-policy`} replace />} />
       <Route path="/support" element={<Navigate to={`/${DEFAULT_LANGUAGE}/support`} replace />} />
       <Route path="/partners" element={<Navigate to={`/${DEFAULT_LANGUAGE}/partners`} replace />} />
       <Route path="/merchant-cooperation" element={<Navigate to={`/${DEFAULT_LANGUAGE}/merchant-cooperation`} replace />} />
@@ -343,6 +347,7 @@ function App() {
                       <LanguageRoutes />
                       <CookieManager />
                       <InstallPrompt />
+                      <NotificationPermissionPrompt />
                     </ErrorBoundary>
                   </Router>
                 </UnreadMessageProvider>
