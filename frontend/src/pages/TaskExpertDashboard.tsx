@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -13,7 +12,6 @@ import { TimeHandlerV2 } from '../utils/timeUtils';
 import {
   fetchCurrentUser,
   getTaskExpert,
-  updateTaskExpertProfile,
   getMyTaskExpertServices,
   createTaskExpertService,
   updateTaskExpertService,
@@ -25,12 +23,10 @@ import {
   submitProfileUpdateRequest,
   getMyProfileUpdateRequest,
   getTaskParticipants,
-  startMultiParticipantTask,
   approveParticipant,
   rejectParticipant,
   approveExitRequest,
   rejectExitRequest,
-  completeTaskAndDistributeRewardsEqual,
   createExpertMultiParticipantTask,
   getServiceTimeSlots,
   getServiceTimeSlotsPublic,
@@ -46,7 +42,6 @@ import {
   deleteActivity,
 } from '../api';
 import LoginModal from '../components/LoginModal';
-import ServiceDetailModal from '../components/ServiceDetailModal';
 import TabButton from '../components/taskExpertDashboard/TabButton';
 import StatCard from '../components/taskExpertDashboard/StatCard';
 import { compressImage } from '../utils/imageCompression';
@@ -126,7 +121,7 @@ const TaskExpertDashboard: React.FC = () => {
   // 多人活动管理相关
   const [multiTasks, setMultiTasks] = useState<any[]>([]);
   const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [, setSelectedTaskId] = useState<number | null>(null); void setSelectedTaskId;
   // 按活动ID和任务ID分组存储参与者：{activityId: {taskId: [participants]}}
   const [taskParticipants, setTaskParticipants] = useState<{[activityId: number]: {[taskId: number]: any[]}}>({});
   // 存储活动关联的任务列表：{activityId: [tasks]}
@@ -320,18 +315,13 @@ const TaskExpertDashboard: React.FC = () => {
   // 时刻表页面定时刷新（每10秒刷新一次，确保参与者数量实时更新）
   useEffect(() => {
     if (activeTab === 'schedule' && user) {
-      // 立即加载一次
       loadSchedule();
-      
-      // 每10秒刷新一次
       const interval = setInterval(() => {
-        if (!document.hidden) {
-          loadSchedule();
-        }
-      }, 10000); // 10秒
-      
+        if (!document.hidden) loadSchedule();
+      }, 10000);
       return () => clearInterval(interval);
     }
+    return () => {};
   }, [activeTab, user]);
 
   // 当打开创建多人活动模态框时，确保服务列表已加载
@@ -382,16 +372,10 @@ const TaskExpertDashboard: React.FC = () => {
       const futureDate = new Date(today);
       futureDate.setDate(today.getDate() + 30);
       
-      const startDate = scheduleStartDate || today.toISOString().split('T')[0];
-      const endDate = scheduleEndDate || futureDate.toISOString().split('T')[0];
-      
-      // 更新状态中的日期（如果还没有设置）
-      if (!scheduleStartDate) {
-        setScheduleStartDate(startDate);
-      }
-      if (!scheduleEndDate) {
-        setScheduleEndDate(endDate);
-      }
+      const startDate = scheduleStartDate ?? today.toISOString().split('T')[0] ?? '';
+      const endDate = scheduleEndDate ?? futureDate.toISOString().split('T')[0] ?? '';
+      if (!scheduleStartDate) setScheduleStartDate(startDate);
+      if (!scheduleEndDate) setScheduleEndDate(endDate);
       
       // 分别处理两个请求，避免一个失败导致全部失败
       try {
@@ -494,12 +478,11 @@ const TaskExpertDashboard: React.FC = () => {
     setShowServiceModal(true);
   };
 
-  const handleManageTimeSlots = async (service: Service) => {
+  const _handleManageTimeSlots = async (service: Service) => {
     setSelectedServiceForTimeSlot(service);
     setShowTimeSlotManagement(true);
-    // 加载该服务的所有时间段（未来30天）
     await loadTimeSlotManagement(service.id);
-  };
+  }; void _handleManageTimeSlots;
 
   const loadTimeSlotManagement = async (serviceId: number) => {
     setLoadingTimeSlotManagement(true);
@@ -525,7 +508,7 @@ const TaskExpertDashboard: React.FC = () => {
         if (!groupedByDate[slotDateUK]) {
           groupedByDate[slotDateUK] = [];
         }
-        groupedByDate[slotDateUK].push(slot);
+        groupedByDate[slotDateUK]!.push(slot);
       });
         setTimeSlotManagementSlots(slotsArray);
       } catch (err: any) {
@@ -612,11 +595,11 @@ const TaskExpertDashboard: React.FC = () => {
       if (!groupedByDate[slotDateUK]) {
         groupedByDate[slotDateUK] = [];
       }
-      groupedByDate[slotDateUK].push(slot);
+      groupedByDate[slotDateUK]!.push(slot);
     });
     return Object.keys(groupedByDate).sort().map((dateStr) => ({
       date: dateStr,
-      slots: groupedByDate[dateStr],
+      slots: groupedByDate[dateStr] ?? [],
     }));
   }, [timeSlotManagementSlots]);
 
@@ -679,14 +662,13 @@ const TaskExpertDashboard: React.FC = () => {
       await rejectServiceApplication(applicationId, reason);
       message.success('申请已拒绝');
         // ⚠️ 后台刷新，不阻塞 UI
-        loadApplications().catch(err => {
+        loadApplications().catch(() => {
           // 如果刷新失败，恢复原状态
           setApplications(originalApplications);
       });
     } catch (err: any) {
-      // 如果失败，恢复原状态
       setApplications(originalApplications);
-      message.error(err.response?.data?.detail || '拒绝申请失败');
+      message.error(err?.response?.data?.detail || '拒绝申请失败');
     }
   };
 
@@ -780,14 +762,18 @@ const TaskExpertDashboard: React.FC = () => {
               if (task.is_multi_participant) {
                 try {
                   const participantsData = await getTaskParticipants(task.id);
-                  participantsMap[activity.id][task.id] = participantsData.participants || [];
-                } catch (error: any) {
-                  const errorMessage = error.response?.data?.detail || error.message || '未知错误';
-                  participantsMap[activity.id][task.id] = [];
+                  if (!participantsMap[activity.id]) participantsMap[activity.id] = {};
+                  const actMap = participantsMap[activity.id]!;
+                  actMap[task.id] = participantsData?.participants ?? [];
+                } catch (_error: any) {
+                  if (!participantsMap[activity.id]) participantsMap[activity.id] = {};
+                  const actMap = participantsMap[activity.id]!;
+                  actMap[task.id] = [];
                 }
               } else {
                 // 非多人任务不需要加载参与者
-                participantsMap[activity.id][task.id] = [];
+                if (!participantsMap[activity.id]) participantsMap[activity.id] = {};
+                participantsMap[activity.id]![task.id] = [];
               }
             }
           } catch (error) {
@@ -817,7 +803,7 @@ const TaskExpertDashboard: React.FC = () => {
     return statusMap[status] || status;
   };
 
-  const getStatusColor = (status: string) => {
+  const _getStatusColor = (status: string) => {
     const colorMap: { [key: string]: string } = {
       pending: '#f59e0b',
       negotiating: '#3b82f6',
@@ -827,8 +813,8 @@ const TaskExpertDashboard: React.FC = () => {
       cancelled: '#6b7280',
     };
     return colorMap[status] || '#6b7280';
-  };
-  
+  }; void _getStatusColor;
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1790,7 +1776,7 @@ const TaskExpertDashboard: React.FC = () => {
                     if (!groupedByDate[date]) {
                       groupedByDate[date] = [];
                     }
-                    groupedByDate[date].push(item);
+                    groupedByDate[date]!.push(item);
                   });
 
                   const sortedDates = Object.keys(groupedByDate).sort();
@@ -1798,7 +1784,7 @@ const TaskExpertDashboard: React.FC = () => {
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       {sortedDates.map((date) => {
-                        const items = groupedByDate[date];
+                        const items = groupedByDate[date] ?? [];
                         const dateObj = new Date(date);
                         const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dateObj.getDay()];
                         
@@ -2296,7 +2282,7 @@ const TaskExpertDashboard: React.FC = () => {
                               endDate.setDate(startDate.getDate() + 30);
                               return endDate.toISOString().split('T')[0];
                             })()}
-                            onChange={(e) => {
+                            onChange={() => {
                               // 结束日期用于显示，实际加载未来30天的时间段
                             }}
                             min={createMultiTaskForm.selected_time_slot_date || new Date().toISOString().split('T')[0]}
@@ -2381,7 +2367,7 @@ const TaskExpertDashboard: React.FC = () => {
                               if (!slotsByDate[dateStr]) {
                                 slotsByDate[dateStr] = [];
                               }
-                              slotsByDate[dateStr].push(slot);
+                              slotsByDate[dateStr]!.push(slot);
                             });
                             
                             return (
@@ -2396,7 +2382,7 @@ const TaskExpertDashboard: React.FC = () => {
                                       gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
                                       gap: '8px',
                                     }}>
-                                      {slotsByDate[dateStr].map((slot: any) => {
+                                      {(slotsByDate[dateStr] ?? []).map((slot: any) => {
                                         const isSelected = createMultiTaskForm.selected_time_slot_ids?.includes(slot.id) || false;
                                         const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
                                         const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
@@ -3327,8 +3313,8 @@ const TaskExpertDashboard: React.FC = () => {
                     // 验证开始时间早于结束时间
                     const startTime = newTimeSlotForm.slot_start_time.split(':').map(Number);
                     const endTime = newTimeSlotForm.slot_end_time.split(':').map(Number);
-                    const startMinutes = startTime[0] * 60 + startTime[1];
-                    const endMinutes = endTime[0] * 60 + endTime[1];
+                    const startMinutes = (startTime[0] ?? 0) * 60 + (startTime[1] ?? 0);
+                    const endMinutes = (endTime[0] ?? 0) * 60 + (endTime[1] ?? 0);
                     if (startMinutes >= endMinutes) {
                       message.warning('开始时间必须早于结束时间');
                       return;
@@ -3417,7 +3403,8 @@ const TaskExpertDashboard: React.FC = () => {
               ) : (
                 <div>
                   {groupedTimeSlots.map(({ date, slots }) => {
-                    const hasDeleted = slots.some((s: any) => s.is_manually_deleted);
+                    const safeSlots = slots ?? [];
+                    const hasDeleted = safeSlots.some((s: any) => s.is_manually_deleted);
                     
                     return (
                       <div
@@ -3429,11 +3416,11 @@ const TaskExpertDashboard: React.FC = () => {
                             {date} {hasDeleted && '(已删除)'}
                           </div>
                           <div className={styles.timeSlotDateCount}>
-                            {slots.length} 个时间段
+                            {safeSlots.length} 个时间段
                           </div>
                         </div>
                         <div className={styles.timeSlotDateGrid}>
-                          {slots.map((slot: any) => {
+                          {safeSlots.map((slot: any) => {
                             const isFull = slot.current_participants >= slot.max_participants;
                             const isExpired = slot.is_expired === true;
                             const isDeleted = slot.is_manually_deleted === true;
@@ -3898,7 +3885,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     slot_end_time: '14:00', // 结束时间（英国时间），格式：HH:MM
   });
   const [saving, setSaving] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
+  const [, setUploadingImages] = useState<boolean[]>([]); void setUploadingImages;
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -3973,8 +3960,8 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       // 验证开始时间早于结束时间
       const startTime = formData.slot_start_time.split(':').map(Number);
       const endTime = formData.slot_end_time.split(':').map(Number);
-      const startMinutes = startTime[0] * 60 + startTime[1];
-      const endMinutes = endTime[0] * 60 + endTime[1];
+      const startMinutes = (startTime[0] ?? 0) * 60 + (startTime[1] ?? 0);
+      const endMinutes = (endTime[0] ?? 0) * 60 + (endTime[1] ?? 0);
       if (startMinutes >= endMinutes) {
         message.warning('开始时间必须早于结束时间');
         return;
@@ -3990,7 +3977,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         base_price: formData.base_price,
         currency: formData.currency,
         status: formData.status,
-        images: formData.images,
+        images: formData.images ?? [],
       };
       
       // 添加时间段信息（如果启用）

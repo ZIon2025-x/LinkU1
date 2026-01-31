@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, message, Alert, Typography } from 'antd';
 import styled from 'styled-components';
-import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import LoginModal from '../components/LoginModal';
@@ -11,7 +10,7 @@ import HreflangManager from '../components/HreflangManager';
 import { getErrorMessage } from '../utils/errorHandler';
 import { validateEmail, validateName } from '../utils/inputValidators';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -26,26 +25,15 @@ const StyledCard = styled(Card)`
   box-shadow: 0 2px 8px #f0f1f2;
 `;
 
-const ErrorMsg = styled.div`
-  color: #ff4d4f;
-  margin-bottom: 12px;
-  text-align: center;
-`;
-
 const PasswordRequirements = styled.div`
   margin-top: 4px;
   font-size: 12px;
   color: #666;
 `;
 
-const PasswordRequirementItem = styled.div<{ valid: boolean }>`
-  color: ${props => props.valid ? '#52c41a' : '#d9d9d9'};
-  margin: 2px 0;
-`;
-
 const Register: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  useNavigate();
+  useLocation();
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [password, setPassword] = useState('');

@@ -43,12 +43,7 @@ const PublishTask: React.FC = () => {
     super_vip_enabled: true
   });
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  // 生成canonical URL
-  const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
-    ? `https://www.link2ur.com${location.pathname}`
-    : 'https://www.link2ur.com/en/publish-task';
+  useLocation(); // 预留用于 canonical 等
 
   // 移动端检测
   useEffect(() => {
@@ -110,13 +105,14 @@ const PublishTask: React.FC = () => {
     
     for (let i = 0; i < filesToUpload.length; i++) {
       const file = filesToUpload[i];
-      
+      if (!file) continue;
+
       // 检查文件类型
       if (!file.type.startsWith('image/')) {
         message.error(`文件 ${file.name} 不是图片格式`);
         continue;
       }
-      
+
       // 检查文件大小（限制5MB）
       if (file.size > 5 * 1024 * 1024) {
         message.error(`图片 ${file.name} 大小超过5MB`);
@@ -136,7 +132,7 @@ const PublishTask: React.FC = () => {
           maxSizeMB: 1,
           maxWidthOrHeight: 1920,
         });
-        
+
         const formData = new FormData();
         formData.append('image', compressedFile);
 
@@ -153,7 +149,7 @@ const PublishTask: React.FC = () => {
           message.error(`图片 ${file.name} 上传失败`);
         }
       } catch (error: any) {
-                message.error(`图片 ${file.name} 上传失败: ${getErrorMessage(error)}`);
+        message.error(`图片 ${file.name} 上传失败: ${getErrorMessage(error)}`);
       } finally {
         setUploadingImages(prev => {
           const newArr = [...prev];

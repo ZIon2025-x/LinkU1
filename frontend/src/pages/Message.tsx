@@ -428,7 +428,7 @@ TaskListItem.displayName = 'TaskListItem';
 
 const MessagePage: React.FC = () => {
   const { t, language } = useLanguage();
-  const { unreadCount: globalUnreadCount, refreshUnreadCount, updateUnreadCount } = useUnreadMessages();
+  const { unreadCount: globalUnreadCount, refreshUnreadCount } = useUnreadMessages();
   
   // 添加CSS动画样式
   React.useEffect(() => {
@@ -2981,7 +2981,7 @@ const MessagePage: React.FC = () => {
           }
         };
         
-        socket.onerror = (error) => {
+        socket.onerror = () => {
                   };
         
         socket.onclose = (event) => {

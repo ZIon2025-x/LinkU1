@@ -1,16 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead, getTaskRecommendations, recordTaskInteraction } from '../api';
+import api, { fetchTasks, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead, getTaskRecommendations, recordTaskInteraction } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
-import TaskTitle from '../components/TaskTitle';
 import TaskCard from '../components/TaskCard';
 import FleaMarketCard from '../components/FleaMarketCard';
 import SortControls from '../components/SortControls';
@@ -351,23 +349,6 @@ export const CITIES = [
   "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
 ];
 
-// 获取任务类型的默认图片路径
-const getTaskTypeDefaultImage = (taskType: string): string => {
-  const taskTypeMap: Record<string, string> = {
-    "Housekeeping": "/static/task-types/housekeeping.jpg",
-    "Campus Life": "/static/task-types/campus-life.jpg",
-    "Second-hand & Rental": "/static/task-types/secondhand.jpg",
-    "Errand Running": "/static/task-types/errand.jpg",
-    "Skill Service": "/static/task-types/skill.jpg",
-    "Social Help": "/static/task-types/social.jpg",
-    "Transportation": "/static/task-types/transportation.jpg",
-    "Pet Care": "/static/task-types/pet.jpg",
-    "Life Convenience": "/static/task-types/convenience.jpg",
-    "Other": "/static/task-types/other.jpg"
-  };
-  return taskTypeMap[taskType] || "/static/task-types/default.jpg";
-};
-
 const Tasks: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
@@ -625,23 +606,6 @@ const Tasks: React.FC = () => {
     if (isTaskDetailPage) {
       return; // 不设置meta标签，让任务详情页自己管理
     }
-    
-    const updateMetaTag = (name: string, content: string, property?: boolean) => {
-      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
-      // 先移除所有同名的标签，确保没有重复
-      const allTags = document.querySelectorAll(selector);
-      allTags.forEach(tag => tag.remove());
-      
-      // 创建新标签
-      const metaTag = document.createElement('meta');
-      if (property) {
-        metaTag.setAttribute('property', name);
-      } else {
-        metaTag.setAttribute('name', name);
-      }
-      metaTag.content = content;
-      document.head.appendChild(metaTag);
-    };
 
     // 强制移除所有旧的og:image相关标签（包括index.html中的默认标签）
     const allOgImages = document.querySelectorAll('meta[property="og:image"], meta[property="og:image:width"], meta[property="og:image:height"], meta[property="og:image:type"]');
@@ -866,7 +830,6 @@ const Tasks: React.FC = () => {
   };
   
   // 用户菜单和通知相关状态
-  const [showMenu, setShowMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
@@ -890,7 +853,7 @@ const Tasks: React.FC = () => {
   const [showActivityDetailModal, setShowActivityDetailModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]); // 活动列表
-  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [, setLoadingActivities] = useState(false);
   // 活动时间段列表（用于时间段服务）
   const [activityTimeSlots, setActivityTimeSlots] = useState<any[]>([]);
   const [loadingActivityTimeSlots, setLoadingActivityTimeSlots] = useState(false);
@@ -898,7 +861,7 @@ const Tasks: React.FC = () => {
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
   
   // 已申请任务状态
-  const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
+  const [, setAppliedTasks] = useState<Set<number>>(new Set());
   
   // 申请任务弹窗状态
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -1086,6 +1049,7 @@ const Tasks: React.FC = () => {
         }
       };
     }
+    return undefined;
   }, [user]);
 
   // 当通知面板打开时，定期刷新通知列表
@@ -1156,6 +1120,7 @@ const Tasks: React.FC = () => {
       
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [showNotifications, user]);
 
   // WebSocket实时更新通知（监听notification_created事件）
@@ -1394,8 +1359,9 @@ const Tasks: React.FC = () => {
   // Grid 组件的滚动处理（用于无限滚动）
   const gridRef = useRef<GridImperativeAPI>(null);
   
-  // Grid 的滚动事件处理
-  const handleGridScroll = useCallback(() => {
+  // Grid 的滚动事件处理（预留供虚拟列表使用）
+  // @ts-expect-error 预留供虚拟列表使用
+  const _handleGridScroll = useCallback(() => {
     if (loadingMore || loading || !hasMore) return;
     
     const grid = gridRef.current;
@@ -1430,6 +1396,7 @@ const Tasks: React.FC = () => {
       window.addEventListener('scroll', handleScroll, { passive: true });
       return () => window.removeEventListener('scroll', handleScroll);
     }
+    return undefined;
   }, [handleScroll, shouldUseVirtualList]);
   
   // 点击外部关闭下拉菜单
@@ -1486,6 +1453,7 @@ const Tasks: React.FC = () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
+    return undefined;
   }, [showLocationDropdown, showLanguageDropdown, sorting.showRewardDropdown, sorting.showDeadlineDropdown, showLevelDropdown]);
 
 
@@ -1553,7 +1521,8 @@ const Tasks: React.FC = () => {
   };
 
   // 处理任务申请（显示弹窗）
-  const handleAcceptTask = (taskId: number) => {
+  // @ts-expect-error 预留供后续使用
+  const _handleAcceptTask = (taskId: number) => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -1649,7 +1618,8 @@ const Tasks: React.FC = () => {
   }, [activities]);
 
   // 判断任务是否关联到活动（通过 parent_activity_id）
-  const isTaskFromActivity = useCallback((task: any) => {
+  // @ts-expect-error 预留供后续使用
+  const _isTaskFromActivity = useCallback((task: any) => {
     return task.parent_activity_id && task.parent_activity_id !== null;
   }, []);
 
@@ -1726,12 +1696,14 @@ const Tasks: React.FC = () => {
   }, []);
 
   // 处理联系发布者（跳转到任务聊天页面）
-  const handleContactPoster = (taskId: number) => {
+  // @ts-expect-error 预留供后续使用
+  const _handleContactPoster = (taskId: number) => {
     navigate(`/message?taskId=${taskId}`);
   };
 
   // 检查用户是否可以查看/申请任务（等级匹配）
-  const canViewTask = (user: any, task: any) => {
+  // @ts-expect-error 预留供后续使用
+  const _canViewTask = (user: any, task: any) => {
     if (!task) return false;
     
     // 如果用户未登录，只能查看普通任务
@@ -2058,7 +2030,7 @@ const Tasks: React.FC = () => {
   }, [isMobile, handleViewActivity]);
 
   // Grid 单元格渲染函数（必须在所有依赖的函数定义之后）
-  const Cell = useCallback(({ columnIndex, rowIndex, style, ...props }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; [key: string]: any }) => {
+  const Cell = useCallback(({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
     const index = rowIndex * columnCount + columnIndex;
     
     if (index >= displayTasks.length) {
@@ -2942,13 +2914,13 @@ const Tasks: React.FC = () => {
                             if (!slotsByDate[slotDateUK]) {
                               slotsByDate[slotDateUK] = [];
                             }
-                            slotsByDate[slotDateUK].push(slot);
+                            slotsByDate[slotDateUK]!.push(slot);
                           });
 
                         const dates = Object.keys(slotsByDate).sort();
                         
                         return dates.map(date => {
-                          const slots = slotsByDate[date];
+                          const slots = slotsByDate[date] ?? [];
                           const firstSlot = slots[0];
                           const dateStr = firstSlot.slot_start_datetime || firstSlot.slot_date;
                           const formattedDate = TimeHandlerV2.formatUtcToLocal(
@@ -2974,7 +2946,7 @@ const Tasks: React.FC = () => {
                                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
                                 gap: '8px',
                               }}>
-                                {slots.map((slot: any) => {
+                                {(slots ?? []).map((slot: any) => {
                                   const isFull = slot.current_participants >= slot.max_participants;
                                   const isExpired = slot.is_expired === true;
                                   const availableSpots = slot.max_participants - slot.current_participants;

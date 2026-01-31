@@ -66,7 +66,7 @@ const VIP: React.FC = () => {
     }
   };
 
-  const handleUpgrade = (level: string) => {
+  const handleUpgrade = (_level: string) => {
     // VIP功能即将推出
     // 暂时移除购买功能，符合App Store审核要求
     message.info(t('vip.comingSoon') || 'VIP功能即将推出，敬请期待！');

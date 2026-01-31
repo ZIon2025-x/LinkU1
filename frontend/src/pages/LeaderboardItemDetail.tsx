@@ -20,9 +20,7 @@ import {
   reportLeaderboardItem
 } from '../api';
 import { fetchCurrentUser } from '../api';
-import { compressImage } from '../utils/imageCompression';
 import { formatImageUrl } from '../utils/imageUtils';
-import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { getErrorMessage } from '../utils/errorHandler';
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import api, { fetchCurrentUser, logout, getPublicSystemSettings } from '../api';
+import { fetchCurrentUser, logout, getPublicSystemSettings } from '../api';
 import SEOHead from '../components/SEOHead';
 import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -444,7 +443,7 @@ const TaskExpertsIntro: React.FC = () => {
                   { icon: '📈', key: 'advantage4' },
                   { icon: '🔒', key: 'advantage5' },
                   { icon: '🌟', key: 'advantage6' }
-                ].map((item, index) => (
+                ].map((item) => (
                   <div key={item.key} style={{
                     background: '#fff',
                     padding: '28px',

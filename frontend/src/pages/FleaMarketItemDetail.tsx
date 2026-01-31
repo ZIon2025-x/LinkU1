@@ -297,11 +297,11 @@ const FleaMarketItemDetail: React.FC = () => {
         canonicalUrl={canonicalUrl}
         ogTitle={item.title}
         ogDescription={seoDescription}
-        ogImage={item.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+        ogImage={item.images?.[0] || `https://www.link2ur.com/static/favicon.png`}
         ogUrl={canonicalUrl}
         twitterTitle={item.title}
         twitterDescription={seoDescription}
-        twitterImage={item.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+        twitterImage={item.images?.[0] || `https://www.link2ur.com/static/favicon.png`}
       />
       <FleaMarketStructuredData 
         item={{

@@ -31,7 +31,7 @@ const ErrorMsg = styled.div`
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  useLocation(); // 保留用于未来 redirect state
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ const Login: React.FC = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.post('/api/secure-auth/send-verification-code', {
+      await api.post('/api/secure-auth/send-verification-code', {
         email: email.trim().toLowerCase(),
       });
       

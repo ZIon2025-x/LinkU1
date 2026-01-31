@@ -4,7 +4,6 @@ import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices,
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { formatViewCount } from '../utils/formatUtils';
-import { message } from 'antd';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import LazyImage from '../components/LazyImage';
 
@@ -60,11 +59,11 @@ const UserProfile: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [taskExpert, setTaskExpert] = useState<any>(null);
   const [expertServices, setExpertServices] = useState<any[]>([]);
-  const [loadingExpert, setLoadingExpert] = useState(false);
+  const [, setLoadingExpert] = useState(false); void setLoadingExpert;
   const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [hotPosts, setHotPosts] = useState<any[]>([]);
-  const [loadingHotPosts, setLoadingHotPosts] = useState(false);
+  const [, setLoadingHotPosts] = useState(false); void setLoadingHotPosts;
   const [isStudentVerified, setIsStudentVerified] = useState(false);
   const [studentUniversity, setStudentUniversity] = useState<{name: string; name_cn: string} | null>(null);
 
@@ -304,7 +303,7 @@ const UserProfile: React.FC = () => {
     );
   }
 
-  const isOwnProfile = currentUser && currentUser.id === userId;
+  const _isOwnProfile = currentUser && currentUser.id === userId; void _isOwnProfile;
 
   return (
     <div style={{ 
@@ -862,7 +861,7 @@ const UserProfile: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {/* 他人用户主页：所有评价都显示为匿名 */}
                         <LazyImage
-                          src="/static/any.png"
+                          src="/static/logo.png"
                           alt={t('userProfile.anonymousUser')}
                           width={40}
                           height={40}

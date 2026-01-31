@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Modal, Upload, Button, Progress, message, Typography, Space } from 'antd';
-import { UploadOutlined, DeleteOutlined, CheckCircleOutlined, ExclamationCircleOutlined, FileOutlined } from '@ant-design/icons';
+import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined, FileOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { compressImage } from '../utils/imageCompression';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -26,7 +26,7 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
   onCancel,
   onSuccess
 }) => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -40,7 +40,7 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
   };
 
   // 处理文件选择
-  const handleChange: UploadProps['onChange'] = useCallback((info) => {
+  const handleChange: UploadProps['onChange'] = useCallback((info: Parameters<NonNullable<UploadProps['onChange']>>[0]) => {
     const newFileList = [...info.fileList];
     
     // 限制文件数量
@@ -225,6 +225,7 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
+      if (!file) continue;
       if (file.originFileObj) {
         try {
           const maxSize = isImageFile(file.originFileObj) ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
@@ -295,14 +296,13 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
 
     for (let i = 0; i < validFiles.length; i++) {
       const file = validFiles[i];
-      if (file.originFileObj) {
-        try {
-          const fileId = await uploadFile(file.originFileObj, taskId);
-          uploadedFileIds.push(fileId);
-          setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
-        } catch (error: any) {
-          uploadErrors.push({ error, index: i + 1 });
-        }
+      if (!file?.originFileObj) continue;
+      try {
+        const fileId = await uploadFile(file.originFileObj, taskId);
+        uploadedFileIds.push(fileId);
+        setUploadProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      } catch (error: any) {
+        uploadErrors.push({ error, index: i + 1 });
       }
     }
 
@@ -452,7 +452,7 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
             <Progress
               percent={Math.round((uploadProgress.current / uploadProgress.total) * 100)}
               status="active"
-              format={(percent) => `${uploadProgress.current}/${uploadProgress.total}`}
+              format={() => `${uploadProgress.current}/${uploadProgress.total}`}
             />
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import { Form, Input, Button, Card } from 'antd';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -34,7 +34,7 @@ const PasswordRequirements = styled.div`
 `;
 
 const ResetPassword: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);

@@ -1,14 +1,13 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Modal, Upload, Button, Progress, message, Typography, Space, Input } from 'antd';
-
-const { TextArea } = Input;
-import { UploadOutlined, DeleteOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { compressImage } from '../utils/imageCompression';
 import { getErrorMessage } from '../utils/errorHandler';
 import api, { completeTask } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
+const { TextArea } = Input;
 const { Text } = Typography;
 
 interface CompleteTaskModalProps {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
-import StripeConnectAccountInfo from '../components/stripe/StripeConnectAccountInfo';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
@@ -48,7 +47,7 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isMobile, setIsMobile] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
-  const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  const [, setStripeAccountStatus] = useState<any>(null);
   // 启用 payouts 和 account_management 组件（用于设置页面显示提现和账户管理）
   const stripeConnectInstance = useStripeConnect(stripeAccountId, true, true);
   const [sessions, setSessions] = useState<Array<any>>([]);
@@ -222,10 +221,13 @@ const Settings: React.FC = () => {
         const newData = { ...prev };
         let current: any = newData;
         for (let i = 0; i < parts.length - 1; i++) {
-          current[parts[i]] = { ...current[parts[i]] };
-          current = current[parts[i]];
+          const key = parts[i];
+          if (key === undefined) break;
+          current[key] = { ...(current[key] ?? {}) };
+          current = current[key];
         }
-        current[parts[parts.length - 1]] = value;
+        const lastKey = parts[parts.length - 1];
+        if (lastKey !== undefined) current[lastKey] = value;
         return newData;
       });
     } else {

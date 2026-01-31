@@ -64,7 +64,7 @@ const TaskExperts: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
-  const [isMobile, setIsMobile] = useState(false);
+  const [, setIsMobile] = useState(false); void setIsMobile;
 
   // 处理活动图片URL（确保相对路径能正确显示）
   const getActivityImageUrl = useCallback((imageValue: string | null | undefined): string => {
@@ -122,7 +122,7 @@ const TaskExperts: React.FC = () => {
   
   // 达人活动相关状态
   const [expertActivities, setExpertActivities] = useState<{[key: string]: any[]}>({});
-  const [loadingActivities, setLoadingActivities] = useState<{[key: string]: boolean}>({});
+  const [, setLoadingActivities] = useState<{[key: string]: boolean}>({});
   const [showActivityDetailModal, setShowActivityDetailModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   // 活动时间段列表（用于时间段服务）
@@ -130,30 +130,6 @@ const TaskExperts: React.FC = () => {
   const [loadingActivityTimeSlots, setLoadingActivityTimeSlots] = useState(false);
   // 选中的时间段ID（用于多时间段活动）
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
-
-  // 模拟数据 - 实际项目中应该从API获取
-  const mockExperts: TaskExpert[] = [
-    {
-      id: '1',
-      name: '张技术',
-      avatar: '/static/avatar1.png',
-      user_level: 'super',
-      avg_rating: 4.9,
-      completed_tasks: 156,
-      total_tasks: 160,
-      completion_rate: 97.5,
-      expertise_areas: ['编程开发', '网站建设', '移动应用'],
-      is_verified: true,
-      bio: '资深全栈开发工程师，10年开发经验，精通多种编程语言和框架。',
-      join_date: '2023-01-15',
-      last_active: '2024-01-10',
-      featured_skills: ['React', 'Node.js', 'Python', 'Vue.js'],
-      achievements: ['技术认证', '优秀贡献者', '年度达人'],
-      response_time: '2小时内',
-      success_rate: 98,
-      location: 'London'
-    }
-  ];
 
   const categories = [
     { value: 'all', label: t('taskExperts.allCategories') },
@@ -284,7 +260,7 @@ const TaskExperts: React.FC = () => {
           try {
             await getTaskExpert(userData.id);
             setIsTaskExpert(true);
-          } catch (error: any) {
+          } catch (_error: any) {
             // 如果不是任务达人（404错误），设置为false
             setIsTaskExpert(false);
           }
@@ -312,12 +288,12 @@ const TaskExperts: React.FC = () => {
     if (user) {
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
-      }).catch(error => {
+      }).catch(() => {
               });
       
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
-      }).catch(error => {
+      }).catch(() => {
               });
     }
   }, [user]);
@@ -329,12 +305,13 @@ const TaskExperts: React.FC = () => {
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
-          }).catch(error => {
+          }).catch(() => {
                       });
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [user]);
 
   // 使用useCallback优化loadExperts函数，避免不必要的重新创建
@@ -522,13 +499,13 @@ const TaskExperts: React.FC = () => {
   };
 
 
-  const getLevelColor = (level: string) => {
+  const _getLevelColor = (level: string) => {
     switch (level) {
       case 'super': return '#8b5cf6';
       case 'vip': return '#f59e0b';
       default: return '#6b7280';
     }
-  };
+  }; void _getLevelColor;
 
   const getLevelText = (level: string) => {
     switch (level) {
@@ -1082,13 +1059,13 @@ const TaskExperts: React.FC = () => {
               </div>
               
               {/* 达人活动卡片 */}
-              {expertActivities[expert.id] && expertActivities[expert.id].length > 0 && (
+              {(expertActivities[expert.id] ?? []).length > 0 && (
                 <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
                     <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'white', marginBottom: '16px' }}>
                       🎯 达人活动
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {expertActivities[expert.id].map((activity: any) => {
+                      {(expertActivities[expert.id] ?? []).map((activity: any) => {
                         // 获取活动图片
                         let rawImageUrl: string | null = null;
                         if (activity.images && Array.isArray(activity.images) && activity.images.length > 0) {
@@ -1747,13 +1724,13 @@ const TaskExperts: React.FC = () => {
                             if (!slotsByDate[slotDateUK]) {
                               slotsByDate[slotDateUK] = [];
                             }
-                            slotsByDate[slotDateUK].push(slot);
+                            slotsByDate[slotDateUK]!.push(slot);
                           });
 
                         const dates = Object.keys(slotsByDate).sort();
                         
                         return dates.map(date => {
-                          const slots = slotsByDate[date];
+                          const slots = slotsByDate[date] ?? [];
                           const firstSlot = slots[0];
                           const dateStr = firstSlot.slot_start_datetime || firstSlot.slot_date;
                           const formattedDate = TimeHandlerV2.formatUtcToLocal(
@@ -1779,7 +1756,7 @@ const TaskExperts: React.FC = () => {
                                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
                                 gap: '8px',
                               }}>
-                                {slots.map((slot: any) => {
+                                {(slots ?? []).map((slot: any) => {
                                   const isFull = slot.current_participants >= slot.max_participants;
                                   const isExpired = slot.is_expired === true;
                                   const availableSpots = slot.max_participants - slot.current_participants;

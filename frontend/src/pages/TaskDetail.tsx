@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings, fetchTasks, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings, fetchTasks, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual } from '../api';
 import { prefetchTaskDetail, prefetchUserInfo } from '../utils/preloadUtils';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -58,7 +58,7 @@ const TaskDetail: React.FC = () => {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [showReviews, setShowReviews] = useState(false);
+  const [, setShowReviews] = useState(false); void setShowReviews;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
@@ -81,7 +81,7 @@ const TaskDetail: React.FC = () => {
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
   // 推荐任务相关状态
   const [recommendedTasks, setRecommendedTasks] = useState<any[]>([]);
-  const [loadingRecommendedTasks, setLoadingRecommendedTasks] = useState(false);
+  const [, setLoadingRecommendedTasks] = useState(false); void setLoadingRecommendedTasks;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // 多人任务相关状态
   const [participants, setParticipants] = useState<any[]>([]);
@@ -535,7 +535,7 @@ const TaskDetail: React.FC = () => {
               const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
               allOgTitles.forEach(tag => tag.remove());
             };
-            
+            removeAllDescriptions();
             // 使用提取的函数设置meta标签
             setMetaTags(seoDesc, `${task.title} - Link²Ur任务平台`);
             
@@ -584,7 +584,7 @@ const TaskDetail: React.FC = () => {
           }
         }, 0);
       })
-      .catch((error) => {
+      .catch(() => {
                         setError('任务不存在');
       })
       .finally(() => setLoading(false));
@@ -1097,9 +1097,9 @@ const TaskDetail: React.FC = () => {
                 
                 // 使用setTimeout确保在下一个事件循环中执行，这样可以保持用户交互的上下文
                 setTimeout(() => {
-                  navigator.share(shareData).catch((error) => {
+                  navigator.share(shareData).catch((err: unknown) => {
                     // 如果分享图片失败，尝试不分享图片
-                    if (error.name !== 'AbortError') {
+                    if (!(err instanceof Error && 'name' in err && err.name === 'AbortError')) {
                       navigator.share({
                         title: shareTitle,
                         text: shareText,
@@ -1114,7 +1114,7 @@ const TaskDetail: React.FC = () => {
               .catch(() => {
                 // 如果获取图片失败，直接分享不带图片
                 setTimeout(() => {
-                  navigator.share(shareData).catch((error) => {
+                  navigator.share(shareData).catch(() => {
                     // 用户取消分享或出错时不做任何处理
                   });
                 }, 100);
@@ -1122,7 +1122,7 @@ const TaskDetail: React.FC = () => {
           } else {
             // 如果没有任务图片，直接分享
             setTimeout(() => {
-              navigator.share(shareData).catch((error) => {
+              navigator.share(shareData).catch(() => {
                 // 用户取消分享或出错时不做任何处理
               });
             }, 100);
@@ -1254,10 +1254,10 @@ const TaskDetail: React.FC = () => {
            userLevelValue >= taskLevelValue;
   };
 
-  // 检查用户是否已接受任务
-  const hasAcceptedTask = (user: any, task: any) => {
+  // 检查用户是否已接受任务（预留）
+  const _hasAcceptedTask = (user: any, task: any) => {
     return user && task && task.taker_id === user.id;
-  };
+  }; void _hasAcceptedTask;
 
   const loadTaskReviews = async () => {
     try {
@@ -1303,16 +1303,13 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  const handleChat = async () => {
-    // 跳转到任务聊天页面，使用任务ID
+  const _handleChat = async () => {
     if (!id) {
       alert('无法获取任务信息，请联系客服');
       return;
     }
-
-    // 跳转到任务聊天页面
     navigate(`/message?taskId=${id}`);
-  };
+  }; void _handleChat;
 
   // 处理任务申请（显示弹窗）
   const handleAcceptTask = () => {
@@ -1499,48 +1496,6 @@ const TaskDetail: React.FC = () => {
         } catch (error) {
                   }
       }, 1000);
-    } catch (error: any) {
-      alert(getErrorMessage(error));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-
-  const handleApproveTaker = async () => {
-    if (!user) {
-      alert('请先登录');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await approveTaskTaker(Number(id));
-      alert('已同意接受者进行任务！');
-      // 重新获取任务信息
-      const res = await api.get(`/api/tasks/${id}`);
-      setTask(res.data);
-    } catch (error: any) {
-      alert(getErrorMessage(error));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRejectTaker = async () => {
-    if (!user) {
-      alert('请先登录');
-      return;
-    }
-    if (!window.confirm('确定要拒绝这个接受者吗？任务将重新开放给其他人。')) {
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await rejectTaskTaker(Number(id));
-      alert('已拒绝接受者，任务重新开放！');
-      // 重新获取任务信息
-      const res = await api.get(`/api/tasks/${id}`);
-      setTask(res.data);
     } catch (error: any) {
       alert(getErrorMessage(error));
     } finally {
@@ -1816,12 +1771,12 @@ const TaskDetail: React.FC = () => {
     (!task.is_multi_participant || (task.current_participants || 0) < (task.max_participants || 1)); // 多人任务检查是否还有空位
 
   // 是否可以申请任务（需要登录）
-  const canAcceptTask = user && 
+  const _canAcceptTask = user && 
     user.id !== task.poster_id && 
     (task.status === 'open' || task.status === 'taken' || (task.is_multi_participant && task.status === 'in_progress')) && 
     canViewTask(user, task) &&
     (!task.is_multi_participant ? (!userApplication && !hasApplied) : (!userParticipant && !hasApplied)) && // 多人任务检查参与者，普通任务检查申请
-    (!task.is_multi_participant || (task.current_participants || 0) < (task.max_participants || 1)); // 多人任务检查是否还有空位
+    (!task.is_multi_participant || (task.current_participants || 0) < (task.max_participants || 1)); void _canAcceptTask;
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -2080,11 +2035,11 @@ const TaskDetail: React.FC = () => {
             canonicalUrl={canonicalUrl}
             ogTitle={task.title}
             ogDescription={seoDescription}
-            ogImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/og-default.jpg`}
+            ogImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/favicon.png`}
             ogUrl={canonicalUrl}
             twitterTitle={task.title}
             twitterDescription={seoDescription}
-            twitterImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/og-default.jpg`}
+            twitterImage={task.images?.[0] ? ensureAbsoluteImageUrl(task.images[0]) : `https://www.link2ur.com/static/favicon.png`}
           />
           <TaskStructuredData task={task} language={language} />
           <HreflangManager type="task" id={task.id} />
@@ -4212,9 +4167,9 @@ const TaskDetail: React.FC = () => {
                   用户 {review.user_id}
                 </div>
                                  <div style={{color: '#ffc107', fontSize: 16}}>
-                   {Array.from({length: Math.floor(review.rating)}, (_, i) => '⭐').join('')}
+                   {Array.from({length: Math.floor(review.rating)}, () => '⭐').join('')}
                    {review.rating % 1 !== 0 && '☆'}
-                   {Array.from({length: 5 - Math.ceil(review.rating)}, (_, i) => '☆').join('')}
+                   {Array.from({length: 5 - Math.ceil(review.rating)}, () => '☆').join('')}
                  </div>
               </div>
               {review.comment && (

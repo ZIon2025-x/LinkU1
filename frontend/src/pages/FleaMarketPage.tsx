@@ -652,7 +652,7 @@ const FleaMarketPage: React.FC = () => {
               src={item.images[0] ?? ''}
               alt={item.title}
               className={styles.itemImage}
-              placeholder="/placeholder.png"
+              placeholder="/static/logo.png"
             />
           ) : (
             <div className={styles.itemImagePlaceholder}>

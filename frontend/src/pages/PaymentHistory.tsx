@@ -38,8 +38,10 @@ interface PaymentRecord {
 }
 
 const PaymentHistory: React.FC = () => {
-  const navigate = useNavigate();
-  const { t } = useLanguage();
+  const _navigate = useNavigate();
+  void _navigate;
+  const { t: _t } = useLanguage();
+  void _t;
   const { navigate: localizedNavigate } = useLocalizedNavigation();
   
   const [loading, setLoading] = useState(false);
@@ -146,7 +148,7 @@ const PaymentHistory: React.FC = () => {
       title: '总金额',
       dataIndex: 'total_amount_display',
       key: 'total_amount',
-      render: (amount: string, record: PaymentRecord) => (
+      render: (amount: string) => (
         <span>£{amount}</span>
       ),
     },

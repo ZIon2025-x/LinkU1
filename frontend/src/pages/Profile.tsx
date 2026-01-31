@@ -49,7 +49,7 @@ const Profile: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showAvatars, setShowAvatars] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [, setSaving] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [systemSettings, setSystemSettings] = useState({ vip_button_visible: true });
@@ -119,7 +119,7 @@ const Profile: React.FC = () => {
     
     setSaving(true);
     try {
-      const result = await updateAvatar(newAvatar);
+      await updateAvatar(newAvatar);
       setUser({ ...user, avatar: newAvatar });
       setShowAvatars(false);
     } catch (error) {
@@ -704,7 +704,7 @@ const Profile: React.FC = () => {
                     }}>
                       {review.is_anonymous ? (
                         <LazyImage
-                          src="/static/any.png"
+                          src="/static/logo.png"
                           alt={t('profile.anonymousUser')}
                           width={40}
                           height={40}

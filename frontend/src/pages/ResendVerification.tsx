@@ -20,7 +20,7 @@ const StyledCard = styled(Card)`
 `;
 
 const ResendVerification: React.FC = () => {
-  const navigate = useNavigate();
+  useNavigate();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);

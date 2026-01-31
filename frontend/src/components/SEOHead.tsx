@@ -155,7 +155,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     const isValidOgImage = (imageUrl: string): boolean => {
       // 简化版：检查 URL 是否包含已知的大图标识
       // 实际项目中可以异步加载图片检查尺寸
-      return imageUrl.includes('og-') || imageUrl.includes('1200x630') || imageUrl.includes('og-default');
+      return imageUrl.includes('og-') || imageUrl.includes('1200x630') || imageUrl.includes('favicon');
     };
     
     // 检查是否是榜单详情页（URL格式：/leaderboard/custom/数字）
@@ -174,7 +174,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       
       // 对于其他页面，如果图片尺寸太小，才 fallback 到默认大图
       if (!isValidOgImage(fullOgImage)) {
-        fullOgImage = 'https://www.link2ur.com/static/og-default.jpg'; // 1200×630 的默认图
+        fullOgImage = 'https://www.link2ur.com/static/favicon.png'; // 默认分享图
       }
       
       // 添加版本号避免缓存问题

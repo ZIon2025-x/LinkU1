@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCurrentUser, getPointsAccount, getPointsTransactions, getStripeAccountTransactions, getStripeAccountBalance, getPaymentHistory } from '../api';
+import { getPointsAccount, getPointsTransactions, getStripeAccountTransactions, getStripeAccountBalance, getPaymentHistory } from '../api';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useStripeConnect } from '../hooks/useStripeConnect';
@@ -41,7 +41,7 @@ const Wallet: React.FC = () => {
   const [balance, setBalance] = useState(0);  // 钱包余额（金额）
   const [transactions, setTransactions] = useState<any[]>([]);  // 钱包交易记录
   const [transactionsLoading, setTransactionsLoading] = useState(false);  // 交易记录加载状态
-  const [transactionsTotal, setTransactionsTotal] = useState(0);  // 交易记录总数
+  const [, setTransactionsTotal] = useState(0); void setTransactionsTotal;  // 交易记录总数
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null);  // 积分账户
   const [pointsTransactions, setPointsTransactions] = useState<PointsTransaction[]>([]);  // 积分交易记录
   const [activeTab, setActiveTab] = useState<'balance' | 'points'>('balance');  // 当前标签页

@@ -654,7 +654,7 @@ const Home: React.FC = () => {
           });
         }
       })
-      .catch(error => {
+      .catch(() => {
                 setTasks([]);
       })
       .finally(() => setLoading(false));
@@ -2093,7 +2093,7 @@ const Home: React.FC = () => {
         title={t('fleaMarket.cardTitle') || '跳蚤市场'}
       >
         <LazyImage 
-          src="/static/Flea.png" 
+          src="/static/Flea.png"
           alt="跳蚤市场"
           className={styles.fleaMarketIcon}
         />

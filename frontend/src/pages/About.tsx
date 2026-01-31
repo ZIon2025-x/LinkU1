@@ -411,7 +411,7 @@ const About: React.FC = () => {
             <Col xs={0} lg={12} className="vision-image-col">
               <div className="vision-image">
                 <LazyImage 
-                  src="/static/logo.png" 
+                  src="/static/logo.png"
                   alt={t('about.vision')} 
                   className="vision-img"
                 />

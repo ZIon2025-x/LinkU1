@@ -11,11 +11,11 @@ import LoginModal from '../components/LoginModal';
 const Partners: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
-  const [user, setUser] = useState<any>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [user] = useState<any>(null);
+  const [unreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [systemSettings, setSystemSettings] = useState({});
+  const [systemSettings] = useState({});
 
   // SEO优化：设置页面标题和Meta标签
   useEffect(() => {

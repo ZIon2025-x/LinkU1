@@ -145,24 +145,20 @@ export class TimeHandlerV2 {
     if (!utcTimeString) return '';
     
     try {
-      const tz = userTimezone || this.getUserTimezone();
+      void (userTimezone || this.getUserTimezone());
       
       // 确保正确解析UTC时间
       let utcTime;
       
       // 处理不同的时间格式
       if (utcTimeString.endsWith('Z')) {
-        // 标准ISO格式，带Z后缀
         utcTime = dayjs.utc(utcTimeString);
       } else if (utcTimeString.includes('T')) {
-        // ISO格式但没有Z后缀
         utcTime = dayjs.utc(utcTimeString + 'Z');
       } else {
-        // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
         utcTime = dayjs.utc(utcTimeString);
       }
       
-      // 转换为英国时间进行比较
       const messageTimeUK = utcTime.tz('Europe/London');
       const nowUK = dayjs().tz('Europe/London');
       

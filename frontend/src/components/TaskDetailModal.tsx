@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
 import { message } from 'antd';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute, createRefundRequest, getRefundStatus, getRefundHistory, cancelRefundRequest, submitRefundRebuttal, getTaskDisputeTimeline } from '../api';
+import api, { fetchCurrentUser, applyForTask, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual, createTaskDispute, createRefundRequest, getRefundStatus, getRefundHistory, cancelRefundRequest, submitRefundRebuttal, getTaskDisputeTimeline } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -12,8 +12,6 @@ import ConfirmCompletionModal from './ConfirmCompletionModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
-import { useDebounce } from '../hooks/useDebounce';
-import { useThrottle } from '../hooks/useThrottle';
 import { usePaymentCountdown } from '../hooks/usePaymentCountdown';
 import LazyImage from './LazyImage';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -115,8 +113,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [userParticipant, setUserParticipant] = useState<any>(null);
-  // 时间段信息
-  const [timeSlot, setTimeSlot] = useState<any>(null);
+  // 时间段信息（预留）
+  const [, setTimeSlot] = useState<any>(null); void setTimeSlot;
   // 确认倒计时相关状态
   const [confirmationRemainingSeconds, setConfirmationRemainingSeconds] = useState<number | null>(null);
 
@@ -4712,7 +4710,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     type="radio"
                     value="full"
                     checked={refundType === 'full'}
-                    onChange={(e) => {
+                    onChange={() => {
                       setRefundType('full');
                       setRefundAmount(undefined);
                       setRefundPercentage(undefined);
@@ -4735,7 +4733,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     type="radio"
                     value="partial"
                     checked={refundType === 'partial'}
-                    onChange={(e) => setRefundType('partial')}
+                    onChange={() => setRefundType('partial')}
                     style={{ marginRight: '8px' }}
                   />
                   <span>{language === 'zh' ? '部分退款' : 'Partial Refund'}</span>
@@ -5024,7 +5022,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   
                   setActionLoading(true);
                   try {
-                    const refundResult = await createRefundRequest(
+                    await createRefundRequest(
                       taskId!,
                       refundReasonType,
                       refundReason.trim(),
@@ -5166,7 +5164,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 flexDirection: 'column',
                 gap: '16px'
               }}>
-                {refundHistory.map((refund: any, index: number) => {
+                {refundHistory.map((refund: any) => {
                   const statusColors: { [key: string]: { bg: string; border: string; text: string } } = {
                     pending: { bg: '#fff3cd', border: '#ffc107', text: '#856404' },
                     processing: { bg: '#d1ecf1', border: '#17a2b8', text: '#0c5460' },
@@ -5176,7 +5174,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     cancelled: { bg: '#e2e3e5', border: '#6c757d', text: '#383d41' }
                   };
                   
-                  const statusInfo = statusColors[refund.status] || statusColors.pending;
+                  const statusInfo = (statusColors[refund.status] ?? statusColors.pending) as { bg: string; border: string; text: string };
                   const statusText: { [key: string]: { zh: string; en: string } } = {
                     pending: { zh: '待审核', en: 'Pending' },
                     processing: { zh: '处理中', en: 'Processing' },

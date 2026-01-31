@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Button, Spin, message, Input, Select, Image } from 'antd';
+import { Button, Spin, message, Input } from 'antd';
 import api from '../api';
 import StripePaymentForm from '../components/payment/StripePaymentForm';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -11,8 +11,6 @@ import LazyImage from '../components/LazyImage';
 import { obfuscateLocation } from '../utils/formatUtils';
 import { logger } from '../utils/logger';
 import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
-
-const { Option } = Select;
 
 interface PaymentData {
   payment_id: number | null;
@@ -49,22 +47,21 @@ interface TaskInfo {
 
 const TaskPayment: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
-  const navigate = useNavigate();
+  useNavigate();
   const [searchParams] = useSearchParams();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { navigate: localizedNavigate } = useLocalizedNavigation();
   
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [paymentMethod] = useState<'stripe'>('stripe'); // 只支持 Stripe 支付
   const [couponCode, setCouponCode] = useState<string>('');
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pointsBalance, setPointsBalance] = useState<number>(0);
+  const [, setPointsBalance] = useState<number>(0); void setPointsBalance;
   const [taskInfo, setTaskInfo] = useState<TaskInfo | null>(null);
   const [loadingTask, setLoadingTask] = useState(true);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
-  const [returnType, setReturnType] = useState<string | null>(null);
+  const [, setReturnType] = useState<string | null>(null); void setReturnType;
 
   const showCountdown = taskInfo?.status === 'pending_payment' && taskInfo?.payment_expires_at;
   const { formatted, isExpired } = usePaymentCountdown(showCountdown ? taskInfo!.payment_expires_at! : null);

@@ -237,7 +237,7 @@ const Footer: React.FC = () => {
           {/* 左侧 - Logo和版权 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
             <LazyImage 
-              src="/static/logo.png" 
+              src="/static/logo.png"
               alt="Link²Ur Logo" 
               style={{
                 width: '40px',
@@ -357,21 +357,21 @@ const Footer: React.FC = () => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
                 e.currentTarget.style.transform = 'scale(1)';
               }}
-              title="微信二维码"
+              title="WeChat"
             >
               <LazyImage 
-                src="/static/wechatlogo.png" 
-                alt="微信" 
+                src="/static/wechatlogo.png"
+                alt="WeChat" 
                 style={{
                   width: '20px',
                   height: '20px',
                   objectFit: 'contain'
                 }}
                 onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                  // 如果 PNG 不存在，回退到 JPG
+                  // 如果 PNG 加载失败，回退到 WeChat 二维码图
                   const target = e.currentTarget;
-                  if (!target.src.includes('.jpg')) {
-                    target.src = '/static/wechatlogo.jpg';
+                  if (!target.src.includes('wechat.jpg')) {
+                    target.src = '/static/wechat.jpg';
                   }
                 }}
               />
@@ -380,7 +380,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
       
-      {/* 微信二维码弹窗 */}
+      {/* WeChat 二维码弹窗 */}
       {showWechatModal && (
         <div 
           style={{
@@ -449,11 +449,11 @@ const Footer: React.FC = () => {
               fontSize: '20px',
               fontWeight: '600'
             }}>
-              添加我们的微信客服
+              添加我们的 WeChat 客服
             </h3>
             <LazyImage 
-              src="/static/wechat.jpg" 
-              alt="微信二维码" 
+              src="/static/wechat.jpg"
+              alt="WeChat QR code" 
               style={{
                 width: '100%',
                 maxWidth: '300px',
@@ -467,7 +467,7 @@ const Footer: React.FC = () => {
               color: '#666',
               fontSize: '14px'
             }}>
-              扫码添加客服
+              Scan to add WeChat
             </p>
           </div>
         </div>

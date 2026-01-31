@@ -39,7 +39,7 @@ const ErrorIcon = styled.div`
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  useNavigate();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<'success' | 'error' | 'loading'>('loading');
@@ -140,18 +140,17 @@ const VerifyEmail: React.FC = () => {
       // 获取通知列表 - 获取所有未读通知和最近10条已读通知
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
-      }).catch(error => {
-                // 如果获取失败，获取最近的通知
+      }).catch(() => {
         getNotifications(20).then(notifications => {
           setNotifications(notifications);
-        }).catch(error => {
+        }).catch(() => {
                   });
       });
       
       // 获取未读数量
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
-      }).catch(error => {
+      }).catch(() => {
               });
     }
   }, [user]);
@@ -160,16 +159,13 @@ const VerifyEmail: React.FC = () => {
   useEffect(() => {
     if (user) {
       const interval = setInterval(() => {
-        // 只在页面可见时才更新
         if (!document.hidden) {
-          getUnreadNotificationCount().then(count => {
-            setUnreadCount(count);
-          }).catch(error => {
-                      });
+          getUnreadNotificationCount().then(count => setUnreadCount(count)).catch(() => {});
         }
-      }, 30000); // 每30秒更新一次
+      }, 30000);
       return () => clearInterval(interval);
     }
+    return () => {};
   }, [user]);
 
   // 处理通知标记为已读

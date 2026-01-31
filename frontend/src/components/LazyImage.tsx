@@ -30,7 +30,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
   src, 
   alt, 
   className,
-  placeholder = '/placeholder.png',
+  placeholder = '/static/logo.png',
   width,
   height,
   style,
@@ -59,6 +59,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     
     // 如果已经指定了 srcSet，直接返回原 src
     if (srcSet) return resolvedSrc;
+    
+    // public/static 下的静态资源没有 webp 版本，不替换
+    if (resolvedSrc.startsWith('/static/')) return resolvedSrc;
     
     // 检查浏览器是否支持 WebP
     const supportsWebP = () => {
