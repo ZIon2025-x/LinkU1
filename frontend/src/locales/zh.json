@@ -488,6 +488,17 @@
     "partnerCooperation": "合作伙伴，发送邮件至",
     "faq": "常见问题"
   },
+  "supportPage": {
+    "title": "技术支持",
+    "subtitle": "如有问题或建议，欢迎通过以下方式联系我们。",
+    "contactTitle": "联系我们",
+    "contactIntro": "一般咨询、技术支持或反馈，请发送邮件。我们会在 1–2 个工作日内回复。",
+    "emailLabel": "支持邮箱",
+    "faqTitle": "常见问题",
+    "faqIntro": "许多常见问题已在 FAQ 中解答，建议先查看再联系我们。",
+    "faqLink": "查看常见问题",
+    "termsAndPrivacy": "法律文件请参见《服务条款》与《隐私政策》。"
+  },
   "partners": {
     "title": "合作伙伴",
     "subtitle": "携手共创，为用户与社区创造更大价值",

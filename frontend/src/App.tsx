@@ -76,6 +76,7 @@ const JoinUs = lazyWithRetry(() => import('./pages/JoinUs'));
 const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const Support = lazyWithRetry(() => import('./pages/Support'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
@@ -205,6 +206,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
+          <Route path={`/${lang}/support`} element={<Support />} />
           <Route path={`/${lang}/partners`} element={<Partners />} />
           <Route path={`/${lang}/merchant-cooperation`} element={<MerchantCooperation />} />
           <Route path={`/${lang}/publish`} element={
@@ -291,6 +293,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/cookie-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-test`} replace />} />
       <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
       <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
+      <Route path="/support" element={<Navigate to={`/${DEFAULT_LANGUAGE}/support`} replace />} />
       <Route path="/partners" element={<Navigate to={`/${DEFAULT_LANGUAGE}/partners`} replace />} />
       <Route path="/merchant-cooperation" element={<Navigate to={`/${DEFAULT_LANGUAGE}/merchant-cooperation`} replace />} />
       <Route path="/publish" element={<Navigate to={`/${DEFAULT_LANGUAGE}/publish`} replace />} />

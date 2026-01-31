@@ -493,6 +493,17 @@
     "partnerCooperation": "Partner cooperation, send email to",
     "faq": "FAQ"
   },
+  "supportPage": {
+    "title": "Support",
+    "subtitle": "We're here to help. Get in touch or find answers below.",
+    "contactTitle": "Contact Us",
+    "contactIntro": "For general enquiries, technical support, or feedback, please email us. We aim to respond within 1–2 business days.",
+    "emailLabel": "Support email",
+    "faqTitle": "Frequently Asked Questions",
+    "faqIntro": "Many common questions are answered in our FAQ. You may find what you need there before contacting us.",
+    "faqLink": "View FAQ",
+    "termsAndPrivacy": "For legal documents, see our Terms of Service and Privacy Policy."
+  },
   "partners": {
     "title": "Partner with Link²Ur",
     "subtitle": "Join forces to create value for users and the community",

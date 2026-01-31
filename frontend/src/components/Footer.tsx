@@ -58,6 +58,17 @@ const Footer: React.FC = () => {
                 {t('footer.support')}
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                <LocalizedLink to="/support" style={{
+                  color: 'rgba(255,255,255,0.8)',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
+                >
+                  {t('footer.support')}
+                </LocalizedLink>
                 <LocalizedLink to="/faq" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
