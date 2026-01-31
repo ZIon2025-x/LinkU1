@@ -1,7 +1,7 @@
 /**
- * 「在 App 内打开」条（B 方案）
- * 仅对 iOS 用户显示（iPhone / iPad / iPod，Safari、Chrome 等均可），
- * 点击「在 App 内打开」使用当前页 URL 作为 Universal Link；另提供「下载 App」跳转 App Store。
+ * 「在 App 内打开」单按钮条
+ * 仅对 iOS 用户显示。点击后先尝试用当前页 URL 打开 App（Universal Link）；
+ * 若未安装，页面会重新加载，此时自动跳转到 App Store 下载页。
  */
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,6 +10,7 @@ import { APP_STORE_URL } from '../config';
 import './OpenInAppBanner.css';
 
 const STORAGE_KEY = 'open-in-app-banner-dismissed';
+const FALLBACK_KEY = 'open-in-app-fallback';
 
 const OpenInAppBanner: React.FC = () => {
   const { t } = useLanguage();
@@ -23,47 +24,49 @@ const OpenInAppBanner: React.FC = () => {
     setVisible(true);
   }, []);
 
+  // 从「尝试打开 App」返回且未安装时，自动跳转 App Store
+  useEffect(() => {
+    if (typeof window === 'undefined' || !visible) return;
+    if (sessionStorage.getItem(FALLBACK_KEY) !== '1') return;
+    sessionStorage.removeItem(FALLBACK_KEY);
+    window.location.href = APP_STORE_URL;
+  }, [visible]);
+
   const handleDismiss = () => {
     sessionStorage.setItem(STORAGE_KEY, '1');
     setVisible(false);
   };
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const handleOpenApp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = window.location.href;
+    sessionStorage.setItem(FALLBACK_KEY, '1');
+    window.location.href = url;
+  };
 
   if (!visible) return null;
 
   return (
     <div className="open-in-app-banner" role="banner">
-      <button
-        type="button"
-        className="open-in-app-banner-close"
-        onClick={handleDismiss}
-        aria-label={t('common.close')}
-      >
-        ×
-      </button>
-      <div className="open-in-app-banner-content">
+      <div className="open-in-app-banner-float">
+        <button
+          type="button"
+          className="open-in-app-banner-close"
+          onClick={handleDismiss}
+          aria-label={t('common.close')}
+        >
+          ×
+        </button>
         <a
-          href={currentUrl}
-          className="open-in-app-banner-btn open-in-app-banner-btn-primary"
+          href={typeof window !== 'undefined' ? window.location.href : '#'}
+          className="open-in-app-banner-btn"
+          onClick={handleOpenApp}
           rel="noopener noreferrer"
         >
           <span className="open-in-app-banner-btn-icon-wrap">
             <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
           </span>
           <span className="open-in-app-banner-btn-text">{t('pwa.openInApp')}</span>
-          <span className="open-in-app-banner-btn-arrow" aria-hidden>→</span>
-        </a>
-        <a
-          href={APP_STORE_URL}
-          className="open-in-app-banner-btn open-in-app-banner-btn-secondary"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <span className="open-in-app-banner-btn-icon-wrap">
-            <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
-          </span>
-          <span className="open-in-app-banner-btn-text">{t('pwa.downloadApp')}</span>
           <span className="open-in-app-banner-btn-arrow" aria-hidden>→</span>
         </a>
       </div>
