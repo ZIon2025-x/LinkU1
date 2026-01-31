@@ -1,7 +1,7 @@
 /**
  * 「在 App 内打开」条（B 方案）
- * 仅对 iOS 用户显示（Safari、Chrome 等均可），点击「在 App 内打开」使用当前页 URL 作为 Universal Link，
- * 若已安装 App 则由系统打开 App；另提供「下载 App」跳转 App Store。
+ * 仅对 iOS 用户显示（iPhone / iPad / iPod，Safari、Chrome 等均可），
+ * 点击「在 App 内打开」使用当前页 URL 作为 Universal Link；另提供「下载 App」跳转 App Store。
  */
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -48,8 +48,11 @@ const OpenInAppBanner: React.FC = () => {
           className="open-in-app-banner-btn open-in-app-banner-btn-primary"
           rel="noopener noreferrer"
         >
-          <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
-          {t('pwa.openInApp')}
+          <span className="open-in-app-banner-btn-icon-wrap">
+            <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
+          </span>
+          <span className="open-in-app-banner-btn-text">{t('pwa.openInApp')}</span>
+          <span className="open-in-app-banner-btn-arrow" aria-hidden>→</span>
         </a>
         <a
           href={APP_STORE_URL}
@@ -57,8 +60,11 @@ const OpenInAppBanner: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
-          {t('pwa.downloadApp')}
+          <span className="open-in-app-banner-btn-icon-wrap">
+            <img src="/static/pwa.png" alt="" className="open-in-app-banner-btn-icon" aria-hidden />
+          </span>
+          <span className="open-in-app-banner-btn-text">{t('pwa.downloadApp')}</span>
+          <span className="open-in-app-banner-btn-arrow" aria-hidden>→</span>
         </a>
       </div>
     </div>
