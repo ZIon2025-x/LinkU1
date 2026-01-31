@@ -9,7 +9,6 @@ import { detectOS } from '../utils/deviceDetector';
 import { APP_STORE_URL } from '../config';
 import './OpenInAppBanner.css';
 
-const STORAGE_KEY = 'open-in-app-banner-dismissed';
 const FALLBACK_KEY = 'open-in-app-fallback';
 
 const OpenInAppBanner: React.FC = () => {
@@ -20,7 +19,6 @@ const OpenInAppBanner: React.FC = () => {
     if (typeof window === 'undefined') return;
     const os = detectOS();
     if (os.name !== 'iOS') return;
-    if (sessionStorage.getItem(STORAGE_KEY)) return;
     setVisible(true);
   }, []);
 
@@ -31,11 +29,6 @@ const OpenInAppBanner: React.FC = () => {
     sessionStorage.removeItem(FALLBACK_KEY);
     window.location.href = APP_STORE_URL;
   }, [visible]);
-
-  const handleDismiss = () => {
-    sessionStorage.setItem(STORAGE_KEY, '1');
-    setVisible(false);
-  };
 
   const handleOpenApp = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -49,14 +42,6 @@ const OpenInAppBanner: React.FC = () => {
   return (
     <div className="open-in-app-banner" role="banner">
       <div className="open-in-app-banner-float">
-        <button
-          type="button"
-          className="open-in-app-banner-close"
-          onClick={handleDismiss}
-          aria-label={t('common.close')}
-        >
-          ×
-        </button>
         <a
           href={typeof window !== 'undefined' ? window.location.href : '#'}
           className="open-in-app-banner-btn"
