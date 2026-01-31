@@ -136,6 +136,37 @@ struct VIPPurchaseView: View {
                 .cornerRadius(AppCornerRadius.medium)
                 .padding(.horizontal, AppSpacing.md)
                 
+                // 隐私政策与服务条款（Guideline 3.1.2 - 订阅应用须在应用内提供可用的隐私政策与 Terms of Use 链接）
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    NavigationLink(destination: PrivacyWebView()) {
+                        HStack {
+                            Text(LocalizationKey.infoPrivacyPolicy.localized)
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                    NavigationLink(destination: TermsWebView()) {
+                        HStack {
+                            Text(LocalizationKey.infoTermsOfService.localized)
+                                .font(AppTypography.subheadline)
+                                .foregroundColor(AppColors.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                    }
+                }
+                .padding(AppSpacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppColors.cardBackground)
+                .cornerRadius(AppCornerRadius.medium)
+                .padding(.horizontal, AppSpacing.md)
+                
                 Spacer(minLength: AppSpacing.xl)
             }
             .padding(.bottom, AppSpacing.xl)

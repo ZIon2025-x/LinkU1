@@ -16,11 +16,11 @@ struct TermsView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text(isChinese ? "版本：v0.9-beta" : "Version: v0.9-beta")
+                    Text(isChinese ? "版本：v1.0" : "Version: v1.0")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Text(isChinese ? "生效日期：2025年10月10日" : "Effective Date: October 10, 2025")
+                    Text(isChinese ? "生效日期：2026年1月" : "Effective Date: January 2026")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
@@ -44,9 +44,9 @@ struct TermsView: View {
                 TermsSection(
                     title: isChinese ? "1. 服务性质" : "1. Nature of Service",
                     content: [
-                        isChinese ? "Link²Ur 是一个在线任务撮合平台，连接任务发布者与任务接受者。我们提供信息撮合服务，并通过 Stripe 支付系统处理平台内的支付交易。我们可随时变更、暂停或终止访问。" : "Link²Ur is an online task matching platform connecting task posters with task takers. We provide information matching services and process in-platform payment transactions through the Stripe payment system. We may change, suspend or terminate access at any time.",
+                        isChinese ? "Link²Ur 是面向英国用户的本地服务平台，包括：（1）任务市场——连接任务发布者与任务接受者；（2）跳蚤市场——二手物品买卖；（3）社区论坛——按大学分类的讨论区；（4）VIP 会员——可选自动续期订阅（通过 Apple App Store 等渠道的应用内购买）。我们提供撮合与发布服务，并通过 Stripe（包括银行卡、Apple Pay、微信支付等）处理平台内支付。我们可随时变更、暂停或终止访问。" : "Link²Ur is a local service platform for users in the UK, comprising: (1) Task Marketplace — connecting task posters with task takers; (2) Flea Market — for buying and selling secondhand items; (3) Community Forum — for discussions by university; (4) VIP Membership — optional auto-renewable subscription (in-app purchase via Apple App Store or other supported channels). We provide matching and listing services and process in-platform payments through Stripe (including card, Apple Pay and WeChat Pay where available). We may change, suspend or terminate access at any time.",
                         isChinese ? "测试阶段声明：当前平台处于测试阶段，功能可能不完善，服务可能不稳定。用户使用本平台即表示理解并接受测试阶段可能存在的风险。" : "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
-                        isChinese ? "支付系统：平台使用 Stripe 支付系统处理在线支付。所有支付均通过 Stripe 安全处理，平台作为托管方，在任务完成后将资金转给任务接受者。" : "Payment System: The platform uses the Stripe payment system to process online payments. All payments are securely processed through Stripe, and the platform acts as an escrow service, transferring funds to task takers upon task completion."
+                        isChinese ? "支付系统：平台使用 Stripe 支付系统处理在线支付（包括银行卡、Apple Pay、微信支付等）。所有支付均通过 Stripe 等安全处理，平台作为托管方，在任务/交易完成后将资金转给接受者。VIP 订阅通过 Apple App Store 购买，适用 Apple 的条款与隐私政策。" : "Payment System: The platform uses the Stripe payment system to process online payments (including card, Apple Pay, WeChat Pay). All payments are securely processed; the platform acts as an escrow service. VIP subscriptions are purchased via the Apple App Store and are subject to Apple's terms and privacy policy."
                     ],
                     warnings: [
                         isChinese ? "测试阶段声明：当前平台处于测试阶段，功能可能不完善，服务可能不稳定。用户使用本平台即表示理解并接受测试阶段可能存在的风险。" : "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase."

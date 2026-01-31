@@ -2376,16 +2376,16 @@
   },
   "termsOfService": {
     "title": "Terms of Service",
-    "lastUpdated": "Last Updated: October 10, 2025",
-    "version": "Version: v0.9-beta",
-    "effectiveDate": "Effective Date: October 10, 2025",
+    "lastUpdated": "Last Updated: January 2026",
+    "version": "Version: v1.0",
+    "effectiveDate": "Effective Date: January 2026",
     "jurisdiction": "Applicable Jurisdiction: England & Wales",
     "operatorInfo": "Entity Information",
     "operator": "Operator (\"We\" \"Link²Ur\"): LINK2UR LTD",
     "contact": "Contact: info@link2ur.com",
     "serviceNature": {
       "title": "1. Nature of Service",
-      "content": "Link²Ur is an online task matching platform connecting task posters with task takers. We provide information matching services and process in-platform payment transactions through the Stripe payment system. We may change, suspend or terminate access at any time.",
+      "content": "Link²Ur is a local service platform for users in the UK, comprising: (1) Task Marketplace — connecting task posters with task takers; (2) Flea Market — for buying and selling secondhand items; (3) Community Forum — for discussions by university; (4) VIP Membership — optional auto-renewable subscription (in-app purchase via Apple App Store or other supported channels). We provide matching and listing services and process in-platform payments through Stripe (including card, Apple Pay and WeChat Pay where available). We may change, suspend or terminate access at any time.",
       "testingPhase": "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
       "paymentSystem": "Payment System: The platform uses the Stripe payment system to process online payments. All payments are securely processed through Stripe, and the platform acts as an escrow service, transferring funds to task takers upon task completion.",
       "recommendationSystem": "Personalized Recommendation System: The platform provides personalized task recommendation services based on user behavior, preferences, and geographic location. The recommendation algorithm analyzes your browsing history, search records, task acceptance preferences, frequently visited locations, and other information to recommend tasks that better match your interests and needs. You can opt out of personalized recommendations through settings, but this may affect recommendation quality. Recommendation results are for reference only, and the platform does not assume responsibility for the accuracy or suitability of recommendation results."
@@ -2499,9 +2499,9 @@
   },
   "privacyPolicy": {
     "title": "Privacy Notice",
-    "lastUpdated": "Last Updated: October 10, 2025",
-    "version": "Version: v0.9-beta",
-    "effectiveDate": "Effective Date: October 10, 2025",
+    "lastUpdated": "Last Updated: January 2026",
+    "version": "Version: v1.0",
+    "effectiveDate": "Effective Date: January 2026",
     "controller": "Controller",
     "operator": "LINK2UR LTD",
     "contactEmail": "Contact Email: info@link2ur.com",
@@ -2510,16 +2510,17 @@
     "dataCollection": {
       "title": "What Data We Collect & Processing Purposes (Legal Basis)",
       "accountData": "Account Data: Email, name (if provided), login records, etc. — For account creation and management, communication with you (contract performance/legitimate interests).",
-      "taskData": "Task and Communication Data: Task content, timestamps, communication records (in-platform messages/emails received by us) — For matching, risk control and support (contract performance/legitimate interests).",
-      "locationData": "Location Information: When you use the map location picker feature or allow the app to access location permissions, we collect location coordinates (latitude/longitude). We only display obfuscated locations (such as city or area), not precise coordinates. Location information is used for: (1) helping you select task/item locations, calculate distances, and matching; (2) providing location-based personalized task recommendations (such as recommending tasks near you); (3) analyzing your frequently visited locations to optimize recommendation algorithms. You can choose to manually enter locations instead; location services are not mandatory. GPS location data is only used for recommendation purposes and will not be shared with third parties (contract performance/legitimate interests).",
-      "recommendationData": "Recommendation System Data: To provide you with personalized task recommendations, we collect and analyze the following data: (1) Browsing behavior: tasks you browse, browsing duration, click records, etc.; (2) Search behavior: your search keywords, filter conditions, etc.; (3) Interaction behavior: tasks you accept, skip, or favorite, as well as your ratings and feedback on tasks; (4) Preference data: cities and locations you frequently visit, preferred task types, active time slots, etc.; (5) Historical task data: your task posting and acceptance history, used to analyze your preference patterns. This data is only used to improve the accuracy of recommendation algorithms and recommend tasks that better match your interests and needs. You can opt out of personalized recommendations through settings (legitimate interests).",
-      "technicalData": "Technical and Log Data: IP, device information, error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).",
+      "taskData": "Task, Flea Market, Forum and Communication Data: Task and flea market listing content, timestamps, in-platform messages, forum posts and replies, and related communication records — For matching, listings, risk control and support (contract performance/legitimate interests).",
+      "locationData": "Location Information: When you use the map location picker or allow the app to access location, we collect coordinates (latitude/longitude). We display only obfuscated locations (e.g. city or area). Location is used for: (1) selecting task/item locations, distance and matching; (2) location-based recommendations; (3) optimising recommendation algorithms. You may enter locations manually; location is not mandatory. GPS data is used for recommendation only and not shared with third parties (contract performance/legitimate interests).",
+      "recommendationData": "Recommendation System Data: We collect browsing and search behaviour, interaction data (tasks/items you view, accept, skip or favourite), preference and historical data to provide personalised task and content recommendations. You can opt out of personalised recommendations in settings (legitimate interests).",
+      "technicalData": "Technical and Log Data: IP, device information, app version (web and iOS/Android), error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).",
       "analyticsData": "Optional Analytics Cookies (if enabled): For understanding usage and improving experience (consent).",
-      "paymentData": "Payment Related: The platform uses the Stripe payment system to process payments. Payment information we collect includes: payment amount, payment status, payment time, task ID and other necessary information for reconciliation, support services and dispute resolution. Complete payment credentials (such as full credit card numbers) are processed by Stripe, and we do not access or store them. All payment data security is handled by Stripe in compliance with PCI DSS standards (contract performance/legitimate interests)."
+      "paymentData": "Payment Related: We process payments via Stripe (card, Apple Pay, WeChat Pay where available). We collect payment amount, status, time and relevant IDs for reconciliation and support. Full payment credentials are processed by Stripe/Apple/WeChat; we do not store them. VIP subscription purchases via the Apple App Store are subject to Apple’s terms and privacy policy; we receive only subscription status for access control (contract performance/legitimate interests)."
     },
     "dataSharing": {
       "title": "Who We Share With",
       "cloudServices": "Cloud Services/Hosting and Security Vendors: Only shared to the extent necessary for service provision, with data processing agreements in place.",
+      "paymentProcessors": "Payment and Subscription Processors (e.g. Stripe, Apple, WeChat Pay): Only to the extent necessary to process payments and VIP subscriptions; each has its own privacy policy.",
       "legalDisclosure": "Law Enforcement/Regulatory and Dispute Resolution: Disclose necessary information when legally required or to protect legitimate rights."
     },
     "internationalTransfer": {

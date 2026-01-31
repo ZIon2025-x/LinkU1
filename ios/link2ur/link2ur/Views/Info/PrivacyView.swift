@@ -16,11 +16,11 @@ struct PrivacyView: View {
                         .fontWeight(.bold)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text(isChinese ? "版本：v0.9-beta" : "Version: v0.9-beta")
+                    Text(isChinese ? "版本：v1.0" : "Version: v1.0")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Text(isChinese ? "生效日期：2025年10月10日" : "Effective Date: October 10, 2025")
+                    Text(isChinese ? "生效日期：2026年1月" : "Effective Date: January 2026")
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textSecondary)
                 }
@@ -43,11 +43,11 @@ struct PrivacyView: View {
                     title: isChinese ? "我们收集哪些数据 & 处理目的（法律依据）" : "What Data We Collect & Processing Purposes (Legal Basis)",
                     items: [
                         (isChinese ? "账户数据：邮箱、姓名（如提供）、登录记录等 —— 用于创建与管理账户、与您沟通（合同履行/合法利益）。" : "Account Data: Email, name (if provided), login records, etc. — For account creation and management, communication with you (contract performance/legitimate interests).", nil),
-                        (isChinese ? "任务与沟通数据：任务内容、时间、交流记录（站内消息/电子邮件中由我们接收的部分）—— 为撮合、风控与支持（合同履行/合法利益）。" : "Task and Communication Data: Task content, timestamps, communication records (in-platform messages/emails received by us) — For matching, risk control and support (contract performance/legitimate interests).", nil),
-                        (isChinese ? "位置信息：当您使用地图选点功能时，我们会收集位置坐标（经纬度）。我们仅显示模糊位置（如城市或区域），不显示精确坐标。位置信息用于帮助您选择任务/商品位置、计算距离和匹配。您可以选择手动输入位置，不强制使用定位功能（合同履行/合法利益）。" : "Location Information: When you use the map location picker feature, we collect location coordinates (latitude/longitude). We only display obfuscated locations (such as city or area), not precise coordinates. Location information is used to help you select task/item locations, calculate distances, and matching. You can choose to manually enter locations instead; location services are not mandatory (contract performance/legitimate interests).", nil),
-                        (isChinese ? "技术与日志数据：IP、设备信息、错误日志、必要 Cookies —— 用于安全、调试与防滥用（合法利益）。" : "Technical and Log Data: IP, device information, error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).", nil),
+                        (isChinese ? "任务、跳蚤市场、论坛与沟通数据：任务与二手商品发布内容、时间戳、站内消息、论坛发帖与回复及相关沟通记录 —— 用于撮合、展示、风控与支持（合同履行/合法利益）。" : "Task, Flea Market, Forum and Communication Data: Task and flea market listing content, timestamps, in-platform messages, forum posts and replies — For matching, listings, risk control and support (contract performance/legitimate interests).", nil),
+                        (isChinese ? "位置信息：当您使用地图选点或允许应用访问位置时，我们会收集坐标。我们仅展示模糊位置（如城市或区域）。您可手动输入位置，定位非必选（合同履行/合法利益）。" : "Location Information: When you use the map picker or allow the app to access location, we collect coordinates. We display only obfuscated locations (e.g. city or area). You may enter locations manually; location is not mandatory (contract performance/legitimate interests).", nil),
+                        (isChinese ? "技术与日志数据：IP、设备信息、应用版本（网页与 iOS）、错误日志、必要 Cookies —— 用于安全、调试与防滥用（合法利益）。" : "Technical and Log Data: IP, device information, app version (web and iOS), error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).", nil),
                         (isChinese ? "可选分析 Cookies（如启用）：用于了解使用情况与改进体验（同意）。" : "Optional Analytics Cookies (if enabled): For understanding usage and improving experience (consent).", nil),
-                        (isChinese ? "支付相关：我们不在平台内处理支付；如您进行站外支付，支付数据由相关第三方或交易对方处理，我们仅在对账或支持需要时获得最小必要信息（合同履行/合法利益）。" : "Payment Related: We do not process payments within the platform; if you make off-platform payments, payment data is handled by relevant third parties or transaction counterparts, and we only obtain minimal necessary information for reconciliation or support needs (contract performance/legitimate interests).", nil)
+                        (isChinese ? "支付相关：我们通过 Stripe（银行卡、Apple Pay、微信支付等）处理支付。我们收集支付金额、状态、时间及相关 ID 用于对账与支持。完整支付凭证由 Stripe/Apple/微信处理，我们不予存储。通过 Apple App Store 购买的 VIP 订阅适用 Apple 条款与隐私政策；我们仅接收订阅状态用于访问控制（合同履行/合法利益）。" : "Payment Related: We process payments via Stripe (card, Apple Pay, WeChat Pay where available). We collect payment amount, status, time and relevant IDs for reconciliation and support. Full payment credentials are processed by Stripe/Apple/WeChat; we do not store them. VIP subscription purchases via the Apple App Store are subject to Apple's terms and privacy policy; we receive only subscription status for access control (contract performance/legitimate interests).", nil)
                     ]
                 )
                 
@@ -56,6 +56,7 @@ struct PrivacyView: View {
                     title: isChinese ? "与谁共享" : "Who We Share With",
                     items: [
                         (isChinese ? "云服务/托管与安全供应商：仅在提供服务所必需的范围内共享，并签署数据处理条款。" : "Cloud Services/Hosting and Security Vendors: Only shared to the extent necessary for service provision, with data processing agreements in place.", nil),
+                        (isChinese ? "支付与订阅处理方（如 Stripe、Apple、微信支付）：仅在处理支付与 VIP 订阅所必需的范围内共享；各方另有其隐私政策。" : "Payment and Subscription Processors (e.g. Stripe, Apple, WeChat Pay): Only to the extent necessary to process payments and VIP subscriptions; each has its own privacy policy.", nil),
                         (isChinese ? "执法/监管与纠纷处理：在法律要求或为保护合法权利时披露必要信息。" : "Law Enforcement/Regulatory and Dispute Resolution: Disclose necessary information when legally required or to protect legitimate rights.", nil)
                     ]
                 )

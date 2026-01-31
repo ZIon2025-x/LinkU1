@@ -76,7 +76,11 @@ Link²Ur 是一个专为学生设计的本地服务平台，帮助您轻松连�
 • 连接本地服务提供者
 
 立即下载 Link²Ur，开启您的本地服务之旅！
+
+服务条款（Terms of Use）：https://www.link2ur.com/terms
 ```
+
+**Guideline 3.1.2 合规**：提供自动续期订阅的应用须在 App 描述或 EULA 栏提供可用的 Terms of Use 链接。请务必在描述末尾保留上述「服务条款」链接一行，或在 App Store Connect 的 EULA 处填写自定义 EULA。
 
 ### 版权信息（Copyright）
 ```
@@ -147,7 +151,11 @@ Link²Ur is a local service platform designed specifically for students, helping
 • Connecting with local service providers
 
 Download Link²Ur now and start your local service journey!
+
+Terms of Use: https://www.link2ur.com/terms
 ```
+
+**Guideline 3.1.2 compliance**: Apps offering auto-renewable subscriptions must include a functional link to Terms of Use (EULA) in the App Description or in the EULA field in App Store Connect. Keep the "Terms of Use" line above at the end of the description, or provide a custom EULA in the EULA field.
 
 ### Copyright
 ```
@@ -170,7 +178,10 @@ Download Link²Ur now and start your local service journey!
 
 ### 3. 应用隐私（App Privacy）
 - **数据收集**：根据实际功能填写
-- **隐私政策 URL**：https://www.link2ur.com/privacy
+- **隐私政策 URL**：https://www.link2ur.com/privacy（必填，且须可访问）
+
+### 3.1 Guideline 3.1.2 - 订阅应用 EULA（必填）
+- **Terms of Use (EULA)**：在「版本信息」的**描述**末尾加入可点击链接「服务条款：https://www.link2ur.com/terms」（见上方完整描述示例），或在 App Store Connect 的 **EULA / 许可协议** 处选择「自定义 EULA」并填写条款。
 
 ### 4. 版本信息（Version Information）
 - **推广文本**：使用上面的"推广文本"
@@ -209,6 +220,7 @@ Download Link²Ur now and start your local service journey!
 - [ ] 中英文版本都已准备
 - [ ] 联系信息准确
 - [ ] 隐私政策和服务条款已准备
+- [ ] **Guideline 3.1.2**：描述末尾含可点击的 Terms of Use 链接，或已在 EULA 栏填写自定义 EULA；应用内 VIP 购买页已提供隐私政策与服务条款链接
 
 ---
 

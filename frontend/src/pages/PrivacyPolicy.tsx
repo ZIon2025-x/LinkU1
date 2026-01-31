@@ -166,6 +166,7 @@ const PrivacyPolicy: React.FC = () => {
                 {t('privacyPolicy.dataSharing.title')}
               </h2>
               <p>{t('privacyPolicy.dataSharing.cloudServices')}</p>
+              <p>{t('privacyPolicy.dataSharing.paymentProcessors')}</p>
               <p>{t('privacyPolicy.dataSharing.legalDisclosure')}</p>
 
               {/* 国际传输 */}
