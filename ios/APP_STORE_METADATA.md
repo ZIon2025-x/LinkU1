@@ -20,28 +20,28 @@
 **最多 170 个字符，可随时更新**
 
 ```
-🎓 专为学生打造的本地服务平台！发布任务、买卖二手、参与社区，连接身边的技能与需求。安全可靠，立即体验！
+🎓 面向英国用户的本地服务平台！发布任务、买卖二手、参与社区，连接身边的技能与需求。安全可靠，立即体验！
 ```
 
 ### 简短描述（Subtitle）
 **最多 30 个字符**
 
 ```
-连接学生与本地服务的平台
+连接英国用户与本地服务的平台
 ```
 
 ### 关键词（Keywords）
 **最多 100 个字符，用逗号分隔，无空格**
 
 ```
-link2ur,link to you,link2u,学生,任务,服务,跳蚤市场,论坛,社区,本地服务,兼职,二手,交易,任务平台,学生服务,校园服务,技能匹配,任务发布,二手交易,社区论坛
+link2ur,link to you,link2u,英国,任务,服务,跳蚤市场,论坛,社区,本地服务,兼职,二手,交易,任务平台,英国用户,本地生活,技能匹配,任务发布,二手交易,社区论坛
 ```
 
 ### 完整描述（Description）
 **最多 4000 个字符**
 
 ```
-Link²Ur 是一个专为学生设计的本地服务平台，帮助您轻松连接身边的技能与需求。
+Link²Ur 是一个面向英国用户的本地服务平台，帮助您轻松连接身边的技能与需求。
 
 🌟 核心功能
 
@@ -62,7 +62,7 @@ Link²Ur 是一个专为学生设计的本地服务平台，帮助您轻松连�
 
 🔒 安全可靠
 
-• 学生身份验证，确保平台用户真实性
+• 身份验证，确保平台用户真实性
 • 安全的支付系统，保障交易安全
 • 完善的隐私保护，保护您的个人信息
 • 专业的客服支持，随时为您服务
@@ -72,7 +72,7 @@ Link²Ur 是一个专为学生设计的本地服务平台，帮助您轻松连�
 • 需要帮助完成某项任务
 • 想要通过技能赚取收入
 • 寻找或出售二手商品
-• 参与校园社区讨论
+• 参与本地社区讨论
 • 连接本地服务提供者
 
 立即下载 Link²Ur，开启您的本地服务之旅！
@@ -95,28 +95,28 @@ Link²Ur 是一个专为学生设计的本地服务平台，帮助您轻松连�
 **Maximum 170 characters, can be updated anytime**
 
 ```
-🎓 The local service platform designed for students! Publish tasks, buy & sell items, join communities. Connect skills with needs. Safe & reliable. Download now!
+🎓 The local service platform for users in the UK! Publish tasks, buy & sell items, join communities. Connect skills with needs. Safe & reliable. Download now!
 ```
 
 ### Subtitle
 **Maximum 30 characters**
 
 ```
-Connect Students with Local Services
+Connect UK Users with Local Services
 ```
 
 ### Keywords
 **Maximum 100 characters, comma-separated, no spaces**
 
 ```
-link2ur,link to you,link2u,student,task,service,flea market,forum,community,local service,part-time,secondhand,trade,task platform,student service,campus service,skill matching,task publishing,secondhand trading,community forum
+link2ur,link to you,link2u,UK,task,service,flea market,forum,community,local service,part-time,secondhand,trade,task platform,UK users,local life,skill matching,task publishing,secondhand trading,community forum
 ```
 
 ### Description
 **Maximum 4000 characters**
 
 ```
-Link²Ur is a local service platform designed specifically for students, helping you easily connect skills with needs in your community.
+Link²Ur is a local service platform for users in the UK, helping you easily connect skills with needs in your community.
 
 🌟 Core Features
 
@@ -137,7 +137,7 @@ Link²Ur is a local service platform designed specifically for students, helping
 
 🔒 Safe & Reliable
 
-• Student identity verification ensures authentic platform users
+• Identity verification ensures authentic platform users
 • Secure payment system protects your transactions
 • Comprehensive privacy protection safeguards your personal information
 • Professional customer support available anytime
@@ -147,7 +147,7 @@ Link²Ur is a local service platform designed specifically for students, helping
 • Need help completing a task
 • Want to earn income through your skills
 • Looking for or selling secondhand items
-• Participating in campus community discussions
+• Participating in local community discussions
 • Connecting with local service providers
 
 Download Link²Ur now and start your local service journey!
@@ -205,7 +205,7 @@ Terms of Use: https://www.link2ur.com/terms
 
 1. **关键词必须包含 "link2ur"**：确保用户搜索应用名称时能找到
 2. **描述要突出核心功能**：任务、跳蚤市场、论坛
-3. **强调安全性**：学生验证、安全支付、隐私保护
+3. **强调安全性**：身份验证、安全支付、隐私保护
 4. **使用表情符号**：让描述更吸引人（但不要过度使用）
 5. **定期更新推广文本**：可以随时更新，用于推广活动
 

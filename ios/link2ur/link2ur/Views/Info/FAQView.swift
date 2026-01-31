@@ -12,6 +12,23 @@ struct FAQView: View {
     private var faqSections: [FAQSection] {
         [
             FAQSection(
+                id: "about",
+                title: isChinese ? "关于 Link²Ur" : "About Link²Ur",
+                items: [
+                    FAQItem(
+                        id: "about_1",
+                        question: isChinese ? "Link²Ur 是什么？" : "What is Link²Ur?",
+                        answer: isChinese ? "Link²Ur 是面向英国用户的本地服务平台，包含：任务市场（发布/接单）、跳蚤市场（二手买卖）、社区论坛、实时消息与安全支付。通过身份验证，连接身边的技能与需求。" : "Link²Ur is a local service platform for users in the UK. It includes: task marketplace (post/accept tasks), flea market (buy/sell secondhand), community forum, real-time messaging, and secure payments. Identity verification connects skills with needs in your community.",
+                        isOpen: true
+                    ),
+                    FAQItem(
+                        id: "about_2",
+                        question: isChinese ? "谁可以使用 Link²Ur？" : "Who can use Link²Ur?",
+                        answer: isChinese ? "主要面向英国用户。注册时需完成身份验证（如使用学校邮箱等），以确保平台用户真实性与交易安全。" : "Link²Ur is mainly for users in the UK. Registration may require identity verification (e.g. school email) to ensure authentic users and safer transactions."
+                    )
+                ]
+            ),
+            FAQSection(
                 id: "task_flow",
                 title: isChinese ? "任务流程" : "Task Flow",
                 items: [
@@ -25,6 +42,23 @@ struct FAQView: View {
                         id: "task_flow_2",
                         question: isChinese ? "如何提高匹配与成交率？" : "How to improve matching and success rate?",
                         answer: isChinese ? "尽量提供清晰需求、合理预算与可行时间窗口；及时回复消息并保持礼貌沟通；必要时补充图片或示例。" : "Provide clear requirements, reasonable budget and feasible time windows; reply promptly and communicate politely; add images/examples if helpful."
+                    )
+                ]
+            ),
+            FAQSection(
+                id: "payment_refunds",
+                title: isChinese ? "支付与退款" : "Payment & Refunds",
+                items: [
+                    FAQItem(
+                        id: "payment_1",
+                        question: isChinese ? "平台支付如何运作？钱什么时候到账？" : "How does payment work? When do I get paid?",
+                        answer: isChinese ? "任务/订单采用平台托管：发布方或买家付款后，款项由平台暂存；任务/交易经双方确认完成后，款项会释放给接单方或卖家。请务必在平台内完成支付，勿私下转账，以保障双方权益。" : "Payments are held by the platform: the poster or buyer pays first, and funds are released to the taker or seller after both parties confirm completion. Always pay through the platform — do not pay privately — to protect everyone.",
+                        isOpen: true
+                    ),
+                    FAQItem(
+                        id: "payment_2",
+                        question: isChinese ? "如何申请退款？" : "How do I request a refund?",
+                        answer: isChinese ? "若任务取消、订单未完成或存在争议，可在相应任务/订单页提交退款申请。客服会根据双方说明与平台规则进行审核，通过后款项将按原路退回。具体以《服务条款》与订单状态为准。" : "If a task is cancelled, an order is not completed, or there is a dispute, you can submit a refund request on the task/order page. Support will review based on both sides' information and platform rules; approved refunds will be returned to the original payment method. See Terms of Use and order status for details."
                     )
                 ]
             ),
@@ -130,7 +164,7 @@ struct FAQView: View {
                     FAQItem(
                         id: "support_1",
                         question: isChinese ? "客服在线时间与响应规则？" : "Support availability and response?",
-                        answer: isChinese ? "测试阶段客服在线时段不固定。若遇紧急问题，请先在 FAQ 中查找，或发送邮件至 support@link2ur.com。" : "During testing, support hours are irregular. For urgent issues, check this FAQ first or email support@link2ur.com.",
+                        answer: isChinese ? "如有问题请先查看本 FAQ。需要人工协助可发送邮件至 support@link2ur.com，我们会尽快回复。" : "Please check this FAQ first. For assistance, email support@link2ur.com and we will respond as soon as possible.",
                         isOpen: true
                     ),
                     FAQItem(
@@ -168,8 +202,8 @@ struct FAQView: View {
                 items: [
                     FAQItem(
                         id: "others_1",
-                        question: isChinese ? "是否支持移动端？" : "Is mobile supported?",
-                        answer: isChinese ? "已对移动端进行适配，建议使用现代浏览器获得更佳体验。" : "Yes. The site is mobile‑friendly; use a modern browser for best experience."
+                        question: isChinese ? "是否有 App？网页支持手机吗？" : "Is there an app? Is the website mobile-friendly?",
+                        answer: isChinese ? "我们提供 iOS App（App Store 可下载），同时官网已对手机浏览器适配，使用现代浏览器即可获得良好体验。" : "We have an iOS app available on the App Store. The website is also mobile-friendly — use a modern browser for a good experience."
                     ),
                     FAQItem(
                         id: "others_2",
@@ -184,7 +218,7 @@ struct FAQView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text(isChinese ? "我们根据近期用户反馈整理了常见问题与答案，帮助你更快上手平台。" : "We compiled common questions and answers to help you get started quickly.")
+                Text(isChinese ? "我们整理了常见问题与答案，帮助你更快上手 Link²Ur（任务、跳蚤市场、论坛与支付等）。" : "We compiled common questions and answers to help you get started with Link²Ur — tasks, flea market, forum, and payments.")
                     .font(AppTypography.body)
                     .foregroundColor(AppColors.textSecondary)
                     .padding(.horizontal, AppSpacing.md)

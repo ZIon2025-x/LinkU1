@@ -82,10 +82,33 @@ const FAQ: React.FC = () => {
           {L('常见问题（FAQ）', 'Frequently Asked Questions (FAQ)')}
         </h1>
         <p style={{color: '#64748b', marginBottom: 24}}>
-          {L('我们根据近期用户反馈整理了常见问题与答案，帮助你更快上手平台。', 'We compiled common questions and answers to help you get started quickly.')}
+          {L('我们整理了常见问题与答案，帮助你更快上手 Link²Ur（任务、跳蚤市场、论坛与支付等）。', 'We compiled common questions and answers to help you get started with Link²Ur — tasks, flea market, forum, and payments.')}
         </p>
 
         <div style={{display: 'flex', flexDirection: 'column', gap: 16}}>
+          {/* 关于 Link²Ur / About Link²Ur */}
+          <section style={{background: '#fff', borderRadius: 12, boxShadow: '0 6px 20px rgba(43,108,176,0.12)', padding: 20, border: '1px solid #e6f7ff'}}>
+            <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 12}}>{L('关于 Link²Ur', 'About Link²Ur')}</h2>
+            <details open>
+              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('Link²Ur 是什么？', 'What is Link²Ur?')}</summary>
+              <div style={{marginTop: 8, color: '#334155'}}>
+                {L(
+                  'Link²Ur 是面向英国用户的本地服务平台，包含：任务市场（发布/接单）、跳蚤市场（二手买卖）、社区论坛、实时消息与安全支付。通过身份验证，连接身边的技能与需求。',
+                  'Link²Ur is a local service platform for users in the UK. It includes: task marketplace (post/accept tasks), flea market (buy/sell secondhand), community forum, real-time messaging, and secure payments. Identity verification connects skills with needs in your community.'
+                )}
+              </div>
+            </details>
+            <details>
+              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('谁可以使用 Link²Ur？', 'Who can use Link²Ur?')}</summary>
+              <div style={{marginTop: 8, color: '#334155'}}>
+                {L(
+                  '主要面向英国用户。注册时需完成身份验证（如使用学校邮箱等），以确保平台用户真实性与交易安全。',
+                  'Link²Ur is mainly for users in the UK. Registration may require identity verification (e.g. school email) to ensure authentic users and safer transactions.'
+                )}
+              </div>
+            </details>
+          </section>
+
           {/* 任务流程 / Task Flow */}
           <section style={{background: '#fff', borderRadius: 12, boxShadow: '0 6px 20px rgba(43,108,176,0.12)', padding: 20, border: '1px solid #e6f7ff'}}>
             <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 12}}>{L('任务流程', 'Task Flow')}</h2>
@@ -104,6 +127,29 @@ const FAQ: React.FC = () => {
                 {L(
                   '尽量提供清晰需求、合理预算与可行时间窗口；及时回复消息并保持礼貌沟通；必要时补充图片或示例。',
                   'Provide clear requirements, reasonable budget and feasible time windows; reply promptly and communicate politely; add images/examples if helpful.'
+                )}
+              </div>
+            </details>
+          </section>
+
+          {/* 支付与退款 / Payment & Refunds */}
+          <section style={{background: '#fff', borderRadius: 12, boxShadow: '0 6px 20px rgba(43,108,176,0.12)', padding: 20, border: '1px solid #e6f7ff'}}>
+            <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 12}}>{L('支付与退款', 'Payment & Refunds')}</h2>
+            <details open>
+              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('平台支付如何运作？钱什么时候到账？', 'How does payment work? When do I get paid?')}</summary>
+              <div style={{marginTop: 8, color: '#334155'}}>
+                {L(
+                  '任务/订单采用平台托管：发布方或买家付款后，款项由平台暂存；任务/交易经双方确认完成后，款项会释放给接单方或卖家。请务必在平台内完成支付，勿私下转账，以保障双方权益。',
+                  'Payments are held by the platform: the poster or buyer pays first, and funds are released to the taker or seller after both parties confirm completion. Always pay through the platform — do not pay privately — to protect everyone.'
+                )}
+              </div>
+            </details>
+            <details>
+              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('如何申请退款？', 'How do I request a refund?')}</summary>
+              <div style={{marginTop: 8, color: '#334155'}}>
+                {L(
+                  '若任务取消、订单未完成或存在争议，可在相应任务/订单页提交退款申请。客服会根据双方说明与平台规则进行审核，通过后款项将按原路退回。具体以《服务条款》与订单状态为准。',
+                  'If a task is cancelled, an order is not completed, or there is a dispute, you can submit a refund request on the task/order page. Support will review based on both sides’ information and platform rules; approved refunds will be returned to the original payment method. See Terms of Use and order status for details.'
                 )}
               </div>
             </details>
@@ -239,7 +285,7 @@ const FAQ: React.FC = () => {
             <details open>
               <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('客服在线时间与响应规则？', 'Support availability and response?')}</summary>
               <div style={{marginTop: 8, color: '#334155'}}>
-                {L('测试阶段客服在线时段不固定。若遇紧急问题，请先在 FAQ 中查找，或发送邮件至 support@link2ur.com。', 'During testing, support hours are irregular. For urgent issues, check this FAQ first or email support@link2ur.com.')}
+                {L('如有问题请先查看本 FAQ。需要人工协助可发送邮件至 support@link2ur.com，我们会尽快回复。', 'Please check this FAQ first. For assistance, email support@link2ur.com and we will respond as soon as possible.')}
               </div>
             </details>
             <details>
@@ -280,9 +326,9 @@ const FAQ: React.FC = () => {
           <section style={{background: '#fff', borderRadius: 12, boxShadow: '0 6px 20px rgba(43,108,176,0.12)', padding: 20, border: '1px solid #e6f7ff'}}>
             <h2 style={{fontSize: 20, fontWeight: 700, marginBottom: 12}}>{L('其他', 'Others')}</h2>
             <details>
-              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('是否支持移动端？', 'Is mobile supported?')}</summary>
+              <summary style={{cursor: 'pointer', fontWeight: 600}}>{L('是否有 App？网页支持手机吗？', 'Is there an app? Is the website mobile-friendly?')}</summary>
               <div style={{marginTop: 8, color: '#334155'}}>
-                {L('已对移动端进行适配，建议使用现代浏览器获得更佳体验。', 'Yes. The site is mobile‑friendly; use a modern browser for best experience.')}
+                {L('我们提供 iOS App（App Store 可下载），同时官网已对手机浏览器适配，使用现代浏览器即可获得良好体验。', 'We have an iOS app available on the App Store. The website is also mobile-friendly — use a modern browser for a good experience.')}
               </div>
             </details>
             <details>

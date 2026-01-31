@@ -18,7 +18,6 @@ import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
-import InstallPrompt from './components/InstallPrompt';
 import NotificationPermissionPrompt from './components/NotificationPermissionPrompt';
 import { detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
@@ -346,7 +345,6 @@ function App() {
                       <ScrollToTop />
                       <LanguageRoutes />
                       <CookieManager />
-                      <InstallPrompt />
                       <NotificationPermissionPrompt />
                     </ErrorBoundary>
                   </Router>
