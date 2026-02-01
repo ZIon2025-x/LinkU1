@@ -181,12 +181,14 @@ const TermsOfService: React.FC = () => {
               <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
                 {t('termsOfService.platformPosition.offlineTransactions')}
               </p>
+              <p style={{ marginTop: '16px', whiteSpace: 'pre-line' }}>{t('termsOfService.platformPosition.scopeOfServices')}</p>
 
               {/* 4. 费用与平台规则 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.feesAndRules.title')}
               </h2>
               <p>{t('termsOfService.feesAndRules.content')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.feesAndRules.applicationFee')}</p>
               <p>{t('termsOfService.feesAndRules.paymentProcessing')}</p>
               <p>{t('termsOfService.feesAndRules.reviews')}</p>
 
@@ -197,17 +199,45 @@ const TermsOfService: React.FC = () => {
               <p>{t('termsOfService.paymentAndRefund.paymentMethod')}</p>
               <p>{t('termsOfService.paymentAndRefund.paymentProcess')}</p>
               <p>{t('termsOfService.paymentAndRefund.escrowService')}</p>
+              <p style={{ fontWeight: '600', marginTop: '20px' }}>{t('termsOfService.paymentAndRefund.guaranteePayment')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.paymentAndRefund.guaranteePaymentIntro')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.guaranteeWhat')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.guaranteeWhatNot')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.fundReleaseConditions')}</p>
               <p style={{ fontWeight: '600', marginTop: '16px' }}>{t('termsOfService.paymentAndRefund.completionConfirmation')}</p>
               <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.refundBeforeConfirmation')}</p>
               <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.appealAfterConfirmation')}</p>
+              <p style={{ marginTop: '12px', fontWeight: '600' }}>{t('termsOfService.paymentAndRefund.refundDispute')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.refundDisputeDetails')}</p>
               <p style={{ marginTop: '12px', fontWeight: '600' }}>{t('termsOfService.paymentAndRefund.refundProcessing')}</p>
               <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.refundProcessingDetails')}</p>
+              <p style={{ marginTop: '12px', fontWeight: '600' }}>{t('termsOfService.paymentAndRefund.chargeback')}</p>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-line' }}>{t('termsOfService.paymentAndRefund.chargebackDetails')}</p>
               <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca', marginTop: '16px' }}>
                 {t('termsOfService.paymentAndRefund.refundWarning')}
               </p>
               <p style={{ marginTop: '12px' }}>{t('termsOfService.paymentAndRefund.paymentSecurity')}</p>
 
-              {/* 6. 用户行为与禁止事项 */}
+              {/* 6. 禁止的任务类型 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.prohibitedTasks.title')}
+              </h2>
+              <p>{t('termsOfService.prohibitedTasks.introduction')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.illegalActivities')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.illegalActivitiesList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.harmfulContent')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.harmfulContentList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.fraudulentServices')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.fraudulentServicesList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.regulatedServices')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.regulatedServicesList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.platformAbuse')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.platformAbuseList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.prohibitedTasks.otherProhibited')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.prohibitedTasks.otherProhibitedList')}</p>
+              <p style={{ marginTop: '12px' }}>{t('termsOfService.prohibitedTasks.enforcement')}</p>
+
+              {/* 7. 用户行为与禁止事项 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.userBehavior.title')}
               </h2>
@@ -217,7 +247,23 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.userBehavior.accountSuspension')}
               </p>
 
-              {/* 7. 知识产权与用户内容 */}
+              {/* 8. 用户责任与义务 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.userResponsibilities.title')}
+              </h2>
+              <p>{t('termsOfService.userResponsibilities.introduction')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.userResponsibilities.accountSecurity')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.userResponsibilities.accountSecurityList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.userResponsibilities.accurateInformation')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.userResponsibilities.accurateInformationList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.userResponsibilities.legalCompliance')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.userResponsibilities.legalComplianceList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.userResponsibilities.disputeResolution')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.userResponsibilities.disputeResolutionList')}</p>
+              <p style={{ fontWeight: '600', marginTop: '8px' }}>{t('termsOfService.userResponsibilities.consequences')}</p>
+              <p style={{ whiteSpace: 'pre-line' }}>{t('termsOfService.userResponsibilities.consequencesDetails')}</p>
+
+              {/* 9. 知识产权与用户内容 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.intellectualProperty.title')}
               </h2>
@@ -225,14 +271,14 @@ const TermsOfService: React.FC = () => {
               <p>{t('termsOfService.intellectualProperty.userContent')}</p>
               <p>{t('termsOfService.intellectualProperty.complaints')}</p>
 
-              {/* 8. 隐私与数据 */}
+              {/* 10. 隐私与数据 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.privacyData.title')}
               </h2>
               <p>{t('termsOfService.privacyData.controller')}</p>
               <p>{t('termsOfService.privacyData.payments')}</p>
 
-              {/* 9. 免责声明与责任限制 */}
+              {/* 11. 免责声明与责任限制 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.disclaimer.title')}
               </h2>
@@ -240,7 +286,7 @@ const TermsOfService: React.FC = () => {
               <p>{t('termsOfService.disclaimer.liability')}</p>
               <p>{t('termsOfService.disclaimer.limit')}</p>
 
-              {/* 10. 终止与数据保留 */}
+              {/* 12. 终止与数据保留 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {t('termsOfService.termination.title')}
               </h2>
@@ -252,7 +298,35 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.disputes.title')}
               </h2>
               <p>{t('termsOfService.disputes.negotiation')}</p>
-              <p>{t('termsOfService.disputes.law')}</p>
+              <p style={{ fontWeight: '600', marginTop: '16px' }}>{t('termsOfService.disputes.disputeArbitration')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.whoCanSubmit')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.howToSubmit')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.platformMediation')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.platformDecision')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.decisionFactors')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.decisionBinding')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.disputes.legalRemedy')}</p>
+              <p style={{ marginTop: '16px' }}>{t('termsOfService.disputes.law')}</p>
+
+              {/* 论坛服务条款 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.forumTerms.title')}
+              </h2>
+              <p>{t('termsOfService.forumTerms.intro')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.forumTerms.contentResponsibility')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.forumTerms.moderation')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.forumTerms.conduct')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.forumTerms.disclaimer')}</p>
+
+              {/* 跳蚤市场服务条款 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.fleaMarketTerms.title')}
+              </h2>
+              <p>{t('termsOfService.fleaMarketTerms.intro')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.fleaMarketTerms.platformPosition')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.fleaMarketTerms.sellerResponsibility')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.fleaMarketTerms.riskNotice')}</p>
+              <p style={{ marginTop: '8px' }}>{t('termsOfService.fleaMarketTerms.disclaimer')}</p>
 
               {/* 消费者条款附录 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
