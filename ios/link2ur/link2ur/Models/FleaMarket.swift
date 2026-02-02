@@ -42,6 +42,7 @@ struct FleaMarketItem: Codable, Identifiable {
     let latitude: Double?  // 纬度（用于地图选点和距离计算）
     let longitude: Double?  // 经度（用于地图选点和距离计算）
     let sellerId: String
+    let sellerUserLevel: String?  // 卖家会员等级：用于「会员卖家」角标
     let seller: User?
     let status: String
     let viewCount: Int
@@ -66,6 +67,7 @@ struct FleaMarketItem: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, title, description, price, currency, category, images, seller, status, location, latitude, longitude
         case sellerId = "seller_id"
+        case sellerUserLevel = "seller_user_level"
         case viewCount = "view_count"
         case favoriteCount = "favorite_count"
         case refreshedAt = "refreshed_at"
@@ -109,6 +111,7 @@ struct FleaMarketItem: Codable, Identifiable {
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
         sellerId = try container.decode(String.self, forKey: .sellerId)
+        sellerUserLevel = try container.decodeIfPresent(String.self, forKey: .sellerUserLevel)
         seller = try container.decodeIfPresent(User.self, forKey: .seller)
         status = try container.decode(String.self, forKey: .status)
         viewCount = try container.decode(Int.self, forKey: .viewCount)
@@ -153,6 +156,7 @@ struct FleaMarketItem: Codable, Identifiable {
         try container.encodeIfPresent(latitude, forKey: .latitude)
         try container.encodeIfPresent(longitude, forKey: .longitude)
         try container.encode(sellerId, forKey: .sellerId)
+        try container.encodeIfPresent(sellerUserLevel, forKey: .sellerUserLevel)
         try container.encodeIfPresent(seller, forKey: .seller)
         try container.encode(status, forKey: .status)
         try container.encode(viewCount, forKey: .viewCount)

@@ -175,6 +175,26 @@ struct ItemCard: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isFavorited ? .topLeading : .topTrailing)
                 .padding(8)
+                
+                // 会员卖家角标 - 左下角
+                if let level = item.sellerUserLevel, level == "vip" || level == "super" {
+                    Text(LocalizationKey.homeMemberSeller.localized)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color(red: 0.96, green: 0.62, blue: 0.04), Color(red: 0.85, green: 0.47, blue: 0.02)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(Capsule())
+                        .shadow(color: Color.orange.opacity(0.4), radius: 2, x: 0, y: 1)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(8)
+                }
             }
             
             // 2. 商品信息区域

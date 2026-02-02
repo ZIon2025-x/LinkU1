@@ -18,6 +18,7 @@ import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import { getForumPostDisplayTitle } from '../utils/displayLocale';
+import MemberBadge from '../components/MemberBadge';
 import styles from './Forum.module.css';
 
 const { Title, Text } = Typography;
@@ -39,6 +40,7 @@ interface ForumCategory {
       id: string;
       name: string;
       avatar?: string;
+      user_level?: string;
     };
     last_reply_at: string;
     reply_count: number;
@@ -302,8 +304,11 @@ const Forum: React.FC = () => {
                     <div className={styles.latestPostMeta}>
                       <Space size="small" split="|">
                         {category.latest_post.author && (
-                          <span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <UserOutlined /> {category.latest_post.author.name}
+                            {category.latest_post.author.user_level && (category.latest_post.author.user_level === 'vip' || category.latest_post.author.user_level === 'super') && (
+                              <MemberBadge level={category.latest_post.author.user_level} variant="compact" />
+                            )}
                           </span>
                         )}
                         <span>

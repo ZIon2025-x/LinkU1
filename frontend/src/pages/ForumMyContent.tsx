@@ -26,6 +26,7 @@ import { formatViewCount } from '../utils/formatUtils';
 import { getForumPostDisplayTitle } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import SafeContent from '../components/SafeContent';
+import MemberBadge from '../components/MemberBadge';
 import styles from './ForumMyContent.module.css';
 
 const { Title, Text } = Typography;
@@ -352,8 +353,14 @@ const ForumMyContent: React.FC = () => {
                           </Space>
                         </div>
                         <div className={styles.itemMeta}>
-                          <Space split="|">
+                          <Space split="|" wrap>
                             <Tag>{post.category.name}</Tag>
+                            {currentUser?.user_level && (currentUser.user_level === 'vip' || currentUser.user_level === 'super') && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                {t('forum.me') || '我'}
+                                <MemberBadge level={currentUser.user_level} variant="compact" />
+                              </span>
+                            )}
                             <span>
                               <EyeOutlined /> {formatViewCount(post.view_count)}
                             </span>

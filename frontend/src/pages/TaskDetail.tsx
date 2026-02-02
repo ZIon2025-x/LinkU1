@@ -3509,8 +3509,11 @@ const TaskDetail: React.FC = () => {
                     alignItems: 'center'
                   }}>
                     <div>
-                      <div style={{ fontWeight: '600', color: '#333', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: '600', color: '#333', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         {app.applicant_name}
+                        {app.applicant_user_level && (app.applicant_user_level === 'vip' || app.applicant_user_level === 'super') && (
+                          <MemberBadge level={app.applicant_user_level} variant="compact" />
+                        )}
                       </div>
                       {app.message && (
                         <div style={{ color: '#666', fontSize: '14px', marginBottom: '4px' }}>

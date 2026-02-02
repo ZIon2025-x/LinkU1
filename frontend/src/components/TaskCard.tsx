@@ -462,6 +462,22 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
             {getTaskLevelLabel(task.task_level)}
           </div>
         )}
+        {/* 会员发布角标：发布者为 VIP/超级VIP 时显示 */}
+        {task.poster_user_level && (task.poster_user_level === 'vip' || task.poster_user_level === 'super') && (
+          <div
+            className={isMobile ? styles.levelBadgeMobile : styles.levelBadge}
+            style={{
+              top: isMobile ? '8px' : '12px',
+              left: isMobile ? '8px' : '12px',
+              right: 'auto',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              fontSize: isMobile ? '9px' : '10px',
+              padding: isMobile ? '2px 6px' : '4px 8px',
+            }}
+          >
+            {t('home.memberPublished') || '会员发布'}
+          </div>
+        )}
       </div>
       
       {/* 任务标题 */}

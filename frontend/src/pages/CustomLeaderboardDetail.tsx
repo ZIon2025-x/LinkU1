@@ -24,6 +24,7 @@ import LoginModal from '../components/LoginModal';
 import SEOHead from '../components/SEOHead';
 import HreflangManager from '../components/HreflangManager';
 import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
+import MemberBadge from '../components/MemberBadge';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import styles from './ForumLeaderboard.module.css';
 
@@ -1510,6 +1511,21 @@ const CustomLeaderboardDetail: React.FC = () => {
                               wordBreak: 'break-word'
                             }}>
                               📍 {item.address}
+                            </div>
+                          )}
+                          {item.submitter_info && (
+                            <div style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: 8, 
+                              marginBottom: 8,
+                              fontSize: 12,
+                              color: '#666'
+                            }}>
+                              <span>{t('forum.submitter') || '提交者'}: {item.submitter_info.name}</span>
+                              {item.submitter_info.user_level && (item.submitter_info.user_level === 'vip' || item.submitter_info.user_level === 'super') && (
+                                <MemberBadge level={item.submitter_info.user_level} variant="compact" />
+                              )}
                             </div>
                           )}
                           {/* 图片展示 */}

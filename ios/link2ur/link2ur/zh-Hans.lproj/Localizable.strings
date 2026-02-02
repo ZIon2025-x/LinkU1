@@ -111,6 +111,8 @@
 "home.no_experts" = "暂无任务达人";
 "home.no_experts_message" = "还没有任务达人，敬请期待...";
 "home.recommended_tasks" = "推荐任务";
+"home.member_published" = "会员发布";
+"home.member_seller" = "会员卖家";
 "home.no_recommended_tasks" = "暂无推荐任务";
 "home.no_recommended_tasks_message" = "还没有推荐任务，快去任务大厅看看吧！";
 "home.latest_activity" = "最新动态";

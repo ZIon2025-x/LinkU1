@@ -105,6 +105,8 @@
 "home.no_experts" = "No task experts";
 "home.no_experts_message" = "No task experts yet, stay tuned...";
 "home.recommended_tasks" = "Recommended Tasks";
+"home.member_published" = "Member Published";
+"home.member_seller" = "Member Seller";
 "home.no_recommended_tasks" = "No recommended tasks";
 "home.no_recommended_tasks_message" = "No recommended tasks yet. Check out the task hall!";
 "home.latest_activity" = "Latest Activity";

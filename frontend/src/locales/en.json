@@ -210,6 +210,8 @@
     "vipTask": "⭐ VIP Task",
     "superTask": "🔥 Super Task",
     "normalTask": "📋 Normal Task",
+    "memberPublished": "Member Published",
+    "memberSeller": "Member Seller",
     "basicTask": "📝 Basic Task",
     "taskLevel": "Task Level",
     "taskReward": "Reward",

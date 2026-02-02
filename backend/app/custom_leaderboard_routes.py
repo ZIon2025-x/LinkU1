@@ -1198,8 +1198,14 @@ async def get_leaderboard_items(
     result = await db.execute(query)
     items = result.scalars().all()
     
-    # 获取所有竞品ID
+    # 获取所有竞品ID 与 提交者ID（用于批量加载 submitter_info）
     item_ids = [item.id for item in items]
+    submitter_ids = list({item.submitted_by for item in items if item.submitted_by})
+    submitters_by_id = {}
+    if submitter_ids:
+        submitters_result = await db.execute(select(models.User).where(models.User.id.in_(submitter_ids)))
+        for u in submitters_result.scalars().all():
+            submitters_by_id[u.id] = u
     
     user_votes = {}
     user_vote_comments = {}
@@ -1288,6 +1294,16 @@ async def get_leaderboard_items(
         created_at = item.created_at if item.created_at is not None else get_utc_time()
         updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
         
+        submitter_info = None
+        if item.submitted_by and item.submitted_by in submitters_by_id:
+            submitter = submitters_by_id[item.submitted_by]
+            submitter_info = {
+                "id": submitter.id,
+                "name": submitter.name or f"用户{submitter.id}",
+                "avatar": submitter.avatar or "",
+                "user_level": getattr(submitter, "user_level", None),
+            }
+        
         item_dict = {
             "id": item.id,
             "leaderboard_id": item.leaderboard_id,
@@ -1298,6 +1314,7 @@ async def get_leaderboard_items(
             "website": item.website,
             "images": images_list,
             "submitted_by": item.submitted_by,
+            "submitter_info": submitter_info,
             "status": item.status,
             "upvotes": item.upvotes,
             "downvotes": item.downvotes,
@@ -1397,7 +1414,8 @@ async def get_item_detail(
             submitter_info = {
                 "id": submitter.id,
                 "name": submitter.name or f"用户{submitter.id}",
-                "avatar": submitter.avatar or ""
+                "avatar": submitter.avatar or "",
+                "user_level": getattr(submitter, "user_level", None),
             }
     
     item_dict = {
@@ -1410,6 +1428,7 @@ async def get_item_detail(
         "website": item.website,
         "images": images_list,
         "submitted_by": item.submitted_by,
+        "submitter_info": submitter_info,
         "status": item.status,
         "upvotes": item.upvotes,
         "downvotes": item.downvotes,

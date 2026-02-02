@@ -563,6 +563,7 @@ class TasksViewModel: ObservableObject {
                                     takerId: task.takerId,
                                     originatingUserId: task.originatingUserId,
                                     taskLevel: task.taskLevel,
+                                    posterUserLevel: task.posterUserLevel,
                                     pointsReward: task.pointsReward,
                                     isMultiParticipant: task.isMultiParticipant,
                                     maxParticipants: task.maxParticipants,

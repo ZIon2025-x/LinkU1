@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { getErrorMessage } from '../utils/errorHandler';
 import LazyImage from './LazyImage';
+import MemberBadge from './MemberBadge';
 import styles from './FleaMarketItemDetailModal.module.css';
 
 const { TextArea } = Input;
@@ -482,8 +483,11 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                 <div className={styles.sellerInfo}>
                   <h3>{t('fleaMarket.seller')}</h3>
                   <div className={styles.sellerCard}>
-                    <span className={styles.sellerName}>
+                    <span className={styles.sellerName} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {sellerInfo.name || `用户${sellerInfo.id}`}
+                      {sellerInfo.user_level && (sellerInfo.user_level === 'vip' || sellerInfo.user_level === 'super') && (
+                        <MemberBadge level={sellerInfo.user_level} variant="compact" />
+                      )}
                     </span>
                     {sellerInfo.avg_rating > 0 && (
                       <Rate disabled defaultValue={sellerInfo.avg_rating} allowHalf style={{ fontSize: 14 }} />

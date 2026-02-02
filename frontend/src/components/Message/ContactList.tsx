@@ -2,6 +2,7 @@ import type React from 'react';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
 import { useLanguage } from '../../contexts/LanguageContext';
 import LazyImage from '../../components/LazyImage';
+import MemberBadge from '../../components/MemberBadge';
 
 interface Contact {
   id: string;
@@ -33,31 +34,6 @@ const ContactList: React.FC<ContactListProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  const getLevelBadge = (level: number) => {
-    switch (level) {
-      case 2:
-        return <span style={{ 
-          background: '#fbbf24', 
-          color: 'white', 
-          padding: '2px 6px', 
-          borderRadius: '4px', 
-          fontSize: '10px',
-          fontWeight: 'bold'
-        }}>VIP</span>;
-      case 3:
-        return <span style={{ 
-          background: '#8b5cf6', 
-          color: 'white', 
-          padding: '2px 6px', 
-          borderRadius: '4px', 
-          fontSize: '10px',
-          fontWeight: 'bold'
-        }}>超级VIP</span>;
-      default:
-        return null;
-    }
-  };
-
   const formatLastMessageTime = (timestamp: string | null) => {
     // 使用新的统一时间处理系统，确保正确处理UTC时间
     if (!timestamp) return '';
@@ -204,7 +180,7 @@ const ContactList: React.FC<ContactListProps> = ({
                       }}>
                         {contact.name}
                       </span>
-                      {getLevelBadge(contact.user_level)}
+                      <MemberBadge level={contact.user_level} variant="compact" />
                     </div>
                     
                     <div style={{ 

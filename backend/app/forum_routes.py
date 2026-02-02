@@ -660,7 +660,8 @@ async def build_user_info(
             id="unknown",
             name="已删除用户",
             avatar=None,
-            is_admin=False
+            is_admin=False,
+            user_level=None,
         )
     
     # 如果强制标记为管理员（管理员在后台页面发帖/回复），直接返回
@@ -669,7 +670,8 @@ async def build_user_info(
             id=user.id,
             name=user.name,
             avatar=user.avatar or None,
-            is_admin=True
+            is_admin=True,
+            user_level=getattr(user, "user_level", None),
         )
     
     # 注意：普通用户永远不是管理员
@@ -680,7 +682,8 @@ async def build_user_info(
         id=user.id,
         name=user.name,
         avatar=user.avatar or None,
-        is_admin=False
+        is_admin=False,
+        user_level=getattr(user, "user_level", None),
     )
 
 
@@ -694,7 +697,8 @@ async def build_admin_user_info(admin_user: models.AdminUser) -> schemas.UserInf
         id=admin_user.id,  # 保留管理员ID用于内部识别
         name="Link²Ur",  # 统一显示名称
         avatar="/static/logo.png",  # 统一使用logo作为头像
-        is_admin=True  # 官方标识
+        is_admin=True,  # 官方标识
+        user_level=None,  # 管理员不展示会员等级
     )
 
 
@@ -755,7 +759,8 @@ async def get_post_author_info(
         id="unknown",
         name="已删除用户",
         avatar=None,
-        is_admin=False
+        is_admin=False,
+        user_level=None,
     )
 
 
@@ -801,8 +806,10 @@ async def get_reply_author_info(
         id="unknown",
         name="已删除用户",
         avatar=None,
-        is_admin=False
+        is_admin=False,
+        user_level=None,
     )
+
 
 def get_user_language_preference(
     current_user: Optional[models.User] = None,

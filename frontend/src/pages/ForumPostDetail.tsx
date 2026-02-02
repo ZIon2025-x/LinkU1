@@ -29,6 +29,7 @@ import SafeContent from '../components/SafeContent';
 import { getErrorMessage } from '../utils/errorHandler';
 import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
+import MemberBadge from '../components/MemberBadge';
 import styles from './ForumPostDetail.module.css';
 
 const { Title, Text } = Typography;
@@ -43,6 +44,7 @@ interface ForumReply {
     name: string;
     avatar?: string;
     is_admin?: boolean;
+    user_level?: string;
   };
   like_count: number;
   is_liked: boolean;
@@ -69,6 +71,7 @@ interface ForumPost {
     name: string;
     avatar?: string;
     is_admin?: boolean;
+    user_level?: string;
   };
   view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
@@ -856,7 +859,7 @@ const ForumPostDetail: React.FC = () => {
         data-level={level}
       >
         <div className={styles.replyHeader}>
-          <Space>
+          <Space wrap>
             <Avatar 
               src={reply.author.avatar} 
               icon={<UserOutlined />}
@@ -865,6 +868,9 @@ const ForumPostDetail: React.FC = () => {
             <Text strong>{reply.author.name}</Text>
             {reply.author.is_admin && (
               <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
+            )}
+            {reply.author.user_level && (reply.author.user_level === 'vip' || reply.author.user_level === 'super') && (
+              <MemberBadge level={reply.author.user_level} variant="compact" />
             )}
             <Text type="secondary" style={{ fontSize: 12 }}>
               <ClockCircleOutlined /> {formatRelativeTime(reply.created_at)}
@@ -1121,11 +1127,14 @@ const ForumPostDetail: React.FC = () => {
 
           <div className={styles.postMeta}>
             <Space split="|">
-              <Space>
+              <Space wrap>
                 <Avatar src={post.author.avatar} icon={<UserOutlined />} />
                 <Text strong>{post.author.name}</Text>
                 {post.author.is_admin && (
                   <Tag color="blue" style={{ marginLeft: 8 }}>{t('forum.official')}</Tag>
+                )}
+                {post.author.user_level && (post.author.user_level === 'vip' || post.author.user_level === 'super') && (
+                  <MemberBadge level={post.author.user_level} variant="compact" />
                 )}
               </Space>
               <Text type="secondary">

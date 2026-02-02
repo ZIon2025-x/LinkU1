@@ -548,6 +548,22 @@ struct EnhancedTaskCard: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(getTaskLevelColor(taskLevel))
                         }
+                        // 会员发布角标
+                        if let level = task.posterUserLevel, level == "vip" || level == "super" {
+                            Text(LocalizationKey.homeMemberPublished.localized)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color(red: 0.96, green: 0.62, blue: 0.04), Color(red: 0.85, green: 0.47, blue: 0.02)]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .clipShape(Capsule())
+                        }
                     }
                     
                     // 用户角色标签和任务来源标签

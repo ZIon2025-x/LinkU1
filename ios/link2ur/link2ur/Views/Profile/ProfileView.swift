@@ -76,18 +76,21 @@ struct ProfileView: View {
     
     private var userInfoSection: some View {
         VStack(spacing: AppSpacing.lg) {
-            ZStack {
-                Circle()
-                    .fill(.white)
-                    .frame(width: 104, height: 104)
-                    .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
-                
-                AvatarView(
-                    urlString: appState.currentUser?.avatar,
-                    size: 96,
-                    placeholder: Image(systemName: "person.crop.circle.fill")
-                )
-                .clipShape(Circle())
+            ZStack(alignment: .bottomTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 104, height: 104)
+                        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+                    
+                    AvatarView(
+                        urlString: appState.currentUser?.avatar,
+                        size: 96,
+                        placeholder: Image(systemName: "person.crop.circle.fill")
+                    )
+                    .clipShape(Circle())
+                }
+                MemberBadgeAvatarOverlay(userLevel: appState.currentUser?.userLevel)
             }
             
             VStack(spacing: 6) {

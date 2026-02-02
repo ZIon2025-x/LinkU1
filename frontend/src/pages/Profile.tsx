@@ -5,6 +5,7 @@ import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import LazyImage from '../components/LazyImage';
+import MemberBadge from '../components/MemberBadge';
 import SkeletonLoader from '../components/SkeletonLoader';
 
 const AVATARS = [
@@ -263,6 +264,7 @@ const Profile: React.FC = () => {
                   boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
                 }}
               />
+              <MemberBadge level={user.user_level} variant="avatar-corner" />
               <button 
                 onClick={() => setShowAvatars(v => !v)} 
                 style={{
@@ -544,16 +546,14 @@ const Profile: React.FC = () => {
               background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
               padding: '12px 24px',
               borderRadius: '25px',
-              border: '1px solid #cbd5e1'
+              border: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px'
             }}>
               <span style={{ color: '#64748b', fontSize: '14px' }}>{t('profile.memberLevel')}</span>
-              <div style={{ 
-                color: user.user_level === 'super' ? '#8b5cf6' : user.user_level === 'vip' ? '#f59e0b' : '#64748b',
-                fontWeight: '700',
-                fontSize: '16px'
-              }}>
-                {user.user_level === 'super' ? t('profile.superVip') : user.user_level === 'vip' ? t('profile.vip') : t('profile.normalUser')}
-              </div>
+              <MemberBadge level={user.user_level} variant="full" />
             </div>
             
             <div style={{

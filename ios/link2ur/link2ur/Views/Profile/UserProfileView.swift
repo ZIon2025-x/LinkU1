@@ -264,45 +264,48 @@ struct UserInfoCard: View {
                         .offset(y: -20)
                     
                     VStack(spacing: AppSpacing.lg) {
-                        // 头像 - 带阴影和边框
-                        ZStack {
-                            // 外层光晕效果
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        gradient: Gradient(colors: [
-                                            AppColors.primary.opacity(0.2),
-                                            Color.clear
-                                        ]),
-                                        center: .center,
-                                        startRadius: 0,
-                                        endRadius: 60
-                                    )
-                                )
-                                .frame(width: 120, height: 120)
-                                .blur(radius: 8)
-                            
-                            // 渐变边框
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: AppColors.gradientPrimary),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 110, height: 110)
-                                .shadow(color: AppColors.primary.opacity(0.4), radius: 16, x: 0, y: 8)
-                            
-                            AvatarView(
-                                urlString: profile.user.avatar,
-                                size: 100,
-                                placeholder: Image(systemName: "person.fill")
-                            )
-                            .overlay(
+                        // 头像 - 带阴影和边框，右下角会员角标
+                        ZStack(alignment: .bottomTrailing) {
+                            ZStack {
+                                // 外层光晕效果
                                 Circle()
-                                    .stroke(.white, lineWidth: 4)
-                            )
+                                    .fill(
+                                        RadialGradient(
+                                            gradient: Gradient(colors: [
+                                                AppColors.primary.opacity(0.2),
+                                                Color.clear
+                                            ]),
+                                            center: .center,
+                                            startRadius: 0,
+                                            endRadius: 60
+                                        )
+                                    )
+                                    .frame(width: 120, height: 120)
+                                    .blur(radius: 8)
+                                
+                                // 渐变边框
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: AppColors.gradientPrimary),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 110, height: 110)
+                                    .shadow(color: AppColors.primary.opacity(0.4), radius: 16, x: 0, y: 8)
+                                
+                                AvatarView(
+                                    urlString: profile.user.avatar,
+                                    size: 100,
+                                    placeholder: Image(systemName: "person.fill")
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(.white, lineWidth: 4)
+                                )
+                            }
+                            MemberBadgeAvatarOverlay(userLevel: profile.user.userLevel)
                         }
                         
                         // 用户名和等级

@@ -2398,6 +2398,7 @@ class FleaMarketItemResponse(BaseModel):
     category: Optional[str]
     status: Literal["active", "sold", "deleted"]
     seller_id: str
+    seller_user_level: Optional[str] = None  # 卖家会员等级：normal, vip, super（用于「会员卖家」角标）
     view_count: int
     favorite_count: int = 0  # 收藏数量
     refreshed_at: str
@@ -3024,6 +3025,7 @@ class UserInfo(BaseModel):
     name: str
     avatar: Optional[str] = None
     is_admin: Optional[bool] = False  # 是否为管理员
+    user_level: Optional[str] = None  # 会员等级：normal, vip, super（用于论坛/排行榜等展示会员徽章）
     
     class Config:
         from_attributes = True

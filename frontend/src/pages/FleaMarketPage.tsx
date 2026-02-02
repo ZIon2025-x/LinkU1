@@ -54,6 +54,7 @@ interface FleaMarketItem {
   contact?: string;
   status: 'active' | 'sold' | 'deleted';
   seller_id: string;
+  seller_user_level?: string;  // 卖家会员等级：用于「会员卖家」角标
   created_at: string;
   updated_at: string;
 }
@@ -675,6 +676,24 @@ const FleaMarketPage: React.FC = () => {
             £{typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(String(item.price || 0)).toFixed(2)}
           </div>
           
+          {/* 会员卖家角标 - 左下角 */}
+          {item.seller_user_level && (item.seller_user_level === 'vip' || item.seller_user_level === 'super') && (
+            <div
+              className={styles.priceBadge}
+              style={{
+                top: 'auto',
+                right: 'auto',
+                bottom: '8px',
+                left: '8px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                fontSize: '11px',
+                padding: '4px 8px',
+              }}
+            >
+              {t('home.memberSeller') || '会员卖家'}
+            </div>
+          )}
+          
           {/* 操作按钮（仅所有者可见） - 左上角（如果已收藏，则显示在收藏标识下方） */}
           {isOwner && (
             <div className={styles.itemActions}>
@@ -714,6 +733,7 @@ const FleaMarketPage: React.FC = () => {
     if (prevProps.item.price !== nextProps.item.price) return false;
     if (prevProps.item.location !== nextProps.item.location) return false;
     if (prevProps.item.images?.[0] !== nextProps.item.images?.[0]) return false;
+    if (prevProps.item.seller_user_level !== nextProps.item.seller_user_level) return false;
     if (prevProps.isOwner !== nextProps.isOwner) return false;
     
     // 如果所有关键属性都相同，跳过重新渲染

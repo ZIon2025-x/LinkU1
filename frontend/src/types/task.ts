@@ -37,6 +37,7 @@ export interface Task {
   taker_id?: string;
   status: 'open' | 'taken' | 'in_progress' | 'pending_payment' | 'pending_confirmation' | 'completed' | 'cancelled';
   task_level: 'normal' | 'vip' | 'super' | 'expert';
+  poster_user_level?: string;  // 发布者会员等级：用于「会员发布」角标
   created_at: string;
   accepted_at?: string;
   completed_at?: string;
@@ -65,6 +66,7 @@ export interface TaskApplication {
   applicant_id: string;
   applicant_name?: string;
   applicant_avatar?: string;
+  applicant_user_level?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   message?: string;

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会员徽章预览 - Link²Ur</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+      padding: 40px 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .subtitle { text-align: center; color: #64748b; margin-bottom: 40px; }
+    section {
+      max-width: 800px;
+      margin: 0 auto 48px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    section h2 {
+      margin: 0 0 20px;
+      font-size: 18px;
+      color: #334155;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 10px;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+    .cell { text-align: center; }
+    .cell label { display: block; font-size: 12px; color: #64748b; margin-top: 8px; }
+
+    /* 头像 + 角标 */
+    .avatar-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #e2e8f0;
+      background: #f1f5f9;
+    }
+    .badge-avatar-corner {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      z-index: 5;
+    }
+    .badge-avatar-corner.vip { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .badge-avatar-corner.super { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+
+    /* 紧凑徽章 */
+    .badge-compact {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      white-space: nowrap;
+    }
+    .badge-compact.vip { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .badge-compact.super { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+    .badge-compact .icon { font-size: 10px; }
+
+    /* 完整徽章 */
+    .badge-full {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .badge-full.normal {
+      color: #64748b;
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      border: 1px solid #cbd5e1;
+      box-shadow: none;
+    }
+    .badge-full.vip { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .badge-full.super { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+    .badge-full .icon { font-size: 16px; }
+
+    .name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .name-row .name { font-weight: 600; font-size: 16px; color: #1e293b; }
+  </style>
+</head>
+<body>
+  <h1>会员徽章预览</h1>
+  <p class="subtitle">MemberBadge 三种形态 · 普通 / VIP / 超级VIP</p>
+
+  <section>
+    <h2>1. 头像角标 (avatar-corner)</h2>
+    <p style="color:#64748b;font-size:14px;margin-bottom:20px">用于个人主页、他人主页头像右下角，仅 VIP/超级 显示。</p>
+    <div class="row">
+      <div class="cell">
+        <div class="avatar-wrap">
+          <img class="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect fill='%23cbd5e1' width='80' height='80'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23475569' font-size='24'%3E普%3C/text%3E%3C/svg%3E" alt="普通">
+        </div>
+        <label>普通用户（无角标）</label>
+      </div>
+      <div class="cell">
+        <div class="avatar-wrap">
+          <img class="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect fill='%23fef3c7' width='80' height='80'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23b45309' font-size='24'%3EVIP%3C/text%3E%3C/svg%3E" alt="VIP">
+          <div class="badge-avatar-corner vip">⭐</div>
+        </div>
+        <label>VIP</label>
+      </div>
+      <div class="cell">
+        <div class="avatar-wrap">
+          <img class="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect fill='%23ede9fe' width='80' height='80'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%235b21b6' font-size='20'%3E超%3C/text%3E%3C/svg%3E" alt="超级">
+          <div class="badge-avatar-corner super">👑</div>
+        </div>
+        <label>超级VIP</label>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 紧凑徽章 (compact)</h2>
+    <p style="color:#64748b;font-size:14px;margin-bottom:20px">用于消息联系人、达人卡片等列表中的等级标签。</p>
+    <div class="row">
+      <div class="cell">
+        <div class="name-row">
+          <span class="name">张三</span>
+        </div>
+        <label>普通用户（无徽章）</label>
+      </div>
+      <div class="cell">
+        <div class="name-row">
+          <span class="name">李四</span>
+          <span class="badge-compact vip"><span class="icon">⭐</span> VIP</span>
+        </div>
+        <label>VIP</label>
+      </div>
+      <div class="cell">
+        <div class="name-row">
+          <span class="name">王五</span>
+          <span class="badge-compact super"><span class="icon">👑</span> 超级VIP</span>
+        </div>
+        <label>超级VIP</label>
+      </div>
+    </div>
+    <p style="margin-top:20px;font-size:13px;color:#64748b">达人场景示例：</p>
+    <div class="name-row" style="margin-top:8px">
+      <span class="name">赵六</span>
+      <span class="badge-compact vip"><span class="icon">⭐</span> VIP达人</span>
+    </div>
+    <div class="name-row" style="margin-top:8px">
+      <span class="name">钱七</span>
+      <span class="badge-compact super"><span class="icon">👑</span> 超级达人</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. 完整徽章 (full)</h2>
+    <p style="color:#64748b;font-size:14px;margin-bottom:20px">用于个人主页「会员等级」、他人主页等级展示。</p>
+    <div class="row">
+      <div class="cell">
+        <span class="badge-full normal">普通用户</span>
+        <label>普通用户</label>
+      </div>
+      <div class="cell">
+        <span class="badge-full vip"><span class="icon">⭐</span> VIP</span>
+        <label>VIP</label>
+      </div>
+      <div class="cell">
+        <span class="badge-full super"><span class="icon">👑</span> 超级VIP</span>
+        <label>超级VIP</label>
+      </div>
+    </div>
+    <p style="margin-top:24px;font-size:13px;color:#64748b">他人主页文案示例：</p>
+    <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap">
+      <span class="badge-full vip"><span class="icon">⭐</span> VIP会员</span>
+      <span class="badge-full super"><span class="icon">👑</span> 超级会员</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. 模拟个人主页区块</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;background:#f8fafc;border-radius:12px;">
+      <div style="position:relative;display:inline-block">
+        <img class="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect fill='%23fef3c7' width='80' height='80'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23b45309' font-size='22'%3EVIP%3C/text%3E%3C/svg%3E" alt="头像" style="width:100px;height:100px;border:4px solid #3b82f6;">
+        <div class="badge-avatar-corner vip" style="width:32px;height:32px;font-size:16px;bottom:-2px;right:-2px">⭐</div>
+      </div>
+      <div style="font-size:14px;color:#64748b">会员等级</div>
+      <span class="badge-full vip"><span class="icon">⭐</span> VIP</span>
+    </div>
+  </section>
+</body>
+</html>

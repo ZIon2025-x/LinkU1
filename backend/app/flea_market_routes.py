@@ -360,6 +360,18 @@ async def get_flea_market_items(
         result = await db.execute(query)
         items = result.scalars().all()
         
+        # 批量获取卖家会员等级（用于「会员卖家」角标）
+        seller_ids = list({item.seller_id for item in items})
+        seller_levels = {}
+        if seller_ids:
+            seller_result = await db.execute(
+                select(models.User.id, models.User.user_level).where(models.User.id.in_(seller_ids))
+            )
+            for row in seller_result.all():
+                sid = row[0] if len(row) else None
+                if sid is not None:
+                    seller_levels[sid] = (row[1] if len(row) > 1 else None) or "normal"
+        
         # 构建响应
         processed_items = []
         for item in items:
@@ -396,6 +408,7 @@ async def get_flea_market_items(
                 category=item.category,
                 status=item.status,
                 seller_id=item.seller_id,
+                seller_user_level=seller_levels.get(item.seller_id),
                 view_count=item.view_count or 0,
                 favorite_count=favorite_count,
                 refreshed_at=format_iso_utc(item.refreshed_at),
@@ -564,6 +577,12 @@ async def get_flea_market_item(
                 user_purchase_request_status = user_purchase_request.status
                 user_purchase_request_proposed_price = float(user_purchase_request.proposed_price) if user_purchase_request.proposed_price else None
         
+        # 获取卖家会员等级（用于「会员卖家」角标）
+        seller_user_level = None
+        if item.seller_id:
+            seller_result = await db.execute(select(models.User.user_level).where(models.User.id == item.seller_id))
+            seller_user_level = seller_result.scalar_one_or_none()
+        
         return schemas.FleaMarketItemResponse(
             id=format_flea_market_id(item.id),
             title=item.title,
@@ -575,6 +594,7 @@ async def get_flea_market_item(
             category=item.category,
             status=item.status,
             seller_id=item.seller_id,
+            seller_user_level=seller_user_level,
             view_count=item.view_count or 0,
             favorite_count=favorite_count,
             refreshed_at=format_iso_utc(item.refreshed_at),

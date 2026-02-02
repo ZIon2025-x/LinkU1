@@ -16,6 +16,7 @@ import ServiceDetailModal from '../components/ServiceDetailModal';
 import ServiceListModal from '../components/ServiceListModal';
 import ExpertDetailModal from '../components/ExpertDetailModal';
 import LazyImage from '../components/LazyImage';
+import MemberBadge from '../components/MemberBadge';
 import styles from './TaskExperts.module.css';
 
 interface TaskExpert {
@@ -889,9 +890,13 @@ const TaskExperts: React.FC = () => {
                     <h3 className={styles.expertName}>
                       {expert.name}
                     </h3>
-                    <span className={styles.levelBadge}>
-                      {getLevelText(expert.user_level)}
-                    </span>
+                    <MemberBadge
+                      level={expert.user_level}
+                      variant="compact"
+                      labelVip="taskExperts.vipExpert"
+                      labelSuper="taskExperts.superExpert"
+                      style={{ marginTop: 4 }}
+                    />
                   </div>
                 </div>
 

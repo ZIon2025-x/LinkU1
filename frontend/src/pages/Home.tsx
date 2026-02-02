@@ -23,6 +23,7 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
 import LazyImage from '../components/LazyImage';
+import MemberBadge from '../components/MemberBadge';
 import { loadTaskTranslationsBatch } from '../utils/taskTranslationBatch';
 import { logger } from '../utils/logger';
 import styles from './Home.module.css';
@@ -1654,6 +1655,12 @@ const Home: React.FC = () => {
                       {getTaskLevelText(task.task_level)}
                     </div>
                   )}
+                  {/* 会员发布角标 */}
+                  {task.poster_user_level && (task.poster_user_level === 'vip' || task.poster_user_level === 'super') && (
+                    <div className={styles.taskLevelBadge} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', fontSize: '11px', padding: '4px 8px' }}>
+                      {t('home.memberPublished') || '会员发布'}
+                    </div>
+                  )}
                   
                   <div>
                     <div className={styles.taskTitle}>
@@ -1913,22 +1920,12 @@ const Home: React.FC = () => {
                         }}>
                           {expert.name}
                         </h3>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: isMobile ? '4px 10px' : '5px 12px',
-                          background: expert.user_level === 'super' ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
-                                     expert.user_level === 'vip' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' :
-                                     '#f1f5f9',
-                          color: expert.user_level === 'super' || expert.user_level === 'vip' ? '#fff' : '#475569',
-                          borderRadius: '14px',
-                          fontSize: isMobile ? '11px' : '12px',
-                          fontWeight: '600',
-                          marginTop: '4px'
-                        }}>
-                          {expert.user_level === 'super' ? (t('taskExperts.superExpert') || '超级达人') :
-                           expert.user_level === 'vip' ? (t('taskExperts.vipExpert') || 'VIP达人') :
-                           (t('taskExperts.normalExpert') || '普通达人')}
-                        </span>
+                        <MemberBadge
+                          level={expert.user_level}
+                          variant="compact"
+                          labelVip="taskExperts.vipExpert"
+                          labelSuper="taskExperts.superExpert"
+                        />
                       </div>
                     </div>
 

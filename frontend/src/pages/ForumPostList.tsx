@@ -21,6 +21,7 @@ import { formatRelativeTime } from '../utils/timeUtils';
 import { formatViewCount } from '../utils/formatUtils';
 import { getForumPostDisplayTitle } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
+import MemberBadge from '../components/MemberBadge';
 import styles from './ForumPostList.module.css';
 
 const { Title } = Typography;
@@ -42,6 +43,7 @@ interface ForumPost {
     name: string;
     avatar?: string;
     is_admin?: boolean;
+    user_level?: string;
   };
   view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
@@ -350,10 +352,13 @@ const ForumPostList: React.FC = () => {
 
                   <div className={styles.postMeta}>
                     <Space size="small" split="|">
-                      <span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <UserOutlined /> {post.author.name}
                         {post.author.is_admin && (
                           <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
+                        )}
+                        {post.author.user_level && (post.author.user_level === 'vip' || post.author.user_level === 'super') && (
+                          <MemberBadge level={post.author.user_level} variant="compact" />
                         )}
                       </span>
                       <span>

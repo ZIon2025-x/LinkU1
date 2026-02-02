@@ -149,6 +149,17 @@ async def get_tasks(
         from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
         translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
         
+        # 批量获取发布者会员等级（用于「会员发布」角标）
+        poster_ids = list({task.poster_id for task in tasks if task.poster_id})
+        poster_levels = {}
+        if poster_ids:
+            from sqlalchemy import select
+            result = await db.execute(select(models.User.id, models.User.user_level).where(models.User.id.in_(poster_ids)))
+            for row in result.all():
+                uid = row[0] if len(row) else None
+                if uid is not None:
+                    poster_levels[uid] = (row[1] if len(row) > 1 else None) or 'normal'
+        
         # 格式化任务列表（与下面的格式化逻辑保持一致）
         formatted_tasks = []
         for task in tasks:
@@ -210,6 +221,7 @@ async def get_tasks(
                 "original_price_per_participant": float(task.original_price_per_participant) if hasattr(task, 'original_price_per_participant') and task.original_price_per_participant is not None else None,
                 "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
                 "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
+                "poster_user_level": poster_levels.get(task.poster_id) if task.poster_id else None,
             }
             
             # 如果有距离信息，添加到返回数据中
@@ -252,6 +264,17 @@ async def get_tasks(
     task_ids = [task.id for task in tasks]
     from app.utils.task_translation_helper import get_task_translations_batch, get_task_title_translations
     translations_dict = await get_task_translations_batch(db, task_ids, field_type='title')
+    
+    # 批量获取发布者会员等级（用于「会员发布」角标）
+    poster_ids = list({task.poster_id for task in tasks if task.poster_id})
+    poster_levels = {}
+    if poster_ids:
+        from sqlalchemy import select
+        result = await db.execute(select(models.User.id, models.User.user_level).where(models.User.id.in_(poster_ids)))
+        for row in result.all():
+            uid = row[0] if len(row) else None
+            if uid is not None:
+                poster_levels[uid] = (row[1] if len(row) > 1 else None) or 'normal'
     
     # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
     # format_iso_utc 已在文件顶部导入
@@ -310,6 +333,7 @@ async def get_tasks(
             "original_price_per_participant": float(task.original_price_per_participant) if hasattr(task, 'original_price_per_participant') and task.original_price_per_participant is not None else None,
             "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
             "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
+            "poster_user_level": poster_levels.get(task.poster_id) if task.poster_id else None,
         }
         
         # 如果有距离信息，添加到返回数据中
@@ -926,6 +950,7 @@ async def get_task_applications(
                     "applicant_id": app.applicant_id,
                     "applicant_name": user.name,
                     "applicant_avatar": user.avatar if hasattr(user, 'avatar') else None,
+                    "applicant_user_level": getattr(user, 'user_level', None),
                     "message": app.message,
                     "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
                     "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取

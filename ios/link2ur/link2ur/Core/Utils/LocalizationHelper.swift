@@ -181,6 +181,8 @@ public enum LocalizationKey: String {
     case homeNoExperts = "home.no_experts"
     case homeNoExpertsMessage = "home.no_experts_message"
     case homeRecommendedTasks = "home.recommended_tasks"
+    case homeMemberPublished = "home.member_published"
+    case homeMemberSeller = "home.member_seller"
     case homeNoRecommendedTasks = "home.no_recommended_tasks"
     case homeNoRecommendedTasksMessage = "home.no_recommended_tasks_message"
     case homeLatestActivity = "home.latest_activity"

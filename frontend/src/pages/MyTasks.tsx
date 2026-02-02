@@ -1246,6 +1246,12 @@ const MyTasks: React.FC = () => {
                             {getTaskLevelText(task.task_level)}
                           </div>
                         )}
+                        {/* 会员发布角标 */}
+                        {task.poster_user_level && (task.poster_user_level === 'vip' || task.poster_user_level === 'super') && (
+                          <div className={styles.taskCardLevelBadge} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', fontSize: '11px', padding: '4px 8px' }}>
+                            {t('home.memberPublished') || '会员发布'}
+                          </div>
+                        )}
                       </div>
                       <span 
                         className={styles.taskCardStatusBadge}

@@ -6,6 +6,7 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { formatViewCount } from '../utils/formatUtils';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import LazyImage from '../components/LazyImage';
+import MemberBadge from '../components/MemberBadge';
 
 interface UserProfileType {
   user: {
@@ -192,24 +193,6 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const getLevelText = (level: string) => {
-    switch (level) {
-      case 'normal': return t('userProfile.normalUser');
-      case 'vip': return t('userProfile.vipMember');
-      case 'super': return t('userProfile.superMember');
-      default: return level;
-    }
-  };
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'normal': return '#6c757d';
-      case 'vip': return '#ffc107';
-      case 'super': return '#dc3545';
-      default: return '#6c757d';
-    }
-  };
-
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -368,6 +351,7 @@ const UserProfile: React.FC = () => {
                     boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
                   }}
                 />
+                <MemberBadge level={profile.user.user_level} variant="avatar-corner" />
               </div>
             </div>
             
@@ -418,19 +402,7 @@ const UserProfile: React.FC = () => {
               marginBottom: 32,
               flexWrap: 'wrap'
             }}>
-              <div style={{
-                padding: '8px 20px',
-                borderRadius: 25,
-                fontSize: 14,
-                fontWeight: 700,
-                color: '#fff',
-                background: getLevelColor(profile.user.user_level),
-                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                {getLevelText(profile.user.user_level)}
-              </div>
+              <MemberBadge level={profile.user.user_level} variant="full" labelVip="userProfile.vipMember" labelSuper="userProfile.superMember" />
               
               <div style={{ 
                 display: 'flex', 

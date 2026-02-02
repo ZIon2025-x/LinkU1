@@ -949,6 +949,28 @@ struct TaskCard: View {
                 }
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            // 会员发布角标：发布者为 VIP/超级VIP 时显示
+            if let level = task.posterUserLevel, level == "vip" || level == "super" {
+                Text(LocalizationKey.homeMemberPublished.localized)
+                    .font(AppTypography.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 4)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(red: 0.96, green: 0.62, blue: 0.04), Color(red: 0.85, green: 0.47, blue: 0.02)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: Color.orange.opacity(0.5), radius: 4, x: 0, y: 2)
+                    .padding(.bottom, AppSpacing.sm)
+                    .padding(.leading, AppSpacing.sm)
+            }
+        }
     }
     
     // 占位背景（符合 HIG，使用系统颜色和 SF Symbols）

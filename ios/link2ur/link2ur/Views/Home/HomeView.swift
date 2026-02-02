@@ -1262,10 +1262,27 @@ struct SearchTaskCard: View {
             
             // 信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.displayTitle)
-                    .font(AppTypography.bodyBold)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(task.displayTitle)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                    if let level = task.posterUserLevel, level == "vip" || level == "super" {
+                        Text(LocalizationKey.homeMemberPublished.localized)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color(red: 0.96, green: 0.62, blue: 0.04), Color(red: 0.85, green: 0.47, blue: 0.02)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(Capsule())
+                    }
+                }
                 
                 Text(task.displayDescription)
                     .font(AppTypography.caption)
@@ -1413,10 +1430,27 @@ struct SearchFleaMarketCard: View {
             
             // 信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(AppTypography.bodyBold)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(item.title)
+                        .font(AppTypography.bodyBold)
+                        .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                    if let level = item.sellerUserLevel, level == "vip" || level == "super" {
+                        Text(LocalizationKey.homeMemberSeller.localized)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color(red: 0.96, green: 0.62, blue: 0.04), Color(red: 0.85, green: 0.47, blue: 0.02)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(Capsule())
+                    }
+                }
                 
                 if let description = item.description {
                     Text(description)

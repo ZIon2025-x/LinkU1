@@ -51,6 +51,37 @@ struct UserIdentityBadges: View {
     }
 }
 
+/// 头像角标 - 用于个人页/他人页头像右下角，仅 VIP/超级 显示（与 Web MemberBadge avatar-corner 一致）
+struct MemberBadgeAvatarOverlay: View {
+    let userLevel: String?
+    
+    private var isVIP: Bool { userLevel == "vip" }
+    private var isSuper: Bool { userLevel == "super" }
+    private var showBadge: Bool { isVIP || isSuper }
+    
+    var body: some View {
+        if showBadge {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: isSuper ? [Color(red: 0.65, green: 0.55, blue: 0.96), Color(red: 0.55, green: 0.36, blue: 0.96)] : [Color(red: 0.98, green: 0.75, blue: 0.14), Color(red: 0.96, green: 0.62, blue: 0.04)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 28, height: 28)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                Image(systemName: isSuper ? "crown.fill" : "star.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .offset(x: 2, y: 2)
+        }
+    }
+}
+
 /// 单个身份标识徽章
 struct IdentityBadge: View {
     let text: String

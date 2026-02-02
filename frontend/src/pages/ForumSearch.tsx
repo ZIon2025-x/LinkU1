@@ -21,6 +21,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getForumPostDisplayTitle, getForumPostDisplayContent } from '../utils/displayLocale';
 import SkeletonLoader from '../components/SkeletonLoader';
 import SafeContent from '../components/SafeContent';
+import MemberBadge from '../components/MemberBadge';
 import styles from './ForumSearch.module.css';
 
 const { Title, Text } = Typography;
@@ -43,6 +44,7 @@ interface ForumPost {
     name: string;
     avatar?: string;
     is_admin?: boolean;
+    user_level?: string;
   };
   view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
@@ -251,10 +253,13 @@ const ForumSearch: React.FC = () => {
                       <span>
                         <Tag>{post.category.name}</Tag>
                       </span>
-                      <span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <UserOutlined /> {post.author.name}
                         {post.author.is_admin && (
                           <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
+                        )}
+                        {post.author.user_level && (post.author.user_level === 'vip' || post.author.user_level === 'super') && (
+                          <MemberBadge level={post.author.user_level} variant="compact" />
                         )}
                       </span>
                       <span>

@@ -95,6 +95,8 @@
 "home.no_experts" = "暫無任務達人";
 "home.no_experts_message" = "還沒有任務達人，敬請期待...";
 "home.recommended_tasks" = "推薦任務";
+"home.member_published" = "會員發布";
+"home.member_seller" = "會員賣家";
 "home.no_recommended_tasks" = "暫無推薦任務";
 "home.no_recommended_tasks_message" = "還沒有推薦任務，快去任務大廳看看吧！";
 "home.latest_activity" = "最新動態";
