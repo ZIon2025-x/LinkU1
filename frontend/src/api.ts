@@ -1207,6 +1207,28 @@ export const getFaq = async (lang: 'zh' | 'en' = 'en'): Promise<FaqListResponse>
   return res.data;
 };
 
+/** 法律文档库：按 type+lang 获取隐私政策/用户协议/Cookie 政策（用于 Web / iOS） */
+export type LegalDocumentType = 'privacy' | 'terms' | 'cookie';
+export interface LegalDocumentOut {
+  type: LegalDocumentType;
+  lang: string;
+  content_json: Record<string, unknown>;
+  version?: string;
+  effective_at?: string;
+}
+
+export const getLegalDocument = async (
+  docType: LegalDocumentType,
+  lang: 'zh' | 'en' = 'en'
+): Promise<LegalDocumentOut | null> => {
+  try {
+    const res = await api.get<LegalDocumentOut>(`/api/legal/${docType}`, { params: { lang } });
+    return res.data;
+  } catch {
+    return null;
+  }
+};
+
 export const getPublicSystemSettings = async () => {
   const res = await api.get('/api/system-settings/public');
   return res.data;

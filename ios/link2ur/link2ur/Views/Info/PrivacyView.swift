@@ -1,13 +1,22 @@
 import SwiftUI
+import Combine
 
 struct PrivacyView: View {
     @Environment(\.locale) var locale
+    @State private var legalDoc: LegalDocumentOut?
+    @State private var legalCancellable: AnyCancellable?
+
     private var isChinese: Bool {
         locale.language.languageCode?.identifier == "zh"
     }
-    
+
+    private var legalLang: String { isChinese ? "zh" : "en" }
+
     var body: some View {
         ScrollView {
+            if let content = legalDoc?.contentJson, !content.isEmpty {
+                LegalDocumentContentView(contentJson: content)
+            } else {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
                 // 标题和版本信息
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -127,12 +136,24 @@ struct PrivacyView: View {
                     .padding(.bottom, AppSpacing.xl)
             }
             .padding(.vertical, AppSpacing.md)
+            }
         }
         .navigationTitle(isChinese ? "隐私政策" : "Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .onAppear { loadLegal() }
+        .onChange(of: legalLang) { _ in loadLegal() }
+    }
+
+    private func loadLegal() {
+        legalCancellable = APIService.shared.getLegalDocument(type: "privacy", lang: legalLang)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { legalDoc = $0 }
+            )
     }
 }
 

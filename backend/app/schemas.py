@@ -3664,6 +3664,20 @@ class FaqListResponse(BaseModel):
     sections: List[FaqSectionOut]
 
 
+# ==================== 法律文档库 Schemas ====================
+
+class LegalDocumentOut(BaseModel):
+    """法律文档输出（按 type+lang 返回 content_json 等）"""
+    type: str
+    lang: str
+    content_json: Dict[str, Any]
+    version: Optional[str] = None
+    effective_at: Optional[datetime.date] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ==================== 审计日志相关 Schemas ====================
 
 class AuditLogOut(BaseModel):

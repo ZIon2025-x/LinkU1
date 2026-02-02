@@ -4,13 +4,14 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
-import { fetchCurrentUser, logout } from '../api';
+import { fetchCurrentUser, logout, getLegalDocument } from '../api';
 
 const CookiePolicy: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [content, setContent] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -23,6 +24,43 @@ const CookiePolicy: React.FC = () => {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      const doc = await getLegalDocument('cookie', language);
+      setContent(doc?.content_json && Object.keys(doc.content_json).length > 0 ? (doc.content_json as Record<string, unknown>) : null);
+    };
+    load();
+  }, [language]);
+
+  const getContent = (path: string) => {
+    const v = path.split('.').reduce((o: unknown, k: string) => (o != null && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), content);
+    return (typeof v === 'string' ? v : null) ?? t(`cookiePolicy.${path}`);
+  };
+
+  /** 从 API 返回的 content_json 解析为「标题 + 段落」列表，用于完整展示 */
+  const getSectionsFromContent = (c: Record<string, unknown>): { title: string; paragraphs: string[] }[] => {
+    const sections: { title: string; paragraphs: string[] }[] = [];
+    const order = ['title', 'version', 'effectiveDate', 'jurisdiction', 'intro', 'whatAreCookies', 'typesWeUse', 'thirdParty', 'retention', 'howToManage', 'mobileTech', 'yourRights', 'contactUs', 'importantNotice', 'necessary', 'optional', 'contact'];
+    for (const key of order) {
+      if (!(key in c)) continue;
+      const v = c[key];
+      if (typeof v === 'string') {
+        if (key === 'title') continue;
+        sections.push({ title: key, paragraphs: [v] });
+      } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const o = v as Record<string, unknown>;
+        const title = (o.title as string) || '';
+        const pKeys = Object.keys(o).filter(k => k !== 'title').sort((a, b) => (a.startsWith('p') && b.startsWith('p') ? (Number(a.slice(1)) - Number(b.slice(1))) : a.localeCompare(b)));
+        const paras = pKeys.map(k => o[k]).filter((x): x is string => typeof x === 'string');
+        if (title || paras.length) sections.push({ title, paragraphs: paras });
+      }
+    }
+    return sections;
+  };
+
+  const sections = content ? getSectionsFromContent(content) : [];
+  const hasFullContent = sections.length > 5;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -95,10 +133,10 @@ const CookiePolicy: React.FC = () => {
               color: 'transparent',
               background: 'transparent'
             }}>
-              {t('cookiePolicy.title')}
+              {getContent('title')}
             </h1>
             <h2 style={{ fontSize: '1.5rem', color: '#1e293b', margin: 0 }}>
-              {t('cookiePolicy.title')}
+              {getContent('title')}
             </h2>
           </div>
 
@@ -110,15 +148,30 @@ const CookiePolicy: React.FC = () => {
             lineHeight: '1.8'
           }}>
             <div style={{ color: '#374151', fontSize: '1rem' }}>
-              <p style={{ marginBottom: '24px' }}>{t('cookiePolicy.intro')}</p>
-              <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '12px' }}>
-                {t('privacyPolicy.cookies.title')}
-              </h3>
-              <p style={{ marginBottom: '16px' }}>{t('cookiePolicy.necessary')}</p>
-              <p style={{ marginBottom: '24px' }}>{t('cookiePolicy.optional')}</p>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748b' }}>
-                {t('cookiePolicy.contact')}
-              </p>
+              {hasFullContent ? (
+                sections.map((sec, i) => (
+                  <div key={i} style={{ marginBottom: i < sections.length - 1 ? '28px' : 0 }}>
+                    {sec.title && (
+                      <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '12px' }}>{sec.title}</h3>
+                    )}
+                    {sec.paragraphs.map((p, j) => (
+                      <p key={j} style={{ marginBottom: '16px', whiteSpace: 'pre-line' }}>{p}</p>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <>
+                  <p style={{ marginBottom: '24px' }}>{getContent('intro')}</p>
+                  <h3 style={{ color: '#1e293b', fontSize: '1.2rem', marginBottom: '12px' }}>
+                    {t('privacyPolicy.cookies.title')}
+                  </h3>
+                  <p style={{ marginBottom: '16px' }}>{getContent('necessary')}</p>
+                  <p style={{ marginBottom: '24px' }}>{getContent('optional')}</p>
+                  <p style={{ margin: 0, fontSize: '0.95rem', color: '#64748b' }}>
+                    {getContent('contact')}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

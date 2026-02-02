@@ -20,6 +20,16 @@ extension APIService {
     }
 }
 
+// MARK: - 法律文档库 API Extension
+
+extension APIService {
+    /// 获取法律文档（隐私/用户协议/Cookie），type: privacy | terms | cookie，lang: zh | en
+    func getLegalDocument(type: String, lang: String = "en") -> AnyPublisher<LegalDocumentOut, APIError> {
+        let endpoint = APIEndpoints.Common.legal(type: type, lang: lang)
+        return request(LegalDocumentOut.self, endpoint)
+    }
+}
+
 // MARK: - 类型别名（用于兼容性）
 typealias MessageOut = Message
 typealias NotificationOut = SystemNotification

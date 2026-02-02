@@ -351,6 +351,10 @@ enum APIEndpoints {
         static func faq(lang: String) -> String {
             "/api/faq?lang=\(lang)"
         }
+        /// 法律文档（隐私/用户协议/Cookie）：type=privacy|terms|cookie，lang=zh|en
+        static func legal(type: String, lang: String) -> String {
+            "/api/legal/\(type)?lang=\(lang)"
+        }
     }
     
     // MARK: - Reports (举报)
@@ -384,7 +388,10 @@ enum APIEndpoints {
         Forum.categories,
         Activities.list,
         Common.banners,
-        "/api/faq"
+        "/api/faq",
+        "/api/legal/privacy",
+        "/api/legal/terms",
+        "/api/legal/cookie"
     ]
 }
 

@@ -14818,3 +14818,41 @@ def get_faq(
     except Exception as e:
         logger.error(f"获取 FAQ 列表失败: {e}")
         raise HTTPException(status_code=500, detail="获取FAQ失败")
+
+
+# ==================== 法律文档库 API ====================
+
+@router.get("/legal/{doc_type}", response_model=schemas.LegalDocumentOut)
+@cache_response(ttl=600, key_prefix="legal")
+def get_legal_document(
+    doc_type: str,
+    lang: Optional[str] = Query("en", description="语言：zh 或 en"),
+    db: Session = Depends(get_db),
+):
+    """获取法律文档（隐私政策/用户协议/Cookie 政策），按 type+lang 返回 content_json。用于 Web / iOS。"""
+    try:
+        doc_type = (doc_type or "").lower()
+        if doc_type not in ("privacy", "terms", "cookie"):
+            raise HTTPException(status_code=400, detail="doc_type 须为 privacy、terms 或 cookie")
+        lang = (lang or "en").lower()
+        if lang not in ("zh", "en"):
+            lang = "en"
+        row = (
+            db.query(models.LegalDocument)
+            .filter(models.LegalDocument.type == doc_type, models.LegalDocument.lang == lang)
+            .first()
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="未找到该法律文档")
+        return {
+            "type": row.type,
+            "lang": row.lang,
+            "content_json": row.content_json or {},
+            "version": row.version,
+            "effective_at": row.effective_at,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取法律文档失败: {e}")
+        raise HTTPException(status_code=500, detail="获取法律文档失败")

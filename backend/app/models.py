@@ -2993,3 +2993,24 @@ class FaqItem(Base):
         Index("idx_faq_items_section", "section_id"),
         Index("idx_faq_items_section_order", "section_id", "sort_order"),
     )
+
+
+# ==================== 法律文档库模型 ====================
+
+class LegalDocument(Base):
+    """法律文档库：隐私政策、用户协议、Cookie 政策等，按 type+lang 存储 JSON 内容"""
+    __tablename__ = "legal_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String(20), nullable=False, index=True)  # privacy | terms | cookie
+    lang = Column(String(10), nullable=False, index=True)  # zh | en
+    content_json = Column(JSONB, nullable=False, default={}, server_default="{}")
+    version = Column(String(50), nullable=True)
+    effective_at = Column(Date, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+
+    __table_args__ = (
+        UniqueConstraint("type", "lang", name="uq_legal_documents_type_lang"),
+        Index("idx_legal_documents_type_lang", "type", "lang"),
+    )

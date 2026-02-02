@@ -4,14 +4,15 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
-import { fetchCurrentUser, logout } from '../api';
+import { fetchCurrentUser, logout, getLegalDocument } from '../api';
 
 const PrivacyPolicy: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [content, setContent] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -24,6 +25,19 @@ const PrivacyPolicy: React.FC = () => {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      const doc = await getLegalDocument('privacy', language);
+      setContent(doc?.content_json && Object.keys(doc.content_json).length > 0 ? (doc.content_json as Record<string, unknown>) : null);
+    };
+    load();
+  }, [language]);
+
+  const getContent = (path: string) => {
+    const v = path.split('.').reduce((o: unknown, k: string) => (o != null && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), content);
+    return (typeof v === 'string' ? v : null) ?? t(`privacyPolicy.${path}`);
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -110,7 +124,7 @@ const PrivacyPolicy: React.FC = () => {
               color: 'transparent',
               background: 'transparent'
             }}>
-              {t('privacyPolicy.title')}
+              {getContent('title')}
             </h1>
             <div style={{
               fontSize: '1rem',
@@ -118,8 +132,8 @@ const PrivacyPolicy: React.FC = () => {
               margin: 0,
               lineHeight: '1.6'
             }}>
-              <p style={{ margin: '4px 0' }}>{t('privacyPolicy.version')}</p>
-              <p style={{ margin: '4px 0' }}>{t('privacyPolicy.effectiveDate')}</p>
+              <p style={{ margin: '4px 0' }}>{getContent('version')}</p>
+              <p style={{ margin: '4px 0' }}>{getContent('effectiveDate')}</p>
             </div>
           </div>
 
@@ -141,68 +155,68 @@ const PrivacyPolicy: React.FC = () => {
                 border: '1px solid #e9ecef'
               }}>
                 <h3 style={{ color: '#1e293b', fontSize: '1.3rem', marginBottom: '16px' }}>
-                  {t('privacyPolicy.controller')}
+                  {getContent('controller')}
                 </h3>
-                <p style={{ marginBottom: '8px' }}>{t('privacyPolicy.operator')}</p>
-                <p style={{ marginBottom: '8px' }}>{t('privacyPolicy.contactEmail')}</p>
-                <p style={{ marginBottom: '8px' }}>{t('privacyPolicy.address')}</p>
-                <p style={{ margin: 0 }}>{t('privacyPolicy.dpoNote')}</p>
+                <p style={{ marginBottom: '8px' }}>{getContent('operator')}</p>
+                <p style={{ marginBottom: '8px' }}>{getContent('contactEmail')}</p>
+                <p style={{ marginBottom: '8px' }}>{getContent('address')}</p>
+                <p style={{ margin: 0 }}>{getContent('dpoNote')}</p>
               </div>
 
               {/* 数据收集 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.dataCollection.title')}
+                {getContent('dataCollection.title')}
               </h2>
-              <p>{t('privacyPolicy.dataCollection.accountData')}</p>
-              <p>{t('privacyPolicy.dataCollection.taskData')}</p>
-              <p>{t('privacyPolicy.dataCollection.locationData')}</p>
-              <p>{t('privacyPolicy.dataCollection.recommendationData')}</p>
-              <p>{t('privacyPolicy.dataCollection.technicalData')}</p>
-              <p>{t('privacyPolicy.dataCollection.analyticsData')}</p>
-              <p>{t('privacyPolicy.dataCollection.paymentData')}</p>
+              <p>{getContent('dataCollection.accountData')}</p>
+              <p>{getContent('dataCollection.taskData')}</p>
+              <p>{getContent('dataCollection.locationData')}</p>
+              <p>{getContent('dataCollection.recommendationData')}</p>
+              <p>{getContent('dataCollection.technicalData')}</p>
+              <p>{getContent('dataCollection.analyticsData')}</p>
+              <p>{getContent('dataCollection.paymentData')}</p>
 
               {/* 数据共享 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.dataSharing.title')}
+                {getContent('dataSharing.title')}
               </h2>
-              <p>{t('privacyPolicy.dataSharing.cloudServices')}</p>
-              <p>{t('privacyPolicy.dataSharing.paymentProcessors')}</p>
-              <p>{t('privacyPolicy.dataSharing.legalDisclosure')}</p>
+              <p>{getContent('dataSharing.cloudServices')}</p>
+              <p>{getContent('dataSharing.paymentProcessors')}</p>
+              <p>{getContent('dataSharing.legalDisclosure')}</p>
 
               {/* 国际传输 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.internationalTransfer.title')}
+                {getContent('internationalTransfer.title')}
               </h2>
-              <p>{t('privacyPolicy.internationalTransfer.content')}</p>
+              <p>{getContent('internationalTransfer.content')}</p>
 
               {/* 保留期限 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.retentionPeriod.title')}
+                {getContent('retentionPeriod.title')}
               </h2>
-              <p>{t('privacyPolicy.retentionPeriod.accountData')}</p>
-              <p>{t('privacyPolicy.retentionPeriod.transactionData')}</p>
-              <p>{t('privacyPolicy.retentionPeriod.recommendationData')}</p>
-              <p>{t('privacyPolicy.retentionPeriod.securityLogs')}</p>
+              <p>{getContent('retentionPeriod.accountData')}</p>
+              <p>{getContent('retentionPeriod.transactionData')}</p>
+              <p>{getContent('retentionPeriod.recommendationData')}</p>
+              <p>{getContent('retentionPeriod.securityLogs')}</p>
 
               {/* 您的权利 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.yourRights.title')}
+                {getContent('yourRights.title')}
               </h2>
-              <p>{t('privacyPolicy.yourRights.content')}</p>
-              <p>{t('privacyPolicy.yourRights.complaintProcess')}</p>
+              <p>{getContent('yourRights.content')}</p>
+              <p>{getContent('yourRights.complaintProcess')}</p>
 
               {/* Cookies */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.cookies.title')}
+                {getContent('cookies.title')}
               </h2>
-              <p>{t('privacyPolicy.cookies.necessary')}</p>
-              <p>{t('privacyPolicy.cookies.optional')}</p>
+              <p>{getContent('cookies.necessary')}</p>
+              <p>{getContent('cookies.optional')}</p>
 
               {/* 联系我们 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                {t('privacyPolicy.contactUs.title')}
+                {getContent('contactUs.title')}
               </h2>
-              <p>{t('privacyPolicy.contactUs.content')}</p>
+              <p>{getContent('contactUs.content')}</p>
 
               <div style={{
                 marginTop: '40px',
@@ -212,7 +226,7 @@ const PrivacyPolicy: React.FC = () => {
                 border: '1px solid #e9ecef'
               }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#6c757d' }}>
-                  <strong>{t('privacyPolicy.importantNotice')}</strong>
+                  <strong>{getContent('importantNotice')}</strong>
                 </p>
               </div>
             </div>

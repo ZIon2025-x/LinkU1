@@ -2593,7 +2593,107 @@
   },
   "cookiePolicy": {
     "title": "Cookie Policy",
-    "intro": "This page explains how Link²Ur uses cookies and similar technologies. You can change your preferences at any time in the Cookie banner or settings.",
+    "version": "Version: v1.0",
+    "effectiveDate": "Effective Date: January 2026",
+    "jurisdiction": "Applicable Jurisdiction: England & Wales",
+    "intro": {
+      "title": "Introduction",
+      "p1": "This Cookie Policy explains how Link²Ur (\"we\", \"our\") uses cookies and similar technologies, and how you can manage these technologies. This policy supplements the Privacy Notice and should be read together with the Privacy Notice.",
+      "p2": "Under the UK Privacy and Electronic Communications Regulations (PECR) and the General Data Protection Regulation (UK GDPR), we must inform you about the cookies we use when you visit our website and obtain your consent for non-essential cookies."
+    },
+    "whatAreCookies": {
+      "title": "1. What are Cookies and Similar Technologies",
+      "p1": "Cookies are small text files that are stored on your device (computer, tablet, or mobile device) when you visit a website. Cookies contain information that is transmitted back to the website when you return to the website or visit other websites that use the same cookies.",
+      "p2": "In addition to cookies, we may also use other similar technologies, including:",
+      "p3": "• Local Storage: Stores data in your browser, similar to cookies but can store more information.",
+      "p4": "• Session Storage: Temporarily stores data, only valid during the browser session.",
+      "p5": "• Pixel Tags: Small image files used to track webpage visits and email opens.",
+      "p6": "• Device Identifiers: Unique identifiers used in mobile applications to identify devices."
+    },
+    "typesWeUse": {
+      "title": "2. Types of Cookies We Use",
+      "p1": "We categorize cookies based on their purpose and necessity as follows:",
+      "p2": "2.1 Strictly Necessary Cookies (Required)",
+      "p3": "These cookies are essential for the basic functions of the website. Without these cookies, the website cannot function properly. These cookies do not require your consent. Including:",
+      "p4": "• Authentication Cookies: Used to maintain your login status and ensure you are authenticated.",
+      "p5": "• Security Cookies: Used to prevent fraud, abuse, and unauthorized access, protecting your account security.",
+      "p6": "• Load Balancing Cookies: Used to distribute traffic among multiple servers to ensure stable website operation.",
+      "p7": "• Shopping Cart/Session Cookies: Used to remember your actions on the website, such as items added to cart or form filling progress.",
+      "p8": "2.2 Functional Cookies (Optional)",
+      "p9": "These cookies allow the website to remember your choices (such as language preferences, regional settings) to provide enhanced personalized features. These cookies are only enabled after your explicit consent. Including:",
+      "p10": "• Preference Cookies: Remember your language, theme, font size, and other settings.",
+      "p11": "• Functional Cookies: Remember your search history, favorite content, recently viewed items, etc.",
+      "p12": "• Geolocation Cookies: Remember your location preferences for providing localized content and services.",
+      "p13": "2.3 Analytics Cookies (Optional)",
+      "p14": "These cookies help us understand how users use the website so we can improve website performance and user experience. These cookies are only enabled after your explicit consent. Including:",
+      "p15": "• Website Analytics Cookies: Used for statistics on visits, page views, user dwell time, bounce rate, and other metrics.",
+      "p16": "• Performance Monitoring Cookies: Used to monitor website performance, error rates, loading times, etc., helping us optimize website speed.",
+      "p17": "• User Behavior Analysis Cookies: Used to analyze user behavior patterns on the website to understand user preferences and needs.",
+      "p18": "We may use third-party analytics services (such as Google Analytics), and these service providers have their own privacy policies. We recommend that you review these third parties' privacy policies to understand how they use cookies.",
+      "p19": "2.4 Advertising Cookies (Currently Not Used)",
+      "p20": "We currently do not use advertising cookies on our website. If we use advertising cookies in the future, we will update relevant information in this policy and obtain your explicit consent before use."
+    },
+    "thirdParty": {
+      "title": "3. Third-Party Cookies",
+      "p1": "We may allow third-party service providers to set cookies on our website. These third-party cookies are subject to third-party privacy policies, and we are not responsible for them.",
+      "p2": "Third-party services we may use include:",
+      "p3": "• Analytics Services: Such as Google Analytics, for website analytics and performance monitoring.",
+      "p4": "• Cloud Service Providers: For hosting and data storage.",
+      "p5": "• Security Services: For preventing fraud and abuse.",
+      "p6": "We recommend that you review these third parties' privacy policies and cookie policies to understand how they use cookies and your data."
+    },
+    "retention": {
+      "title": "4. Cookie Retention Periods",
+      "p1": "Different types of cookies have different retention periods:",
+      "p2": "• Session Cookies: These cookies are temporary and only valid during your visit to the website. These cookies are automatically deleted when you close your browser.",
+      "p3": "• Persistent Cookies: These cookies remain on your device for a period of time, even after you close your browser. The retention period for persistent cookies is usually 30 days to 2 years, depending on the type and purpose of the cookie. We will provide specific retention period information for each cookie type on the cookie settings page.",
+      "p4": "• Third-Party Cookies: The retention period for third-party cookies is determined by third-party service providers, which we cannot control. Please review the relevant third parties' privacy policies for detailed information."
+    },
+    "howToManage": {
+      "title": "5. How to Manage Cookies",
+      "p1": "You can manage cookies in the following ways:",
+      "p2": "5.1 Through Our Cookie Settings",
+      "p3": "You can change your cookie preferences at any time through the cookie settings page on our website. You can enable or disable functional cookies and analytics cookies, but please note that disabling certain cookies may affect website functionality and your user experience.",
+      "p4": "5.2 Through Browser Settings",
+      "p5": "Most browsers allow you to manage cookies. You can:",
+      "p6": "• View cookies stored on your device",
+      "p7": "• Delete cookies (including all cookies or cookies from specific websites)",
+      "p8": "• Block cookies (block all cookies or only third-party cookies)",
+      "p9": "• Receive notifications before cookies are set",
+      "p10": "Please note that disabling or deleting cookies may affect website functionality. Some features may not work properly, and you may need to re-enter information or reset preferences.",
+      "p11": "5.3 Cookie Management in Mobile Apps",
+      "p12": "In mobile applications, you can manage cookie-like technologies (such as in-app identifiers, device IDs, etc.) through app settings. You can also manage certain identifiers by resetting advertising identifiers in device settings."
+    },
+    "mobileTech": {
+      "title": "6. Similar Technologies in Mobile Applications",
+      "p1": "In mobile applications, we may use cookie-like technologies to achieve similar functions, including:",
+      "p2": "• In-App Identifiers: Used to identify app installations and user sessions.",
+      "p3": "• Device IDs: Used to identify devices and provide personalized services.",
+      "p4": "• Advertising Identifiers: Used to provide relevant advertising (if applicable).",
+      "p5": "The use of these technologies follows the provisions of our Privacy Notice. You can manage these technologies through app settings or device settings."
+    },
+    "yourRights": {
+      "title": "7. Your Rights",
+      "p1": "Under UK GDPR and PECR, you have the following rights regarding cookies:",
+      "p2": "• Right to Information: You have the right to know which cookies we use and why we use them.",
+      "p3": "• Right to Consent: For non-essential cookies, you have the right to choose whether to consent to their use.",
+      "p4": "• Right to Withdraw Consent: You can withdraw your consent to non-essential cookies at any time.",
+      "p5": "• Right to Deletion: You can delete cookies stored on your device at any time.",
+      "p6": "• Right of Access: You can request access to your personal data collected through cookies.",
+      "p7": "If you wish to exercise these rights, please contact us at info@link2ur.com."
+    },
+    "contactUs": {
+      "title": "8. Contact Us",
+      "p1": "If you have any questions about this Cookie Policy or need help managing your cookie preferences, please contact us:",
+      "p2": "• Email: info@link2ur.com",
+      "p3": "• Mailing Address: A3, B16 9NB, UK",
+      "p4": "We will respond to your inquiries within a reasonable time."
+    },
+    "importantNotice": {
+      "title": "Important Notice",
+      "p1": "This Cookie Policy may be updated from time to time. We will notify you when the policy is updated and publish the updated version on this page. We recommend that you review this policy regularly to stay informed.",
+      "p2": "Last Updated: January 2026"
+    },
     "necessary": "Necessary Cookies: Essential for basic site operation (e.g. login, security) and cannot be disabled.",
     "optional": "Analytics/Functional Cookies (Optional): Only enabled after your explicit consent; you can change preferences at any time in the Cookie banner or settings.",
     "contact": "For questions contact: info@link2ur.com"
