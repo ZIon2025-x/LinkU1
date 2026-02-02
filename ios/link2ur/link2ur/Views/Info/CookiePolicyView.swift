@@ -15,7 +15,7 @@ struct CookiePolicyView: View {
     var body: some View {
         ScrollView {
             if let content = legalDoc?.contentJson, !content.isEmpty {
-                LegalDocumentContentView(contentJson: content)
+                LegalDocumentContentView(contentJson: content, documentType: "cookie")
             } else {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
                 // 标题和版本信息

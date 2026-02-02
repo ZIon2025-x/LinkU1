@@ -1688,9 +1688,9 @@ export const getTaskTranslationsBatch = async (
 
 // ==================== 积分系统 API ====================
 
-// 获取积分账户信息
+// 获取积分账户信息（与后端 coupon_points 路由一致）
 export const getPointsAccount = async () => {
-  const res = await api.get('/api/points/account');
+  const res = await api.get('/api/coupon-points/points/account');
   return res.data;
 };
 
@@ -1699,7 +1699,7 @@ export const getPointsTransactions = async (params?: {
   page?: number;
   limit?: number;
 }) => {
-  const res = await api.get('/api/points/transactions', { params });
+  const res = await api.get('/api/coupon-points/points/transactions', { params });
   return res.data;
 };
 
