@@ -2952,3 +2952,44 @@ class TaskTranslation(Base):
         Index('idx_task_translations_target_lang', 'target_language'),
         Index('idx_task_translations_lookup', 'task_id', 'field_type', 'target_language'),
     )
+
+
+# ==================== FAQ 库模型 ====================
+
+class FaqSection(Base):
+    """FAQ 分类表"""
+    __tablename__ = "faq_sections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(80), unique=True, nullable=False, index=True)
+    title_zh = Column(String(200), nullable=False)
+    title_en = Column(String(200), nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    items = relationship("FaqItem", back_populates="section", order_by="FaqItem.sort_order")
+
+    __table_args__ = (Index("idx_faq_sections_sort", "sort_order"),)
+
+
+class FaqItem(Base):
+    """FAQ 问答条目表"""
+    __tablename__ = "faq_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    section_id = Column(Integer, ForeignKey("faq_sections.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_zh = Column(Text, nullable=False)
+    question_en = Column(Text, nullable=False)
+    answer_zh = Column(Text, nullable=False)
+    answer_en = Column(Text, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+
+    section = relationship("FaqSection", back_populates="items")
+
+    __table_args__ = (
+        Index("idx_faq_items_section", "section_id"),
+        Index("idx_faq_items_section_order", "section_id", "sort_order"),
+    )

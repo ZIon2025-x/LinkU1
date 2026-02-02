@@ -751,6 +751,9 @@
 "task_expert.expert_negotiate_price" = "任務達人提出議價：";
 "task_expert.view_task" = "查看任務";
 "task_expert.task_details" = "任務詳情: %@";
+"task_expert.type" = "類型";
+"task_expert.location" = "位置";
+"task_expert.all_cities" = "全部城市";
 "task_expert.clear" = "清除";
 
 // MARK: - Forum

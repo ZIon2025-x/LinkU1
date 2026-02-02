@@ -3,99 +3,14 @@ import UserNotifications
 
 public struct ContentView: View {
     @EnvironmentObject public var appState: AppState
-    @State private var remainingTime: Double = 3.0 // 剩余时间（秒）
-    @State private var progress: Double = 1.0 // 进度值（1.0 到 0.0）
-    @State private var timer: Timer?
-    @State private var hasStartedAnimation: Bool = false // 标记是否已启动动画
     @State private var showOnboarding = false // 是否显示引导教程
     @State private var hasCheckedOnboarding = false // 优化：防止重复检查引导教程状态
     
     public var body: some View {
         Group {
             if appState.isCheckingLoginStatus {
-                // 正在检查登录状态，显示视频加载界面
-                ZStack {
-                    // 视频背景（全屏循环播放，从多个视频中随机选择）
-                    VideoLoadingView(
-                        videoName: "linker",  // 默认视频名（如果 videoNames 为空时使用）
-                        videoExtension: "mp4",
-                        videoNames: ["linker1", "linker2", "linker3", "linker4"],  // 4个视频文件名（不含扩展名）
-                        showOverlay: false
-                    )
-                    
-                    // 可选的半透明遮罩（如果需要降低视频亮度）
-                    Color.black.opacity(0.05)
-                        .ignoresSafeArea()
-                    
-                    // 右上角跳过按钮
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                // 停止定时器（如果存在）
-                                timer?.invalidate()
-                                timer = nil
-                                
-                                // 直接结束视频加载，进入主界面
-                                appState.isCheckingLoginStatus = false
-                            }) {
-                                Text(LocalizationKey.onboardingSkip.localized)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(AppColors.textPrimary)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(
-                                        Capsule()
-                                            .fill(.ultraThinMaterial)
-                                    )
-                                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
-                            }
-                            .padding(.top, 12)
-                            .padding(.trailing, 16)
-                        }
-                        Spacer()
-                    }
-                    
-                    // 中间文本：Link to your world（蓝色字体，world 是蓝底白字）
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Text("Link to your ")
-                                .font(AppTypography.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.primary)
-                            
-                            Text("world")
-                                .font(AppTypography.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                                .background(AppColors.primary)
-                                .cornerRadius(8)
-                        }
-                        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        .padding(.top, 100)  // 往下移动（增加顶部间距）
-                        Spacer()
-                    }
-                    
-                    // 左下角 Logo
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Image("Logo")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 80, height: 80)
-                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)  // 确保左对齐
-                        .padding(.leading, AppSpacing.lg)
-                        .padding(.bottom, AppSpacing.lg)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)  // 确保在左下角
-                }
+                // 正在检查登录状态，显示启动屏（蓝色背景 + Logo + 文案 + 加载动画）
+                SplashView()
             } else {
                 // 未登录时也直接显示主界面，不再强制显示登录框
                 // 用户可以在需要时通过其他入口进行登录
@@ -116,21 +31,9 @@ public struct ContentView: View {
         // AppState 的 init() 中已经调用了 checkLoginStatus()，避免重复调用
         .onChange(of: appState.isCheckingLoginStatus) { isChecking in
             if !isChecking {
-                // 停止倒计时
-                timer?.invalidate()
-                timer = nil
-                remainingTime = 3.0 // 重置
-                progress = 0.0 // 重置为空
-                hasStartedAnimation = false // 重置标记
-                
-                // 视频播放完成，进入app后，请求通知权限
+                // 加载完成，进入主界面后请求通知权限
                 requestNotificationPermissionAfterVideo()
             }
-        }
-        .onDisappear {
-            // 清理定时器
-            timer?.invalidate()
-            timer = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PushNotificationTapped"))) { notification in
             // 处理推送通知点击
@@ -364,7 +267,7 @@ public struct ContentView: View {
         }
     }
     
-    // 视频播放完成后请求通知权限和追踪权限
+    // 启动屏加载完成后请求通知权限和追踪权限
     private func requestNotificationPermissionAfterVideo() {
         // 检查是否已经请求过通知权限
         let hasRequestedNotification = UserDefaults.standard.bool(forKey: "has_requested_notification_permission")

@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct CustomerServiceView: View {
+    /// 从 sheet 等模态打开时传入，用于显示「完成」并关闭；为 nil 时表示在 NavigationStack 内 push，不显示完成按钮
+    var onDismiss: (() -> Void)? = nil
+    
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = CustomerServiceViewModel()
     @StateObject private var keyboardObserver = KeyboardHeightObserver()
@@ -250,6 +253,14 @@ struct CustomerServiceView: View {
             .navigationTitle(LocalizationKey.customerServiceCustomerService.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if let onDismiss = onDismiss {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(LocalizationKey.commonDone.localized) {
+                            onDismiss()
+                        }
+                        .foregroundColor(AppColors.primary)
+                    }
+                }
                 if viewModel.chat != nil {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: {
@@ -260,27 +271,28 @@ struct CustomerServiceView: View {
                         }
                     }
                     
-                    // 仅当对话未结束时显示"结束对话"按钮
+                    // 仅当对话未结束时显示「结束对话」按钮（图标保持导航栏单行紧凑）
                     if viewModel.chat?.isEnded != 1 {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(LocalizationKey.customerServiceEndConversation.localized) {
+                            Button(action: {
                                 viewModel.endChat { success in
                                     if success {
                                         messageText = ""
                                     }
                                 }
+                            }) {
+                                Image(systemName: "phone.down.fill")
+                                    .foregroundColor(AppColors.error)
                             }
-                            .font(AppTypography.subheadline)
-                            .foregroundColor(AppColors.error)
+                            .accessibilityLabel(LocalizationKey.customerServiceEndConversation.localized)
                         }
                     }
                 } else if !viewModel.chats.isEmpty {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: {
                             showChatHistory = true
                         }) {
-                            Text(LocalizationKey.customerServiceHistory.localized)
-                                .font(AppTypography.subheadline)
+                            Image(systemName: "clock.arrow.circlepath")
                                 .foregroundColor(AppColors.primary)
                         }
                     }
@@ -303,7 +315,7 @@ struct CustomerServiceView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        .navigationViewStyle(StackNavigationViewStyle()) // 强制使用堆栈样式，避免iPad上的split view
+        .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
             // 检查用户是否已登录（需要验证用户会话）
             let hasSessionId = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) != nil

@@ -3634,6 +3634,36 @@ class BannerOrderUpdate(BaseModel):
     order: int
 
 
+# ==================== FAQ 库 Schemas ====================
+
+class FaqItemOut(BaseModel):
+    """FAQ 单条问答输出（按语言返回 question/answer）"""
+    id: int
+    question: str
+    answer: str
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class FaqSectionOut(BaseModel):
+    """FAQ 分类输出（含该分类下所有条目）"""
+    id: int
+    key: str
+    title: str
+    items: List[FaqItemOut]
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class FaqListResponse(BaseModel):
+    """FAQ 列表响应"""
+    sections: List[FaqSectionOut]
+
+
 # ==================== 审计日志相关 Schemas ====================
 
 class AuditLogOut(BaseModel):

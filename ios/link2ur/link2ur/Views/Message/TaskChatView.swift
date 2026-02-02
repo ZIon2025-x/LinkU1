@@ -149,18 +149,8 @@ struct TaskChatView: View {
                 LoginView()
             }
             .sheet(isPresented: $showCustomerService) {
-                NavigationStack {
-                    CustomerServiceView()
-                        .environmentObject(appState)
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button(LocalizationKey.commonDone.localized) {
-                                    showCustomerService = false
-                                }
-                            }
-                        }
-                }
+                CustomerServiceView(onDismiss: { showCustomerService = false })
+                    .environmentObject(appState)
             }
             .sheet(isPresented: $showLocationDetail) {
                 NavigationStack {

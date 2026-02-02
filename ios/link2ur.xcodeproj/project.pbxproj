@@ -47,7 +47,7 @@
 		14817E332F14324D00620BCA /* Link-Ur-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Link-Ur-Info.plist"; sourceTree = "<group>"; };
 		1488249B2F2A8F1600E86B07 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1488249D2F2A9E0C00E86B07 /* VIPProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIPProducts.storekit; sourceTree = "<group>"; };
-		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Link²Ur.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Link²Ur.app"; path = Link2Ur.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -482,7 +482,7 @@
 				);
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
-				PRODUCT_NAME = "Link²Ur";
+				PRODUCT_NAME = Link2Ur;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -520,7 +520,7 @@
 				);
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.link2ur;
-				PRODUCT_NAME = "Link²Ur";
+				PRODUCT_NAME = Link2Ur;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

@@ -297,6 +297,7 @@
 "task_expert.search_title" = "Search Experts";
 "task_expert.all_types" = "All Types";
 "task_expert.type" = "Type";
+"task_expert.location" = "Location";
 "task_expert.all_cities" = "All Cities";
 "task_expert.rating" = "Rating";
 "task_expert.completed" = "Completed";

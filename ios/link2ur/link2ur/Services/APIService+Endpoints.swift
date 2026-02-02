@@ -10,6 +10,16 @@ extension APIService {
     }
 }
 
+// MARK: - FAQ 库 API Extension
+
+extension APIService {
+    /// 获取 FAQ 列表（按语言：zh / en）
+    func getFaq(lang: String = "en") -> AnyPublisher<FaqListResponse, APIError> {
+        let endpoint = APIEndpoints.Common.faq(lang: lang)
+        return request(FaqListResponse.self, endpoint)
+    }
+}
+
 // MARK: - 类型别名（用于兼容性）
 typealias MessageOut = Message
 typealias NotificationOut = SystemNotification

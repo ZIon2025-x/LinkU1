@@ -74,7 +74,7 @@ struct NotificationMenuView: View {
             NotificationListView()
         }
         .sheet(isPresented: $showCustomerService) {
-            CustomerServiceView()
+            CustomerServiceView(onDismiss: { showCustomerService = false })
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showTaskChats) {

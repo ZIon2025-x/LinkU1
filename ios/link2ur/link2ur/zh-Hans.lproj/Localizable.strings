@@ -337,6 +337,7 @@
 "task_expert.search_title" = "搜索达人";
 "task_expert.all_types" = "全部类型";
 "task_expert.type" = "类型";
+"task_expert.location" = "位置";
 "task_expert.all_cities" = "全部城市";
 "task_expert.rating" = "评分";
 "task_expert.completed" = "已完成";

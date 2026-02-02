@@ -347,6 +347,10 @@ enum APIEndpoints {
         static let uploadPublicImage = "/api/upload/public-image"  // 公开图片（任务图片、头像等）
         static let uploadFile = "/api/upload/file"  // 私密文件（任务证据文件等）
         static let banners = "/api/banners"
+        /// FAQ 库（按语言）：lang=zh 或 en
+        static func faq(lang: String) -> String {
+            "/api/faq?lang=\(lang)"
+        }
     }
     
     // MARK: - Reports (举报)
@@ -379,7 +383,8 @@ enum APIEndpoints {
         Forum.posts,
         Forum.categories,
         Activities.list,
-        Common.banners
+        Common.banners,
+        "/api/faq"
     ]
 }
 

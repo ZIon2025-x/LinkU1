@@ -14770,3 +14770,55 @@ def get_banners(
     except Exception as e:
         logger.error(f"获取 banner 列表失败: {e}")
         raise HTTPException(status_code=500, detail="获取广告列表失败")
+
+
+# ==================== FAQ 库 API ====================
+
+@router.get("/faq", response_model=schemas.FaqListResponse)
+@cache_response(ttl=600, key_prefix="faq")  # 缓存 10 分钟
+def get_faq(
+    lang: Optional[str] = Query("en", description="语言：zh 或 en"),
+    db: Session = Depends(get_db),
+):
+    """获取 FAQ 列表（按分类与语言返回，用于 Web / iOS）"""
+    try:
+        lang = (lang or "en").lower()
+        if lang not in ("zh", "en"):
+            lang = "en"
+        title_col = models.FaqSection.title_zh if lang == "zh" else models.FaqSection.title_en
+        q_col = models.FaqItem.question_zh if lang == "zh" else models.FaqItem.question_en
+        a_col = models.FaqItem.answer_zh if lang == "zh" else models.FaqItem.answer_en
+
+        sections = (
+            db.query(models.FaqSection)
+            .order_by(models.FaqSection.sort_order.asc())
+            .all()
+        )
+        section_list = []
+        for sec in sections:
+            items = (
+                db.query(models.FaqItem)
+                .filter(models.FaqItem.section_id == sec.id)
+                .order_by(models.FaqItem.sort_order.asc())
+                .all()
+            )
+            item_list = [
+                {
+                    "id": it.id,
+                    "question": getattr(it, "question_zh" if lang == "zh" else "question_en"),
+                    "answer": getattr(it, "answer_zh" if lang == "zh" else "answer_en"),
+                    "sort_order": it.sort_order,
+                }
+                for it in items
+            ]
+            section_list.append({
+                "id": sec.id,
+                "key": sec.key,
+                "title": getattr(sec, "title_zh" if lang == "zh" else "title_en"),
+                "items": item_list,
+                "sort_order": sec.sort_order,
+            })
+        return {"sections": section_list}
+    except Exception as e:
+        logger.error(f"获取 FAQ 列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取FAQ失败")

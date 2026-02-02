@@ -1184,8 +1184,28 @@ export const getPublicStats = async () => {
   }
 };
 
+/** FAQ 库：按语言获取常见问题列表（用于 Web / iOS） */
+export interface FaqItemOut {
+  id: number;
+  question: string;
+  answer: string;
+  sort_order: number;
+}
+export interface FaqSectionOut {
+  id: number;
+  key: string;
+  title: string;
+  items: FaqItemOut[];
+  sort_order: number;
+}
+export interface FaqListResponse {
+  sections: FaqSectionOut[];
+}
 
-
+export const getFaq = async (lang: 'zh' | 'en' = 'en'): Promise<FaqListResponse> => {
+  const res = await api.get<FaqListResponse>('/api/faq', { params: { lang } });
+  return res.data;
+};
 
 export const getPublicSystemSettings = async () => {
   const res = await api.get('/api/system-settings/public');

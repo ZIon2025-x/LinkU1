@@ -240,8 +240,8 @@ struct RecommendedContentView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: AppSpacing.lg) {
-                // 优化：确保LazyVStack不会裁剪子视图
+            // 使用 VStack 而非 LazyVStack，避免向上滑过「最新动态」标题时上方区块重新测量导致内容高度突变、滚动归位/抖动（懒加载在边界重入时会引起布局跳动）
+            VStack(spacing: AppSpacing.lg) {
                 // 顶部欢迎区域（符合 Apple HIG，使用系统字体和间距）
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
                     HStack(alignment: .center, spacing: AppSpacing.md) {
@@ -620,22 +620,24 @@ struct TaskExpertListContentView: View {
                     
                     // 筛选按钮
                     Button(action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
                             showFilterPanel.toggle()
                         }
                     }) {
                         IconStyle.icon("line.3.horizontal.decrease.circle", size: 20)
                             .foregroundColor(selectedCategory != nil || selectedCity != nil ? AppColors.primary : AppColors.textSecondary)
                             .rotationEffect(.degrees(showFilterPanel ? 180 : 0))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showFilterPanel)
+                            .animation(.spring(response: 0.42, dampingFraction: 0.78), value: showFilterPanel)
                             .padding(AppSpacing.sm)
                         .cardBackground(cornerRadius: AppCornerRadius.medium)
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, AppSpacing.sm)
+                .zIndex(1)
+                .background(AppColors.background)
                 
-                // 筛选面板
+                // 筛选面板（宽度铺满到屏幕边；仅用 HStack 内边距控制首尾位置；收起时在搜索栏下方消失不穿帮）
                 if showFilterPanel {
                     VStack(spacing: AppSpacing.md) {
                         // 分类筛选
@@ -644,6 +646,7 @@ struct TaskExpertListContentView: View {
                                 .font(AppTypography.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.textPrimary)
+                                .padding(.horizontal, AppSpacing.md)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: AppSpacing.sm) {
@@ -658,7 +661,11 @@ struct TaskExpertListContentView: View {
                                         }
                                     }
                                 }
+                                .padding(.leading, AppSpacing.md)
+                                .padding(.trailing, AppSpacing.md)
+                                .padding(.vertical, 2)
                             }
+                            .frame(height: 44)
                         }
                         
                         // 城市筛选
@@ -667,6 +674,7 @@ struct TaskExpertListContentView: View {
                                 .font(AppTypography.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.textPrimary)
+                                .padding(.horizontal, AppSpacing.md)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: AppSpacing.sm) {
@@ -681,7 +689,11 @@ struct TaskExpertListContentView: View {
                                         }
                                     }
                                 }
+                                .padding(.leading, AppSpacing.md)
+                                .padding(.trailing, AppSpacing.md)
+                                .padding(.vertical, 2)
                             }
+                            .frame(height: 44)
                         }
                         
                         // 清除筛选按钮
@@ -702,14 +714,25 @@ struct TaskExpertListContentView: View {
                                 .background(AppColors.primary.opacity(0.1))
                                 .cornerRadius(AppCornerRadius.medium)
                             }
+                            .padding(.horizontal, AppSpacing.md)
                         }
                     }
-                    .padding(AppSpacing.md)
-                    .background(AppColors.cardBackground)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.vertical, AppSpacing.md)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppColors.background)
+                    .overlay(alignment: .top) {
+                        Rectangle()
+                            .fill(AppColors.separator.opacity(0.5))
+                            .frame(height: 1 / UIScreen.main.scale)
+                    }
+                    .clipped()
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    ))
                 }
                 
-                // 筛选标签（已选择的筛选条件）
+                // 筛选标签（已选择的筛选条件；宽度铺满到屏幕边，仅 HStack 内边距控制首尾）
                 if selectedCategory != nil || selectedCity != nil {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: AppSpacing.sm) {
@@ -734,11 +757,13 @@ struct TaskExpertListContentView: View {
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, 2)
                     }
+                    .frame(height: 40)
                     .padding(.vertical, AppSpacing.xs)
                 }
                 
-                // 内容区域
+                // 内容区域（筛选面板展开时不加 refreshable，避免在标签区下滑误触刷新）
                 Group {
                     if viewModel.isLoading && viewModel.experts.isEmpty {
                         ListSkeleton(itemCount: 4, itemHeight: 100)
@@ -754,6 +779,19 @@ struct TaskExpertListContentView: View {
                             )
                             Spacer()
                         }
+                    } else if showFilterPanel {
+                        ScrollView {
+                            LazyVStack(spacing: AppSpacing.md) {
+                                ForEach(viewModel.experts) { expert in
+                                    NavigationLink(destination: TaskExpertDetailView(expertId: expert.id)) {
+                                        ExpertCard(expert: expert)
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                }
+                            }
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                        }
                     } else {
                         ScrollView {
                             LazyVStack(spacing: AppSpacing.md) {
@@ -766,6 +804,14 @@ struct TaskExpertListContentView: View {
                             }
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.sm)
+                        }
+                        .refreshable {
+                            searchDebounceTask?.cancel()
+                            if locationService.isAuthorized {
+                                locationService.requestLocation()
+                            }
+                            applyFilters(forceRefresh: true)
+                            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000)
                         }
                     }
                 }
@@ -789,17 +835,6 @@ struct TaskExpertListContentView: View {
                     }
                 }
             }
-        }
-        .refreshable {
-            // 下拉刷新：刷新位置和达人列表
-            searchDebounceTask?.cancel()
-            if locationService.isAuthorized {
-                locationService.requestLocation()
-            }
-            // 强制刷新达人列表
-            applyFilters(forceRefresh: true)
-            // 等待一小段时间，确保刷新完成
-            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
         }
         .onDisappear {
             // 页面消失时取消防抖任务

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iOS 字体预览 - Link to your world</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 40px;
+      font-weight: 500;
+    }
+    .font-card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .font-name {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .slogan {
+      font-size: 28px;
+      color: #555;
+    }
+    .slogan .highlight {
+      color: #007AFF;
+      font-weight: bold;
+    }
+    
+    /* Futura */
+    .futura .slogan {
+      font-family: Futura, 'Trebuchet MS', sans-serif;
+      font-weight: 500;
+    }
+    .futura .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* Avenir Next */
+    .avenir .slogan {
+      font-family: 'Avenir Next', Avenir, sans-serif;
+      font-weight: 500;
+    }
+    .avenir .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* SF Rounded (模拟) */
+    .sf-rounded .slogan {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', sans-serif;
+      font-weight: 500;
+    }
+    .sf-rounded .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* Helvetica Neue */
+    .helvetica .slogan {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 500;
+    }
+    .helvetica .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* Gill Sans */
+    .gill .slogan {
+      font-family: 'Gill Sans', 'Gill Sans MT', sans-serif;
+      font-weight: 500;
+    }
+    .gill .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* New York (Serif) */
+    .new-york .slogan {
+      font-family: 'New York', Georgia, 'Times New Roman', serif;
+      font-weight: 500;
+    }
+    .new-york .slogan .highlight {
+      font-weight: 700;
+    }
+    
+    /* Optima */
+    .optima .slogan {
+      font-family: Optima, 'Segoe UI', sans-serif;
+      font-weight: 500;
+    }
+    .optima .slogan .highlight {
+      font-weight: 700;
+    }
+
+    .recommended {
+      border: 2px solid #007AFF;
+    }
+    .recommended .font-name::after {
+      content: ' ⭐ 推荐';
+      color: #007AFF;
+    }
+  </style>
+</head>
+<body>
+  <h1>iOS 原生字体预览</h1>
+  
+  <div class="font-card futura recommended">
+    <div class="font-name">Futura</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card avenir">
+    <div class="font-name">Avenir Next</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card sf-rounded">
+    <div class="font-name">SF Rounded (当前)</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card helvetica">
+    <div class="font-name">Helvetica Neue</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card gill">
+    <div class="font-name">Gill Sans</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card new-york">
+    <div class="font-name">New York (Serif)</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+  <div class="font-card optima">
+    <div class="font-name">Optima</div>
+    <div class="slogan">Link to your <span class="highlight">world</span></div>
+  </div>
+  
+</body>
+</html>
