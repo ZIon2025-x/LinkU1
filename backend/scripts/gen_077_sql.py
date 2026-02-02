@@ -1,9 +1,10 @@
 """
-从 frontend/src/locales/zh.json 与 en.json 生成 077_seed_legal_documents_full.sql。
+从 frontend/src/locales/zh.json 与 en.json 生成法律文档种子迁移 SQL。
 用法（在项目根目录）：
-  python -m backend.scripts.gen_077_sql
+  python -m backend.scripts.gen_077_sql           # 生成 077
+  python -m backend.scripts.gen_077_sql 078     # 生成 078（077 被跳过时用 078 补齐）
   或
-  cd backend && python scripts/gen_077_sql.py
+  cd backend && python scripts/gen_077_sql.py [078]
 """
 import json
 import sys
@@ -14,7 +15,11 @@ project_root = backend_dir.parent
 frontend_locales = project_root / "frontend" / "src" / "locales"
 zh_path = frontend_locales / "zh.json"
 en_path = frontend_locales / "en.json"
-out_sql = backend_dir / "migrations" / "077_seed_legal_documents_full.sql"
+# 支持 077 或 078（077 被跳过时用 078 补齐）
+MIGRATION_NUM = (sys.argv[1] if len(sys.argv) > 1 else "077").strip()
+if MIGRATION_NUM not in ("077", "078"):
+    MIGRATION_NUM = "077"
+out_sql = backend_dir / "migrations" / f"{MIGRATION_NUM}_seed_legal_documents_full.sql"
 
 LEGAL_KEYS = ("privacyPolicy", "termsOfService", "cookiePolicy")
 TYPE_LANG = [
@@ -39,7 +44,7 @@ def main():
         return 1
 
     lines = [
-        "-- 迁移 077：将前端 locale 中的隐私政策、用户协议、Cookie 政策全文写入 legal_documents",
+        f"-- 迁移 {MIGRATION_NUM}：将前端 locale 中的隐私政策、用户协议、Cookie 政策全文写入 legal_documents",
         "-- 依赖：须先执行 076_add_legal_documents.sql（建表并插入 6 条占位行）",
         "-- 由脚本根据 frontend/src/locales/zh.json 与 en.json 生成；重复执行仅覆盖 content_json，幂等",
         "",
@@ -53,7 +58,7 @@ def main():
             print(f"跳过 {doc_type} / {lang}：无内容或非对象", file=sys.stderr)
             continue
         json_str = json.dumps(content, ensure_ascii=False, separators=(",", ":"))
-        tag = f"LEGAL077_{doc_type}_{lang}"
+        tag = f"LEGAL{MIGRATION_NUM}_{doc_type}_{lang}"
         line = f"UPDATE legal_documents SET content_json = ${tag}${json_str}${tag}$::jsonb, version = 'v1.0' WHERE type = '{doc_type}' AND lang = '{lang}';"
         lines.append(line)
 
