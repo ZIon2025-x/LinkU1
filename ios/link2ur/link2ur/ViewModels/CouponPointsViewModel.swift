@@ -31,7 +31,7 @@ class CouponPointsViewModel: ObservableObject {
     
     func loadPointsAccount() {
         let startTime = Date()
-        let endpoint = "/api/users/points/account"
+        let endpoint = APIEndpoints.Points.account
         
         isLoading = true
         errorMessage = nil

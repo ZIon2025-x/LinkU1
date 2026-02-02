@@ -2212,8 +2212,8 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             else:
                 logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
         
-        # 处理账户要求更新事件（V2 API）
-        elif event_type == "v2.core.account.requirements.updated":
+        # 处理账户要求更新事件（V2 API，支持点号和方括号两种事件名）
+        elif event_type == "v2.core.account.requirements.updated" or event_type == "v2.core.account[requirements].updated":
             account = event_data
             account_id = account.get("id")
             

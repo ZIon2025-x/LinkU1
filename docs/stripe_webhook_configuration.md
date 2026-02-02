@@ -75,6 +75,39 @@ STRIPE_CONNECT_WEBHOOK_SECRET=whsec_...  # Connect webhook 签名密钥（推荐
    - 找到或创建 Connect webhook 端点: `https://api.link2ur.com/api/stripe/connect/webhook`
    - 复制签名密钥到 `STRIPE_CONNECT_WEBHOOK_SECRET`
 
+## 订阅事件列表（参考）
+
+### STRIPE_WEBHOOK_SECRET 端点（支付 / 平台）
+
+建议或已订阅的事件示例：
+
+- `account.application.authorized` / `account.application.deauthorized`
+- `account.external_account.created` / `deleted` / `updated`
+- `account.updated`
+- `charge.captured` / `expired` / `failed` / `pending` / `refund.updated` / `refunded` / `succeeded` / `updated`
+- `charge.dispute.*`（closed, created, funds_reinstated, funds_withdrawn, updated）
+- `payment_intent.amount_capturable_updated` / `canceled` / `created` / `partially_funded` / `payment_failed` / `processing` / `requires_action` / `succeeded`
+- `refund.created` / `failed` / `updated`
+- `transfer.created` / `reversed` / `updated`
+
+**说明**：`transfer.paid` / `transfer.failed` 可不订阅。任务金转账在 `Transfer.create()` 成功后会**立即**在本地标记为 `succeeded`，不依赖 webhook。
+
+### STRIPE_CONNECT_WEBHOOK_SECRET 端点（Connect V2）
+
+建议或已订阅的事件示例（V2 相关）：
+
+- `v2.core.account.closed` / `created` / `updated`
+- `v2.core.account[configuration.customer].capability_status_updated` / `updated`
+- `v2.core.account[configuration.merchant].capability_status_updated` / `updated`
+- `v2.core.account[configuration.recipient].capability_status_updated` / `updated`
+- `v2.core.account[defaults].updated`
+- `v2.core.account[identity].updated`
+- `v2.core.account[requirements].updated`
+- `v2.core.account_person.created` / `deleted` / `updated`
+- `v2.money_management.outbound_transfer.canceled` / `created` / `failed` / `posted` / `returned` / `updated`
+
+后端 Connect webhook 已处理：`account.created` / `account.updated`、`v2.core.account.created` / `updated` / `closed`、`v2.core.account.requirements.updated`（及方括号形式 `v2.core.account[requirements].updated`）、`v2.core.event_destination.ping`、`ping` 等。
+
 ## 注意事项
 
 1. **两个不同的签名密钥**: 
@@ -88,7 +121,11 @@ STRIPE_CONNECT_WEBHOOK_SECRET=whsec_...  # Connect webhook 签名密钥（推荐
 3. **事件订阅**:
    - 确保在 Stripe Dashboard 中为每个 webhook 端点订阅了正确的事件
    - 支付 webhook 需要订阅支付相关事件
-   - Connect webhook 需要订阅账户相关事件
+   - Connect webhook 需要订阅账户相关事件（含 V2 事件）
+
+4. **Transfer 与 Webhook**:
+   - 任务金转账（主账户 → Connect 子账户）在 API 成功时即在本系统内标记为成功，不依赖 `transfer.paid` webhook
+   - 若在平台端点订阅了 `transfer.paid` / `transfer.failed`，仍会处理；未订阅也不影响转账状态
 
 ## 测试
 

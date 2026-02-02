@@ -216,7 +216,8 @@ const Wallet: React.FC = () => {
       const accountData = await getPointsAccount();
       setPointsAccount(accountData);
     } catch (error) {
-          } finally {
+      console.error('加载积分账户失败:', error);
+    } finally {
       setPointsLoading(false);
       setLoading(false);
     }
@@ -232,7 +233,8 @@ const Wallet: React.FC = () => {
       setPointsTransactions(result.data || []);
       setPointsTotal(result.total || 0);
     } catch (error) {
-          } finally {
+      console.error('加载积分交易记录失败:', error);
+    } finally {
       setPointsLoading(false);
     }
   };

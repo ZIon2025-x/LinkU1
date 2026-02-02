@@ -194,23 +194,20 @@ def execute_transfer(
         
         logger.info(f"✅ Transfer 创建成功: transfer_id={transfer.id}, amount=£{transfer_record.amount:.2f}")
         
-        # 更新转账记录：状态设为 pending，等待 webhook 确认
+        # Connect Transfer 在 API 成功时即完成，Stripe 不一定发送 transfer.paid webhook，
+        # 故直接设为 succeeded，不依赖 webhook 配置
         transfer_record.transfer_id = transfer.id
-        transfer_record.status = "pending"  # 等待 webhook 确认，不立即设为 succeeded
+        transfer_record.status = "succeeded"
+        transfer_record.succeeded_at = get_utc_time()
         transfer_record.last_error = None
-        # 不更新 succeeded_at 和 next_retry_at，等待 webhook 确认后再更新
-        
-        # 不更新任务状态，等待 webhook 确认后再更新
-        # task.is_confirmed = 1
-        # task.paid_to_user_id = transfer_record.taker_id
-        # task.escrow_amount = Decimal('0.0')
+        transfer_record.next_retry_at = None
         
         # 使用安全提交，带错误处理和回滚
         from app.transaction_utils import safe_commit
         if not safe_commit(db, f"更新转账记录 transfer_id={transfer.id}"):
             raise Exception("更新转账记录失败")
         
-        logger.info(f"✅ 任务 {transfer_record.task_id} Transfer 已创建，等待 webhook 确认: transfer_id={transfer.id}")
+        logger.info(f"✅ 任务 {transfer_record.task_id} Transfer 已创建并标记为成功: transfer_id={transfer.id}")
         return True, transfer.id, None
         
     except stripe.error.StripeError as e:

@@ -56,14 +56,18 @@ def get_account_info(
     balance_display = f"{account.balance / 100:.2f}"
     
     # 计算累计获得（仅现金收入：用户作为接受人收到的 Stripe 转账）
-    # 从 PaymentTransfer 表统计：taker_id=当前用户 且 status=succeeded
-    # PaymentTransfer.amount 是 DECIMAL(12, 2)，单位为英镑，需要转换为便士
+    # 从 PaymentTransfer 表统计：taker_id=当前用户
+    # 包含 succeeded（API 成功即标记）和 历史遗留的 pending 且 transfer_id 非空（Stripe 已转出）
     task_earnings_decimal = db.query(
         func.sum(models.PaymentTransfer.amount).label('total')
     ).filter(
-        and_(
-            models.PaymentTransfer.taker_id == current_user.id,
-            models.PaymentTransfer.status == 'succeeded'
+        models.PaymentTransfer.taker_id == current_user.id,
+        or_(
+            models.PaymentTransfer.status == 'succeeded',
+            and_(
+                models.PaymentTransfer.status == 'pending',
+                models.PaymentTransfer.transfer_id.isnot(None)
+            )
         )
     ).scalar() or Decimal('0.0')
     
