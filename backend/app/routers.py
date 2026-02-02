@@ -14785,10 +14785,6 @@ def get_faq(
         lang = (lang or "en").lower()
         if lang not in ("zh", "en"):
             lang = "en"
-        title_col = models.FaqSection.title_zh if lang == "zh" else models.FaqSection.title_en
-        q_col = models.FaqItem.question_zh if lang == "zh" else models.FaqItem.question_en
-        a_col = models.FaqItem.answer_zh if lang == "zh" else models.FaqItem.answer_en
-
         sections = (
             db.query(models.FaqSection)
             .order_by(models.FaqSection.sort_order.asc())
