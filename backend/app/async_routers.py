@@ -367,23 +367,24 @@ async def get_task_by_id(
         if not current_user:
             raise HTTPException(status_code=403, detail="需要登录才能查看此任务")
         
-        # 检查是否是任务相关人
-        is_poster = task.poster_id == current_user.id
-        is_taker = task.taker_id == current_user.id
+        # 检查是否是任务相关人（统一转为 str 比较，避免 applicant_id 与 current_user.id 类型不一致）
+        user_id_str = str(current_user.id)
+        is_poster = task.poster_id is not None and (str(task.poster_id) == user_id_str)
+        is_taker = task.taker_id is not None and (str(task.taker_id) == user_id_str)
         is_participant = False
         is_applicant = False
         
         # 如果是多人任务，检查是否是参与者
         if task.is_multi_participant:
             # 检查是否是任务达人（创建者）
-            if task.created_by_expert and task.expert_creator_id == current_user.id:
+            if task.created_by_expert and task.expert_creator_id and str(task.expert_creator_id) == user_id_str:
                 is_participant = True
             else:
                 # 检查是否是TaskParticipant
                 participant_query = select(models.TaskParticipant).where(
                     and_(
                         models.TaskParticipant.task_id == task_id,
-                        models.TaskParticipant.user_id == current_user.id,
+                        models.TaskParticipant.user_id == user_id_str,
                         models.TaskParticipant.status.in_(["accepted", "in_progress"])
                     )
                 )
@@ -395,7 +396,7 @@ async def get_task_by_id(
             application_query = select(models.TaskApplication).where(
                 and_(
                     models.TaskApplication.task_id == task_id,
-                    models.TaskApplication.applicant_id == current_user.id
+                    models.TaskApplication.applicant_id == user_id_str
                 )
             )
             application_result = await db.execute(application_query)

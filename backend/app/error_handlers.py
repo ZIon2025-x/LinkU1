@@ -125,11 +125,23 @@ def get_safe_error_message(error_code: str, original_message: str = None) -> str
     
     # 对于用户注册相关的错误，返回具体信息
     if original_message and any(keyword in original_message for keyword in [
-        "该邮箱已被注册", "该用户名已被使用", "用户名不能包含", "密码至少需要", 
+        "该邮箱已被注册", "该用户名已被使用", "用户名不能包含", "密码至少需要",
         "密码必须包含", "邮箱格式不正确", "用户名至少", "用户名不能超过"
     ]):
         return original_message
-    
+
+    # 「已经申请过此任务」等业务提示在生产环境也保留原文
+    if original_message and any(k in original_message for k in [
+        "已经申请过", "already applied", "You have already applied"
+    ]):
+        return original_message
+
+    # 403 权限类提示保留原文，便于客户端区分「需要登录」与「无权限查看」
+    if original_message and any(k in original_message for k in [
+        "需要登录", "无权限查看", "登录才能查看"
+    ]):
+        return original_message
+
     # 生产环境返回通用错误信息
     return "操作失败，请稍后重试"
 

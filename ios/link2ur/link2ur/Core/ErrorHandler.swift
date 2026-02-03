@@ -70,6 +70,8 @@ extension APIError {
             case 401:
                 return LocalizationKey.errorUnauthorized.localized
             case 403:
+                // 优先展示后端详情（如「需要登录才能查看此任务」「无权限查看此任务」），便于用户区分原因
+                if !message.isEmpty { return message }
                 return LocalizationKey.errorForbidden.localized
             case 404:
                 return LocalizationKey.errorNotFound.localized

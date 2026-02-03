@@ -47,7 +47,7 @@
 		14817E332F14324D00620BCA /* Link-Ur-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Link-Ur-Info.plist"; sourceTree = "<group>"; };
 		1488249B2F2A8F1600E86B07 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1488249D2F2A9E0C00E86B07 /* VIPProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIPProducts.storekit; sourceTree = "<group>"; };
-		1491C6952EDF90BC0054DEAA /* Link²Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Link²Ur.app"; path = Link2Ur.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1491C6952EDF90BC0054DEAA /* Link2Ur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Link2Ur.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -125,7 +125,7 @@
 		1491C6962EDF90BC0054DEAA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1491C6952EDF90BC0054DEAA /* Link²Ur.app */,
+				1491C6952EDF90BC0054DEAA /* Link2Ur.app */,
 				147679782F1814BA009EB626 /* NotificationServiceExtension.appex */,
 			);
 			name = Products;
@@ -182,7 +182,7 @@
 				148177EF2F0F268E00620BCA /* StripePayments */,
 			);
 			productName = link2ur;
-			productReference = 1491C6952EDF90BC0054DEAA /* Link²Ur.app */;
+			productReference = 1491C6952EDF90BC0054DEAA /* Link2Ur.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -279,6 +279,7 @@
 				CODE_SIGN_ENTITLEMENTS = NotificationServiceExtension/NotificationServiceExtensionDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationServiceExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NotificationServiceExtension;
@@ -307,6 +308,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NotificationServiceExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NotificationServiceExtension;
@@ -464,6 +466,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Link²Ur.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";
@@ -502,6 +505,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Link²Ur.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9BH6D242HU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Link-Ur-Info.plist";
