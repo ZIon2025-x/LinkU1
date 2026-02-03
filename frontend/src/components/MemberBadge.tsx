@@ -5,8 +5,8 @@ export type MemberLevel = 'normal' | 'vip' | 'super';
 export type MemberBadgeVariant = 'full' | 'compact' | 'avatar-corner';
 
 interface MemberBadgeProps {
-  /** 会员等级：字符串 'normal' | 'vip' | 'super'，或数字 1=普通 2=VIP 3=超级 */
-  level: MemberLevel | number;
+  /** 会员等级：字符串 'normal' | 'vip' | 'super'，或数字 1=普通 2=VIP 3=超级；API 返回的 string 也可传入 */
+  level: MemberLevel | number | string;
   /** 展示形态：full=完整徽章(图标+文字) compact=紧凑徽章 avatar-corner=头像角标 */
   variant?: MemberBadgeVariant;
   /** 用于达人等场景的文案键：如 taskExperts.vipExpert；不传则用 profile.vip / profile.superVip */
@@ -27,12 +27,12 @@ const LEVEL_MAP: Record<string, MemberLevel> = {
   '3': 'super',
 };
 
-function normalizeLevel(level: MemberLevel | number): MemberLevel {
+function normalizeLevel(level: MemberLevel | number | string): MemberLevel {
   if (typeof level === 'number') {
     const key = String(level) as '1' | '2' | '3';
     return LEVEL_MAP[key] ?? 'normal';
   }
-  return LEVEL_MAP[level] ?? 'normal';
+  return LEVEL_MAP[String(level)] ?? 'normal';
 }
 
 const MemberBadge: React.FC<MemberBadgeProps> = ({
