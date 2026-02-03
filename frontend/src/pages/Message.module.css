@@ -1530,6 +1530,10 @@
   background: #f3f4f6;
   color: #6b7280;
   flex-shrink: 0;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 100%;
+  font-size: 12px;
 }
 
 .privateImageError {

@@ -191,6 +191,7 @@ interface Message {
   created_at: string;
   message_type?: string; // 'text' | 'task_card' | 'image' | 'file'
   task_id?: number; // 任务卡片消息的任务ID
+  image_id?: string; // 图片消息的 image_id（后端可能直接返回）
 }
 
 interface CustomerServiceChat {
@@ -3904,6 +3905,8 @@ const MessagePage: React.FC = () => {
                 src={'/static/service.png'} 
                 alt={t('messages.service')} 
                 className={styles.chatHeaderServiceAvatar}
+                width={36}
+                height={36}
                 onError={() => {
                   // 错误已由 LazyImage 处理
                 }}
@@ -4823,18 +4826,21 @@ const MessagePage: React.FC = () => {
                             transition: 'opacity 0.3s'
                           }}
                         >
-                          {msg.content.startsWith('[图片]') ? (
+                          {(() => {
+                            const imageIdForMsg = msg.image_id || (msg.content.startsWith('[图片]') ? msg.content.replace(/^\[图片\]\s*/, '').trim() : '');
+                            return imageIdForMsg ? (
                             <div className={styles.messageImage}>
                               <PrivateImageDisplay
-                                imageId={msg.content.replace('[图片]', '').trim()}
+                                imageId={imageIdForMsg}
                                 currentUserId={user?.id || ''}
                                 className={styles.messageImageContent}
+                                style={{ width: 150, height: 150, maxWidth: '100%', maxHeight: 150 }}
                                 alt="图片"
                                 onClick={async () => {
                                   // 生成图片URL用于预览
                                   try {
                                     const response = await api.post('/api/messages/generate-image-url', {
-                                      image_id: msg.content.replace('[图片]', '').trim()
+                                      image_id: imageIdForMsg
                                     });
                                     if (response.data.success) {
                                       setPreviewImageUrl(response.data.image_url);
@@ -4894,6 +4900,7 @@ const MessagePage: React.FC = () => {
                                 )}
                               </div>
                             );
+                          })();
                           })()}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div style={{ marginTop: '8px' }}>
