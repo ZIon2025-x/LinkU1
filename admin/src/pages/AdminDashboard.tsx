@@ -105,6 +105,7 @@ import CustomerServiceManagement from '../components/CustomerServiceManagement';
 import SystemSettings from '../components/SystemSettings';
 import TwoFactorAuthSettings from '../components/TwoFactorAuthSettings';
 import JobPositionManagement from './JobPositionManagement';
+import OAuthClientsManagement from '../components/OAuthClientsManagement';
 import dayjs from 'dayjs';
 
 // 城市列表 - 与任务达人页面保持一致
@@ -12003,6 +12004,12 @@ const AdminDashboard: React.FC = () => {
             >
               🎨 Banner管理
             </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'oauth-clients')}
+              onClick={() => handleTabChange('oauth-clients')}
+            >
+              🔐 OAuth 客户端
+            </button>
           </div>
         </div>
       </div>
@@ -12052,6 +12059,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'leaderboard-review' && renderLeaderboardReview()}
             {activeTab === 'leaderboard-items' && renderLeaderboardItems()}
             {activeTab === 'banners' && renderBanners()}
+            {activeTab === 'oauth-clients' && <OAuthClientsManagement />}
           </div>
         )}
       </div>

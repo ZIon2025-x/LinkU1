@@ -3017,3 +3017,37 @@ class LegalDocument(Base):
         UniqueConstraint("type", "lang", name="uq_legal_documents_type_lang"),
         Index("idx_legal_documents_type_lang", "type", "lang"),
     )
+
+
+# ==================== OAuth Provider 模型 ====================
+
+class OAuthClient(Base):
+    """OAuth 2.0 客户端（第三方应用 RP）注册信息"""
+    __tablename__ = "oauth_client"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(String(64), unique=True, nullable=False, index=True)
+    client_secret_hash = Column(String(128), nullable=True)
+    client_name = Column(String(255), nullable=False)
+    client_uri = Column(String(512), nullable=True)
+    logo_uri = Column(String(512), nullable=True)
+    redirect_uris = Column(JSONB, nullable=False, server_default="[]")
+    scope_default = Column(String(512), nullable=True)
+    allowed_grant_types = Column(JSONB, nullable=False, server_default="[\"authorization_code\"]")
+    is_confidential = Column(Boolean, nullable=False, default=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=get_utc_time, onupdate=get_utc_time)
+
+
+class OAuthRefreshToken(Base):
+    """OAuth refresh_token 持久化，便于撤销与审计"""
+    __tablename__ = "oauth_refresh_token"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(256), unique=True, nullable=False, index=True)
+    client_id = Column(String(64), nullable=False, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    scope = Column(String(512), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=get_utc_time)

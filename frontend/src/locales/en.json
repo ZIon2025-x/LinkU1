@@ -61,6 +61,7 @@
   },
   "auth": {
     "loginTitle": "Welcome Back",
+    "loading": "Loading...",
     "loginSubtitle": "Please sign in to your account",
     "registerTitle": "Create Account",
     "registerSubtitle": "Join our community today",

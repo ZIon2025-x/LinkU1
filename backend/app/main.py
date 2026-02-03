@@ -274,6 +274,14 @@ app.include_router(admin_2fa_router, prefix="/api/auth", tags=["管理员-2FA"])
 app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
 
+# OAuth 2.0 / OIDC Provider（/.well-known 需尽早注册以便匹配）
+from app.oauth.oauth_routes import oauth_router
+app.include_router(oauth_router)
+
+# OAuth 客户端管理（管理员）
+from app.oauth_admin_routes import router as oauth_admin_router
+app.include_router(oauth_admin_router)
+
 # 添加时间检查端点
 from app.time_check_endpoint import router as time_check_router
 app.include_router(time_check_router, tags=["时间检查"])

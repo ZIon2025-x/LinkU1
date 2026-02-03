@@ -205,6 +205,11 @@ RATE_LIMITS = {
     "admin_change_password": {"limit": 3, "window": 3600},  # 3次/小时
     "create_admin": {"limit": 1, "window": 3600},  # 1次/小时（超级管理员功能）
     
+    # OAuth
+    "oauth_token": {"limit": 30, "window": 60},  # 30次/分钟
+    "oauth_authorize": {"limit": 60, "window": 60},  # 60次/分钟（按 IP）
+    "oauth_consent": {"limit": 60, "window": 60},  # 同意页提交 60次/分钟
+
     # API调用
     "api_general": {"limit": 100, "window": 60},  # 100次/分钟
     "api_auth": {"limit": 20, "window": 60},  # 20次/分钟

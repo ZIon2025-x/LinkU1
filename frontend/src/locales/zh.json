@@ -61,6 +61,7 @@
   },
   "auth": {
     "loginTitle": "欢迎回来",
+    "loading": "加载中...",
     "loginSubtitle": "请登录您的账户",
     "registerTitle": "创建账户",
     "registerSubtitle": "立即加入我们的社区",

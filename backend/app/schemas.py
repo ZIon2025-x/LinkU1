@@ -3747,3 +3747,55 @@ class AuditLogList(BaseModel):
 class AuditLogDetail(AuditLogOut):
     """审计日志详情 Schema"""
     pass
+
+
+# ==================== OAuth 2.0 / OIDC Provider ====================
+
+class OAuthClientCreate(BaseModel):
+    """创建 OAuth 客户端"""
+    client_name: str
+    redirect_uris: List[str]
+    client_uri: Optional[str] = None
+    logo_uri: Optional[str] = None
+    scope_default: Optional[str] = "openid profile email"
+    allowed_grant_types: Optional[List[str]] = None  # 默认 ["authorization_code", "refresh_token"]
+    is_confidential: Optional[bool] = True
+
+
+class OAuthClientOut(BaseModel):
+    """OAuth 客户端响应（不含 secret）"""
+    client_id: str
+    client_name: str
+    client_uri: Optional[str] = None
+    logo_uri: Optional[str] = None
+    redirect_uris: List[str]
+    scope_default: Optional[str] = None
+    allowed_grant_types: List[str]
+    is_confidential: bool
+    is_active: bool
+    created_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OAuthClientCreateResponse(BaseModel):
+    """创建客户端成功响应（仅此次返回 client_secret）"""
+    client_id: str
+    client_secret: str
+    client_name: str
+    redirect_uris: List[str]
+
+
+class OAuthClientRotateSecretResponse(BaseModel):
+    """轮换 client_secret 响应"""
+    client_secret: str
+
+
+class OAuthClientUpdate(BaseModel):
+    """更新 OAuth 客户端（全部可选）"""
+    client_name: Optional[str] = None
+    redirect_uris: Optional[List[str]] = None
+    client_uri: Optional[str] = None
+    logo_uri: Optional[str] = None
+    is_active: Optional[bool] = None

@@ -191,7 +191,15 @@ class Config:
     # 基础URL配置
     BASE_URL = os.getenv("BASE_URL", "https://api.link2ur.com")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
-    
+
+    # OAuth 2.0 / OIDC Provider 配置
+    OAUTH_ISSUER = os.getenv("OAUTH_ISSUER", "") or None  # 空则用 BASE_URL
+    OAUTH_ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("OAUTH_ACCESS_TOKEN_EXPIRE_SECONDS", "3600"))
+    OAUTH_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("OAUTH_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+    OAUTH_AUTHORIZATION_CODE_EXPIRE_SECONDS = int(os.getenv("OAUTH_AUTHORIZATION_CODE_EXPIRE_SECONDS", "600"))
+    OAUTH_ACCESS_TOKEN_SECRET = os.getenv("OAUTH_ACCESS_TOKEN_SECRET", "") or None  # 空则用 SECRET_KEY
+    OAUTH_ID_TOKEN_SECRET = os.getenv("OAUTH_ID_TOKEN_SECRET", "") or None  # 空则用 OAUTH_ACCESS_TOKEN_SECRET 或 SECRET_KEY
+
     # 翻译服务配置
     # 翻译服务优先级（用逗号分隔，按优先级排序）
     # 可选值: google_cloud, google, mymemory, libretranslate, pons, lingvanex, qcri, baidu, youdao, deepl, microsoft

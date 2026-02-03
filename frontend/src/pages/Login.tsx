@@ -29,10 +29,36 @@ const ErrorMsg = styled.div`
   text-align: center;
 `;
 
+// OAuth/return_to 允许跳转的 host 白名单；可通过 REACT_APP_OAUTH_RETURN_ALLOWED_HOSTS（逗号分隔）覆盖
+const DEFAULT_ALLOWED_RETURN_TO_HOSTS = ['api.link2ur.com', 'www.link2ur.com', 'link2ur.com', 'localhost'];
+const ALLOWED_RETURN_TO_HOSTS: string[] =
+  typeof process !== 'undefined' && process.env?.REACT_APP_OAUTH_RETURN_ALLOWED_HOSTS
+    ? process.env.REACT_APP_OAUTH_RETURN_ALLOWED_HOSTS.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    : DEFAULT_ALLOWED_RETURN_TO_HOSTS;
+
+function isSafeReturnTo(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    const host = u.hostname.toLowerCase();
+    if (ALLOWED_RETURN_TO_HOSTS.includes(host)) return true;
+    if (typeof window !== 'undefined' && window.location.hostname === host) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  useLocation(); // 保留用于未来 redirect state
+  const location = useLocation();
   const { t } = useLanguage();
+  const returnTo = React.useMemo(() => {
+    const q = new URLSearchParams(location.search);
+    const r = q.get('return_to');
+    return r && isSafeReturnTo(r) ? r : null;
+  }, [location.search]);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -55,19 +81,24 @@ const Login: React.FC = () => {
     };
   }, []);
 
-  // 检查用户是否已登录
+  // 检查用户是否已登录（含 OAuth return_to 场景）
   useEffect(() => {
-    // 直接检查用户是否已登录，HttpOnly Cookie会自动发送
     api.get('/api/users/profile/me')
       .then(() => {
-        // 用户已登录，重定向到首页
         message.info(t('auth.alreadyLoggedIn'));
-        navigate('/');
+        if (returnTo) {
+          window.location.href = returnTo;
+        } else {
+          navigate('/');
+        }
       })
       .catch(() => {
-        // 用户未登录，继续显示登录页面
+        // 未登录，显示登录页
+      })
+      .finally(() => {
+        setCheckingAuth(false);
       });
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   // 发送验证码
   const handleSendCode = async (email: string) => {
@@ -198,7 +229,11 @@ const Login: React.FC = () => {
       
       // 添加短暂延迟确保认证信息设置完成
       setTimeout(() => {
-        navigate('/');
+        if (returnTo) {
+          window.location.href = returnTo;
+        } else {
+          navigate('/');
+        }
       }, 100);
     } catch (err: any) {
       let msg = t('auth.loginError');
@@ -260,7 +295,11 @@ const Login: React.FC = () => {
       
       // 添加短暂延迟确保认证信息设置完成
       setTimeout(() => {
-        navigate('/');
+        if (returnTo) {
+          window.location.href = returnTo;
+        } else {
+          navigate('/');
+        }
       }, 100);
     } catch (err: any) {
       let msg = t('auth.loginError');
@@ -323,7 +362,11 @@ const Login: React.FC = () => {
       
       // 添加短暂延迟确保认证信息设置完成
       setTimeout(() => {
-        navigate('/');
+        if (returnTo) {
+          window.location.href = returnTo;
+        } else {
+          navigate('/');
+        }
       }, 100);
     } catch (err: any) {
       console.error('登录错误:', err);
@@ -355,6 +398,15 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <Wrapper>
+        <SEOHead title="登录 - Link²Ur" description="登录Link²Ur" noindex={true} />
+        <StyledCard style={{ textAlign: 'center' }}>{t('auth.loading') || '加载中...'}</StyledCard>
+      </Wrapper>
+    );
+  }
 
   return (
     <Wrapper>
@@ -629,7 +681,11 @@ const Login: React.FC = () => {
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => {
           setShowLoginModal(false);
-          window.location.reload();
+          if (returnTo) {
+            window.location.href = returnTo;
+          } else {
+            window.location.reload();
+          }
         }}
         showForgotPassword={showForgotPasswordModal}
         onShowForgotPassword={() => setShowForgotPasswordModal(true)}
