@@ -40,36 +40,61 @@ struct StripePaymentView: View {
         Logger.debug("StripePaymentView init 完成", category: .api)
     }
     
+    /// 是否当前为「支付表单」状态（需要底部固定支付按钮）
+    private var isPaymentFormVisible: Bool {
+        !viewModel.isLoading && !viewModel.paymentSuccess && viewModel.errorMessage == nil
+            && (viewModel.paymentResponse != nil || clientSecret != nil)
+    }
+
     var body: some View {
         NavigationView {
-            KeyboardAvoidingScrollView(extraPadding: 20) {
-                VStack(spacing: 24) {
-                    // 支付倒计时横幅
-                    if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
-                        PaymentCountdownBanner(expiresAt: paymentExpiresAt)
+            Group {
+                if isPaymentFormVisible {
+                    // 支付表单：上方可滚动，底部固定支付按钮
+                    VStack(spacing: 0) {
+                        KeyboardAvoidingScrollView(extraPadding: 20) {
+                            VStack(spacing: 24) {
+                                if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                                    PaymentCountdownBanner(expiresAt: paymentExpiresAt)
+                                        .padding(.horizontal)
+                                }
+                                if let paymentResponse = viewModel.paymentResponse {
+                                    paymentInfoScrollContent(paymentResponse: paymentResponse)
+                                } else if clientSecret != nil {
+                                    approvalPaymentFallbackScrollContent
+                                }
+                            }
                             .padding(.horizontal)
+                            .padding(.top)
+                            .padding(.bottom, AppSpacing.md)
+                        }
+                        paymentButtonBar
                     }
-                    
-                    if viewModel.isLoading {
-                        ListSkeleton(itemCount: 5, itemHeight: 56)
-                            .padding(.vertical, AppSpacing.md)
-                            .frame(maxWidth: .infinity, minHeight: 400)
-                    } else if viewModel.paymentSuccess {
-                        paymentSuccessView
-                    } else if let error = viewModel.errorMessage {
-                        paymentErrorView(error: error)
-                    } else if let paymentResponse = viewModel.paymentResponse {
-                        paymentInfoView(paymentResponse: paymentResponse)
-                    } else if clientSecret != nil {
-                        // 批准申请支付：外部已提供 PaymentIntent client_secret，此时 paymentResponse 可能为空
-                        approvalPaymentFallbackView
-                    } else {
-                        ListSkeleton(itemCount: 5, itemHeight: 56)
-                            .padding(.vertical, AppSpacing.md)
-                            .frame(maxWidth: .infinity, minHeight: 400)
+                } else {
+                    // 加载/成功/错误/空：整页滚动
+                    KeyboardAvoidingScrollView(extraPadding: 20) {
+                        VStack(spacing: 24) {
+                            if let paymentExpiresAt = paymentExpiresAt, !paymentExpiresAt.isEmpty {
+                                PaymentCountdownBanner(expiresAt: paymentExpiresAt)
+                                    .padding(.horizontal)
+                            }
+                            if viewModel.isLoading {
+                                ListSkeleton(itemCount: 5, itemHeight: 56)
+                                    .padding(.vertical, AppSpacing.md)
+                                    .frame(maxWidth: .infinity, minHeight: 400)
+                            } else if viewModel.paymentSuccess {
+                                paymentSuccessView
+                            } else if let error = viewModel.errorMessage {
+                                paymentErrorView(error: error)
+                            } else {
+                                ListSkeleton(itemCount: 5, itemHeight: 56)
+                                    .padding(.vertical, AppSpacing.md)
+                                    .frame(maxWidth: .infinity, minHeight: 400)
+                            }
+                        }
+                        .padding()
                     }
                 }
-                .padding()
             }
             .navigationTitle(LocalizationKey.paymentPayment.localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -261,7 +286,7 @@ struct StripePaymentView: View {
     
     // MARK: - Payment Info View with Embedded Payment Element
     @ViewBuilder
-    private func paymentInfoView(paymentResponse: PaymentResponse) -> some View {
+    private func paymentInfoView(paymentResponse: PaymentResponse, includeButton: Bool = true) -> some View {
         VStack(spacing: 24) {
             // 任务信息卡片
             if taskTitle != nil || applicantName != nil {
@@ -413,18 +438,41 @@ struct StripePaymentView: View {
             // 支付方式选择卡片
             paymentMethodSelectionCard
                 .transaction { transaction in
-                    // 禁用支付方式选择卡片的隐式动画，确保切换流畅
                     transaction.animation = nil
                 }
             
-            // 支付按钮
-            paymentButton
+            if includeButton {
+                paymentButton
+            }
         }
         .padding(.vertical)
     }
 
+    /// 仅可滚动内容（不含支付按钮），用于「底部固定按钮」布局
+    @ViewBuilder
+    private func paymentInfoScrollContent(paymentResponse: PaymentResponse) -> some View {
+        paymentInfoView(paymentResponse: paymentResponse, includeButton: false)
+    }
+
+    /// 仅可滚动内容（不含支付按钮），用于「底部固定按钮」布局
+    private var approvalPaymentFallbackScrollContent: some View {
+        approvalPaymentFallbackView(includeButton: false)
+    }
+
+    /// 底部固定的支付按钮栏（安全区 + 背景）
+    private var paymentButtonBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            paymentButton
+                .padding(.horizontal)
+                .padding(.top, AppSpacing.md)
+                .padding(.bottom, AppSpacing.md)
+        }
+        .background(AppColors.background)
+    }
+
     // MARK: - Approval Payment Fallback View (client_secret provided, no paymentResponse)
-    private var approvalPaymentFallbackView: some View {
+    private func approvalPaymentFallbackView(includeButton: Bool = true) -> some View {
         VStack(spacing: 24) {
             // 任务信息卡片（如果有）
             if taskTitle != nil || applicantName != nil {
@@ -496,9 +544,10 @@ struct StripePaymentView: View {
             .cornerRadius(AppCornerRadius.large)
             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
 
-            // 支付方式选择 + 支付按钮
             paymentMethodSelectionCard
-            paymentButton
+            if includeButton {
+                paymentButton
+            }
         }
         .padding(.vertical)
     }
