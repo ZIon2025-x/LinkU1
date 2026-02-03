@@ -3807,17 +3807,17 @@ const MessagePage: React.FC = () => {
             >
               <div style={{ 
                 position: 'relative',
-                width: '50px',
-                height: '50px'
+                width: '36px',
+                height: '36px'
               }}>
                 <LazyImage src={'/static/service.png'} alt={t('messages.service')} style={{ 
-                  width: '50px', 
-                  height: '50px', 
+                  width: '36px', 
+                  height: '36px', 
                   borderRadius: '50%', 
-                  border: '3px solid #f59e0b', 
+                  border: '2px solid #f59e0b', 
                   background: '#fffbe6', 
                   objectFit: 'cover',
-                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
                   transition: 'none'
                 }} 
                 onError={() => {

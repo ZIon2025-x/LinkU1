@@ -365,13 +365,13 @@
 }
 
 .chatHeaderServiceAvatar {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 3px solid #f59e0b;
+  border: 2px solid #f59e0b;
   background: #fffbe6;
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 .chatHeaderServiceInfo {
@@ -520,18 +520,18 @@
 
 .serviceListItemAvatarContainer {
   position: relative;
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
 }
 
 .serviceListItemAvatar {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 3px solid #f59e0b;
+  border: 2px solid #f59e0b;
   background: #fffbe6;
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 .serviceListItemInfo {

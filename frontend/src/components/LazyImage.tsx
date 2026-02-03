@@ -50,12 +50,21 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // src 变化时重置加载状态，避免旧图片已加载但新图片未加载时仍显示 loading
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
+
   // 先将后端返回的相对路径（如 public/...、flea_market/...）转为可用的 /uploads/... 等
   const resolvedSrc = formatImageUrl(src);
 
   // 优化图片 URL：尝试使用 WebP 格式（如果浏览器支持）
   const optimizedSrc = useMemo(() => {
     if (!resolvedSrc) return resolvedSrc;
+    
+    // blob/data URL 直接使用，不做转换
+    if (resolvedSrc.startsWith('blob:') || resolvedSrc.startsWith('data:')) return resolvedSrc;
     
     // 如果已经指定了 srcSet，直接返回原 src
     if (srcSet) return resolvedSrc;
@@ -84,6 +93,11 @@ const LazyImage: React.FC<LazyImageProps> = ({
   }, [resolvedSrc, srcSet]);
 
   useEffect(() => {
+    // blob/data URL 表示数据已就绪，立即显示（如 PrivateImageDisplay 传来的）
+    if (resolvedSrc.startsWith('blob:') || resolvedSrc.startsWith('data:')) {
+      setIsInView(true);
+      return;
+    }
     // 如果图片是绝对定位的，直接加载（因为绝对定位的图片通常需要立即显示）
     const isAbsolutePositioned = style?.position === 'absolute';
     if (isAbsolutePositioned) {
@@ -122,7 +136,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
       }
       observer.disconnect();
     };
-  }, [rootMargin, style?.position]);
+  }, [rootMargin, style?.position, resolvedSrc]);
 
   const handleLoad = () => {
     setIsLoaded(true);

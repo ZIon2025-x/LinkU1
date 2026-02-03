@@ -15,6 +15,7 @@
 export function formatImageUrl(imagePath: string | null | undefined): string {
   if (imagePath == null || imagePath === '') return '';
   const s = String(imagePath).trim();
+  if (s.startsWith('blob:')) return s;  // blob URL 原样返回
   if (s.startsWith('http://') || s.startsWith('https://')) return s;
   if (s.startsWith('/')) return s;
   if (s.startsWith('public/') || s.startsWith('flea_market/')) return `/uploads/${s}`;
