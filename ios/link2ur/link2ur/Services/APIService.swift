@@ -682,15 +682,15 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body（安全编码）
+        // 构建multipart body（安全编码）：顺序为 头 → 空行 → 文件内容 → 结束边界
         var body = Data()
         guard body.appendIfUTF8("--\(boundary)\r\n"),
               body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
-              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
-              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n") else {
             return Fail(error: APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))).eraseToAnyPublisher()
         }
         body.append(data)
+        _ = body.appendIfUTF8("\r\n--\(boundary)--\r\n")
         request.httpBody = body
         
         return session.dataTaskPublisher(for: request)
@@ -763,15 +763,15 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body（安全编码）
+        // 构建multipart body（安全编码）：顺序为 头 → 空行 → 文件内容 → 结束边界
         var body = Data()
         guard body.appendIfUTF8("--\(boundary)\r\n"),
               body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
-              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
-              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n") else {
             return Fail(error: APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))).eraseToAnyPublisher()
         }
         body.append(data)
+        _ = body.appendIfUTF8("\r\n--\(boundary)--\r\n")
         request.httpBody = body
         
         return session.dataTaskPublisher(for: request)
@@ -859,16 +859,16 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body（安全编码）
+        // 构建multipart body（安全编码）：顺序为 头 → 空行 → 文件内容 → 结束边界
         var body = Data()
         guard body.appendIfUTF8("--\(boundary)\r\n"),
               body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
-              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
-              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n") else {
             completion(.failure(APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))))
             return
         }
         body.append(data)
+        _ = body.appendIfUTF8("\r\n--\(boundary)--\r\n")
         request.httpBody = body
         
         session.dataTaskPublisher(for: request)
@@ -1013,16 +1013,16 @@ public class APIService {
             contentType = "application/octet-stream"
         }
         
-        // 构建multipart body（安全编码）
+        // 构建multipart body（安全编码）：顺序为 头 → 空行 → 文件内容 → 结束边界
         var body = Data()
         guard body.appendIfUTF8("--\(boundary)\r\n"),
               body.appendIfUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n"),
-              body.appendIfUTF8("Content-Type: \(contentType)\r\n\r\n"),
-              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+              body.appendIfUTF8("Content-Type: \(contentType)\r\n\r\n") else {
             completion(.failure(APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))))
             return
         }
         body.append(data)
+        _ = body.appendIfUTF8("\r\n--\(boundary)--\r\n")
         request.httpBody = body
         
         session.dataTaskPublisher(for: request)

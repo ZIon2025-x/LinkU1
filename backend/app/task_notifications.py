@@ -3,7 +3,7 @@
 处理任务申请、同意、完成等状态变化时的通知和邮件发送
 """
 
-from typing import Optional
+from typing import Optional, List
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -419,17 +419,30 @@ def send_task_completion_notification(
     db: Session,
     background_tasks: BackgroundTasks,
     task: models.Task,
-    taker: models.User
+    taker: models.User,
+    evidence_images: Optional[List[str]] = None,
+    evidence_text: Optional[str] = None,
 ):
-    """发送任务完成通知和邮件给发布者"""
+    """发送任务完成通知和邮件给发布者，通知内容包含证据摘要（让对方知道任务被标记完成及证明是什么）"""
     try:
-        # 创建通知
         taker_name = taker.name or f"用户{taker.id}"
-        notification_content = f"用户 {taker_name} 标记任务已完成：{task.title}"
-        
-        # 生成英文版本
         taker_name_en = taker.name or f"User {taker.id}"
-        notification_content_en = f"{taker_name_en} has marked task as completed: {task.title}"
+        # 证据摘要：用于通知正文和推送，让对方知道证明是什么
+        evidence_parts_zh = []
+        evidence_parts_en = []
+        if evidence_images and len(evidence_images) > 0:
+            n = len(evidence_images)
+            evidence_parts_zh.append(f"附 {n} 张证据图")
+            evidence_parts_en.append(f"{n} evidence image(s)")
+        if evidence_text and evidence_text.strip():
+            excerpt = (evidence_text.strip()[:80] + "…") if len(evidence_text.strip()) > 80 else evidence_text.strip()
+            evidence_parts_zh.append(f"文字说明：{excerpt}")
+            evidence_parts_en.append(f"Note: {excerpt}")
+        evidence_suffix_zh = "。" + "；".join(evidence_parts_zh) if evidence_parts_zh else ""
+        evidence_suffix_en = ". " + "; ".join(evidence_parts_en) if evidence_parts_en else ""
+        # 通知正文（含证据）
+        notification_content = f"用户 {taker_name} 已将任务「{task.title}」标记为完成{evidence_suffix_zh}"
+        notification_content_en = f"{taker_name_en} has marked task「{task.title}」as completed{evidence_suffix_en}"
         
         crud.create_notification(
             db=db,
@@ -442,25 +455,28 @@ def send_task_completion_notification(
             related_id=str(task.id)
         )
         
-        # 发送推送通知
+        # 推送通知：模板中可使用 evidence_summary 显示证据摘要
+        evidence_summary_zh = " " + "；".join(evidence_parts_zh) if evidence_parts_zh else ""
+        evidence_summary_en = " " + "; ".join(evidence_parts_en) if evidence_parts_en else ""
         try:
             from app.push_notification_service import send_push_notification
             send_push_notification(
                 db=db,
                 user_id=task.poster_id,
-                title=None,  # 从模板生成（会根据用户语言偏好）
-                body=None,  # 从模板生成（会根据用户语言偏好）
+                title=None,
+                body=None,
                 notification_type="task_completed",
                 data={"task_id": task.id},
                 template_vars={
                     "taker_name": taker_name,
-                    "task_title": task.title,  # 原始标题，会在 send_push_notification 中根据用户语言从翻译表获取
-                    "task_id": task.id  # 传递 task_id 以便获取翻译
+                    "task_title": task.title,
+                    "task_id": task.id,
+                    "evidence_summary": evidence_summary_zh,
+                    "evidence_summary_en": evidence_summary_en,
                 }
             )
         except Exception as e:
             logger.warning(f"发送任务完成推送通知失败: {e}")
-            # 推送通知失败不影响主流程
         
         # ⚠️ 暂时禁用任务状态变化时的自动邮件发送
         # 获取发布者信息

@@ -2199,7 +2199,7 @@ def complete_task(
         logger.warning(f"Failed to send system message: {e}")
         # 系统消息发送失败不影响任务完成流程
 
-    # 发送任务完成通知和邮件给发布者
+    # 发送任务完成通知和邮件给发布者（始终创建通知，让发布者知道完成情况与证据）
     try:
         from app.task_notifications import send_task_completion_notification
         from fastapi import BackgroundTasks
@@ -2208,14 +2208,15 @@ def complete_task(
         if background_tasks is None:
             background_tasks = BackgroundTasks()
         
-        # 获取发布者信息
-        poster = crud.get_user_by_id(db, db_task.poster_id)
-        if poster:
+        # 只要任务有发布者就发送通知（不依赖 poster 对象是否存在）
+        if db_task.poster_id:
             send_task_completion_notification(
                 db=db,
                 background_tasks=background_tasks,
                 task=db_task,
-                taker=current_user
+                taker=current_user,
+                evidence_images=evidence_images,
+                evidence_text=evidence_text,
             )
     except Exception as e:
         logger.warning(f"Failed to send task completion notification: {e}")

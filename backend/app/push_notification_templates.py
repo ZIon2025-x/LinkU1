@@ -58,15 +58,15 @@ PUSH_NOTIFICATION_TEMPLATES = {
         }
     },
     
-    # 任务完成
+    # 任务完成（可选 template_vars: evidence_summary / evidence_summary_en 为证据摘要，无则为空串）
     "task_completed": {
         "en": {
             "title": "✅ Task Completed",
-            "body_template": "{taker_name} marked「{task_title}」as completed"
+            "body_template": "{taker_name} marked「{task_title}」as completed.{evidence_summary_en}"
         },
         "zh": {
             "title": "✅ 任务已完成",
-            "body_template": "{taker_name} 已将「{task_title}」标记为完成"
+            "body_template": "{taker_name} 已将「{task_title}」标记为完成。{evidence_summary}"
         }
     },
     
