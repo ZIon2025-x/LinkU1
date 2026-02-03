@@ -791,23 +791,28 @@ struct TaskCard: View {
                     endPoint: .bottom
                 )
                 
-                // 顶部标签栏（位置标签 - 模糊显示，只显示城市）
+                // 顶部标签栏（位置标签 - 模糊显示，单行过长省略号，距离始终完整）
                 HStack {
-                    // 位置标签（使用 SF Symbols）
                     HStack(spacing: 4) {
-                        Label(task.location.obfuscatedLocation, systemImage: task.isOnline ? "globe" : "mappin.circle.fill")
+                        Image(systemName: task.isOnline ? "globe" : "mappin.circle.fill")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.white)
+                        Text(task.location.obfuscatedLocation)
                             .font(AppTypography.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
-                        
-                        // 距离显示（如果有的话）
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(minWidth: 0)
                         if let distance = task.formattedDistanceFromUser, !task.isOnline {
                             Text("· \(distance)")
                                 .font(AppTypography.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(.white.opacity(0.9))
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
+                    .frame(maxWidth: 260)
                     .padding(.horizontal, AppSpacing.sm)
                     .padding(.vertical, 4)
                     .background(.ultraThinMaterial)

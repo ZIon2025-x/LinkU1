@@ -3328,6 +3328,7 @@ struct ApplicationMessageSheet: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @StateObject private var viewModel = TaskDetailViewModel()
+    @StateObject private var visibilityHolder = ViewVisibilityHolder()
     @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
@@ -3447,9 +3448,10 @@ struct ApplicationMessageSheet: View {
                 Text(errorMessage)
             }
             .onAppear {
-                // 加载任务信息以获取基础价格
+                visibilityHolder.isVisible = true
                 viewModel.loadTask(taskId: taskId)
             }
+            .onDisappear { visibilityHolder.isVisible = false }
         }
     }
     
@@ -3467,7 +3469,8 @@ struct ApplicationMessageSheet: View {
             price: price
         )
         .sink(
-            receiveCompletion: { [self] result in
+            receiveCompletion: { [visibilityHolder, self] result in
+                guard visibilityHolder.isVisible else { return }
                 isSending = false
                 if case .failure(let error) = result {
                     errorMessage = error.userFriendlyMessage
@@ -4822,6 +4825,7 @@ struct RefundRequestSheet: View {
     @State private var imageSizeErrors: [String] = []
     @State private var isSubmitting = false
     @State private var cancellables = Set<AnyCancellable>()
+    @StateObject private var visibilityHolder = ViewVisibilityHolder()
     
     enum RefundType: String {
         case full = "full"
@@ -5279,6 +5283,8 @@ struct RefundRequestSheet: View {
                     .disabled(isSubmitting || isUploading)
                 }
             }
+            .onAppear { visibilityHolder.isVisible = true }
+            .onDisappear { visibilityHolder.isVisible = false }
         }
     }
     
@@ -5480,14 +5486,15 @@ struct RefundRequestSheet: View {
         )
         .receive(on: DispatchQueue.main)
         .sink(
-            receiveCompletion: { [self] result in
+            receiveCompletion: { [visibilityHolder, self] result in
+                guard visibilityHolder.isVisible else { return }
                 isSubmitting = false
                 if case .failure(let error) = result {
                     errorMessage = getDetailedErrorMessage(error)
                 }
             },
-            receiveValue: { [self] _ in
-                // 退款申请提交成功
+            receiveValue: { [visibilityHolder, self] _ in
+                guard visibilityHolder.isVisible else { return }
                 HapticFeedback.success()
                 onSuccess()
             }
@@ -5869,6 +5876,7 @@ struct RefundRebuttalSheet: View {
     @State private var imageSizeErrors: [String] = []
     @State private var isSubmitting = false
     @State private var cancellables = Set<AnyCancellable>()
+    @StateObject private var visibilityHolder = ViewVisibilityHolder()
     
     var body: some View {
         NavigationView {
@@ -6073,6 +6081,8 @@ struct RefundRebuttalSheet: View {
                     }
                 }
             }
+            .onAppear { visibilityHolder.isVisible = true }
+            .onDisappear { visibilityHolder.isVisible = false }
         }
     }
     
@@ -6206,14 +6216,15 @@ struct RefundRebuttalSheet: View {
         )
         .receive(on: DispatchQueue.main)
         .sink(
-            receiveCompletion: { [self] result in
+            receiveCompletion: { [visibilityHolder, self] result in
+                guard visibilityHolder.isVisible else { return }
                 isSubmitting = false
                 if case .failure(let error) = result {
                     errorMessage = getDetailedErrorMessage(error)
                 }
             },
-            receiveValue: { [self] _ in
-                // 反驳提交成功
+            receiveValue: { [visibilityHolder, self] _ in
+                guard visibilityHolder.isVisible else { return }
                 HapticFeedback.success()
                 onSuccess()
             }

@@ -548,7 +548,11 @@ struct ChatHistoryView: View {
                     .ignoresSafeArea()
                 
                 if viewModel.isLoadingChats && viewModel.chats.isEmpty {
-                    LoadingView()
+                    ScrollView {
+                        ListSkeleton(itemCount: 5, itemHeight: 72, spacing: AppSpacing.sm)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, AppSpacing.sm)
+                    }
                 } else if viewModel.chats.isEmpty {
                     VStack(spacing: AppSpacing.md) {
                         Image(systemName: "message.fill")

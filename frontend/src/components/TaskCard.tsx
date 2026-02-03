@@ -304,7 +304,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
           <span style={{
             whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            textOverflow: 'ellipsis',
+            minWidth: 0
           }}>{obfuscateLocation(task.location)}</span>
         </div>
 

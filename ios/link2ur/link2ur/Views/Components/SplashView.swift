@@ -39,22 +39,131 @@ struct SplashView: View {
         }
     }
     
-    // MARK: - 背景
+    // MARK: - 背景（微渐变 + 弥散光，空气感与现代科技感）
     private var backgroundView: some View {
         Group {
             if isDarkMode {
-                Color(red: 0.07, green: 0.07, blue: 0.10)
+                // 暗色：深底 + 极浅蓝绿弥散光
+                ZStack {
+                    Color(red: 0.07, green: 0.07, blue: 0.10)
+                        .ignoresSafeArea()
+                    // 非对称微渐变：左上略偏蓝
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.12, green: 0.14, blue: 0.22),
+                            Color(red: 0.07, green: 0.07, blue: 0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .opacity(0.6)
                     .ignoresSafeArea()
+                    meshOrbsDark
+                }
             } else {
-                RadialGradient(
-                    colors: [Color(white: 0.98), Color.white],
-                    center: .center,
-                    startRadius: 50,
-                    endRadius: 400
-                )
-                .ignoresSafeArea()
+                // 浅色：微渐变基底 + 角落弥散光（蓝绿色）
+                ZStack {
+                    // 1. 微渐变基底：极浅品牌色非对称渐变，避免纯白单调
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.97, green: 0.98, blue: 1.0),   // 极浅蓝
+                            Color(red: 0.99, green: 0.99, blue: 1.0),   // 近乎白
+                            Color(red: 0.98, green: 0.99, blue: 0.98)   // 极浅青
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
+                    // 2. 弥散光：角落模糊蓝绿色块，增加深邃感与空气感
+                    meshOrbsLight
+                }
             }
         }
+    }
+    
+    /// 浅色模式：角落弥散光（蓝、青绿，大范围模糊）
+    private var meshOrbsLight: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            ZStack {
+                // 左上：极浅蓝
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [AppColors.primary.opacity(0.12), AppColors.primary.opacity(0.02), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: w * 0.5
+                        )
+                    )
+                    .frame(width: w * 0.85, height: w * 0.85)
+                    .blur(radius: 60)
+                    .offset(x: -w * 0.2, y: -h * 0.15)
+                // 右下：极浅青绿
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(red: 0.4, green: 0.75, blue: 0.85).opacity(0.1), Color(red: 0.5, green: 0.8, blue: 0.85).opacity(0.02), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: w * 0.45
+                        )
+                    )
+                    .frame(width: w * 0.8, height: w * 0.8)
+                    .blur(radius: 70)
+                    .offset(x: w * 0.25, y: h * 0.2)
+                // 右上：极淡青，补充光感
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(red: 0.45, green: 0.7, blue: 0.9).opacity(0.06), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: w * 0.4
+                        )
+                    )
+                    .frame(width: w * 0.7, height: w * 0.7)
+                    .blur(radius: 55)
+                    .offset(x: w * 0.3, y: -h * 0.1)
+            }
+        }
+        .ignoresSafeArea()
+    }
+    
+    /// 暗色模式：角落弥散光（低饱和度蓝绿）
+    private var meshOrbsDark: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            ZStack {
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(red: 0.2, green: 0.4, blue: 0.6).opacity(0.15), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: w * 0.5
+                        )
+                    )
+                    .frame(width: w * 0.9, height: w * 0.9)
+                    .blur(radius: 80)
+                    .offset(x: -w * 0.15, y: -h * 0.2)
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(red: 0.2, green: 0.5, blue: 0.55).opacity(0.12), Color.clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: w * 0.45
+                        )
+                    )
+                    .frame(width: w * 0.85, height: w * 0.85)
+                    .blur(radius: 90)
+                    .offset(x: w * 0.3, y: h * 0.25)
+            }
+        }
+        .ignoresSafeArea()
     }
     
     // MARK: - Logo 容器
@@ -83,18 +192,18 @@ struct SplashView: View {
         }
     }
     
-    // MARK: - Slogan
+    // MARK: - Slogan（系统无衬线 + 略增字间距）
     private var sloganView: some View {
         HStack(spacing: 4) {
             Text("Link to your ")
-                .font(.system(size: 26, weight: .medium, design: .serif))
+                .font(.system(size: 26, weight: .medium))
                 .foregroundColor(isDarkMode ? Color.white.opacity(0.8) : Color(white: 0.35))
-                .tracking(0.4)
+                .tracking(0.9)
             
             Text("World")
-                .font(.system(size: 26, weight: .bold, design: .serif))
+                .font(.system(size: 26, weight: .bold))
                 .foregroundColor(isDarkMode ? Color(red: 0.45, green: 0.65, blue: 1.0) : AppColors.primary)
-                .tracking(0.3)
+                .tracking(0.7)
         }
     }
     

@@ -97,7 +97,7 @@ extension APIError {
 
 // MARK: - 错误恢复策略
 
-enum ErrorRecoveryStrategy {
+public enum ErrorRecoveryStrategy {
     case retry(maxAttempts: Int, delay: TimeInterval)
     case reauthenticate
     case showError
@@ -192,6 +192,14 @@ public struct AppError: Identifiable, Equatable {
     public let error: Error
     public let context: String?
     public let timestamp: Date
+    
+    /// 恢复策略，用于全局错误 UI 显示「重试」按钮等
+    public var recoveryStrategy: ErrorRecoveryStrategy {
+        if let apiError = error as? APIError {
+            return apiError.recoveryStrategy
+        }
+        return .showError
+    }
     
     public var description: String {
         var desc = "错误: \(error.localizedDescription)"

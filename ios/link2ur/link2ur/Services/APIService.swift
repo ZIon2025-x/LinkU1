@@ -682,14 +682,15 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body
+        // 构建multipart body（安全编码）
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        guard body.appendIfUTF8("--\(boundary)\r\n"),
+              body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
+              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+            return Fail(error: APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))).eraseToAnyPublisher()
+        }
         body.append(data)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        
         request.httpBody = body
         
         return session.dataTaskPublisher(for: request)
@@ -762,14 +763,15 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body
+        // 构建multipart body（安全编码）
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        guard body.appendIfUTF8("--\(boundary)\r\n"),
+              body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
+              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+            return Fail(error: APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))).eraseToAnyPublisher()
+        }
         body.append(data)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        
         request.httpBody = body
         
         return session.dataTaskPublisher(for: request)
@@ -857,14 +859,16 @@ public class APIService {
             AppSignature.signRequest(&request, sessionId: sessionId)
         }
         
-        // 构建multipart body
+        // 构建multipart body（安全编码）
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        guard body.appendIfUTF8("--\(boundary)\r\n"),
+              body.appendIfUTF8("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n"),
+              body.appendIfUTF8("Content-Type: image/jpeg\r\n\r\n"),
+              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+            completion(.failure(APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))))
+            return
+        }
         body.append(data)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        
         request.httpBody = body
         
         session.dataTaskPublisher(for: request)
@@ -1009,14 +1013,16 @@ public class APIService {
             contentType = "application/octet-stream"
         }
         
-        // 构建multipart body
+        // 构建multipart body（安全编码）
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: \(contentType)\r\n\r\n".data(using: .utf8)!)
+        guard body.appendIfUTF8("--\(boundary)\r\n"),
+              body.appendIfUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n"),
+              body.appendIfUTF8("Content-Type: \(contentType)\r\n\r\n"),
+              body.appendIfUTF8("\r\n--\(boundary)--\r\n") else {
+            completion(.failure(APIError.requestFailed(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Multipart encoding failed"]))))
+            return
+        }
         body.append(data)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
-        
         request.httpBody = body
         
         session.dataTaskPublisher(for: request)
@@ -1174,4 +1180,13 @@ enum HTTPMethod: String {
 
 // 辅助空响应结构体
 struct EmptyResponse: Decodable {}
+
+// MARK: - Multipart 安全编码
+private extension Data {
+    mutating func appendIfUTF8(_ string: String) -> Bool {
+        guard let d = string.data(using: .utf8) else { return false }
+        append(d)
+        return true
+    }
+}
 

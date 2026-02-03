@@ -20,6 +20,7 @@ struct CreateTaskView: View {
     @State private var searchDebounceTask: DispatchWorkItem?
     @State private var isProgrammaticLocationUpdate = false  // 标记是否是程序设置（非用户手动输入）
     @FocusState private var isLocationFocused: Bool
+    @StateObject private var visibilityHolder = ViewVisibilityHolder() // 避免异步回调在视图销毁后更新 @State
     
     var body: some View {
         NavigationView {
@@ -261,10 +262,11 @@ struct CreateTaskView: View {
                 }
             }
             .onDisappear {
-                // 用户体验优化：视图消失时自动收起键盘
+                visibilityHolder.isVisible = false
                 isLocationFocused = false
             }
             .onAppear {
+                visibilityHolder.isVisible = true
                 if !appState.isAuthenticated {
                     showLogin = true
                 }
@@ -489,13 +491,14 @@ struct CreateTaskView: View {
         if let location = locationService.currentLocation {
             handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
         } else {
-            // 等待位置更新（最多3秒）
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [self] in
+            // 等待位置更新（最多3秒）；使用 visibilityHolder 避免视图销毁后仍更新 @State
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [visibilityHolder, self] in
+                guard visibilityHolder.isVisible else { return }
                 if let location = locationService.currentLocation {
                     handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
                 } else {
-                    // 继续等待
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [self] in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [visibilityHolder, self] in
+                        guard visibilityHolder.isVisible else { return }
                         if let location = locationService.currentLocation {
                             handleCurrentLocation(latitude: location.latitude, longitude: location.longitude)
                         } else {

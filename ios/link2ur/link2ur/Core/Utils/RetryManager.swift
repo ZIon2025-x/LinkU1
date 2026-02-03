@@ -53,7 +53,9 @@ public class RetryManager {
         throw lastError ?? RetryError.maxAttemptsReached
     }
     
-    /// 执行带重试的同步操作
+    /// 执行带重试的同步操作。
+    /// 使用 `Thread.sleep` 等待重试间隔，会阻塞当前线程。
+    /// 仅用于非主线程或已知短时阻塞场景；请勿在主线程调用，否则会卡住 UI。优先使用 `execute`（async）替代。
     public func executeSync<T>(
         _ operation: @escaping () throws -> T,
         maxAttempts: Int = 3,

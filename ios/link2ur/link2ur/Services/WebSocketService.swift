@@ -44,26 +44,37 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             
             if self.isConnected || self.webSocketTask != nil {
                 self.forceDisconnect()
-                // 等待一小段时间确保旧连接完全关闭
-                Thread.sleep(forTimeInterval: 0.5)
-            }
-            
-            self.isConnecting = true
-            self.currentUserId = userId
-            // 保存userId到UserDefaults以便重连时使用
-            UserDefaults.standard.set(userId, forKey: "current_user_id")
-            
-            let urlString = "\(Constants.API.wsURL)/ws/chat/\(userId)?token=\(token)"
-            guard let url = URL(string: urlString) else {
-                self.isConnecting = false
+                // 使用异步延迟替代 Thread.sleep，避免阻塞 connectionQueue
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.connectionQueue.async {
+                        self?.performConnect(token: token, userId: userId)
+                    }
+                }
                 return
             }
             
-            DispatchQueue.main.async {
-                self.webSocketTask = self.session?.webSocketTask(with: url)
-                self.webSocketTask?.resume()
-                self.receiveMessage()
-            }
+            self.performConnect(token: token, userId: userId)
+        }
+    }
+    
+    /// 在 connectionQueue 上执行实际连接（供 connect 与延迟后调用）
+    private func performConnect(token: String, userId: String) {
+        guard !isConnecting else { return }
+        isConnecting = true
+        currentUserId = userId
+        UserDefaults.standard.set(userId, forKey: "current_user_id")
+        
+        let urlString = "\(Constants.API.wsURL)/ws/chat/\(userId)?token=\(token)"
+        guard let url = URL(string: urlString) else {
+            isConnecting = false
+            return
+        }
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.webSocketTask = self.session?.webSocketTask(with: url)
+            self.webSocketTask?.resume()
+            self.receiveMessage()
         }
     }
     
@@ -157,36 +168,28 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
             
             // 处理任务消息（格式：{ "type": "task_message", "message": {...} }）
             if type == "task_message", let messageDict = json["message"] as? [String: Any] {
-                // 将嵌套的 message 对象提取出来
-                if let messageData = try? JSONSerialization.data(withJSONObject: messageDict) {
-                    DispatchQueue.main.async { [weak self] in
-                        do {
-                            let decoder = JSONDecoder()
-                            let message = try decoder.decode(Message.self, from: messageData)
-                            // 只处理有 content 的消息（过滤掉系统消息或其他类型的消息）
-                            if message.content != nil {
-                                self?.messageSubject.send(message)
-                            }
-                        } catch {
-                        }
-                    }
+                guard let messageData = try? JSONSerialization.data(withJSONObject: messageDict) else { return }
+                // 在主线程解码，避免 Swift 6 下 Message 的 main actor-isolated Decodable 在非隔离上下文使用的警告
+                DispatchQueue.main.async { [weak self] in
+                    do {
+                        let decoder = JSONDecoder()
+                        let message = try decoder.decode(Message.self, from: messageData)
+                        guard message.content != nil else { return }
+                        self?.messageSubject.send(message)
+                    } catch { }
                 }
                 return
             }
         }
         
-        // 在后台线程解码，然后切换到主线程发送（处理普通消息格式）
+        // 在主线程解码并发送（Message 的 Decodable 为 main actor-isolated，需在主线程解码以避免 Swift 6 警告）
         DispatchQueue.main.async { [weak self] in
             do {
-                // 在主线程解码以避免 main actor 隔离问题
                 let decoder = JSONDecoder()
                 let message = try decoder.decode(Message.self, from: data)
-                // 只处理有 content 的消息（过滤掉系统消息或其他类型的消息）
-                if message.content != nil {
-                    self?.messageSubject.send(message)
-                }
-            } catch {
-            }
+                guard message.content != nil else { return }
+                self?.messageSubject.send(message)
+            } catch { }
         }
     }
     
@@ -255,23 +258,34 @@ class WebSocketService: NSObject, URLSessionWebSocketDelegate, ObservableObject 
                     self.webSocketTask = nil
                     self.isConnected = false
                     self.isConnecting = false
-                    Thread.sleep(forTimeInterval: 0.5)
+                    // 使用异步延迟替代 Thread.sleep，避免阻塞
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self?.connectionQueue.async {
+                            guard let self = self else { return }
+                            let userId = self.currentUserId ?? UserDefaults.standard.string(forKey: "current_user_id")
+                            guard let finalUserId = userId, !finalUserId.isEmpty else {
+                                self.reconnectAttempts = self.maxReconnectAttempts
+                                return
+                            }
+                            guard let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty else {
+                                self.reconnectAttempts = self.maxReconnectAttempts
+                                return
+                            }
+                            self.connect(token: token, userId: finalUserId)
+                        }
+                    }
+                    return
                 }
                 
-                // 从存储的userId和Keychain获取token
-                // 优先使用 currentUserId，如果为空则从 UserDefaults 获取
                 let userId = self.currentUserId ?? UserDefaults.standard.string(forKey: "current_user_id")
-                
                 guard let finalUserId = userId, !finalUserId.isEmpty else {
                     self.reconnectAttempts = self.maxReconnectAttempts
                     return
                 }
-                
                 guard let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey), !token.isEmpty else {
                     self.reconnectAttempts = self.maxReconnectAttempts
                     return
                 }
-                
                 self.connect(token: token, userId: finalUserId)
             }
             

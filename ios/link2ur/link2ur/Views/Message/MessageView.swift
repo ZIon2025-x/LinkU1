@@ -12,7 +12,18 @@ struct MessageView: View {
                     .ignoresSafeArea()
                 
                 if viewModel.isLoading && viewModel.taskChats.isEmpty {
-                    LoadingView()
+                    // 使用列表骨架屏提升首屏加载感知性能
+                    ScrollView {
+                        LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
+                            ForEach(0..<6, id: \.self) { _ in
+                                ListSkeleton(itemCount: 1, itemHeight: 72, spacing: 0)
+                            }
+                        }
+                        .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                        .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                        .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 } else if let error = viewModel.errorMessage, viewModel.taskChats.isEmpty {
                     ErrorStateView(
                         message: error,
@@ -308,7 +319,17 @@ struct InteractionMessageView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && interactionNotifications.isEmpty {
-                LoadingView()
+                ScrollView {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
+                        ForEach(0..<6, id: \.self) { _ in
+                            ListSkeleton(itemCount: 1, itemHeight: 72, spacing: 0)
+                        }
+                    }
+                    .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.md)
+                    .padding(.vertical, DeviceInfo.isPad ? AppSpacing.md : AppSpacing.sm)
+                    .frame(maxWidth: DeviceInfo.isPad ? 900 : .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
             } else if let error = viewModel.errorMessage, interactionNotifications.isEmpty {
                 ErrorStateView(
                     message: error,

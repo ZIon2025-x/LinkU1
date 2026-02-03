@@ -3,6 +3,7 @@ import UserNotifications
 
 public struct ContentView: View {
     @EnvironmentObject public var appState: AppState
+    @ObservedObject private var errorHandler = ErrorHandler.shared
     @State private var showOnboarding = false // 是否显示引导教程
     @State private var hasCheckedOnboarding = false // 优化：防止重复检查引导教程状态
     
@@ -38,6 +39,23 @@ public struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("PushNotificationTapped"))) { notification in
             // 处理推送通知点击
             handlePushNotificationTap(userInfo: notification.userInfo)
+        }
+        .alert(LocalizationKey.errorSomethingWentWrong.localized, isPresented: Binding(
+            get: { errorHandler.isShowingError },
+            set: { if !$0 { errorHandler.clearError() } }
+        )) {
+            if case .retry = errorHandler.currentError?.recoveryStrategy {
+                Button(LocalizationKey.errorRetry.localized) {
+                    errorHandler.clearError()
+                }
+            }
+            Button(LocalizationKey.commonOk.localized, role: .cancel) {
+                errorHandler.clearError()
+            }
+        } message: {
+            if let msg = errorHandler.currentError?.userMessage {
+                Text(msg)
+            }
         }
     }
     

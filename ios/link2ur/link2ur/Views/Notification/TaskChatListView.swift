@@ -11,7 +11,15 @@ struct TaskChatListView: View {
                 .ignoresSafeArea()
             
             if viewModel.isLoading && viewModel.taskChats.isEmpty {
-                LoadingView()
+                ScrollView {
+                    LazyVStack(spacing: DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md) {
+                        ForEach(0..<6, id: \.self) { _ in
+                            ListSkeleton(itemCount: 1, itemHeight: 72, spacing: 0)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
             } else if let error = viewModel.errorMessage, viewModel.taskChats.isEmpty {
                 ErrorStateView(
                     message: error,
@@ -28,12 +36,13 @@ struct TaskChatListView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(viewModel.taskChats) { taskChat in
+                        ForEach(Array(viewModel.taskChats.enumerated()), id: \.element.id) { index, taskChat in
                             NavigationLink(destination: TaskChatView(taskId: taskChat.id, taskTitle: taskChat.displayTitle, taskChat: taskChat)
                                 .environmentObject(appState)) {
                                 TaskChatRow(taskChat: taskChat, currentUserId: getCurrentUserId())
                             }
                             .buttonStyle(ScaleButtonStyle())
+                            .listItemAppear(index: index, totalItems: viewModel.taskChats.count)
                         }
                     }
                     .padding(.horizontal, 16)

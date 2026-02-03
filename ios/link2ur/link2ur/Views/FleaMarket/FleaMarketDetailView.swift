@@ -1004,6 +1004,7 @@ struct PurchaseDetailView: View {
     let onNegotiateComplete: () -> Void
     
     @Environment(\.dismiss) var dismiss
+    @StateObject private var visibilityHolder = ViewVisibilityHolder() // 避免 sheet 关闭后回调仍更新 @State
     @State private var wantsNegotiate = false
     @State private var proposedPrice: Double?
     @State private var message = ""
@@ -1244,6 +1245,8 @@ struct PurchaseDetailView: View {
                 }
             }
             .enableSwipeBack()
+            .onAppear { visibilityHolder.isVisible = true }
+            .onDisappear { visibilityHolder.isVisible = false }
         }
     }
     
@@ -1279,32 +1282,30 @@ struct PurchaseDetailView: View {
                 itemId: itemId,
                 proposedPrice: proposedPrice,
                 message: message.isEmpty ? nil : message
-            ) { [self] success, errorMsg in
+            ) { [visibilityHolder, self] success, errorMsg in
                 DispatchQueue.main.async {
+                    guard visibilityHolder.isVisible else { return }
                     isSubmitting = false
                     if success {
-                        // 购买申请成功（包括 409 冲突，表示申请已存在）
                         onNegotiateComplete()
                     } else {
-                        // 显示详细的错误消息，如果没有则使用默认消息
                         errorMessage = errorMsg ?? LocalizationKey.fleaMarketNegotiateRequestFailed.localized
                     }
                 }
             }
         } else {
-            // 直接购买
-            viewModel.directPurchase(itemId: itemId, completion: { [self] purchaseData in
+            viewModel.directPurchase(itemId: itemId, completion: { [visibilityHolder, self] purchaseData in
                 DispatchQueue.main.async {
+                    guard visibilityHolder.isVisible else { return }
                     isSubmitting = false
                     if purchaseData != nil {
                         onPurchaseComplete(purchaseData)
                     }
-                    // 如果 purchaseData 为 nil，说明购买失败，错误信息已通过 onError 回调设置
                 }
-            }, onError: { [self] errorMsg in
+            }, onError: { [visibilityHolder, self] errorMsg in
                 DispatchQueue.main.async {
+                    guard visibilityHolder.isVisible else { return }
                     isSubmitting = false
-                    // 显示错误消息
                     errorMessage = errorMsg
                 }
             })
