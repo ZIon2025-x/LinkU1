@@ -80,6 +80,7 @@ const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const CookiePolicy = lazyWithRetry(() => import('./pages/CookiePolicy'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
+const LoginWithLink2ur = lazyWithRetry(() => import('./pages/LoginWithLink2ur'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
@@ -211,6 +212,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/cookie-policy`} element={<CookiePolicy />} />
           <Route path={`/${lang}/support`} element={<Support />} />
           <Route path={`/${lang}/partners`} element={<Partners />} />
+          <Route path={`/${lang}/login-with-link2ur`} element={<LoginWithLink2ur />} />
           <Route path={`/${lang}/merchant-cooperation`} element={<MerchantCooperation />} />
           <Route path={`/${lang}/publish`} element={
             <ProtectedRoute>

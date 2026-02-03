@@ -137,6 +137,17 @@ const Footer: React.FC = () => {
                 >
                   {t('footer.partners')}
                 </LocalizedLink>
+                <LocalizedLink to="/login-with-link2ur" style={{
+                  color: 'rgba(255,255,255,0.8)',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
+                >
+                  {t('footer.loginWithLink2ur')}
+                </LocalizedLink>
                 <LocalizedLink to="/task-experts/intro" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',

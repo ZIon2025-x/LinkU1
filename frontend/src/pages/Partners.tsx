@@ -4,6 +4,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import Footer from '../components/Footer';
+import LocalizedLink from '../components/LocalizedLink';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
@@ -150,6 +151,12 @@ const Partners: React.FC = () => {
                 <div style={{ fontWeight: 600 }}>{t('partners.benefits.userGrowth')}</div>
                 <div style={{ marginTop: 6, color: '#4b5563' }}>{t('partners.benefits.userGrowthDesc')}</div>
               </div>
+            </div>
+
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 12, padding: 16, marginTop: 24 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>{t('loginWithLink2ur.title')}</div>
+              <p style={{ margin: 0, color: '#374151', fontSize: 14 }}>{t('loginWithLink2ur.subtitle')}</p>
+              <LocalizedLink to="/login-with-link2ur" style={{ color: '#1d4ed8', fontSize: 14, marginTop: 8, display: 'inline-block' }}>{t('loginWithLink2ur.techTitle')} &rarr;</LocalizedLink>
             </div>
 
             <h3 style={{ fontSize: 18, marginTop: 24 }}>{t('partners.sections.contact')}</h3>
