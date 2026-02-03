@@ -1361,7 +1361,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        {/* 关闭按钮和分享按钮 */}
+        {/* 关闭按钮、争议详情按钮和分享按钮 */}
         <div style={{
           position: 'absolute',
           top: '16px',
@@ -1370,6 +1370,45 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           gap: '8px',
           zIndex: 10
         }}>
+          {/* 争议详情按钮：待确认或已完成任务时，发布者和接单者均可查看 */}
+          {(task.status === 'pending_confirmation' || task.status === 'completed') && (isTaskPoster || isTaskTaker) && (
+            <button
+              onClick={async () => {
+                if (!taskId) return;
+                setLoadingDisputeTimeline(true);
+                try {
+                  const timeline = await getTaskDisputeTimeline(taskId);
+                  setDisputeTimeline(timeline);
+                  setShowDisputeTimeline(true);
+                } catch (error: any) {
+                  message.error(getErrorMessage(error));
+                } finally {
+                  setLoadingDisputeTimeline(false);
+                }
+              }}
+              disabled={loadingDisputeTimeline}
+              style={{
+                padding: '8px 14px',
+                background: '#ffc107',
+                color: '#000',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: loadingDisputeTimeline ? 'not-allowed' : 'pointer',
+                opacity: loadingDisputeTimeline ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title={language === 'zh' ? '查看争议与退款时间线' : 'View dispute and refund timeline'}
+            >
+              <span>⏱️</span>
+              {loadingDisputeTimeline
+                ? (language === 'zh' ? '加载中...' : 'Loading...')
+                : (language === 'zh' ? '争议详情' : 'Dispute Details')}
+            </button>
+          )}
           {/* 分享按钮 */}
           <button
             onClick={async () => {
@@ -1889,6 +1928,58 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               >
                 {language === 'zh' ? '立即确认' : 'Confirm Now'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* 任务完成证据（接单者标记完成时上传的图片/文字，发布者与接单者均可在详情中查看） */}
+        {(task.status === 'pending_confirmation' || task.status === 'completed') &&
+         task.completion_evidence &&
+         task.completion_evidence.length > 0 && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '20px',
+            background: '#f8f9fa',
+            borderRadius: '12px',
+            border: '1px solid #e9ecef'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+              {language === 'zh' ? '任务完成证据' : 'Task completion evidence'}
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              {task.completion_evidence.map((item: { type?: string; url?: string; content?: string }, idx: number) => (
+                <React.Fragment key={idx}>
+                  {item?.type === 'text' && item?.content ? (
+                    <div style={{
+                      padding: '12px',
+                      background: '#fff',
+                      borderRadius: '8px',
+                      border: '1px solid #e9ecef',
+                      maxWidth: '100%',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      fontSize: '14px',
+                      color: '#555'
+                    }}>
+                      {item.content}
+                    </div>
+                  ) : item?.url && String(item.url).trim() ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                      <LazyImage
+                        src={ensureAbsoluteImageUrl(item.url)}
+                        alt={language === 'zh' ? `证据 ${idx + 1}` : `Evidence ${idx + 1}`}
+                        style={{
+                          width: 120,
+                          height: 120,
+                          objectFit: 'cover',
+                          borderRadius: 8,
+                          border: '1px solid #e9ecef'
+                        }}
+                      />
+                    </a>
+                  ) : null}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         )}
@@ -5798,35 +5889,62 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                           </div>
                         )}
                         
-                        {/* 显示证据 */}
+                        {/* 显示证据（支持文字和图片） */}
                         {item.evidence && item.evidence.length > 0 && (
                           <div style={{
                             marginTop: '12px',
                             display: 'flex',
                             gap: '8px',
-                            flexWrap: 'wrap'
+                            flexWrap: 'wrap',
+                            flexDirection: 'column'
                           }}>
-                            {item.evidence.map((evidence: any, idx: number) => (
-                              <div key={idx} style={{
-                                width: '80px',
-                                height: '80px',
-                                borderRadius: '8px',
-                                overflow: 'hidden',
-                                border: '1px solid #e5e7eb'
-                              }}>
-                                <img
-                                  src={evidence.url}
-                                  alt={`证据 ${idx + 1}`}
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover'
-                                  }}
-                                  onError={(e: any) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
-                              </div>
+                            {item.evidence.map((evidence: { type?: string; url?: string; content?: string }, idx: number) => (
+                              <React.Fragment key={idx}>
+                                {evidence?.type === 'text' && evidence?.content ? (
+                                  <div style={{
+                                    padding: '12px',
+                                    background: '#f9fafb',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e5e7eb',
+                                    fontSize: '14px',
+                                    color: '#555',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word'
+                                  }}>
+                                    {evidence.content}
+                                  </div>
+                                ) : evidence?.url && String(evidence.url).trim() ? (
+                                  evidence?.type === 'file' ? (
+                                    <a href={evidence.url} target="_blank" rel="noopener noreferrer" style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      padding: '8px 12px',
+                                      background: '#f3f4f6',
+                                      borderRadius: '8px',
+                                      fontSize: '13px',
+                                      color: '#3b82f6',
+                                      textDecoration: 'none'
+                                    }}>
+                                      📎 {language === 'zh' ? '证据文件' : 'Evidence file'}
+                                    </a>
+                                  ) : (
+                                    <a href={evidence.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                                      <LazyImage
+                                        src={ensureAbsoluteImageUrl(evidence.url)}
+                                        alt={language === 'zh' ? `证据 ${idx + 1}` : `Evidence ${idx + 1}`}
+                                        style={{
+                                          width: 80,
+                                          height: 80,
+                                          objectFit: 'cover',
+                                          borderRadius: '8px',
+                                          border: '1px solid #e5e7eb'
+                                        }}
+                                      />
+                                    </a>
+                                  )
+                                ) : null}
+                              </React.Fragment>
                             ))}
                           </div>
                         )}
