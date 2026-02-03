@@ -36,10 +36,11 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 # ⚠️ 由于混合使用同步/异步操作，增加了连接池大小
 if IS_PRODUCTION:
     # 生产环境配置 - 增加以支持混合使用
+    # POOL_RECYCLE 建议小于 Railway/代理的空闲超时，避免使用已被代理关闭的连接（默认 10 分钟）
     POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "30"))  # 从20增加到30
     MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "40"))  # 从30增加到40
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
-    POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # 30分钟
+    POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "600"))  # 10 分钟，适配代理空闲断开
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
     QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
 else:

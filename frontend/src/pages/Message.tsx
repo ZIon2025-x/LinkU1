@@ -1892,32 +1892,24 @@ const MessagePage: React.FC = () => {
   // 更新 ref，以便在其他地方使用
   loadTasksRef.current = loadTasks;
 
-  // 过滤任务列表（根据搜索关键词）
+  // 过滤任务列表（根据搜索关键词），并按时间排序（最后消息时间或更新时间，最新的在前）
   const filteredTasks = useMemo(() => {
-    if (!taskSearchTerm.trim()) {
-      return tasks;
+    let list = tasks;
+    if (taskSearchTerm.trim()) {
+      const searchTerm = taskSearchTerm.toLowerCase().trim();
+      list = tasks.filter((task: any) => {
+        if (task.title && task.title.toLowerCase().includes(searchTerm)) return true;
+        if (task.task_type && task.task_type.toLowerCase().includes(searchTerm)) return true;
+        if (task.location && task.location.toLowerCase().includes(searchTerm)) return true;
+        if (task.last_message && task.last_message.content &&
+            task.last_message.content.toLowerCase().includes(searchTerm)) return true;
+        return false;
+      });
     }
-    
-    const searchTerm = taskSearchTerm.toLowerCase().trim();
-    return tasks.filter((task: any) => {
-      // 搜索任务标题
-      if (task.title && task.title.toLowerCase().includes(searchTerm)) {
-        return true;
-      }
-      // 搜索任务类型
-      if (task.task_type && task.task_type.toLowerCase().includes(searchTerm)) {
-        return true;
-      }
-      // 搜索任务地点
-      if (task.location && task.location.toLowerCase().includes(searchTerm)) {
-        return true;
-      }
-      // 搜索最后一条消息内容
-      if (task.last_message && task.last_message.content && 
-          task.last_message.content.toLowerCase().includes(searchTerm)) {
-        return true;
-      }
-      return false;
+    return [...list].sort((a: any, b: any) => {
+      const timeA = new Date(a.last_message?.created_at || a.updated_at || a.created_at || 0).getTime();
+      const timeB = new Date(b.last_message?.created_at || b.updated_at || b.created_at || 0).getTime();
+      return timeB - timeA; //  newest first
     });
   }, [tasks, taskSearchTerm]);
 
@@ -2064,9 +2056,13 @@ const MessagePage: React.FC = () => {
         return msg;
       });
       
-      // 后端返回的消息是按 created_at DESC 排序的（最新的在前）
-      // 前端需要反转，让最新的消息在底部显示
-      const reversedMessages = [...processedMessages].reverse();
+      // 后端返回的消息可能是 created_at DESC；前端统一按 created_at 升序（旧的在顶，新的在底）
+      const sortedByTime = [...processedMessages].sort((a: any, b: any) => {
+        const tA = new Date(a.created_at || 0).getTime();
+        const tB = new Date(b.created_at || 0).getTime();
+        return tA - tB;
+      });
+      const reversedMessages = sortedByTime;
       
       // 检测是否有新消息（非首次加载且非加载历史消息时）
       if (!cursor && lastTaskMessageIdRef.current !== null && processedMessages.length > 0) {
@@ -2079,8 +2075,13 @@ const MessagePage: React.FC = () => {
       }
       
       if (cursor) {
-        // 加载更多消息（更旧的消息），追加到前面
-        setTaskMessages(prev => [...reversedMessages, ...prev]);
+        // 加载更多消息（更旧的消息），合并后按 created_at 升序排序
+        setTaskMessages(prev => {
+          const merged = [...reversedMessages, ...prev];
+          return merged.sort((a: any, b: any) =>
+            new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+          );
+        });
       } else {
         // 首次加载或刷新，替换消息（已反转，最新的在底部）
         setTaskMessages(reversedMessages);
@@ -2674,8 +2675,10 @@ const MessagePage: React.FC = () => {
                   if (exists) {
                     return prev;
                   }
-                  
-                  return [...prev, systemMsg];
+                  const next = [...prev, systemMsg];
+                  return next.sort((a: any, b: any) =>
+                    new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+                  );
                 });
               }
               
@@ -2783,7 +2786,10 @@ const MessagePage: React.FC = () => {
                   loadTasks().catch(() => {});
                 }
                 
-                return [...prev, taskMessage];
+                const next = [...prev, taskMessage];
+                return next.sort((a: any, b: any) =>
+                  new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+                );
               });
               
               return; // 任务消息已处理，不再处理为普通消息
@@ -5796,6 +5802,7 @@ const MessagePage: React.FC = () => {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  readOnly={activeTask.status === 'completed'}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();

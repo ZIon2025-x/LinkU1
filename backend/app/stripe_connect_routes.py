@@ -2205,12 +2205,23 @@ async def connect_webhook(request: Request, db: Session = Depends(get_db)):
             user = db.query(models.User).filter(models.User.stripe_account_id == account_id).first()
             
             if user:
-                logger.warning(f"Stripe Connect account (V2) closed for user {user.id}: account_id={account_id}")
-                # 可以选择清除账户ID或保留（取决于业务需求）
-                # user.stripe_account_id = None
-                # db.commit()
+                user.stripe_account_id = None
+                db.commit()
+                logger.info(f"Stripe Connect account (V2) closed for user {user.id}: account_id={account_id}, cleared stripe_account_id")
             else:
-                logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
+                # 尝试通过 metadata 查找用户（与 deauthorized 一致）
+                metadata = account.get("metadata") or {}
+                user_id_meta = metadata.get("user_id")
+                if user_id_meta:
+                    user = db.query(models.User).filter(models.User.id == int(user_id_meta)).first()
+                    if user and user.stripe_account_id == account_id:
+                        user.stripe_account_id = None
+                        db.commit()
+                        logger.info(f"Stripe Connect account (V2) closed for user {user.id} (via metadata): account_id={account_id}, cleared stripe_account_id")
+                    else:
+                        logger.warning(f"{event_type} event for account {account_id}, user_id from metadata {user_id_meta} not found or stripe_account_id mismatch")
+                else:
+                    logger.warning(f"{event_type} event for account {account_id}, but no matching user found")
         
         # 处理账户要求更新事件（V2 API，支持点号和方括号两种事件名）
         elif event_type == "v2.core.account.requirements.updated" or event_type == "v2.core.account[requirements].updated":
