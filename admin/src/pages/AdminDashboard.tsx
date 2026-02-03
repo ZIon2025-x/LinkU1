@@ -359,6 +359,8 @@ const AdminDashboard: React.FC = () => {
     eligibility_type: '' as '' | 'first_order' | 'new_user' | 'user_type' | 'member' | 'all',
     eligibility_value: '' as '' | 'normal' | 'vip' | 'super',
     per_day_limit: undefined as number | undefined,
+    per_user_limit_window: '' as '' | 'day' | 'week' | 'month' | 'year',
+    per_user_per_window_limit: undefined as number | undefined,
     vat_category: '' as '' | 'standard' | 'reduced' | 'zero' | 'exempt',
     // 使用场景和限制
     applicable_scenarios: [] as string[], // task, activity, service, flea_market
@@ -5515,6 +5517,8 @@ const AdminDashboard: React.FC = () => {
         per_day_limit: couponForm.per_day_limit,
         eligibility_type: couponForm.eligibility_type || undefined,
         eligibility_value: couponForm.eligibility_value || undefined,
+        per_user_limit_window: couponForm.per_user_limit_window || undefined,
+        per_user_per_window_limit: couponForm.per_user_per_window_limit ?? undefined,
       };
       
       if (couponForm.id) {
@@ -5522,7 +5526,9 @@ const AdminDashboard: React.FC = () => {
           name: data.name,
           description: data.description,
           valid_until: data.valid_until,
-          usage_conditions: data.usage_conditions
+          usage_conditions: data.usage_conditions,
+          per_user_limit_window: data.per_user_limit_window,
+          per_user_per_window_limit: data.per_user_per_window_limit,
         });
         message.success('优惠券更新成功');
       } else {
@@ -5554,6 +5560,8 @@ const AdminDashboard: React.FC = () => {
         eligibility_type: '',
         eligibility_value: '',
         per_day_limit: undefined,
+        per_user_limit_window: '',
+        per_user_per_window_limit: undefined,
         vat_category: '',
         applicable_scenarios: [],
         task_types: [],
@@ -5613,6 +5621,8 @@ const AdminDashboard: React.FC = () => {
               eligibility_type: '',
               eligibility_value: '',
               per_day_limit: undefined,
+              per_user_limit_window: '',
+              per_user_per_window_limit: undefined,
               vat_category: '',
               applicable_scenarios: [],
               task_types: [],
@@ -6036,6 +6046,54 @@ const AdminDashboard: React.FC = () => {
                   fontSize: '14px'
                 }}
               />
+            </div>
+            <div className={styles.formGroup}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>
+                每用户限领（按周期）
+                <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>
+                  （选周期后填写次数，如「每月限领 1 次」）
+                </span>
+              </label>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={couponForm.per_user_limit_window}
+                  onChange={(e) => setCouponForm({...couponForm, per_user_limit_window: e.target.value as any})}
+                  style={{
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff',
+                    minWidth: '100px'
+                  }}
+                >
+                  <option value="">不限制</option>
+                  <option value="day">按日</option>
+                  <option value="week">按周</option>
+                  <option value="month">按月</option>
+                  <option value="year">按年</option>
+                </select>
+                {couponForm.per_user_limit_window && (
+                  <>
+                    <span style={{ color: '#666', fontSize: '14px' }}>限领</span>
+                    <input
+                      type="number"
+                      value={couponForm.per_user_per_window_limit ?? ''}
+                      onChange={(e) => setCouponForm({...couponForm, per_user_per_window_limit: e.target.value ? parseInt(e.target.value) : undefined})}
+                      placeholder="1"
+                      min={1}
+                      style={{
+                        width: '80px',
+                        padding: '10px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <span style={{ color: '#666', fontSize: '14px' }}>次</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className={styles.formGroup}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, color: '#333' }}>

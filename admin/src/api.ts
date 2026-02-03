@@ -546,6 +546,12 @@ export interface CouponData {
   eligibility_type?: string;
   eligibility_value?: string;
   per_day_limit?: number;
+  /** 每用户每月限领（兼容旧逻辑，与 per_user_limit_window + per_user_per_window_limit 二选一） */
+  per_user_per_month_limit?: number;
+  /** 限领周期：day | week | month | year */
+  per_user_limit_window?: string;
+  /** 每个周期内每用户限领次数 */
+  per_user_per_window_limit?: number;
 }
 
 export const createCoupon = async (data: CouponData) => {
@@ -573,6 +579,9 @@ export const updateCoupon = async (couponId: number, data: {
   valid_until?: string;
   status?: 'active' | 'inactive';
   usage_conditions?: object;
+  per_user_per_month_limit?: number;
+  per_user_limit_window?: string;
+  per_user_per_window_limit?: number;
 }) => {
   const res = await api.put(`/api/admin/coupons/${couponId}`, data);
   return res.data;
