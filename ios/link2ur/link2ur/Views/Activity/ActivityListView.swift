@@ -4,31 +4,26 @@ import Combine
 struct ActivityListView: View {
     @StateObject private var viewModel = ActivityViewModel()
     @State private var selectedExpertId: String?
-    @State private var filterOption: ActivityFilterOption = .all
+    @State private var filterOption: ActivityFilterOption = .single
     
+    /// 活动大厅只展示未结束活动；标签为单人（非时间段） / 多人（时间段）
     enum ActivityFilterOption: String, CaseIterable {
-        case all = "activity.all"
-        case active = "activity.active"
-        case ended = "activity.ended"
+        case single = "activity.single"
+        case multi = "activity.multi"
         
         var localized: String {
             switch self {
-            case .all: return LocalizationKey.activityAll.localized
-            case .active: return LocalizationKey.activityActive.localized
-            case .ended: return LocalizationKey.activityEnded.localized
+            case .single: return LocalizationKey.activitySingle.localized
+            case .multi: return LocalizationKey.activityMulti.localized
             }
         }
-        
-        var status: String? {
-            switch self {
-            case .all:
-                return nil
-            case .active:
-                return "open"
-            case .ended:
-                // 后端会将已结束的活动状态更新为 "completed"
-                return "completed"
-            }
+    }
+    
+    /// 当前标签下的列表：服务端已按 has_time_slots 筛选，直接取对应列表
+    private var filteredActivities: [Activity] {
+        switch filterOption {
+        case .single: return viewModel.activitiesSingle
+        case .multi: return viewModel.activitiesMulti
         }
     }
     
@@ -38,7 +33,7 @@ struct ActivityListView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 筛选器
+                // 筛选器：单人活动 / 多人活动
                 Picker(LocalizationKey.activityFilter.localized, selection: $filterOption) {
                     ForEach(ActivityFilterOption.allCases, id: \.self) { option in
                         Text(option.localized).tag(option)
@@ -47,41 +42,33 @@ struct ActivityListView: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal, AppSpacing.md)
                 .padding(.vertical, AppSpacing.sm)
-                .onChange(of: filterOption) { _ in
-                    viewModel.loadActivities(
-                        expertId: selectedExpertId,
-                        status: filterOption.status,
-                        includeEnded: filterOption == .all
-                    )
-                }
                 
-                // 活动列表
-                if viewModel.isLoading && viewModel.activities.isEmpty {
-                    // 使用列表骨架屏
+                // 活动列表（仅未结束，服务端按单人/多人筛选）
+                if viewModel.isLoading && viewModel.activitiesSingle.isEmpty && viewModel.activitiesMulti.isEmpty {
                     ScrollView {
                         ListSkeleton(itemCount: 5, itemHeight: 150)
                             .padding(.horizontal, AppSpacing.md)
                             .padding(.vertical, AppSpacing.sm)
                     }
-                } else if viewModel.activities.isEmpty {
+                } else if filteredActivities.isEmpty {
                     EmptyStateView(
                         icon: "calendar.badge.plus",
-                        title: filterOption == .ended ? LocalizationKey.activityNoEndedActivities.localized : LocalizationKey.activityNoActivities.localized,
-                        message: filterOption == .ended ? LocalizationKey.activityNoEndedActivitiesMessage.localized : LocalizationKey.activityNoActivitiesMessage.localized
+                        title: LocalizationKey.activityNoActivities.localized,
+                        message: LocalizationKey.activityNoActivitiesMessage.localized
                     )
                 } else {
                     ScrollView {
                         LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(Array(viewModel.activities.enumerated()), id: \.element.id) { index, activity in
+                            ForEach(Array(filteredActivities.enumerated()), id: \.element.id) { index, activity in
                                 NavigationLink(destination: ActivityDetailView(activityId: activity.id)) {
                                     ActivityCardView(
                                         activity: activity,
-                                        showEndedBadge: filterOption == .all,
+                                        showEndedBadge: false,
                                         isFavorited: viewModel.favoritedActivityIds.contains(activity.id)
                                     )
                                 }
                                 .buttonStyle(ScaleButtonStyle())
-                                .listItemAppear(index: index, totalItems: viewModel.activities.count) // 添加错落入场动画
+                                .listItemAppear(index: index, totalItems: filteredActivities.count)
                             }
                         }
                         .padding(.horizontal, AppSpacing.md)
@@ -94,23 +81,14 @@ struct ActivityListView: View {
         .navigationBarTitleDisplayMode(.large)
         .enableSwipeBack()
         .refreshable {
-            viewModel.loadActivities(
-                expertId: selectedExpertId,
-                status: filterOption.status,
-                includeEnded: filterOption == .all,
-                forceRefresh: true
-            )
+            viewModel.loadActivitiesForHall(forceRefresh: true)
         }
         .onAppear {
-            if viewModel.activities.isEmpty {
-                viewModel.loadActivities(
-                    expertId: selectedExpertId,
-                    status: filterOption.status,
-                    includeEnded: filterOption == .all
-                )
+            if viewModel.activitiesSingle.isEmpty && viewModel.activitiesMulti.isEmpty {
+                viewModel.loadActivitiesForHall()
+            } else {
+                viewModel.loadFavoriteActivityIds()
             }
-            // 加载收藏列表
-            viewModel.loadFavoriteActivityIds()
         }
         .alert(LocalizationKey.errorError.localized, isPresented: .constant(viewModel.errorMessage != nil)) {
             Button(LocalizationKey.commonOk.localized, role: .cancel) {

@@ -727,6 +727,8 @@ public enum LocalizationKey: String {
     case activityFilter = "activity.filter"
     case activityAll = "activity.all"
     case activityActive = "activity.active"
+    case activitySingle = "activity.single"
+    case activityMulti = "activity.multi"
     case activityActivities = "activity.activities"
     case activityNoEndedActivities = "activity.no_ended_activities"
     case activityNoEndedActivitiesMessage = "activity.no_ended_activities_message"

@@ -939,6 +939,8 @@
 "activity.all" = "All";
 "activity.active" = "Active";
 "activity.ended" = "Ended";
+"activity.single" = "Single";
+"activity.multi" = "Group";
 "activity.tab.all" = "All";
 "activity.tab.applied" = "Applied";
 "activity.tab.favorited" = "Favorited";

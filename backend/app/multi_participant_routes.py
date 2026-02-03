@@ -1260,6 +1260,7 @@ def is_activity_expired(activity: Activity, db: Session) -> bool:
 def get_activities(
     expert_id: Optional[str] = None,
     status: Optional[str] = None,
+    has_time_slots: Optional[bool] = Query(None, description="是否时间段活动：false=单人活动，true=多人活动"),
     limit: int = 20,
     offset: int = 0,
     db: Session = Depends(get_db),
@@ -1267,7 +1268,8 @@ def get_activities(
     """
     获取活动列表
     
-    注意：已过期的活动会自动过滤，不在任务大厅显示
+    注意：已过期的活动会自动过滤，不在任务大厅显示。
+    has_time_slots：可选，用于活动大厅单人/多人筛选（false=单人/非时间段，true=多人/时间段）。
     """
     from app.models import Task, TaskParticipant
     from sqlalchemy import func
@@ -1281,6 +1283,9 @@ def get_activities(
     
     if status:
         query = query.filter(Activity.status == status)
+    
+    if has_time_slots is not None:
+        query = query.filter(Activity.has_time_slots == has_time_slots)
     
     activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(limit).all()
     

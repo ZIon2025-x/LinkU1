@@ -984,6 +984,8 @@
 "activity.all" = "全部";
 "activity.active" = "进行中";
 "activity.ended" = "已结束";
+"activity.single" = "单人活动";
+"activity.multi" = "多人活动";
 "activity.tab.all" = "全部";
 "activity.tab.applied" = "申请过的";
 "activity.tab.favorited" = "收藏的";

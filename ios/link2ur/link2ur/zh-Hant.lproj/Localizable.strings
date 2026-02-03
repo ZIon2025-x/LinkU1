@@ -653,6 +653,8 @@
 "activity.all" = "全部";
 "activity.active" = "進行中";
 "activity.ended" = "已結束";
+"activity.single" = "單人活動";
+"activity.multi" = "多人活動";
 "activity.tab.all" = "全部";
 "activity.tab.applied" = "申請過的";
 "activity.tab.favorited" = "收藏的";

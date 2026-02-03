@@ -10,8 +10,8 @@ extension APIService {
     
     // MARK: - Activities (活动)
     
-    /// 获取活动列表
-    func getActivities(expertId: String? = nil, status: String? = nil, limit: Int = 20, offset: Int = 0) -> AnyPublisher<[Activity], APIError> {
+    /// 获取活动列表（hasTimeSlots: false=单人/非时间段，true=多人/时间段，nil=不筛选）
+    func getActivities(expertId: String? = nil, status: String? = nil, hasTimeSlots: Bool? = nil, limit: Int = 20, offset: Int = 0) -> AnyPublisher<[Activity], APIError> {
         var queryParams: [String: String?] = [
             "limit": "\(limit)",
             "offset": "\(offset)"
@@ -21,6 +21,9 @@ extension APIService {
         }
         if let status = status {
             queryParams["status"] = status
+        }
+        if let hasTimeSlots = hasTimeSlots {
+            queryParams["has_time_slots"] = hasTimeSlots ? "true" : "false"
         }
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Activities.list)?\(queryString)"

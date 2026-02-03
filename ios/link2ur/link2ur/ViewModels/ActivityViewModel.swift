@@ -5,6 +5,10 @@ import Combine
 class ActivityViewModel: ObservableObject {
     private let performanceMonitor = PerformanceMonitor.shared
     @Published var activities: [Activity] = []
+    /// 活动大厅：单人活动（非时间段），由服务端筛选
+    @Published var activitiesSingle: [Activity] = []
+    /// 活动大厅：多人活动（时间段），由服务端筛选
+    @Published var activitiesMulti: [Activity] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedActivity: Activity?
@@ -29,6 +33,59 @@ class ActivityViewModel: ObservableObject {
     }
     
     // MARK: - Load Activities
+    
+    /// 活动大厅专用：并行请求单人/多人未结束活动，服务端按 has_time_slots 筛选，减少传输与前端过滤
+    func loadActivitiesForHall(forceRefresh: Bool = false) {
+        let startTime = Date()
+        let endpoint = "/api/activities"
+        guard !isLoading || forceRefresh else { return }
+        isLoading = true
+        errorMessage = nil
+        if forceRefresh {
+            CacheManager.shared.invalidateActivitiesCache()
+        }
+        if !forceRefresh, let cached = CacheManager.shared.loadActivities() {
+            let openOnly = cached.filter { $0.status == "open" }
+            if !openOnly.isEmpty {
+                activitiesSingle = openOnly.filter { !$0.hasTimeSlots }
+                activitiesMulti = openOnly.filter { $0.hasTimeSlots }
+                activities = openOnly
+                isLoading = false
+                loadFavoriteActivityIds()
+                Logger.success("活动大厅从缓存加载 单人 \(activitiesSingle.count) / 多人 \(activitiesMulti.count)", category: .cache)
+            }
+        }
+        let singlePublisher = apiService.getActivities(expertId: nil, status: "open", hasTimeSlots: false, limit: 50, offset: 0)
+        let multiPublisher = apiService.getActivities(expertId: nil, status: "open", hasTimeSlots: true, limit: 50, offset: 0)
+        Publishers.Zip(singlePublisher, multiPublisher)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { [weak self] completion in
+                    let duration = Date().timeIntervalSince(startTime)
+                    self?.isLoading = false
+                    switch completion {
+                    case .failure(let error):
+                        ErrorHandler.shared.handle(error, context: "加载活动列表")
+                        self?.errorMessage = error.userFriendlyMessage
+                        self?.performanceMonitor.recordNetworkRequest(endpoint: endpoint, method: "GET", duration: duration, error: error)
+                    case .finished:
+                        self?.performanceMonitor.recordNetworkRequest(endpoint: endpoint, method: "GET", duration: duration, statusCode: 200)
+                    }
+                },
+                receiveValue: { [weak self] single, multi in
+                    guard let self = self else { return }
+                    self.activitiesSingle = single
+                    self.activitiesMulti = multi
+                    self.activities = single + multi
+                    self.isLoading = false
+                    self.loadFavoriteActivityIds()
+                    if forceRefresh {
+                        CacheManager.shared.saveActivities(single + multi)
+                    }
+                }
+            )
+            .store(in: &cancellables)
+    }
     
     func loadActivities(expertId: String? = nil, status: String? = nil, includeEnded: Bool = false, forceRefresh: Bool = false) {
         let startTime = Date()
