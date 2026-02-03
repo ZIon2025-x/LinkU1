@@ -1215,6 +1215,59 @@ def get_task_detail(
         setattr(task, "has_applied", None)
         setattr(task, "user_application_status", None)
     
+    # 任务完成证据：当任务已标记完成时，从系统消息中取出证据（图片/文件 + 文字说明）供详情页展示
+    completion_evidence = []
+    if task.status in ("pending_confirmation", "completed") and task.completed_at:
+        completion_message = db.query(models.Message).filter(
+            models.Message.task_id == task_id,
+            models.Message.message_type == "system",
+            models.Message.meta.contains("task_completed_by_taker"),
+        ).order_by(models.Message.created_at.asc()).first()
+        if completion_message and completion_message.id:
+            attachments = db.query(models.MessageAttachment).filter(
+                models.MessageAttachment.message_id == completion_message.id
+            ).all()
+            for att in attachments:
+                url = att.url or ""
+                # 若存的是 file_id（私密文件），生成可访问的签名 URL
+                if url and not url.startswith("http"):
+                    try:
+                        from app.file_system import private_file_system
+                        from app.signed_url import signed_url_manager
+                        import os
+                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                        if task_dir.exists():
+                            for f in task_dir.iterdir():
+                                if f.is_file() and (f.stem == url or f.name.startswith(url)):
+                                    file_path_for_url = f"files/{f.name}"
+                                    viewer_id = str(current_user.id) if current_user else (task.poster_id or task.taker_id)
+                                    if viewer_id:
+                                        url = signed_url_manager.generate_signed_url(
+                                            file_path=file_path_for_url,
+                                            user_id=viewer_id,
+                                            expiry_minutes=60,
+                                            one_time=False,
+                                        )
+                                    break
+                    except Exception as e:
+                        logger.debug(f"生成完成证据文件签名 URL 失败 file_id={url}: {e}")
+                completion_evidence.append({
+                    "type": att.attachment_type or "file",
+                    "url": url,
+                    "file_id": att.blob_id,
+                })
+            if completion_message.meta:
+                try:
+                    meta_data = json.loads(completion_message.meta)
+                    if meta_data.get("evidence_text"):
+                        completion_evidence.append({
+                            "type": "text",
+                            "content": meta_data["evidence_text"],
+                        })
+                except (json.JSONDecodeError, KeyError):
+                    pass
+    setattr(task, "completion_evidence", completion_evidence if completion_evidence else None)
+    
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
     return schemas.TaskOut.from_orm(task)
 

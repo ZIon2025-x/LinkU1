@@ -1268,6 +1268,13 @@ struct TaskDetailContentView: View {
                             .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     }
                     
+                    // 任务完成证据（接单者标记完成时上传的图片/文字，发布者与接单者均可在详情中查看）
+                    if (task.status == .pendingConfirmation || task.status == .completed),
+                       let evidence = task.completionEvidence, !evidence.isEmpty {
+                        TaskCompletionEvidenceCard(evidence: evidence)
+                            .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+                    }
+                    
                     // 发布者查看自己任务时的提示信息
                     if isPoster && task.status == .open {
                         PosterInfoCard()
@@ -1669,6 +1676,50 @@ struct TaskInfoCard: View {
         .cornerRadius(AppCornerRadius.large)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
         .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
+    }
+}
+
+// MARK: - 任务完成证据卡片（接单者标记完成时上传的图片与文字说明）
+struct TaskCompletionEvidenceCard: View {
+    let evidence: [EvidenceItem]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                IconStyle.icon("photo.on.rectangle.angled", size: 18)
+                    .foregroundColor(AppColors.primary)
+                Text(LocalizationHelper.currentLanguage.hasPrefix("zh") ? "任务完成证据" : "Task completion evidence")
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                ForEach(evidence) { item in
+                    if item.type == "text", let content = item.content, !content.isEmpty {
+                        Text(content)
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(AppSpacing.sm)
+                            .background(AppColors.backgroundSecondary)
+                            .cornerRadius(AppCornerRadius.small)
+                    } else if let url = item.displayURL {
+                        AsyncImageView(
+                            urlString: url,
+                            placeholder: Image(systemName: "photo"),
+                            width: 120,
+                            height: 120,
+                            contentMode: .fill,
+                            cornerRadius: AppCornerRadius.small
+                        )
+                    }
+                }
+            }
+        }
+        .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.large)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -5769,9 +5820,15 @@ struct TimelineItemView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: AppSpacing.sm) {
                             ForEach(evidence) { evidenceItem in
-                                if evidenceItem.type == "image" || evidenceItem.type == "file" {
+                                if evidenceItem.type == "text", let content = evidenceItem.content, !content.isEmpty {
+                                    Text(content)
+                                        .font(.subheadline)
+                                        .foregroundColor(AppColors.textSecondary)
+                                        .lineLimit(3)
+                                        .frame(maxWidth: 120, alignment: .leading)
+                                } else if let url = evidenceItem.displayURL {
                                     AsyncImageView(
-                                        urlString: evidenceItem.url,
+                                        urlString: url,
                                         placeholder: Image(systemName: "photo"),
                                         width: 80,
                                         height: 80,

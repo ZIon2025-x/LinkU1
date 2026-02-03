@@ -64,23 +64,31 @@ struct TimelineItem: Codable, Identifiable {
     }
 }
 
-/// 证据项
+/// 证据项（支持图片/文件 URL 与文字说明）
 struct EvidenceItem: Codable, Identifiable {
     let id: String
     let type: String
-    let url: String
+    let url: String?
     let fileId: String?
+    let content: String?
     
     enum CodingKeys: String, CodingKey {
-        case type, url
+        case type, url, content
         case fileId = "file_id"
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         type = try container.decode(String.self, forKey: .type)
-        url = try container.decode(String.self, forKey: .url)
+        url = try container.decodeIfPresent(String.self, forKey: .url)
         fileId = try container.decodeIfPresent(String.self, forKey: .fileId)
-        id = fileId ?? url
+        content = try container.decodeIfPresent(String.self, forKey: .content)
+        id = fileId ?? url ?? content ?? UUID().uuidString
+    }
+    
+    /// 可用于展示的 URL（图片/文件类型）
+    var displayURL: String? {
+        if type == "text" { return nil }
+        return url?.isEmpty == false ? url : nil
     }
 }

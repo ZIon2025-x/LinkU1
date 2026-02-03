@@ -377,6 +377,8 @@ class TaskOut(TaskBase):
     # 当前用户是否已申请（与活动详情一致，在详情接口中根据 current_user 填充，便于客户端直接显示「已申请」状态）
     has_applied: Optional[bool] = None
     user_application_status: Optional[str] = None  # pending / approved / rejected
+    # 任务完成证据（接单者标记完成时上传的图片/文件与文字说明，仅当任务已标记完成时由详情接口填充）
+    completion_evidence: Optional[List[Dict[str, Any]]] = None
 
     @validator('images', pre=True)
     def parse_images(cls, v):

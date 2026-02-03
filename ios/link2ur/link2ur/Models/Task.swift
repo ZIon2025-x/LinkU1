@@ -47,6 +47,8 @@ struct Task: Codable, Identifiable, Equatable {
     let hasApplied: Bool?
     /// 当前用户申请状态：pending / approved / rejected
     let userApplicationStatus: String?
+    /// 任务完成证据（接单者标记完成时上传的图片/文件与文字说明，仅当任务已标记完成时返回）
+    let completionEvidence: [EvidenceItem]?
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
@@ -85,6 +87,7 @@ struct Task: Codable, Identifiable, Equatable {
         case paymentExpiresAt = "payment_expires_at"
         case hasApplied = "has_applied"
         case userApplicationStatus = "user_application_status"
+        case completionEvidence = "completion_evidence"
     }
     
     // 兼容旧代码的 computed properties
