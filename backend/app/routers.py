@@ -3233,16 +3233,58 @@ def get_task_dispute_timeline(
     ).order_by(models.Message.created_at.asc()).first()
     
     if completion_message:
-        # 获取完成证据（附件和文字）
+        # 获取完成证据（附件和文字），需为私密图片/文件生成可访问 URL（与任务详情一致）
         completion_evidence = []
         if completion_message.id:
+            evidence_participants = []
+            if task.poster_id:
+                evidence_participants.append(str(task.poster_id))
+            if task.taker_id:
+                evidence_participants.append(str(task.taker_id))
+            if current_user and str(current_user.id) not in evidence_participants:
+                evidence_participants.append(str(current_user.id))
+            if not evidence_participants and current_user:
+                evidence_participants.append(str(current_user.id))
+            viewer_id = str(current_user.id) if current_user else (str(task.poster_id) if task.poster_id else (str(task.taker_id) if task.taker_id else None))
+
             attachments = db.query(models.MessageAttachment).filter(
                 models.MessageAttachment.message_id == completion_message.id
             ).all()
             for att in attachments:
+                url = att.url or ""
+                is_private_image = att.blob_id and (
+                    (att.attachment_type == "image") or (url and "/api/private-image/" in str(url))
+                )
+                if is_private_image and viewer_id and evidence_participants:
+                    try:
+                        from app.image_system import private_image_system
+                        url = private_image_system.generate_image_url(
+                            att.blob_id, viewer_id, evidence_participants
+                        )
+                    except Exception as e:
+                        logger.debug(f"争议时间线完成证据 private-image URL 失败 blob_id={att.blob_id}: {e}")
+                elif url and not url.startswith("http"):
+                    try:
+                        from app.file_system import private_file_system
+                        from app.signed_url import signed_url_manager
+                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                        if task_dir.exists():
+                            for f in task_dir.glob(f"{url}.*"):
+                                if f.is_file():
+                                    file_path_for_url = f"files/{f.name}"
+                                    if viewer_id:
+                                        url = signed_url_manager.generate_signed_url(
+                                            file_path=file_path_for_url,
+                                            user_id=viewer_id,
+                                            expiry_minutes=60,
+                                            one_time=False,
+                                        )
+                                    break
+                    except Exception as e:
+                        logger.debug(f"争议时间线完成证据文件签名 URL 失败 file_id={url}: {e}")
                 completion_evidence.append({
-                    "type": att.attachment_type,
-                    "url": att.url,
+                    "type": att.attachment_type or "file",
+                    "url": url,
                     "file_id": att.blob_id
                 })
         
@@ -3277,13 +3319,55 @@ def get_task_dispute_timeline(
         
         confirmation_evidence = []
         if confirmation_message and confirmation_message.id:
+            evidence_participants = []
+            if task.poster_id:
+                evidence_participants.append(str(task.poster_id))
+            if task.taker_id:
+                evidence_participants.append(str(task.taker_id))
+            if current_user and str(current_user.id) not in evidence_participants:
+                evidence_participants.append(str(current_user.id))
+            if not evidence_participants and current_user:
+                evidence_participants.append(str(current_user.id))
+            viewer_id = str(current_user.id) if current_user else (str(task.poster_id) if task.poster_id else (str(task.taker_id) if task.taker_id else None))
+
             attachments = db.query(models.MessageAttachment).filter(
                 models.MessageAttachment.message_id == confirmation_message.id
             ).all()
             for att in attachments:
+                url = att.url or ""
+                is_private_image = att.blob_id and (
+                    (att.attachment_type == "image") or (url and "/api/private-image/" in str(url))
+                )
+                if is_private_image and viewer_id and evidence_participants:
+                    try:
+                        from app.image_system import private_image_system
+                        url = private_image_system.generate_image_url(
+                            att.blob_id, viewer_id, evidence_participants
+                        )
+                    except Exception as e:
+                        logger.debug(f"争议时间线确认证据 private-image URL 失败 blob_id={att.blob_id}: {e}")
+                elif url and not url.startswith("http"):
+                    try:
+                        from app.file_system import private_file_system
+                        from app.signed_url import signed_url_manager
+                        task_dir = private_file_system.base_dir / "tasks" / str(task_id)
+                        if task_dir.exists():
+                            for f in task_dir.glob(f"{url}.*"):
+                                if f.is_file():
+                                    file_path_for_url = f"files/{f.name}"
+                                    if viewer_id:
+                                        url = signed_url_manager.generate_signed_url(
+                                            file_path=file_path_for_url,
+                                            user_id=viewer_id,
+                                            expiry_minutes=60,
+                                            one_time=False,
+                                        )
+                                    break
+                    except Exception as e:
+                        logger.debug(f"争议时间线确认证据文件签名 URL 失败 file_id={url}: {e}")
                 confirmation_evidence.append({
-                    "type": att.attachment_type,
-                    "url": att.url,
+                    "type": att.attachment_type or "file",
+                    "url": url,
                     "file_id": att.blob_id
                 })
         

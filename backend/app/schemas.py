@@ -593,6 +593,7 @@ class TaskOut(TaskBase):
             "payment_expires_at": getattr(obj, 'payment_expires_at', None),  # FastAPI会自动将datetime序列化为ISO格式字符串
             "has_applied": getattr(obj, 'has_applied', None),
             "user_application_status": getattr(obj, 'user_application_status', None),
+            "completion_evidence": getattr(obj, 'completion_evidence', None),  # 任务完成证据（由详情接口在 setattr 后填充）
         }
         
         # 如果任务有关联的时间段，获取时间段信息
