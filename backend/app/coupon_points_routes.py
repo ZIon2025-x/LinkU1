@@ -195,7 +195,7 @@ def redeem_coupon(
         )
     
     # 5. 领取优惠券
-    user_coupon = claim_coupon(
+    user_coupon, claim_error = claim_coupon(
         db,
         current_user.id,
         coupon.id,
@@ -203,7 +203,7 @@ def redeem_coupon(
     )
     
     if not user_coupon:
-        raise HTTPException(status_code=400, detail="领取失败，请检查优惠券是否可用或已达到领取限制")
+        raise HTTPException(status_code=400, detail=claim_error or "领取失败，请检查优惠券是否可用或已达到领取限制")
     
     # 6. 扣除积分（使用幂等键防止重复扣除）
     from app.utils.time_utils import get_utc_time
@@ -266,7 +266,11 @@ def get_available_coupons_list(
             "min_amount_display": min_amount_display,
             "currency": coupon.currency,
             "valid_until": coupon.valid_until,
-            "usage_conditions": coupon.usage_conditions
+            "usage_conditions": coupon.usage_conditions,
+            "eligibility_type": getattr(coupon, "eligibility_type", None),
+            "per_user_per_month_limit": getattr(coupon, "per_user_per_month_limit", None),
+            "per_user_limit_window": getattr(coupon, "per_user_limit_window", None),
+            "per_user_per_window_limit": getattr(coupon, "per_user_per_window_limit", None),
         })
     
     return {"data": data}
@@ -320,7 +324,7 @@ def claim_coupon_api(
     else:
         raise HTTPException(status_code=400, detail="必须提供coupon_id或promotion_code")
     
-    user_coupon = claim_coupon(
+    user_coupon, claim_error = claim_coupon(
         db,
         current_user.id,
         coupon_id,
@@ -329,7 +333,7 @@ def claim_coupon_api(
     )
     
     if not user_coupon:
-        raise HTTPException(status_code=400, detail="领取失败，请检查优惠券是否可用或已达到领取限制")
+        raise HTTPException(status_code=400, detail=claim_error or "领取失败，请检查优惠券是否可用或已达到领取限制")
     
     # 获取优惠券详情用于返回
     coupon = get_coupon_by_id(db, coupon_id)

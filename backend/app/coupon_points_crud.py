@@ -16,6 +16,32 @@ from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
+# 每用户限领周期：day=按日, week=按周(ISO周一), month=按月, year=按年
+VALID_LIMIT_WINDOWS = ("day", "week", "month", "year")
+WINDOW_LABELS = {"day": "今日", "week": "本周", "month": "本月", "year": "本年"}
+
+
+def _start_of_window_utc(now: datetime, window: str) -> tuple[datetime, str]:
+    """返回当前周期（UTC）的起始时间与中文标签。window: day|week|month|year"""
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    if window == "day":
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif window == "week":
+        # ISO 周：周一为第一天
+        d = now.date()
+        monday = d - timedelta(days=d.weekday())
+        start = datetime(monday.year, monday.month, monday.day, 0, 0, 0, 0, tzinfo=timezone.utc)
+    elif window == "month":
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif window == "year":
+        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        window = "month"
+    label = WINDOW_LABELS.get(window, "本月")
+    return start, label
+
 
 # ==================== 积分相关 CRUD ====================
 
@@ -213,17 +239,23 @@ def update_coupon(db: Session, coupon_id: int, coupon_update: schemas.CouponUpda
 
 
 def get_available_coupons(db: Session, user_id: Optional[str] = None) -> List[models.Coupon]:
-    """获取可用优惠券列表"""
+    """获取可用优惠券列表（会员专属券仅对 vip/super 用户展示，非会员在 SQL 层过滤）"""
     now = get_utc_time()
     query = db.query(models.Coupon).filter(
         models.Coupon.status == "active",
         models.Coupon.valid_from <= now,
         models.Coupon.valid_until >= now
     )
-    
-    # TODO: 添加用户资格检查
-    # TODO: 添加使用次数限制检查
-    
+    if user_id:
+        user_obj = db.query(models.User).filter(models.User.id == user_id).first()
+        is_member = user_obj and (user_obj.user_level or "normal").strip().lower() in ("vip", "super")
+        if not is_member:
+            query = query.filter(
+                or_(
+                    models.Coupon.eligibility_type.is_(None),
+                    models.Coupon.eligibility_type != "member"
+                )
+            )
     return query.all()
 
 
@@ -256,15 +288,18 @@ def claim_coupon(
     device_fingerprint: Optional[str] = None,
     ip_address: Optional[str] = None,
     idempotency_key: Optional[str] = None
-) -> Optional[models.UserCoupon]:
-    """领取优惠券（带并发控制）"""
+) -> tuple[Optional[models.UserCoupon], Optional[str]]:
+    """
+    领取优惠券（带并发控制）。
+    返回 (user_coupon, error_message)：成功时 error_message 为 None，失败时 user_coupon 为 None 且 error_message 为具体原因。
+    """
     # 检查幂等性
     if idempotency_key:
         existing = db.query(models.UserCoupon).filter(
             models.UserCoupon.idempotency_key == idempotency_key
         ).first()
         if existing:
-            return existing
+            return existing, None
     
     # 使用 SELECT FOR UPDATE 锁定优惠券记录，防止并发超发
     coupon = db.query(models.Coupon).filter(
@@ -272,12 +307,44 @@ def claim_coupon(
     ).with_for_update().first()
     
     if not coupon:
-        return None
+        return None, "优惠券不存在"
     
     # 检查优惠券状态和有效期
     now = get_utc_time()
     if coupon.status != "active" or coupon.valid_from > now or coupon.valid_until < now:
-        return None
+        return None, "优惠券已失效或不在有效期内"
+    
+    # 会员专属券：仅 vip/super 可领
+    if coupon.eligibility_type == "member":
+        user_obj = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user_obj:
+            return None, "仅会员可领取该优惠券"
+        user_level = (user_obj.user_level or "normal").strip().lower()
+        allowed_levels = ["vip", "super"]
+        if coupon.eligibility_value:
+            allowed_levels = [x.strip().lower() for x in coupon.eligibility_value.split(",") if x.strip()]
+        if user_level not in allowed_levels:
+            return None, "仅会员可领取该优惠券"
+    
+    # 每用户每周期限领（per_user_limit_window + per_user_per_window_limit，或兼容 per_user_per_month_limit）
+    window = getattr(coupon, "per_user_limit_window", None)
+    window = (window or "").strip().lower() or None
+    limit_in_window = getattr(coupon, "per_user_per_window_limit", None)
+    if limit_in_window is None and getattr(coupon, "per_user_per_month_limit", None) is not None:
+        limit_in_window = coupon.per_user_per_month_limit
+        window = "month" if not window else window
+    if window and limit_in_window is not None and limit_in_window > 0:
+        if window not in VALID_LIMIT_WINDOWS:
+            window = "month"
+        start_of_window_utc, window_label = _start_of_window_utc(now, window)
+        window_claim_count = db.query(models.UserCoupon).filter(
+            models.UserCoupon.user_id == user_id,
+            models.UserCoupon.coupon_id == coupon_id,
+            models.UserCoupon.obtained_at >= start_of_window_utc,
+            models.UserCoupon.obtained_at <= now
+        ).count()
+        if window_claim_count >= limit_in_window:
+            return None, f"{window_label}已领取过该优惠券"
     
     # 检查用户是否已领取（per_user_limit）
     if coupon.per_user_limit:
@@ -287,7 +354,7 @@ def claim_coupon(
             models.UserCoupon.status.in_(["unused", "used", "expired"])
         ).count()
         if user_coupon_count >= coupon.per_user_limit:
-            return None
+            return None, "已达到该优惠券的领取上限"
     
     # 检查全局余量（total_quantity）- 已在锁内，安全
     if coupon.total_quantity:
@@ -296,7 +363,7 @@ def claim_coupon(
             models.UserCoupon.status.in_(["unused", "used", "expired"])
         ).count()
         if total_issued >= coupon.total_quantity:
-            return None
+            return None, "优惠券已领完"
     
     # 创建用户优惠券
     user_coupon = models.UserCoupon(
@@ -312,7 +379,7 @@ def claim_coupon(
     db.commit()
     db.refresh(user_coupon)
     
-    return user_coupon
+    return user_coupon, None
 
 
 def validate_coupon_usage(
@@ -646,7 +713,9 @@ def check_in(
     
     # 如果奖励是优惠券，创建用户优惠券
     if check_in.reward_type == "coupon" and check_in.coupon_id:
-        claim_coupon(db, user_id, check_in.coupon_id)
+        _uc, _err = claim_coupon(db, user_id, check_in.coupon_id)
+        if _err:
+            logger.warning("Check-in coupon claim failed for user %s: %s", user_id, _err)
     
     db.commit()
     db.refresh(check_in)
@@ -802,8 +871,11 @@ def use_invitation_code(
         
         # 优惠券奖励
         if invitation_code.reward_type in ["coupon", "both"] and invitation_code.coupon_id:
-            claim_coupon(db, user_id, invitation_code.coupon_id)
-            usage.coupon_received_id = invitation_code.coupon_id
+            _uc, _err = claim_coupon(db, user_id, invitation_code.coupon_id)
+            if _uc:
+                usage.coupon_received_id = invitation_code.coupon_id
+            elif _err:
+                logger.warning("Invitation coupon claim failed for user %s: %s", user_id, _err)
         
         usage.reward_received = True
         db.commit()

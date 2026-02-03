@@ -68,6 +68,12 @@ struct Coupon: Codable, Identifiable {
     let currency: String
     let validUntil: String
     let usageConditions: CouponUsageConditions?
+    /// 领取资格：member=仅会员，nil 或 all=所有人
+    let eligibilityType: String?
+    /// 限领周期：day/week/month/year
+    let perUserLimitWindow: String?
+    /// 每个周期内每用户限领次数
+    let perUserPerWindowLimit: Int?
     
     enum CodingKeys: String, CodingKey {
         case id, code, name, type
@@ -78,6 +84,9 @@ struct Coupon: Codable, Identifiable {
         case currency
         case validUntil = "valid_until"
         case usageConditions = "usage_conditions"
+        case eligibilityType = "eligibility_type"
+        case perUserLimitWindow = "per_user_limit_window"
+        case perUserPerWindowLimit = "per_user_per_window_limit"
     }
     
     /// 获取积分兑换所需积分
@@ -88,6 +97,23 @@ struct Coupon: Codable, Identifiable {
     /// 是否支持积分兑换
     var canRedeemWithPoints: Bool {
         return (pointsRequired ?? 0) > 0
+    }
+    
+    /// 是否会员专属券
+    var isMemberOnly: Bool {
+        return eligibilityType == "member"
+    }
+    
+    /// 每周期限领描述（如 "每日限领1次"），无限制返回 nil
+    var perWindowLimitDescription: String? {
+        guard let window = perUserLimitWindow, let limit = perUserPerWindowLimit, limit > 0 else { return nil }
+        switch window {
+        case "day": return String(format: LocalizationKey.couponLimitPerDay.localized, limit)
+        case "week": return String(format: LocalizationKey.couponLimitPerWeek.localized, limit)
+        case "month": return String(format: LocalizationKey.couponLimitPerMonth.localized, limit)
+        case "year": return String(format: LocalizationKey.couponLimitPerYear.localized, limit)
+        default: return nil
+        }
     }
 }
 

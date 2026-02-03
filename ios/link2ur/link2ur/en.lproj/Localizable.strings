@@ -882,6 +882,11 @@
 "coupon.check_in_now" = "Check In Now";
 "coupon.consecutive_days" = "Consecutive check-in for %d days";
 "coupon.consecutive_check_in" = "%d days consecutive check-in";
+"coupon.member_only" = "Member Only";
+"coupon.limit_per_day" = "%d per day";
+"coupon.limit_per_week" = "%d per week";
+"coupon.limit_per_month" = "%d per month";
+"coupon.limit_per_year" = "%d per year";
 
 // MARK: - Task Application (Extended)
 "task_application.apply_info" = "Application Info";

@@ -604,6 +604,11 @@
 "coupon.check_in_now" = "立即簽到";
 "coupon.consecutive_days" = "已連續簽到 %d 天";
 "coupon.consecutive_check_in" = "%d天連續簽到";
+"coupon.member_only" = "會員專屬";
+"coupon.limit_per_day" = "每日限領%d次";
+"coupon.limit_per_week" = "每週限領%d次";
+"coupon.limit_per_month" = "每月限領%d次";
+"coupon.limit_per_year" = "每年限領%d次";
 
 // MARK: - Task Application (Extended)
 "task_application.apply_info" = "申請資訊";

@@ -969,7 +969,10 @@ class Coupon(Base):
     status = Column(String(20), default="active")  # active, inactive, expired
     usage_conditions = Column(JSONB, nullable=True)  # 使用条件限制（JSON格式）
     eligibility_type = Column(String(20), nullable=True)  # first_order, new_user, user_type, member, all
-    eligibility_value = Column(Text, nullable=True)  # 资格值
+    eligibility_value = Column(Text, nullable=True)  # 资格值（如 member 时可为 "vip,super"）
+    per_user_per_month_limit = Column(Integer, nullable=True)  # 每用户每月限领次数（兼容旧逻辑，优先用下方窗口）
+    per_user_limit_window = Column(String(20), nullable=True)  # 限领周期：day, week, month, year
+    per_user_per_window_limit = Column(Integer, nullable=True)  # 每个周期内每用户限领次数
     per_day_limit = Column(Integer, nullable=True)  # 每日限用次数
     vat_category = Column(String(20), nullable=True)  # VAT分类
     created_at = Column(DateTime(timezone=True), default=get_utc_time)

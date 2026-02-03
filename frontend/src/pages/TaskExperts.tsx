@@ -508,14 +508,6 @@ const TaskExperts: React.FC = () => {
     }
   }; void _getLevelColor;
 
-  const getLevelText = (level: string) => {
-    switch (level) {
-      case 'super': return t('taskExperts.superExpert');
-      case 'vip': return t('taskExperts.vipExpert');
-      default: return t('taskExperts.normalExpert');
-    }
-  };
-
   if (loading) {
     return (
       <div style={{ 

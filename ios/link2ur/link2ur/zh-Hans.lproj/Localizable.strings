@@ -888,6 +888,11 @@
 "coupon.check_in_now" = "立即签到";
 "coupon.consecutive_days" = "已连续签到 %d 天";
 "coupon.consecutive_check_in" = "%d天连续签到";
+"coupon.member_only" = "会员专属";
+"coupon.limit_per_day" = "每日限领%d次";
+"coupon.limit_per_week" = "每周限领%d次";
+"coupon.limit_per_month" = "每月限领%d次";
+"coupon.limit_per_year" = "每年限领%d次";
 
 // MARK: - Task Application (Extended)
 "task_application.apply_info" = "申请信息";

@@ -8,7 +8,8 @@ interface Coupon {
   name: string;
   description: string;
   code: string;
-  discount_type: 'fixed' | 'percentage';
+  discount_type?: 'fixed' | 'percentage';
+  type?: string;
   discount_value: number;
   min_amount?: number;
   max_discount?: number;
@@ -20,6 +21,10 @@ interface Coupon {
     task_types?: string[];
   };
   status: string;
+  /** 会员专属券仅对 vip/super 展示 */
+  eligibility_type?: string | null;
+  per_user_limit_window?: string | null;
+  per_user_per_window_limit?: number | null;
 }
 
 interface UserCoupon {
@@ -127,11 +132,11 @@ const Coupons: React.FC = () => {
   };
 
   const formatDiscount = (coupon: Coupon) => {
-    if (coupon.discount_type === 'fixed') {
+    const isFixed = coupon.discount_type === 'fixed' || coupon.type === 'fixed_amount';
+    if (isFixed) {
       return `£${(coupon.discount_value / 100).toFixed(2)}`;
-    } else {
-      return `${coupon.discount_value}%`;
     }
+    return `${(coupon.discount_value / 100).toFixed(0)}%`;
   };
 
   const canRedeemWithPoints = (coupon: Coupon) => {
@@ -405,6 +410,33 @@ const Coupons: React.FC = () => {
                           }}>
                             {formatDiscount(coupon)}
                           </span>
+                          {coupon.eligibility_type === 'member' && (
+                            <span style={{
+                              padding: '4px 10px',
+                              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                              color: '#fff',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              {language === 'zh' ? '会员专属' : 'Members Only'}
+                            </span>
+                          )}
+                          {coupon.per_user_limit_window && coupon.per_user_per_window_limit != null && coupon.per_user_per_window_limit > 0 && (
+                            <span style={{
+                              padding: '4px 10px',
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '500'
+                            }}>
+                              {language === 'zh'
+                                ? (coupon.per_user_limit_window === 'day' ? '每日' : coupon.per_user_limit_window === 'week' ? '每周' : coupon.per_user_limit_window === 'month' ? '每月' : '每年')
+                                  + `限领${coupon.per_user_per_window_limit}次`
+                                : `${coupon.per_user_limit_window === 'day' ? 'Daily' : coupon.per_user_limit_window === 'week' ? 'Weekly' : coupon.per_user_limit_window === 'month' ? 'Monthly' : 'Yearly'} ${coupon.per_user_per_window_limit}x`}
+                            </span>
+                          )}
                         </div>
                         <p style={{
                           margin: '0 0 12px 0',

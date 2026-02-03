@@ -779,6 +779,29 @@ struct CouponCardView: View {
                     }
                 }
                 
+                if isAvailable && (coupon.isMemberOnly || coupon.perWindowLimitDescription != nil) {
+                    HStack(spacing: 6) {
+                        if coupon.isMemberOnly {
+                            Text(LocalizationKey.couponMemberOnly.localized)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(AppColors.primary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(AppColors.primaryLight)
+                                .cornerRadius(6)
+                        }
+                        if let limitDesc = coupon.perWindowLimitDescription {
+                            Text(limitDesc)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(AppColors.textSecondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(AppColors.textQuaternary.opacity(0.15))
+                                .cornerRadius(6)
+                        }
+                    }
+                }
+                
                 Spacer()
                 
                 HStack {

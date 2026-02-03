@@ -787,6 +787,11 @@ public enum LocalizationKey: String {
     case couponRedeem = "coupon.redeem"
     case couponConfirmRedeem = "coupon.confirm_redeem"
     case couponConfirmRedeemWithPoints = "coupon.confirm_redeem_with_points"
+    case couponMemberOnly = "coupon.member_only"
+    case couponLimitPerDay = "coupon.limit_per_day"
+    case couponLimitPerWeek = "coupon.limit_per_week"
+    case couponLimitPerMonth = "coupon.limit_per_month"
+    case couponLimitPerYear = "coupon.limit_per_year"
     
     // MARK: - Task Type
     case taskTypeSuperTask = "task_type.super_task"

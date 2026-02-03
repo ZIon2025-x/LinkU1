@@ -1298,6 +1298,10 @@ class CouponUsageConditions(BaseModel):
     excluded_task_types: Optional[List[str]] = None
 
 
+# 限领周期允许值（可扩展）
+COUPON_LIMIT_WINDOWS = ("day", "week", "month", "year")
+
+
 class CouponBase(BaseModel):
     code: Optional[str] = None  # 优惠券代码（可选，如果为空则只能通过积分兑换）
     name: str
@@ -1319,8 +1323,20 @@ class CouponBase(BaseModel):
     usage_conditions: Optional[Dict[str, Any]] = None
     eligibility_type: Optional[str] = None
     eligibility_value: Optional[str] = None
+    per_user_per_month_limit: Optional[int] = None
+    per_user_limit_window: Optional[str] = None  # day | week | month | year
+    per_user_per_window_limit: Optional[int] = None
     per_day_limit: Optional[int] = None
     vat_category: Optional[str] = None
+
+    @validator("per_user_limit_window")
+    def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        w = v.strip().lower()
+        if w not in COUPON_LIMIT_WINDOWS:
+            raise ValueError(f"per_user_limit_window 仅支持: {', '.join(COUPON_LIMIT_WINDOWS)}")
+        return w
 
 
 class CouponCreate(CouponBase):
@@ -1333,6 +1349,18 @@ class CouponUpdate(BaseModel):
     valid_until: Optional[datetime.datetime] = None
     status: Optional[str] = None
     usage_conditions: Optional[Dict[str, Any]] = None
+    per_user_per_month_limit: Optional[int] = None
+    per_user_limit_window: Optional[str] = None
+    per_user_per_window_limit: Optional[int] = None
+
+    @validator("per_user_limit_window")
+    def validate_limit_window(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        w = v.strip().lower()
+        if w not in COUPON_LIMIT_WINDOWS:
+            raise ValueError(f"per_user_limit_window 仅支持: {', '.join(COUPON_LIMIT_WINDOWS)}")
+        return w
 
 
 class CouponOut(BaseModel):
@@ -1547,6 +1575,11 @@ class CouponAdminOut(CouponOut):
     total_quantity: Optional[int] = None
     used_quantity: Optional[int] = None
     usage_conditions: Optional[Dict[str, Any]] = None
+    eligibility_type: Optional[str] = None
+    eligibility_value: Optional[str] = None
+    per_user_per_month_limit: Optional[int] = None
+    per_user_limit_window: Optional[str] = None
+    per_user_per_window_limit: Optional[int] = None
 
     class Config:
         from_attributes = True

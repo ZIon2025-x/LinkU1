@@ -137,6 +137,9 @@ def create_coupon(
         usage_conditions=coupon_data.usage_conditions,
         eligibility_type=coupon_data.eligibility_type,
         eligibility_value=coupon_data.eligibility_value,
+        per_user_per_month_limit=coupon_data.per_user_per_month_limit,
+        per_user_limit_window=coupon_data.per_user_limit_window,
+        per_user_per_window_limit=coupon_data.per_user_per_window_limit,
         per_day_limit=coupon_data.per_day_limit,
         vat_category=coupon_data.vat_category,
         status="active"
@@ -233,7 +236,10 @@ def update_coupon(
         "description": coupon.description,
         "valid_until": str(coupon.valid_until),
         "status": coupon.status,
-        "usage_conditions": coupon.usage_conditions
+        "usage_conditions": coupon.usage_conditions,
+        "per_user_per_month_limit": coupon.per_user_per_month_limit,
+        "per_user_limit_window": coupon.per_user_limit_window,
+        "per_user_per_window_limit": coupon.per_user_per_window_limit,
     }
     
     # 更新字段
@@ -252,6 +258,12 @@ def update_coupon(
         coupon.status = coupon_data.status
     if coupon_data.usage_conditions is not None:
         coupon.usage_conditions = coupon_data.usage_conditions
+    if coupon_data.per_user_per_month_limit is not None:
+        coupon.per_user_per_month_limit = coupon_data.per_user_per_month_limit
+    if coupon_data.per_user_limit_window is not None:
+        coupon.per_user_limit_window = coupon_data.per_user_limit_window
+    if coupon_data.per_user_per_window_limit is not None:
+        coupon.per_user_per_window_limit = coupon_data.per_user_per_window_limit
     
     db.commit()
     db.refresh(coupon)
@@ -264,7 +276,10 @@ def update_coupon(
             "description": coupon.description,
             "valid_until": str(coupon.valid_until),
             "status": coupon.status,
-            "usage_conditions": coupon.usage_conditions
+            "usage_conditions": coupon.usage_conditions,
+            "per_user_per_month_limit": coupon.per_user_per_month_limit,
+            "per_user_limit_window": coupon.per_user_limit_window,
+            "per_user_per_window_limit": coupon.per_user_per_window_limit,
         }
         create_audit_log(
             db=db,
