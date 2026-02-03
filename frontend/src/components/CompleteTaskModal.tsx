@@ -386,6 +386,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
       }
       open={visible}
       onCancel={handleCancel}
+      zIndex={10003}
       footer={[
         <Button key="cancel" onClick={handleCancel} disabled={uploading}>
           {language === 'zh' ? '取消' : 'Cancel'}

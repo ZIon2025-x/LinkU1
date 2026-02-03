@@ -234,10 +234,12 @@ const LazyImage: React.FC<LazyImageProps> = ({
   
   // 图片样式：合并传入的图片相关样式和默认样式
   // 优先使用 style 中的 width/height，然后是 props 中的 width/height，最后是默认值
-  // 对于圆形头像，图片应该填充整个容器
+  // 对于圆形头像，图片应该填充整个容器。加载完成后设 zIndex: 2 确保在 loading 层之上（loading 隐藏后无影响）
   const imgStyle: React.CSSProperties = {
     opacity: isLoaded ? (style?.opacity !== undefined ? style.opacity : 1) : 0,
     transition: 'opacity 0.3s ease-in-out',
+    position: 'relative',
+    zIndex: isLoaded ? 2 : 0,
     width: isAbsolutePositioned 
       ? (style?.width || '100%') 
       : '100%', // 图片填充容器宽度
@@ -263,6 +265,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     if (style?.minHeight !== undefined) imgStyle.minHeight = style.minHeight;
   }
   
+  // 仅在未进入视口或图片未加载完成时显示 loading，避免图片已显示但 loading 仍盖在上方
+  const showLoadingOverlay = !isInView || !isLoaded;
+
   return (
     <div 
       ref={imgRef}
@@ -273,7 +278,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {!isInView && (
+      {showLoadingOverlay && (
         <div style={{
           position: 'absolute',
           top: 0,
@@ -283,7 +288,8 @@ const LazyImage: React.FC<LazyImageProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#f0f0f0'
+          backgroundColor: '#f0f0f0',
+          zIndex: 1
         }}>
           <Spin size="small" />
         </div>

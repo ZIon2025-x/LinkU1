@@ -1861,10 +1861,7 @@ const MessagePage: React.FC = () => {
         } catch (error) {
                   }
         
-        // 过滤掉已取消的任务、已完成超过3天的任务、以及用户手动移除的任务
-        const now = new Date();
-        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-        
+        // 过滤掉已取消的任务、以及用户手动移除的任务（不再按完成时间自动去除）
         const activeTasks = data.tasks.filter((task: any) => {
           // 过滤已取消的任务
           if (task.status === 'cancelled') {
@@ -1873,13 +1870,6 @@ const MessagePage: React.FC = () => {
           // 过滤用户手动移除的任务
           if (removedTaskIds.includes(task.id)) {
             return false;
-          }
-          // 过滤已完成超过3天的任务
-          if (task.status === 'completed' && task.completed_at) {
-            const completedDate = new Date(task.completed_at);
-            if (completedDate <= threeDaysAgo) {
-              return false;
-            }
           }
           return true;
         });

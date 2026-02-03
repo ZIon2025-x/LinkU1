@@ -363,6 +363,7 @@ const ConfirmCompletionModal: React.FC<ConfirmCompletionModalProps> = ({
       }
       open={visible}
       onCancel={handleCancel}
+      zIndex={10003}
       footer={[
         <Button key="cancel" onClick={handleCancel} disabled={uploading}>
           {language === 'zh' ? '取消' : 'Cancel'}
