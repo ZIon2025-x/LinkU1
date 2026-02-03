@@ -13,11 +13,11 @@ import { API_BASE_URL } from '../config';
 const LoginWithLink2ur: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
-  const [user, setUser] = useState<unknown>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [user] = useState<unknown>(null);
+  const [unreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [systemSettings, setSystemSettings] = useState<Record<string, unknown>>({});
+  const [systemSettings] = useState<Record<string, unknown>>({});
 
   const discoveryUrl = `${API_BASE_URL.replace(/\/$/, '')}/.well-known/openid-configuration`;
 

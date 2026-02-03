@@ -435,7 +435,7 @@ const OAuthClientsManagement: React.FC = () => {
         title="创建成功 - 请保存 Client Secret"
         open={!!newClientSecret}
         onCancel={() => setNewClientSecret(null)}
-        footer={[{ text: '已保存', onClick: () => setNewClientSecret(null) }]}
+        footer={<Button onClick={() => setNewClientSecret(null)}>已保存</Button>}
         width={520}
       >
         {newClientSecret && (
