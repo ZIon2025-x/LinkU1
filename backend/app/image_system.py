@@ -352,6 +352,22 @@ class PrivateImageSystem:
                             file_path = potential_file
                             break
             
+            # 2b. 任务完成证据等：通过 MessageAttachment.blob_id 关联到任务消息，再定位到任务文件夹
+            if not file_path:
+                from app.models import MessageAttachment
+                att = db.query(MessageAttachment).filter(
+                    MessageAttachment.blob_id == image_id
+                ).first()
+                if att:
+                    task_message = db.query(Message).filter(Message.id == att.message_id).first()
+                    if task_message and task_message.task_id:
+                        task_dir = self.base_dir / "tasks" / str(task_message.task_id)
+                        for ext in self.allowed_extensions:
+                            potential_file = task_dir / f"{image_id}{ext}"
+                            if potential_file.exists() and potential_file.is_file():
+                                file_path = potential_file
+                                break
+            
             # 3. 如果数据库查询失败或文件不存在，回退到全局搜索（向后兼容）
             if not file_path:
                 image_files = []

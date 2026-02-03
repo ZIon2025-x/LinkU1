@@ -1218,29 +1218,70 @@ def get_task_detail(
     # 任务完成证据：当任务已标记完成时，从系统消息中取出证据（图片/文件 + 文字说明）供详情页展示
     completion_evidence = []
     if task.status in ("pending_confirmation", "completed") and task.completed_at:
+        # 先按 meta 包含 task_completed_by_taker 查；若无结果则取该任务所有系统消息在 Python 里按 meta JSON 匹配（兼容不同数据库）
         completion_message = db.query(models.Message).filter(
             models.Message.task_id == task_id,
             models.Message.message_type == "system",
             models.Message.meta.contains("task_completed_by_taker"),
         ).order_by(models.Message.created_at.asc()).first()
+        if not completion_message:
+            all_system = (
+                db.query(models.Message)
+                .filter(
+                    models.Message.task_id == task_id,
+                    models.Message.message_type == "system",
+                    models.Message.meta.isnot(None),
+                )
+                .order_by(models.Message.created_at.asc())
+                .all()
+            )
+            for msg in all_system:
+                try:
+                    if msg.meta and json.loads(msg.meta).get("system_action") == "task_completed_by_taker":
+                        completion_message = msg
+                        break
+                except (json.JSONDecodeError, TypeError):
+                    continue
         if completion_message and completion_message.id:
             attachments = db.query(models.MessageAttachment).filter(
                 models.MessageAttachment.message_id == completion_message.id
             ).all()
+            # 用于生成私密图片 URL 的参与者（发布者、接单者）
+            evidence_participants = []
+            if getattr(task, "poster_id", None):
+                evidence_participants.append(str(task.poster_id))
+            if getattr(task, "taker_id", None):
+                evidence_participants.append(str(task.taker_id))
+            if current_user and str(current_user.id) not in evidence_participants:
+                evidence_participants.append(str(current_user.id))
+            if not evidence_participants:
+                evidence_participants = [str(current_user.id)] if current_user else []
+            viewer_id = str(current_user.id) if current_user else (getattr(task, "poster_id") or getattr(task, "taker_id"))
+            viewer_id = str(viewer_id) if viewer_id else None
             for att in attachments:
                 url = att.url or ""
-                # 若存的是 file_id（私密文件），生成可访问的签名 URL
-                if url and not url.startswith("http"):
+                # 证据图片：若有 blob_id（即 private-image 的 image_id），统一生成新的 private-image URL，便于详情页展示且不过期
+                is_private_image = att.blob_id and (
+                    (att.attachment_type == "image") or (url and "/api/private-image/" in str(url))
+                )
+                if is_private_image and viewer_id and evidence_participants:
+                    try:
+                        from app.image_system import private_image_system
+                        url = private_image_system.generate_image_url(
+                            att.blob_id, viewer_id, evidence_participants
+                        )
+                    except Exception as e:
+                        logger.debug(f"生成完成证据 private-image URL 失败 blob_id={att.blob_id}: {e}")
+                elif url and not url.startswith("http"):
+                    # 若存的是 file_id（私密文件），生成可访问的签名 URL
                     try:
                         from app.file_system import private_file_system
                         from app.signed_url import signed_url_manager
                         task_dir = private_file_system.base_dir / "tasks" / str(task_id)
                         if task_dir.exists():
-                            # 用 glob 按 file_id 匹配，避免遍历整个目录（与争议/退款处逻辑一致）
                             for f in task_dir.glob(f"{url}.*"):
                                 if f.is_file():
                                     file_path_for_url = f"files/{f.name}"
-                                    viewer_id = str(current_user.id) if current_user else (task.poster_id or task.taker_id)
                                     if viewer_id:
                                         url = signed_url_manager.generate_signed_url(
                                             file_path=file_path_for_url,
