@@ -68,8 +68,17 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
       const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          // 支付宝等支付方式会重定向，需提供 return_url 以便支付完成后返回
-          return_url: `${window.location.origin}${window.location.pathname}${window.location.search}`,
+          // 支付宝/3D Secure 等会重定向，return_url 仅保留必要参数，避免重定向回优惠券输入区
+          return_url: (() => {
+            const u = new URL(window.location.href);
+            const keep = ['return_url', 'return_type'];
+            const next = new URLSearchParams();
+            keep.forEach((k) => {
+              const v = u.searchParams.get(k);
+              if (v) next.set(k, v);
+            });
+            return `${u.origin}${u.pathname}${next.toString() ? '?' + next.toString() : ''}`;
+          })(),
         },
         redirect: 'if_required', // 只在需要时重定向（如 3D Secure、支付宝）
       });

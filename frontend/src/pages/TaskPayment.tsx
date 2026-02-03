@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Spin, message, Input } from 'antd';
-import api from '../api';
+import { Button, Spin, message, Select } from 'antd';
+import api, { getMyCoupons } from '../api';
 import StripePaymentForm from '../components/payment/StripePaymentForm';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -45,6 +45,12 @@ interface TaskInfo {
   payment_expires_at?: string | null;
 }
 
+interface UserCouponItem {
+  id: number;
+  coupon: { id: number; name: string; code: string; type?: string; discount_value: number; min_amount?: number };
+  status: string;
+}
+
 const TaskPayment: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   useNavigate();
@@ -54,7 +60,9 @@ const TaskPayment: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [couponCode, setCouponCode] = useState<string>('');
+  const [myCoupons, setMyCoupons] = useState<UserCouponItem[]>([]);
+  const [selectedUserCouponId, setSelectedUserCouponId] = useState<number | null>(null);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [, setPointsBalance] = useState<number>(0); void setPointsBalance;
@@ -62,6 +70,8 @@ const TaskPayment: React.FC = () => {
   const [loadingTask, setLoadingTask] = useState(true);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
   const [, setReturnType] = useState<string | null>(null); void setReturnType;
+  const [isStripeRedirectReturn, setIsStripeRedirectReturn] = useState(false);
+  const [stripeRedirectHandled, setStripeRedirectHandled] = useState(false);
 
   const showCountdown = taskInfo?.status === 'pending_payment' && taskInfo?.payment_expires_at;
   const { formatted, isExpired } = usePaymentCountdown(showCountdown ? taskInfo!.payment_expires_at! : null);
@@ -134,6 +144,23 @@ const TaskPayment: React.FC = () => {
     checkUser();
   }, []);
 
+  // 加载用户可用优惠券（未使用的）
+  useEffect(() => {
+    const loadCoupons = async () => {
+      if (!user) return;
+      try {
+        setLoadingCoupons(true);
+        const res = await getMyCoupons({ status: 'unused', limit: 50 });
+        setMyCoupons(res.data || []);
+      } catch (e) {
+        // 优惠券加载失败不影响支付
+      } finally {
+        setLoadingCoupons(false);
+      }
+    };
+    loadCoupons();
+  }, [user]);
+
   // 检查 URL 参数中是否有支付信息和返回 URL
   useEffect(() => {
     const clientSecret = searchParams.get('client_secret');
@@ -143,12 +170,52 @@ const TaskPayment: React.FC = () => {
     const returnUrlParam = searchParams.get('return_url');
     const returnTypeParam = searchParams.get('return_type');
 
+    // Stripe 重定向返回时的参数（3D Secure、支付宝等会触发重定向）
+    const stripeRedirectStatus = searchParams.get('redirect_status');
+    const stripePaymentIntent = searchParams.get('payment_intent');
+    const stripePaymentIntentSecret = searchParams.get('payment_intent_client_secret');
+
     // 保存返回 URL 和类型
     if (returnUrlParam) {
       setReturnUrl(returnUrlParam);
     }
     if (returnTypeParam) {
       setReturnType(returnTypeParam);
+    }
+
+    // 优先处理 Stripe 重定向返回：用户完成 3DS/支付宝后重定向回本页
+    if (stripeRedirectStatus && (stripePaymentIntent || stripePaymentIntentSecret) && taskId) {
+      logger.log('📥 检测到 Stripe 重定向返回:', { redirect_status: stripeRedirectStatus, payment_intent: stripePaymentIntent });
+      // 清除 URL 中的 Stripe 参数，避免刷新时重复处理
+      const newUrl = new URL(window.location.href);
+      ['redirect_status', 'payment_intent', 'payment_intent_client_secret'].forEach((p) => newUrl.searchParams.delete(p));
+      window.history.replaceState({}, '', newUrl.pathname + (newUrl.search || ''));
+      if (stripeRedirectStatus === 'failed') {
+        message.error(language === 'zh' ? '支付失败，请重试' : 'Payment failed, please try again');
+        return;
+      }
+      setIsStripeRedirectReturn(true);
+      setReturnUrl(returnUrlParam || null);
+      setPaymentData({
+        payment_id: null,
+        fee_type: 'task_amount',
+        total_amount: 0,
+        total_amount_display: '0.00',
+        points_used: null,
+        points_used_display: null,
+        coupon_discount: null,
+        coupon_discount_display: null,
+        stripe_amount: null,
+        stripe_amount_display: null,
+        currency: 'GBP',
+        final_amount: 0,
+        final_amount_display: '0.00',
+        checkout_url: null,
+        client_secret: null,
+        payment_intent_id: stripePaymentIntent || null,
+        note: '',
+      });
+      return;
     }
 
     if (clientSecret && paymentIntentId && taskId) {
@@ -174,6 +241,14 @@ const TaskPayment: React.FC = () => {
       });
     }
   }, [searchParams, taskId, language]);
+
+  // Stripe 重定向返回后：立即显示「支付完成，正在确认」并启动轮询，不展示优惠券表单
+  useEffect(() => {
+    if (!isStripeRedirectReturn || stripeRedirectHandled || !taskId || !paymentData?.payment_intent_id) return;
+    setStripeRedirectHandled(true);
+    message.success(language === 'zh' ? '支付已完成，正在确认...' : 'Payment completed, confirming...');
+    startPaymentStatusPolling();
+  }, [isStripeRedirectReturn, stripeRedirectHandled, taskId, paymentData?.payment_intent_id, language]);
 
   const handleCreatePayment = async () => {
     if (!taskId) {
@@ -201,8 +276,8 @@ const TaskPayment: React.FC = () => {
         payment_method: 'stripe', // 只支持 Stripe 支付
       };
 
-      if (couponCode) {
-        requestData.coupon_code = couponCode.toUpperCase();
+      if (selectedUserCouponId) {
+        requestData.user_coupon_id = selectedUserCouponId;
       }
 
       const response = await api.post(
@@ -523,7 +598,18 @@ const TaskPayment: React.FC = () => {
               )}
             </div>
           )}
-          {!paymentData ? (
+          {isStripeRedirectReturn && !paymentData?.client_secret ? (
+            <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '24px' }}>⏳</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1890ff', marginBottom: '16px' }}>
+                {language === 'zh' ? '支付已完成，正在确认...' : 'Payment completed, confirming...'}
+              </div>
+              <div style={{ color: '#666', marginBottom: '24px' }}>
+                {language === 'zh' ? '请稍候，正在验证支付结果' : 'Please wait while we verify your payment'}
+              </div>
+              <Spin size="large" />
+            </div>
+          ) : !paymentData ? (
             <div>
               <h2 style={{ 
                 fontSize: '24px', 
@@ -534,16 +620,27 @@ const TaskPayment: React.FC = () => {
                 {language === 'zh' ? '选择支付方式' : 'Select Payment Method'}
               </h2>
 
-              {/* 优惠券输入 */}
+              {/* 优惠券选择（可选） */}
               <div style={{ marginBottom: '32px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '16px' }}>
-                  {language === 'zh' ? '优惠券代码（可选）' : 'Coupon Code (Optional)'}
+                  {language === 'zh' ? '使用优惠券（可选）' : 'Use Coupon (Optional)'}
                 </label>
-                <Input
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  placeholder={language === 'zh' ? '输入优惠券代码' : 'Enter coupon code'}
+                <Select
+                  placeholder={language === 'zh' ? '选择优惠券' : 'Select a coupon'}
+                  allowClear
+                  style={{ width: '100%' }}
                   size="large"
+                  loading={loadingCoupons}
+                  value={selectedUserCouponId ?? undefined}
+                  onChange={(v: number | undefined) => setSelectedUserCouponId(v ?? null)}
+                  options={myCoupons.map((uc: UserCouponItem) => {
+                    const c = uc.coupon;
+                    const discount = (c.type === 'fixed_amount' || c.type === 'fixed') 
+                      ? `£${(c.discount_value / 100).toFixed(2)}`
+                      : `${(c.discount_value / 100).toFixed(0)}% off`;
+                    const min = c.min_amount ? ` (min £${(c.min_amount / 100).toFixed(2)})` : '';
+                    return { value: uc.id, label: `${c.name} - ${discount}${min}` };
+                  })}
                 />
               </div>
 
