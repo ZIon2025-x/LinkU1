@@ -1282,11 +1282,12 @@ def create_task_payment(
             f"创建 PaymentIntent: preferred_payment_method={payment_request.preferred_payment_method!r}, "
             f"pm_types={pm_types}"
         )
-        # iOS PaymentSheet 需要为 wechat_pay 指定 client，否则会报 "None of the payment methods can be used"
+        # PaymentSheet 需要为 wechat_pay 指定 client，否则会报 "None of the payment methods can be used"
         # 仅 wechat_pay 支持 payment_method_options.client；alipay 不支持该参数，传了会报 InvalidRequestError
+        # 使用 "web"：展示二维码由用户用微信扫码完成支付
         payment_method_options = {}
         if "wechat_pay" in pm_types:
-            payment_method_options["wechat_pay"] = {"client": "ios"}
+            payment_method_options["wechat_pay"] = {"client": "web"}
 
         create_kw = {
             "amount": final_amount,
