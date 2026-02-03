@@ -65,7 +65,7 @@ struct TimelineItem: Codable, Identifiable {
 }
 
 /// 证据项（支持图片/文件 URL 与文字说明）
-struct EvidenceItem: Codable, Identifiable {
+struct EvidenceItem: Codable, Identifiable, Equatable {
     let id: String
     let type: String
     let url: String?

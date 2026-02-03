@@ -1234,11 +1234,11 @@ def get_task_detail(
                     try:
                         from app.file_system import private_file_system
                         from app.signed_url import signed_url_manager
-                        import os
                         task_dir = private_file_system.base_dir / "tasks" / str(task_id)
                         if task_dir.exists():
-                            for f in task_dir.iterdir():
-                                if f.is_file() and (f.stem == url or f.name.startswith(url)):
+                            # 用 glob 按 file_id 匹配，避免遍历整个目录（与争议/退款处逻辑一致）
+                            for f in task_dir.glob(f"{url}.*"):
+                                if f.is_file():
                                     file_path_for_url = f"files/{f.name}"
                                     viewer_id = str(current_user.id) if current_user else (task.poster_id or task.taker_id)
                                     if viewer_id:

@@ -580,7 +580,8 @@ class TasksViewModel: ObservableObject {
                                     confirmationReminderSent: task.confirmationReminderSent,
                                     paymentExpiresAt: task.paymentExpiresAt,
                                     hasApplied: task.hasApplied,
-                                    userApplicationStatus: task.userApplicationStatus
+                                    userApplicationStatus: task.userApplicationStatus,
+                                    completionEvidence: task.completionEvidence
                                 )
                             }
                         }

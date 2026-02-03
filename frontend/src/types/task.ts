@@ -48,6 +48,8 @@ export interface Task {
   is_public: number;
   visibility: 'public' | 'private';
   payment_expires_at?: string | null;  // ISO string, for pending_payment countdown
+  /** 任务完成证据（接单者标记完成时上传的图片/文件与文字说明，仅当任务已标记完成时由详情接口返回） */
+  completion_evidence?: Array<{ type: string; url?: string; file_id?: string; content?: string }>;
 }
 
 export interface Review {

@@ -1271,7 +1271,7 @@ struct TaskDetailContentView: View {
                     // 任务完成证据（接单者标记完成时上传的图片/文字，发布者与接单者均可在详情中查看）
                     if (task.status == .pendingConfirmation || task.status == .completed),
                        let evidence = task.completionEvidence, !evidence.isEmpty {
-                        TaskCompletionEvidenceCard(evidence: evidence)
+                        TaskCompletionEvidenceCard(items: evidence)
                             .padding(.horizontal, DeviceInfo.isPad ? AppSpacing.lg : AppSpacing.md)
                     }
                     
@@ -1681,7 +1681,7 @@ struct TaskInfoCard: View {
 
 // MARK: - 任务完成证据卡片（接单者标记完成时上传的图片与文字说明）
 struct TaskCompletionEvidenceCard: View {
-    let evidence: [EvidenceItem]
+    let items: [EvidenceItem]
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
@@ -1694,32 +1694,49 @@ struct TaskCompletionEvidenceCard: View {
             }
             
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                ForEach(evidence) { item in
-                    if item.type == "text", let content = item.content, !content.isEmpty {
-                        Text(content)
-                            .font(AppTypography.body)
-                            .foregroundColor(AppColors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(AppSpacing.sm)
-                            .background(AppColors.backgroundSecondary)
-                            .cornerRadius(AppCornerRadius.small)
-                    } else if let url = item.displayURL {
-                        AsyncImageView(
-                            urlString: url,
-                            placeholder: Image(systemName: "photo"),
-                            width: 120,
-                            height: 120,
-                            contentMode: .fill,
-                            cornerRadius: AppCornerRadius.small
-                        )
-                    }
-                }
+                TaskCompletionEvidenceList(items: items)
             }
         }
         .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
         .background(AppColors.cardBackground)
         .cornerRadius(AppCornerRadius.large)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+    }
+}
+
+/// 单独子 View 内使用 ForEach，避免与 Binding 重载冲突
+private struct TaskCompletionEvidenceList: View {
+    let items: [EvidenceItem]
+    var body: some View {
+        ForEach(items) { item in
+            TaskCompletionEvidenceRow(item: item)
+        }
+    }
+}
+
+private struct TaskCompletionEvidenceRow: View {
+    let item: EvidenceItem
+    var body: some View {
+        Group {
+            if item.type == "text", let content = item.content, !content.isEmpty {
+                Text(content)
+                    .font(AppTypography.body)
+                    .foregroundColor(AppColors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(AppSpacing.sm)
+                    .background(AppColors.secondaryBackground)
+                    .cornerRadius(AppCornerRadius.small)
+            } else if let url = item.displayURL {
+                AsyncImageView(
+                    urlString: url,
+                    placeholder: Image(systemName: "photo"),
+                    width: 120,
+                    height: 120,
+                    contentMode: .fill,
+                    cornerRadius: AppCornerRadius.small
+                )
+            }
+        }
     }
 }
 

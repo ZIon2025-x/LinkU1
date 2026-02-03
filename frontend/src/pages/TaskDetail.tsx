@@ -3195,6 +3195,58 @@ const TaskDetail: React.FC = () => {
             </div>
           )}
 
+          {/* 任务完成证据（接单者标记完成时上传的图片/文字，发布者与接单者均可在详情中查看） */}
+          {(task.status === 'pending_confirmation' || task.status === 'completed') &&
+           task.completion_evidence &&
+           task.completion_evidence.length > 0 && (
+            <div style={{
+              marginTop: '20px',
+              padding: '20px',
+              background: '#f8f9fa',
+              borderRadius: '12px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+                {language === 'zh' ? '任务完成证据' : 'Task completion evidence'}
+              </h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                {task.completion_evidence.map((item: { type?: string; url?: string; content?: string }, idx: number) => (
+                  <React.Fragment key={idx}>
+                    {item?.type === 'text' && item?.content ? (
+                      <div style={{
+                        padding: '12px',
+                        background: '#fff',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef',
+                        maxWidth: '100%',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        fontSize: '14px',
+                        color: '#555'
+                      }}>
+                        {item.content}
+                      </div>
+                    ) : item?.url && String(item.url).trim() ? (
+                      <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                        <LazyImage
+                          src={ensureAbsoluteImageUrl(item.url)}
+                          alt={language === 'zh' ? `证据 ${idx + 1}` : `Evidence ${idx + 1}`}
+                          style={{
+                            width: 120,
+                            height: 120,
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            border: '1px solid #e9ecef'
+                          }}
+                        />
+                      </a>
+                    ) : null}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          )}
+
         {/* 多人任务：参与者列表 - 所有人可见 */}
         {task.is_multi_participant && (
           <div style={{

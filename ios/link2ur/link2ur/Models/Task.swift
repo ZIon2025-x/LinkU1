@@ -251,7 +251,8 @@ struct RecommendationTask: Codable {
             confirmationReminderSent: nil,
             paymentExpiresAt: nil,
             hasApplied: nil,
-            userApplicationStatus: nil
+            userApplicationStatus: nil,
+            completionEvidence: nil
         )
     }
 }
