@@ -2259,33 +2259,41 @@ def complete_task(
         db.add(system_message)
         db.flush()  # 获取消息ID
         
-        # 如果有证据图片，创建附件
+        # 如果有证据图片，创建附件（满足 ck_message_attachments_url_blob：url 与 blob_id 二选一）
         if evidence_images:
             for image_url in evidence_images:
                 # 从URL中提取image_id（如果URL格式为 {base_url}/api/private-image/{image_id}?user=...&token=...）
                 image_id = None
                 if image_url and '/api/private-image/' in image_url:
-                    # 提取image_id：/api/private-image/{image_id}?...
                     try:
                         from urllib.parse import urlparse
                         parsed_url = urlparse(image_url)
                         if '/api/private-image/' in parsed_url.path:
-                            # 提取路径中的image_id部分
                             path_parts = parsed_url.path.split('/api/private-image/')
                             if len(path_parts) > 1:
-                                image_id = path_parts[1].split('?')[0]  # 去掉查询参数
+                                image_id = path_parts[1].split('?')[0]
                                 logger.debug(f"Extracted image_id {image_id} from URL {image_url}")
                     except Exception as e:
                         logger.warning(f"Failed to extract image_id from URL {image_url}: {e}")
-                
-                attachment = MessageAttachment(
-                    message_id=system_message.id,
-                    attachment_type="image",
-                    url=image_url,
-                    blob_id=image_id,  # 存储image_id以便后续处理（如果提取成功）
-                    meta=None,
-                    created_at=get_utc_time()
-                )
+                # 约束要求 (url IS NOT NULL AND blob_id IS NULL) OR (url IS NULL AND blob_id IS NOT NULL)
+                if image_id:
+                    attachment = MessageAttachment(
+                        message_id=system_message.id,
+                        attachment_type="image",
+                        url=None,
+                        blob_id=image_id,
+                        meta=None,
+                        created_at=get_utc_time()
+                    )
+                else:
+                    attachment = MessageAttachment(
+                        message_id=system_message.id,
+                        attachment_type="image",
+                        url=image_url,
+                        blob_id=None,
+                        meta=None,
+                        created_at=get_utc_time()
+                    )
                 db.add(attachment)
         
         db.commit()
