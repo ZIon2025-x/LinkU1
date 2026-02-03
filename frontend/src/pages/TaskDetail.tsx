@@ -27,6 +27,7 @@ import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import { getTaskDisplayTitle, getTaskDisplayDescription } from '../utils/displayLocale';
 import styles from './TaskDetail.module.css';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
+import MemberBadge from '../components/MemberBadge';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -1225,34 +1226,22 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  // 检查用户等级是否满足任务等级要求
+  // 检查用户是否可以查看任务（所有用户均可查看和申请所有等级的任务）
   const canViewTask = (user: any, task: any) => {
     if (!task) return false;
     
-    // 如果用户未登录，只能查看任务大厅中显示的普通任务
-    if (!user) {
-      // 未登录用户只能查看：普通任务 + 开放状态的任务
-      return task.task_level === 'normal' && 
-             (task.status === 'open' || task.status === 'taken');
-    }
-    
-    // 任务发布者可以查看自己发布的所有任务，无论任务等级如何
-    if (user.id === task.poster_id) {
+    // 任务发布者可以查看自己发布的所有任务
+    if (user && user.id === task.poster_id) {
       return true;
     }
     
-    // 任务接受者可以查看自己接受的任务，无论任务等级如何
-    if (user.id === task.taker_id) {
+    // 任务接受者可以查看自己接受的任务
+    if (user && user.id === task.taker_id) {
       return true;
     }
     
-    // 非任务相关的人：只能查看开放状态的任务，且需要满足等级要求
-    const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
-    const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
-    const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
-    
-    return (task.status === 'open' || task.status === 'taken') && 
-           userLevelValue >= taskLevelValue;
+    // 开放/已接单状态的任务：所有用户（含未登录）均可查看，不区分任务等级
+    return task.status === 'open' || task.status === 'taken';
   };
 
   // 检查用户是否已接受任务（预留）

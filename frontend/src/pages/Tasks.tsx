@@ -1701,21 +1701,11 @@ const Tasks: React.FC = () => {
     navigate(`/message?taskId=${taskId}`);
   };
 
-  // 检查用户是否可以查看/申请任务（等级匹配）
+  // 检查用户是否可以查看/申请任务（所有用户均可查看和申请所有等级的任务）
   // @ts-expect-error 预留供后续使用
-  const _canViewTask = (user: any, task: any) => {
+  const _canViewTask = (_user: any, task: any) => {
     if (!task) return false;
-    
-    // 如果用户未登录，只能查看普通任务
-    if (!user) {
-      return task.task_level === 'normal';
-    }
-    
-    const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
-    const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
-    const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
-    
-    return userLevelValue >= taskLevelValue;
+    return task.status === 'open' || task.status === 'taken';
   };
 
   // 获取任务等级颜色

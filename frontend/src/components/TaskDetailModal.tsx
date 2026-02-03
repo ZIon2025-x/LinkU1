@@ -599,51 +599,24 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   }, [isOpen, task, taskId, loadParticipants]);
 
   // P0 优化：使用 useMemo 缓存复杂计算
-  // 检查用户等级是否满足任务等级要求
+  // 检查用户是否可以查看任务（所有用户均可查看和申请所有等级的任务）
   const canViewTask = useMemo(() => {
     if (!task) return false;
     
-    // 如果用户未登录，只能查看普通任务
-    if (!user) {
-      return task.task_level === 'normal';
-    }
-    
     // 多人任务：检查用户是否是参与者或任务达人
     if (task.is_multi_participant) {
-      // 任务达人（创建者）可以查看
-      if (task.expert_creator_id === user.id) {
-        return true;
-      }
-      // 任务接收者（taker_id）可以查看
-      if (task.taker_id === user.id) {
-        return true;
-      }
-      // 任务发布者（如果有）可以查看
-      if (task.poster_id && task.poster_id === user.id) {
-        return true;
-      }
-      // 如果是多人任务，参与者也可以查看（即使 poster_id 为 null）
-      // 注意：这里不检查 userParticipant，因为它是异步加载的，可能导致初始时无法显示
-      // 多人任务默认允许查看，具体权限由后端控制
+      if (user && task.expert_creator_id === user.id) return true;
+      if (user && task.taker_id === user.id) return true;
+      if (user && task.poster_id && task.poster_id === user.id) return true;
       return true;
     }
     
-    // 单人任务：任务发布者可以查看自己发布的所有任务，无论任务等级如何
-    if (task.poster_id && user.id === task.poster_id) {
-      return true;
-    }
+    // 单人任务：任务发布者/接受者可以查看
+    if (user && task.poster_id && user.id === task.poster_id) return true;
+    if (user && task.taker_id && user.id === task.taker_id) return true;
     
-    // 单人任务：任务接受者可以查看自己接受的任务，无论任务等级如何
-    if (task.taker_id && user.id === task.taker_id) {
-      return true;
-    }
-    
-    // 其他用户需要满足等级要求
-    const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
-    const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
-    const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
-    
-    return userLevelValue >= taskLevelValue;
+    // 开放/已接单状态：所有用户（含未登录）均可查看，不区分任务等级
+    return task.status === 'open' || task.status === 'taken';
   }, [user, task]);
 
   // 检查用户是否已接受任务（预留）
