@@ -1319,6 +1319,7 @@ class ReplyApplicationMessageRequest(BaseModel):
 async def accept_application(
     task_id: int,
     application_id: int,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1620,34 +1621,34 @@ async def accept_application(
         task_title_short = locked_task.title[:50] if locked_task.title else f"Task #{task_id}"
         payment_description = f"任务 #{task_id}: {task_title_short} - 批准申请 #{application_id}"
         
-        payment_intent = stripe.PaymentIntent.create(
-            amount=task_amount_pence,
-            currency="gbp",
-            # 明确指定支付方式类型，确保 WeChat Pay 可用
-            # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-            # 必须在 Stripe Dashboard 中启用 WeChat Pay
-            payment_method_types=["card", "wechat_pay", "alipay"],
-            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-            description=payment_description,  # 支付描述，方便在 Stripe Dashboard 中查看
-            metadata={
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request)
+        create_pi_kw = {
+            "amount": task_amount_pence,
+            "currency": "gbp",
+            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "description": payment_description,
+            "metadata": {
                 "task_id": str(task_id),
-                "task_title": locked_task.title[:200] if locked_task.title else "",  # 任务标题（限制长度）
+                "task_title": locked_task.title[:200] if locked_task.title else "",
                 "application_id": str(application_id),
                 "poster_id": str(current_user.id),
-                "poster_name": current_user.name or f"User {current_user.id}",  # 发布者名称
+                "poster_name": current_user.name or f"User {current_user.id}",
                 "taker_id": str(application.applicant_id),
-                "taker_name": applicant.name or f"User {application.applicant_id}",  # 接受者名称
-                "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                "task_amount": str(task_amount_pence),  # 任务金额（便士）
-                "task_amount_display": f"{task_amount:.2f}",  # 任务金额（显示格式）
-                "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",  # 议价金额
-                "pending_approval": "true",  # 标记这是待确认的批准
-                "platform": "Link²Ur",  # 平台标识
-                "payment_type": "application_approval"  # 支付类型：申请批准
+                "taker_name": applicant.name or f"User {application.applicant_id}",
+                "taker_stripe_account_id": taker_stripe_account_id,
+                "application_fee": str(application_fee_pence),
+                "task_amount": str(task_amount_pence),
+                "task_amount_display": f"{task_amount:.2f}",
+                "negotiated_price": str(application.negotiated_price) if application.negotiated_price else "",
+                "pending_approval": "true",
+                "platform": "Link²Ur",
+                "payment_type": "application_approval",
             },
-        )
+        }
+        if payment_method_options:
+            create_pi_kw["payment_method_options"] = payment_method_options
+        payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
 
         # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
         customer_id, ephemeral_key_secret = await _create_customer_and_ephemeral_key(
@@ -2317,6 +2318,7 @@ async def respond_negotiation(
     task_id: int,
     application_id: int,
     request: RespondNegotiationRequest,
+    http_request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -2514,15 +2516,14 @@ async def respond_negotiation(
             stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
             
             try:
-                payment_intent = stripe.PaymentIntent.create(
-                    amount=task_amount_pence,
-                    currency="gbp",
-                    # 明确指定支付方式类型，确保 WeChat Pay 可用
-                    # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-                    # 必须在 Stripe Dashboard 中启用 WeChat Pay
-                    payment_method_types=["card", "wechat_pay", "alipay"],
-                    description=f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
-                    metadata={
+                from app.secure_auth import get_wechat_pay_payment_method_options
+                payment_method_options = get_wechat_pay_payment_method_options(http_request)
+                create_pi_kw = {
+                    "amount": task_amount_pence,
+                    "currency": "gbp",
+                    "payment_method_types": ["card", "wechat_pay", "alipay"],
+                    "description": f"任务 #{task_id}: {locked_task.title[:50] if locked_task.title else 'Task'} - 接受议价申请 #{application_id}",
+                    "metadata": {
                         "task_id": str(task_id),
                         "task_title": locked_task.title[:200] if locked_task.title else "",
                         "poster_id": str(locked_task.poster_id),
@@ -2537,7 +2538,10 @@ async def respond_negotiation(
                         "application_id": str(application_id),
                         "negotiated_price": str(application.negotiated_price) if application.negotiated_price else ""
                     },
-                )
+                }
+                if payment_method_options:
+                    create_pi_kw["payment_method_options"] = payment_method_options
+                payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
                 
                 # 更新任务的 payment_intent_id
                 locked_task.payment_intent_id = payment_intent.id

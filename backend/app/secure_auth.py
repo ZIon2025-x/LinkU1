@@ -636,6 +636,21 @@ def is_ios_app_request(request: Request) -> bool:
     logger.warning(f"[iOS检测] X-Platform=ios 但缺少应用标识（link2ur-ios），不是 iOS 应用: UA={user_agent[:80]}")
     return False
 
+
+def get_wechat_pay_payment_method_options(request: Optional[Request]) -> dict:
+    """
+    返回 WeChat Pay 的 payment_method_options，用于创建 PaymentIntent。
+    iOS PaymentSheet 必须为 wechat_pay 指定 client: "ios"，否则会报
+    "None of the payment methods can be used in PaymentSheet"；
+    Web 端不传或传 client: "web" 即可。
+    """
+    if request is None:
+        return {}
+    if is_ios_app_request(request):
+        return {"wechat_pay": {"client": "ios"}}
+    return {}
+
+
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话 - 严格绑定IP、设备指纹和地址，一个会话只能在一个IP、一个设备上使用"""
     # 会话验证中（已移除DEBUG日志以提升性能）

@@ -2338,6 +2338,7 @@ async def get_expert_services(
 async def apply_for_service(
     service_id: int,
     application_data: schemas.ServiceApplicationCreate,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -2628,30 +2629,27 @@ async def apply_for_service(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
-            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
-            # 交易市场托管模式：
-            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-            payment_intent = stripe.PaymentIntent.create(
-                amount=task_amount_pence,
-                currency=(application_data.currency or service.currency).lower(),
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay", "alipay"],
-                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-                metadata={
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = get_wechat_pay_payment_method_options(request)
+            create_pi_kw = {
+                "amount": task_amount_pence,
+                "currency": (application_data.currency or service.currency).lower(),
+                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "metadata": {
                     "task_id": str(new_task.id),
                     "application_id": str(new_application.id),
                     "poster_id": current_user.id,
                     "taker_id": service.expert_id,
-                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "taker_stripe_account_id": taker_stripe_account_id,
+                    "application_fee": str(application_fee_pence),
+                    "task_amount": str(task_amount_pence),
                     "task_type": "service_application",
                 },
-                description=f"服务申请支付 - {service.service_name}",
-            )
+                "description": f"服务申请支付 - {service.service_name}",
+            }
+            if payment_method_options:
+                create_pi_kw["payment_method_options"] = payment_method_options
+            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
             new_task.payment_intent_id = payment_intent.id
             logger.info(f"创建支付意图成功: payment_intent_id={payment_intent.id}, task_id={new_task.id}")
         except Exception as e:
@@ -2869,6 +2867,7 @@ async def counter_offer_service_application(
 @task_expert_router.post("/applications/{application_id}/approve")
 async def approve_service_application(
     application_id: int,
+    request: Request,
     current_expert: models.TaskExpert = Depends(get_current_expert),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -3024,38 +3023,33 @@ async def approve_service_application(
     application_fee_pence = calculate_application_fee_pence(task_amount_pence)
     
     try:
-        # ⚠️ 优化：使用托管模式（与其他支付功能一致）
-        # 交易市场托管模式：
-        # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-        # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-        # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-        payment_intent = stripe.PaymentIntent.create(
-            amount=task_amount_pence,
-            currency="gbp",
-            # 明确指定支付方式类型，确保 WeChat Pay 可用
-            # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-            # 必须在 Stripe Dashboard 中启用 WeChat Pay
-            payment_method_types=["card", "wechat_pay", "alipay"],
-            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-            description=f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
-            metadata={
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request)
+        create_pi_kw = {
+            "amount": task_amount_pence,
+            "currency": "gbp",
+            "payment_method_types": ["card", "wechat_pay", "alipay"],
+            "description": f"任务达人服务 #{new_task.id}: {service.service_name[:50]}",
+            "metadata": {
                 "task_id": str(new_task.id),
                 "task_title": service.service_name[:200] if service.service_name else "",
                 "poster_id": str(application.applicant_id),
                 "poster_name": applicant_user.name if applicant_user else f"User {application.applicant_id}",
                 "taker_id": str(application.expert_id),
                 "taker_name": expert_user.name if expert_user else f"User {application.expert_id}",
-                "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                "task_amount": str(task_amount_pence),  # 任务金额
+                "taker_stripe_account_id": taker_stripe_account_id,
+                "application_fee": str(application_fee_pence),
+                "task_amount": str(task_amount_pence),
                 "task_amount_display": f"{price:.2f}",
                 "platform": "Link²Ur",
                 "payment_type": "service_application_approve",
                 "service_application_id": str(application_id),
                 "service_id": str(service.id)
             },
-        )
+        }
+        if payment_method_options:
+            create_pi_kw["payment_method_options"] = payment_method_options
+        payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
         
         # 更新任务的 payment_intent_id
         new_task.payment_intent_id = payment_intent.id

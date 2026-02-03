@@ -1252,6 +1252,7 @@ async def get_my_purchases(
 @flea_market_router.post("/items/{item_id}/direct-purchase", response_model=dict)
 async def direct_purchase_item(
     item_id: str,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1417,37 +1418,32 @@ async def direct_purchase_item(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
-            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
-            # 交易市场托管模式：
-            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-            payment_intent = stripe.PaymentIntent.create(
-                amount=task_amount_pence,
-                currency="gbp",
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-                # 必须在 Stripe Dashboard 中启用 WeChat Pay
-                payment_method_types=["card", "wechat_pay", "alipay"],
-                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-                description=f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
-                metadata={
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = get_wechat_pay_payment_method_options(request)
+            create_pi_kw = {
+                "amount": task_amount_pence,
+                "currency": "gbp",
+                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "description": f"跳蚤市场购买 #{new_task.id}: {item.title[:50]}",
+                "metadata": {
                     "task_id": str(new_task.id),
                     "task_title": item.title[:200] if item.title else "",
                     "poster_id": str(current_user.id),
                     "poster_name": current_user.name or f"User {current_user.id}",
                     "taker_id": str(item.seller_id),
                     "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "taker_stripe_account_id": taker_stripe_account_id,
+                    "application_fee": str(application_fee_pence),
+                    "task_amount": str(task_amount_pence),
                     "task_amount_display": f"{item.price:.2f}",
                     "platform": "Link²Ur",
                     "payment_type": "flea_market_direct_purchase",
                     "flea_market_item_id": str(item.id)
                 },
-            )
+            }
+            if payment_method_options:
+                create_pi_kw["payment_method_options"] = payment_method_options
+            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
             
             # 更新任务的 payment_intent_id
             new_task.payment_intent_id = payment_intent.id
@@ -1667,6 +1663,7 @@ async def create_purchase_request(
 @flea_market_router.post("/purchase-requests/{request_id}/approve", response_model=dict)
 async def approve_purchase_request(
     request_id: str,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1806,13 +1803,14 @@ async def approve_purchase_request(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
-            # 使用托管模式（与其他支付功能一致）
-            payment_intent = stripe.PaymentIntent.create(
-                amount=task_amount_pence,
-                currency="gbp",
-                payment_method_types=["card", "wechat_pay", "alipay"],
-                description=f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
-                metadata={
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = get_wechat_pay_payment_method_options(request)
+            create_pi_kw = {
+                "amount": task_amount_pence,
+                "currency": "gbp",
+                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
+                "metadata": {
                     "task_id": str(new_task.id),
                     "task_title": item.title[:200] if item.title else "",
                     "poster_id": str(purchase_request.buyer_id),
@@ -1828,7 +1826,10 @@ async def approve_purchase_request(
                     "flea_market_item_id": str(item.id),
                     "purchase_request_id": str(db_request_id)
                 },
-            )
+            }
+            if payment_method_options:
+                create_pi_kw["payment_method_options"] = payment_method_options
+            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
             
             # 更新任务的 payment_intent_id
             new_task.payment_intent_id = payment_intent.id
@@ -1978,6 +1979,7 @@ async def approve_purchase_request(
 async def accept_purchase_request(
     item_id: str,
     accept_data: schemas.AcceptPurchaseRequest,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -2119,38 +2121,33 @@ async def accept_purchase_request(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
-            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
-            # 交易市场托管模式：
-            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-            payment_intent = stripe.PaymentIntent.create(
-                amount=task_amount_pence,
-                currency="gbp",
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                # 注意：不能同时使用 payment_method_types 和 automatic_payment_methods
-                # 必须在 Stripe Dashboard 中启用 WeChat Pay
-                payment_method_types=["card", "wechat_pay", "alipay"],
-                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-                description=f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
-                metadata={
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = get_wechat_pay_payment_method_options(request)
+            create_pi_kw = {
+                "amount": task_amount_pence,
+                "currency": "gbp",
+                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "description": f"跳蚤市场购买（议价） #{new_task.id}: {item.title[:50]}",
+                "metadata": {
                     "task_id": str(new_task.id),
                     "task_title": item.title[:200] if item.title else "",
                     "poster_id": str(purchase_request.buyer_id),
                     "poster_name": purchase_request.buyer.name if purchase_request.buyer else f"User {purchase_request.buyer_id}",
                     "taker_id": str(item.seller_id),
                     "taker_name": seller.name if seller else f"User {item.seller_id}",
-                    "taker_stripe_account_id": taker_stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "taker_stripe_account_id": taker_stripe_account_id,
+                    "application_fee": str(application_fee_pence),
+                    "task_amount": str(task_amount_pence),
                     "task_amount_display": f"{final_price:.2f}",
                     "platform": "Link²Ur",
                     "payment_type": "flea_market_purchase_request",
                     "flea_market_item_id": str(item.id),
                     "purchase_request_id": str(accept_data.purchase_request_id)
                 },
-            )
+            }
+            if payment_method_options:
+                create_pi_kw["payment_method_options"] = payment_method_options
+            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
             
             # 更新任务的 payment_intent_id
             new_task.payment_intent_id = payment_intent.id

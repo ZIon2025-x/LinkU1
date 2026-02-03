@@ -178,6 +178,7 @@ def get_task_participants(
 def apply_to_activity(
     activity_id: int,
     request: ActivityApplyRequest,
+    http_request: Request,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -543,30 +544,27 @@ def apply_to_activity(
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
         try:
-            # ⚠️ 优化：使用托管模式（与其他支付功能一致）
-            # 交易市场托管模式：
-            # - 支付时：资金先到平台账户（不立即转账给任务接受人）
-            # - 任务完成后：使用 Transfer.create 将资金转给任务接受人
-            # - 平台服务费在转账时扣除（不在这里设置 application_fee_amount）
-            payment_intent = stripe.PaymentIntent.create(
-                amount=task_amount_pence,
-                currency=db_activity.currency.lower(),
-                # 明确指定支付方式类型，确保 WeChat Pay 可用
-                payment_method_types=["card", "wechat_pay", "alipay"],
-                # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-                # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-                metadata={
+            from app.secure_auth import get_wechat_pay_payment_method_options
+            payment_method_options = get_wechat_pay_payment_method_options(http_request)
+            create_pi_kw = {
+                "amount": task_amount_pence,
+                "currency": db_activity.currency.lower(),
+                "payment_method_types": ["card", "wechat_pay", "alipay"],
+                "metadata": {
                     "task_id": str(new_task.id),
                     "activity_id": str(activity_id),
                     "poster_id": current_user.id if not is_multi_participant else None,
                     "taker_id": db_activity.expert_id,
-                    "taker_stripe_account_id": expert_user.stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                    "application_fee": str(application_fee_pence),  # 保存服务费金额，用于后续转账时扣除
-                    "task_amount": str(task_amount_pence),  # 任务金额
+                    "taker_stripe_account_id": expert_user.stripe_account_id,
+                    "application_fee": str(application_fee_pence),
+                    "task_amount": str(task_amount_pence),
                     "task_type": "activity_application",
                 },
-                description=f"活动申请支付 - {db_activity.title}",
-            )
+                "description": f"活动申请支付 - {db_activity.title}",
+            }
+            if payment_method_options:
+                create_pi_kw["payment_method_options"] = payment_method_options
+            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
             payment_intent_id = payment_intent.id
             new_task.payment_intent_id = payment_intent_id
             logger.info(f"创建支付意图成功: payment_intent_id={payment_intent_id}, task_id={new_task.id}")

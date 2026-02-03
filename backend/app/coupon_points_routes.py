@@ -470,6 +470,7 @@ def use_coupon_api(
 def create_task_payment(
     task_id: int,
     payment_request: schemas.TaskPaymentRequest,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
@@ -1284,9 +1285,8 @@ def create_task_payment(
         )
         # iOS PaymentSheet 必须为 wechat_pay 指定 client: "ios"，否则会报 "None of the payment methods can be used in PaymentSheet"
         # 仅 wechat_pay 支持 payment_method_options.client；alipay 不支持该参数，传了会报 InvalidRequestError
-        payment_method_options = {}
-        if "wechat_pay" in pm_types:
-            payment_method_options["wechat_pay"] = {"client": "ios"}
+        from app.secure_auth import get_wechat_pay_payment_method_options
+        payment_method_options = get_wechat_pay_payment_method_options(request) if "wechat_pay" in pm_types else {}
 
         create_kw = {
             "amount": final_amount,
