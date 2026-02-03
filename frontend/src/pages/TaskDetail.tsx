@@ -1795,11 +1795,11 @@ const TaskDetail: React.FC = () => {
   const getTaskLevelText = (level: string) => {
     switch (level) {
       case 'vip':
-        return '⭐ VIP任务';
+        return t('home.vipTask');
       case 'super':
-        return '🔥 超级任务';
+        return t('home.superTask');
       default:
-        return '普通任务';
+        return t('home.normalTask');
     }
   };
 
@@ -4018,7 +4018,7 @@ const TaskDetail: React.FC = () => {
                           color: '#fff',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                         }}>
-                          {isVip ? 'VIP' : 'SUPER'}
+                          {isVip ? t('tasks.levels.vip') : t('tasks.levels.super')}
                         </div>
                       )}
                       

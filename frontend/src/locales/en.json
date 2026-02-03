@@ -207,7 +207,7 @@
     "noTasksAvailable": "No tasks available",
     "noTasksDesc": "Please come back later or publish a new task",
     "autoCancelExpired": "System will automatically cancel tasks that exceed the deadline to ensure task timeliness",
-    "vipTask": "⭐ VIP Task",
+    "vipTask": "⭐ Advanced Task",
     "superTask": "🔥 Super Task",
     "normalTask": "📋 Normal Task",
     "memberPublished": "Member Published",
@@ -280,7 +280,7 @@
     "levels": {
       "all": "All Levels",
       "normal": "Normal Task",
-      "vip": "VIP Task",
+      "vip": "Advanced Task",
       "super": "Super Task",
       "taskLevel": "Task Level",
       "selectLevel": "Select Task Level"
@@ -941,6 +941,7 @@
     },
     "taskLevel": {
       "normal": "Normal Task",
+      "vip": "Advanced Task",
       "super": "Super Task"
     },
     "actions": {
@@ -2423,6 +2424,25 @@
       "reviews": "Reviews and Content: Prohibited are false/misleading reviews, review manipulation or organizing \"positive review tasks\". We may delete related content and restrict or terminate accounts.",
       "paymentProcessing": "Payment Processing: All payments are processed through the Stripe payment system. The platform acts as an escrow service, holding funds in the platform account after the task poster pays, and transferring them to the task taker upon task completion.",
       "applicationFee": "Platform Service Fee: The platform deducts a service fee from the task amount. The service fee calculation rules are as follows:\n• Micro Tasks (Task Amount < £10): A fixed fee of £1 is charged as the Micro Task Service Fee\n• Regular Tasks (Task Amount ≥ £10): A service fee of 10% of the task amount is charged\nThe service fee includes but is not limited to: payment transfer fees, platform operating costs (servers, bandwidth, system maintenance, etc.), human resource costs (customer support, technical development, operations management, etc.), risk guarantee funds, and other reasonable costs required for platform operations. The service fee is used to maintain platform operations, provide technical support and service guarantees. Specific rates are displayed on the platform."
+    },
+    "pointsRules": {
+      "title": "4.1 Points Rules",
+      "intro": "Platform points are virtual benefit units issued by the platform to users and may only be used within the scope of platform rules.",
+      "earn": "How to earn: Users may earn points by completing tasks, inviting new users, participating in activities, etc. Specific rules and amounts are as published or stated in the relevant activity.",
+      "use": "How to use: Points may be used to redeem designated coupons or benefits; they cannot be used directly as cash or withdrawn. Each redemption is subject to the platform's current rules.",
+      "expire": "Validity and expiry: Points may be subject to a validity period or expiry rules; if the platform has enabled point expiry, unused points after expiry will be cleared. Specific validity is as published.",
+      "value": "Points are not currency: Points have no monetary value, are non-transferable, cannot be exchanged for cash or legal property, and may only be used within the account holder's account.",
+      "adjust": "Rule changes: The platform may adjust point earning rates, use scope, validity and other rules as needed; changes will be communicated by notice or publication; material changes will be notified with reasonable advance notice."
+    },
+    "couponRules": {
+      "title": "4.2 Coupon Rules",
+      "intro": "Coupons are discount vouchers issued by the platform or partners and may only be used in designated platform scenarios.",
+      "claim": "Claiming and eligibility: Users may obtain coupons via redemption codes, activity pages, or point redemption. Eligibility, per-user limits and conditions are as stated on the coupon or published by the platform.",
+      "use": "Conditions of use: Coupons are typically subject to minimum spend, applicable services (e.g. task payment only) and validity; use must comply with both the coupon and platform rules.",
+      "type": "Type and value: Coupons may offer a fixed discount or percentage discount as stated on the coupon or detail page. Rules for use per order (e.g. stacking) are as published at the time.",
+      "refund": "Refunds and invalidity: If an order paid with a coupon is refunded, platform refund rules apply; used coupons may not be returned or may be voided. Unused coupons expire automatically after the validity period.",
+      "prohibit": "Prohibited conduct: Bulk acquisition, resale or counterfeiting of coupons by improper means is prohibited; violations may result in coupon voiding and account action.",
+      "adjust": "Rule changes: The platform may adjust coupon issuance, use rules and scope; changes take effect as published."
     },
     "paymentAndRefund": {
       "title": "5. Payment and Refund",

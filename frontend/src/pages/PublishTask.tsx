@@ -177,13 +177,13 @@ const PublishTask: React.FC = () => {
     const vipThreshold = systemSettings.vip_price_threshold || 10.0;
     const superVipThreshold = systemSettings.super_vip_price_threshold || 50.0;
     
-    // 任务等级显示只根据金额和阈值，与VIP升级功能无关
+    // 任务等级显示只根据金额和阈值，与会员等级区分（高级任务/超级任务）
     if (reward >= superVipThreshold) {
-      return `💰 超级任务 (≥${superVipThreshold}元)`;
+      return `💰 ${t('tasks.levels.super')} (≥${superVipThreshold}元)`;
     } else if (reward >= vipThreshold) {
-      return `⭐ VIP任务 (≥${vipThreshold}元)`;
+      return `⭐ ${t('tasks.levels.vip')} (≥${vipThreshold}元)`;
     } else {
-      return `📝 普通任务 (<${vipThreshold}元)`;
+      return `📝 ${t('tasks.levels.normal')} (<${vipThreshold}元)`;
     }
   };
 

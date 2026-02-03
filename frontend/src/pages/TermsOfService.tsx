@@ -206,6 +206,29 @@ const TermsOfService: React.FC = () => {
               <p>{getContent('feesAndRules.paymentProcessing')}</p>
               <p>{getContent('feesAndRules.reviews')}</p>
 
+              {/* 4.1 积分规则 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {getContent('pointsRules.title')}
+              </h2>
+              <p>{getContent('pointsRules.intro')}</p>
+              <p style={{ marginTop: '12px' }}>{getContent('pointsRules.earn')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('pointsRules.use')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('pointsRules.expire')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('pointsRules.value')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('pointsRules.adjust')}</p>
+
+              {/* 4.2 优惠券规则 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {getContent('couponRules.title')}
+              </h2>
+              <p>{getContent('couponRules.intro')}</p>
+              <p style={{ marginTop: '12px' }}>{getContent('couponRules.claim')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('couponRules.use')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('couponRules.type')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('couponRules.refund')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('couponRules.prohibit')}</p>
+              <p style={{ marginTop: '8px' }}>{getContent('couponRules.adjust')}</p>
+
               {/* 5. 支付与退款 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 {getContent('paymentAndRefund.title')}

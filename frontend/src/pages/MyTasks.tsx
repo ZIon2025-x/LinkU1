@@ -797,7 +797,7 @@ const MyTasks: React.FC = () => {
   const getTaskLevelText = (level: string) => {
     switch (level) {
       case 'vip':
-        return '⭐ VIP';
+        return `⭐ ${t('myTasks.taskLevel.vip')}`;
       case 'super':
         return t('myTasks.taskLevel.super');
       default:

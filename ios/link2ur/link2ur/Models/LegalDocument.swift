@@ -59,7 +59,7 @@ enum JSONValue: Decodable {
         switch documentType {
         case "terms":
             return ["title", "lastUpdated", "version", "effectiveDate", "jurisdiction", "operatorInfo", "operator", "contact",
-                    "serviceNature", "userTypes", "platformPosition", "feesAndRules", "paymentAndRefund", "prohibitedTasks",
+                    "serviceNature", "userTypes", "platformPosition", "feesAndRules", "pointsRules", "couponRules", "paymentAndRefund", "prohibitedTasks",
                     "userBehavior", "userResponsibilities", "intellectualProperty", "privacyData", "disclaimer", "termination",
                     "disputes", "forumTerms", "fleaMarketTerms", "consumerAppendix", "importantNotice"]
         case "privacy":

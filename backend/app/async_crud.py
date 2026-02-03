@@ -1294,24 +1294,7 @@ class AsyncTaskCRUD:
                 logger.debug(f"用户 {applicant_id} 不存在")
                 return None
             
-            # 等级匹配检查
-            # expert 等级是达人任务，通常已有指定接收者，不参与等级检查
-            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3, 'expert': 0}
-            # 从 SQLAlchemy 对象中获取实际值
-            user_level_actual = getattr(user, 'user_level', None)
-            task_level_actual = getattr(task, 'task_level', None)
-            
-            user_level_str = str(user_level_actual) if user_level_actual is not None else "normal"
-            task_level_str = str(task_level_actual) if task_level_actual is not None else "normal"
-            user_level_value = level_hierarchy.get(user_level_str, 1)
-            task_level_value = level_hierarchy.get(task_level_str, 1)
-            
-            # expert 任务跳过等级检查（因为已有指定接收者）
-            if task_level_str == "expert":
-                pass  # expert 任务不检查用户等级
-            elif user_level_value < task_level_value:
-                logger.debug(f"用户等级 {user.user_level} 不足以申请 {task.task_level} 任务")
-                return None
+            # 所有用户均可申请任意等级任务（任务等级仅按赏金划分，不限制接单权限）
             
             # 检查是否已经申请过
             existing_application = await db.execute(

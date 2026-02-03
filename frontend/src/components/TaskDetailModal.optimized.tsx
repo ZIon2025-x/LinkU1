@@ -85,7 +85,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
 
   const getTaskLevelText = useCallback((level: string) => {
     switch (level) {
-      case 'vip': return '⭐ VIP';
+      case 'vip': return `⭐ ${t('myTasks.taskLevel.vip')}`;
       case 'super': return t('myTasks.taskLevel.super');
       default: return t('myTasks.taskLevel.normal');
     }

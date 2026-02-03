@@ -1092,7 +1092,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const getTaskLevelText = useCallback((level: string) => {
     switch (level) {
       case 'vip':
-        return '⭐ VIP';
+        return `⭐ ${t('myTasks.taskLevel.vip')}`;
       case 'super':
         return t('myTasks.taskLevel.super');
       default:

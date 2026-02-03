@@ -254,7 +254,7 @@ const VIP: React.FC = () => {
               <li style={{ marginBottom: '10px', color: '#666' }}>✓ 基础客服支持</li>
               <li style={{ marginBottom: '10px', color: '#999' }}>✗ 优先任务推荐</li>
               <li style={{ marginBottom: '10px', color: '#999' }}>✗ 专属客服服务</li>
-              <li style={{ marginBottom: '10px', color: '#999', fontSize: '14px' }}>✗ 发布VIP任务 (≥{systemSettings.vip_price_threshold}元)</li>
+              <li style={{ marginBottom: '10px', color: '#999', fontSize: '14px' }}>✗ 发布高级任务 (≥{systemSettings.vip_price_threshold}元)</li>
             </ul>
             <button
               onClick={() => handleUpgrade('normal')}
@@ -387,7 +387,7 @@ const VIP: React.FC = () => {
               <li style={{ marginBottom: '10px', color: '#666' }}>✓ 专属高级客服</li>
               <li style={{ marginBottom: '10px', color: '#666' }}>✓ 任务优先展示</li>
               <li style={{ marginBottom: '10px', color: '#666' }}>✓ 专属会员标识</li>
-              <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布VIP任务 (≥{systemSettings.vip_price_threshold}元)</li>
+              <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布高级任务 (≥{systemSettings.vip_price_threshold}元)</li>
               <li style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>✓ 发布超级任务 (≥{systemSettings.super_vip_price_threshold}元)</li>
             </ul>
             {user?.user_level === 'super' ? (

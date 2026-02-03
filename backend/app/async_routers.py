@@ -723,21 +723,7 @@ async def apply_for_task(
                     detail=f"货币不一致：任务使用 {task.currency}，申请使用 {currency}"
                 )
         
-        # 检查等级匹配
-        # expert 等级是达人任务，通常已有指定接收者，不参与等级检查
-        level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3, 'expert': 0}
-        user_level_value = level_hierarchy.get(str(current_user.user_level or 'normal'), 1)
-        task_level_value = level_hierarchy.get(str(task.task_level or 'normal'), 1)
-        
-        # expert 任务跳过等级检查（因为已有指定接收者）
-        if task.task_level == "expert":
-            pass  # expert 任务不检查用户等级
-        elif user_level_value < task_level_value:
-            task_level_name = task.task_level.upper() if task.task_level else "VIP"
-            raise HTTPException(
-                status_code=403,
-                detail=f"您的用户等级不足以申请此任务。此任务需要{task_level_name}用户才能申请。"
-            )
+        # 所有用户均可申请任意等级任务（任务等级仅按赏金划分，用于展示与推荐，不限制接单权限）
         
         # 创建申请记录
         from app.utils.time_utils import get_utc_time, format_iso_utc

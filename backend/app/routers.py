@@ -1637,34 +1637,7 @@ def accept_task(
                 status_code=400, detail="You cannot accept your own task"
             )
 
-        # 检查用户等级是否满足任务等级要求
-        user_level = current_user.user_level
-        task_level = db_task.task_level
-
-        # 权限检查：用户等级必须大于等于任务等级
-        # expert 等级是达人任务，通常已有指定接收者，不参与等级检查
-        level_hierarchy = {"normal": 1, "vip": 2, "super": 3, "expert": 0}
-        user_level_value = level_hierarchy.get(user_level, 1)
-        task_level_value = level_hierarchy.get(task_level, 1)
-
-        # expert 任务跳过等级检查（因为已有指定接收者）
-        if task_level == "expert":
-            pass  # expert 任务不检查用户等级
-        elif user_level_value < task_level_value:
-            if task_level == "vip":
-                raise HTTPException(
-                    status_code=403,
-                    detail="此任务需要VIP用户才能接受，请升级您的账户等级",
-                )
-            elif task_level == "super":
-                raise HTTPException(
-                    status_code=403,
-                    detail="此任务需要超级VIP用户才能接受，请升级您的账户等级",
-                )
-            else:
-                raise HTTPException(
-                    status_code=403, detail="您的账户等级不足以接受此任务"
-                )
+        # 所有用户均可接受任意等级任务（任务等级仅按赏金划分，由数据库配置的阈值决定，不限制接单权限）
 
         # 检查任务是否已过期
         from datetime import datetime, timezone
