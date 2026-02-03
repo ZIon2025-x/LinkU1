@@ -252,9 +252,9 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
         // 配置 Payment Sheet
         var configuration = PaymentSheet.Configuration()
         configuration.merchantDisplayName = "Link²Ur"
-        // 注意：WeChat Pay 不支持 delayed payment methods
-        // 如果设置为 true，WeChat Pay 可能会被过滤掉
-        configuration.allowsDelayedPaymentMethods = false
+        // 微信支付、支付宝等需跳转完成的支付方式属于 delayed payment methods，必须设为 true
+        // 否则 PaymentSheet 会报：None of the payment methods can be used in PaymentSheet
+        configuration.allowsDelayedPaymentMethods = true
         
         // 设置默认账单地址国家为英国（GB）
         // 说明：这里用“先取出再写回”的方式，避免直接链式修改导致的可变性问题

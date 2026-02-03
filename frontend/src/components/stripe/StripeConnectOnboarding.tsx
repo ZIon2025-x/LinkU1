@@ -515,17 +515,11 @@ const StripeConnectOnboarding: React.FC<StripeConnectOnboardingProps> = ({
                 // 监听步骤变化，用于分析和调试
                 logger.log('Onboarding step changed:', stepChange.step);
               }}
-              // 根据官方文档，这些是可选的配置
-              // collectionOptions 可以控制收集哪些要求
-              // collectionOptions={{
-              //   fields: 'currently_due', // 默认值，只收集当前需要的要求
-              //   // fields: 'eventually_due', // 也可以收集未来需要的要求
-              //   // futureRequirements: 'include', // 包含未来要求
-              //   // requirements: {
-              //   //   only: ['business_details.*'], // 只收集特定要求
-              //   //   // exclude: ['tos_acceptance.*'], // 排除特定要求
-              //   // }
-              // }}
+              // 收集「最终需要」的验证项（含身份证明文件），避免入驻完成后 Stripe 再要求补传
+              collectionOptions={{
+                fields: 'eventually_due',
+                futureRequirements: 'include',
+              }}
               // 自定义策略链接（可选）
               // fullTermsOfServiceUrl="https://your-domain.com/terms"
               // recipientTermsOfServiceUrl="https://your-domain.com/recipient-terms"

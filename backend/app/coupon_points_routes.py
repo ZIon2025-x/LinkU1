@@ -1282,25 +1282,33 @@ def create_task_payment(
             f"创建 PaymentIntent: preferred_payment_method={payment_request.preferred_payment_method!r}, "
             f"pm_types={pm_types}"
         )
-        payment_intent = stripe.PaymentIntent.create(
-            amount=final_amount,  # 便士（发布者需要支付的金额，可能已扣除积分和优惠券）
-            currency="gbp",
-            # 有 preferred_payment_method 时仅该方式，PaymentSheet 不弹选择窗；否则支持 card / wechat_pay / alipay
-            payment_method_types=pm_types,
-            # 不设置 transfer_data.destination，让资金留在平台账户（托管模式）
-            # 不设置 application_fee_amount，服务费在任务完成转账时扣除
-            metadata={
+        # iOS PaymentSheet 需要为 wechat_pay/alipay 指定 client，否则会报 "None of the payment methods can be used"
+        # 见 Stripe 文档：payment_method_options.wechat_pay.client = "web"|"ios"|"android"
+        payment_method_options = {}
+        if "wechat_pay" in pm_types:
+            payment_method_options["wechat_pay"] = {"client": "ios"}
+        if "alipay" in pm_types:
+            payment_method_options["alipay"] = {"client": "ios"}
+
+        create_kw = {
+            "amount": final_amount,
+            "currency": "gbp",
+            "payment_method_types": pm_types,
+            "metadata": {
                 "task_id": str(task_id),
                 "user_id": str(current_user.id),
                 "taker_id": str(task.taker_id),
-                "taker_stripe_account_id": taker.stripe_account_id,  # 保存接受人的 Stripe 账户ID，用于后续转账
-                "task_amount": str(task_amount_pence),  # 任务金额
+                "taker_stripe_account_id": taker.stripe_account_id,
+                "task_amount": str(task_amount_pence),
                 "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
                 "coupon_discount": str(coupon_discount) if coupon_discount > 0 else "",
-                "application_fee": str(application_fee_pence)  # 保存服务费金额，用于后续转账时扣除
+                "application_fee": str(application_fee_pence),
             },
-            description=f"任务 #{task_id} 任务金额支付 - {task.title}",
-        )
+            "description": f"任务 #{task_id} 任务金额支付 - {task.title}",
+        }
+        if payment_method_options:
+            create_kw["payment_method_options"] = payment_method_options
+        payment_intent = stripe.PaymentIntent.create(**create_kw)
         
         # 记录 PaymentIntent 的支付方式类型，用于调试
         payment_method_types = payment_intent.get("payment_method_types", [])

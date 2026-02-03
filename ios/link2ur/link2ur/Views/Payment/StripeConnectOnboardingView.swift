@@ -239,9 +239,6 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
     let onError: (String) -> Void
     
     // 可选的高级配置
-    // 注意：collectionOptions 的类型取决于 Stripe iOS SDK 的实际实现
-    // 如果 SDK 不支持，可以注释掉或使用正确的类型
-    // var collectionOptions: AccountCollectionOptions? = nil
     var fullTermsOfServiceURL: URL? = nil
     var recipientTermsOfServiceURL: URL? = nil
     var privacyPolicyURL: URL? = nil
@@ -276,20 +273,19 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         let recipientTermsURL = recipientTermsOfServiceURL ?? Constants.Stripe.ConnectOnboarding.recipientTermsOfServiceURL
         let privacyURL = privacyPolicyURL ?? Constants.Stripe.ConnectOnboarding.privacyPolicyURL
         
-        // 创建 controller
-        // 注意：如果 SDK 不支持这些参数，请使用无参数版本：
-        // let controller = embeddedComponentManager.createAccountOnboardingController()
+        // 收集「最终需要」的验证项（含身份证明文件），避免入驻完成后 Stripe 再要求补传
+        // 见 Stripe 文档：https://docs.stripe.com/connect/supported-embedded-components/account-onboarding
+        var collectionOptions = AccountCollectionOptions()
+        collectionOptions.fields = .eventuallyDue
+        collectionOptions.futureRequirements = .include
+        
+        // 创建 controller（传入 collectionOptions 以在入驻时收集身份证明等 eventually_due 要求）
         let controller = embeddedComponentManager.createAccountOnboardingController(
             fullTermsOfServiceUrl: fullTermsURL,
             recipientTermsOfServiceUrl: recipientTermsURL,
-            privacyPolicyUrl: privacyURL
+            privacyPolicyUrl: privacyURL,
+            collectionOptions: collectionOptions
         )
-        
-        // 如果提供了 collectionOptions，可以通过 controller 的属性设置
-        // 注意：这取决于 SDK 的实际实现
-        // if let collectionOptions = collectionOptions {
-        //     // 根据 SDK 文档设置 collectionOptions
-        // }
         
         controller.delegate = context.coordinator
         controller.title = LocalizationKey.paymentSetupAccount.localized
@@ -401,9 +397,14 @@ class StripeConnectOnboardingViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { [weak self] completion in
-                    if case .failure = completion {
-                        // 如果获取状态失败，尝试创建账户
-                        self?.createOnboardingSession()
+                    if case .failure(let apiError) = completion {
+                        // 获取状态失败时显示错误并允许重试，不要误判为“无账户”而去创建
+                        self?.isLoading = false
+                        var errorMessage = apiError.localizedDescription
+                        if case .httpError(let code) = apiError {
+                            errorMessage = "获取账户状态失败 (HTTP \(code))，请重试"
+                        }
+                        self?.error = errorMessage
                     }
                 },
                 receiveValue: { [weak self] statusResponse in
@@ -412,7 +413,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                        statusResponse.details_submitted && statusResponse.charges_enabled {
                         self?.loadAccountDetails()
                     } else {
-                        // 否则创建或获取 onboarding session
+                        // 真正没有账户时才创建 onboarding session
                         self?.createOnboardingSession()
                     }
                 }
@@ -547,7 +548,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
     
     func checkAccountStatus() {
         struct StatusResponse: Codable {
-            let account_id: String
+            let account_id: String?
             let details_submitted: Bool
             let charges_enabled: Bool
             let payouts_enabled: Bool
@@ -561,6 +562,9 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                 receiveValue: { [weak self] response in
                     if response.charges_enabled {
                         self?.isCompleted = true
+                    } else if response.account_id != nil {
+                        // 已提交但 Stripe 尚未开通收款时，展示账户详情页，避免一直停在设置表单
+                        self?.loadAccountDetails()
                     }
                 }
             )
