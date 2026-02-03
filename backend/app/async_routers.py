@@ -423,6 +423,27 @@ async def get_task_by_id(
     task.description_en = description_en
     task.description_zh = description_zh
     
+    # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」按钮而不依赖单独接口
+    if current_user:
+        user_id_str = str(current_user.id)
+        app_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.task_id == task_id,
+                models.TaskApplication.applicant_id == user_id_str,
+            )
+        )
+        app_result = await db.execute(app_query)
+        user_app = app_result.scalar_one_or_none()
+        if user_app:
+            setattr(task, "has_applied", True)
+            setattr(task, "user_application_status", user_app.status)
+        else:
+            setattr(task, "has_applied", False)
+            setattr(task, "user_application_status", None)
+    else:
+        setattr(task, "has_applied", None)
+        setattr(task, "user_application_status", None)
+    
     return task
 
 
@@ -868,6 +889,34 @@ async def get_user_applications(
         logger.error(f"Error getting user applications: {e}")
         raise HTTPException(status_code=500, detail="Failed to get applications")
 
+def _format_application_item(app, user):
+    """将 TaskApplication 格式化为 API 返回的 dict（共用给发布者列表与申请者查看自己的申请）"""
+    negotiated_price_value = None
+    if app.negotiated_price is not None:
+        try:
+            from decimal import Decimal
+            if isinstance(app.negotiated_price, Decimal):
+                negotiated_price_value = float(app.negotiated_price)
+            elif isinstance(app.negotiated_price, (int, float)):
+                negotiated_price_value = float(app.negotiated_price)
+            else:
+                negotiated_price_value = float(str(app.negotiated_price))
+        except (ValueError, TypeError, AttributeError):
+            negotiated_price_value = None
+    return {
+        "id": app.id,
+        "applicant_id": app.applicant_id,
+        "applicant_name": user.name if user else None,
+        "applicant_avatar": user.avatar if user and hasattr(user, 'avatar') else None,
+        "applicant_user_level": getattr(user, 'user_level', None) if user else None,
+        "message": app.message,
+        "negotiated_price": negotiated_price_value,
+        "currency": app.currency or "GBP",
+        "created_at": format_iso_utc(app.created_at) if app.created_at else None,
+        "status": app.status,
+    }
+
+
 @async_router.get("/tasks/{task_id}/applications", response_model=List[dict])
 async def get_task_applications(
     task_id: int,
@@ -876,75 +925,59 @@ async def get_task_applications(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """获取任务的申请者列表（仅任务发布者可查看，优化版本：批量查询用户避免N+1）"""
+    """获取任务的申请者列表。发布者/达人可见全部；非发布者仅返回当前用户自己的申请（用于详情页显示「已申请」状态）"""
     try:
         from sqlalchemy.orm import selectinload
-        from app.query_optimizer import AsyncQueryOptimizer
-        
-        # 检查是否为任务发布者
-        task = await db.execute(
+
+        task_result = await db.execute(
             select(models.Task).where(models.Task.id == task_id)
         )
-        task = task.scalar_one_or_none()
-        
+        task = task_result.scalar_one_or_none()
+
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
-        
-        # 权限检查：发布者或多人任务的任务达人可以查看申请列表
-        is_poster = task.poster_id == current_user.id
-        is_expert_creator = getattr(task, 'is_multi_participant', False) and getattr(task, 'expert_creator_id', None) == current_user.id
-        
+
+        user_id_str = str(current_user.id)
+        is_poster = task.poster_id is not None and str(task.poster_id) == user_id_str
+        is_expert_creator = (
+            getattr(task, "is_multi_participant", False)
+            and getattr(task, "expert_creator_id", None) is not None
+            and str(task.expert_creator_id) == user_id_str
+        )
+
+        # 非发布者且非达人：只返回当前用户自己在该任务下的申请（任意状态），便于详情页显示「已申请/等待确认」
         if not is_poster and not is_expert_creator:
-            raise HTTPException(status_code=403, detail="Only task poster or expert creator can view applications")
-        
-        # 使用 selectinload 预加载申请者信息，避免N+1查询
+            own_query = (
+                select(models.TaskApplication)
+                .options(selectinload(models.TaskApplication.applicant))
+                .where(models.TaskApplication.task_id == task_id)
+                .where(models.TaskApplication.applicant_id == user_id_str)
+                .order_by(models.TaskApplication.created_at.desc())
+                .limit(1)
+            )
+            own_result = await db.execute(own_query)
+            own_app = own_result.scalar_one_or_none()
+            if not own_app:
+                return []
+            return [_format_application_item(own_app, own_app.applicant)]
+
+        # 发布者/达人：返回待处理申请列表（与原有行为一致）
         applications_query = (
             select(models.TaskApplication)
-            .options(selectinload(models.TaskApplication.applicant))  # 预加载申请者
+            .options(selectinload(models.TaskApplication.applicant))
             .where(models.TaskApplication.task_id == task_id)
             .where(models.TaskApplication.status == "pending")
             .order_by(models.TaskApplication.created_at.desc())
             .offset(skip)
             .limit(limit)
         )
-        
         applications_result = await db.execute(applications_query)
         applications = applications_result.scalars().all()
-    
-        # 直接使用关联数据，无需额外查询
+
         result = []
         for app in applications:
-            user = app.applicant  # 已预加载，无需查询
-            
-            if user:
-                # 处理议价金额：从 task_applications 表中读取 negotiated_price 字段
-                negotiated_price_value = None
-                if app.negotiated_price is not None:
-                    try:
-                        from decimal import Decimal
-                        if isinstance(app.negotiated_price, Decimal):
-                            negotiated_price_value = float(app.negotiated_price)
-                        elif isinstance(app.negotiated_price, (int, float)):
-                            negotiated_price_value = float(app.negotiated_price)
-                        else:
-                            negotiated_price_value = float(str(app.negotiated_price))
-                    except (ValueError, TypeError, AttributeError) as e:
-                        logger.warning(f"转换议价金额失败: app_id={app.id}, error={e}")
-                        negotiated_price_value = None
-                
-                result.append({
-                    "id": app.id,
-                    "applicant_id": app.applicant_id,
-                    "applicant_name": user.name,
-                    "applicant_avatar": user.avatar if hasattr(user, 'avatar') else None,
-                    "applicant_user_level": getattr(user, 'user_level', None),
-                    "message": app.message,
-                    "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
-                    "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取
-                    "created_at": format_iso_utc(app.created_at) if app.created_at else None,
-                    "status": app.status
-                })
-        
+            result.append(_format_application_item(app, app.applicant))
+
         return result
         
     except HTTPException:

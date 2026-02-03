@@ -1196,6 +1196,25 @@ def get_task_detail(
         thread = threading.Thread(target=trigger_translations_sync, daemon=True)
         thread.start()
     
+    # 与活动详情一致：在详情响应中带上「当前用户是否已申请」及申请状态，便于客户端直接显示「已申请」状态
+    if current_user:
+        user_id_str = str(current_user.id)
+        application = db.query(TaskApplication).filter(
+            and_(
+                TaskApplication.task_id == task_id,
+                TaskApplication.applicant_id == user_id_str,
+            )
+        ).first()
+        if application:
+            setattr(task, "has_applied", True)
+            setattr(task, "user_application_status", application.status)
+        else:
+            setattr(task, "has_applied", False)
+            setattr(task, "user_application_status", None)
+    else:
+        setattr(task, "has_applied", None)
+        setattr(task, "user_application_status", None)
+    
     # 使用 TaskOut.from_orm 确保所有字段（包括 task_source）都被正确序列化
     return schemas.TaskOut.from_orm(task)
 

@@ -43,6 +43,10 @@ struct Task: Codable, Identifiable, Equatable {
     let autoConfirmed: Bool?  // 是否自动确认
     let confirmationReminderSent: Int?  // 提醒状态位掩码
     let paymentExpiresAt: String?  // 支付过期时间（ISO 格式），待支付任务有效
+    /// 当前用户是否已申请（与活动详情一致，由任务详情接口返回，用于直接显示「已申请」状态）
+    let hasApplied: Bool?
+    /// 当前用户申请状态：pending / approved / rejected
+    let userApplicationStatus: String?
     
     enum CodingKeys: String, CodingKey {
         case id, title, description, status, images, currency, latitude, longitude
@@ -79,6 +83,8 @@ struct Task: Codable, Identifiable, Equatable {
         case autoConfirmed = "auto_confirmed"
         case confirmationReminderSent = "confirmation_reminder_sent"
         case paymentExpiresAt = "payment_expires_at"
+        case hasApplied = "has_applied"
+        case userApplicationStatus = "user_application_status"
     }
     
     // 兼容旧代码的 computed properties
@@ -240,7 +246,9 @@ struct RecommendationTask: Codable {
             confirmedAt: nil,
             autoConfirmed: nil,
             confirmationReminderSent: nil,
-            paymentExpiresAt: nil
+            paymentExpiresAt: nil,
+            hasApplied: nil,
+            userApplicationStatus: nil
         )
     }
 }

@@ -374,6 +374,9 @@ class TaskOut(TaskBase):
     # 任务来源
     task_source: Optional[str] = "normal"  # normal（普通任务）、expert_service（达人服务）、expert_activity（达人活动）、flea_market（跳蚤市场）
     payment_expires_at: Optional[datetime.datetime] = None  # 支付过期时间，待支付任务有效（FastAPI会自动序列化为ISO格式字符串）
+    # 当前用户是否已申请（与活动详情一致，在详情接口中根据 current_user 填充，便于客户端直接显示「已申请」状态）
+    has_applied: Optional[bool] = None
+    user_application_status: Optional[str] = None  # pending / approved / rejected
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -586,6 +589,8 @@ class TaskOut(TaskBase):
             "time_slot_start_datetime": None,
             "time_slot_end_datetime": None,
             "payment_expires_at": getattr(obj, 'payment_expires_at', None),  # FastAPI会自动将datetime序列化为ISO格式字符串
+            "has_applied": getattr(obj, 'has_applied', None),
+            "user_application_status": getattr(obj, 'user_application_status', None),
         }
         
         # 如果任务有关联的时间段，获取时间段信息

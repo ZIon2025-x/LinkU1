@@ -90,9 +90,9 @@ struct TaskDetailView: View {
         return String(takerId) == currentUserId
     }
     
-    // 判断是否已申请
+    /// 是否已申请（与活动详情一致：申请列表中有记录，或详情接口返回 has_applied）
     private var hasApplied: Bool {
-        viewModel.userApplication != nil
+        viewModel.userApplication != nil || (viewModel.task?.hasApplied == true)
     }
     
     // 判断支付是否已过期
@@ -2026,13 +2026,20 @@ struct TaskActionButtonsView: View {
         }
     }
     
-    /// 非发布者时的申请/支付相关按钮（拆分子视图以减轻编译器类型检查负担）
+    /// 非发布者时的申请/支付相关按钮（与活动详情一致：优先用详情接口返回的 hasApplied / userApplicationStatus 显示「已申请」状态）
     @ViewBuilder
     private var nonPosterApplicantButtonsContent: some View {
         // 待支付时仅发布者支付平台服务费，接受者不显示支付按钮
         if let userApp = viewModel.userApplication {
-            // 如果用户已申请，显示申请状态
+            // 有申请列表数据时，按申请状态展示
             userApplicationStatusView(userApp: userApp)
+        } else if task.hasApplied == true {
+            // 与活动详情一致：详情接口已返回「当前用户已申请」，直接根据 userApplicationStatus 显示，不依赖 applications 接口
+            if task.userApplicationStatus == "pending" {
+                pendingConfirmationButton
+            } else {
+                appliedButton
+            }
         } else {
             // 无申请记录时的按钮（待确认占位 或 申请按钮）
             applicantButtonsWhenNoUserApplication
@@ -2048,6 +2055,17 @@ struct TaskActionButtonsView: View {
             // 如果用户未申请，显示申请按钮
             applyButton
         }
+    }
+    
+    /// 已申请状态按钮（灰色不可点击，与活动详情的「已申请」一致）
+    @ViewBuilder
+    private var appliedButton: some View {
+        Button(action: {}) {
+            Label(LocalizationKey.taskDetailAlreadyApplied.localized, systemImage: "checkmark.circle.fill")
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(true)
+        .opacity(0.7)
     }
     
     @ViewBuilder
