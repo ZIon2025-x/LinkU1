@@ -336,6 +336,26 @@
 "location.drag_to_select" = "Drag map to select location";
 "location.current_location" = "Current Location";
 "location.online_remote" = "Online/Remote";
+"location.select_title" = "Select location";
+"location.search_place" = "Search place, address, postcode...";
+"location.moving" = "Moving";
+"search.results_title" = "Search results";
+"task_expert.loading" = "Loading...";
+"task_expert.load_failed" = "Failed to load expert info";
+"task_expert.search_title" = "Search experts";
+"external_web.loading" = "Loading...";
+"empty_state.no_content" = "No content yet";
+"empty_state.no_content_message" = "Nothing here yet. Try refreshing or come back later.";
+"empty_state.no_results" = "No results found";
+"empty_state.no_results_message" = "No matching search results. Try other keywords.";
+"leaderboard.empty_title" = "No leaderboard yet";
+"leaderboard.empty_message" = "Be the first to create one!";
+"leaderboard.sort_latest" = "Latest";
+"leaderboard.sort_hot" = "Hot";
+"leaderboard.sort_votes" = "Votes";
+"leaderboard.add_item" = "Add item";
+"leaderboard.item_count" = "items";
+"leaderboard.vote_count" = "votes";
 
 // MARK: - Payment
 "payment.setup_account" = "Setup Payment Account";
@@ -1228,6 +1248,8 @@
 "service.apply_title" = "Apply for Service";
 
 // MARK: - Network
+"offline.mode" = "Offline mode";
+"offline.pending_sync" = "(%d pending sync)";
 "network.offline" = "Offline";
 "network.disconnected" = "Network disconnected";
 "network.check_settings" = "Please check your network settings";

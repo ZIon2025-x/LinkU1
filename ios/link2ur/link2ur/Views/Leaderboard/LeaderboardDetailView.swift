@@ -139,7 +139,7 @@ struct LeaderboardDetailView: View {
                             showLogin = true
                         }
                     }) {
-                        Label("添加竞品", systemImage: "plus.circle")
+                        Label(LocalizationKey.leaderboardAddItem.localized, systemImage: "plus.circle")
                     }
                     
                     // 分享
@@ -147,7 +147,7 @@ struct LeaderboardDetailView: View {
                         showShareSheet = true
                         HapticFeedback.light()
                     }) {
-                        Label("分享", systemImage: "square.and.arrow.up")
+                        Label(LocalizationKey.commonShare.localized, systemImage: "square.and.arrow.up")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -653,7 +653,7 @@ struct LeaderboardShareView: View {
             return description
         } else {
             // 如果没有描述，使用统计信息构建
-            let statsText = "\(leaderboard.itemCount) 竞品 · \(leaderboard.voteCount) 投票"
+            let statsText = "\(leaderboard.itemCount) \(LocalizationKey.leaderboardItemCount.localized) · \(leaderboard.voteCount) \(LocalizationKey.leaderboardVoteCount.localized)"
             if let location = leaderboard.location, !location.isEmpty {
                 return "\(location) | \(statsText)"
             }

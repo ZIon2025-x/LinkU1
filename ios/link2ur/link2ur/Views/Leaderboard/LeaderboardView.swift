@@ -27,8 +27,8 @@ struct LeaderboardView: View {
                 VStack(spacing: AppSpacing.xl) {
                     EmptyStateView(
                         icon: "trophy.fill",
-                        title: "暂无排行榜",
-                        message: "还没有排行榜，快来申请创建第一个吧！"
+                        title: LocalizationKey.leaderboardEmptyTitle.localized,
+                        message: LocalizationKey.leaderboardEmptyMessage.localized
                     )
                     
                     Button(action: {
@@ -82,9 +82,9 @@ struct LeaderboardView: View {
                     
                     // 排序菜单
                     Menu {
-                        Button("最新") { selectedSort = "latest"; viewModel.loadLeaderboards(sort: selectedSort) }
-                        Button("热门") { selectedSort = "hot"; viewModel.loadLeaderboards(sort: selectedSort) }
-                        Button("投票数") { selectedSort = "votes"; viewModel.loadLeaderboards(sort: selectedSort) }
+                        Button(LocalizationKey.leaderboardSortLatest.localized) { selectedSort = "latest"; viewModel.loadLeaderboards(sort: selectedSort) }
+                        Button(LocalizationKey.leaderboardSortHot.localized) { selectedSort = "hot"; viewModel.loadLeaderboards(sort: selectedSort) }
+                        Button(LocalizationKey.leaderboardSortVotes.localized) { selectedSort = "votes"; viewModel.loadLeaderboards(sort: selectedSort) }
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .font(.system(size: 20))

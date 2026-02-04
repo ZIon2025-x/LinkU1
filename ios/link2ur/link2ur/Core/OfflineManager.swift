@@ -551,11 +551,11 @@ public struct OfflineModeIndicatorModifier: ViewModifier {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 14, weight: .semibold))
             
-            Text("离线模式")
+            Text(LocalizationKey.offlineMode.localized)
                 .font(.system(size: 14, weight: .medium))
             
             if !offlineManager.pendingOperations.isEmpty {
-                Text("(\(offlineManager.pendingOperations.filter { $0.status == .pending }.count) 待同步)")
+                Text(LocalizationKey.offlinePendingSync.localized(offlineManager.pendingOperations.filter { $0.status == .pending }.count))
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.8))
             }

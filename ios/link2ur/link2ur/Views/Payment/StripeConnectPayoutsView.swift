@@ -388,7 +388,7 @@ struct PayoutSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("取消") {
+                    Button(LocalizationKey.commonCancel.localized) {
                         isPresented = false
                     }
                 }
@@ -1166,7 +1166,7 @@ struct AccountDetailsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                 }
@@ -1363,7 +1363,7 @@ struct TransactionDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("关闭") {
+                    Button(LocalizationKey.commonClose.localized) {
                         dismiss()
                     }
                 }

@@ -34,7 +34,7 @@ struct ExternalWebView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        Text("加载中...")
+                        Text(LocalizationKey.externalWebLoading.localized)
                             .font(AppTypography.subheadline)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -66,7 +66,7 @@ struct ExternalWebView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button(LocalizationKey.commonDone.localized) {
                         dismiss()
                     }
                     .foregroundColor(AppColors.primary)

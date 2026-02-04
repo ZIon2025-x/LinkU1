@@ -194,7 +194,7 @@ struct TaskExpertSearchView: View {
                 }
             }
         }
-        .navigationTitle("搜索达人")
+        .navigationTitle(LocalizationKey.taskExpertSearchTitle.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbarBackground(AppColors.background, for: .navigationBar)

@@ -15,7 +15,7 @@ struct TaskExpertDetailView: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
-                    Text("加载中...")
+                    Text(LocalizationKey.taskExpertLoading.localized)
                         .font(AppTypography.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
@@ -87,7 +87,7 @@ struct TaskExpertDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(AppColors.textTertiary)
-                    Text("专家信息加载失败")
+                    Text(LocalizationKey.taskExpertLoadFailed.localized)
                         .font(AppTypography.body)
                         .foregroundColor(AppColors.textSecondary)
                 }

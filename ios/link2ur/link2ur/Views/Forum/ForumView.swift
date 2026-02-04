@@ -985,7 +985,7 @@ struct MyCategoryRequestsView: View {
                                 .font(.system(size: 16))
                                 .foregroundColor(AppColors.textSecondary)
                                 .multilineTextAlignment(.center)
-                            Button("重试") {
+                            Button(LocalizationKey.commonRetry.localized) {
                                 loadRequests()
                             }
                             .buttonStyle(.borderedProminent)

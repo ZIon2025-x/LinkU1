@@ -11,8 +11,6 @@ import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from './LazyImage';
-import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
-
 interface ServiceListModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,7 +61,6 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   expertId,
   expertName,
 }) => {
-  const { navigate } = useLocalizedNavigation();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

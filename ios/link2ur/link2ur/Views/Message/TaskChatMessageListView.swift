@@ -375,7 +375,7 @@ struct TaskChatSystemMessageBubble: View {
                                             Image(systemName: "doc.fill")
                                                 .font(.system(size: 16))
                                                 .foregroundColor(AppColors.primary)
-                                            Text("证据文件")
+                                            Text(LocalizationKey.chatEvidenceFile.localized)
                                                 .font(AppTypography.caption)
                                                 .foregroundColor(AppColors.primary)
                                             Image(systemName: "arrow.down.circle")
@@ -393,7 +393,7 @@ struct TaskChatSystemMessageBubble: View {
                                         Image(systemName: "doc.fill")
                                             .font(.system(size: 16))
                                             .foregroundColor(AppColors.textSecondary)
-                                        Text("证据文件")
+                                        Text(LocalizationKey.chatEvidenceFile.localized)
                                             .font(AppTypography.caption)
                                             .foregroundColor(AppColors.textSecondary)
                                     }

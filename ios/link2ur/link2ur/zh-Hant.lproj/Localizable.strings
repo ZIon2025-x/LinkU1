@@ -1487,7 +1487,27 @@
 "location.drag_to_select" = "拖动地图选择位置";
 "location.getting_address" = "正在获取地址...";
 "location.google_maps" = "Google 地图";
-"location.online_remote" = "线上/远程";
+"location.online_remote" = "線上/遠程";
+"location.select_title" = "選擇位置";
+"location.search_place" = "搜索地點、地址、郵編...";
+"location.moving" = "移動中";
+"search.results_title" = "搜索結果";
+"task_expert.loading" = "加載中...";
+"task_expert.load_failed" = "專家信息加載失敗";
+"task_expert.search_title" = "搜索達人";
+"external_web.loading" = "加載中...";
+"empty_state.no_content" = "暫無內容";
+"empty_state.no_content_message" = "這裡還沒有任何內容，試試刷新或稍後再來";
+"empty_state.no_results" = "未找到結果";
+"empty_state.no_results_message" = "沒有找到匹配的搜索結果，請嘗試其他關鍵詞";
+"leaderboard.empty_title" = "暫無排行榜";
+"leaderboard.empty_message" = "還沒有排行榜，快來申請創建第一個吧！";
+"leaderboard.sort_latest" = "最新";
+"leaderboard.sort_hot" = "熱門";
+"leaderboard.sort_votes" = "投票數";
+"leaderboard.add_item" = "添加競品";
+"leaderboard.item_count" = "競品";
+"leaderboard.vote_count" = "投票";
 "location.search_placeholder" = "搜索地点或输入 Online";
 "location.title" = "位置";
 "messages.load_more_history" = "加载更多历史消息";
@@ -1812,6 +1832,8 @@
 "service.apply_title" = "申請服務";
 
 // MARK: - Network
+"offline.mode" = "離線模式";
+"offline.pending_sync" = "(%d 待同步)";
 "network.offline" = "離線";
 "network.disconnected" = "網路連接已斷開";
 "network.check_settings" = "請檢查您的網路設定";

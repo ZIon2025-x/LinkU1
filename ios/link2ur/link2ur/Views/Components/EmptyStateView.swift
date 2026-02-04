@@ -125,8 +125,8 @@ extension EmptyStateView {
     VStack(spacing: 40) {
         EmptyStateView(
             icon: "doc.text.fill",
-            title: "暂无内容",
-            message: "这里还没有任何内容，试试刷新或稍后再来"
+            title: LocalizationKey.emptyStateNoContent.localized,
+            message: LocalizationKey.emptyStateNoContentMessage.localized
         )
         .frame(height: 300)
         
@@ -134,8 +134,8 @@ extension EmptyStateView {
         
         EmptyStateView(
             icon: "magnifyingglass",
-            title: "未找到结果",
-            message: "没有找到匹配的搜索结果，请尝试其他关键词",
+            title: LocalizationKey.emptyStateNoResults.localized,
+            message: LocalizationKey.emptyStateNoResultsMessage.localized,
             actionTitle: "重新搜索"
         ) {
         }

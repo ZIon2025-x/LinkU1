@@ -567,7 +567,7 @@ struct CreateTaskView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 12))
                         .foregroundColor(AppColors.textSecondary)
-                    Text("搜索结果")
+                    Text(LocalizationKey.searchResultsTitle.localized)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                     

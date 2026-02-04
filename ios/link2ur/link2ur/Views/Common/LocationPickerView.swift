@@ -64,17 +64,17 @@ struct LocationPickerView: View {
                 bottomPanel
             }
         }
-        .navigationTitle("选择位置")
+        .navigationTitle(LocalizationKey.locationSelectTitle.localized)
         .navigationBarTitleDisplayMode(.inline)
         .enableSwipeBack()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("取消") {
+                Button(LocalizationKey.commonCancel.localized) {
                     dismiss()
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("确定") {
+                Button(LocalizationKey.commonConfirm.localized) {
                     confirmSelection()
                 }
                 .fontWeight(.semibold)
@@ -127,7 +127,7 @@ struct LocationPickerView: View {
                     .foregroundColor(isSearchFocused ? AppColors.primary : AppColors.textSecondary)
                     .font(.system(size: 16, weight: .medium))
                 
-                TextField("搜索地点、地址、邮编...", text: $searchText)
+                TextField(LocalizationKey.locationSearchPlace.localized, text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
                     .font(.system(size: 15))
                     .autocorrectionDisabled()
@@ -561,7 +561,7 @@ struct LocationPickerView: View {
                 
                 // 拖动状态指示
                 if isDragging {
-                    Text("移动中")
+                    Text(LocalizationKey.locationMoving.localized)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)

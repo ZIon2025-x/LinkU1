@@ -376,6 +376,26 @@
 "location.drag_to_select" = "拖动地图选择位置";
 "location.current_location" = "当前位置";
 "location.online_remote" = "线上/远程";
+"location.select_title" = "选择位置";
+"location.search_place" = "搜索地点、地址、邮编...";
+"location.moving" = "移动中";
+"search.results_title" = "搜索结果";
+"task_expert.loading" = "加载中...";
+"task_expert.load_failed" = "专家信息加载失败";
+"task_expert.search_title" = "搜索达人";
+"external_web.loading" = "加载中...";
+"empty_state.no_content" = "暂无内容";
+"empty_state.no_content_message" = "这里还没有任何内容，试试刷新或稍后再来";
+"empty_state.no_results" = "未找到结果";
+"empty_state.no_results_message" = "没有找到匹配的搜索结果，请尝试其他关键词";
+"leaderboard.empty_title" = "暂无排行榜";
+"leaderboard.empty_message" = "还没有排行榜，快来申请创建第一个吧！";
+"leaderboard.sort_latest" = "最新";
+"leaderboard.sort_hot" = "热门";
+"leaderboard.sort_votes" = "投票数";
+"leaderboard.add_item" = "添加竞品";
+"leaderboard.item_count" = "竞品";
+"leaderboard.vote_count" = "投票";
 
 // MARK: - Payment
 "payment.setup_account" = "设置收款账户";
@@ -1333,6 +1353,8 @@
 "service.apply_title" = "申请服务";
 
 // MARK: - Network
+"offline.mode" = "离线模式";
+"offline.pending_sync" = "(%d 待同步)";
 "network.offline" = "离线";
 "network.disconnected" = "网络连接已断开";
 "network.check_settings" = "请检查您的网络设置";
