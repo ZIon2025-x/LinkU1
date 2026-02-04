@@ -1660,8 +1660,6 @@ async def create_wechat_checkout_session(
             "mode": "payment",
             "success_url": success_url,
             "cancel_url": cancel_url,
-            # 尽量减少表单输入
-            "customer_creation": "if_required",
             "metadata": {
                 'task_id': str(task_id),
                 'user_id': str(current_user.id),
@@ -1680,6 +1678,9 @@ async def create_wechat_checkout_session(
             session_create_kw["customer"] = customer_id
         elif current_user.email:
             session_create_kw["customer_email"] = current_user.email
+        else:
+            # 仅在不传 customer/customer_email 时使用
+            session_create_kw["customer_creation"] = "if_required"
 
         session = stripe.checkout.Session.create(**session_create_kw)
         
