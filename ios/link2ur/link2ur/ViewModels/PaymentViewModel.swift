@@ -381,9 +381,14 @@ class PaymentViewModel: NSObject, ObservableObject, ApplePayContextDelegate, STP
                 self.createPaymentIntent(isMethodSwitch: true)
             case .wechatPay:
                 // 微信支付使用 Checkout Session，不需要预先创建 PaymentIntent
-                // 直接清除状态，点击支付按钮时会调用 createWeChatCheckoutSession
-                self.isSwitchingPaymentMethod = false
-                Logger.debug("微信支付无需预创建 PaymentIntent，点击支付时创建 Checkout Session", category: .api)
+                // 显示加载状态 2 秒，防止用户点击太快导致 Checkout Session 还未创建好
+                self.isSwitchingPaymentMethod = true
+                Logger.debug("微信支付准备中，显示加载状态 2 秒", category: .api)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    guard let self = self, self.selectedPaymentMethod == .wechatPay else { return }
+                    self.isSwitchingPaymentMethod = false
+                    Logger.debug("微信支付准备完成", category: .api)
+                }
             case .alipayPay:
                 // 支付宝使用 PaymentSheet，需要创建包含 alipay 的 PaymentIntent
                 self.clearPaymentSheetAndSecretForMethodSwitch()

@@ -1879,9 +1879,8 @@ def get_task_payment_status(
         "payment_expires_at": task.payment_expires_at.isoformat() if task.payment_expires_at else None,
     }
     
-    # 如果有 Payment Intent ID 且任务尚未支付，才从 Stripe 获取详细信息
-    # 优化：如果任务已标记为已支付（is_paid=True），跳过 Stripe API 调用以提升性能
-    if task.payment_intent_id and not task.is_paid:
+    # 如果有 Payment Intent ID，从 Stripe 获取详细信息（只读）
+    if task.payment_intent_id:
         try:
             stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
             # 检索 Payment Intent（只读，不修改）
