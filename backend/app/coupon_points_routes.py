@@ -1456,8 +1456,15 @@ async def create_wechat_checkout_session(
     if not task.taker_id:
         raise HTTPException(status_code=400, detail="任务尚未被接受，无法支付")
     
-    # 计算金额
-    task_amount = float(task.amount)  # 任务金额（镑）
+    # 计算金额（与任务支付逻辑一致：优先使用最终成交价，其次原始标价）
+    if task.agreed_reward is not None:
+        task_amount = float(task.agreed_reward)
+    elif task.base_reward is not None:
+        task_amount = float(task.base_reward)
+    elif task.reward is not None:
+        task_amount = float(task.reward)
+    else:
+        task_amount = 0.0
     task_amount_pence = int(task_amount * 100)  # 转换为便士
     
     # 计算平台服务费（8%，最低 0.08 镑 = 8 便士）
