@@ -12,7 +12,6 @@ import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from './LazyImage';
-import { handleStripeSetupRequired } from '../utils/errorHandler';
 
 interface ServiceDetailModalProps {
   isOpen: boolean;
@@ -184,15 +183,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       }
       onClose();
     } catch (err: any) {
-      const handled = handleStripeSetupRequired(err, {
-        showMessage: (msg) => message.warning(msg),
-        navigate: navigateLocalized,
-        onBeforeNavigate: onClose,
-        fallbackMessage: t('wallet.stripe.pleaseRegisterPaymentAccount'),
-      });
-      if (!handled) {
-        message.error(err.response?.data?.detail || '申请失败');
-      }
+      message.error(err.response?.data?.detail || '申请失败');
     } finally {
       setApplying(false);
     }

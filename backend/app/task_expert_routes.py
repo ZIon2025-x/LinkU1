@@ -2344,14 +2344,12 @@ async def apply_for_service(
 ):
     """用户申请服务（完整校验 + 并发安全）"""
     import logging
-    import logging
-    from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
     logger = logging.getLogger(__name__)
     
     logger.info(f"用户 {current_user.id} 申请服务 {service_id}")
     
-    # 0. 检查用户是否有可用的收款账户
-    validate_user_stripe_account_for_receiving(current_user, "申请服务")
+    # 注意：申请服务时用户是客户/付款方，不需要收款账户
+    # 收款账户校验只在用户作为收款方时需要（如申请任务、发布商品）
     
     # 1. 获取服务信息（带锁，防止并发修改）
     service = await db.execute(

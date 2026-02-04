@@ -138,7 +138,7 @@ struct ServiceDetailView: View {
                 }
             }
         }
-        .stripeSetupAlert(shouldPromptStripeSetup: $viewModel.shouldPromptStripeSetup)
+        // 注意：申请服务时用户是客户/付款方，不需要收款账户检查
     }
     
     // MARK: - Sub Components

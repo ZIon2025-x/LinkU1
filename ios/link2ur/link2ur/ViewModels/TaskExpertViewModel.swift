@@ -395,8 +395,6 @@ class ServiceDetailViewModel: ObservableObject {
     @Published var isLoadingReviews = false
     @Published var isLoadingMoreReviews = false
     @Published var errorMessage: String?
-    /// 收到 428 时需要引导用户去设置收款账户
-    @Published var shouldPromptStripeSetup = false
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -515,14 +513,11 @@ class ServiceDetailViewModel: ObservableObject {
         }
         body["is_flexible"] = isFlexible
         
+        // 注意：申请服务时用户是客户/付款方，不需要收款账户
         apiService.request(ServiceApplication.self, "/api/task-experts/services/\(serviceId)/apply", method: "POST", body: body)
-            .sink(receiveCompletion: { [weak self] result in
+            .sink(receiveCompletion: { result in
                 if case .failure(let error) = result {
-                    if case .httpError(428) = error {
-                        self?.shouldPromptStripeSetup = true
-                    } else {
-                        ErrorHandler.shared.handle(error, context: "申请服务")
-                    }
+                    ErrorHandler.shared.handle(error, context: "申请服务")
                     completion(false)
                 }
             }, receiveValue: { _ in
