@@ -4234,21 +4234,19 @@ struct CompleteTaskSheet: View {
                 var errorDetails: [String] = []
                 for (error, index) in uploadErrors {
                     let errorDescription = self.getDetailedErrorMessage(error)
-                    errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                    errorDetails.append(String(format: LocalizationKey.uploadImageIndexError.localized, index, errorDescription))
                 }
                 
                 if errorDetails.count == validImages.count {
-                    // 所有图片都上传失败
-                    self.errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                    self.errorMessage = String(format: LocalizationKey.uploadAllFailed.localized, errorDetails.joined(separator: "\n"))
                 } else {
-                    // 部分图片上传失败
-                    self.errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    self.errorMessage = String(format: LocalizationKey.uploadPartialFailed.localized, errorDetails.joined(separator: "\n"))
                 }
             }
         }
     }
     
-    /// 获取详细的错误信息
+    /// 获取详细的错误信息（已国际化）
     private func getDetailedErrorMessage(_ error: Error) -> String {
         if let apiError = error as? APIError {
             switch apiError {
@@ -4256,56 +4254,56 @@ struct CompleteTaskSheet: View {
                 if let urlError = underlyingError as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet, .networkConnectionLost:
-                        return "网络连接失败，请检查网络设置"
+                        return LocalizationKey.errorNetworkConnectionFailed.localized
                     case .timedOut:
-                        return "上传超时，请重试"
+                        return LocalizationKey.errorRequestTimeout.localized
                     case .cannotFindHost, .cannotConnectToHost:
-                        return "无法连接到服务器，请稍后重试"
+                        return LocalizationKey.uploadCannotConnectServer.localized
                     default:
-                        return "网络错误：\(urlError.localizedDescription)"
+                        return String(format: LocalizationKey.uploadNetworkErrorWithReason.localized, urlError.localizedDescription)
                     }
                 }
-                return "网络请求失败：\(underlyingError.localizedDescription)"
+                return String(format: LocalizationKey.errorRequestFailedWithReason.localized, underlyingError.localizedDescription)
             case .httpError(let statusCode):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误，请检查图片格式"
+                    return LocalizationKey.uploadBadRequestFormatImage.localized
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传图片"
+                    return LocalizationKey.uploadForbiddenUploadImage.localized
                 case 413:
-                    return "图片文件过大，请选择较小的图片"
+                    return LocalizationKey.uploadImageTooLarge.localized
                 case 500...599:
-                    return "服务器错误（\(statusCode)），请稍后重试"
+                    return String(format: LocalizationKey.uploadServerErrorRetry.localized, statusCode)
                 default:
-                    return "服务器错误（\(statusCode)）"
+                    return String(format: LocalizationKey.uploadServerErrorCode.localized, statusCode)
                 }
-            case .serverError(let statusCode, let message):
+            case .serverError(let statusCode, let message, _):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误：\(message)"
+                    return String(format: LocalizationKey.uploadBadRequestWithMessage.localized, message)
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传图片"
+                    return LocalizationKey.uploadForbiddenUploadImage.localized
                 case 413:
-                    return "图片文件过大：\(message)"
+                    return String(format: LocalizationKey.uploadImageTooLargeWithMessage.localized, message)
                 case 500...599:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 default:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 }
             case .decodingError(let error):
-                return "解析响应失败：\(error.localizedDescription)"
+                return String(format: LocalizationKey.uploadParseResponseFailed.localized, error.localizedDescription)
             case .invalidURL:
-                return "无效的URL"
+                return LocalizationKey.errorInvalidURL.localized
             case .invalidResponse:
-                return "服务器响应格式错误"
+                return LocalizationKey.uploadInvalidResponseFormat.localized
             case .unauthorized:
-                return "未授权，请重新登录"
+                return LocalizationKey.errorUnauthorized.localized
             case .unknown:
-                return "未知错误，请重试"
+                return LocalizationKey.uploadUnknownRetry.localized
             }
         }
         return error.localizedDescription
@@ -4751,21 +4749,19 @@ struct ConfirmCompletionSheet: View {
                 var errorDetails: [String] = []
                 for (error, index) in uploadErrors {
                     let errorDescription = getDetailedErrorMessage(error)
-                    errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                    errorDetails.append(String(format: LocalizationKey.uploadImageIndexError.localized, index, errorDescription))
                 }
                 
                 if errorDetails.count == validImages.count {
-                    // 所有图片都上传失败
-                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = String(format: LocalizationKey.uploadAllFailed.localized, errorDetails.joined(separator: "\n"))
                 } else {
-                    // 部分图片上传失败
-                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = String(format: LocalizationKey.uploadPartialFailed.localized, errorDetails.joined(separator: "\n"))
                 }
             }
         }
     }
     
-    /// 获取详细的错误信息
+    /// 获取详细的错误信息（已国际化）
     private func getDetailedErrorMessage(_ error: Error) -> String {
         if let apiError = error as? APIError {
             switch apiError {
@@ -4773,56 +4769,56 @@ struct ConfirmCompletionSheet: View {
                 if let urlError = underlyingError as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet, .networkConnectionLost:
-                        return "网络连接失败，请检查网络设置"
+                        return LocalizationKey.errorNetworkConnectionFailed.localized
                     case .timedOut:
-                        return "上传超时，请重试"
+                        return LocalizationKey.errorRequestTimeout.localized
                     case .cannotFindHost, .cannotConnectToHost:
-                        return "无法连接到服务器，请稍后重试"
+                        return LocalizationKey.uploadCannotConnectServer.localized
                     default:
-                        return "网络错误：\(urlError.localizedDescription)"
+                        return String(format: LocalizationKey.uploadNetworkErrorWithReason.localized, urlError.localizedDescription)
                     }
                 }
-                return "网络请求失败：\(underlyingError.localizedDescription)"
+                return String(format: LocalizationKey.errorRequestFailedWithReason.localized, underlyingError.localizedDescription)
             case .httpError(let statusCode):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误，请检查图片格式"
+                    return LocalizationKey.uploadBadRequestFormatImage.localized
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传文件"
+                    return LocalizationKey.uploadForbiddenUploadFile.localized
                 case 413:
-                    return "文件过大，请选择较小的文件"
+                    return LocalizationKey.uploadFileTooLargeChooseSmaller.localized
                 case 500...599:
-                    return "服务器错误（\(statusCode)），请稍后重试"
+                    return String(format: LocalizationKey.uploadServerErrorRetry.localized, statusCode)
                 default:
-                    return "服务器错误（\(statusCode)）"
+                    return String(format: LocalizationKey.uploadServerErrorCode.localized, statusCode)
                 }
-            case .serverError(let statusCode, let message):
+            case .serverError(let statusCode, let message, _):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误：\(message)"
+                    return String(format: LocalizationKey.uploadBadRequestWithMessage.localized, message)
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传文件"
+                    return LocalizationKey.uploadForbiddenUploadFile.localized
                 case 413:
-                    return "文件过大：\(message)"
+                    return String(format: LocalizationKey.errorFileTooLargeWithDetail.localized, message)
                 case 500...599:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 default:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 }
             case .decodingError(let error):
-                return "解析响应失败：\(error.localizedDescription)"
+                return String(format: LocalizationKey.uploadParseResponseFailed.localized, error.localizedDescription)
             case .invalidURL:
-                return "无效的URL"
+                return LocalizationKey.errorInvalidURL.localized
             case .invalidResponse:
-                return "服务器响应格式错误"
+                return LocalizationKey.uploadInvalidResponseFormat.localized
             case .unauthorized:
-                return "未授权，请重新登录"
+                return LocalizationKey.errorUnauthorized.localized
             case .unknown:
-                return "未知错误，请重试"
+                return LocalizationKey.uploadUnknownRetry.localized
             }
         }
         return error.localizedDescription
@@ -5481,9 +5477,9 @@ struct RefundRequestSheet: View {
                     var errorDetails: [String] = []
                     for (error, index) in uploadErrors {
                         let errorDescription = getDetailedErrorMessage(error)
-                        errorDetails.append("第 \(index) 张图片：\(errorDescription)")
+                        errorDetails.append(String(format: LocalizationKey.uploadImageIndexError.localized, index, errorDescription))
                     }
-                    errorMessage = "部分图片上传失败：\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = String(format: LocalizationKey.uploadPartialFailed.localized, errorDetails.joined(separator: "\n"))
                     return
                 }
                 
@@ -5527,7 +5523,7 @@ struct RefundRequestSheet: View {
         .store(in: &cancellables)
     }
     
-    /// 获取详细的错误信息
+    /// 获取详细的错误信息（已国际化）
     private func getDetailedErrorMessage(_ error: Error) -> String {
         if let apiError = error as? APIError {
             switch apiError {
@@ -5535,43 +5531,43 @@ struct RefundRequestSheet: View {
                 if let urlError = underlyingError as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet, .networkConnectionLost:
-                        return "网络连接失败，请检查网络设置"
+                        return LocalizationKey.errorNetworkConnectionFailed.localized
                     case .timedOut:
-                        return "请求超时，请重试"
+                        return LocalizationKey.errorRequestTimeout.localized
                     case .cannotFindHost, .cannotConnectToHost:
-                        return "无法连接到服务器，请稍后重试"
+                        return LocalizationKey.uploadCannotConnectServer.localized
                     default:
-                        return "网络错误：\(urlError.localizedDescription)"
+                        return String(format: LocalizationKey.uploadNetworkErrorWithReason.localized, urlError.localizedDescription)
                     }
                 }
-                return "网络请求失败：\(underlyingError.localizedDescription)"
+                return String(format: LocalizationKey.errorRequestFailedWithReason.localized, underlyingError.localizedDescription)
             case .httpError(let statusCode):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误，请检查输入"
+                    return LocalizationKey.refundBadRequestFormat.localized
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限提交退款申请"
+                    return LocalizationKey.refundForbidden.localized
                 case 404:
-                    return "任务不存在或无权访问"
+                    return LocalizationKey.refundTaskNotFound.localized
                 case 500...599:
-                    return "服务器错误（\(statusCode)），请稍后重试"
+                    return String(format: LocalizationKey.uploadServerErrorRetry.localized, statusCode)
                 default:
-                    return "服务器错误（\(statusCode)）"
+                    return String(format: LocalizationKey.uploadServerErrorCode.localized, statusCode)
                 }
-            case .serverError(let statusCode, let message):
-                return "服务器错误（\(statusCode)）：\(message)"
+            case .serverError(let statusCode, let message, _):
+                return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
             case .decodingError(let error):
-                return "解析响应失败：\(error.localizedDescription)"
+                return String(format: LocalizationKey.uploadParseResponseFailed.localized, error.localizedDescription)
             case .invalidURL:
-                return "无效的URL"
+                return LocalizationKey.errorInvalidURL.localized
             case .invalidResponse:
-                return "服务器响应格式错误"
+                return LocalizationKey.uploadInvalidResponseFormat.localized
             case .unauthorized:
-                return "未授权，请重新登录"
+                return LocalizationKey.errorUnauthorized.localized
             case .unknown:
-                return "未知错误，请重试"
+                return LocalizationKey.uploadUnknownRetry.localized
             }
         }
         return error.localizedDescription
@@ -5878,7 +5874,7 @@ class DisputeTimelineViewModel: ObservableObject {
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
                 if case .failure(let error) = result {
-                    self?.errorMessage = error.localizedDescription
+                    self?.errorMessage = error.userFriendlyMessage
                 }
             }, receiveValue: { [weak self] timeline in
                 DispatchQueue.main.async {
@@ -6220,15 +6216,13 @@ struct RefundRebuttalSheet: View {
                 var errorDetails: [String] = []
                 for (error, index) in uploadErrors {
                     let errorDescription = getDetailedErrorMessage(error)
-                    errorDetails.append("第 \(index + 1) 张图片：\(errorDescription)")
+                    errorDetails.append(String(format: LocalizationKey.uploadImageIndexError.localized, index + 1, errorDescription))
                 }
                 
                 if errorDetails.count == validImages.count {
-                    // 所有图片都上传失败
-                    errorMessage = "所有图片上传失败。\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = String(format: LocalizationKey.uploadAllFailed.localized, errorDetails.joined(separator: "\n"))
                 } else {
-                    // 部分图片上传失败，使用已上传的文件ID继续提交
-                    errorMessage = "部分图片上传失败，将使用已上传的图片继续提交：\n" + errorDetails.joined(separator: "\n")
+                    errorMessage = String(format: LocalizationKey.uploadPartialFailedContinue.localized, errorDetails.joined(separator: "\n"))
                     submitRebuttalWithFiles(fileIds: uploadedFileIds)
                 }
             }
@@ -6263,7 +6257,7 @@ struct RefundRebuttalSheet: View {
         .store(in: &cancellables)
     }
     
-    /// 获取详细的错误信息
+    /// 获取详细的错误信息（已国际化）
     private func getDetailedErrorMessage(_ error: Error) -> String {
         if let apiError = error as? APIError {
             switch apiError {
@@ -6271,56 +6265,56 @@ struct RefundRebuttalSheet: View {
                 if let urlError = underlyingError as? URLError {
                     switch urlError.code {
                     case .notConnectedToInternet, .networkConnectionLost:
-                        return "网络连接失败，请检查网络设置"
+                        return LocalizationKey.errorNetworkConnectionFailed.localized
                     case .timedOut:
-                        return "请求超时，请重试"
+                        return LocalizationKey.errorRequestTimeout.localized
                     case .cannotFindHost, .cannotConnectToHost:
-                        return "无法连接到服务器，请稍后重试"
+                        return LocalizationKey.uploadCannotConnectServer.localized
                     default:
-                        return "网络错误：\(urlError.localizedDescription)"
+                        return String(format: LocalizationKey.uploadNetworkErrorWithReason.localized, urlError.localizedDescription)
                     }
                 }
                 return underlyingError.localizedDescription
             case .httpError(let statusCode):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误，请重试"
+                    return LocalizationKey.uploadBadRequestRetry.localized
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传文件"
+                    return LocalizationKey.uploadForbiddenUploadFile.localized
                 case 413:
-                    return "文件过大，请选择较小的文件"
+                    return LocalizationKey.uploadFileTooLargeChooseSmaller.localized
                 case 500...599:
-                    return "服务器错误（\(statusCode)），请稍后重试"
+                    return String(format: LocalizationKey.uploadServerErrorRetry.localized, statusCode)
                 default:
-                    return "服务器错误（\(statusCode)）"
+                    return String(format: LocalizationKey.uploadServerErrorCode.localized, statusCode)
                 }
-            case .serverError(let statusCode, let message):
+            case .serverError(let statusCode, let message, _):
                 switch statusCode {
                 case 400:
-                    return "请求格式错误：\(message)"
+                    return String(format: LocalizationKey.uploadBadRequestWithMessage.localized, message)
                 case 401:
-                    return "未授权，请重新登录"
+                    return LocalizationKey.errorUnauthorized.localized
                 case 403:
-                    return "无权限上传文件"
+                    return LocalizationKey.uploadForbiddenUploadFile.localized
                 case 413:
-                    return "文件过大：\(message)"
+                    return String(format: LocalizationKey.errorFileTooLargeWithDetail.localized, message)
                 case 500...599:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 default:
-                    return "服务器错误（\(statusCode)）：\(message)"
+                    return String(format: LocalizationKey.uploadServerErrorCodeWithMessage.localized, statusCode, message)
                 }
             case .decodingError(let error):
-                return "解析响应失败：\(error.localizedDescription)"
+                return String(format: LocalizationKey.uploadParseResponseFailed.localized, error.localizedDescription)
             case .invalidURL:
-                return "无效的URL"
+                return LocalizationKey.errorInvalidURL.localized
             case .invalidResponse:
-                return "服务器响应格式错误"
+                return LocalizationKey.uploadInvalidResponseFormat.localized
             case .unauthorized:
-                return "未授权，请重新登录"
+                return LocalizationKey.errorUnauthorized.localized
             case .unknown:
-                return "未知错误，请重试"
+                return LocalizationKey.uploadUnknownRetry.localized
             }
         }
         return error.localizedDescription

@@ -144,7 +144,7 @@ public struct NetworkRetryConfiguration: Sendable {
             switch apiError {
             case .httpError(let code):
                 return retryableStatusCodes.contains(code)
-            case .serverError(let code, _):
+            case .serverError(let code, _, _):
                 return retryableStatusCodes.contains(code)
             case .requestFailed(let underlyingError):
                 let nsError = underlyingError as NSError

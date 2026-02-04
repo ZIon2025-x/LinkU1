@@ -33,6 +33,7 @@
 "common.filter" = "Filter";
 "common.not_provided" = "Not provided";
 "common.please_select" = "Please select";
+"common.user" = "User";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -450,6 +451,70 @@
 "error.request_failed" = "Request failed (Error code: %d)";
 "error.decoding_error" = "Data parsing failed, please try again later";
 "error.unknown" = "Unknown error occurred, please try again later";
+"error.file_too_large" = "File too large";
+"error.file_too_large_with_detail" = "File too large: %@";
+"error.request_failed_with_reason" = "Request failed: %@";
+"error.invalid_response_body" = "Invalid response";
+"error.server_error_code" = "Server error (code: %d)";
+"error.server_error_code_with_message" = "Server error (code: %d): %@";
+"error.decoding_error_with_reason" = "Data parsing error: %@";
+
+// MARK: - Error codes (i18n)
+"error_code.email_already_used" = "This email is already used by another account";
+"error_code.email_already_exists" = "This email is already registered. Use another email or log in";
+"error_code.phone_already_used" = "This phone number is already used by another account";
+"error_code.phone_already_exists" = "This phone number is already registered. Use another or log in";
+"error_code.username_already_exists" = "This username is already taken. Please choose another";
+"error_code.code_invalid_or_expired" = "Verification code is invalid or expired. Please request a new one";
+"error_code.send_code_failed" = "Failed to send verification code. Please try again later";
+"error_code.email_update_need_code" = "Please send a verification code to your new email first";
+"error_code.phone_update_need_code" = "Please send a verification code to your new phone number first";
+"error_code.temp_email_not_allowed" = "Temporary email addresses are not allowed. Please use a real email";
+"error_code.login_required" = "Please log in to view";
+"error_code.forbidden_view" = "You don't have permission to view this";
+"error_code.task_already_applied" = "You have already applied for this task";
+"error_code.dispute_already_submitted" = "You have already submitted a dispute. Please wait for review";
+"error_code.rebuttal_already_submitted" = "You have already submitted a rebuttal";
+"error_code.task_not_paid" = "Task is not paid yet. Please complete payment first";
+"error_code.task_payment_unavailable" = "Payment is no longer available for this task";
+"error_code.stripe_dispute_frozen" = "This task is frozen due to a Stripe dispute. Please wait for it to be resolved";
+"error_code.refund_amount_required" = "Please enter refund amount or percentage";
+"error_code.evidence_files_limit" = "Too many evidence files";
+"error_code.evidence_text_limit" = "Evidence text must be 500 characters or less";
+"error_code.account_has_active_tasks" = "Cannot delete account: you have active tasks. Complete or cancel them first";
+"error_code.temp_email_no_password_reset" = "Temporary email cannot receive password reset. Please update your email in Settings";
+
+// MARK: - Stripe Connect
+"stripe.dashboard" = "Stripe Dashboard";
+"stripe.connect_init_failed" = "Unable to initialise payout account setup";
+"stripe.connect_load_failed" = "Payout setup failed to load, please try again";
+"stripe.connect_load_failed_with_reason" = "Load failed: %@";
+"stripe.onboarding_create_failed" = "Unable to create payout setup session, please try again";
+
+// MARK: - Upload / Image errors
+"upload.network_error_with_reason" = "Network error: %@";
+"upload.cannot_connect_server" = "Cannot connect to server, please try again later";
+"upload.bad_request_format_image" = "Invalid request format, please check image format";
+"upload.bad_request_retry" = "Invalid request, please try again";
+"upload.file_too_large_choose_smaller" = "File too large, please choose a smaller file";
+"upload.forbidden_upload_image" = "No permission to upload image";
+"upload.forbidden_upload_file" = "No permission to upload file";
+"upload.image_too_large" = "Image too large, please choose a smaller one";
+"upload.image_too_large_with_message" = "Image too large: %@";
+"upload.server_error_retry" = "Server error (%d), please try again later";
+"upload.server_error_code" = "Server error (%d)";
+"upload.bad_request_with_message" = "Invalid request: %@";
+"upload.server_error_code_with_message" = "Server error (%d): %@";
+"upload.parse_response_failed" = "Failed to parse response: %@";
+"upload.invalid_response_format" = "Invalid server response format";
+"upload.unknown_retry" = "Unknown error, please try again";
+"upload.all_failed" = "All image uploads failed.\n%@";
+"upload.partial_failed" = "Some image uploads failed:\n%@";
+"upload.partial_failed_continue" = "Some image uploads failed, continuing with uploaded images:\n%@";
+"upload.image_index_error" = "Image %d: %@";
+"refund.forbidden" = "No permission to submit refund request";
+"refund.task_not_found" = "Task not found or no access";
+"refund.bad_request_format" = "Invalid request, please check your input";
 
 // MARK: - Success
 "success.operation_success" = "Operation Successful";

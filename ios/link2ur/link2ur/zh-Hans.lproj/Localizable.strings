@@ -39,6 +39,7 @@
 "common.loading_image" = "加载图片中...";
 "common.not_provided" = "未提供";
 "common.please_select" = "请选择";
+"common.user" = "用户";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -1032,6 +1033,70 @@
 "error.request_failed" = "请求失败 (错误代码: %d)";
 "error.decoding_error" = "数据解析失败，请稍后重试";
 "error.unknown" = "发生未知错误，请稍后重试";
+"error.file_too_large" = "文件过大";
+"error.file_too_large_with_detail" = "文件过大：%@";
+"error.request_failed_with_reason" = "请求失败：%@";
+"error.invalid_response_body" = "无效的响应";
+"error.server_error_code" = "服务器错误（代码：%d）";
+"error.server_error_code_with_message" = "服务器错误（代码：%d）：%@";
+"error.decoding_error_with_reason" = "数据解析错误：%@";
+
+// MARK: - Error codes (i18n，与后端 error_code 对应)
+"error_code.email_already_used" = "该邮箱已被其他用户使用";
+"error_code.email_already_exists" = "该邮箱已被注册，请使用其他邮箱或直接登录";
+"error_code.phone_already_used" = "该手机号已被其他用户使用";
+"error_code.phone_already_exists" = "该手机号已被注册，请使用其他手机号或直接登录";
+"error_code.username_already_exists" = "该用户名已被使用，请选择其他用户名";
+"error_code.code_invalid_or_expired" = "验证码错误或已过期，请重新发送";
+"error_code.send_code_failed" = "发送验证码失败，请稍后重试";
+"error_code.email_update_need_code" = "修改邮箱需要验证码，请先发送验证码到新邮箱";
+"error_code.phone_update_need_code" = "修改手机号需要验证码，请先发送验证码到新手机号";
+"error_code.temp_email_not_allowed" = "不能使用临时邮箱地址，请使用您的真实邮箱";
+"error_code.login_required" = "需要登录才能查看";
+"error_code.forbidden_view" = "无权限查看";
+"error_code.task_already_applied" = "您已经申请过此任务";
+"error_code.dispute_already_submitted" = "您已经提交过争议，请等待管理员处理";
+"error_code.rebuttal_already_submitted" = "您已经提交过反驳，无法重复提交";
+"error_code.task_not_paid" = "任务尚未支付，请先完成支付";
+"error_code.task_payment_unavailable" = "任务已不再支付，无法处理退款";
+"error_code.stripe_dispute_frozen" = "任务因 Stripe 争议已冻结，请等待争议解决后再试";
+"error_code.refund_amount_required" = "请填写退款金额或退款比例";
+"error_code.evidence_files_limit" = "证据文件数量超出限制";
+"error_code.evidence_text_limit" = "文字证据说明不能超过 500 字";
+"error_code.account_has_active_tasks" = "无法删除账户：您有进行中的任务，请先完成或取消";
+"error_code.temp_email_no_password_reset" = "您当前使用的是临时邮箱，无法接收密码重置邮件，请在设置中更新邮箱";
+
+// MARK: - Stripe Connect
+"stripe.dashboard" = "Stripe 仪表板";
+"stripe.connect_init_failed" = "无法初始化收款账户设置";
+"stripe.connect_load_failed" = "收款账户设置界面加载失败，请重试";
+"stripe.connect_load_failed_with_reason" = "加载失败：%@";
+"stripe.onboarding_create_failed" = "无法创建收款设置会话，请重试";
+
+// MARK: - Upload / Image errors
+"upload.network_error_with_reason" = "网络错误：%@";
+"upload.cannot_connect_server" = "无法连接到服务器，请稍后重试";
+"upload.bad_request_format_image" = "请求格式错误，请检查图片格式";
+"upload.bad_request_retry" = "请求格式错误，请重试";
+"upload.file_too_large_choose_smaller" = "文件过大，请选择较小的文件";
+"upload.forbidden_upload_image" = "无权限上传图片";
+"upload.forbidden_upload_file" = "无权限上传文件";
+"upload.image_too_large" = "图片文件过大，请选择较小的图片";
+"upload.image_too_large_with_message" = "图片文件过大：%@";
+"upload.server_error_retry" = "服务器错误（%d），请稍后重试";
+"upload.server_error_code" = "服务器错误（%d）";
+"upload.bad_request_with_message" = "请求格式错误：%@";
+"upload.server_error_code_with_message" = "服务器错误（%d）：%@";
+"upload.parse_response_failed" = "解析响应失败：%@";
+"upload.invalid_response_format" = "服务器响应格式错误";
+"upload.unknown_retry" = "未知错误，请重试";
+"upload.all_failed" = "所有图片上传失败。\n%@";
+"upload.partial_failed" = "部分图片上传失败：\n%@";
+"upload.partial_failed_continue" = "部分图片上传失败，将使用已上传的图片继续提交：\n%@";
+"upload.image_index_error" = "第 %d 张图片：%@";
+"refund.forbidden" = "无权限提交退款申请";
+"refund.task_not_found" = "任务不存在或无权访问";
+"refund.bad_request_format" = "请求格式错误，请检查输入";
 
 // MARK: - Menu
 "menu.menu" = "菜单";

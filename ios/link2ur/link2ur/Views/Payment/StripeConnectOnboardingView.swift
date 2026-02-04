@@ -147,7 +147,7 @@ struct StripeConnectOnboardingView: View {
             onOpenDashboard: {
                 if let dashboardUrl = details.dashboardUrl, let url = URL(string: dashboardUrl) {
                     webViewURL = url
-                    webViewTitle = "Stripe 仪表板"
+                    webViewTitle = LocalizationKey.stripeDashboard.localized
                     showWebView = true
                 }
             }
@@ -329,7 +329,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 guard let self = self,
                       let controller = self.accountOnboardingController else {
-                    self?.coordinator?.onError("无法初始化收款账户设置")
+                    self?.coordinator?.onError(LocalizationKey.stripeConnectInitFailed.localized)
                     return
                 }
                 
@@ -341,7 +341,7 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
                         guard let self = self,
                               let controller = self.accountOnboardingController,
                               self.view.window != nil else {
-                            self?.coordinator?.onError("收款账户设置界面加载失败，请重试")
+                            self?.coordinator?.onError(LocalizationKey.stripeConnectLoadFailed.localized)
                             return
                         }
                         controller.present(from: self)
@@ -376,13 +376,15 @@ struct AccountOnboardingControllerWrapper: UIViewControllerRepresentable {
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailWith error: Error) {
             DispatchQueue.main.async {
-                self.onError(error.localizedDescription)
+                let msg = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                self.onError(msg)
             }
         }
         
         func accountOnboarding(_ accountOnboarding: AccountOnboardingController, didFailLoadWithError error: Error) {
             DispatchQueue.main.async {
-                self.onError("加载失败: \(error.localizedDescription)")
+                let msg = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
+                self.onError(String(format: LocalizationKey.stripeConnectLoadFailedWithReason.localized, msg))
             }
         }
     }
@@ -434,13 +436,9 @@ class StripeConnectOnboardingViewModel: ObservableObject {
             .sink(
                 receiveCompletion: { [weak self] completion in
                     if case .failure(let apiError) = completion {
-                        // 获取状态失败时显示错误并允许重试，不要误判为“无账户”而去创建
+                        // 获取状态失败时显示错误并允许重试，展示后端返回的用户可读原因
                         self?.isLoading = false
-                        var errorMessage = apiError.localizedDescription
-                        if case .httpError(let code) = apiError {
-                            errorMessage = "获取账户状态失败 (HTTP \(code))，请重试"
-                        }
-                        self?.error = errorMessage
+                        self?.error = apiError.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] statusResponse in
@@ -479,11 +477,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                 receiveCompletion: { [weak self] completion in
                     self?.isLoading = false
                     if case .failure(let apiError) = completion {
-                        var errorMessage = apiError.localizedDescription
-                        if case .httpError(let code) = apiError {
-                            errorMessage = "请求失败 (HTTP \(code))"
-                        }
-                        self?.error = errorMessage
+                        self?.error = apiError.userFriendlyMessage
                     }
                 },
                 receiveValue: { [weak self] response in
@@ -493,7 +487,7 @@ class StripeConnectOnboardingViewModel: ObservableObject {
                     } else if response.account_status && response.charges_enabled {
                         self?.isCompleted = true
                     } else {
-                        self?.error = "无法创建 onboarding session"
+                        self?.error = LocalizationKey.stripeOnboardingCreateFailed.localized
                     }
                 }
             )
@@ -525,15 +519,9 @@ class StripeConnectOnboardingViewModel: ObservableObject {
             receiveCompletion: { [weak self] completion in
                 self?.isLoading = false
                 if case .failure(let apiError) = completion {
-                    var errorMessage = apiError.localizedDescription
-                    if case .httpError(let code) = apiError {
-                        if code == 404 {
-                            // 账户不存在，继续创建流程
-                            return
-                        }
-                        errorMessage = "获取账户详情失败 (HTTP \(code))"
-                    }
-                    self?.error = errorMessage
+                    if case .httpError(404) = apiError { return }
+                    if case .serverError(404, _, _) = apiError { return }
+                    self?.error = apiError.userFriendlyMessage
                 }
             },
             receiveValue: { [weak self] response in

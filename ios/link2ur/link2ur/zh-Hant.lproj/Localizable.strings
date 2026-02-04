@@ -28,6 +28,7 @@
 "common.more" = "更多";
 "common.view_all" = "查看全部";
 "common.loading_image" = "載入圖片中...";
+"common.user" = "用戶";
 
 // MARK: - App
 "app.name" = "Link²Ur";
@@ -690,6 +691,70 @@
 "error.request_failed" = "請求失敗 (錯誤代碼: %d)";
 "error.decoding_error" = "數據解析失敗，請稍後重試";
 "error.unknown" = "發生未知錯誤，請稍後重試";
+"error.file_too_large" = "檔案過大";
+"error.file_too_large_with_detail" = "檔案過大：%@";
+"error.request_failed_with_reason" = "請求失敗：%@";
+"error.invalid_response_body" = "無效的響應";
+"error.server_error_code" = "伺服器錯誤（代碼：%d）";
+"error.server_error_code_with_message" = "伺服器錯誤（代碼：%d）：%@";
+"error.decoding_error_with_reason" = "數據解析錯誤：%@";
+
+// MARK: - Error codes (i18n)
+"error_code.email_already_used" = "該郵箱已被其他用戶使用";
+"error_code.email_already_exists" = "該郵箱已被註冊，請使用其他郵箱或直接登錄";
+"error_code.phone_already_used" = "該手機號已被其他用戶使用";
+"error_code.phone_already_exists" = "該手機號已被註冊，請使用其他手機號或直接登錄";
+"error_code.username_already_exists" = "該用戶名已被使用，請選擇其他用戶名";
+"error_code.code_invalid_or_expired" = "驗證碼錯誤或已過期，請重新發送";
+"error_code.send_code_failed" = "發送驗證碼失敗，請稍後重試";
+"error_code.email_update_need_code" = "修改郵箱需要驗證碼，請先發送驗證碼到新郵箱";
+"error_code.phone_update_need_code" = "修改手機號需要驗證碼，請先發送驗證碼到新手機號";
+"error_code.temp_email_not_allowed" = "不能使用臨時郵箱地址，請使用您的真實郵箱";
+"error_code.login_required" = "需要登錄才能查看";
+"error_code.forbidden_view" = "無權限查看";
+"error_code.task_already_applied" = "您已經申請過此任務";
+"error_code.dispute_already_submitted" = "您已經提交過爭議，請等待管理員處理";
+"error_code.rebuttal_already_submitted" = "您已經提交過反駁，無法重複提交";
+"error_code.task_not_paid" = "任務尚未支付，請先完成支付";
+"error_code.task_payment_unavailable" = "任務已不再支付，無法處理退款";
+"error_code.stripe_dispute_frozen" = "任務因 Stripe 爭議已凍結，請等待爭議解決後再試";
+"error_code.refund_amount_required" = "請填寫退款金額或退款比例";
+"error_code.evidence_files_limit" = "證據檔案數量超出限制";
+"error_code.evidence_text_limit" = "文字證據說明不能超過 500 字";
+"error_code.account_has_active_tasks" = "無法刪除帳戶：您有進行中的任務，請先完成或取消";
+"error_code.temp_email_no_password_reset" = "您目前使用的是臨時郵箱，無法接收密碼重設郵件，請在設定中更新郵箱";
+
+// MARK: - Stripe Connect
+"stripe.dashboard" = "Stripe 儀表板";
+"stripe.connect_init_failed" = "無法初始化收款帳戶設定";
+"stripe.connect_load_failed" = "收款帳戶設定介面載入失敗，請重試";
+"stripe.connect_load_failed_with_reason" = "載入失敗：%@";
+"stripe.onboarding_create_failed" = "無法建立收款設定工作階段，請重試";
+
+// MARK: - Upload / Image errors
+"upload.network_error_with_reason" = "網路錯誤：%@";
+"upload.cannot_connect_server" = "無法連線到伺服器，請稍後重試";
+"upload.bad_request_format_image" = "請求格式錯誤，請檢查圖片格式";
+"upload.bad_request_retry" = "請求格式錯誤，請重試";
+"upload.file_too_large_choose_smaller" = "檔案過大，請選擇較小的檔案";
+"upload.forbidden_upload_image" = "無權限上傳圖片";
+"upload.forbidden_upload_file" = "無權限上傳檔案";
+"upload.image_too_large" = "圖片檔案過大，請選擇較小的圖片";
+"upload.image_too_large_with_message" = "圖片檔案過大：%@";
+"upload.server_error_retry" = "伺服器錯誤（%d），請稍後重試";
+"upload.server_error_code" = "伺服器錯誤（%d）";
+"upload.bad_request_with_message" = "請求格式錯誤：%@";
+"upload.server_error_code_with_message" = "伺服器錯誤（%d）：%@";
+"upload.parse_response_failed" = "解析響應失敗：%@";
+"upload.invalid_response_format" = "伺服器響應格式錯誤";
+"upload.unknown_retry" = "未知錯誤，請重試";
+"upload.all_failed" = "所有圖片上傳失敗。\n%@";
+"upload.partial_failed" = "部分圖片上傳失敗：\n%@";
+"upload.partial_failed_continue" = "部分圖片上傳失敗，將使用已上傳的圖片繼續提交：\n%@";
+"upload.image_index_error" = "第 %d 張圖片：%@";
+"refund.forbidden" = "無權限提交退款申請";
+"refund.task_not_found" = "任務不存在或無權存取";
+"refund.bad_request_format" = "請求格式錯誤，請檢查輸入";
 
 // MARK: - Menu
 "menu.menu" = "選單";

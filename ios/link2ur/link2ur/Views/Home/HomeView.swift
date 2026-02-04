@@ -2183,7 +2183,7 @@ class BannerCarouselViewModel: ObservableObject {
                     guard let self = self else { return }
                     self.isLoading = false
                     if case .failure(let error) = completion {
-                        self.errorMessage = error.localizedDescription
+                        self.errorMessage = error.userFriendlyMessage
                         Logger.error("加载广告失败: \(error.localizedDescription)", category: .api)
                         // 如果之前没有缓存数据，显示硬编码的Banner
                         if self.banners.isEmpty {

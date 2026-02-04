@@ -13,7 +13,7 @@ extension APIError {
         switch self {
         case .httpError(428):
             return true
-        case .serverError(428, _):
+        case .serverError(428, _, _):
             return true
         default:
             return false
@@ -25,12 +25,12 @@ extension APIError {
         switch self {
         case .unauthorized:
             return .reauthenticate
-        case .httpError(428), .serverError(428, _):
+        case .httpError(428), .serverError(428, _, _):
             // 428 需要特殊处理（引导设置收款账户），不自动重试
             return .showError
         case .httpError(let code) where code >= 500:
             return .retry(maxAttempts: 3, delay: 2.0)
-        case .serverError(let code, _) where code >= 500:
+        case .serverError(let code, _, _) where code >= 500:
             return .retry(maxAttempts: 3, delay: 2.0)
         case .requestFailed:
             return .retry(maxAttempts: 2, delay: 1.0)
@@ -74,33 +74,36 @@ extension APIError {
             default:
                 return String(format: LocalizationKey.errorRequestFailed.localized, code)
             }
-        case .serverError(let code, let message):
+        case .serverError(let code, let message, let errorCode):
+            // 优先使用后端 error_code 的国际化文案（多语言）
+            if let codeKey = errorCode.flatMap({ LocalizationKey.forErrorCode($0) }) {
+                return codeKey.localized
+            }
             switch code {
             case 400:
-                // 「已申请过此任务」使用国际化文案，其余 400 直接展示后端文案
                 if message.contains("已经申请过") || message.contains("already applied") {
                     return LocalizationKey.taskDetailAlreadyApplied.localized
                 }
-                return message
+                return message.isEmpty ? LocalizationKey.errorBadRequest.localized : message
             case 401:
                 return LocalizationKey.errorUnauthorized.localized
             case 403:
-                // 优先展示后端详情（如「需要登录才能查看此任务」「无权限查看此任务」），便于用户区分原因
                 if !message.isEmpty { return message }
                 return LocalizationKey.errorForbidden.localized
             case 404:
+                if !message.isEmpty { return message }
                 return LocalizationKey.errorNotFound.localized
             case 409:
-                // 409 Conflict - 直接返回后端错误消息（如"该商品已被其他用户购买或正在处理中"）
                 return message
             case 413:
-                return "文件过大: \(message)"
+                return message.isEmpty ? LocalizationKey.errorFileTooLarge.localized : String(format: LocalizationKey.errorFileTooLargeWithDetail.localized, message)
             case 429:
                 return LocalizationKey.errorTooManyRequests.localized
             case 500...599:
-                return "\(LocalizationKey.errorServerError.localized): \(message)"
+                return message.isEmpty ? LocalizationKey.errorServerError.localized : "\(LocalizationKey.errorServerError.localized): \(message)"
             default:
-                return "\(String(format: LocalizationKey.errorRequestFailed.localized, code)): \(message)"
+                if !message.isEmpty { return message }
+                return String(format: LocalizationKey.errorRequestFailed.localized, code)
             }
         case .decodingError:
             return LocalizationKey.errorDecodingError.localized

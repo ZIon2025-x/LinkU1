@@ -589,11 +589,12 @@ class TaskExpertApplicationViewModel: ObservableObject {
             .sink(receiveCompletion: { [weak self] result in
                 self?.isLoading = false
                 if case .failure(let error) = result {
-                    // 404 表示没有申请，这是正常的
                     if case APIError.httpError(404) = error {
                         self?.application = nil
+                    } else if case APIError.serverError(404, _, _) = error {
+                        self?.application = nil
                     } else {
-                        self?.errorMessage = error.localizedDescription
+                        self?.errorMessage = error.userFriendlyMessage
                     }
                 }
             }, receiveValue: { [weak self] application in

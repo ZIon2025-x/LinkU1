@@ -112,44 +112,135 @@ SECURITY_ERROR_MESSAGES = {
 }
 
 
-def get_safe_error_message(error_code: str, original_message: str = None) -> str:
-    """获取安全的错误信息"""
-    # 如果是已知的安全错误代码，返回安全信息
+def get_safe_error_message(error_code: str, original_message=None) -> str:
+    """获取安全的错误信息。original_message 可为 str 或 list（FastAPI 校验错误）。"""
+    if isinstance(original_message, list):
+        msg_str = (original_message[0].get("msg", str(original_message[0]))
+                   if original_message and isinstance(original_message[0], dict)
+                   else str(original_message[0]) if original_message else "")
+    else:
+        msg_str = str(original_message) if original_message else ""
+
     if error_code in SECURITY_ERROR_MESSAGES:
         return SECURITY_ERROR_MESSAGES[error_code]
-    
-    # 如果是开发环境，返回原始信息
+
     import os
     if os.getenv("ENVIRONMENT", "development") == "development":
-        return original_message or "未知错误"
-    
-    # 对于用户注册相关的错误，返回具体信息
-    if original_message and any(keyword in original_message for keyword in [
-        "该邮箱已被注册", "该用户名已被使用", "用户名不能包含", "密码至少需要",
-        "密码必须包含", "邮箱格式不正确", "用户名至少", "用户名不能超过"
-    ]):
-        return original_message
+        return msg_str or "未知错误"
 
-    # 「已经申请过此任务」等业务提示在生产环境也保留原文
-    if original_message and any(k in original_message for k in [
-        "已经申请过", "already applied", "You have already applied"
+    # 用户注册/资料/验证码类：保留具体原因，便于用户修改后重试
+    if msg_str and any(keyword in msg_str for keyword in [
+        "该邮箱已被注册", "该邮箱已被其他用户使用", "该手机号已被", "该用户名已被使用",
+        "用户名不能包含", "密码至少需要", "密码必须包含", "邮箱格式不正确", "用户名至少", "用户名不能超过",
+        "用户名不能以数字开头", "用户名不能包含空格", "手机号格式不正确", "手机验证码错误或已过期",
+        "发送验证码失败", "不能使用临时邮箱", "修改邮箱需要验证码", "修改手机号需要验证码",
+        "验证码错误或已过期", "您必须同意用户协议", "语言偏好只能是", "短信服务未配置",
     ]):
-        return original_message
+        return msg_str
 
-    # 403 权限类提示保留原文，便于客户端区分「需要登录」与「无权限查看」
-    if original_message and any(k in original_message for k in [
-        "需要登录", "无权限查看", "登录才能查看"
+    # 任务/申请类业务提示：保留原文
+    if msg_str and any(k in msg_str for k in [
+        "已经申请过", "already applied", "You have already applied",
+        "您已经提交过争议", "已经提交过反驳", "无法重复提交",
     ]):
-        return original_message
+        return msg_str
 
-    # 生产环境返回通用错误信息
+    # 权限/登录类：保留原文便于区分原因
+    if msg_str and any(k in msg_str for k in [
+        "需要登录", "无权限查看", "登录才能查看", "客服账号不能",
+        "Only task poster", "Only the task taker", "Only task participants",
+        "Not authorized", "don't have permission",
+    ]):
+        return msg_str
+
+    # 支付/退款/任务状态类：保留具体原因
+    if msg_str and any(k in msg_str for k in [
+        "任务尚未支付", "无法批准", "无法完成", "无法进入进行中", "无需退款",
+        "已不再支付", "Stripe争议已冻结", "退款类型必须", "退款金额必须", "退款比例必须",
+        "证据文件数量不能超过", "转账金额必须", "文字证据说明不能超过",
+        "Task is not", "Task cannot be cancelled", "cancel request is already pending",
+        "Task deadline has passed", "Cannot create review", "Dispute is not pending",
+    ]):
+        return msg_str
+
+    # 账户/密码重置等：保留原文
+    if msg_str and any(k in msg_str for k in [
+        "临时邮箱", "无法接收密码重置", "无法删除账户", "进行中的任务",
+        "未找到待验证的用户", "订阅记录不存在", "Refund request not found",
+    ]):
+        return msg_str
+
     return "操作失败，请稍后重试"
+
+
+# 根据异常详情返回稳定 error_code，供客户端做国际化（i18n）展示
+def get_error_code_from_detail(detail) -> str:
+    """从 exc.detail 推断稳定错误码，客户端用此 key 查多语言文案。"""
+    if detail is None:
+        return "HTTP_ERROR"
+    if isinstance(detail, list):
+        msg = (detail[0].get("msg", "") if detail and isinstance(detail[0], dict) else str(detail[0]) if detail else "")
+    else:
+        msg = str(detail)
+    if not msg:
+        return "HTTP_ERROR"
+    msg_lower = msg.lower()
+    # 注册/登录/资料
+    if "该邮箱已被其他用户使用" in msg or "email already used" in msg_lower:
+        return "EMAIL_ALREADY_USED"
+    if "该邮箱已被注册" in msg or "email already exists" in msg_lower:
+        return "EMAIL_ALREADY_EXISTS"
+    if "该手机号已被其他用户使用" in msg:
+        return "PHONE_ALREADY_USED"
+    if "该手机号已被注册" in msg:
+        return "PHONE_ALREADY_EXISTS"
+    if "该用户名已被使用" in msg or "username already" in msg_lower:
+        return "USERNAME_ALREADY_EXISTS"
+    if "验证码错误或已过期" in msg or "invalid or expired token" in msg_lower or "verification code" in msg_lower and "expired" in msg_lower:
+        return "CODE_INVALID_OR_EXPIRED"
+    if "发送验证码失败" in msg:
+        return "SEND_CODE_FAILED"
+    if "修改邮箱需要验证码" in msg:
+        return "EMAIL_UPDATE_NEED_CODE"
+    if "修改手机号需要验证码" in msg:
+        return "PHONE_UPDATE_NEED_CODE"
+    if "不能使用临时邮箱" in msg:
+        return "TEMP_EMAIL_NOT_ALLOWED"
+    if "需要登录" in msg or "login" in msg_lower and "view" in msg_lower:
+        return "LOGIN_REQUIRED"
+    if "无权限查看" in msg or "not authorized" in msg_lower or "don't have permission" in msg_lower:
+        return "FORBIDDEN_VIEW"
+    # 任务/申请
+    if "已经申请过" in msg or "already applied" in msg_lower:
+        return "TASK_ALREADY_APPLIED"
+    if "您已经提交过争议" in msg:
+        return "DISPUTE_ALREADY_SUBMITTED"
+    if "已经提交过反驳" in msg:
+        return "REBUTTAL_ALREADY_SUBMITTED"
+    # 支付/任务状态
+    if "任务尚未支付" in msg:
+        return "TASK_NOT_PAID"
+    if "已不再支付" in msg or "无法处理退款" in msg:
+        return "TASK_PAYMENT_UNAVAILABLE"
+    if "Stripe争议已冻结" in msg:
+        return "STRIPE_DISPUTE_FROZEN"
+    if "退款金额必须" in msg or "退款比例必须" in msg:
+        return "REFUND_AMOUNT_REQUIRED"
+    if "证据文件数量不能超过" in msg:
+        return "EVIDENCE_FILES_LIMIT"
+    if "文字证据说明不能超过" in msg:
+        return "EVIDENCE_TEXT_LIMIT"
+    if "无法删除账户" in msg and "进行中的任务" in msg:
+        return "ACCOUNT_HAS_ACTIVE_TASKS"
+    if "临时邮箱" in msg and "密码重置" in msg:
+        return "TEMP_EMAIL_NO_PASSWORD_RESET"
+    return "HTTP_ERROR"
 
 
 # 全局异常处理器
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """HTTP异常处理器"""
-    error_code = getattr(exc, 'error_code', 'HTTP_ERROR')
+    """HTTP异常处理器。返回带 error_code 的响应，便于客户端做错误文案国际化。"""
+    error_code = getattr(exc, 'error_code', None) or get_error_code_from_detail(exc.detail)
     safe_message = get_safe_error_message(error_code, exc.detail)
     
     # 记录错误日志（不包含敏感信息）

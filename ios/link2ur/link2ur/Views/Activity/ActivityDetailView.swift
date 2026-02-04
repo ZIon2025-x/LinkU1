@@ -928,7 +928,7 @@ struct ActivityApplyView: View {
             receiveCompletion: { completion in
                 isApplying = false
                 if case .failure(let error) = completion {
-                    applyError = error.localizedDescription
+                    applyError = (error as? APIError)?.userFriendlyMessage ?? error.localizedDescription
                 } else {
                     HapticFeedback.success()
                     dismiss()

@@ -362,15 +362,10 @@ class StripeConnectPaymentsViewModel: ObservableObject {
         .sink(
             receiveCompletion: { result in
                 if case .failure(let apiError) = result {
-                    var errorMessage: String? = apiError.localizedDescription
-                    if case .httpError(let code) = apiError {
-                        if code == 404 {
-                            // 404 不算错误，只是没有 Stripe Connect 账户
-                            errorMessage = nil
-                        } else {
-                            errorMessage = "请求失败 (HTTP \(code))"
-                        }
-                    }
+                    var errorMessage: String?
+                    if case .httpError(404) = apiError { errorMessage = nil }
+                    else if case .serverError(404, _, _) = apiError { errorMessage = nil }
+                    else { errorMessage = apiError.userFriendlyMessage }
                     completion(errorMessage)
                 } else {
                     // 成功完成，completion 已在 receiveValue 中调用

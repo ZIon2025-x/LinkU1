@@ -633,8 +633,8 @@ public enum LocalizationKey: String {
     // MARK: - My Posts
     case myPostsTitle = "my_posts.title"
     
-    // MARK: - Stripe Connect
-    case stripeConnectLoadFailed = "stripe_connect.load_failed"
+    // MARK: - Stripe Connect (load_failed 使用 stripe.connect_load_failed，与下方 Error / Stripe 区一致)
+    case stripeConnectLoadFailed = "stripe.connect_load_failed"
     
     // MARK: - Payment
     case paymentLoadingForm = "payment.loading_form"
@@ -822,6 +822,69 @@ public enum LocalizationKey: String {
     case errorRequestFailed = "error.request_failed"
     case errorDecodingError = "error.decoding_error"
     case errorUnknown = "error.unknown"
+    case errorFileTooLarge = "error.file_too_large"
+    case errorFileTooLargeWithDetail = "error.file_too_large_with_detail"
+    case errorRequestFailedWithReason = "error.request_failed_with_reason"
+    case errorInvalidResponseBody = "error.invalid_response_body"
+    case errorServerErrorCode = "error.server_error_code"
+    case errorServerErrorCodeWithMessage = "error.server_error_code_with_message"
+    case errorDecodingErrorWithReason = "error.decoding_error_with_reason"
+    
+    // MARK: - Error codes (后端 error_code，用于国际化)
+    case errorCodeEmailAlreadyUsed = "error_code.email_already_used"
+    case errorCodeEmailAlreadyExists = "error_code.email_already_exists"
+    case errorCodePhoneAlreadyUsed = "error_code.phone_already_used"
+    case errorCodePhoneAlreadyExists = "error_code.phone_already_exists"
+    case errorCodeUsernameAlreadyExists = "error_code.username_already_exists"
+    case errorCodeCodeInvalidOrExpired = "error_code.code_invalid_or_expired"
+    case errorCodeSendCodeFailed = "error_code.send_code_failed"
+    case errorCodeEmailUpdateNeedCode = "error_code.email_update_need_code"
+    case errorCodePhoneUpdateNeedCode = "error_code.phone_update_need_code"
+    case errorCodeTempEmailNotAllowed = "error_code.temp_email_not_allowed"
+    case errorCodeLoginRequired = "error_code.login_required"
+    case errorCodeForbiddenView = "error_code.forbidden_view"
+    case errorCodeTaskAlreadyApplied = "error_code.task_already_applied"
+    case errorCodeDisputeAlreadySubmitted = "error_code.dispute_already_submitted"
+    case errorCodeRebuttalAlreadySubmitted = "error_code.rebuttal_already_submitted"
+    case errorCodeTaskNotPaid = "error_code.task_not_paid"
+    case errorCodeTaskPaymentUnavailable = "error_code.task_payment_unavailable"
+    case errorCodeStripeDisputeFrozen = "error_code.stripe_dispute_frozen"
+    case errorCodeRefundAmountRequired = "error_code.refund_amount_required"
+    case errorCodeEvidenceFilesLimit = "error_code.evidence_files_limit"
+    case errorCodeEvidenceTextLimit = "error_code.evidence_text_limit"
+    case errorCodeAccountHasActiveTasks = "error_code.account_has_active_tasks"
+    case errorCodeTempEmailNoPasswordReset = "error_code.temp_email_no_password_reset"
+    
+    // MARK: - Stripe Connect (onboarding 等，stripeConnectLoadFailed 已在上方 Stripe Connect 区声明)
+    case stripeDashboard = "stripe.dashboard"
+    case stripeConnectInitFailed = "stripe.connect_init_failed"
+    case stripeConnectLoadFailedWithReason = "stripe.connect_load_failed_with_reason"
+    case stripeOnboardingCreateFailed = "stripe.onboarding_create_failed"
+    
+    // MARK: - Upload / Image errors (task completion, evidence)
+    case uploadNetworkErrorWithReason = "upload.network_error_with_reason"
+    case uploadCannotConnectServer = "upload.cannot_connect_server"
+    case uploadBadRequestFormatImage = "upload.bad_request_format_image"
+    case uploadBadRequestRetry = "upload.bad_request_retry"
+    case uploadFileTooLargeChooseSmaller = "upload.file_too_large_choose_smaller"
+    case uploadForbiddenUploadImage = "upload.forbidden_upload_image"
+    case uploadForbiddenUploadFile = "upload.forbidden_upload_file"
+    case uploadImageTooLarge = "upload.image_too_large"
+    case uploadImageTooLargeWithMessage = "upload.image_too_large_with_message"
+    case uploadServerErrorRetry = "upload.server_error_retry"
+    case uploadServerErrorCode = "upload.server_error_code"
+    case uploadBadRequestWithMessage = "upload.bad_request_with_message"
+    case uploadServerErrorCodeWithMessage = "upload.server_error_code_with_message"
+    case uploadParseResponseFailed = "upload.parse_response_failed"
+    case uploadInvalidResponseFormat = "upload.invalid_response_format"
+    case uploadUnknownRetry = "upload.unknown_retry"
+    case uploadAllFailed = "upload.all_failed"
+    case uploadPartialFailed = "upload.partial_failed"
+    case uploadPartialFailedContinue = "upload.partial_failed_continue"
+    case uploadImageIndexError = "upload.image_index_error"
+    case refundForbidden = "refund.forbidden"
+    case refundTaskNotFound = "refund.task_not_found"
+    case refundBadRequestFormat = "refund.bad_request_format"
     
     // MARK: - Tabs
     case tabsHome = "tabs.home"
@@ -1676,6 +1739,36 @@ public enum LocalizationKey: String {
     case timeWan = "time.wan"
     case timeWanPlus = "time.wan_plus"
     
+    /// 根据后端返回的 error_code 返回对应的 LocalizationKey（用于错误文案国际化）
+    public static func forErrorCode(_ code: String) -> LocalizationKey? {
+        switch code {
+        case "EMAIL_ALREADY_USED": return .errorCodeEmailAlreadyUsed
+        case "EMAIL_ALREADY_EXISTS": return .errorCodeEmailAlreadyExists
+        case "PHONE_ALREADY_USED": return .errorCodePhoneAlreadyUsed
+        case "PHONE_ALREADY_EXISTS": return .errorCodePhoneAlreadyExists
+        case "USERNAME_ALREADY_EXISTS": return .errorCodeUsernameAlreadyExists
+        case "CODE_INVALID_OR_EXPIRED": return .errorCodeCodeInvalidOrExpired
+        case "SEND_CODE_FAILED": return .errorCodeSendCodeFailed
+        case "EMAIL_UPDATE_NEED_CODE": return .errorCodeEmailUpdateNeedCode
+        case "PHONE_UPDATE_NEED_CODE": return .errorCodePhoneUpdateNeedCode
+        case "TEMP_EMAIL_NOT_ALLOWED": return .errorCodeTempEmailNotAllowed
+        case "LOGIN_REQUIRED": return .errorCodeLoginRequired
+        case "FORBIDDEN_VIEW": return .errorCodeForbiddenView
+        case "TASK_ALREADY_APPLIED": return .errorCodeTaskAlreadyApplied
+        case "DISPUTE_ALREADY_SUBMITTED": return .errorCodeDisputeAlreadySubmitted
+        case "REBUTTAL_ALREADY_SUBMITTED": return .errorCodeRebuttalAlreadySubmitted
+        case "TASK_NOT_PAID": return .errorCodeTaskNotPaid
+        case "TASK_PAYMENT_UNAVAILABLE": return .errorCodeTaskPaymentUnavailable
+        case "STRIPE_DISPUTE_FROZEN": return .errorCodeStripeDisputeFrozen
+        case "REFUND_AMOUNT_REQUIRED": return .errorCodeRefundAmountRequired
+        case "EVIDENCE_FILES_LIMIT": return .errorCodeEvidenceFilesLimit
+        case "EVIDENCE_TEXT_LIMIT": return .errorCodeEvidenceTextLimit
+        case "ACCOUNT_HAS_ACTIVE_TASKS": return .errorCodeAccountHasActiveTasks
+        case "TEMP_EMAIL_NO_PASSWORD_RESET": return .errorCodeTempEmailNoPasswordReset
+        default: return nil
+        }
+    }
+
     /// 获取本地化字符串
     public var localized: String {
         return LocalizationHelper.localized(self.rawValue)

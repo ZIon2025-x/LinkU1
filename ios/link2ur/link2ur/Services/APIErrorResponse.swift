@@ -75,17 +75,13 @@ struct AnyCodable: Codable {
 }
 
 extension APIError {
-    /// 从后端错误响应创建 APIError
+    /// 从后端错误响应创建 APIError（保留 message 与 errorCode，errorCode 供客户端国际化）
     static func from(errorResponse: APIErrorResponse) -> APIError {
         switch errorResponse.statusCode {
         case 401:
             return .unauthorized
-        case 400...499:
-            return .httpError(errorResponse.statusCode)
-        case 500...599:
-            return .httpError(errorResponse.statusCode)
         default:
-            return .unknown
+            return .serverError(errorResponse.statusCode, errorResponse.message, errorCode: errorResponse.errorCode)
         }
     }
     

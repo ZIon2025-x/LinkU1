@@ -7,21 +7,22 @@ public enum APIError: Error, LocalizedError {
     case requestFailed(Error)
     case invalidResponse
     case httpError(Int)
-    case serverError(Int, String)
+    /// statusCode, message, 可选 errorCode（后端返回，用于客户端国际化）
+    case serverError(Int, String, errorCode: String? = nil)
     case decodingError(Error)
     case unauthorized
     case unknown
     
     public var errorDescription: String? {
         switch self {
-        case .invalidURL: return "无效的 URL"
-        case .requestFailed(let error): return "请求失败: \(error.localizedDescription)"
-        case .invalidResponse: return "无效的响应"
-        case .httpError(let code): return "服务器错误 (代码: \(code))"
-        case .serverError(let code, let message): return "服务器错误 (代码: \(code)): \(message)"
-        case .decodingError(let error): return "数据解析错误: \(error.localizedDescription)"
-        case .unauthorized: return "未授权或登录已过期"
-        case .unknown: return "未知错误"
+        case .invalidURL: return LocalizationKey.errorInvalidURL.localized
+        case .requestFailed(let error): return String(format: LocalizationKey.errorRequestFailedWithReason.localized, error.localizedDescription)
+        case .invalidResponse: return LocalizationKey.errorInvalidResponseBody.localized
+        case .httpError(let code): return String(format: LocalizationKey.errorServerErrorCode.localized, code)
+        case .serverError(let code, let message, _): return String(format: LocalizationKey.errorServerErrorCodeWithMessage.localized, code, message)
+        case .decodingError(let error): return String(format: LocalizationKey.errorDecodingErrorWithReason.localized, error.localizedDescription)
+        case .unauthorized: return LocalizationKey.errorUnauthorized.localized
+        case .unknown: return LocalizationKey.errorUnknown.localized
         }
     }
 }
@@ -167,8 +168,8 @@ public class APIService {
                                         if let (parsedError, errorMessage) = APIError.parse(from: data) {
                                             Logger.error("API错误: \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
                                             // 如果解析出的错误状态码为0（FastAPI detail格式），使用实际HTTP状态码
-                                            if case .serverError(0, let message) = parsedError {
-                                                apiError = .serverError(httpResponse.statusCode, message)
+                                            if case .serverError(0, let message, _) = parsedError {
+                                                apiError = .serverError(httpResponse.statusCode, message, errorCode: nil)
                                             } else {
                                                 apiError = parsedError
                                             }
@@ -193,8 +194,8 @@ public class APIService {
                     if let (parsedError, errorMessage) = APIError.parse(from: data) {
                         Logger.error("API错误 (\(endpoint)): \(errorMessage) (code: \(httpResponse.statusCode))", category: .api)
                         // 如果解析出的错误状态码为0（FastAPI detail格式），使用实际HTTP状态码
-                        if case .serverError(0, let message) = parsedError {
-                            apiError = .serverError(httpResponse.statusCode, message)
+                        if case .serverError(0, let message, _) = parsedError {
+                            apiError = .serverError(httpResponse.statusCode, message, errorCode: nil)
                         } else {
                             apiError = parsedError
                         }
@@ -523,8 +524,8 @@ public class APIService {
                     // 非 2xx、非 401：尝试解析响应体中的 detail，便于展示「您已经申请过此任务」等后端提示
                     let apiError: APIError
                     if let (parsedError, errorMessage) = APIError.parse(from: data) {
-                        if case .serverError(0, _) = parsedError {
-                            apiError = .serverError(httpResponse.statusCode, errorMessage)
+                        if case .serverError(0, _, _) = parsedError {
+                            apiError = .serverError(httpResponse.statusCode, errorMessage, errorCode: nil)
                         } else {
                             apiError = parsedError
                         }
@@ -898,7 +899,7 @@ public class APIService {
                     return Fail(error: APIError.decodingError(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法解析上传响应"]))).eraseToAnyPublisher()
                 } else {
                     let errorMessage = String(data: data, encoding: .utf8) ?? "上传失败"
-                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage)).eraseToAnyPublisher()
+                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage, errorCode: nil)).eraseToAnyPublisher()
                 }
             }
             .sink(receiveCompletion: { result in
@@ -1049,7 +1050,7 @@ public class APIService {
                     return Fail(error: APIError.unauthorized).eraseToAnyPublisher()
                 } else {
                     let errorMessage = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String ?? "上传失败"
-                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage)).eraseToAnyPublisher()
+                    return Fail(error: APIError.serverError(httpResponse.statusCode, errorMessage, errorCode: nil)).eraseToAnyPublisher()
                 }
             }
             .receive(on: DispatchQueue.main)

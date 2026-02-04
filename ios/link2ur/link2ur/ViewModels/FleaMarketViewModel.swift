@@ -257,7 +257,7 @@ class FleaMarketDetailViewModel: ObservableObject {
                 if case .failure(let error) = result {
                     // 检查是否是 409 冲突错误（表示已经提交过申请）
                     // 409 错误应该被视为成功，因为申请已经存在
-                    if case .serverError(let statusCode, _) = error, statusCode == 409 {
+                    if case .serverError(let statusCode, _, _) = error, statusCode == 409 {
                         // 409 冲突错误：申请已存在，视为成功
                         Logger.debug("购买申请已存在（409冲突），视为成功", category: .network)
                         completion(true, nil)
