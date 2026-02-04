@@ -332,6 +332,7 @@
     "personalInfo": "Personal Information",
     "username": "Username",
     "email": "Email",
+    "pleaseUpdateEmail": "Please update your email address in Settings to avoid missing important notifications.",
     "phone": "Phone",
     "bio": "Bio",
     "avatar": "Avatar",

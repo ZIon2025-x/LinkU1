@@ -6690,9 +6690,9 @@ def delete_user_account(
             (Message.sender_id == user_id) | (Message.receiver_id == user_id)
         ).delete()
         
-        # 4. 删除任务申请
+        # 4. 删除任务申请（申请者字段为 applicant_id）
         from app.models import TaskApplication
-        db.query(TaskApplication).filter(TaskApplication.user_id == user_id).delete()
+        db.query(TaskApplication).filter(TaskApplication.applicant_id == user_id).delete()
         
         # 5. 删除评价（保留评价，但移除用户关联）
         from app.models import Review

@@ -250,6 +250,8 @@
 "profile.about" = "关于";
 "profile.logout" = "退出登录";
 "profile.logout_confirm" = "确定要退出登录吗？";
+"profile.please_update_email_title" = "请更新邮箱";
+"profile.please_update_email_message" = "请尽快在设置中更新您的邮箱地址，以免错过重要通知邮件。";
 
 // MARK: - Messages
 "messages.messages" = "消息";

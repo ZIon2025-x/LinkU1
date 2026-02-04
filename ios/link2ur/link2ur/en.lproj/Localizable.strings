@@ -207,6 +207,8 @@
 "profile.about" = "About";
 "profile.logout" = "Logout";
 "profile.logout_confirm" = "Are you sure you want to logout?";
+"profile.please_update_email_title" = "Please Update Email";
+"profile.please_update_email_message" = "Please update your email address in Settings to avoid missing important notifications.";
 "profile.name" = "Name";
 "profile.enter_name" = "Enter name";
 "profile.email" = "Email";

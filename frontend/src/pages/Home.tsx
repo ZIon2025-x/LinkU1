@@ -324,6 +324,19 @@ const Home: React.FC = () => {
         // Directly try to get user info, HttpOnly Cookie will be sent automatically
         const userData = await fetchCurrentUser();
         setUser(userData);
+        
+        // 检查用户邮箱是否为系统默认的占位邮箱
+        if (userData?.email?.endsWith('@link2ur.com')) {
+          // 检查是否已经提醒过（避免重复提醒）
+          const emailWarningKey = `email_warning_shown_${userData.id}`;
+          const lastWarningTime = localStorage.getItem(emailWarningKey);
+          const now = Date.now();
+          // 每24小时最多提醒一次
+          if (!lastWarningTime || (now - parseInt(lastWarningTime)) > 24 * 60 * 60 * 1000) {
+            message.warning(t('profile.pleaseUpdateEmail'), 8);
+            localStorage.setItem(emailWarningKey, now.toString());
+          }
+        }
       } catch (error: any) {
         setUser(null);
       }
@@ -338,7 +351,7 @@ const Home: React.FC = () => {
     });
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [t]);
 
   // Get notification data - 同时获取任务和论坛通知
   useEffect(() => {

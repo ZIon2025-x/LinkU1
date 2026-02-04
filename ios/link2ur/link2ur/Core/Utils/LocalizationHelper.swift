@@ -268,6 +268,8 @@ public enum LocalizationKey: String {
     case profileAbout = "profile.about"
     case profileLogout = "profile.logout"
     case profileLogoutConfirm = "profile.logout_confirm"
+    case profilePleaseUpdateEmailTitle = "profile.please_update_email_title"
+    case profilePleaseUpdateEmailMessage = "profile.please_update_email_message"
     
     // MARK: - Messages
     case messagesMessages = "messages.messages"

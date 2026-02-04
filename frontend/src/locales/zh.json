@@ -327,6 +327,7 @@
     "personalInfo": "个人信息",
     "username": "用户名",
     "email": "邮箱",
+    "pleaseUpdateEmail": "请尽快在设置中更新您的邮箱地址，以免错过重要通知邮件。",
     "phone": "电话",
     "bio": "个人简介",
     "avatar": "头像",

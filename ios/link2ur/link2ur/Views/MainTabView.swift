@@ -9,6 +9,7 @@ public struct MainTabView: View {
     @State private var showLogin = false
     @State private var homeViewResetTrigger = UUID() // 用于重置 HomeView
     @State private var searchKeyword: String? = nil // 用于搜索快捷指令
+    @State private var showEmailUpdateAlert = false // 邮箱更新提醒
     
     public var body: some View {
         TabView(selection: Binding(
@@ -146,6 +147,45 @@ public struct MainTabView: View {
                 // 处理快捷指令
                 handleQuickAction(notification.object as? String, userInfo: notification.userInfo)
             }
+            .onAppear {
+                // 检查用户邮箱是否为系统默认的占位邮箱
+                checkEmailAndShowWarning()
+            }
+            .onChange(of: appState.currentUser?.email) { _ in
+                // 用户信息更新时也检查
+                checkEmailAndShowWarning()
+            }
+            .alert(
+                LocalizationKey.profilePleaseUpdateEmailTitle.localized,
+                isPresented: $showEmailUpdateAlert
+            ) {
+                Button(LocalizationKey.commonOk.localized, role: .cancel) { }
+            } message: {
+                Text(LocalizationKey.profilePleaseUpdateEmailMessage.localized)
+            }
+    }
+    
+    // 检查邮箱并显示警告
+    private func checkEmailAndShowWarning() {
+        guard let email = appState.currentUser?.email,
+              email.hasSuffix("@link2ur.com"),
+              let userId = appState.currentUser?.id else {
+            return
+        }
+        
+        // 每24小时最多提醒一次
+        let warningKey = "email_warning_shown_\(userId)"
+        let lastWarningTime = UserDefaults.standard.double(forKey: warningKey)
+        let now = Date().timeIntervalSince1970
+        let oneDayInSeconds: Double = 24 * 60 * 60
+        
+        if lastWarningTime == 0 || (now - lastWarningTime) > oneDayInSeconds {
+            // 延迟显示，避免与其他弹窗冲突
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                showEmailUpdateAlert = true
+                UserDefaults.standard.set(now, forKey: warningKey)
+            }
+        }
     }
     
     // 处理快捷指令
