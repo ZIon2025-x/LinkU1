@@ -3,6 +3,62 @@
  * 提供友好的错误提示，统一错误处理逻辑
  */
 
+/**
+ * 检查是否为需要设置收款账户的错误（428）
+ */
+export const isStripeSetupRequiredError = (error: any): boolean => {
+  return error?.response?.status === 428;
+};
+
+/**
+ * 获取 428 错误的提示消息
+ */
+export const getStripeSetupRequiredMessage = (error: any, fallbackKey?: string): string => {
+  if (error?.response?.data?.detail) {
+    return error.response.data.detail;
+  }
+  return fallbackKey || '请先设置收款账户';
+};
+
+/**
+ * 处理需要设置收款账户的错误（428）
+ * 显示提示消息并在短暂延迟后跳转到设置页面
+ * 
+ * @param error 错误对象
+ * @param options 选项
+ * @returns 是否为 428 错误
+ */
+export const handleStripeSetupRequired = (
+  error: any,
+  options: {
+    showMessage: (msg: string) => void;
+    navigate: (path: string) => void;
+    onBeforeNavigate?: () => void;
+    fallbackMessage?: string;
+    navigateDelay?: number;
+  }
+): boolean => {
+  if (!isStripeSetupRequiredError(error)) {
+    return false;
+  }
+
+  const message = getStripeSetupRequiredMessage(error, options.fallbackMessage);
+  options.showMessage(message);
+  
+  // 执行跳转前的清理操作（如关闭弹窗）
+  if (options.onBeforeNavigate) {
+    options.onBeforeNavigate();
+  }
+  
+  // 延迟跳转，让用户有时间看到提示
+  const delay = options.navigateDelay ?? 800;
+  setTimeout(() => {
+    options.navigate('/settings?tab=payment');
+  }, delay);
+  
+  return true;
+};
+
 export interface ErrorResponse {
   detail?: string | string[] | { msg?: string; message?: string };
   message?: string;

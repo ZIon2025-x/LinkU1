@@ -21,7 +21,7 @@ import { compressImage } from '../utils/imageCompression';
 import LazyImage from '../components/LazyImage';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { validateName } from '../utils/inputValidators';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, handleStripeSetupRequired } from '../utils/errorHandler';
 import styles from './FleaMarketPage.module.css';
 import headerStyles from './Home.module.css';
 
@@ -540,10 +540,13 @@ const FleaMarketPage: React.FC = () => {
         loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
       }, 500);
     } catch (error: any) {
-      if (error.response?.status === 428) {
-        message.warning(error.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
-        navigate(`/${language}/settings?tab=payment`);
-      } else {
+      const handled = handleStripeSetupRequired(error, {
+        showMessage: (msg) => message.warning(msg),
+        navigate: (path) => navigate(`/${language}${path}`),
+        onBeforeNavigate: () => setShowUploadModal(false),
+        fallbackMessage: t('wallet.stripe.pleaseRegisterPaymentAccount'),
+      });
+      if (!handled) {
         message.error(getErrorMessage(error));
       }
     } finally {

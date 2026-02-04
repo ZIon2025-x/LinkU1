@@ -40,6 +40,7 @@ const isMobileDevice = () => {
 };
 
 const TAB_IDS = ['payment', 'profile', 'preferences', 'notifications', 'privacy', 'security', 'studentVerification'] as const;
+type SettingsTabId = (typeof TAB_IDS)[number];
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const Settings: React.FC = () => {
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'preferences' | 'notifications' | 'privacy' | 'security' | 'studentVerification'>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('profile');
   const [isMobile, setIsMobile] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [, setStripeAccountStatus] = useState<any>(null);
@@ -131,8 +132,8 @@ const Settings: React.FC = () => {
   // 从 URL ?tab=payment 等同步到 activeTab（便于从其他页跳转到收款账户等）
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && TAB_IDS.includes(tabFromUrl as typeof TAB_IDS[number])) {
-      setActiveTab(tabFromUrl as typeof activeTab);
+    if (tabFromUrl && TAB_IDS.includes(tabFromUrl as SettingsTabId)) {
+      setActiveTab(tabFromUrl as SettingsTabId);
     }
   }, [searchParams]);
 
@@ -538,7 +539,7 @@ const Settings: React.FC = () => {
     );
   }
 
-  const tabs = [
+  const tabs: { id: SettingsTabId; label: string; icon: string }[] = [
     { id: 'payment', label: t('wallet.stripe.paymentAccount'), icon: '💳' },
     { id: 'profile', label: t('settings.profile'), icon: '👤' },
     { id: 'preferences', label: t('settings.preferences'), icon: '🎯' },

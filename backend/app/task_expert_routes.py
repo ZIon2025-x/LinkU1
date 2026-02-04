@@ -2344,37 +2344,14 @@ async def apply_for_service(
 ):
     """用户申请服务（完整校验 + 并发安全）"""
     import logging
-    import os
-    import stripe
+    import logging
+    from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
     logger = logging.getLogger(__name__)
     
     logger.info(f"用户 {current_user.id} 申请服务 {service_id}")
     
-    # 0. 检查用户是否有收款账户（Stripe Connect 账户）
-    if not current_user.stripe_account_id:
-        logger.warning(f"用户 {current_user.id} 尝试申请服务 {service_id}，但没有收款账户")
-        raise HTTPException(
-            status_code=428,  # 428 Precondition Required
-            detail="申请服务前需要先注册收款账户。请先完成收款账户注册。"
-        )
-    
-    # 验证收款账户是否有效
-    try:
-        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-        account = stripe.Account.retrieve(current_user.stripe_account_id)
-        # 检查账户是否已完成设置
-        if not account.details_submitted:
-            logger.warning(f"用户 {current_user.id} 的收款账户 {current_user.stripe_account_id} 未完成设置")
-            raise HTTPException(
-                status_code=428,
-                detail="您的收款账户尚未完成设置。请先完成收款账户注册。"
-            )
-    except stripe.error.StripeError as e:
-        logger.error(f"验证用户 {current_user.id} 的收款账户失败: {e}")
-        raise HTTPException(
-            status_code=428,
-            detail="收款账户验证失败。请先完成收款账户注册。"
-        )
+    # 0. 检查用户是否有可用的收款账户
+    validate_user_stripe_account_for_receiving(current_user, "申请服务")
     
     # 1. 获取服务信息（带锁，防止并发修改）
     service = await db.execute(

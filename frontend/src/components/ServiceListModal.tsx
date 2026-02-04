@@ -13,6 +13,7 @@ import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from './LazyImage';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { handleStripeSetupRequired } from '../utils/errorHandler';
 
 interface ServiceListModalProps {
   isOpen: boolean;
@@ -303,12 +304,16 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       // 重新加载服务列表以更新申请数量
       await loadServices();
     } catch (err: any) {
-      if (err.response?.status === 428) {
-        message.warning(err.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
-        setShowApplyModal(false);
-        onClose();
-        navigate('/settings?tab=payment');
-      } else {
+      const handled = handleStripeSetupRequired(err, {
+        showMessage: (msg) => message.warning(msg),
+        navigate,
+        onBeforeNavigate: () => {
+          setShowApplyModal(false);
+          onClose();
+        },
+        fallbackMessage: t('wallet.stripe.pleaseRegisterPaymentAccount'),
+      });
+      if (!handled) {
         message.error(err.response?.data?.detail || '提交申请失败');
       }
     } finally {

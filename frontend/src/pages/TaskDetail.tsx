@@ -23,7 +23,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { usePaymentCountdown } from '../hooks/usePaymentCountdown';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import LazyImage from '../components/LazyImage';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, handleStripeSetupRequired } from '../utils/errorHandler';
 import { ensureAbsoluteImageUrl } from '../utils/imageUtils';
 import { getTaskDisplayTitle, getTaskDisplayDescription } from '../utils/displayLocale';
 import styles from './TaskDetail.module.css';
@@ -1350,11 +1350,13 @@ const TaskDetail: React.FC = () => {
         await checkUserApplication();
         await loadParticipants();
       } catch (error: any) {
-        if (error.response?.status === 428) {
-          message.warning(error.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
-          setShowApplyModal(false);
-          navigate('/settings?tab=payment');
-        } else {
+        const handled = handleStripeSetupRequired(error, {
+          showMessage: (msg) => message.warning(msg),
+          navigate,
+          onBeforeNavigate: () => setShowApplyModal(false),
+          fallbackMessage: t('wallet.stripe.pleaseRegisterPaymentAccount'),
+        });
+        if (!handled) {
           alert(getErrorMessage(error));
         }
       } finally {
@@ -1414,11 +1416,13 @@ const TaskDetail: React.FC = () => {
       setTask(res.data);
       await checkUserApplication();
     } catch (error: any) {
-      if (error.response?.status === 428) {
-        message.warning(error.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
-        setShowApplyModal(false);
-        navigate('/settings?tab=payment');
-      } else {
+      const handled = handleStripeSetupRequired(error, {
+        showMessage: (msg) => message.warning(msg),
+        navigate,
+        onBeforeNavigate: () => setShowApplyModal(false),
+        fallbackMessage: t('wallet.stripe.pleaseRegisterPaymentAccount'),
+      });
+      if (!handled) {
         alert(getErrorMessage(error));
       }
     } finally {

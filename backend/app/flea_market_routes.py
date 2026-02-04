@@ -742,31 +742,10 @@ async def create_flea_market_item(
 ):
     """上传商品"""
     try:
+        from app.utils.stripe_utils import validate_user_stripe_account_for_receiving
+        
         # 发布商品需要收款账户（用于后续接收买家付款）
-        if not current_user.stripe_account_id:
-            logger.warning(f"用户 {current_user.id} 尝试发布商品，但没有收款账户")
-            raise HTTPException(
-                status_code=428,  # 428 Precondition Required
-                detail="发布商品前需要先注册收款账户。请先完成收款账户设置。"
-            )
-        try:
-            import stripe
-            stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-            account = stripe.Account.retrieve(current_user.stripe_account_id)
-            if not account.details_submitted:
-                logger.warning(f"用户 {current_user.id} 的收款账户未完成设置")
-                raise HTTPException(
-                    status_code=428,
-                    detail="您的收款账户尚未完成设置。请先完成收款账户设置。"
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.warning(f"验证收款账户失败: {e}")
-            raise HTTPException(
-                status_code=428,
-                detail="收款账户验证失败。请先完成收款账户设置。"
-            )
+        validate_user_stripe_account_for_receiving(current_user, "发布商品")
 
         # 验证图片数量
         if len(item_data.images) > 5:

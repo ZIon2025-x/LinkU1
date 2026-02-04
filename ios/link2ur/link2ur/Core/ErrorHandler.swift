@@ -8,11 +8,26 @@ import SwiftUI
 // MARK: - 错误类型扩展
 
 extension APIError {
+    /// 是否为需要设置收款账户的错误（428 Precondition Required）
+    var isStripeSetupRequired: Bool {
+        switch self {
+        case .httpError(428):
+            return true
+        case .serverError(428, _):
+            return true
+        default:
+            return false
+        }
+    }
+    
     /// 错误恢复策略
     var recoveryStrategy: ErrorRecoveryStrategy {
         switch self {
         case .unauthorized:
             return .reauthenticate
+        case .httpError(428), .serverError(428, _):
+            // 428 需要特殊处理（引导设置收款账户），不自动重试
+            return .showError
         case .httpError(let code) where code >= 500:
             return .retry(maxAttempts: 3, delay: 2.0)
         case .serverError(let code, _) where code >= 500:
