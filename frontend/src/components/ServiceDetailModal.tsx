@@ -183,12 +183,10 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       }
       onClose();
     } catch (err: any) {
-      // 检查是否是收款账户未注册错误（428）
       if (err.response?.status === 428) {
-        // 这里可以触发父组件显示收款账户注册弹窗
-        // 或者直接在这里显示
         message.warning(err.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
-        // 可以在这里添加逻辑来显示收款账户注册弹窗
+        onClose();
+        navigateLocalized('/settings?tab=payment');
       } else {
         message.error(err.response?.data?.detail || '申请失败');
       }

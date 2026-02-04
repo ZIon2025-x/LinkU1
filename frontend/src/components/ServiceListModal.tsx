@@ -12,7 +12,7 @@ import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LazyImage from './LazyImage';
-import StripeConnectOnboarding from './stripe/StripeConnectOnboarding';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 interface ServiceListModalProps {
   isOpen: boolean;
@@ -65,6 +65,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   expertName,
 }) => {
   const { t } = useLanguage();
+  const { navigate } = useLocalizedNavigation();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -80,7 +81,6 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   const [applying, setApplying] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showStripeConnectModal, setShowStripeConnectModal] = useState(false);
   // 时间段相关状态
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
@@ -303,10 +303,11 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       // 重新加载服务列表以更新申请数量
       await loadServices();
     } catch (err: any) {
-      // 检查是否是收款账户未注册错误（428）
       if (err.response?.status === 428) {
-        setShowStripeConnectModal(true);
+        message.warning(err.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
         setShowApplyModal(false);
+        onClose();
+        navigate('/settings?tab=payment');
       } else {
         message.error(err.response?.data?.detail || '提交申请失败');
       }
@@ -319,65 +320,6 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
 
   return (
     <>
-      {/* 收款账户注册弹窗 */}
-      {showStripeConnectModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-          padding: '20px'
-        }} onClick={() => setShowStripeConnectModal(false)}>
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: '12px',
-            padding: '30px',
-            maxWidth: '600px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            position: 'relative'
-          }} onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowStripeConnectModal(false)}
-              style={{
-                position: 'absolute',
-                top: '15px',
-                right: '15px',
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer',
-                color: '#666'
-              }}
-            >
-              ×
-            </button>
-            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
-              {t('wallet.stripe.registerPaymentAccount')}
-            </h2>
-            <p style={{ marginBottom: '20px', color: '#666' }}>
-              {t('wallet.stripe.registerPaymentAccountDescService')}
-            </p>
-            <StripeConnectOnboarding
-              onComplete={() => {
-                setShowStripeConnectModal(false);
-                message.success(t('wallet.stripe.paymentAccountRegisteredService'));
-              }}
-              onError={(error) => {
-                console.error('Stripe Connect onboarding error:', error);
-              }}
-            />
-          </div>
-        </div>
-      )}
-      
       <div style={{
         ...MODAL_OVERLAY_STYLE,
         background: 'rgba(0, 0, 0, 0.6)',

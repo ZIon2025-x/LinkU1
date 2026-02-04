@@ -8,6 +8,7 @@
 // MARK: - Common
 "common.ok" = "确定";
 "common.cancel" = "取消";
+"common.go_setup" = "去设置";
 "common.confirm" = "确认";
 "common.delete" = "删除";
 "common.save" = "保存";
@@ -374,6 +375,8 @@
 
 // MARK: - Payment
 "payment.setup_account" = "设置收款账户";
+"payment.please_setup_first" = "请先设置收款账户";
+"payment.please_setup_message" = "申请任务前需要先设置收款账户。请前往设置完成。";
 
 // MARK: - Notifications
 "notifications.notifications" = "通知";

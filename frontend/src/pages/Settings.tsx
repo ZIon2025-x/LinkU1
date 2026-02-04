@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StripeConnectOnboarding from '../components/stripe/StripeConnectOnboarding';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -39,12 +39,15 @@ const isMobileDevice = () => {
   return isSmallScreen || (isMobileUA && isTouchDevice);
 };
 
+const TAB_IDS = ['payment', 'profile', 'preferences', 'notifications', 'privacy', 'security', 'studentVerification'] as const;
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'preferences' | 'notifications' | 'privacy' | 'security' | 'studentVerification'>('profile');
   const [isMobile, setIsMobile] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [, setStripeAccountStatus] = useState<any>(null);
@@ -124,6 +127,14 @@ const Settings: React.FC = () => {
       setStripeAccountStatus(null);
     }
   };
+
+  // 从 URL ?tab=payment 等同步到 activeTab（便于从其他页跳转到收款账户等）
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && TAB_IDS.includes(tabFromUrl as typeof TAB_IDS[number])) {
+      setActiveTab(tabFromUrl as typeof activeTab);
+    }
+  }, [searchParams]);
 
   // 切换到安全设置时加载会话列表
   useEffect(() => {
@@ -632,7 +643,10 @@ const Settings: React.FC = () => {
               {tabs.map(tab => (
                 <div
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSearchParams({ tab: tab.id });
+                  }}
                   style={{
                     padding: '12px 16px',
                     cursor: 'pointer',
@@ -665,7 +679,10 @@ const Settings: React.FC = () => {
               {tabs.map(tab => (
                 <div
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSearchParams({ tab: tab.id });
+                  }}
                   style={{
                     padding: '16px 20px',
                     cursor: 'pointer',

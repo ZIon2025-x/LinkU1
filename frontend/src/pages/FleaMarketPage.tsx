@@ -540,11 +540,16 @@ const FleaMarketPage: React.FC = () => {
         loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
       }, 500);
     } catch (error: any) {
-      message.error(getErrorMessage(error));
+      if (error.response?.status === 428) {
+        message.warning(error.response?.data?.detail || t('wallet.stripe.pleaseRegisterPaymentAccount'));
+        navigate(`/${language}/settings?tab=payment`);
+      } else {
+        message.error(getErrorMessage(error));
+      }
     } finally {
       setUploading(false);
     }
-  }, [formData, imageFiles, editingItem, debouncedSearchKeyword, selectedCategory, selectedLocation, uploadImages, t, loadItemsRef]);
+  }, [formData, imageFiles, editingItem, debouncedSearchKeyword, selectedCategory, selectedLocation, uploadImages, t, loadItemsRef, language, navigate]);
 
   // 删除商品 - 使用useCallback优化
   const handleDelete = useCallback(async (item: FleaMarketItem) => {

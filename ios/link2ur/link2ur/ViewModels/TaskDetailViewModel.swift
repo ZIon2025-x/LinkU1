@@ -19,6 +19,8 @@ class TaskDetailViewModel: ObservableObject {
     @Published var isLoadingRefundHistory = false
     @Published var isCancellingRefund = false
     @Published var isSubmittingRebuttal = false
+    /// 收到 428 时需要引导用户去设置收款账户
+    @Published var shouldPromptStripeSetup = false
     
     // 使用依赖注入获取服务
     private let apiService: APIService
@@ -159,10 +161,13 @@ class TaskDetailViewModel: ObservableObject {
     
     func applyTask(taskId: Int, message: String?, negotiatedPrice: Double? = nil, currency: String? = nil, completion: @escaping (Bool) -> Void) {
         apiService.applyForTask(taskId: taskId, message: message, negotiatedPrice: negotiatedPrice, currency: currency)
-            .sink(receiveCompletion: { result in
+            .sink(receiveCompletion: { [weak self] result in
                 if case .failure(let error) = result {
-                    // 使用 ErrorHandler 统一处理错误
-                    ErrorHandler.shared.handle(error, context: "申请任务")
+                    if case .httpError(428) = error {
+                        self?.shouldPromptStripeSetup = true
+                    } else {
+                        ErrorHandler.shared.handle(error, context: "申请任务")
+                    }
                     completion(false)
                 }
             }, receiveValue: { _ in

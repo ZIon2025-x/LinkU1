@@ -16,6 +16,8 @@ struct ServiceDetailView: View {
     @State private var showSuccessOverlay = false
     @State private var successOverlayMessage: String = ""
     @State private var showApplyLoading = false
+    @State private var showStripeSetupAlert = false
+    @State private var showStripeOnboardingSheet = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -138,6 +140,23 @@ struct ServiceDetailView: View {
                         .environmentObject(appState)
                 }
             }
+        }
+        .onChange(of: viewModel.shouldPromptStripeSetup) { _, newValue in
+            if newValue { showStripeSetupAlert = true }
+        }
+        .alert(LocalizationKey.paymentPleaseSetupFirst.localized, isPresented: $showStripeSetupAlert) {
+            Button(LocalizationKey.commonGoSetup.localized) {
+                showStripeOnboardingSheet = true
+                viewModel.shouldPromptStripeSetup = false
+            }
+            Button(LocalizationKey.commonCancel.localized, role: .cancel) {
+                viewModel.shouldPromptStripeSetup = false
+            }
+        } message: {
+            Text(LocalizationKey.paymentPleaseSetupMessage.localized)
+        }
+        .sheet(isPresented: $showStripeOnboardingSheet) {
+            StripeConnectOnboardingView()
         }
     }
     

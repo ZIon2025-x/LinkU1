@@ -8,6 +8,7 @@
 // MARK: - Common
 "common.ok" = "確定";
 "common.cancel" = "取消";
+"common.go_setup" = "前往設置";
 "common.confirm" = "確認";
 "common.delete" = "刪除";
 "common.save" = "儲存";
@@ -832,6 +833,9 @@
 "wallet.my_wallet" = "我的錢包";
 
 // MARK: - Payment
+"payment.setup_account" = "設置收款賬戶";
+"payment.please_setup_first" = "請先設置收款賬戶";
+"payment.please_setup_message" = "申請任務前需要先設置收款賬戶。請前往設置完成。";
 "payment.loading_form" = "正在載入支付表單...";
 "payment.preparing" = "準備支付...";
 "payment.success" = "支付成功！";

@@ -698,6 +698,9 @@ public enum LocalizationKey: String {
     
     // MARK: - Stripe Connect
     case stripeConnectSetupAccount = "stripe_connect.setup_account"
+    case paymentPleaseSetupFirst = "payment.please_setup_first"
+    case paymentPleaseSetupMessage = "payment.please_setup_message"
+    case commonGoSetup = "common.go_setup"
     
     // MARK: - Activity
     case activityLoadFailed = "activity.load_failed"

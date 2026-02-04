@@ -67,6 +67,8 @@ struct TaskDetailView: View {
     @State private var lastInteractionTime: Date? = nil  // 上次交互时间
     @State private var viewStartTime: Date? // 增强：记录任务详情页查看开始时间（用于计算浏览时长）
     @State private var retryWorkItem: DispatchWorkItem? // 用于取消递归重试任务
+    @State private var showStripeSetupAlert = false
+    @State private var showStripeOnboardingSheet = false
     
     // 判断当前用户是否是任务发布者
     // ⚠️ 重要：确保类型比较正确
@@ -267,6 +269,23 @@ struct TaskDetailView: View {
             }
             .sheet(isPresented: $showRefundRebuttalSheet) {
                 refundRebuttalSheet
+            }
+            .onChange(of: viewModel.shouldPromptStripeSetup) { _, newValue in
+                if newValue { showStripeSetupAlert = true }
+            }
+            .alert(LocalizationKey.paymentPleaseSetupFirst.localized, isPresented: $showStripeSetupAlert) {
+                Button(LocalizationKey.commonGoSetup.localized) {
+                    showStripeOnboardingSheet = true
+                    viewModel.shouldPromptStripeSetup = false
+                }
+                Button(LocalizationKey.commonCancel.localized, role: .cancel) {
+                    viewModel.shouldPromptStripeSetup = false
+                }
+            } message: {
+                Text(LocalizationKey.paymentPleaseSetupMessage.localized)
+            }
+            .sheet(isPresented: $showStripeOnboardingSheet) {
+                StripeConnectOnboardingView()
             }
             .sheet(isPresented: $showDisputeTimeline) {
                 disputeTimelineView

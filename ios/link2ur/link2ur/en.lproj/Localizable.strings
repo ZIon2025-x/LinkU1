@@ -8,6 +8,7 @@
 // MARK: - Common
 "common.ok" = "OK";
 "common.cancel" = "Cancel";
+"common.go_setup" = "Go to setup";
 "common.confirm" = "Confirm";
 "common.delete" = "Delete";
 "common.save" = "Save";
@@ -334,6 +335,8 @@
 
 // MARK: - Payment
 "payment.setup_account" = "Setup Payment Account";
+"payment.please_setup_first" = "Please set up payment account first";
+"payment.please_setup_message" = "You need to set up your payment account before applying for tasks. Please go to Settings to complete setup.";
 
 // MARK: - Notifications
 "notifications.notifications" = "Notifications";
