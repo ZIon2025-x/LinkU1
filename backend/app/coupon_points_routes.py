@@ -1608,6 +1608,30 @@ async def create_wechat_checkout_session(
             detail="任务接受人尚未设置 Stripe Connect 收款账户，无法进行支付"
         )
     
+    # 创建或获取 Stripe Customer（用于预填邮箱/姓名，减少 Checkout 表单输入）
+    customer_id = None
+    try:
+        if current_user.id:
+            search_result = stripe.Customer.search(
+                query=f"metadata['user_id']:'{current_user.id}'",
+                limit=1
+            )
+            if search_result.data:
+                customer_id = search_result.data[0].id
+            else:
+                customer = stripe.Customer.create(
+                    email=current_user.email or None,
+                    name=current_user.name or None,
+                    metadata={
+                        "user_id": str(current_user.id),
+                        "user_name": current_user.name or ""
+                    }
+                )
+                customer_id = customer.id
+    except Exception as e:
+        logger.warning(f"无法创建 Stripe Customer（微信支付 Checkout）：{e}")
+        customer_id = None
+
     # 构建成功和取消 URL
     base_url = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
     success_url = f"{base_url}/payment-success?task_id={task_id}&session_id={{CHECKOUT_SESSION_ID}}"
@@ -1615,7 +1639,7 @@ async def create_wechat_checkout_session(
     
     try:
         # 创建 Stripe Checkout Session（仅微信支付）
-        session = stripe.checkout.Session.create(
+        session_create_kw = {
             payment_method_types=['wechat_pay'],
             payment_method_options={
                 'wechat_pay': {
@@ -1636,6 +1660,8 @@ async def create_wechat_checkout_session(
             mode='payment',
             success_url=success_url,
             cancel_url=cancel_url,
+            # 尽量减少表单输入
+            customer_creation="if_required",
             metadata={
                 'task_id': str(task_id),
                 'user_id': str(current_user.id),
@@ -1648,7 +1674,14 @@ async def create_wechat_checkout_session(
                 'payment_type': 'wechat_checkout',
             },
             expires_at=int((datetime.now(timezone.utc) + timedelta(minutes=30)).timestamp()),
-        )
+        }
+        # 传 Customer 可预填姓名/邮箱；否则传 customer_email
+        if customer_id:
+            session_create_kw["customer"] = customer_id
+        elif current_user.email:
+            session_create_kw["customer_email"] = current_user.email
+
+        session = stripe.checkout.Session.create(**session_create_kw)
         
         logger.info(f"创建微信支付 Checkout Session: session_id={session.id}, task_id={task_id}")
         
