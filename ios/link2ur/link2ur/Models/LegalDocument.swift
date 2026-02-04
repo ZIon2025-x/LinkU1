@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - 法律文档库 API 模型（与后端 GET /api/legal/{type} 一致）
 
-struct LegalDocumentOut: Decodable {
+struct LegalDocumentOut: Codable {
     let type: String
     let lang: String
     let version: String?
@@ -17,7 +17,7 @@ struct LegalDocumentOut: Decodable {
 }
 
 /// 用于解码任意 JSON 的 content_json
-enum JSONValue: Decodable {
+enum JSONValue: Codable {
     case string(String)
     case int(Int)
     case double(Double)
@@ -34,6 +34,24 @@ enum JSONValue: Decodable {
         if let o = try? c.decode([String: JSONValue].self) { self = .object(o); return }
         if let a = try? c.decode([JSONValue].self) { self = .array(a); return }
         throw DecodingError.typeMismatch(JSONValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Unknown JSON type"))
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let s):
+            try container.encode(s)
+        case .int(let i):
+            try container.encode(i)
+        case .double(let d):
+            try container.encode(d)
+        case .bool(let b):
+            try container.encode(b)
+        case .object(let o):
+            try container.encode(o)
+        case .array(let a):
+            try container.encode(a)
+        }
     }
 
     /// 按路径取字符串，路径如 "dataCollection.title"

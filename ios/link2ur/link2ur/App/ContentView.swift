@@ -19,6 +19,8 @@ public struct ContentView: View {
                     .sheet(isPresented: $showOnboarding) {
                         OnboardingView(isPresented: $showOnboarding)
                     }
+                    .withNetworkStatusBanner()      // 全局网络状态提示Banner
+                    .withOfflineModeIndicator()     // 离线模式指示器
             }
         }
         .onAppear {

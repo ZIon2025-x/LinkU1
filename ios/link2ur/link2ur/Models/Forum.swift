@@ -129,7 +129,7 @@ struct ForumCategory: Codable, Identifiable {
     }
 }
 
-struct ForumCategoryListResponse: Decodable {
+struct ForumCategoryListResponse: Codable {
     let categories: [ForumCategory]
     
     // 支持两种格式：包装对象 {categories: [...]} 或直接数组 [...]

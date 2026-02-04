@@ -1417,7 +1417,12 @@ async def direct_purchase_item(
         from app.utils.fee_calculator import calculate_application_fee_pence
         application_fee_pence = calculate_application_fee_pence(task_amount_pence)
         
-        try:
+        # ⚠️ 性能优化：使用 asyncio 并行执行多个 Stripe API 调用
+        import asyncio
+        import concurrent.futures
+        
+        # 定义 Stripe API 调用函数（同步函数，将在线程池中执行）
+        def create_payment_intent_sync():
             from app.secure_auth import get_wechat_pay_payment_method_options
             payment_method_options = get_wechat_pay_payment_method_options(request)
             create_pi_kw = {
@@ -1443,18 +1448,81 @@ async def direct_purchase_item(
             }
             if payment_method_options:
                 create_pi_kw["payment_method_options"] = payment_method_options
-            payment_intent = stripe.PaymentIntent.create(**create_pi_kw)
+            return stripe.PaymentIntent.create(**create_pi_kw)
+        
+        def get_or_create_customer_sync(user_id, user_name):
+            """获取或创建 Stripe Customer（同步函数）"""
+            try:
+                # 首先尝试搜索现有 Customer
+                search_result = stripe.Customer.search(
+                    query=f"metadata['user_id']:'{user_id}'",
+                    limit=1
+                )
+                if search_result.data:
+                    return search_result.data[0].id
+            except Exception:
+                pass  # 搜索失败，直接创建新的
+            
+            # 创建新的 Customer
+            customer = stripe.Customer.create(
+                metadata={
+                    "user_id": str(user_id),
+                    "user_name": user_name or f"User {user_id}",
+                }
+            )
+            return customer.id
+        
+        def create_ephemeral_key_sync(customer_id):
+            """创建 Ephemeral Key（同步函数）"""
+            ephemeral_key = stripe.EphemeralKey.create(
+                customer=customer_id,
+                stripe_version="2025-04-30.preview",
+            )
+            return ephemeral_key.secret
+        
+        # 使用线程池并行执行 PaymentIntent 创建和 Customer 获取/创建
+        loop = asyncio.get_event_loop()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        
+        try:
+            # 并行执行：创建 PaymentIntent 和 获取/创建 Customer
+            pi_future = loop.run_in_executor(executor, create_payment_intent_sync)
+            customer_future = loop.run_in_executor(
+                executor, 
+                get_or_create_customer_sync, 
+                current_user.id, 
+                current_user.name
+            )
+            
+            # 等待两个任务完成
+            payment_intent, customer_id = await asyncio.gather(pi_future, customer_future)
             
             # 更新任务的 payment_intent_id
             new_task.payment_intent_id = payment_intent.id
+            
+            # 创建 Ephemeral Key（需要 customer_id，所以在 Customer 创建后执行）
+            ephemeral_key_secret = None
+            if customer_id:
+                try:
+                    ephemeral_key_secret = await loop.run_in_executor(
+                        executor, 
+                        create_ephemeral_key_sync, 
+                        customer_id
+                    )
+                except Exception as e:
+                    logger.warning(f"无法创建 Ephemeral Key: {e}")
+                    ephemeral_key_secret = None
+                    
         except Exception as e:
             # 如果创建 PaymentIntent 失败，回滚整个事务
             await db.rollback()
-            logger.error(f"创建 PaymentIntent 失败: {e}", exc_info=True)
+            logger.error(f"创建 PaymentIntent 或 Customer 失败: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="创建支付失败，请稍后重试"
             )
+        finally:
+            executor.shutdown(wait=False)
         
         # ⚠️ 自动拒绝所有待处理的议价请求（因为商品已被直接购买）
         await db.execute(
@@ -1475,50 +1543,13 @@ async def direct_purchase_item(
         invalidate_item_cache(item.id)
         logger.info(f"✅ 商品 {item_id} 已预留，事务已提交，所有待处理的议价请求已自动拒绝，缓存已清除")
         
-        # 为支付方创建/获取 Customer + EphemeralKey（用于保存卡）
-        customer_id = None
-        ephemeral_key_secret = None
+        # 发送通知给卖家（同步执行，因为需要使用 db session）
+        # 注意：这里不能用 asyncio.create_task，因为 db session 可能在响应返回后关闭
         try:
-            # 使用 Stripe Search API 查找现有 Customer（通过 metadata.user_id）
-            # 注意：Customer.list() 不支持通过 metadata 查询，需要使用 Search API
-            try:
-                search_result = stripe.Customer.search(
-                    query=f"metadata['user_id']:'{current_user.id}'",
-                    limit=1
-                )
-                if search_result.data:
-                    customer_id = search_result.data[0].id
-                else:
-                    customer = stripe.Customer.create(
-                        metadata={
-                            "user_id": str(current_user.id),
-                            "user_name": current_user.name or f"User {current_user.id}",
-                        }
-                    )
-                    customer_id = customer.id
-            except Exception as search_error:
-                # 如果 Search API 不可用或失败，直接创建新的 Customer
-                logger.debug(f"Stripe Search API 不可用，直接创建新 Customer: {search_error}")
-                customer = stripe.Customer.create(
-                    metadata={
-                        "user_id": str(current_user.id),
-                        "user_name": current_user.name or f"User {current_user.id}",
-                    }
-                )
-                customer_id = customer.id
-
-            ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer_id,
-                stripe_version="2025-04-30.preview",
-            )
-            ephemeral_key_secret = ephemeral_key.secret
-        except Exception as e:
-            logger.warning(f"无法创建 Stripe Customer 或 Ephemeral Key: {e}")
-            customer_id = None
-            ephemeral_key_secret = None
-        
-        # 发送通知给卖家
-        await send_direct_purchase_notification(db, item, current_user, new_task.id)
+            await send_direct_purchase_notification(db, item, current_user, new_task.id)
+        except Exception as notify_error:
+            # 通知发送失败不影响购买流程
+            logger.warning(f"发送直接购买通知失败: {notify_error}")
         
         # 再次清除缓存（确保缓存已清除，防止通知发送过程中的任何延迟）
         invalidate_item_cache(item.id)

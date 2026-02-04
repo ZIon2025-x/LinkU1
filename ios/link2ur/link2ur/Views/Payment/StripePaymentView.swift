@@ -144,21 +144,24 @@ struct StripePaymentView: View {
                     }
                 }
                 
-                // 已有 clientSecret 时：并行「检查支付状态」与「初始化 PaymentSheet」，减少首屏等待
+                // 已有 clientSecret 时：立即初始化 PaymentSheet，后台检查支付状态
                 if self.clientSecret != nil {
                     self.viewModel.ensurePaymentSheetReady()
+                    // 后台检查支付状态（不阻塞 UI）
                     viewModel.checkPaymentStatus { alreadyPaid in
                         if alreadyPaid {
                             Logger.info("支付状态检查：已完成支付，跳过支付表单", category: .api)
                         }
                     }
                 } else {
+                    // 优化：立即开始创建支付意图，不等待 checkPaymentStatus
+                    // checkPaymentStatus 会在后台运行，如果发现已支付会自动更新状态
+                    self.viewModel.createPaymentIntent()
+                    // 后台检查支付状态（不阻塞创建流程）
                     viewModel.checkPaymentStatus { alreadyPaid in
                         if alreadyPaid {
-                            Logger.info("支付状态检查：已完成支付，跳过创建支付意图", category: .api)
-                            return
+                            Logger.info("支付状态检查：已完成支付", category: .api)
                         }
-                        self.viewModel.createPaymentIntent()
                     }
                 }
                 

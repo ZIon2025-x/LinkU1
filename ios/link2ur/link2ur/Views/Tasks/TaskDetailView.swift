@@ -1511,17 +1511,11 @@ struct TaskHeaderCard: View {
             HStack {
                 HStack(spacing: AppSpacing.sm) {
                     if let taskLevel = task.taskLevel, taskLevel != "normal" {
-                        Label(
-                            taskLevel == "vip" ? LocalizationKey.taskDetailVipTask.localized : LocalizationKey.taskDetailSuperTask.localized,
-                            systemImage: taskLevel == "vip" ? "star.fill" : "flame.fill"
+                        TaskTagView(
+                            text: taskLevel == "vip" ? LocalizationKey.taskDetailVipTask.localized : LocalizationKey.taskDetailSuperTask.localized,
+                            icon: taskLevel == "vip" ? "star.fill" : "flame.fill",
+                            style: taskLevel == "vip" ? .vip : .superTask
                         )
-                        .font(AppTypography.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(taskLevel == "vip" ? Color.orange : Color.purple)
-                        .clipShape(Capsule())
                     }
                     
                     StatusBadge(status: task.status)
@@ -1540,7 +1534,7 @@ struct TaskHeaderCard: View {
                 .fixedSize(horizontal: false, vertical: true)
                 
                 // 价格和积分
-                TaskRewardView(task: task)
+                TaskAmountView(task: task)
             }
             
             // 分类和位置标签（位置模糊显示，只显示城市）
@@ -1548,35 +1542,18 @@ struct TaskHeaderCard: View {
                 // 跳蚤市场任务：从描述中的 "Category: {分类}" 定位商品分类（后端创建任务时追加）
                 if task.isFleaMarketTask {
                     if let productType = extractFleaMarketCategoryFromDescription(task.displayDescription), !productType.isEmpty {
-                        Label(productType, systemImage: "tag.fill")
-                            .font(AppTypography.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppColors.primary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(AppColors.primaryLight)
-                            .clipShape(Capsule())
+                        TaskTagView(text: productType, icon: "tag.fill", style: .primary)
                     }
                 } else {
                     // 普通任务：显示分类
-                    Label(task.taskType, systemImage: "tag.fill")
-                        .font(AppTypography.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(AppColors.primaryLight)
-                        .clipShape(Capsule())
+                    TaskTagView(text: task.taskType, icon: "tag.fill", style: .primary)
                 }
                 
-                Label(task.location.obfuscatedLocation, systemImage: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill")
-                    .font(AppTypography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(AppColors.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppColors.background)
-                    .clipShape(Capsule())
+                TaskTagView(
+                    text: task.location.obfuscatedLocation,
+                    icon: task.location.lowercased() == "online" ? "globe" : "mappin.circle.fill",
+                    style: .secondary
+                )
             }
         }
         .padding(DeviceInfo.isPad ? AppSpacing.xl : AppSpacing.lg)
@@ -1593,44 +1570,6 @@ struct TaskHeaderCard: View {
         let after = String(text[range.upperBound...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return after.isEmpty ? nil : after
-    }
-}
-
-// MARK: - 任务奖励视图
-struct TaskRewardView: View {
-    let task: Task
-    
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            if task.reward > 0 {
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("£")
-                        .font(AppTypography.title3)
-                        .fontWeight(.bold)
-                    Text(formatPrice(task.reward))
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                }
-                .foregroundColor(AppColors.primary)
-            }
-            
-            if let pointsReward = task.pointsReward, pointsReward > 0 {
-                HStack(spacing: 4) {
-                    IconStyle.icon("star.circle.fill", size: 16)
-                    Text(String(format: LocalizationKey.pointsAmountFormat.localized, pointsReward))
-                        .font(AppTypography.bodyBold)
-                }
-                .foregroundColor(.orange)
-                .padding(.bottom, 4)
-            }
-        }
-    }
-    
-    private func formatPrice(_ price: Double) -> String {
-        if price.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", price)
-        } else {
-            return String(format: "%.2f", price)
-        }
     }
 }
 

@@ -1,0 +1,127 @@
+# SwiftLint Configuration for LinkU iOS App
+# 企业级代码规范配置
+
+# 包含的路径
+included:
+  - link2ur/link2ur
+
+# 排除的路径
+excluded:
+  - Pods
+  - Carthage
+  - .build
+  - vendor
+  - DerivedData
+  - link2ur/link2urTests
+  - link2ur/link2urUITests
+
+# 禁用的规则
+disabled_rules:
+  - trailing_whitespace        # 行尾空格（某些场景下自动格式化会产生）
+  - todo                       # TODO 注释（开发中经常使用）
+  - line_length                # 行长度限制（有时需要长行）
+  - identifier_name            # 标识符命名（某些场景下需要短名称）
+  - large_tuple                # 大元组（有时确实需要）
+  - nesting                    # 嵌套层级（某些复杂逻辑需要）
+
+# 仅警告的规则（不阻止编译）
+opt_in_rules:
+  - empty_count                # 使用 isEmpty 而不是 count == 0
+  - empty_string               # 使用 isEmpty 而不是 == ""
+  - closure_spacing            # 闭包内容与花括号之间的空格
+  - contains_over_first_not_nil # 使用 contains 而不是 first != nil
+  - fatal_error_message        # fatalError 必须包含消息
+  - first_where                # 使用 first(where:) 而不是 filter().first
+  - force_unwrapping           # 强制解包警告
+  - implicitly_unwrapped_optional # 隐式解包可选值警告
+  - last_where                 # 使用 last(where:) 而不是 filter().last
+  - literal_expression_end_indentation # 字面量表达式结尾缩进
+  - modifier_order             # 修饰符顺序
+  - multiline_function_chains  # 多行函数链
+  - operator_usage_whitespace  # 操作符周围的空格
+  - overridden_super_call      # 重写方法调用 super
+  - prefer_self_type_over_type_of_self # 使用 Self 而不是 type(of: self)
+  - private_action             # IBAction 应该是私有的
+  - private_outlet             # IBOutlet 应该是私有的
+  - redundant_nil_coalescing   # 冗余的 nil 合并
+  - redundant_type_annotation  # 冗余的类型注解
+  - sorted_first_last          # 使用 min/max 而不是 sorted().first/last
+  - toggle_bool                # 使用 toggle() 而不是 = !
+  - unneeded_parentheses_in_closure_argument # 闭包参数不需要括号
+  - vertical_parameter_alignment_on_call # 调用时的垂直参数对齐
+  - yoda_condition             # 避免 Yoda 条件
+
+# 自定义规则配置
+custom_rules:
+  # 禁止使用 print（应使用 Logger）
+  no_print_statement:
+    included: ".*\\.swift"
+    excluded: ".*Tests?\\.swift"
+    name: "Print Statement"
+    regex: "\\bprint\\s*\\("
+    message: "请使用 Logger 而不是 print"
+    severity: warning
+  
+  # 禁止硬编码字符串（用于 UI 文本）
+  no_hardcoded_strings_in_views:
+    included: ".*View\\.swift"
+    name: "Hardcoded String in View"
+    regex: 'Text\s*\(\s*"[^"]+"\s*\)'
+    message: "考虑使用 LocalizationKey 进行国际化"
+    severity: warning
+
+# 规则配置
+cyclomatic_complexity:
+  ignores_case_statements: true
+  warning: 15
+  error: 25
+
+file_length:
+  warning: 500
+  error: 1000
+  ignore_comment_only_lines: true
+
+function_body_length:
+  warning: 50
+  error: 100
+
+function_parameter_count:
+  warning: 6
+  error: 8
+  ignores_default_parameters: true
+
+type_body_length:
+  warning: 300
+  error: 500
+
+type_name:
+  min_length: 2
+  max_length: 50
+
+# 强制规则配置
+force_cast:
+  severity: warning
+
+force_try:
+  severity: warning
+
+# 垂直空白
+vertical_whitespace:
+  max_empty_lines: 2
+
+# 文件头
+file_header:
+  required_pattern: |
+                    \/\/
+                    \/\/.*\.swift
+                    \/\/.*
+                    \/\/
+
+# 报告格式
+reporter: "xcode"  # 在 Xcode 中显示
+
+# 分析器规则
+analyzer_rules:
+  - explicit_self
+  - unused_declaration
+  - unused_import

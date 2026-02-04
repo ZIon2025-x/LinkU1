@@ -187,6 +187,7 @@ struct ActivityDetailView: View {
             if let taskId = paymentTaskId {
                 NavigationView {
                     TaskDetailView(taskId: taskId)
+                        .environmentObject(appState)
                 }
             }
         }

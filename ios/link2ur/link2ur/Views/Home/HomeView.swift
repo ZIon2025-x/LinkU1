@@ -151,21 +151,25 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showActivityDetail) {
                 if let activityId = navigateToActivityId {
                     ActivityDetailView(activityId: activityId)
+                        .environmentObject(appState)
                 }
             }
             .navigationDestination(isPresented: $showTaskDetail) {
                 if let taskId = navigateToTaskId {
                     TaskDetailView(taskId: taskId)
+                        .environmentObject(appState)
                 }
             }
             .navigationDestination(isPresented: $showPostDetail) {
                 if let postId = navigateToPostId {
                     ForumPostDetailView(postId: postId)
+                        .environmentObject(appState)
                 }
             }
             .navigationDestination(isPresented: $showFleaMarketItemDetail) {
                 if let itemId = navigateToFleaMarketItemId {
                     FleaMarketDetailView(itemId: itemId)
+                        .environmentObject(appState)
                 }
             }
         }

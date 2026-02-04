@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ServiceDetailView: View {
     let serviceId: Int
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = ServiceDetailViewModel()
     @State private var showApplySheet = false
     @State private var applicationMessage = ""
@@ -134,6 +135,7 @@ struct ServiceDetailView: View {
             if let taskId = paymentTaskId {
                 NavigationView {
                     TaskDetailView(taskId: taskId)
+                        .environmentObject(appState)
                 }
             }
         }

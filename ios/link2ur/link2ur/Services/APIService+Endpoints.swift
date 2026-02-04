@@ -4,29 +4,43 @@ import Combine
 // MARK: - Banner API Extension
 
 extension APIService {
-    /// 获取首页广告横幅列表
+    /// 获取首页广告横幅列表（带缓存，1小时有效）
     func getBanners() -> AnyPublisher<BannerListResponse, APIError> {
-        return request(BannerListResponse.self, APIEndpoints.Common.banners)
+        return requestWithCache(
+            BannerListResponse.self,
+            APIEndpoints.Common.banners,
+            cachePolicy: .cacheFirst
+        )
     }
 }
 
 // MARK: - FAQ 库 API Extension
 
 extension APIService {
-    /// 获取 FAQ 列表（按语言：zh / en）
+    /// 获取 FAQ 列表（按语言：zh / en）（带缓存，24小时有效）
     func getFaq(lang: String = "en") -> AnyPublisher<FaqListResponse, APIError> {
         let endpoint = APIEndpoints.Common.faq(lang: lang)
-        return request(FaqListResponse.self, endpoint)
+        return requestWithCache(
+            FaqListResponse.self,
+            endpoint,
+            queryParams: ["lang": lang],
+            cachePolicy: .cacheFirst
+        )
     }
 }
 
 // MARK: - 法律文档库 API Extension
 
 extension APIService {
-    /// 获取法律文档（隐私/用户协议/Cookie），type: privacy | terms | cookie，lang: zh | en
+    /// 获取法律文档（隐私/用户协议/Cookie），type: privacy | terms | cookie，lang: zh | en（带缓存，24小时有效）
     func getLegalDocument(type: String, lang: String = "en") -> AnyPublisher<LegalDocumentOut, APIError> {
         let endpoint = APIEndpoints.Common.legal(type: type, lang: lang)
-        return request(LegalDocumentOut.self, endpoint)
+        return requestWithCache(
+            LegalDocumentOut.self,
+            endpoint,
+            queryParams: ["type": type, "lang": lang],
+            cachePolicy: .cacheFirst
+        )
     }
 }
 
@@ -254,18 +268,33 @@ extension APIService {
     // MARK: - User Profile (用户资料)
     
     /// 获取当前用户信息
+    /// 获取当前用户信息（带缓存，10分钟有效）
     func getUserProfile() -> AnyPublisher<User, APIError> {
-        return request(User.self, APIEndpoints.Users.profileMe)
+        return requestWithCache(
+            User.self,
+            APIEndpoints.Users.profileMe,
+            cachePolicy: .networkFirst  // 优先网络，失败时用缓存
+        )
     }
     
-    /// 获取指定用户信息（简化版，只返回 User）
+    /// 获取指定用户信息（简化版，只返回 User）（带缓存）
     func getUserProfile(userId: String) -> AnyPublisher<User, APIError> {
-        return request(User.self, APIEndpoints.Users.profile(userId))
+        return requestWithCache(
+            User.self,
+            APIEndpoints.Users.profile(userId),
+            queryParams: ["user_id": userId],
+            cachePolicy: .cacheFirst
+        )
     }
     
-    /// 获取指定用户完整资料（包含统计、任务、评价等）
+    /// 获取指定用户完整资料（包含统计、任务、评价等）（带缓存）
     func getUserProfileDetail(userId: String) -> AnyPublisher<UserProfileResponse, APIError> {
-        return request(UserProfileResponse.self, APIEndpoints.Users.profile(userId))
+        return requestWithCache(
+            UserProfileResponse.self,
+            APIEndpoints.Users.profile(userId),
+            queryParams: ["user_id": userId, "detail": "true"],
+            cachePolicy: .cacheFirst
+        )
     }
     
     /// 更新用户资料
@@ -285,7 +314,7 @@ extension APIService {
     
     // MARK: - Tasks (任务)
     
-    /// 获取任务列表
+    /// 获取任务列表（带重试和缓存：先读缓存再请求网络）
     func getTasks(page: Int = 1, pageSize: Int = 20, type: String? = nil, location: String? = nil, keyword: String? = nil, sortBy: String? = nil, userLatitude: Double? = nil, userLongitude: Double? = nil) -> AnyPublisher<TaskListResponse, APIError> {
         var queryParams: [String: String?] = [
             "page": "\(page)",
@@ -311,34 +340,163 @@ extension APIService {
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Tasks.list)?\(queryString)"
         
-        return request(TaskListResponse.self, endpoint)
+        // 只缓存第一页且无搜索关键词的请求
+        let shouldCache = page == 1 && (keyword == nil || keyword?.isEmpty == true)
+        
+        // 构建查询参数字典用于缓存键
+        let cacheQueryParams = queryParams.compactMapValues { $0 }
+        
+        // 网络请求 Publisher（带重试）
+        let networkPublisher = requestWithRetry(
+            TaskListResponse.self,
+            endpoint,
+            retryConfiguration: .default
+        )
+        .handleEvents(receiveOutput: { response in
+            // 成功时缓存结果
+            if shouldCache {
+                APICache.shared.set(response, for: APIEndpoints.Tasks.list, queryParams: cacheQueryParams)
+            }
+        })
+        .eraseToAnyPublisher()
+        
+        // 如果应该使用缓存，先尝试读缓存
+        if shouldCache {
+            // 尝试从缓存读取
+            if let cached: TaskListResponse = APICache.shared.get(TaskListResponse.self, for: APIEndpoints.Tasks.list, queryParams: cacheQueryParams) {
+                Logger.debug("任务列表: 从缓存返回数据，同时后台刷新", category: .cache)
+                // 先发缓存数据，再发网络数据（cacheFirst 策略）
+                let cachedPublisher = Just(cached)
+                    .setFailureType(to: APIError.self)
+                    .eraseToAnyPublisher()
+                
+                // 合并：先缓存，后网络（忽略网络错误，因为已有缓存）
+                return cachedPublisher
+                    .merge(with: networkPublisher.catch { _ in Empty<TaskListResponse, APIError>() })
+                    .eraseToAnyPublisher()
+            }
+        }
+        
+        // 无缓存或不应缓存，直接网络请求
+        return networkPublisher
+            .catch { error -> AnyPublisher<TaskListResponse, APIError> in
+                // 网络失败时，尝试从缓存获取（兜底）
+                if shouldCache, let cached: TaskListResponse = APICache.shared.get(TaskListResponse.self, for: APIEndpoints.Tasks.list, queryParams: cacheQueryParams) {
+                    Logger.info("任务列表网络请求失败，使用缓存兜底", category: .cache)
+                    return Just(cached).setFailureType(to: APIError.self).eraseToAnyPublisher()
+                }
+                return Fail(error: error).eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
     }
     
     /// 获取我的任务
+    /// 获取我的任务（带重试）
     func getMyTasks() -> AnyPublisher<[Task], APIError> {
-        return request([Task].self, APIEndpoints.Users.myTasks)
+        return requestWithRetry(
+            [Task].self,
+            APIEndpoints.Users.myTasks,
+            retryConfiguration: .default
+        )
     }
     
     /// 获取任务详情
+    /// 获取任务详情（带重试和缓存）
     func getTaskDetail(taskId: Int) -> AnyPublisher<Task, APIError> {
-        return request(Task.self, APIEndpoints.Tasks.detail(taskId))
+        let endpoint = APIEndpoints.Tasks.detail(taskId)
+        
+        return requestWithRetry(
+            Task.self,
+            endpoint,
+            retryConfiguration: .fast
+        )
+        .handleEvents(receiveOutput: { task in
+            // 缓存任务详情（3分钟有效）
+            APICache.shared.set(task, for: endpoint, ttl: 180)
+        })
+        .catch { error -> AnyPublisher<Task, APIError> in
+            // 网络失败时尝试从缓存获取
+            if let cached: Task = APICache.shared.get(Task.self, for: endpoint) {
+                Logger.info("任务详情网络请求失败，使用缓存: \(taskId)", category: .cache)
+                return Just(cached).setFailureType(to: APIError.self).eraseToAnyPublisher()
+            }
+            return Fail(error: error).eraseToAnyPublisher()
+        }
+        .eraseToAnyPublisher()
     }
     
-    /// 创建任务
+    /// 创建任务（支持离线：离线时加入队列，网络恢复后自动同步）
     func createTask(_ task: TaskCreateRequest) -> AnyPublisher<Task, APIError> {
         guard let bodyDict = APIRequestHelper.encodeToDictionary(task) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(Task.self, APIEndpoints.Tasks.list, method: "POST", body: bodyDict)
+        
+        // 检查网络状态，离线时加入离线队列
+        if !Reachability.shared.isConnected {
+            Logger.info("当前离线，任务创建已加入离线队列", category: .network)
+            
+            // 将请求加入离线队列
+            if let bodyData = try? JSONSerialization.data(withJSONObject: bodyDict) {
+                let operation = OfflineOperation(
+                    type: .create,
+                    endpoint: APIEndpoints.Tasks.list,
+                    method: "POST",
+                    body: bodyData,
+                    resourceType: "task"
+                )
+                OfflineManager.shared.addOperation(operation)
+            }
+            
+            // 返回离线错误，让 UI 知道已离线处理
+            return Fail(error: APIError.requestFailed(NSError(domain: "OfflineMode", code: -1009, userInfo: [NSLocalizedDescriptionKey: "已离线，任务将在网络恢复后创建"])))
+                .eraseToAnyPublisher()
+        }
+        
+        return requestWithRetry(
+            Task.self,
+            APIEndpoints.Tasks.list,
+            method: "POST",
+            body: bodyDict,
+            retryConfiguration: .default,
+            enqueueOnFailure: true
+        )
     }
     
-    /// 申请任务（支持议价）
+    /// 申请任务（支持离线：离线时加入队列）
     func applyForTask(taskId: Int, message: String? = nil, negotiatedPrice: Double? = nil, currency: String? = nil) -> AnyPublisher<EmptyResponse, APIError> {
         var body: [String: Any] = [:]
         if let message = message, !message.isEmpty { body["message"] = message }
         if let negotiatedPrice = negotiatedPrice { body["negotiated_price"] = negotiatedPrice }
         if let currency = currency { body["currency"] = currency }
-        return request(EmptyResponse.self, APIEndpoints.Tasks.apply(taskId), method: "POST", body: body.isEmpty ? nil : body)
+        
+        // 检查网络状态，离线时加入离线队列
+        if !Reachability.shared.isConnected {
+            Logger.info("当前离线，任务申请已加入离线队列: taskId=\(taskId)", category: .network)
+            
+            if let bodyData = try? JSONSerialization.data(withJSONObject: body) {
+                let operation = OfflineOperation(
+                    type: .create,
+                    endpoint: APIEndpoints.Tasks.apply(taskId),
+                    method: "POST",
+                    body: body.isEmpty ? nil : bodyData,
+                    resourceType: "task_application",
+                    resourceId: String(taskId)
+                )
+                OfflineManager.shared.addOperation(operation)
+            }
+            
+            return Fail(error: APIError.requestFailed(NSError(domain: "OfflineMode", code: -1009, userInfo: [NSLocalizedDescriptionKey: "已离线，申请将在网络恢复后提交"])))
+                .eraseToAnyPublisher()
+        }
+        
+        return requestWithRetry(
+            EmptyResponse.self,
+            APIEndpoints.Tasks.apply(taskId),
+            method: "POST",
+            body: body.isEmpty ? nil : body,
+            retryConfiguration: .fast,
+            enqueueOnFailure: true
+        )
     }
     
     // 注意：acceptApplication 方法已移至 APIService+Chat.swift，这里不再重复定义
@@ -487,6 +645,7 @@ extension APIService {
     // MARK: - Flea Market (跳蚤市场)
     
     /// 获取商品列表
+    /// 获取跳蚤市场商品列表（带重试）
     func getFleaMarketItems(page: Int = 1, pageSize: Int = 20, category: String? = nil) -> AnyPublisher<FleaMarketItemListResponse, APIError> {
         var queryParams: [String: String?] = [
             "page": "\(page)",
@@ -498,12 +657,22 @@ extension APIService {
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.FleaMarket.items)?\(queryString)"
         
-        return request(FleaMarketItemListResponse.self, endpoint)
+        return requestWithRetry(
+            FleaMarketItemListResponse.self,
+            endpoint,
+            retryConfiguration: .default
+        )
     }
     
-    /// 获取商品详情
+    /// 获取商品详情（带缓存，3分钟有效）
     func getFleaMarketItemDetail(itemId: String) -> AnyPublisher<FleaMarketItemResponse, APIError> {
-        return request(FleaMarketItemResponse.self, APIEndpoints.FleaMarket.itemDetail(itemId))
+        let endpoint = APIEndpoints.FleaMarket.itemDetail(itemId)
+        return requestWithCache(
+            FleaMarketItemResponse.self,
+            endpoint,
+            queryParams: ["item_id": itemId],
+            cachePolicy: .cacheFirst
+        )
     }
     
     /// 发布商品
@@ -543,7 +712,7 @@ extension APIService {
     
     // MARK: - Forum (论坛)
     
-    /// 获取论坛板块列表（用户可见的）
+    /// 获取论坛板块列表（用户可见的）（带缓存，1小时有效）
     func getForumCategories(includeAll: Bool = false, viewAs: String? = nil, includeLatestPost: Bool = true) -> AnyPublisher<ForumCategoryListResponse, APIError> {
         var queryParams: [String: String?] = [
             "include_all": "\(includeAll)",
@@ -555,10 +724,15 @@ extension APIService {
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Forum.categories)?\(queryString)"
         
-        return request(ForumCategoryListResponse.self, endpoint)
+        return requestWithCache(
+            ForumCategoryListResponse.self,
+            endpoint,
+            queryParams: queryParams.compactMapValues { $0 },
+            cachePolicy: .cacheFirst
+        )
     }
     
-    /// 获取帖子列表
+    /// 获取帖子列表（带重试）
     func getForumPosts(page: Int = 1, pageSize: Int = 20, categoryId: Int? = nil, sort: String = "latest", keyword: String? = nil) -> AnyPublisher<ForumPostListResponse, APIError> {
         var queryParams: [String: String?] = [
             "page": "\(page)",
@@ -575,23 +749,61 @@ extension APIService {
         let endpoint = "\(APIEndpoints.Forum.posts)?\(queryString)"
         
         Logger.debug("论坛帖子 API 请求: \(endpoint)", category: .api)
-        return request(ForumPostListResponse.self, endpoint)
+        return requestWithRetry(
+            ForumPostListResponse.self,
+            endpoint,
+            retryConfiguration: .default
+        )
     }
     
-    /// 获取帖子详情
+    /// 获取帖子详情（带缓存，3分钟有效）
     func getForumPostDetail(postId: Int) -> AnyPublisher<ForumPostOut, APIError> {
-        return request(ForumPostOut.self, APIEndpoints.Forum.postDetail(postId))
+        let endpoint = APIEndpoints.Forum.postDetail(postId)
+        return requestWithCache(
+            ForumPostOut.self,
+            endpoint,
+            queryParams: ["post_id": "\(postId)"],
+            cachePolicy: .cacheFirst
+        )
     }
     
-    /// 发布帖子
+    /// 发布帖子（带重试，失败时加入离线队列）
+    /// 发布帖子（支持离线：离线时加入队列）
     func createForumPost(_ post: ForumPostCreateRequest) -> AnyPublisher<ForumPostOut, APIError> {
         guard let bodyDict = APIRequestHelper.encodeToDictionary(post) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(ForumPostOut.self, APIEndpoints.Forum.posts, method: "POST", body: bodyDict)
+        
+        // 检查网络状态，离线时加入离线队列
+        if !Reachability.shared.isConnected {
+            Logger.info("当前离线，帖子发布已加入离线队列", category: .network)
+            
+            if let bodyData = try? JSONSerialization.data(withJSONObject: bodyDict) {
+                let operation = OfflineOperation(
+                    type: .create,
+                    endpoint: APIEndpoints.Forum.posts,
+                    method: "POST",
+                    body: bodyData,
+                    resourceType: "forum_post"
+                )
+                OfflineManager.shared.addOperation(operation)
+            }
+            
+            return Fail(error: APIError.requestFailed(NSError(domain: "OfflineMode", code: -1009, userInfo: [NSLocalizedDescriptionKey: "已离线，帖子将在网络恢复后发布"])))
+                .eraseToAnyPublisher()
+        }
+        
+        return requestWithRetry(
+            ForumPostOut.self,
+            APIEndpoints.Forum.posts,
+            method: "POST",
+            body: bodyDict,
+            retryConfiguration: .default,
+            enqueueOnFailure: true
+        )
     }
     
-    /// 获取帖子回复
+    /// 获取帖子回复（带重试）
     func getForumReplies(postId: Int, page: Int = 1, pageSize: Int = 20) -> AnyPublisher<ForumReplyListResponse, APIError> {
         let queryParams: [String: String?] = [
             "page": "\(page)",
@@ -600,29 +812,72 @@ extension APIService {
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Forum.replies(postId))?\(queryString)"
         
-        return request(ForumReplyListResponse.self, endpoint)
+        return requestWithRetry(
+            ForumReplyListResponse.self,
+            endpoint,
+            retryConfiguration: .default
+        )
     }
     
-    /// 回复帖子
+    /// 回复帖子（带重试，失败时加入离线队列）
+    /// 回复帖子（支持离线：离线时加入队列）
     func replyToPost(postId: Int, content: String, parentReplyId: Int? = nil) -> AnyPublisher<ForumReplyOut, APIError> {
         let body = ForumReplyCreateRequest(content: content, parentReplyId: parentReplyId)
         guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(ForumReplyOut.self, APIEndpoints.Forum.replies(postId), method: "POST", body: bodyDict)
+        
+        // 检查网络状态，离线时加入离线队列
+        if !Reachability.shared.isConnected {
+            Logger.info("当前离线，回复已加入离线队列: postId=\(postId)", category: .network)
+            
+            if let bodyData = try? JSONSerialization.data(withJSONObject: bodyDict) {
+                let operation = OfflineOperation(
+                    type: .create,
+                    endpoint: APIEndpoints.Forum.replies(postId),
+                    method: "POST",
+                    body: bodyData,
+                    resourceType: "forum_reply",
+                    resourceId: String(postId)
+                )
+                OfflineManager.shared.addOperation(operation)
+            }
+            
+            return Fail(error: APIError.requestFailed(NSError(domain: "OfflineMode", code: -1009, userInfo: [NSLocalizedDescriptionKey: "已离线，回复将在网络恢复后发送"])))
+                .eraseToAnyPublisher()
+        }
+        
+        return requestWithRetry(
+            ForumReplyOut.self,
+            APIEndpoints.Forum.replies(postId),
+            method: "POST",
+            body: bodyDict,
+            retryConfiguration: .fast,
+            enqueueOnFailure: true
+        )
     }
     
     // MARK: - 板块申请管理（用户端）
     
     /// 获取我的板块申请列表（普通用户）
     func getMyCategoryRequests() -> AnyPublisher<[ForumCategoryRequestDetail], APIError> {
-        return request([ForumCategoryRequestDetail].self, APIEndpoints.Forum.myCategoryRequests)
+        return requestWithRetry(
+            [ForumCategoryRequestDetail].self,
+            APIEndpoints.Forum.myCategoryRequests,
+            retryConfiguration: .default
+        )
     }
     
-    /// 点赞/取消点赞
+    /// 点赞/取消点赞（带重试）
     func toggleForumLike(targetType: String, targetId: Int) -> AnyPublisher<ForumLikeResponse, APIError> {
         let body: [String: Any] = ["target_type": targetType, "target_id": targetId]
-        return request(ForumLikeResponse.self, APIEndpoints.Forum.likes, method: "POST", body: body)
+        return requestWithRetry(
+            ForumLikeResponse.self,
+            APIEndpoints.Forum.likes,
+            method: "POST",
+            body: body,
+            retryConfiguration: .fast
+        )
     }
     
     /// 收藏/取消收藏帖子
@@ -690,11 +945,16 @@ extension APIService {
     // MARK: - Notifications & Messages (通知与消息)
     
     /// 获取通知列表
+    /// 获取通知列表（带重试）
     func getNotifications(limit: Int = 20) -> AnyPublisher<[NotificationOut], APIError> {
         let queryParams: [String: String?] = ["limit": "\(limit)"]
         let queryString = APIRequestHelper.buildQueryString(queryParams)
         let endpoint = "\(APIEndpoints.Users.notifications)?\(queryString)"
-        return request([NotificationOut].self, endpoint)
+        return requestWithRetry(
+            [NotificationOut].self,
+            endpoint,
+            retryConfiguration: .default
+        )
     }
     
     /// 获取未读通知列表
@@ -750,12 +1010,42 @@ extension APIService {
     /// 发送私信
     /// ⚠️ 注意：此接口已废弃，后端返回410错误
     /// 联系人聊天功能已移除，请使用任务聊天接口或客服对话接口
+    /// 发送私信（带重试，失败时加入离线队列）
+    /// 发送私信（支持离线：离线时加入队列，网络恢复后自动发送）
     func sendMessage(receiverId: String, content: String) -> AnyPublisher<MessageOut, APIError> {
         let body = MessageSendRequest(receiverId: receiverId, content: content)
         guard let bodyDict = APIRequestHelper.encodeToDictionary(body) else {
             return Fail(error: APIError.unknown).eraseToAnyPublisher()
         }
-        return request(MessageOut.self, APIEndpoints.Users.messagesSend, method: "POST", body: bodyDict)
+        
+        // 检查网络状态，离线时加入离线队列
+        if !Reachability.shared.isConnected {
+            Logger.info("当前离线，私信已加入离线队列: receiverId=\(receiverId)", category: .network)
+            
+            if let bodyData = try? JSONSerialization.data(withJSONObject: bodyDict) {
+                let operation = OfflineOperation(
+                    type: .create,
+                    endpoint: APIEndpoints.Users.messagesSend,
+                    method: "POST",
+                    body: bodyData,
+                    resourceType: "message",
+                    resourceId: receiverId
+                )
+                OfflineManager.shared.addOperation(operation)
+            }
+            
+            return Fail(error: APIError.requestFailed(NSError(domain: "OfflineMode", code: -1009, userInfo: [NSLocalizedDescriptionKey: "已离线，消息将在网络恢复后发送"])))
+                .eraseToAnyPublisher()
+        }
+        
+        return requestWithRetry(
+            MessageOut.self,
+            APIEndpoints.Users.messagesSend,
+            method: "POST",
+            body: bodyDict,
+            retryConfiguration: .fast,
+            enqueueOnFailure: true
+        )
     }
     
     // MARK: - Customer Service (客服对话)

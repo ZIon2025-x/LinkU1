@@ -86,18 +86,13 @@ class NetworkRequestExample {
     /// 示例4: 使用 RetryManager
     func requestWithRetryManager() async {
         do {
-            let user = try await RetryManager.shared.execute(
+            let user: User = try await RetryManager.shared.execute(
                 {
                     try await self.loadUserFromAPI()
                 },
-                maxAttempts: 3,
-                delay: 1.0,
-                shouldRetry: { error in
-                    // 只对网络错误重试
-                    if let urlError = error as? URLError {
-                        return urlError.code == .timedOut || urlError.code == .networkConnectionLost
-                    }
-                    return false
+                configuration: .fast,  // 使用预定义配置
+                onRetry: { state in
+                    Logger.debug("重试中... 尝试 \(state.attempt)/\(state.maxAttempts)", category: .network)
                 }
             )
             print("用户: \(user.name)")

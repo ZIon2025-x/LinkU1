@@ -30,7 +30,7 @@ public class APIService {
     public static let shared = APIService()
     
     private let session: URLSession
-    private let baseURL = Constants.API.baseURL
+    public let baseURL = Constants.API.baseURL
     private var isRefreshing = false
     private var refreshSubject = PassthroughSubject<Void, APIError>()
     private var cancellables = Set<AnyCancellable>()
@@ -1170,7 +1170,7 @@ extension APIService {
     }
 }
 
-enum HTTPMethod: String {
+public enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
     case put = "PUT"
@@ -1188,5 +1188,371 @@ private extension Data {
         append(d)
         return true
     }
+}
+
+// MARK: - 带重试的请求方法
+
+extension APIService {
+    /// 带自动重试的 Combine 请求方法
+    /// 使用指数退避策略自动重试网络错误、超时和服务器错误
+    /// 所有重试失败后，会将请求加入失败队列，待网络恢复后重试
+    public func requestWithRetry<T: Decodable>(
+        _ type: T.Type,
+        _ endpoint: String,
+        method: String = "GET",
+        body: [String: Any]? = nil,
+        headers: [String: String]? = nil,
+        retryConfiguration: NetworkRetryConfiguration = .default,
+        enqueueOnFailure: Bool = true  // 是否在失败时加入队列
+    ) -> AnyPublisher<T, APIError> {
+        var currentAttempt = 0
+        
+        func makeRequest() -> AnyPublisher<T, APIError> {
+            return request(type, endpoint, method: method, body: body, headers: headers)
+        }
+        
+        return makeRequest()
+            .catch { [weak self] error -> AnyPublisher<T, APIError> in
+                guard let self = self else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+                
+                currentAttempt += 1
+                
+                // 检查是否应该重试
+                guard retryConfiguration.shouldRetry(error: error),
+                      currentAttempt < retryConfiguration.maxAttempts else {
+                    // 所有重试都失败了，将请求加入失败队列（仅限可重试的网络错误）
+                    if enqueueOnFailure && retryConfiguration.shouldRetry(error: error) && !Reachability.shared.isConnected {
+                        self.enqueueFailedRequest(endpoint: endpoint, method: method, body: body, headers: headers, error: error)
+                    }
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+                
+                let delay = retryConfiguration.delay(forAttempt: currentAttempt)
+                Logger.debug("🔄 请求重试 (\(endpoint)) - 尝试 \(currentAttempt + 1)/\(retryConfiguration.maxAttempts)，延迟 \(String(format: "%.2f", delay))s", category: .network)
+                
+                // 延迟后重试
+                return Just(())
+                    .delay(for: .seconds(delay), scheduler: DispatchQueue.global())
+                    .flatMap { _ in
+                        self.requestWithRetry(
+                            type,
+                            endpoint,
+                            method: method,
+                            body: body,
+                            headers: headers,
+                            retryConfiguration: NetworkRetryConfiguration(
+                                maxAttempts: retryConfiguration.maxAttempts - currentAttempt,
+                                baseDelay: retryConfiguration.baseDelay,
+                                maxDelay: retryConfiguration.maxDelay,
+                                backoffMultiplier: retryConfiguration.backoffMultiplier,
+                                useJitter: retryConfiguration.useJitter,
+                                retryableStatusCodes: retryConfiguration.retryableStatusCodes,
+                                retryableErrorCodes: retryConfiguration.retryableErrorCodes
+                            ),
+                            enqueueOnFailure: enqueueOnFailure
+                        )
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    /// 将失败的请求加入队列
+    private func enqueueFailedRequest(endpoint: String, method: String, body: [String: Any]?, headers: [String: String]?, error: Error) {
+        // 只对 GET 请求以外的重要操作进行队列（GET 请求可以直接重新发起）
+        guard method != "GET" else { return }
+        
+        var bodyData: Data?
+        if let body = body {
+            bodyData = try? JSONSerialization.data(withJSONObject: body)
+        }
+        
+        let failedRequest = FailedRequest(
+            endpoint: endpoint,
+            method: method,
+            body: bodyData.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] },
+            headers: headers,
+            error: error
+        )
+        
+        RequestQueueManager.shared.enqueue(failedRequest)
+        Logger.info("请求已加入失败队列，待网络恢复后重试: \(method) \(endpoint)", category: .network)
+    }
+    
+    /// 带自动重试的 async/await 请求方法
+    /// 使用指数退避策略自动重试网络错误、超时和服务器错误
+    public func requestWithRetry<T: Decodable>(
+        _ endpoint: String,
+        method: HTTPMethod = .get,
+        queryParams: [String: String]? = nil,
+        body: [String: Any]? = nil,
+        headers: [String: String]? = nil,
+        retryConfiguration: NetworkRetryConfiguration = .default
+    ) async throws -> T {
+        return try await RetryManager.shared.execute({
+            try await self.request(
+                endpoint,
+                method: method,
+                queryParams: queryParams,
+                body: body,
+                headers: headers
+            ) as T
+        }, configuration: retryConfiguration) { state in
+            Logger.debug("🔄 Async 请求重试 (\(endpoint)) - 尝试 \(state.attempt)/\(state.maxAttempts)", category: .network)
+        }
+    }
+    
+    /// 带重试的网络健康检查
+    /// 用于在网络恢复后验证连接
+    public func checkNetworkHealth(retryConfiguration: NetworkRetryConfiguration = .fast) async -> Bool {
+        do {
+            // 尝试一个轻量级的健康检查请求
+            let _: EmptyResponse = try await requestWithRetry(
+                APIEndpoints.Common.health,
+                method: .get,
+                retryConfiguration: retryConfiguration
+            )
+            return true
+        } catch {
+            Logger.warning("网络健康检查失败: \(error.localizedDescription)", category: .network)
+            return false
+        }
+    }
+}
+
+// MARK: - 请求队列管理（用于网络恢复后重试）
+
+/// 失败请求信息（用于网络恢复后重试）
+public struct FailedRequest {
+    public let id: UUID
+    public let endpoint: String
+    public let method: String
+    public let body: [String: Any]?
+    public let headers: [String: String]?
+    public let timestamp: Date
+    public let error: Error
+    public let retryCount: Int
+    
+    public init(
+        endpoint: String,
+        method: String,
+        body: [String: Any]?,
+        headers: [String: String]?,
+        error: Error,
+        retryCount: Int = 0
+    ) {
+        self.id = UUID()
+        self.endpoint = endpoint
+        self.method = method
+        self.body = body
+        self.headers = headers
+        self.timestamp = Date()
+        self.error = error
+        self.retryCount = retryCount
+    }
+}
+
+/// 请求队列管理器
+/// 用于管理因网络问题失败的请求，在网络恢复后自动重试
+public final class RequestQueueManager: ObservableObject {
+    public static let shared = RequestQueueManager()
+    
+    @Published public private(set) var pendingRequests: [FailedRequest] = []
+    @Published public private(set) var isProcessing: Bool = false
+    @Published public private(set) var successCount: Int = 0
+    @Published public private(set) var failureCount: Int = 0
+    
+    private let maxQueueSize = 50
+    private let maxRetryCount = 3
+    private var cancellables = Set<AnyCancellable>()
+    
+    private init() {
+        setupNetworkObserver()
+    }
+    
+    // MARK: - Public Methods
+    
+    /// 添加失败的请求到队列
+    public func enqueue(_ request: FailedRequest) {
+        guard pendingRequests.count < maxQueueSize else {
+            Logger.warning("请求队列已满，丢弃请求: \(request.endpoint)", category: .network)
+            return
+        }
+        
+        guard request.retryCount < maxRetryCount else {
+            Logger.warning("请求达到最大重试次数，放弃: \(request.endpoint)", category: .network)
+            return
+        }
+        
+        // 检查是否已存在相同请求（避免重复入队）
+        let isDuplicate = pendingRequests.contains { existing in
+            existing.endpoint == request.endpoint &&
+            existing.method == request.method
+        }
+        
+        guard !isDuplicate else {
+            Logger.debug("相同请求已在队列中，跳过: \(request.endpoint)", category: .network)
+            return
+        }
+        
+        pendingRequests.append(request)
+        Logger.debug("请求已加入队列: \(request.endpoint)，当前队列大小: \(pendingRequests.count)", category: .network)
+    }
+    
+    /// 移除请求
+    public func remove(_ request: FailedRequest) {
+        pendingRequests.removeAll { $0.id == request.id }
+    }
+    
+    /// 清空队列
+    public func clearQueue() {
+        pendingRequests.removeAll()
+        Logger.debug("请求队列已清空", category: .network)
+    }
+    
+    /// 手动触发队列处理
+    public func processQueue() {
+        guard !isProcessing, !pendingRequests.isEmpty else { return }
+        
+        isProcessing = true
+        successCount = 0
+        failureCount = 0
+        Logger.info("开始处理请求队列，共 \(pendingRequests.count) 个请求", category: .network)
+        
+        _Concurrency.Task {
+            await processQueueAsync()
+            await MainActor.run {
+                self.isProcessing = false
+                Logger.info("请求队列处理完成: 成功 \(self.successCount)，失败 \(self.failureCount)", category: .network)
+            }
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func setupNetworkObserver() {
+        // 监听网络状态变化
+        Reachability.shared.$isConnected
+            .removeDuplicates()
+            .filter { $0 } // 只在网络恢复时触发
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main) // 等待网络稳定
+            .sink { [weak self] _ in
+                Logger.info("网络已恢复，检查待处理请求", category: .network)
+                self?.processQueue()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func processQueueAsync() async {
+        // 复制一份队列，避免在处理过程中被修改
+        let requestsToProcess = pendingRequests
+        
+        for request in requestsToProcess {
+            // 检查网络状态
+            guard Reachability.shared.isConnected else {
+                Logger.warning("网络断开，暂停队列处理", category: .network)
+                break
+            }
+            
+            // 等待一小段时间，避免请求风暴
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+            
+            Logger.debug("重试队列请求: \(request.method) \(request.endpoint)", category: .network)
+            
+            // 真正重新执行请求
+            let success = await executeRequest(request)
+            
+            await MainActor.run {
+                self.remove(request)
+                if success {
+                    self.successCount += 1
+                } else {
+                    self.failureCount += 1
+                    // 如果还没超过最大重试次数，重新入队
+                    if request.retryCount + 1 < self.maxRetryCount {
+                        let retriedRequest = FailedRequest(
+                            endpoint: request.endpoint,
+                            method: request.method,
+                            body: request.body,
+                            headers: request.headers,
+                            error: request.error,
+                            retryCount: request.retryCount + 1
+                        )
+                        self.pendingRequests.append(retriedRequest)
+                    }
+                }
+            }
+            
+            // 发送通知（用于 UI 更新等）
+            NotificationCenter.default.post(
+                name: .retryFailedRequest,
+                object: request,
+                userInfo: ["success": success]
+            )
+        }
+    }
+    
+    /// 执行单个请求重放
+    private func executeRequest(_ request: FailedRequest) async -> Bool {
+        do {
+            // 构建 URLRequest
+            guard let baseURL = URL(string: APIService.shared.baseURL) else {
+                Logger.error("无效的 baseURL", category: .network)
+                return false
+            }
+            
+            var urlRequest = URLRequest(url: baseURL.appendingPathComponent(request.endpoint))
+            urlRequest.httpMethod = request.method
+            urlRequest.timeoutInterval = 30
+            
+            // 添加 headers
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let headers = request.headers {
+                for (key, value) in headers {
+                    urlRequest.setValue(value, forHTTPHeaderField: key)
+                }
+            }
+            
+            // 添加 Authorization token
+            if let token = KeychainHelper.shared.read(service: Constants.Keychain.service, account: Constants.Keychain.accessTokenKey) {
+                urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            
+            // 添加 body
+            if let body = request.body {
+                urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+            }
+            
+            // 执行请求
+            let (_, response) = try await URLSession.shared.data(for: urlRequest)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return false
+            }
+            
+            let isSuccess = (200...299).contains(httpResponse.statusCode)
+            if isSuccess {
+                Logger.success("队列请求重试成功: \(request.method) \(request.endpoint)", category: .network)
+            } else {
+                Logger.warning("队列请求重试失败: \(request.method) \(request.endpoint), 状态码: \(httpResponse.statusCode)", category: .network)
+            }
+            
+            return isSuccess
+        } catch {
+            Logger.error("队列请求重试异常: \(request.endpoint), 错误: \(error.localizedDescription)", category: .network)
+            return false
+        }
+    }
+}
+
+// MARK: - 通知扩展
+
+extension Notification.Name {
+    /// 重试失败的请求
+    static let retryFailedRequest = Notification.Name("retryFailedRequest")
+    /// 网络状态变化
+    static let networkStatusChanged = Notification.Name("networkStatusChanged")
 }
 

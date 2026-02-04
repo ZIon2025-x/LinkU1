@@ -54,17 +54,25 @@ struct link2urApp: App {
 // AppDelegate 适配，用于处理远程推送等
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // 标记启动阶段开始
+        LaunchPerformanceMonitor.shared.markPhase(.willFinish)
+        
         // 配置推送通知
         UNUserNotificationCenter.current().delegate = self
+        
+        // 初始化崩溃报告器
+        CrashReporter.shared.configureWithFirebase()
         
         // 注意：不在这里请求通知权限，而是在视频播放完成后、进入app后再请求
         // 这样可以避免在启动视频播放时弹出权限请求对话框
         
-        // 初始化微信和QQ SDK（如果已集成）
-        #if canImport(WechatOpenSDK)
-        // 注意：需要替换为实际的微信AppID和Universal Link
-        // WXApi.registerApp("YOUR_WECHAT_APPID", universalLink: "https://yourdomain.com/wechat/")
-        #endif
+        // 初始化微信和QQ SDK（如果已集成）- 延迟初始化
+        DeferredInitializationManager.shared.register(priority: 50) {
+            #if canImport(WechatOpenSDK)
+            // 注意：需要替换为实际的微信AppID和Universal Link
+            // WXApi.registerApp("YOUR_WECHAT_APPID", universalLink: "https://yourdomain.com/wechat/")
+            #endif
+        }
         
         // 强制 TabBar 使用不透明背景，避免从详情页返回或某些操作后整行背景消失、变透明
         let tabBarAppearance = UITabBarAppearance()
@@ -72,6 +80,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         tabBarAppearance.backgroundColor = UIColor.systemBackground
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        
+        // 标记启动阶段完成
+        LaunchPerformanceMonitor.shared.markPhase(.didFinish)
+        
+        // 延迟执行非关键初始化
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DeferredInitializationManager.shared.executeAll()
+            
+            // 启动内存监控
+            MemoryMonitor.shared.startMonitoring()
+            
+            // 启动性能监控（包含FPS和ANR检测，仅DEBUG模式）
+            #if DEBUG
+            PerformanceMonitor.shared.startMonitoring()
+            #endif
+            
+            // 初始化网络失败请求队列管理器（触发懒加载单例初始化）
+            _ = RequestQueueManager.shared
+            
+            // 初始化离线管理器（触发懒加载单例初始化）
+            _ = OfflineManager.shared
+            
+            // 标记首屏渲染完成
+            LaunchPerformanceMonitor.shared.markPhase(.firstFrame)
+        }
 
         return true
     }
